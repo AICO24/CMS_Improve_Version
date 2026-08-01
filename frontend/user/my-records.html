@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decedent Records | Cemetery Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/shared/base.css">
+    <link rel="stylesheet" href="../../assets/css/shared/dashboard.css">
+    <link rel="stylesheet" href="../../assets/css/user/decedent-records.css">
+</head>
+<body class="dashboard-body">
+    <div class="dashboard-container">
+        <!-- STATIC SIDEBAR (same as admin dashboard) -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
+            </div>
+            <div class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item"><span class="icon">📊</span> <span>Dashboard</span></a>
+                <a href="reserve-burial-slot.html" class="nav-item"><span class="icon">🪦</span> <span>Reserve Burial Slot</span></a>
+                <a href="my-reservations.html" class="nav-item"><span class="icon">📌</span> <span>My Reservations</span></a>
+                <a href="payments.html" class="nav-item"><span class="icon">💳</span> <span>Payments</span></a>
+                <a href="payment-history.html" class="nav-item"><span class="icon">📜</span> <span>Payment History</span></a>
+                <a href="my-records.html" class="nav-item active"><span class="icon">🗂️</span> <span>My Records</span></a>
+                <a href="notifications.html" class="nav-item"><span class="icon">🔔</span> <span>Notifications</span></a>
+                <a href="profile.html" class="nav-item"><span class="icon">👤</span> <span>Profile</span></a>
+                <a href="settings.html" class="nav-item"><span class="icon">⚙️</span> <span>Settings</span></a>
+            </div>
+            <div class="sidebar-footer">
+                <div class="user-chip">
+                    <i class="fas fa-user"></i>
+                    <div><span id="sidebarUserName">Admin User</span><small id="sidebarUserRole">Administrator</small></div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="top-bar">
+                <div class="top-left">
+                    <label class="hamburger">
+                        <input type="checkbox" id="toggleSidebar">
+
+                        <svg viewBox="0 0 32 32">
+                            <path
+                                class="line line-top-bottom"
+                                d="M27 10H13c-2.209 0-4-1.791-4-4
+                                0-2.209 1.791-4 4-4
+                                2.209 0 4 1.791 4 4v20
+                                c0 2.209-1.791 4-4 4
+                                -2.209 0-4-1.791-4-4
+                                0-2.209 1.791-4 4-4h14">
+                            </path>
+
+                            <path
+                                class="line"
+                                d="M7 16H27">
+                            </path>
+                        </svg>
+                    </label>
+                    <h3 id="pageTitle">Decedent Records</h3>
+                </div>
+                <div class="user-info">
+                    <div class="profile">
+                        <div class="notification-icon" id="notificationIcon">
+                            <i class="fas fa-bell"></i>
+                            <span class="notification-badge" id="notificationBadge">3</span>
+                        </div>
+                        <div class="profile-avatar" id="userAvatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="profile-text">
+                            <div class="user-name" id="userName">Admin User</div>
+                            <div class="user-role" id="userRole">Administrator</div>
+                        </div>
+                    </div>
+                    <button class="Btn logout-btn" id="logoutBtn">
+                        <div class="sign">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </div>
+
+                        <div class="text">
+                            Logout
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <!-- Header with Add Button and Search -->
+                <div class="records-header">
+                    <div class="search-box">
+                        <div class="mainbox">
+                            <input
+                                type="text"
+                                id="searchInput"
+                                class="search_input"
+                                placeholder="Search by name, lot number, or record ID..."
+                            >
+
+                            <div class="iconContainer">
+                                <i class="fas fa-search search_icon"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-add type1" id="openAddModal">
+                        <span class="btn-txt">
+                            <i class="fas fa-plus"></i>
+                            Add New Record
+                        </span>
+                    </button>
+                </div>
+
+                <!-- Stats Row -->
+                <div class="stats-row">
+                    <div class="stat-card"><div class="stat-title">Total Records</div><div class="stat-value" id="totalCount">0</div><div class="stat-sub">Decedents</div></div>
+                    <div class="stat-card"><div class="stat-title">Burials</div><div class="stat-value" id="burialCount">0</div><div class="stat-sub">Interred</div></div>
+                    <div class="stat-card"><div class="stat-title">Cremations</div><div class="stat-value" id="cremationCount">0</div><div class="stat-sub">Ashes stored</div></div>
+                    <div class="stat-card"><div class="stat-title">Avg. Age</div><div class="stat-value" id="avgAge">0</div><div class="stat-sub">Years old</div></div>
+                </div>
+
+                <!-- Table -->
+                <div class="table-container">
+                    <table class="data-table" id="recordsTable">
+                        <thead>
+                            <tr>
+                                <th>Record ID</th>
+                                <th>Full Name</th>
+                                <th>Date of Birth</th>
+                                <th>Date of Death</th>
+                                <th>Lot Number</th>
+                                <th>Section</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr><td colspan="7">Loading records...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="recordModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 id="modalTitle">Add Decedent Record</h3>
+            <form id="recordForm">
+                <input type="hidden" id="recordId">
+                <div class="form-group"><label>First Name</label><input type="text" id="firstName" required></div>
+                <div class="form-group"><label>Last Name</label><input type="text" id="lastName" required></div>
+                <div class="form-group"><label>Middle Name</label><input type="text" id="middleName"></div>
+                <div class="form-group"><label>Suffix (Jr., Sr., etc.)</label><input type="text" id="suffix"></div>
+                <div class="form-group"><label>Date of Birth</label><input type="date" id="dob" required></div>
+                <div class="form-group"><label>Date of Death</label><input type="date" id="dod" required></div>
+                <div class="form-group"><label>Cause of Death</label><textarea id="cause" rows="2"></textarea></div>
+                <div class="form-group"><label>Lot Number</label><select id="lotNumber" required><option value="">Select a lot</option></select></div>
+                <div class="form-group"><label>Section</label><input type="text" id="section" readonly></div>
+                <div class="form-group"><label>Family Contact Name</label><input type="text" id="contactName"></div>
+                <div class="form-group"><label>Family Contact Number</label><input type="text" id="contactNumber"></div>
+                <div class="form-group"><label>Cremated?</label>
+                    <select id="isCremated">
+                        <option value="no">No</option>
+                        <option value="yes">Yes</option>
+                    </select>
+                </div>
+                <div class="form-group" id="ashStorageGroup" style="display:none;"><label>Ash Storage Location</label><input type="text" id="ashStorage"></div>
+                <button type="submit" class="btn-save bookmarkBtn">
+                    <span class="IconContainer">
+                        <i class="fas fa-save icon"></i>
+                    </span>
+
+                    <span class="text">
+                        Save
+                    </span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Modal -->
+    <div id="viewModal" class="modal">
+        <div class="modal-content">
+            <span class="close-view">&times;</span>
+            <h3>Decedent Record Details</h3>
+            <div id="viewDetails"></div>
+            <button class="btn-edit">
+                <span class="edit-text">Edit Record</span>
+
+                <span class="edit-icon">
+                    <i class="fas fa-pen"></i>
+                </span>
+            </button>
+        </div>
+    </div>
+
+    <script src="../../assets/js/shared/api.js"></script>
+    <script src="../../assets/js/user/my-records.js"></script>
+</body>
+</html>

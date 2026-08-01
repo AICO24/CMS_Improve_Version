@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | Cemetery Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/shared/base.css">
+    <link rel="stylesheet" href="../../assets/css/auth/register.css">
+</head>
+<body>
+
+    <!-- Animated Background Overlay (SAME AS LOGIN) -->
+    <div class="bg-overlay"></div>
+
+    <div class="register-container">
+        <div class="register-card">
+            <!-- Decorative top accent (SAME AS LOGIN) -->
+            <div class="card-accent"></div>
+            
+            <!-- Decorative corner elements (SAME AS LOGIN) -->
+            <div class="corner-decoration corner-tl"></div>
+            <div class="corner-decoration corner-tr"></div>
+            <div class="corner-decoration corner-bl"></div>
+            <div class="corner-decoration corner-br"></div>
+
+            <div class="logo">
+                <div class="logo-icon-wrapper">
+                    <lord-icon
+                        src="https://cdn.lordicon.com/hhxmdqos.json"
+                        trigger="hover"
+                        colors="primary:#2c5e47,secondary:#7aa77a"
+                        style="width:70px;height:70px;">
+                    </lord-icon>
+                </div>
+                <h1>Create New Account</h1>
+                <p>Register a new account (User, Staff, or Administrator)</p>
+                <div class="divider">
+                    <span></span>
+                    <i class="fas fa-leaf"></i>
+                    <span></span>
+                </div>
+                <p class="sub-text">Complete the form below to create your account</p>
+            </div>
+
+            <div id="alert" class="alert"></div>
+
+            <form id="registerForm" action="javascript:void(0);">
+                <!-- Full Name -->
+                <div class="input-field">
+                    <label for="full_name">Full Name</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><i class="fas fa-user"></i></span>
+                        <input type="text" id="full_name" placeholder="Enter full name" required>
+                    </div>
+                    <div class="error-message" id="fullNameError"></div>
+                </div>
+
+                <!-- Email -->
+                <div class="input-field">
+                    <label for="email">Email Address</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><i class="fas fa-envelope"></i></span>
+                        <input type="email" id="email" placeholder="Enter email address" required>
+                    </div>
+                    <div class="error-message" id="emailError"></div>
+                </div>
+
+                <!-- Username (optional for public users) -->
+                <div class="input-field">
+                    <label for="username">Username (leave blank if registering as User)</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><i class="fas fa-user-circle"></i></span>
+                        <input type="text" id="username" placeholder="Choose a username (optional)" >
+                    </div>
+                    <div class="error-message" id="usernameError"></div>
+                </div>
+
+                <!-- Role -->
+                <div class="input-field">
+                    <label for="role">Role</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><i class="fas fa-user-tag"></i></span>
+                        <select id="role" required>
+                            <option value="user">User</option>
+                            <option value="staff">Staff</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Contact Number -->
+                <div class="input-field">
+                    <label for="contact_number">Contact Number</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><i class="fas fa-phone"></i></span>
+                        <input type="text" id="contact_number" placeholder="Enter contact number">
+                    </div>
+                    <div class="error-message" id="contactError"></div>
+                </div>
+
+                <!-- Address -->
+                <div class="input-field">
+                    <label for="address">Address</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><i class="fas fa-map-marker-alt"></i></span>
+                        <input type="text" id="address" placeholder="Enter address">
+                    </div>
+                    <div class="error-message" id="addressError"></div>
+                </div>
+
+                <!-- Password -->
+                <div class="input-field">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><i class="fas fa-lock"></i></span>
+                        <input type="password" id="password" placeholder="Create a password" required>
+                        <span class="toggle-password" data-target="password" onclick="togglePassword('password')">
+                            <i class="fas fa-eye"></i>
+                        </span>
+                    </div>
+                    <div class="error-message" id="passwordError"></div>
+                </div>
+
+                <!-- Confirm Password -->
+                <div class="input-field">
+                    <label for="confirm_password">Confirm Password</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><i class="fas fa-shield-alt"></i></span>
+                        <input type="password" id="confirm_password" placeholder="Confirm your password" required>
+                        <span class="toggle-password" data-target="confirm_password" onclick="togglePassword('confirm_password')">
+                            <i class="fas fa-eye"></i>
+                        </span>
+                    </div>
+                    <div class="error-message" id="confirmError"></div>
+                </div>
+
+                <button type="submit" class="btn-register">
+                    <span>Register Account</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <div class="login-link">
+                <p>Already have an account? <a href="login.html">Sign in here</a></p>
+            </div>
+
+            <div class="footer-text">
+                <p>© 2026 Cemetery Management System. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../assets/js/shared/api.js"></script>
+    <script src="../../assets/js/auth/register.js"></script>
+    <script>
+        function togglePassword(fieldId) {
+            const field = document.getElementById(fieldId);
+            const icon = document.querySelector(`.toggle-password[data-target="${fieldId}"] i`);
+            if (!field) return;
+            if (field.type === 'password') {
+                field.type = 'text';
+                if (icon) {
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                }
+            } else {
+                field.type = 'password';
+                if (icon) {
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

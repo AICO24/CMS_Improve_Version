@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payments | Cemetery Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/shared/base.css">
+    <link rel="stylesheet" href="../../assets/css/shared/dashboard.css">
+    <link rel="stylesheet" href="../../assets/css/staff/payments.css">
+</head>
+<body class="dashboard-body">
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
+            </div>
+            <div class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item"><span class="icon">📊</span> <span>Dashboard</span></a>
+                <a href="burial-scheduling.html" class="nav-item"><span class="icon">🪦</span> <span>Burial Scheduling</span></a>
+                <a href="lot-management.html" class="nav-item"><span class="icon">🗺️</span> <span>Lot Management</span></a>
+                <a href="payments.html" class="nav-item active"><span class="icon">💳</span> <span>Payments</span></a>
+                <a href="notifications.html" class="nav-item"><span class="icon">🔔</span> <span>Notifications</span></a>
+            </div>
+            <div class="sidebar-footer">
+                <div class="user-chip">
+                    <i class="fas fa-user"></i>
+                    <div><span id="sidebarUserName">User</span><small id="sidebarUserRole">Staff</small></div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="top-bar">
+                <div class="top-left">
+                    <label class="hamburger">
+                        <input type="checkbox" id="toggleSidebar">
+
+                        <svg viewBox="0 0 32 32">
+                            <path
+                                class="line line-top-bottom"
+                                d="M27 10H13c-2.209 0-4-1.791-4-4
+                                0-2.209 1.791-4 4-4
+                                2.209 0 4 1.791 4 4v20
+                                c0 2.209-1.791 4-4 4
+                                -2.209 0-4-1.791-4-4
+                                0-2.209 1.791-4 4-4h14">
+                            </path>
+
+                            <path
+                                class="line"
+                                d="M7 16H27">
+                            </path>
+                        </svg>
+                    </label>
+                    <h3>Payment Recording</h3>
+                </div>
+                <div class="user-info">
+                    <div class="notification-icon" id="notificationIcon">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="notificationBadge">0</span>
+                    </div>
+                    <div class="profile">
+                        <div class="profile-avatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="profile-text">
+                            <div class="user-name" id="userName">User</div>
+                            <div class="user-role" id="userRole">Staff</div>
+                        </div>
+                    </div>
+                    <button class="Btn logout-btn" id="logoutBtn">
+                        <div class="sign">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </div>
+
+                        <div class="text">
+                            Logout
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <div class="stats-row">
+                    <div class="stat-card"><div class="stat-title">Total Revenue</div><div class="stat-value" id="totalRevenue">₱0</div><div class="stat-sub">All time</div></div>
+                    <div class="stat-card"><div class="stat-title">This Month</div><div class="stat-value" id="monthRevenue">₱0</div><div class="stat-sub">Current month</div></div>
+                    <div class="stat-card"><div class="stat-title">Transactions</div><div class="stat-value" id="transactionCount">0</div><div class="stat-sub">Total count</div></div>
+                    <div class="stat-card"><div class="stat-title">Last Payment</div><div class="stat-value" id="lastPayment">—</div><div class="stat-sub">Date</div></div>
+                </div>
+
+                <div class="toolbar-row">
+                    <button class="btn-add" id="openAddPayment"><i class="fas fa-plus"></i> Record Payment</button>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Receipt #</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                                <th>Method</th>
+                                <th>Status</th>
+                                <th>Received By</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentsTableBody">
+                            <tr><td colspan="7">Loading payments...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 id="modalTitle">Record Payment</h3>
+            <form id="paymentForm">
+                <input type="hidden" id="paymentId">
+                <div class="form-group"><label>Transaction Type</label><select id="transactionType" required><option value="Lot Purchase">Lot Purchase</option><option value="Cremation">Cremation</option><option value="Relocation">Relocation</option><option value="Renewal">Renewal</option><option value="Other">Other</option></select></div>
+                <div class="form-group"><label>Reference ID (e.g., Lot ID, Schedule ID)</label><input type="number" id="referenceId" required></div>
+                <div class="form-group"><label>Amount (₱)</label><input type="number" id="amount" step="0.01" required></div>
+                <div class="form-group"><label>Payment Date</label><input type="date" id="paymentDate" required></div>
+                <div class="form-group"><label>Payment Method</label><select id="paymentMethod" required><option value="Cash">Cash</option><option value="Card">Card</option><option value="Bank Transfer">Bank Transfer</option><option value="GCash">GCash</option><option value="PayMaya">PayMaya</option><option value="Other">Other</option></select></div>
+                <div class="form-group"><label>Receipt Number</label><input type="text" id="receiptNumber" required placeholder="e.g., R-2026-001"></div>
+                <div class="form-group"><label>Receipt Upload</label><input type="file" id="receiptFile" accept="image/*,.pdf"></div>
+                <div class="form-group"><label>Notes</label><textarea id="paymentNotes" rows="2"></textarea></div>
+                <button type="submit" class="btn-save">Save Payment</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="viewModal" class="modal">
+        <div class="modal-content">
+            <span class="close-view">&times;</span>
+            <h3>Payment Details</h3>
+            <div id="viewDetails"></div>
+        </div>
+    </div>
+
+    <script src="../../assets/js/shared/api.js"></script>
+    <script src="../../assets/js/staff/payments.js"></script>
+</body>
+</html>

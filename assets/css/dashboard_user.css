@@ -1,0 +1,71 @@
+.user-welcome-card {
+    padding: 24px;
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(15,23,42,0.06);
+    margin-bottom: 24px;
+}
+
+.welcome-label {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #243736;
+}
+
+.welcome-note {
+    margin: 12px 0 0;
+    color: #5f6e7a;
+    line-height: 1.7;
+    max-width: 580px;
+}
+
+.stats-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.stat-card {
+    min-height: 150px;
+}
+
+.recent-list li {
+    padding: 18px;
+}
+
+.recent-list li strong {
+    font-size: 0.98rem;
+    color: #243736;
+}
+
+.recent-list li .muted {
+    margin-top: 6px;
+    display: block;
+    color: #64748b;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 18px;
+}
+
+.card-grid .card {
+    padding: 22px;
+    min-height: 280px;
+}
+
+.card-grid .card h4 {
+    margin-bottom: 18px;
+}
+
+.notification-badge.hidden {
+    display: none;
+}
+
+@media (max-width: 1080px) {
+    .card-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,65 @@
+<?php
+class AIService {
+    private $baseUrl;
+    private $timeout;
+
+    public function __construct($baseUrl = 'http://127.0.0.1:5000') {
+        $this->baseUrl = rtrim($baseUrl, '/');
+        $this->timeout = 30;
+    }
+
+    public function healthCheck() {
+        return $this->request('/api/health');
+    }
+
+    public function getRecommendations($preferences) {
+        return $this->request('/api/recommend', 'POST', $preferences);
+    }
+
+    public function getForecast($months = 6) {
+        return $this->request('/api/forecast?months=' . (int) $months);
+    }
+
+    private function request($path, $method = 'GET', $data = null) {
+        if (!function_exists('curl_init')) {
+            return ['error' => 'cURL extension is not available', 'code' => 500];
+        }
+
+        $url = $this->baseUrl . $path;
+        $ch = curl_init($url);
+
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_FAILONERROR, false);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json']);
+
+        if ($method === 'POST') {
+            curl_setopt($ch, CURLOPT_POST, true);
+            if ($data !== null) {
+                $payload = is_array($data) ? json_encode($data) : $data;
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Accept: application/json',
+                    'Content-Type: application/json',
+                ]);
+            }
+        }
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError !== '') {
+            return ['error' => $curlError, 'code' => 503];
+        }
+
+        if ($httpCode >= 400) {
+            return ['error' => 'Python service request failed', 'code' => $httpCode];
+        }
+
+        $decoded = json_decode($response, true);
+        return is_array($decoded) ? $decoded : ['error' => 'Invalid response', 'code' => 502];
+    }
+}

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard | Cemetery Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/base.css">
+    <link rel="stylesheet" href="../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../assets/css/dashboard_staff.css">
+    <link rel="stylesheet" href="../assets/css/dashboard_user.css">
+</head>
+<body class="dashboard-body">
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management</span></div>
+            </div>
+            <div class="sidebar-nav">
+                <a href="dashboard_user.html" class="nav-item active"><span class="icon">📊</span> <span>Dashboard</span></a>
+                <a href="reserve-burial-slot.html" class="nav-item"><span class="icon">🪦</span> <span>Reserve Burial Slot</span></a>
+                <a href="my-reservations.html" class="nav-item"><span class="icon">📌</span> <span>My Reservations</span></a>
+                <a href="payments.html" class="nav-item"><span class="icon">💳</span> <span>Payments</span></a>
+                <a href="payment-history.html" class="nav-item"><span class="icon">📜</span> <span>Payment History</span></a>
+                <a href="my-records.html" class="nav-item"><span class="icon">🗂️</span> <span>My Records</span></a>
+                <a href="notifications.html" class="nav-item"><span class="icon">🔔</span> <span>Notifications</span></a>
+                <a href="profile.html" class="nav-item"><span class="icon">👤</span> <span>Profile</span></a>
+                <a href="settings.html" class="nav-item"><span class="icon">⚙️</span> <span>Settings</span></a>
+            </div>
+            <div class="sidebar-footer">
+                <div class="user-chip">
+                    <i class="fas fa-user-circle"></i>
+                    <div><span id="sidebarUserName">Client</span><small id="sidebarUserRole">Client</small></div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="top-bar">
+                <div class="top-left">
+                    <label class="hamburger">
+                        <input type="checkbox" id="toggleSidebar">
+                        <svg viewBox="0 0 32 32">
+                            <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
+                            <path class="line" d="M7 16H27"></path>
+                        </svg>
+                    </label>
+                    <h3 id="pageTitle">USER DASHBOARD</h3>
+                </div>
+                <div class="user-info">
+                    <div class="notification-icon" id="notificationIcon">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="notificationBadge">0</span>
+                    </div>
+                    <div class="profile">
+                        <div class="profile-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
+                        <div class="profile-text">
+                            <div class="user-name" id="userName">Client</div>
+                            <div class="user-role" id="userRole">User</div>
+                        </div>
+                    </div>
+                    <button class="Btn logout-btn" id="logoutBtn">
+                        <div class="sign">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </div>
+                        <div class="text">Logout</div>
+                    </button>
+                </div>
+            </div>
+            <div class="content-area">
+                <div class="user-welcome-card card">
+                    <p class="welcome-label">👋 Welcome, <span id="welcomeName">Client</span></p>
+                    <p class="welcome-note">Your account summary is below. Check your reservations, payments, and upcoming burial schedule.</p>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div class="stat-title">Active Reservation</div>
+                        <div class="stat-value" id="activeReservationCount">-</div>
+                        <div class="stat-sub" id="activeReservationText">Loading reservation status...</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Payment Status</div>
+                        <div class="stat-value" id="paymentStatusCount">-</div>
+                        <div class="stat-sub" id="paymentStatusText">Checking payment history...</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Burial Schedule</div>
+                        <div class="stat-value" id="scheduleCount">-</div>
+                        <div class="stat-sub" id="scheduleText">Fetching upcoming bookings...</div>
+                    </div>
+                </div>
+                <div class="card-grid">
+                    <div class="card">
+                        <h4>Upcoming Schedule</h4>
+                        <ul class="recent-list" id="upcomingScheduleList"></ul>
+                    </div>
+                    <div class="card">
+                        <h4>Notifications</h4>
+                        <ul class="recent-list" id="notificationsList"></ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="../assets/js/api/client.js"></script>
+    <script src="../assets/js/pages/dashboard_user.js"></script>
+</body>
+</html>

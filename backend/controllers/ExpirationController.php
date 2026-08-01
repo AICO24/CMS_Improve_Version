@@ -1,0 +1,87 @@
+<?php
+require_once __DIR__ . '/../models/ExpirationRecord.php';
+require_once __DIR__ . '/../models/Notification.php';
+require_once __DIR__ . '/../models/AuditLog.php';
+
+class ExpirationController {
+    private $expirationModel;
+    private $notificationModel;
+    private $auditLogModel;
+
+    public function __construct() {
+        $this->expirationModel = new ExpirationRecord();
+        $this->notificationModel = new Notification();
+        $this->auditLogModel = new AuditLog();
+    }
+
+    public function index($filters = []) {
+        return $this->expirationModel->findAll($filters);
+    }
+
+    public function show($id) {
+        $record = $this->expirationModel->findById($id);
+        return $record ?: ['error' => 'Expiration record not found', 'code' => 404];
+    }
+
+    public function store($data) {
+        $required = ['lot_id', 'end_date'];
+        foreach ($required as $field) {
+            if (empty($data[$field])) {
+                return ['error' => "Field '$field' is required", 'code' => 400];
+            }
+        }
+        $result = $this->expirationModel->create($data);
+        return $result ? ['success' => true, 'message' => 'Expiration record created'] : ['error' => 'Failed to create expiration record', 'code' => 500];
+    }
+
+    public function update($id, $data) {
+        if (!$this->expirationModel->findById($id)) {
+            return ['error' => 'Expiration record not found', 'code' => 404];
+        }
+        $required = ['lot_id', 'end_date'];
+        foreach ($required as $field) {
+            if (empty($data[$field])) {
+                return ['error' => "Field '$field' is required", 'code' => 400];
+            }
+        }
+        $result = $this->expirationModel->update($id, $data);
+        return $result ? ['success' => true, 'message' => 'Expiration record updated'] : ['error' => 'Failed to update expiration record', 'code' => 500];
+    }
+
+    public function destroy($id) {
+        if (!$this->expirationModel->findById($id)) {
+            return ['error' => 'Expiration record not found', 'code' => 404];
+        }
+        $result = $this->expirationModel->delete($id);
+        return $result ? ['success' => true, 'message' => 'Expiration record deleted'] : ['error' => 'Failed to delete expiration record', 'code' => 500];
+    }
+
+    public function stats() {
+        return $this->expirationModel->getStats();
+    }
+
+    public function generateNotifications($days = 30) {
+        $rows = $this->expirationModel->findExpiringSoon($days);
+        $count = 0;
+        foreach ($rows as $row) {
+            $title = "Lot {$row['lot_number']} expiring in {$days} days";
+            $message = "Expiration alert for Lot {$row['lot_number']} in Section {$row['section_name']} (Block {$row['block_name']}). Lease ends on {$row['end_date']}";
+            $this->notificationModel->create([
+                'title' => $title,
+                'message' => $message,
+                'notification_type' => 'Expiration',
+                'is_read' => 0
+            ]);
+            $this->auditLogModel->log(
+                'Expiration notification generated',
+                null,
+                null,
+                'Expiration',
+                $row['record_id'] ?? null,
+                ['lot_number' => $row['lot_number'], 'end_date' => $row['end_date'], 'alert_days' => $days]
+            );
+            $count++;
+        }
+        return ['success' => true, 'created' => $count, 'message' => "$count expiration notifications generated"];
+    }
+}

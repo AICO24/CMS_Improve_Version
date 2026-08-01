@@ -1,0 +1,10 @@
+# Environment files
+.env
+
+# Local runtime artifacts
+backend/storage/logs/
+backend/storage/uploads/
+
+# OS files
+.DS_Store
+Thumbs.db

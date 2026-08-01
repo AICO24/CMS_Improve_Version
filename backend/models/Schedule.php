@@ -1,0 +1,237 @@
+<?php
+require_once __DIR__ . '/../config/database.php';
+
+class Schedule {
+    private $db;
+
+    public function __construct() {
+        $this->db = Database::getInstance()->getConnection();
+    }
+
+    public function findAll($filters = [], $pagination = []) {
+        $sql = "
+            SELECT s.*, 
+                   l.lot_number, 
+                   t.type_name as lot_type_name,
+                   sec.section_name, 
+                   d.first_name, d.last_name,
+                   u.full_name as created_by_name
+            FROM burial_schedules s
+            JOIN lots l ON s.lot_id = l.lot_id
+            JOIN lot_types t ON l.lot_type_id = t.type_id
+            JOIN blocks b ON l.block_id = b.block_id
+            JOIN sections sec ON b.section_id = sec.section_id
+            JOIN decedent_records d ON s.deceased_id = d.decedent_id
+            LEFT JOIN users u ON s.created_by = u.user_id
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if (!empty($filters['lot_id'])) {
+            $sql .= " AND s.lot_id = ?";
+            $params[] = $filters['lot_id'];
+        }
+        if (!empty($filters['created_by'])) {
+            $sql .= " AND s.created_by = ?";
+            $params[] = $filters['created_by'];
+        }
+        if (!empty($filters['status'])) {
+            $sql .= " AND s.status = ?";
+            $params[] = $filters['status'];
+        }
+        if (!empty($filters['lot_number'])) {
+            $sql .= " AND l.lot_number LIKE ?";
+            $params[] = '%' . $filters['lot_number'] . '%';
+        }
+        if (!empty($filters['q'])) {
+            $sql .= " AND (l.lot_number LIKE ? OR sec.section_name LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ?)";
+            $search = '%' . $filters['q'] . '%';
+            $params[] = $search;
+            $params[] = $search;
+            $params[] = $search;
+            $params[] = $search;
+        }
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND s.schedule_date >= ?";
+            $params[] = $filters['date_from'];
+        }
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND s.schedule_date <= ?";
+            $params[] = $filters['date_to'];
+        }
+        if (!empty($filters['month']) && !empty($filters['year'])) {
+            $sql .= " AND YEAR(s.schedule_date) = ? AND MONTH(s.schedule_date) = ?";
+            $params[] = $filters['year'];
+            $params[] = $filters['month'];
+        }
+
+        $sql .= " ORDER BY s.schedule_date ASC, s.schedule_time ASC";
+
+        $page = null;
+        $perPage = null;
+        if (!empty($pagination['page']) || !empty($pagination['per_page'])) {
+            $page = max(1, (int) ($pagination['page'] ?? 1));
+            $perPage = max(1, min(100, (int) ($pagination['per_page'] ?? 10)));
+        }
+
+        if ($page !== null && $perPage !== null) {
+            $offset = ($page - 1) * $perPage;
+            $sql .= " LIMIT ?, ?";
+            $params[] = $offset;
+            $params[] = $perPage;
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function countAll($filters = []) {
+        $sql = "
+            SELECT COUNT(*) as total
+            FROM burial_schedules s
+            JOIN lots l ON s.lot_id = l.lot_id
+            JOIN blocks b ON l.block_id = b.block_id
+            JOIN sections sec ON b.section_id = sec.section_id
+            JOIN decedent_records d ON s.deceased_id = d.decedent_id
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if (!empty($filters['lot_id'])) {
+            $sql .= " AND s.lot_id = ?";
+            $params[] = $filters['lot_id'];
+        }
+        if (!empty($filters['created_by'])) {
+            $sql .= " AND s.created_by = ?";
+            $params[] = $filters['created_by'];
+        }
+        if (!empty($filters['status'])) {
+            $sql .= " AND s.status = ?";
+            $params[] = $filters['status'];
+        }
+        if (!empty($filters['lot_number'])) {
+            $sql .= " AND l.lot_number LIKE ?";
+            $params[] = '%' . $filters['lot_number'] . '%';
+        }
+        if (!empty($filters['q'])) {
+            $sql .= " AND (l.lot_number LIKE ? OR sec.section_name LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ?)";
+            $search = '%' . $filters['q'] . '%';
+            $params[] = $search;
+            $params[] = $search;
+            $params[] = $search;
+            $params[] = $search;
+        }
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND s.schedule_date >= ?";
+            $params[] = $filters['date_from'];
+        }
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND s.schedule_date <= ?";
+            $params[] = $filters['date_to'];
+        }
+        if (!empty($filters['month']) && !empty($filters['year'])) {
+            $sql .= " AND YEAR(s.schedule_date) = ? AND MONTH(s.schedule_date) = ?";
+            $params[] = $filters['year'];
+            $params[] = $filters['month'];
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return (int) ($row['total'] ?? 0);
+    }
+
+    public function findById($id) {
+        $stmt = $this->db->prepare(" 
+            SELECT s.*, 
+                   l.lot_number, 
+                   sec.section_name, 
+                   d.first_name, d.last_name,
+                   u.full_name as created_by_name
+            FROM burial_schedules s
+            JOIN lots l ON s.lot_id = l.lot_id
+            JOIN blocks b ON l.block_id = b.block_id
+            JOIN sections sec ON b.section_id = sec.section_id
+            JOIN decedent_records d ON s.deceased_id = d.decedent_id
+            LEFT JOIN users u ON s.created_by = u.user_id
+            WHERE s.schedule_id = ?
+        ");
+        $stmt->execute([(int) $id]);
+        return $stmt->fetch();
+    }
+
+    public function checkConflict($lotId, $date, $time = null) {
+        $sql = "SELECT COUNT(*) as count FROM burial_schedules 
+                WHERE lot_id = ? AND schedule_date = ? AND status != 'Cancelled'";
+        $params = [(int) $lotId, $date];
+        if ($time) {
+            $sql .= " AND schedule_time = ?";
+            $params[] = $time;
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch();
+        return (int) ($result['count'] ?? 0) > 0;
+    }
+
+    public function create($data) {
+        $stmt = $this->db->prepare(" 
+            INSERT INTO burial_schedules 
+            (lot_id, deceased_id, schedule_date, schedule_time, status, notes, created_by, confirmed_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        return $stmt->execute([
+            (int) $data['lot_id'],
+            (int) $data['deceased_id'],
+            $data['schedule_date'],
+            $data['schedule_time'] ?? null,
+            $data['status'] ?? 'Pending',
+            $data['notes'] ?? null,
+            (int) $data['created_by'],
+            isset($data['confirmed_by']) ? (int) $data['confirmed_by'] : null,
+        ]);
+    }
+
+    public function update($id, $data) {
+        $stmt = $this->db->prepare(" 
+            UPDATE burial_schedules SET
+                lot_id = ?,
+                deceased_id = ?,
+                schedule_date = ?,
+                schedule_time = ?,
+                status = ?,
+                notes = ?,
+                confirmed_by = ?
+            WHERE schedule_id = ?
+        ");
+        return $stmt->execute([
+            (int) $data['lot_id'],
+            (int) $data['deceased_id'],
+            $data['schedule_date'],
+            $data['schedule_time'] ?? null,
+            $data['status'] ?? 'Pending',
+            $data['notes'] ?? null,
+            isset($data['confirmed_by']) ? (int) $data['confirmed_by'] : null,
+            (int) $id,
+        ]);
+    }
+
+    public function delete($id) {
+        $stmt = $this->db->prepare("DELETE FROM burial_schedules WHERE schedule_id = ?");
+        return $stmt->execute([(int) $id]);
+    }
+
+    public function getCalendar($month, $year) {
+        $schedules = $this->findAll(['month' => $month, 'year' => $year]);
+        $calendar = [];
+        foreach ($schedules as $schedule) {
+            $date = $schedule['schedule_date'];
+            if (!isset($calendar[$date])) {
+                $calendar[$date] = [];
+            }
+            $calendar[$date][] = $schedule;
+        }
+        return $calendar;
+    }
+}

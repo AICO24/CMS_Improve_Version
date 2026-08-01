@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Logs | Cemetery Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/base.css">
+    <link rel="stylesheet" href="../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../assets/css/user-management.css">
+</head>
+<body class="dashboard-body">
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
+            </div>
+            <div class="sidebar-nav">
+                <a href="dashboard_admin.html" class="nav-item"><span class="icon">📊</span> <span>Dashboard</span></a>
+                <a href="lot-management.html" class="nav-item"><span class="icon">🗺️</span> <span>Lot Management</span></a>
+                <a href="burial-scheduling.html" class="nav-item"><span class="icon">🪦</span> <span>Burial Scheduling</span></a>
+                <a href="cremation-management.html" class="nav-item"><span class="icon">⚱️</span> <span>Cremation Management</span></a>
+                <a href="relocation-management.html" class="nav-item"><span class="icon">📦</span> <span>Relocation Management</span></a>
+                <a href="expiration-monitoring.html" class="nav-item"><span class="icon">⏳</span> <span>Expiration Monitoring</span></a>
+                <a href="decedent-records.html" class="nav-item"><span class="icon">🗂️</span> <span>Decedent Records</span></a>
+                <a href="payments.html" class="nav-item"><span class="icon">💳</span> <span>Payments</span></a>
+                <a href="reports.html" class="nav-item"><span class="icon">📈</span> <span>Reports</span></a>
+                <a href="forecast.html" class="nav-item"><span class="icon">🔮</span> <span>Capacity Forecast</span></a>
+                <a href="user-management.html" class="nav-item"><span class="icon">👥</span> <span>User Management</span></a>
+                <a href="audit.html" class="nav-item active"><span class="icon">📜</span> <span>Audit Logs</span></a>
+            </div>
+            <div class="sidebar-footer">
+                <div class="user-chip">
+                    <i class="fas fa-user"></i>
+                    <div><span id="sidebarUserName">User</span><small id="sidebarUserRole">Administrator</small></div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="top-bar">
+                <div class="top-left">
+                    <label class="hamburger">
+                        <input type="checkbox" id="toggleSidebar">
+                        <svg viewBox="0 0 32 32">
+                            <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
+                            <path class="line" d="M7 16H27"></path>
+                        </svg>
+                    </label>
+                    <h3>Security & Audit Trail</h3>
+                </div>
+                <div class="user-info">
+                    <div class="notification-icon" id="notificationIcon">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="notificationBadge">0</span>
+                    </div>
+                    <div class="profile">
+                        <div class="profile-avatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="profile-text">
+                            <div class="user-name" id="userName">User</div>
+                            <div class="user-role" id="userRole">Administrator</div>
+                        </div>
+                    </div>
+                    <button class="Btn logout-btn" id="logoutBtn">
+                        <div class="sign"><i class="fas fa-sign-out-alt"></i></div>
+                        <div class="text">Logout</div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <div class="toolbar-row" style="margin-bottom: 20px;">
+                    <div class="toolbar-filters">
+                        <input type="text" id="searchLogs" placeholder="Filter by action or username..." style="padding: 8px 14px; border-radius: 20px; border: 1px solid #cbd5e1; width: 280px;" />
+                        <button class="btn-secondary" id="refreshAuditBtn" style="padding: 8px 16px; border-radius: 20px; cursor: pointer;"><i class="fas fa-sync-alt"></i> Refresh Logs</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Entity</th>
+                                <th>IP Address</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditTableBody">
+                            <tr><td colspan="6">Loading audit trail...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../assets/js/api/client.js"></script>
+    <script src="../assets/js/pages/audit.js"></script>
+</body>
+</html>
