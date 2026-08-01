@@ -33,12 +33,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 alertBox.textContent = 'Login successful! Redirecting...';
                 alertBox.classList.add('show', 'alert-success');
                 // Redirect according to role: admin, staff, user
+                const currentPath = window.location.pathname || '';
+                const baseHref = currentPath.includes('/frontend/')
+                    ? `${window.location.origin}${currentPath.split('/frontend/')[0]}/frontend/pages/`
+                    : `${window.location.origin}/CMS/frontend/pages/`;
                 if (result.user.role === 'admin') {
-                    window.location.href = 'dashboard_admin.html';
+                    window.location.href = `${baseHref}dashboard_admin.html`;
                 } else if (result.user.role === 'staff') {
-                    window.location.href = 'dashboard_staff.html';
+                    window.location.href = `${baseHref}dashboard_staff.html`;
                 } else {
-                    window.location.href = 'dashboard_user.html';
+                    window.location.href = `${baseHref}dashboard_user.html`;
                 }
             } else {
                 alertBox.textContent = result.error || 'Login failed';

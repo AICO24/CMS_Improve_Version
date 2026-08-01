@@ -14,10 +14,20 @@ require_once __DIR__ . '/../controllers/UserController.php';
 require_once __DIR__ . '/../middleware/Auth.php';
 
 $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$requestUri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+$parsedUri = parse_url($requestUri, PHP_URL_PATH);
+$query = [];
+parse_str(parse_url($requestUri, PHP_URL_QUERY) ?? '', $query);
 $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
 $basePath = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
-$path = trim(str_replace($basePath, '', str_replace('\\', '/', $requestUri)), '/');
+$path = trim(str_replace($basePath, '', str_replace('\\', '/', $parsedUri)), '/');
+
+if (!empty($query['route'])) {
+    $path = trim((string) $query['route'], '/');
+} elseif (preg_match('#^index\.php/(.+)$#', $path, $matches)) {
+    $path = $matches[1];
+}
+
 if ($path === '') {
     $path = 'index';
 }
@@ -422,11 +432,7 @@ if (preg_match('/^relocations\/(\d+)$/', $path, $matches) && $requestMethod === 
 }
 
 if (preg_match('/^relocations\/(\d+)\/approve$/', $path, $matches) && $requestMethod === 'PUT') {
-    if ($user['role'] !== 'admin') {
-        http_response_code(403);
-        echo json_encode(['error' => 'Only administrators can approve requests']);
-        exit;
-    }
+    $user = AuthMiddleware::requireRole(['admin']);
     $result = $relocationController->approve($matches[1], $user['user_id']);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -435,6 +441,7 @@ if (preg_match('/^relocations\/(\d+)\/approve$/', $path, $matches) && $requestMe
 }
 
 if (preg_match('/^relocations\/(\d+)\/complete$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $result = $relocationController->complete($matches[1], $user['user_id']);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -443,6 +450,7 @@ if (preg_match('/^relocations\/(\d+)\/complete$/', $path, $matches) && $requestM
 }
 
 if (preg_match('/^relocations\/(\d+)\/deny$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin']);
     $result = $relocationController->deny($matches[1], $user['user_id']);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -461,6 +469,7 @@ if (preg_match('/^relocations\/(\d+)$/', $path, $matches) && $requestMethod === 
 $paymentController = new PaymentController();
 
 if ($path === 'payments/mine' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $filters = [];
     if (isset($_GET['verification_status'])) $filters['verification_status'] = $_GET['verification_status'];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
@@ -470,6 +479,7 @@ if ($path === 'payments/mine' && $requestMethod === 'GET') {
 }
 
 if ($path === 'payments' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $filters = [];
     if (isset($_GET['transaction_type'])) $filters['transaction_type'] = $_GET['transaction_type'];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
@@ -487,9 +497,10 @@ if (preg_match('/^payments\/(\d+)$/', $path, $matches) && $requestMethod === 'GE
     exit;
 }
 
-if ($path === 'payments' && $requestMethod === 'POST') {
+if (preg_match('/^payments\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $input = readRequestBody();
-    $result = $paymentController->store($input, $user['user_id']);
+    $result = $paymentController->update($matches[1], $input, $user['user_id']);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -497,11 +508,7 @@ if ($path === 'payments' && $requestMethod === 'POST') {
 }
 
 if (preg_match('/^payments\/(\d+)\/verify$/', $path, $matches) && $requestMethod === 'PUT') {
-    if ($user['role'] !== 'admin') {
-        http_response_code(403);
-        echo json_encode(['error' => 'Only administrators may verify payments']);
-        exit;
-    }
+    $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
     $status = $input['verification_status'] ?? null;
     $result = $paymentController->verify($matches[1], $status, $user['user_id']);
@@ -521,6 +528,7 @@ if (preg_match('/^payments\/(\d+)$/', $path, $matches) && $requestMethod === 'PU
 }
 
 if (preg_match('/^payments\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
+    $user = AuthMiddleware::requireRole(['admin']);
     $result = $paymentController->destroy($matches[1]);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -553,6 +561,7 @@ if ($path === 'payments/revenue-breakdown' && $requestMethod === 'GET') {
 $notificationController = new NotificationController();
 
 if ($path === 'notifications' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $filters = [];
     if (isset($_GET['type'])) $filters['notification_type'] = $_GET['type'];
     echo json_encode($notificationController->index($filters));
@@ -560,6 +569,7 @@ if ($path === 'notifications' && $requestMethod === 'GET') {
 }
 
 if ($path === 'notifications' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
     $result = $notificationController->store($input);
     http_response_code($result['code'] ?? 200);
@@ -569,6 +579,7 @@ if ($path === 'notifications' && $requestMethod === 'POST') {
 }
 
 if ($path === 'notifications/unread-count' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     echo json_encode($notificationController->unreadCount());
     exit;
 }
@@ -582,6 +593,7 @@ if (preg_match('/^notifications\/(\d+)$/', $path, $matches) && $requestMethod ==
 }
 
 if (preg_match('/^notifications\/(\d+)\/read$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $result = $notificationController->markRead($matches[1]);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -590,6 +602,7 @@ if (preg_match('/^notifications\/(\d+)\/read$/', $path, $matches) && $requestMet
 }
 
 if ($path === 'notifications/mark-all-read' && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $result = $notificationController->markAllRead();
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -598,6 +611,7 @@ if ($path === 'notifications/mark-all-read' && $requestMethod === 'PUT') {
 }
 
 if (preg_match('/^notifications\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $result = $notificationController->destroy($matches[1]);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -609,11 +623,7 @@ require_once __DIR__ . '/../models/AuditLog.php';
 $auditLogModel = new AuditLog();
 
 if ($path === 'audit-logs' && $requestMethod === 'GET') {
-    if ($user['role'] !== 'admin') {
-        http_response_code(403);
-        echo json_encode(['error' => 'Only administrators can view audit logs']);
-        exit;
-    }
+    $user = AuthMiddleware::requireRole(['admin']);
     $filters = [];
     if (isset($_GET['q'])) $filters['q'] = $_GET['q'];
     if (isset($_GET['action'])) $filters['action'] = $_GET['action'];
@@ -629,11 +639,7 @@ $userController = new UserController();
 $reportController = new ReportController();
 
 if ($path === 'users' && $requestMethod === 'GET') {
-    if ($user['role'] !== 'admin') {
-        http_response_code(403);
-        echo json_encode(['error' => 'Only administrators can access user management']);
-        exit;
-    }
+    $user = AuthMiddleware::requireRole(['admin']);
     $filters = [];
     if (isset($_GET['role'])) $filters['role'] = $_GET['role'];
     if (isset($_GET['is_active'])) $filters['is_active'] = $_GET['is_active'];
@@ -643,11 +649,7 @@ if ($path === 'users' && $requestMethod === 'GET') {
 }
 
 if (preg_match('/^users\/(\d+)$/', $path, $matches) && $requestMethod === 'GET') {
-    if ($user['role'] !== 'admin') {
-        http_response_code(403);
-        echo json_encode(['error' => 'Only administrators can access user management']);
-        exit;
-    }
+    $user = AuthMiddleware::requireRole(['admin']);
     $result = $userController->show($matches[1]);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -656,11 +658,7 @@ if (preg_match('/^users\/(\d+)$/', $path, $matches) && $requestMethod === 'GET')
 }
 
 if ($path === 'users' && $requestMethod === 'POST') {
-    if ($user['role'] !== 'admin') {
-        http_response_code(403);
-        echo json_encode(['error' => 'Only administrators can create users']);
-        exit;
-    }
+    $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
     $result = $userController->store($input, $user);
     http_response_code($result['code'] ?? 200);
@@ -670,11 +668,7 @@ if ($path === 'users' && $requestMethod === 'POST') {
 }
 
 if (preg_match('/^users\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
-    if ($user['role'] !== 'admin') {
-        http_response_code(403);
-        echo json_encode(['error' => 'Only administrators can update users']);
-        exit;
-    }
+    $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
     $result = $userController->update($matches[1], $input, $user);
     http_response_code($result['code'] ?? 200);
@@ -684,11 +678,7 @@ if (preg_match('/^users\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT')
 }
 
 if (preg_match('/^users\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
-    if ($user['role'] !== 'admin') {
-        http_response_code(403);
-        echo json_encode(['error' => 'Only administrators can delete users']);
-        exit;
-    }
+    $user = AuthMiddleware::requireRole(['admin']);
     $result = $userController->destroy($matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -734,22 +724,14 @@ if ($path === 'ai/forecast' && $requestMethod === 'GET') {
 }
 
 if ($path === 'ai/parameters' && $requestMethod === 'GET') {
-    if ($user['role'] !== 'admin') {
-        http_response_code(403);
-        echo json_encode(['error' => 'Only administrators can view AI parameters']);
-        exit;
-    }
+    $user = AuthMiddleware::requireRole(['admin']);
     $module = $_GET['module'] ?? null;
     echo json_encode($aiController->getParameters($module));
     exit;
 }
 
 if (preg_match('/^ai\/parameters\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
-    if ($user['role'] !== 'admin') {
-        http_response_code(403);
-        echo json_encode(['error' => 'Only administrators can update AI parameters']);
-        exit;
-    }
+    $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
     $result = $aiController->updateParameter($matches[1], $input);
     http_response_code($result['code'] ?? 200);

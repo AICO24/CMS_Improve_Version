@@ -12,7 +12,14 @@ class AuthMiddleware {
             exit;
         }
 
-        $decoded = JWTConfig::decode($matches[1]);
+        try {
+            $decoded = JWTConfig::decode($matches[1]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'JWT configuration error']);
+            exit;
+        }
+
         if (!$decoded) {
             http_response_code(401);
             echo json_encode(['error' => 'Invalid or expired token']);

@@ -23,11 +23,19 @@ const buildListItem = (title, subtitle) => {
 };
 
 const getRoleRedirect = (role) => {
-    if (!role) return 'login.html';
+    if (!role) return null;
     const normalized = String(role).toLowerCase();
     if (normalized.includes('admin')) return 'dashboard_admin.html';
     if (normalized.includes('staff')) return 'dashboard_staff.html';
     return null;
+};
+
+const getFrontendBasePath = () => {
+    const currentPath = window.location.pathname || '';
+    if (currentPath.includes('/frontend/')) {
+        return `${window.location.origin}${currentPath.split('/frontend/')[0]}/frontend`;
+    }
+    return `${window.location.origin}/CMS/frontend`;
 };
 
 const setSidebarUser = (user) => {
@@ -68,13 +76,13 @@ const renderNotifications = (notifications) => {
 const loadDashboard = async () => {
     const user = await api.getMe();
     if (!user) {
-        window.location.href = 'login.html';
+        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
         return;
     }
 
     const redirectPage = getRoleRedirect(user.role);
     if (redirectPage) {
-        window.location.href = redirectPage;
+        window.location.href = `${getFrontendBasePath()}/pages/${redirectPage}`;
         return;
     }
 
@@ -124,7 +132,7 @@ const loadDashboard = async () => {
 
 const attachEvents = () => {
     document.getElementById('logoutBtn')?.addEventListener('click', () => api.logout());
-    document.getElementById('notificationIcon')?.addEventListener('click', () => window.location.href = 'notifications.html');
+    document.getElementById('notificationIcon')?.addEventListener('click', () => window.location.href = `${getFrontendBasePath()}/pages/notifications.html`);
 };
 
 document.addEventListener('DOMContentLoaded', async () => {

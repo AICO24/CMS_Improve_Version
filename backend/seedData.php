@@ -4,7 +4,7 @@
  * This script populates the database with sample data for testing
  */
 
-require_once __DIR__ . '/api/config/database.php';
+require_once __DIR__ . '/config/database.php';
 
 try {
     $db = Database::getInstance()->getConnection();

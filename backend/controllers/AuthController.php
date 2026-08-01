@@ -57,7 +57,11 @@ class AuthController {
             'role' => $role,
             'full_name' => $user['full_name'],
         ];
-        $token = JWTConfig::encode($payload);
+        try {
+            $token = JWTConfig::encode($payload);
+        } catch (Exception $e) {
+            return ['error' => 'JWT configuration error', 'code' => 500];
+        }
 
         return [
             'success' => true,
@@ -77,80 +81,47 @@ class AuthController {
         // Support two registration flows: admin/staff via existing register UI (which provides username),
         // and public user registration (provides full_name, email, contact_number, address, password).
         // Decide public-user by explicit role='user' when provided, otherwise fall back to empty username.
-        $isPublicUser = false;
-        if (isset($data['role']) && strtolower($data['role']) === 'user') {
-            $isPublicUser = true;
-        } elseif (empty($data['username'])) {
-            $isPublicUser = true;
+        $requestedRole = isset($data['role']) ? strtolower(trim((string) $data['role'])) : null;
+        if ($requestedRole === 'admin' || $requestedRole === 'staff') {
+            return ['error' => 'Registration with admin or staff role is not allowed', 'code' => 403];
         }
 
-        if ($isPublicUser) {
-            $required = ['full_name', 'email', 'password', 'confirm_password'];
-            foreach ($required as $field) {
-                if (empty($data[$field])) {
-                    return ['error' => "Field '$field' is required", 'code' => 400];
-                }
-            }
-
-            if ($data['password'] !== $data['confirm_password']) {
-                return ['error' => 'Password confirmation does not match', 'code' => 400];
-            }
-
-            if (strlen($data['password']) < 6) {
-                return ['error' => 'Password must be at least 6 characters', 'code' => 400];
-            }
-
-            if ($this->userModel->findByEmail($data['email'])) {
-                return ['error' => 'Email already registered', 'code' => 409];
-            }
-
-            // Ensure user role exists and set role_id
-            $data['role_id'] = $this->userModel->ensureUserRoleExists();
-            // map fields
-            $createData = [
-                'full_name' => $data['full_name'],
-                'email' => $data['email'],
-                'password' => $data['password'],
-                'contact_number' => $data['contact_number'] ?? null,
-                'address' => $data['address'] ?? null,
-                'role_id' => $data['role_id'],
-            ];
-
-            $result = $this->userModel->create($createData);
-            if ($result) {
-                $created = $this->userModel->findByEmail($data['email']);
-                return ['success' => true, 'message' => 'Registration successful', 'user' => $created];
-            }
-            return ['error' => 'Registration failed', 'code' => 500];
-        }
-
-        // Existing admin/staff creation flow (username provided)
-        $required = ['username', 'password', 'full_name', 'email'];
+        // Anonymous registration is limited to normal users only.
+        $required = ['full_name', 'email', 'password', 'confirm_password'];
         foreach ($required as $field) {
             if (empty($data[$field])) {
                 return ['error' => "Field '$field' is required", 'code' => 400];
             }
         }
 
-        if ($this->userModel->findByUsername($data['username'])) {
-            return ['error' => 'Username already taken', 'code' => 409];
+        if ($data['password'] !== $data['confirm_password']) {
+            return ['error' => 'Password confirmation does not match', 'code' => 400];
+        }
+
+        if (strlen($data['password']) < 6) {
+            return ['error' => 'Password must be at least 6 characters', 'code' => 400];
         }
 
         if ($this->userModel->findByEmail($data['email'])) {
             return ['error' => 'Email already registered', 'code' => 409];
         }
 
-        // Resolve role id server-side to avoid front-end id mismatches
-        if (!empty($data['role'])) {
-            $resolved = $this->userModel->getRoleIdByTitle($data['role']);
-            $data['role_id'] = $resolved ?? ($data['role_id'] ?? 2);
-        } else {
-            $data['role_id'] = $data['role_id'] ?? 2;
-        }
-        $result = $this->userModel->create($data);
+        // Ignore any submitted role_id and always assign normal user role for anonymous registration.
+        $data['role_id'] = $this->userModel->ensureUserRoleExists();
+        $createData = [
+            'username' => !empty($data['username']) ? $data['username'] : null,
+            'full_name' => $data['full_name'],
+            'email' => $data['email'],
+            'password' => $data['password'],
+            'contact_number' => $data['contact_number'] ?? null,
+            'address' => $data['address'] ?? null,
+            'role_id' => $data['role_id'],
+        ];
+
+        $result = $this->userModel->create($createData);
         if ($result) {
             $created = $this->userModel->findByEmail($data['email']);
-            return ['success' => true, 'message' => 'User registered successfully', 'user' => $created];
+            return ['success' => true, 'message' => 'Registration successful', 'user' => $created];
         }
         return ['error' => 'Registration failed', 'code' => 500];
     }

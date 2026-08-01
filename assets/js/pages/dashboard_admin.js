@@ -22,7 +22,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function redirectToLogin() {
-        window.location.href = 'login.html';
+        const currentPath = window.location.pathname || '';
+        const prefix = currentPath.includes('/frontend/')
+            ? currentPath.split('/frontend/')[0] + '/frontend'
+            : '/CMS/frontend';
+        window.location.href = `${window.location.origin}${prefix}/auth/login.html`;
     }
 
     const toggleBtn = document.getElementById("toggleSidebar");

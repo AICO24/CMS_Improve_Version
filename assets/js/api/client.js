@@ -1,5 +1,20 @@
-const basePath = window.location.pathname.split('/frontend')[0] || '';
+const basePath = window.location.pathname.includes('/frontend/')
+    ? window.location.pathname.split('/frontend/')[0]
+    : window.location.pathname.split('/frontend')[0] || '';
 const API_BASE = `${window.location.origin}${basePath}/backend/api`;
+
+function getLoginRedirectUrl() {
+    const currentPath = window.location.pathname || '';
+    const prefix = currentPath.includes('/frontend/')
+        ? currentPath.split('/frontend/')[0] + '/frontend'
+        : '';
+
+    if (prefix) {
+        return `${window.location.origin}${prefix}/auth/login.html`;
+    }
+
+    return `${window.location.origin}/auth/login.html`;
+}
 
 class ApiClient {
     constructor() {
@@ -42,7 +57,7 @@ class ApiClient {
                 this.setToken(null);
                 localStorage.removeItem('user_session');
                 localStorage.removeItem('cemetery_session');
-                window.location.href = 'login.html';
+                window.location.href = getLoginRedirectUrl();
             }
             throw new Error(data.error || 'Request failed');
         }
@@ -100,7 +115,7 @@ class ApiClient {
         this.setToken(null);
         localStorage.removeItem('user_session');
         localStorage.removeItem('cemetery_session');
-        window.location.href = 'login.html';
+        window.location.href = getLoginRedirectUrl();
     }
 }
 

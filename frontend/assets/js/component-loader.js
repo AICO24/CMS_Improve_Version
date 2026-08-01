@@ -1,8 +1,11 @@
 (function () {
+  const basePath = window.location.pathname.includes('/frontend/')
+    ? window.location.pathname.split('/frontend/')[0] + '/frontend/'
+    : '/';
   const placeholders = {
-    '#navbar-placeholder': 'src/components/layout/navbar.html',
-    '#main-content': 'src/components/sections/developer-team.html',
-    '#page-footer': 'src/components/layout/footer.html'
+    '#navbar-placeholder': `${basePath}src/components/layout/navbar.html`,
+    '#main-content': `${basePath}src/components/sections/developer-team.html`,
+    '#page-footer': `${basePath}src/components/layout/footer.html`
   };
 
   async function loadPartial(selector, url) {

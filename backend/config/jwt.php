@@ -12,7 +12,12 @@ class JWTConfig {
         }
 
         EnvironmentService::loadEnvironment(dirname(__DIR__) . '/.env');
-        self::$secret = EnvironmentService::get('JWT_SECRET', 'cemetery-super-secret-key-change-this');
+        $secret = EnvironmentService::get('JWT_SECRET');
+        if (!is_string($secret) || trim($secret) === '') {
+            throw new RuntimeException('JWT_SECRET must be configured and must not be empty');
+        }
+
+        self::$secret = $secret;
         self::$expiry = (int) EnvironmentService::get('JWT_EXPIRY', 3600);
     }
 

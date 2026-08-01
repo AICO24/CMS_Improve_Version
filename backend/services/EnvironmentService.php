@@ -8,8 +8,34 @@ class EnvironmentService {
             return;
         }
 
-        $envPath = $path ?: dirname(__DIR__) . '/.env';
-        if (!is_file($envPath)) {
+        $candidatePaths = [];
+
+        if ($path) {
+            $candidatePaths[] = $path;
+        }
+
+        $candidatePaths[] = dirname(__DIR__) . '/.env';
+        $candidatePaths[] = dirname(dirname(__DIR__)) . '/.env';
+
+        if (defined('CMS_ROOT') && CMS_ROOT) {
+            $candidatePaths[] = CMS_ROOT . '/.env';
+        }
+
+        if (defined('BACKEND_ROOT') && BACKEND_ROOT) {
+            $candidatePaths[] = BACKEND_ROOT . '/.env';
+        }
+
+        $candidatePaths = array_values(array_unique(array_filter($candidatePaths)));
+
+        $envPath = null;
+        foreach ($candidatePaths as $candidate) {
+            if (is_file($candidate)) {
+                $envPath = $candidate;
+                break;
+            }
+        }
+
+        if ($envPath === null) {
             self::$loaded = true;
             return;
         }
