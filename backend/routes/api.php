@@ -125,6 +125,7 @@ if (preg_match('/^sections\/(\d+)$/', $path, $matches) && $requestMethod === 'GE
     exit;
 }
 if ($path === 'sections' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
     $result = $lotController->createSection($input);
     http_response_code($result['code'] ?? 200);
@@ -133,6 +134,7 @@ if ($path === 'sections' && $requestMethod === 'POST') {
     exit;
 }
 if (preg_match('/^sections\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
     $result = $lotController->updateSection($matches[1], $input);
     http_response_code($result['code'] ?? 200);
@@ -141,6 +143,7 @@ if (preg_match('/^sections\/(\d+)$/', $path, $matches) && $requestMethod === 'PU
     exit;
 }
 if (preg_match('/^sections\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $result = $lotController->deleteSection($matches[1]);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -158,6 +161,7 @@ if (preg_match('/^blocks\/(\d+)$/', $path, $matches) && $requestMethod === 'GET'
     exit;
 }
 if ($path === 'blocks' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
     $result = $lotController->createBlock($input);
     http_response_code($result['code'] ?? 200);
@@ -166,6 +170,7 @@ if ($path === 'blocks' && $requestMethod === 'POST') {
     exit;
 }
 if (preg_match('/^blocks\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
     $result = $lotController->updateBlock($matches[1], $input);
     http_response_code($result['code'] ?? 200);
@@ -174,6 +179,7 @@ if (preg_match('/^blocks\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT'
     exit;
 }
 if (preg_match('/^blocks\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $result = $lotController->deleteBlock($matches[1]);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -208,6 +214,7 @@ if (preg_match('/^lots\/(\d+)$/', $path, $matches) && $requestMethod === 'GET') 
     exit;
 }
 if ($path === 'lots' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
     $result = $lotController->createLot($input);
     http_response_code($result['code'] ?? 200);
@@ -216,6 +223,7 @@ if ($path === 'lots' && $requestMethod === 'POST') {
     exit;
 }
 if (preg_match('/^lots\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
     $result = $lotController->updateLot($matches[1], $input);
     http_response_code($result['code'] ?? 200);
@@ -224,6 +232,7 @@ if (preg_match('/^lots\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') 
     exit;
 }
 if (preg_match('/^lots\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $result = $lotController->deleteLot($matches[1]);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -334,6 +343,7 @@ if ($path === 'cremations/niches' && $requestMethod === 'GET') {
 }
 
 if ($path === 'cremations/assign' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
     $result = $cremationController->assignNiche($input, $user['user_id']);
     http_response_code($result['code'] ?? 200);
@@ -360,6 +370,7 @@ if (preg_match('/^cremations\/(\d+)$/', $path, $matches) && $requestMethod === '
 }
 
 if ($path === 'cremations' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
     $result = $cremationController->store($input, $user['user_id']);
     http_response_code($result['code'] ?? 200);
@@ -369,6 +380,7 @@ if ($path === 'cremations' && $requestMethod === 'POST') {
 }
 
 if (preg_match('/^cremations\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
     $result = $cremationController->update($matches[1], $input, $user['user_id']);
     http_response_code($result['code'] ?? 200);
@@ -378,6 +390,7 @@ if (preg_match('/^cremations\/(\d+)$/', $path, $matches) && $requestMethod === '
 }
 
 if (preg_match('/^cremations\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
+    $user = AuthMiddleware::requireRole(['admin']);
     $result = $cremationController->destroy($matches[1]);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -411,6 +424,7 @@ if (preg_match('/^relocations\/(\d+)$/', $path, $matches) && $requestMethod === 
 }
 
 if ($path === 'relocations' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
     $result = $relocationController->store($input, $user['user_id']);
     http_response_code($result['code'] ?? 200);
@@ -420,6 +434,7 @@ if ($path === 'relocations' && $requestMethod === 'POST') {
 }
 
 if (preg_match('/^relocations\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
     // If approving, completing, or denying, these are handled below.
     if (isset($matches[1]) && preg_match('/^relocations\/\d+\/(approve|complete|deny)$/', $path) === 0) {
@@ -459,6 +474,7 @@ if (preg_match('/^relocations\/(\d+)\/deny$/', $path, $matches) && $requestMetho
 }
 
 if (preg_match('/^relocations\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
+    $user = AuthMiddleware::requireRole(['admin']);
     $result = $relocationController->destroy($matches[1], $user['user_id']);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -512,15 +528,6 @@ if (preg_match('/^payments\/(\d+)\/verify$/', $path, $matches) && $requestMethod
     $input = readRequestBody();
     $status = $input['verification_status'] ?? null;
     $result = $paymentController->verify($matches[1], $status, $user['user_id']);
-    http_response_code($result['code'] ?? 200);
-    unset($result['code']);
-    echo json_encode($result);
-    exit;
-}
-
-if (preg_match('/^payments\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
-    $input = readRequestBody();
-    $result = $paymentController->update($matches[1], $input, $user['user_id']);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -762,6 +769,7 @@ if (preg_match('/^expiration-records\/(\d+)$/', $path, $matches) && $requestMeth
 }
 
 if ($path === 'expiration-records' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
     $result = $expirationController->store($input);
     http_response_code($result['code'] ?? 200);
@@ -771,6 +779,7 @@ if ($path === 'expiration-records' && $requestMethod === 'POST') {
 }
 
 if (preg_match('/^expiration-records\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
     $result = $expirationController->update($matches[1], $input);
     http_response_code($result['code'] ?? 200);
@@ -780,6 +789,7 @@ if (preg_match('/^expiration-records\/(\d+)$/', $path, $matches) && $requestMeth
 }
 
 if (preg_match('/^expiration-records\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
+    $user = AuthMiddleware::requireRole(['admin']);
     $result = $expirationController->destroy($matches[1]);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -793,6 +803,7 @@ if ($path === 'expiration-records/stats' && $requestMethod === 'GET') {
 }
 
 if ($path === 'expiration-records/generate-notifications' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $days = $_GET['days'] ?? 30;
     echo json_encode($expirationController->generateNotifications($days));
     exit;
@@ -816,6 +827,7 @@ if (preg_match('/^decedents\/(\d+)$/', $path, $matches) && $requestMethod === 'G
     exit;
 }
 if ($path === 'decedents' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
     $result = $decedentController->store($input);
     http_response_code($result['code'] ?? 200);
@@ -824,6 +836,7 @@ if ($path === 'decedents' && $requestMethod === 'POST') {
     exit;
 }
 if (preg_match('/^decedents\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
     $result = $decedentController->update($matches[1], $input);
     http_response_code($result['code'] ?? 200);
@@ -832,6 +845,7 @@ if (preg_match('/^decedents\/(\d+)$/', $path, $matches) && $requestMethod === 'P
     exit;
 }
 if (preg_match('/^decedents\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $result = $decedentController->destroy($matches[1]);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);

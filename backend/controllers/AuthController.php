@@ -21,7 +21,9 @@ class AuthController {
             return ['error' => 'Email/Username and password are required', 'code' => 400];
         }
 
-        $this->userModel->ensureDefaultUsers();
+        if (strtolower((string) EnvironmentService::get('SEED_DEFAULT_USERS', 'false')) === 'true') {
+            $this->userModel->ensureDefaultUsers();
+        }
         // allow login by email or username
         if (filter_var($inputUser, FILTER_VALIDATE_EMAIL)) {
             $user = $this->userModel->findByEmail($inputUser);
