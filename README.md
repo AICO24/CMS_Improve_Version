@@ -3,10 +3,8 @@
 A full-stack PHP web application for cemetery and lot management.
 
 ## Project Structure
-- frontend/: presentation layer with auth, admin, staff, user, and shared pages
-- backend/: PHP API entry points, controllers, models, middleware, and services
-- database/: SQL schema and seed data
-- shared/: reusable helpers and common logic
+- frontend/: presentation layer, with auth/ (login, register) and pages/ (all role-based dashboards and features)
+- backend/: PHP API entry points, controllers, models, middleware, services, and database schema/migrations
 - docs/: architecture and project documentation
 - scripts/: setup and maintenance scripts
 - tests/: automated tests and fixtures

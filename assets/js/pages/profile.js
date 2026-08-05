@@ -1,13 +1,13 @@
 document.addEventListener('DOMContentLoaded', async function() {
     if (!localStorage.getItem('jwt_token')) {
-        window.location.href = 'login.html';
+        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
         return;
     }
 
     try {
         const user = await api.getMe();
         if (!user) {
-            window.location.href = 'login.html';
+            window.location.href = `${getFrontendBasePath()}/auth/login.html`;
             return;
         }
 
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         setText('sidebarUserRole', roleLabel);
     } catch (error) {
         console.error('Failed to load profile', error);
-        window.location.href = 'login.html';
+        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
         return;
     }
 

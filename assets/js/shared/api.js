@@ -1,19 +1,39 @@
+function getFrontendBasePath() {
+    const currentPath = window.location.pathname || '';
+    if (currentPath.includes('/frontend/')) {
+        const prefix = currentPath.split('/frontend/')[0];
+        return `${window.location.origin}${prefix}/frontend`;
+    }
+
+    if (currentPath.includes('/frontend')) {
+        return `${window.location.origin}${currentPath.split('/frontend')[0]}/frontend`;
+    }
+
+    return `${window.location.origin}/CMS/frontend`;
+}
+
 const basePath = window.location.pathname.includes('/frontend/')
     ? window.location.pathname.split('/frontend/')[0]
     : window.location.pathname.split('/frontend')[0] || '';
 const API_BASE = `${window.location.origin}${basePath}/backend/api`;
 
 function getLoginRedirectUrl() {
-    const currentPath = window.location.pathname || '';
-    const prefix = currentPath.includes('/frontend/')
-        ? currentPath.split('/frontend/')[0] + '/frontend'
-        : '';
+    return `${getFrontendBasePath()}/auth/login.html`;
+}
 
-    if (prefix) {
-        return `${window.location.origin}${prefix}/auth/login.html`;
+function getRoleDashboardPath(role) {
+    const basePath = getFrontendBasePath();
+    const roleName = String(role || '').toLowerCase();
+
+    if (roleName === 'admin') {
+        return `${basePath}/pages/dashboard_admin.html`;
     }
 
-    return `${window.location.origin}/auth/login.html`;
+    if (roleName === 'staff') {
+        return `${basePath}/pages/dashboard_staff.html`;
+    }
+
+    return `${basePath}/pages/dashboard_user.html`;
 }
 
 class ApiClient {

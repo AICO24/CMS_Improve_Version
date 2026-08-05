@@ -25,8 +25,8 @@ const buildListItem = (title, subtitle) => {
 const getRoleRedirect = (role) => {
     if (!role) return null;
     const normalized = String(role).toLowerCase();
-    if (normalized.includes('admin')) return 'dashboard_admin.html';
-    if (normalized.includes('staff')) return 'dashboard_staff.html';
+    if (normalized.includes('admin')) return `${getFrontendBasePath()}/pages/dashboard_admin.html`;
+    if (normalized.includes('staff')) return `${getFrontendBasePath()}/pages/dashboard_staff.html`;
     return null;
 };
 
@@ -82,7 +82,7 @@ const loadDashboard = async () => {
 
     const redirectPage = getRoleRedirect(user.role);
     if (redirectPage) {
-        window.location.href = `${getFrontendBasePath()}/pages/${redirectPage}`;
+        window.location.href = redirectPage;
         return;
     }
 
