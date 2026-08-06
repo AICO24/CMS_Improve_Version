@@ -1,0 +1,10 @@
+/*
+  Design System — Foundation: Shadow scale
+  Three neutral elevation levels. Variable definitions only — existing
+  per-component box-shadow declarations are untouched in this batch.
+*/
+:root {
+    --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+    --shadow-2: 0 8px 24px rgba(15, 23, 42, 0.08);
+    --shadow-3: 0 24px 48px rgba(15, 23, 42, 0.2);
+}

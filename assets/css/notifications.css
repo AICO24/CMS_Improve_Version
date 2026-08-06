@@ -14,61 +14,7 @@
     align-items: center;
 }
 
-.hamburger{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    user-select:none;
-}
-
-.hamburger input{
-    display:none;
-}
-
-.hamburger svg{
-
-    width:28px;
-    height:28px;
-
-    transition:transform .6s cubic-bezier(.4,0,.2,1);
-}
-
-.line{
-
-    fill:none;
-
-    stroke:#2b3658;
-
-    stroke-linecap:round;
-    stroke-linejoin:round;
-
-    stroke-width:3;
-
-    transition:
-        stroke-dasharray .6s cubic-bezier(.4,0,.2,1),
-        stroke-dashoffset .6s cubic-bezier(.4,0,.2,1),
-        stroke .3s;
-}
-
-.line-top-bottom{
-    stroke-dasharray:12 63;
-}
-
-.hamburger:hover .line{
-    stroke:#2c5e47;
-}
-
-.hamburger input:checked + svg{
-    transform:rotate(-45deg);
-}
-
-.hamburger input:checked + svg .line-top-bottom{
-
-    stroke-dasharray:20 300;
-
-    stroke-dashoffset:-32.42;
-}
+/* .hamburger and its SVG icon states now come from assets/css/dashboard.css (Batch 6) -- the previous per-page copy had .hamburger input { display: none; }, which made the toggle unreachable by keyboard */
 
 .user-info {
     display: flex;

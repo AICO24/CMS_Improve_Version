@@ -1,0 +1,71 @@
+/*
+  Design System — Component: Modals
+  .modal / .modal-content (relocated from dashboard.css), restyled to
+  Design System tokens. The show/hide mechanism is untouched: pages
+  toggle visibility via direct `style.display` writes from JS, which
+  always take precedence over this stylesheet's `display: none`
+  default — so none of the existing open/close JS needed to change.
+  .modal-header / .modal-body / .modal-footer are new, additive
+  sub-parts for markup that wants explicit sections.
+
+  NOT covered here: page-specific .modal/.modal-content overrides in
+  cremation-management.css, my-records.css, lot-management.css,
+  user-management.css, decedent-records.css. Those still render from
+  their own files — see the Batch 2 report.
+*/
+
+.modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: var(--overlay-scrim);
+    padding: var(--space-5);
+    z-index: 200;
+}
+
+.modal-content {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    width: min(640px, 100%);
+    max-height: 90vh;
+    overflow: auto;
+    box-shadow: var(--shadow-3);
+}
+
+/* --- New sub-parts (additive) --- */
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding-bottom: var(--space-4);
+    margin-bottom: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+    font-family: var(--font-sans);
+    font-size: var(--fs-h4);
+    font-weight: var(--fw-h4);
+    color: var(--color-text);
+}
+
+.modal-body {
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    color: var(--color-neutral-700);
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-3);
+    padding-top: var(--space-4);
+    margin-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+}
+
+/* --- Size modifiers (additive) --- */
+.modal-content.modal--sm { width: min(420px, 100%); }
+.modal-content.modal--md { width: min(560px, 100%); }
+.modal-content.modal--lg { width: min(760px, 100%); }

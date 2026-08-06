@@ -13,7 +13,7 @@ class Database {
     private function __construct() {
         EnvironmentService::loadEnvironment(dirname(__DIR__) . '/.env');
         $this->host = EnvironmentService::get('DB_HOST', '127.0.0.1');
-        $this->port = EnvironmentService::get('DB_PORT', '3306');
+        $this->port = EnvironmentService::get('DB_PORT', '3307');
         $this->dbname = EnvironmentService::get('DB_NAME', 'cemetery_db');
         $this->username = EnvironmentService::get('DB_USER', 'root');
         $this->password = EnvironmentService::get('DB_PASS', '');

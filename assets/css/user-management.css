@@ -171,57 +171,27 @@ Dashboard .user-chip .fas {
     background: #fff;
 }
 
-.btn-secondary,
-.btn-add,
+/* .btn-secondary and .btn-add now come from assets/css/components/buttons.css (Batch 5) */
 .btn-save {
     border: none;
     border-radius: 14px;
     padding: 12px 18px;
     font-weight: 600;
     cursor: pointer;
-}
-
-.btn-secondary {
-    background: #eef3f7;
-    color: #2b3658;
-}
-
-.btn-add {
-    background: #2b3658;
-    color: #fff;
-}
-
-.btn-save {
     background: #7aa77a;
     color: #fff;
     width: 100%;
 }
 
-.table-container {
-    overflow-x: auto;
-    background: #fff;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(34, 77, 102, 0.08);
-}
+/* .table-container now comes from assets/css/components/tables.css (Batch 5) */
 
+/* .data-table base styling now comes from assets/css/components/tables.css (Batch 5); min-width kept as page-specific */
 .data-table {
-    width: 100%;
-    border-collapse: collapse;
     min-width: 900px;
 }
 
-.data-table th,
-.data-table td {
-    padding: 16px 18px;
-    text-align: left;
-    color: #344055;
-}
-
-.data-table th {
-    background: #f7fafc;
-    font-weight: 600;
-    font-size: 0.95rem;
-}
+/* .data-table th/td padding/color now come from assets/css/components/tables.css (Batch 5);
+   this file's own .data-table tr border-bottom rule below is kept as-is */
 
 .data-table tr {
     border-bottom: 1px solid #edf2f7;
@@ -254,22 +224,11 @@ Dashboard .user-chip .fas {
     transform: translateY(-1px);
 }
 
-.modal {
-    position: fixed;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: rgba(18, 38, 63, 0.45);
-    z-index: 100;
-}
-
+/* .modal overlay now comes from assets/css/components/modals.css (Batch 5) — this also fixes a latent
+   z-index tie with the sidebar (both were 100); the canonical modal now sits at 200 */
+/* background/radius/padding/shadow now come from assets/css/components/modals.css (Batch 5); width kept as page-specific sizing */
 .modal-content {
     width: min(640px, 95%);
-    background: #fff;
-    border-radius: 24px;
-    padding: 28px;
-    box-shadow: 0 40px 120px rgba(18, 38, 63, 0.18);
 }
 
 .modal-content h3 {
@@ -284,6 +243,15 @@ Dashboard .user-chip .fas {
     font-size: 1.6rem;
     color: #243736;
     cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+    border-radius: var(--radius-sm);
+}
+
+.close:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
 }
 
 .form-group {
@@ -297,13 +265,7 @@ Dashboard .user-chip .fas {
     color: #344055;
 }
 
-.form-group input,
-.form-group select {
-    border: 1px solid #d9e1e8;
-    border-radius: 14px;
-    padding: 12px 14px;
-    font-size: 0.95rem;
-}
+/* .form-group input/select now come from assets/css/components/forms.css (Batch 5) */
 
 @media (max-width: 980px) {
     .stats-row,

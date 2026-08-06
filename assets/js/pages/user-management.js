@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.querySelectorAll('.admin-only').forEach(el => { el.style.display = 'flex'; el.classList.remove('admin-only'); });
         }
     } catch (error) {
-        window.location.href = 'login.html';
+        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
         return;
     }
 

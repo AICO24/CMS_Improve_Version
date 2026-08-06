@@ -5,7 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register | Cemetery Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/tokens.css">
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/spacing.css">
+    <link rel="stylesheet" href="../../assets/css/shadows.css">
+    <link rel="stylesheet" href="../../assets/css/animations.css">
     <link rel="stylesheet" href="../../assets/css/shared/base.css">
     <link rel="stylesheet" href="../../assets/css/auth/register.css">
 </head>
@@ -44,7 +49,7 @@
                 <p class="sub-text">Complete the form below to create your account</p>
             </div>
 
-            <div id="alert" class="alert"></div>
+            <div id="alert" class="alert" role="alert" aria-live="polite"></div>
 
             <form id="registerForm" action="javascript:void(0);">
                 <!-- Full Name -->
@@ -52,9 +57,9 @@
                     <label for="full_name">Full Name</label>
                     <div class="input-wrapper">
                         <span class="input-icon"><i class="fas fa-user"></i></span>
-                        <input type="text" id="full_name" placeholder="Enter full name" required>
+                        <input type="text" id="full_name" placeholder="Enter full name" required aria-describedby="fullNameError">
                     </div>
-                    <div class="error-message" id="fullNameError"></div>
+                    <div class="error-message" id="fullNameError" role="alert"></div>
                 </div>
 
                 <!-- Email -->
@@ -62,9 +67,9 @@
                     <label for="email">Email Address</label>
                     <div class="input-wrapper">
                         <span class="input-icon"><i class="fas fa-envelope"></i></span>
-                        <input type="email" id="email" placeholder="Enter email address" required>
+                        <input type="email" id="email" placeholder="Enter email address" required aria-describedby="emailError">
                     </div>
-                    <div class="error-message" id="emailError"></div>
+                    <div class="error-message" id="emailError" role="alert"></div>
                 </div>
 
                 <!-- Username (optional for public users) -->
@@ -72,9 +77,9 @@
                     <label for="username">Username (leave blank if registering as User)</label>
                     <div class="input-wrapper">
                         <span class="input-icon"><i class="fas fa-user-circle"></i></span>
-                        <input type="text" id="username" placeholder="Choose a username (optional)" >
+                        <input type="text" id="username" placeholder="Choose a username (optional)" aria-describedby="usernameError">
                     </div>
-                    <div class="error-message" id="usernameError"></div>
+                    <div class="error-message" id="usernameError" role="alert"></div>
                 </div>
 
                 <!-- Role -->
@@ -95,9 +100,9 @@
                     <label for="contact_number">Contact Number</label>
                     <div class="input-wrapper">
                         <span class="input-icon"><i class="fas fa-phone"></i></span>
-                        <input type="text" id="contact_number" placeholder="Enter contact number">
+                        <input type="text" id="contact_number" placeholder="Enter contact number" aria-describedby="contactError">
                     </div>
-                    <div class="error-message" id="contactError"></div>
+                    <div class="error-message" id="contactError" role="alert"></div>
                 </div>
 
                 <!-- Address -->
@@ -105,9 +110,9 @@
                     <label for="address">Address</label>
                     <div class="input-wrapper">
                         <span class="input-icon"><i class="fas fa-map-marker-alt"></i></span>
-                        <input type="text" id="address" placeholder="Enter address">
+                        <input type="text" id="address" placeholder="Enter address" aria-describedby="addressError">
                     </div>
-                    <div class="error-message" id="addressError"></div>
+                    <div class="error-message" id="addressError" role="alert"></div>
                 </div>
 
                 <!-- Password -->
@@ -115,12 +120,12 @@
                     <label for="password">Password</label>
                     <div class="input-wrapper">
                         <span class="input-icon"><i class="fas fa-lock"></i></span>
-                        <input type="password" id="password" placeholder="Create a password" required>
-                        <span class="toggle-password" data-target="password" onclick="togglePassword('password')">
+                        <input type="password" id="password" placeholder="Create a password" required aria-describedby="passwordError">
+                        <button type="button" class="toggle-password" data-target="password" onclick="togglePassword('password')" aria-label="Show password">
                             <i class="fas fa-eye"></i>
-                        </span>
+                        </button>
                     </div>
-                    <div class="error-message" id="passwordError"></div>
+                    <div class="error-message" id="passwordError" role="alert"></div>
                 </div>
 
                 <!-- Confirm Password -->
@@ -128,12 +133,12 @@
                     <label for="confirm_password">Confirm Password</label>
                     <div class="input-wrapper">
                         <span class="input-icon"><i class="fas fa-shield-alt"></i></span>
-                        <input type="password" id="confirm_password" placeholder="Confirm your password" required>
-                        <span class="toggle-password" data-target="confirm_password" onclick="togglePassword('confirm_password')">
+                        <input type="password" id="confirm_password" placeholder="Confirm your password" required aria-describedby="confirmError">
+                        <button type="button" class="toggle-password" data-target="confirm_password" onclick="togglePassword('confirm_password')" aria-label="Show password">
                             <i class="fas fa-eye"></i>
-                        </span>
+                        </button>
                     </div>
-                    <div class="error-message" id="confirmError"></div>
+                    <div class="error-message" id="confirmError" role="alert"></div>
                 </div>
 
                 <button type="submit" class="btn-register">
@@ -157,7 +162,8 @@
     <script>
         function togglePassword(fieldId) {
             const field = document.getElementById(fieldId);
-            const icon = document.querySelector(`.toggle-password[data-target="${fieldId}"] i`);
+            const btn = document.querySelector(`.toggle-password[data-target="${fieldId}"]`);
+            const icon = btn ? btn.querySelector('i') : null;
             if (!field) return;
             if (field.type === 'password') {
                 field.type = 'text';
@@ -165,12 +171,14 @@
                     icon.classList.remove('fa-eye');
                     icon.classList.add('fa-eye-slash');
                 }
+                if (btn) btn.setAttribute('aria-label', 'Hide password');
             } else {
                 field.type = 'password';
                 if (icon) {
                     icon.classList.remove('fa-eye-slash');
                     icon.classList.add('fa-eye');
                 }
+                if (btn) btn.setAttribute('aria-label', 'Show password');
             }
         }
     </script>

@@ -92,61 +92,7 @@
     align-items: center;
 }
 
-.hamburger{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    user-select:none;
-}
-
-.hamburger input{
-    display:none;
-}
-
-.hamburger svg{
-
-    width:28px;
-    height:28px;
-
-    transition:transform .6s cubic-bezier(.4,0,.2,1);
-}
-
-.line{
-
-    fill:none;
-
-    stroke:#2b3658;
-
-    stroke-linecap:round;
-    stroke-linejoin:round;
-
-    stroke-width:3;
-
-    transition:
-        stroke-dasharray .6s cubic-bezier(.4,0,.2,1),
-        stroke-dashoffset .6s cubic-bezier(.4,0,.2,1),
-        stroke .3s;
-}
-
-.line-top-bottom{
-    stroke-dasharray:12 63;
-}
-
-.hamburger:hover .line{
-    stroke:#2c5e47;
-}
-
-.hamburger input:checked + svg{
-    transform:rotate(-45deg);
-}
-
-.hamburger input:checked + svg .line-top-bottom{
-
-    stroke-dasharray:20 300;
-
-    stroke-dashoffset:-32.42;
-}
+/* .hamburger and its SVG icon states now come from assets/css/dashboard.css (Batch 6) -- the previous per-page copy had .hamburger input { display: none; }, which made the toggle unreachable by keyboard */
 
 .user-info {
     display: flex;
@@ -312,68 +258,29 @@
     margin-bottom: 20px;
 }
 
-.btn-add,
-.btn-save,
-.btn-ghost,
-.btn-primary,
-.btn-filter {
+/* .btn-add/.btn-ghost/.btn-primary/.btn-filter now come from assets/css/components/buttons.css (Batch 5) */
+.btn-save {
     border: none;
     border-radius: 14px;
     padding: 12px 18px;
     cursor: pointer;
     font-weight: 600;
-}
-
-.btn-add,
-.btn-primary,
-.btn-filter {
-    background: #2b3658;
-    color: white;
-}
-
-.btn-save {
     background: #7aa77a;
     color: white;
     width: 100%;
     margin-top: 10px;
 }
 
-.btn-ghost {
-    background: transparent;
-    color: #2b3658;
-    border: 1px solid #cbd5e1;
-}
+/* .table-container now comes from assets/css/components/tables.css (Batch 5) */
 
-.table-container {
-    background: #fff;
-    border-radius: 22px;
-    box-shadow: 0 16px 32px rgba(15,23,42,0.05);
-    overflow: hidden;
-}
-
+/* .data-table base styling now comes from assets/css/components/tables.css (Batch 5); min-width kept as page-specific */
 .data-table {
-    width: 100%;
-    border-collapse: collapse;
     min-width: 760px;
 }
 
-.data-table th,
-.data-table td {
-    padding: 16px 18px;
-    text-align: left;
-    border-bottom: 1px solid #eef2f7;
-}
+/* .data-table th/td styling now comes from assets/css/components/tables.css (Batch 5) */
 
-.data-table th {
-    background: #f8fafc;
-    color: #3b4a55;
-    font-size: 0.85rem;
-    font-weight: 700;
-}
-
-.data-table tbody tr:hover {
-    background: #f8fafc;
-}
+/* .data-table tbody tr:hover now comes from assets/css/components/tables.css (Batch 5) */
 
 .action-buttons {
     display: flex;
@@ -399,23 +306,10 @@
     color: #b91c1c;
 }
 
-.modal {
-    position: fixed;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: rgba(15,23,42,0.45);
-    padding: 20px;
-    z-index: 200;
-}
-
+/* .modal overlay now comes from assets/css/components/modals.css (Batch 5) */
+/* background/radius/padding/shadow now come from assets/css/components/modals.css (Batch 5); width kept as page-specific sizing */
 .modal-content {
     width: min(700px, 100%);
-    background: #fff;
-    border-radius: 24px;
-    padding: 24px;
-    box-shadow: 0 24px 48px rgba(15,23,42,0.2);
     position: relative;
 }
 
@@ -432,6 +326,16 @@
     font-size: 1.4rem;
     color: #6b7a73;
     cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+    border-radius: var(--radius-sm);
+}
+
+.close:focus-visible,
+.close-view:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
 }
 
 .form-group {
@@ -446,21 +350,7 @@
     font-weight: 600;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: 12px 14px;
-    border-radius: 14px;
-    border: 1px solid #d6dbe6;
-    background: #f8fafc;
-    font-size: 0.95rem;
-    color: #243736;
-}
-
-.form-group textarea {
-    resize: vertical;
-}
+/* .form-group input/select/textarea now come from assets/css/components/forms.css (Batch 5) */
 
 .detail-row {
     display: flex;

@@ -1,3 +1,20 @@
+function getRoleDashboardPath(role) {
+    const basePath = typeof window.getFrontendBasePath === 'function'
+        ? window.getFrontendBasePath()
+        : `${window.location.origin}/CMS/frontend`;
+    const roleName = String(role || '').toLowerCase();
+
+    if (roleName === 'admin') {
+        return `${basePath}/admin/dashboard.html`;
+    }
+
+    if (roleName === 'staff') {
+        return `${basePath}/staff/dashboard.html`;
+    }
+
+    return `${basePath}/user/dashboard.html`;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('loginForm');
     const alertBox = document.getElementById('alert');
@@ -32,18 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('cemetery_session', JSON.stringify(result.user));
                 alertBox.textContent = 'Login successful! Redirecting...';
                 alertBox.classList.add('show', 'alert-success');
-                // Redirect according to role: admin, staff, user
-                const currentPath = window.location.pathname || '';
-                const baseHref = currentPath.includes('/frontend/')
-                    ? `${window.location.origin}${currentPath.split('/frontend/')[0]}/frontend/pages/`
-                    : `${window.location.origin}/CMS/frontend/pages/`;
-                if (result.user.role === 'admin') {
-                    window.location.href = `${baseHref}dashboard_admin.html`;
-                } else if (result.user.role === 'staff') {
-                    window.location.href = `${baseHref}dashboard_staff.html`;
-                } else {
-                    window.location.href = `${baseHref}dashboard_user.html`;
-                }
+                window.location.href = getRoleDashboardPath(result.user.role);
             } else {
                 alertBox.textContent = result.error || 'Login failed';
                 alertBox.classList.add('show');

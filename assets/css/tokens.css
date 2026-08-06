@@ -1,0 +1,70 @@
+/*
+  Design System — Foundation: Tokens (color + radius)
+  Variable definitions only. Nothing in this file targets an element or
+  class, so loading it introduces no visual change on its own.
+*/
+:root {
+    /* Primary — brand green (base = #2c5e47, already the dominant brand color in the app) */
+    --color-primary-50:  #eaf3ee;
+    --color-primary-100: #cfe4d8;
+    --color-primary-200: #a6cdb6;
+    --color-primary-300: #7aa77a;
+    --color-primary-400: #4f8467;
+    --color-primary-500: #2c5e47;
+    --color-primary-600: #244d3a;
+    --color-primary-700: #1f4538;
+    --color-primary-800: #163229;
+    --color-primary-900: #0f2019;
+
+    /* Neutral — slate scale */
+    --color-neutral-0:   #ffffff;
+    --color-neutral-50:  #f8fafc;
+    --color-neutral-100: #eef3f7;
+    --color-neutral-200: #e2e8f0;
+    --color-neutral-300: #cbd5e1;
+    --color-neutral-400: #94a3b8;
+    --color-neutral-500: #64748b;
+    --color-neutral-600: #475569;
+    --color-neutral-700: #334155;
+    --color-neutral-800: #1f2937;
+    --color-neutral-900: #0f172a;
+    --color-white: #ffffff;
+
+    /* Semantic */
+    --color-success:        #16a34a;
+    --color-success-soft:   #dcfce7;
+    --color-success-strong: #166534;
+
+    --color-warning:        #f59e0b;
+    --color-warning-soft:   #fff4e5;
+    --color-warning-strong: #b45309;
+
+    --color-danger:        #dc2626;
+    --color-danger-soft:   #fee2e2;
+    --color-danger-strong: #b91c1c;
+
+    --color-info:        #2563eb;
+    --color-info-soft:   #dbeafe;
+    --color-info-strong: #1d4ed8;
+
+    /* Background / surface */
+    --color-bg:           #f4f7fa;
+    --color-surface:      #ffffff;
+    --color-surface-soft: #eef3f7;
+    --color-border:       #e2e8f0;
+
+    /* Text */
+    --color-text:       #0f172a;
+    --color-text-muted: #64748b;
+    --color-text-faint: #94a3b8;
+
+    /* Radius */
+    --radius-sm:     6px;
+    --radius-md:     12px;
+    --radius-lg:     20px;
+    --radius-pill:   999px;
+    --radius-avatar: 50%;
+
+    /* Overlay (added in Batch 2 for the modal component) */
+    --overlay-scrim: rgba(15, 23, 42, 0.5);
+}

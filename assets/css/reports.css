@@ -83,61 +83,7 @@
     align-items: center;
 }
 
-.hamburger{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    user-select:none;
-}
-
-.hamburger input{
-    display:none;
-}
-
-.hamburger svg{
-
-    width:28px;
-    height:28px;
-
-    transition:transform .6s cubic-bezier(.4,0,.2,1);
-}
-
-.line{
-
-    fill:none;
-
-    stroke:#2b3658;
-
-    stroke-linecap:round;
-    stroke-linejoin:round;
-
-    stroke-width:3;
-
-    transition:
-        stroke-dasharray .6s cubic-bezier(.4,0,.2,1),
-        stroke-dashoffset .6s cubic-bezier(.4,0,.2,1),
-        stroke .3s;
-}
-
-.line-top-bottom{
-    stroke-dasharray:12 63;
-}
-
-.hamburger:hover .line{
-    stroke:#2c5e47;
-}
-
-.hamburger input:checked + svg{
-    transform:rotate(-45deg);
-}
-
-.hamburger input:checked + svg .line-top-bottom{
-
-    stroke-dasharray:20 300;
-
-    stroke-dashoffset:-32.42;
-}
+/* .hamburger and its SVG icon states now come from assets/css/dashboard.css (Batch 6) -- the previous per-page copy had .hamburger input { display: none; }, which made the toggle unreachable by keyboard */
 
 .user-info {
     display: flex;
@@ -239,15 +185,7 @@
     border: 1px solid #d6dbe6;
 }
 
-.btn-filter {
-    border: none;
-    border-radius: 14px;
-    padding: 12px 18px;
-    background: #2b3658;
-    color: #fff;
-    cursor: pointer;
-    font-weight: 600;
-}
+/* .btn-filter now comes from assets/css/components/buttons.css (Batch 5) */
 
 .card {
     background: #fff;
@@ -261,24 +199,12 @@
     margin-bottom: 18px;
 }
 
+/* .data-table base styling now comes from assets/css/components/tables.css (Batch 5); min-width kept as page-specific */
 .data-table {
-    width: 100%;
-    border-collapse: collapse;
     min-width: 760px;
 }
 
-.data-table th,
-.data-table td {
-    padding: 16px 18px;
-    border-bottom: 1px solid #eef2f7;
-    text-align: left;
-}
-
-.data-table th {
-    background: #f8fafc;
-    color: #3b4a55;
-    font-weight: 700;
-}
+/* .data-table th/td styling now comes from assets/css/components/tables.css (Batch 5) */
 
 .status-badge {
     display: inline-flex;
@@ -304,13 +230,7 @@
     color: #166534;
 }
 
-.table-container {
-    overflow-x: auto;
-}
-
-.table-scroll {
-    overflow-x: auto;
-}
+/* .table-container / .table-scroll now come from assets/css/components/tables.css (Batch 5) */
 
 .muted {
     color: #64748b;

@@ -16,7 +16,7 @@ body {
     align-items: center;
     justify-content: center;
     padding: 1.5rem;
-    background: #0f172a;
+    background: var(--color-neutral-900);
     position: relative;
     overflow: hidden;
 }
@@ -117,7 +117,7 @@ body {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #2c5e47, #7aa77a, #2c5e47);
+    background: linear-gradient(90deg, var(--color-primary-500), var(--color-primary-300), var(--color-primary-500));
     background-size: 200% 100%;
     animation: shimmer 3s linear infinite;
 }
@@ -186,7 +186,7 @@ body {
 }
 
 .logo .sub-text {
-    color: #94a3b8;
+    color: var(--color-text-faint);
     font-size: 0.8rem;
     font-weight: 400;
 }
@@ -207,7 +207,7 @@ body {
 }
 
 .divider i {
-    color: #7aa77a;
+    color: var(--color-primary-300);
     font-size: 0.7rem;
     opacity: 0.6;
 }
@@ -224,7 +224,7 @@ body {
     display: block;
     font-size: 0.8rem;
     font-weight: 600;
-    color: #334155;
+    color: var(--color-neutral-700);
     margin-bottom: 6px;
     letter-spacing: 0.2px;
 }
@@ -242,7 +242,7 @@ body {
 .input-icon {
     position: absolute;
     left: 14px;
-    color: #64748b;
+    color: var(--color-text-muted);
     font-size: 0.9rem;
     pointer-events: none;
     transition: color 0.3s;
@@ -255,7 +255,7 @@ body {
 
 .input-wrapper input:focus ~ .input-icon,
 .input-wrapper select:focus ~ .input-icon {
-    color: #2c5e47;
+    color: var(--color-primary-500);
 }
 
 /* ============================================
@@ -267,9 +267,9 @@ body {
     width: 100%;
     padding: 12px 16px 12px 44px;
     font-size: 0.9rem;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 12px;
-    background: #f8fafc;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-neutral-50);
     font-family: 'Inter', sans-serif;
     transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     outline: none;
@@ -278,14 +278,14 @@ body {
 
 .input-wrapper input:focus,
 .input-wrapper select:focus {
-    border-color: #2c5e47;
-    background: #ffffff;
+    border-color: var(--color-primary-500);
+    background: var(--color-white);
     box-shadow: 0 0 0 4px rgba(44, 94, 71, 0.08), 0 0 0 2px rgba(44, 94, 71, 0.02);
     transform: translateY(-1px);
 }
 
 .input-wrapper input::placeholder {
-    color: #94a3b8;
+    color: var(--color-text-faint);
     font-weight: 400;
     font-size: 0.85rem;
 }
@@ -307,16 +307,25 @@ body {
     position: absolute;
     right: 14px;
     cursor: pointer;
-    color: #94a3b8;
+    color: var(--color-text-faint);
     font-size: 0.9rem;
     transition: all 0.3s;
     z-index: 2;
     padding: 4px;
+    background: none;
+    border: none;
+    font-family: inherit;
+    border-radius: var(--radius-sm);
 }
 
 .toggle-password:hover {
-    color: #2c5e47;
+    color: var(--color-primary-500);
     transform: scale(1.1);
+}
+
+.toggle-password:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
 }
 
 .toggle-password i {
@@ -334,13 +343,13 @@ body {
 
 .btn-register {
     width: 100%;
-    background: linear-gradient(135deg, #2c5e47, #1f4538);
+    background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700));
     color: white;
     border: none;
     padding: 14px;
     font-size: 0.95rem;
     font-weight: 600;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     display: flex;
@@ -356,7 +365,7 @@ body {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, #7aa77a, #2c5e47);
+    background: linear-gradient(135deg, var(--color-primary-300), var(--color-primary-500));
     opacity: 0;
     transition: opacity 0.4s;
 }
@@ -396,6 +405,11 @@ body {
     transform: translateY(0) scale(0.98);
 }
 
+.btn-register:focus-visible {
+    outline: 2px solid var(--color-primary-300);
+    outline-offset: 3px;
+}
+
 /* ============================================
    LOGIN LINK (SAME AS LOGIN)
    ============================================ */
@@ -404,11 +418,11 @@ body {
     text-align: center;
     margin-top: 1.5rem;
     font-size: 0.85rem;
-    color: #64748b;
+    color: var(--color-text-muted);
 }
 
 .login-link a {
-    color: #2c5e47;
+    color: var(--color-primary-500);
     text-decoration: none;
     font-weight: 600;
     transition: all 0.3s;
@@ -422,7 +436,7 @@ body {
     left: 0;
     width: 0;
     height: 1.5px;
-    background: #2c5e47;
+    background: var(--color-primary-500);
     transition: width 0.3s;
 }
 
@@ -431,7 +445,13 @@ body {
 }
 
 .login-link a:hover {
-    color: #1f4538;
+    color: var(--color-primary-700);
+}
+
+.login-link a:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 3px;
+    border-radius: 2px;
 }
 
 /* ============================================
@@ -442,7 +462,7 @@ body {
     text-align: center;
     margin-top: 1.5rem;
     font-size: 0.7rem;
-    color: #94a3b8;
+    color: var(--color-text-faint);
     letter-spacing: 0.3px;
     border-top: 1px solid #f1f5f9;
     padding-top: 1.2rem;
@@ -453,8 +473,8 @@ body {
    ============================================ */
 
 .alert {
-    background: #fee2e2;
-    border-left: 4px solid #dc2626;
+    background: var(--color-danger-soft);
+    border-left: 4px solid var(--color-danger);
     padding: 10px 14px;
     border-radius: 10px;
     margin-bottom: 1.2rem;
@@ -468,9 +488,9 @@ body {
 }
 
 .alert-success {
-    background: #dcfce7;
-    border-left-color: #16a34a;
-    color: #166534;
+    background: var(--color-success-soft);
+    border-left-color: var(--color-success);
+    color: var(--color-success-strong);
 }
 
 @keyframes fadeSlide {
@@ -479,7 +499,7 @@ body {
 }
 
 .error-message {
-    color: #dc2626;
+    color: var(--color-danger);
     font-size: 0.7rem;
     margin-top: 5px;
     margin-left: 4px;

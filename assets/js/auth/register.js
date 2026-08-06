@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.success) {
                 alertBox.textContent = 'Registration successful! Redirecting to login...';
                 alertBox.classList.add('show', 'alert-success');
-                setTimeout(() => window.location.href = 'login.html', 1500);
+                setTimeout(() => window.location.href = `${getFrontendBasePath()}/auth/login.html`, 1500);
             } else {
                 alertBox.textContent = result.error || 'Registration failed';
                 alertBox.classList.add('show');

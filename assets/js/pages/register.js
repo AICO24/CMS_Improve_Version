@@ -72,10 +72,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.success) {
                 alertBox.textContent = 'Registration successful! Redirecting to login...';
                 alertBox.classList.add('show', 'alert-success');
-                const baseHref = window.location.pathname.includes('/frontend/')
-                    ? '../pages/'
-                    : '';
-                setTimeout(() => window.location.href = `${baseHref}login.html`, 1500);
+                const loginPath = typeof window.getFrontendBasePath === 'function'
+                    ? `${window.getFrontendBasePath()}/auth/login.html`
+                    : `${window.location.origin}/CMS/frontend/auth/login.html`;
+                setTimeout(() => window.location.href = loginPath, 1500);
             } else {
                 alertBox.textContent = result.error || 'Registration failed';
                 alertBox.classList.add('show');

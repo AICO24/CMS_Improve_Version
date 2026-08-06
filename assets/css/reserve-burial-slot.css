@@ -140,13 +140,7 @@
     transition: margin-left 220ms ease;
 }
 
-.sidebar.collapsed {
-    transform: translateX(-100%);
-}
-
-.sidebar.collapsed ~ .main-content {
-    margin-left: 0;
-}
+/* .sidebar.collapsed pin/unpin now comes from the shared dashboard.css (Batch 3) */
 
 /* ---------- TOP BAR ---------- */
 .top-bar {
@@ -164,61 +158,7 @@
     align-items: center;
 }
 
-.hamburger{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    user-select:none;
-}
-
-.hamburger input{
-    display:none;
-}
-
-.hamburger svg{
-
-    width:28px;
-    height:28px;
-
-    transition:transform .6s cubic-bezier(.4,0,.2,1);
-}
-
-.line{
-
-    fill:none;
-
-    stroke:#2b3658;
-
-    stroke-linecap:round;
-    stroke-linejoin:round;
-
-    stroke-width:3;
-
-    transition:
-        stroke-dasharray .6s cubic-bezier(.4,0,.2,1),
-        stroke-dashoffset .6s cubic-bezier(.4,0,.2,1),
-        stroke .3s;
-}
-
-.line-top-bottom{
-    stroke-dasharray:12 63;
-}
-
-.hamburger:hover .line{
-    stroke:#2c5e47;
-}
-
-.hamburger input:checked + svg{
-    transform:rotate(-45deg);
-}
-
-.hamburger input:checked + svg .line-top-bottom{
-
-    stroke-dasharray:20 300;
-
-    stroke-dashoffset:-32.42;
-}
+/* .hamburger and its SVG icon states now come from assets/css/dashboard.css (Batch 6) -- the previous per-page copy had .hamburger input { display: none; }, which made the toggle unreachable by keyboard */
 
 .user-info {
     display: flex;
@@ -437,16 +377,7 @@
     color: #2d3e3a;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: 8px 10px;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    font-family: inherit;
-    font-size: 0.9rem;
-}
+/* .form-group input/select/textarea now come from assets/css/components/forms.css (Batch 5) */
 
 input[type="range"] {
     padding: 0;
@@ -544,34 +475,9 @@ input[type="range"] {
 }
 
 /* ---------- RESPONSIVE ---------- */
-@media (max-width: 1024px) {
-    .sidebar {
-        width: 70px;
-    }
-    .brand span,
-    .nav-item span:not(.icon) {
-        display: none;
-    }
-    .main-content {
-        margin-left: 70px;
-    }
-}
+/* Sidebar/rail responsive behavior now comes from the shared dashboard.css (Batch 3) */
 
 @media (max-width: 768px) {
-    .sidebar {
-        width: 260px;
-        transform: translateX(-100%);
-    }
-    .sidebar.collapsed {
-        transform: translateX(0);
-    }
-    .brand span,
-    .nav-item span:not(.icon) {
-        display: inline;
-    }
-    .main-content {
-        margin-left: 0;
-    }
     .steps {
         flex-direction: column;
         gap: 8px;

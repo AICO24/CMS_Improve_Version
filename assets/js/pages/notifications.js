@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     try {
         const user = await api.getMe();
         if (!user) {
-            window.location.href = 'login.html';
+            window.location.href = `${getFrontendBasePath()}/auth/login.html`;
             return;
         }
         document.getElementById('userName').innerText = user.full_name || user.username;
@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('sidebarUserName').innerText = user.full_name || user.username;
         document.getElementById('sidebarUserRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
     } catch (error) {
-        window.location.href = 'login.html';
+        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
         return;
     }
 

@@ -141,6 +141,33 @@ class ApiClient {
 
 const api = new ApiClient();
 
+// Escape closes any open modal (Batch 6 accessibility). Each page already
+// closes its modals via `element.style.display = 'none'` from its own
+// close-button handler; this just triggers the same thing on Escape, so
+// no per-page JS needs to change.
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('.modal').forEach((modal) => {
+        const isOpen = modal.style.display === 'flex' || modal.style.display === 'block';
+        if (isOpen) {
+            modal.style.display = 'none';
+        }
+    });
+});
+
+// Elements marked role="button" (e.g. the notification icon, which is a
+// <div> for layout reasons) don't get native Enter/Space activation the
+// way a real <button> does. This dispatches a click for them so any
+// existing click handler on that element still fires (Batch 6).
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const target = e.target;
+    if (target && target.matches && target.matches('[role="button"]')) {
+        e.preventDefault();
+        target.click();
+    }
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
     const currentPath = window.location.pathname;
     const currentPage = currentPath.split('/').pop();

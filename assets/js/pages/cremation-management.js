@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     } catch (error) {
         console.error('Authentication failed', error);
-        window.location.href = 'login.html';
+        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
         return;
     }
 

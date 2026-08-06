@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
     if (!localStorage.getItem('jwt_token')) {
-        window.location.href = 'login.html';
+        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
         return;
     }
 
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('logoutBtn').addEventListener('click', () => {
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('user_session');
-        window.location.href = 'login.html';
+        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
     });
 
     let currentSection = '';
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!response.ok) {
             if (response.status === 401) {
                 localStorage.removeItem('jwt_token');
-                window.location.href = 'login.html';
+                window.location.href = `${getFrontendBasePath()}/auth/login.html`;
             }
             throw new Error(data.error || 'Request failed');
         }

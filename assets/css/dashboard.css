@@ -1,6 +1,6 @@
 /* Shared dashboard layout and component styles */
 .dashboard-body {
-    background: #f4f7fa;
+    background: var(--color-bg);
     font-family: 'Inter', sans-serif;
     color: #243736;
 }
@@ -13,7 +13,7 @@
 .sidebar {
     width: 260px;
     background: #2b3658;
-    color: #fff;
+    color: var(--color-white);
     position: fixed;
     height: 100vh;
     overflow-y: visible;
@@ -40,7 +40,7 @@
 }
 
 .brand i {
-    background: #fff;
+    background: var(--color-white);
     color: #2b3658;
     padding: 6px;
     border-radius: 8px;
@@ -97,12 +97,17 @@
 .nav-item:hover {
     background: rgba(255,255,255,0.03);
     transform: translateX(4px);
-    color: #fff;
+    color: var(--color-white);
 }
 
 .nav-item.active {
-    background: #7aa77a;
+    background: var(--color-primary-300);
     color: #06321a;
+}
+
+.nav-item:focus-visible {
+    outline: 2px solid var(--color-white);
+    outline-offset: -2px;
 }
 
 .nav-item.admin-only {
@@ -131,7 +136,7 @@
 
 .user-chip i {
     font-size: 1.5rem;
-    color: #7aa77a;
+    color: var(--color-primary-300);
     flex-shrink: 0;
 }
 
@@ -145,7 +150,7 @@
     display: block;
     font-weight: 600;
     font-size: 0.85rem;
-    color: #fff;
+    color: var(--color-white);
 }
 
 .user-chip small {
@@ -158,7 +163,7 @@
     flex: 1;
     min-height: 100vh;
     transition: margin-left 220ms ease;
-    background: #f4f7fa;
+    background: var(--color-bg);
 }
 
 .sidebar.collapsed {
@@ -169,26 +174,8 @@
     margin-left: 0;
 }
 
-@media (max-width: 900px) {
-    .sidebar {
-        transform: translateX(-100%);
-    }
-
-    .sidebar.collapsed {
-        transform: translateX(-100%);
-    }
-
-    .sidebar:not(.collapsed) {
-        transform: translateX(0);
-    }
-
-    .main-content {
-        margin-left: 0;
-    }
-}
-
 .top-bar {
-    background: #fff;
+    background: var(--color-white);
     padding: 12px 20px;
     display: flex;
     justify-content: space-between;
@@ -203,18 +190,70 @@
     align-items: center;
 }
 
+/*
+  Hamburger toggle (Batch 6) — was previously duplicated per-page with
+  `.hamburger input { display: none; }`, which removes the checkbox from
+  the tab order entirely and made this control unreachable by keyboard
+  on every page that had it. Fixed here to be visually hidden but still
+  focusable, and centralized so it isn't re-broken by a future copy-paste.
+*/
 .hamburger {
-    background: transparent;
-    border: 0;
-    font-size: 1.2rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    color: #2b3658;
-    padding: 4px 6px;
-    border-radius: 6px;
+    user-select: none;
+    border-radius: var(--radius-sm);
 }
 
-.hamburger:hover {
-    background: rgba(0,0,0,0.05);
+.hamburger input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    margin: 0;
+    cursor: pointer;
+}
+
+.hamburger input:focus-visible + svg {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+.hamburger svg {
+    width: 28px;
+    height: 28px;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hamburger .line {
+    fill: none;
+    stroke: #2b3658;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 3;
+    transition:
+        stroke-dasharray 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+        stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+        stroke 0.3s;
+}
+
+.hamburger .line-top-bottom {
+    stroke-dasharray: 12 63;
+}
+
+.hamburger:hover .line {
+    stroke: var(--color-primary-500);
+}
+
+.hamburger input:checked + svg {
+    transform: rotate(-45deg);
+}
+
+.hamburger input:checked + svg .line-top-bottom {
+    stroke-dasharray: 20 300;
+    stroke-dashoffset: -32.42;
 }
 
 .user-info {
@@ -228,6 +267,21 @@
     color: #2b3658;
     cursor: pointer;
     position: relative;
+    border-radius: var(--radius-sm);
+}
+
+.notification-icon:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 3px;
+}
+
+/* .logout-btn/.Btn are defined per-page, but the focus-visible ring is
+   centralized here so every page gets it regardless of which file's
+   base button rule is loaded (Batch 6). */
+.logout-btn:focus-visible,
+.Btn:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 3px;
 }
 
 .notification-badge {
@@ -236,7 +290,7 @@
     right: -8px;
     background: #ef4444;
     color: white;
-    border-radius: 50%;
+    border-radius: var(--radius-avatar);
     width: 18px;
     height: 18px;
     display: flex;
@@ -255,11 +309,11 @@
 .profile-avatar {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
+    border-radius: var(--radius-avatar);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #eef3f7;
+    background: var(--color-surface-soft);
     color: #2b3658;
 }
 
@@ -293,7 +347,7 @@
 }
 
 .stat-card {
-    background: #fff;
+    background: var(--color-white);
     border-radius: 18px;
     padding: 20px;
     box-shadow: 0 8px 24px rgba(15,23,42,0.05);
@@ -318,35 +372,12 @@
     font-size: 0.82rem;
 }
 
-.btn,
-.btn-primary,
-.btn-add,
-.btn-filter {
-    border: none;
-    border-radius: 14px;
-    padding: 12px 18px;
-    cursor: pointer;
-    font-weight: 600;
-    background: #2b3658;
-    color: white;
-}
-
-.btn-secondary,
-.btn-ghost {
-    border: 1px solid #cbd5e1;
-    background: transparent;
-    color: #2b3658;
-    border-radius: 14px;
-    padding: 10px 14px;
-}
-
-.card {
-    background: #fff;
-    border-radius: 22px;
-    box-shadow: 0 16px 32px rgba(15,23,42,0.05);
-    padding: 22px;
-    margin-bottom: 24px;
-}
+/*
+  Buttons, cards, and tables have moved to assets/css/components/
+  (buttons.css, cards.css, tables.css) as part of the Batch 2 design
+  system rollout. .card-grid stays here — it's a layout helper, not
+  part of the card component itself.
+*/
 
 .card-grid {
     display: grid;
@@ -354,113 +385,35 @@
     gap: 20px;
 }
 
-.card h4,
-.card-block h4 {
-    margin-bottom: 18px;
-    color: #243736;
-}
-
-.card-block p,
-.muted {
-    color: #64748b;
-}
-
-.table-scroll,
-.table-container {
-    overflow-x: auto;
-}
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 620px;
-}
-
-.data-table th,
-.data-table td {
-    padding: 14px 16px;
-    text-align: left;
-    border-bottom: 1px solid #eef2f7;
-}
-
-.data-table th {
-    background: #f8fafc;
-    color: #3b4a55;
-    font-weight: 700;
-    font-size: 0.9rem;
-}
-
-.data-table tbody tr:hover {
-    background: #f8fafc;
-}
-
 .status-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     padding: 8px 12px;
     font-size: 0.8rem;
     font-weight: 700;
 }
 
 .status-warning {
-    background: #fff4e5;
+    background: var(--color-warning-soft);
     color: #9d6114;
 }
 
 .status-danger {
-    background: #fee2e2;
-    color: #b91c1c;
+    background: var(--color-danger-soft);
+    color: var(--color-danger-strong);
 }
 
 .status-success {
-    background: #dcfce7;
-    color: #166534;
+    background: var(--color-success-soft);
+    color: var(--color-success-strong);
 }
 
-.modal {
-    position: fixed;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: rgba(15,23,42,0.45);
-    padding: 20px;
-    z-index: 200;
-}
-
-.modal-content {
-    background: #fff;
-    border-radius: 20px;
-    padding: 24px;
-    width: min(640px, 100%);
-    max-height: 90vh;
-    overflow: auto;
-    box-shadow: 0 20px 45px rgba(15,23,42,0.08);
-}
-
-.form-group {
-    margin-bottom: 16px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: #334155;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    border: 1px solid #d6dbe6;
-    border-radius: 14px;
-    padding: 12px 14px;
-    color: #243736;
-    background: #fff;
-}
+/*
+  Modals and form fields have moved to assets/css/components/
+  (modals.css, forms.css) as part of the Batch 2 design system rollout.
+*/
 
 .recent-list {
     list-style: none;
@@ -471,25 +424,50 @@
 }
 
 .recent-list li {
-    background: #fff;
+    background: var(--color-white);
     border-radius: 18px;
     padding: 16px;
     box-shadow: 0 8px 24px rgba(15,23,42,0.05);
 }
 
-@media (max-width: 1080px) {
+/*
+  Responsive shell (Batch 3). This is the icon-rail pattern that several
+  page stylesheets had already independently converged on (lot-management,
+  decedent-records, my-records, etc.) — adopted here as the one canonical
+  version so it comes from a single shared file instead of being
+  copy-pasted per page.
+  Desktop (>=1025px): sidebar fixed, full width, labels visible;
+    .collapsed manually pins it away — unchanged from before.
+  Tablet (769-1024px): sidebar narrows to a 70px icon-only rail —
+    always visible, no hamburger interaction needed.
+  Mobile (<=768px): sidebar goes off-canvas at full width; .collapsed
+    reveals it as a drawer, with a dimmed backdrop behind it. The
+    backdrop is visual only (pointer-events: none) — closing the
+    drawer is still via the hamburger, exactly as before, so no JS
+    needed to change.
+*/
+@media (max-width: 1024px) {
     .stats-row,
     .card-grid,
     .activity-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-}
 
-@media (max-width: 760px) {
-    .main-content {
-        margin-left: 0;
+    .sidebar {
+        width: 70px;
     }
 
+    .brand span,
+    .nav-item span:not(.icon) {
+        display: none;
+    }
+
+    .main-content {
+        margin-left: 70px;
+    }
+}
+
+@media (max-width: 768px) {
     .content-area {
         padding: 16px;
     }
@@ -501,8 +479,7 @@
     }
 
     .sidebar {
-        position: fixed;
-        width: 100%;
+        width: 260px;
         transform: translateX(-100%);
     }
 
@@ -510,7 +487,21 @@
         transform: translateX(0);
     }
 
-    .sidebar.collapsed ~ .main-content {
+    .brand span,
+    .nav-item span:not(.icon) {
+        display: inline;
+    }
+
+    .main-content {
         margin-left: 0;
+    }
+
+    .sidebar.collapsed ~ .main-content::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: var(--overlay-scrim);
+        z-index: 90;
+        pointer-events: none;
     }
 }

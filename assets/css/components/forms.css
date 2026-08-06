@@ -1,0 +1,91 @@
+/*
+  Design System — Component: Forms
+  .form-group (relocated from dashboard.css) now applies Design System
+  tokens: radius-sm instead of an ad-hoc 14px, the shared border color,
+  and a visible focus ring. Checkbox/radio rules are new — no existing
+  page currently has a checkbox or radio inside a .form-group, so this
+  is purely additive groundwork, not a change to anything rendered today.
+
+  NOT covered here: page-specific .form-group overrides in
+  cremation-management.css, burial-scheduling.css, my-records.css,
+  lot-management.css, user-management.css, decedent-records.css,
+  reserve-burial-slot.css. Those still render from their own files —
+  see the Batch 2 report.
+*/
+
+.form-group {
+    margin-bottom: var(--space-4);
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: var(--space-2);
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-body-sm);
+    color: var(--color-neutral-700);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    height: 40px;
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    color: var(--color-text);
+    background: var(--color-white);
+    transition: border-color var(--duration-base) var(--easing-standard),
+                box-shadow var(--duration-base) var(--easing-standard);
+}
+
+.form-group textarea {
+    height: auto;
+    min-height: 96px;
+    padding: var(--space-3);
+    resize: vertical;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px rgba(44, 94, 71, 0.15);
+}
+
+.form-group input:disabled,
+.form-group select:disabled,
+.form-group textarea:disabled {
+    background: var(--color-neutral-50);
+    color: var(--color-neutral-400);
+    cursor: not-allowed;
+}
+
+.form-group .help {
+    margin-top: var(--space-2);
+    font-size: var(--fs-caption);
+    color: var(--color-text-muted);
+}
+
+.form-group.is-error input,
+.form-group.is-error select,
+.form-group.is-error textarea {
+    border-color: var(--color-danger);
+}
+
+.form-group.is-error .help {
+    color: var(--color-danger-strong);
+}
+
+/* --- Checkbox / radio (additive) --- */
+.form-group input[type="checkbox"],
+.form-group input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    accent-color: var(--color-primary-500);
+    cursor: pointer;
+}

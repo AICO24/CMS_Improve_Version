@@ -5,7 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cemetery Management System | Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/tokens.css">
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/spacing.css">
+    <link rel="stylesheet" href="../../assets/css/shadows.css">
+    <link rel="stylesheet" href="../../assets/css/animations.css">
     <link rel="stylesheet" href="../../assets/css/shared/base.css">
     <link rel="stylesheet" href="../../assets/css/auth/login.css">
     <script src="https://cdn.lordicon.com/lordicon.js"></script>
@@ -41,7 +46,7 @@
                 <p class="sub-text">Sign in to access the system</p>
             </div>
 
-            <div id="alert" class="alert"></div>
+            <div id="alert" class="alert" role="alert" aria-live="polite"></div>
 
             <form id="loginForm" action="javascript:void(0);">
                 <!-- Username -->
@@ -49,9 +54,9 @@
                     <label for="username">Username</label>
                     <div class="input-wrapper">
                         <span class="input-icon"><i class="fas fa-user"></i></span>
-                        <input type="text" id="username" placeholder="Enter your username or email" autocomplete="username" required>
+                        <input type="text" id="username" placeholder="Enter your username or email" autocomplete="username" required aria-describedby="usernameError">
                     </div>
-                    <div class="error-message" id="usernameError"></div>
+                    <div class="error-message" id="usernameError" role="alert"></div>
                 </div>
 
                 <!-- Password -->
@@ -59,12 +64,12 @@
                     <label for="password">Password</label>
                     <div class="input-wrapper">
                         <span class="input-icon"><i class="fas fa-lock"></i></span>
-                        <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" required>
-                        <span class="toggle-password" data-target="password" onclick="togglePassword('password')">
+                        <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" required aria-describedby="passwordError">
+                        <button type="button" class="toggle-password" data-target="password" onclick="togglePassword('password')" aria-label="Show password">
                             <i class="fas fa-eye"></i>
-                        </span>
+                        </button>
                     </div>
-                    <div class="error-message" id="passwordError"></div>
+                    <div class="error-message" id="passwordError" role="alert"></div>
                 </div>
 
                 <!-- Role -->
@@ -110,7 +115,8 @@
     <script>
         function togglePassword(fieldId) {
             const field = document.getElementById(fieldId);
-            const icon = document.querySelector(`.toggle-password[data-target="${fieldId}"] i`);
+            const btn = document.querySelector(`.toggle-password[data-target="${fieldId}"]`);
+            const icon = btn ? btn.querySelector('i') : null;
             if (!field) return;
             if (field.type === 'password') {
                 field.type = 'text';
@@ -118,12 +124,14 @@
                     icon.classList.remove('fa-eye');
                     icon.classList.add('fa-eye-slash');
                 }
+                if (btn) btn.setAttribute('aria-label', 'Hide password');
             } else {
                 field.type = 'password';
                 if (icon) {
                     icon.classList.remove('fa-eye-slash');
                     icon.classList.add('fa-eye');
                 }
+                if (btn) btn.setAttribute('aria-label', 'Show password');
             }
         }
     </script>

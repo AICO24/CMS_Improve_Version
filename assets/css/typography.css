@@ -1,0 +1,30 @@
+/*
+  Design System — Foundation: Typography tokens
+  Variable definitions only — no element selectors. Existing heading/body
+  rules in base.css and page stylesheets are left as-is in this batch;
+  these tokens are available for components to adopt incrementally.
+*/
+:root {
+    --font-sans: 'Inter', sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+    --fs-h1: 32px;      --lh-h1: 40px;      --fw-h1: 700;
+    --fs-h2: 26px;      --lh-h2: 34px;      --fw-h2: 700;
+    --fs-h3: 20px;      --lh-h3: 28px;      --fw-h3: 700;
+    --fs-h4: 17px;      --lh-h4: 24px;      --fw-h4: 600;
+    --fs-h5: 15px;      --lh-h5: 22px;      --fw-h5: 600;
+    --fs-h6: 13px;      --lh-h6: 18px;      --fw-h6: 600;
+    --fs-body-lg: 16px; --lh-body-lg: 26px;
+    --fs-body: 14px;    --lh-body: 22px;
+    --fs-body-sm: 13px; --lh-body-sm: 20px;
+    --fs-caption: 12px; --lh-caption: 16px; --fw-caption: 500;
+
+    --fw-regular:  400;
+    --fw-medium:   500;
+    --fw-semibold: 600;
+    --fw-bold:     700;
+
+    --leading-tight:   1.25;
+    --leading-normal:  1.5;
+    --leading-relaxed: 1.6;
+}

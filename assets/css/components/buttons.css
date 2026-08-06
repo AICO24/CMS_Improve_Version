@@ -1,0 +1,183 @@
+/*
+  Design System — Component: Buttons
+  Canonical .btn system (BEM modifiers), plus the legacy flat class
+  names already shared across pages via dashboard.css — .btn-primary,
+  .btn-add, .btn-filter, .btn-secondary, .btn-ghost — aliased to the
+  same rules so existing markup needs no changes.
+
+  NOT covered here: page-specific button classes defined inside
+  individual page stylesheets (.btn-edit, .btn-save, .btn-approve,
+  .btn-delete-row, etc.). Those still render from their own files.
+  See the Batch 2 report for the full list.
+*/
+
+.btn,
+.btn-primary,
+.btn-add,
+.btn-filter,
+.btn--primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    height: 40px;
+    padding: 0 var(--space-5);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    font-family: var(--font-sans);
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-body);
+    line-height: 1;
+    cursor: pointer;
+    background: var(--color-primary-500);
+    color: var(--color-white);
+    transition: background var(--duration-base) var(--easing-standard),
+                border-color var(--duration-base) var(--easing-standard),
+                transform var(--duration-base) var(--easing-standard);
+}
+
+.btn:hover,
+.btn-primary:hover,
+.btn-add:hover,
+.btn-filter:hover,
+.btn--primary:hover {
+    background: var(--color-primary-600);
+}
+
+.btn:active,
+.btn-primary:active,
+.btn-add:active,
+.btn-filter:active,
+.btn--primary:active {
+    background: var(--color-primary-700);
+}
+
+.btn:focus-visible,
+.btn-primary:focus-visible,
+.btn-add:focus-visible,
+.btn-filter:focus-visible,
+.btn--primary:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+.btn:disabled,
+.btn-primary:disabled,
+.btn-add:disabled,
+.btn-filter:disabled,
+.btn--primary:disabled {
+    background: var(--color-neutral-100);
+    color: var(--color-neutral-400);
+    border-color: var(--color-neutral-200);
+    cursor: not-allowed;
+}
+
+/* --- Secondary / Ghost (legacy: .btn-secondary, .btn-ghost) --- */
+.btn--secondary,
+.btn-secondary,
+.btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    height: 40px;
+    padding: 0 var(--space-4);
+    border: 1px solid var(--color-neutral-300);
+    border-radius: var(--radius-md);
+    font-family: var(--font-sans);
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-body);
+    line-height: 1;
+    cursor: pointer;
+    background: transparent;
+    color: #2b3658;
+    transition: background var(--duration-base) var(--easing-standard);
+}
+
+.btn--secondary:hover,
+.btn-secondary:hover,
+.btn-ghost:hover {
+    background: var(--color-neutral-100);
+}
+
+.btn--secondary:disabled,
+.btn-secondary:disabled,
+.btn-ghost:disabled {
+    color: var(--color-neutral-300);
+    border-color: var(--color-neutral-200);
+    cursor: not-allowed;
+    background: transparent;
+}
+
+/* --- New variants (additive — not used by existing markup yet) --- */
+.btn--success {
+    background: var(--color-success);
+    color: var(--color-white);
+    border-color: transparent;
+}
+.btn--success:hover { background: #128a3e; }
+.btn--success:active { background: #0f7735; }
+
+.btn--danger {
+    background: var(--color-danger);
+    color: var(--color-white);
+    border-color: transparent;
+}
+.btn--danger:hover { background: var(--color-danger-strong); }
+.btn--danger:active { background: #991b1b; }
+
+.btn--outline {
+    background: transparent;
+    color: var(--color-primary-600);
+    border: 1px solid var(--color-primary-500);
+}
+.btn--outline:hover { background: var(--color-primary-50); }
+
+.btn--ghost {
+    background: transparent;
+    color: var(--color-neutral-700);
+    border-color: transparent;
+}
+.btn--ghost:hover { background: var(--color-neutral-100); }
+
+/* --- Icon-only button --- */
+.btn--icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--color-neutral-600);
+    cursor: pointer;
+    transition: background var(--duration-base) var(--easing-standard),
+                color var(--duration-base) var(--easing-standard);
+}
+.btn--icon:hover {
+    background: var(--color-neutral-100);
+    color: var(--color-primary-600);
+}
+
+/* --- Sizes (opt-in modifiers, apply alongside a variant class) --- */
+.btn--sm {
+    height: 32px;
+    padding: 0 var(--space-3);
+    font-size: var(--fs-body-sm);
+}
+.btn--sm.btn--icon { width: 32px; height: 32px; }
+
+.btn--md {
+    height: 40px;
+    padding: 0 var(--space-5);
+    font-size: var(--fs-body);
+}
+
+.btn--lg {
+    height: 48px;
+    padding: 0 var(--space-6);
+    font-size: 15.5px;
+}
+.btn--lg.btn--icon { width: 48px; height: 48px; }

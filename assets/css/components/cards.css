@@ -1,0 +1,60 @@
+/*
+  Design System — Component: Cards
+  Canonical .card (relocated from dashboard.css, now token-driven).
+  .card-header / .card-body / .card-footer are new, additive sub-parts
+  for markup that wants explicit sections — existing `<div class="card">`
+  markup works unchanged without adopting them.
+*/
+
+.card {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+}
+
+.card--interactive:hover {
+    box-shadow: var(--shadow-2);
+}
+
+.card h4,
+.card-block h4 {
+    margin-bottom: 18px;
+    color: #243736;
+}
+
+.card-block p,
+.muted {
+    color: var(--color-text-muted);
+}
+
+/* --- New sub-parts (additive) --- */
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding-bottom: var(--space-4);
+    margin-bottom: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+    font-family: var(--font-sans);
+    font-size: var(--fs-h4);
+    font-weight: var(--fw-h4);
+    color: var(--color-text);
+}
+
+.card-body {
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    color: var(--color-neutral-700);
+}
+
+.card-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-3);
+    padding-top: var(--space-4);
+    margin-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+}

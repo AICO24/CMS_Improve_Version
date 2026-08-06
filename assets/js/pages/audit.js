@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     try {
         const user = await api.getMe();
         if (!user || user.role !== 'admin') {
-            window.location.href = 'dashboard_admin.html';
+            window.location.href = `${getFrontendBasePath()}/admin/dashboard.html`;
             return;
         }
         document.getElementById('userName').innerText = user.full_name || user.username;
@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('sidebarUserRole').innerText = 'Administrator';
         document.querySelectorAll('.admin-only').forEach(el => { el.style.display = 'flex'; el.classList.remove('admin-only'); });
     } catch (error) {
-        window.location.href = 'login.html';
+        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
         return;
     }
 

@@ -8,11 +8,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('sidebarUserRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
         if (user.role !== 'admin') {
             alert('Administrator access is required to view this page.');
-            window.location.href = 'dashboard_staff.html';
+            window.location.href = `${getFrontendBasePath()}/staff/dashboard.html`;
             return;
         }
     } catch (error) {
-        window.location.href = 'login.html';
+        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
         return;
     }
 

@@ -1,12 +1,12 @@
 document.addEventListener('DOMContentLoaded', async function() {
     if (!localStorage.getItem('jwt_token')) {
-        window.location.href = 'login.html';
+        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
         return;
     }
 
     const session = await loadSession();
     if (!session) {
-        window.location.href = 'login.html';
+        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
         return;
     }
 
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('cemetery_session');
         localStorage.removeItem('user_session');
-        window.location.href = 'login.html';
+        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
     });
 
     const toggleBtn = document.getElementById('toggleSidebar');
