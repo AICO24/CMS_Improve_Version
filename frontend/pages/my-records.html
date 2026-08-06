@@ -105,6 +105,7 @@
                                 id="searchInput"
                                 class="search_input"
                                 placeholder="Search by name, lot number, or record ID..."
+                                aria-label="Search by name, lot number, or record ID"
                             >
 
                             <div class="iconContainer">
@@ -195,7 +196,7 @@
             <button type="button" class="close-view" aria-label="Close">&times;</button>
             <h3 id="viewModalTitle">Decedent Record Details</h3>
             <div id="viewDetails"></div>
-            <button class="btn-edit">
+            <button class="btn-edit" id="editFromView">
                 <span class="edit-text">Edit Record</span>
 
                 <span class="edit-icon">

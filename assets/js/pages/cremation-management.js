@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         gridContainer.innerHTML = niches.map(niche => `
-            <div class="niche-card" data-id="${niche.cremation_id || niche.niche_number}">
+            <div class="niche-card" data-id="${niche.cremation_id || niche.niche_number}" tabindex="0" role="button" aria-label="View niche ${niche.niche_number}">
                 <div class="niche-number">${niche.niche_number}</div>
                 <div class="niche-location">${niche.columbarium || 'N/A'} | Level ${niche.level || 1}</div>
                 <div class="niche-status status-${niche.status}">${niche.status === 'occupied' ? 'Occupied' : 'Available'}</div>
@@ -68,11 +68,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         `).join('');
 
         gridContainer.querySelectorAll('.niche-card').forEach(card => {
-            card.addEventListener('click', () => {
+            const openCard = () => {
                 const id = card.dataset.id;
                 const niche = niches.find(n => (n.cremation_id || n.niche_number).toString() === id.toString());
                 if (niche) {
                     showViewModal(niche);
+                }
+            };
+            card.addEventListener('click', openCard);
+            card.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openCard();
                 }
             });
         });

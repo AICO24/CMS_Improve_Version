@@ -87,8 +87,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <td>${user.username}</td>
                 <td>${user.full_name}</td>
                 <td>${user.email}</td>
-                <td>${user.role_title || user.role || 'Staff'}</td>
-                <td>${user.is_active ? 'Active' : 'Inactive'}</td>
+                <td><span class="status-badge ${(user.role_title || user.role || '').toLowerCase() === 'admin' ? 'status-info' : 'status-neutral'}">${user.role_title || user.role || 'Staff'}</span></td>
+                <td><span class="status-badge ${user.is_active ? 'status-success' : 'status-danger'}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
                 <td>${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</td>
                 <td class="action-buttons">
                     <button class="btn-view" title="Edit"><i class="fas fa-edit"></i></button>

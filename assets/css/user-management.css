@@ -105,13 +105,11 @@
     align-items: center;
 }
 
-Dashboard .user-chip .fas {
-    font-size: 22px;
-}
-
 .content-area {
     padding: 24px;
 }
+
+/* .logout-btn/.Btn (+ .sign/.text sliding animation) now come from assets/css/dashboard.css (Batch 10; previously duplicated here in Batch 8) */
 
 .stats-row {
     display: grid;
@@ -178,9 +176,19 @@ Dashboard .user-chip .fas {
     padding: 12px 18px;
     font-weight: 600;
     cursor: pointer;
-    background: #7aa77a;
+    background: var(--color-primary-300);
     color: #fff;
     width: 100%;
+    transition: background var(--duration-base) var(--easing-standard);
+}
+
+.btn-save:hover {
+    background: var(--color-primary-400);
+}
+
+.btn-save:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
 }
 
 /* .table-container now comes from assets/css/components/tables.css (Batch 5) */
@@ -222,6 +230,11 @@ Dashboard .user-chip .fas {
 .action-buttons button:hover {
     background: #eef3f7;
     transform: translateY(-1px);
+}
+
+.action-buttons button:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
 }
 
 /* .modal overlay now comes from assets/css/components/modals.css (Batch 5) — this also fixes a latent

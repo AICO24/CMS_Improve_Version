@@ -221,86 +221,7 @@
 }
 
 
-/* Logout button styles */
-.logout-btn,
-.Btn {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 45px;
-    height: 45px;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.199);
-    background-color: white;
-    padding: 0;
-}
-
-.sign {
-    width: 100%;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.sign svg,
-.sign i {
-    width: 17px;
-}
-
-.sign svg path,
-.sign i {
-    color: black;
-}
-
-.text {
-    position: absolute;
-    right: 0%;
-    width: 0%;
-    opacity: 0;
-    color: white;
-    font-size: 1.2em;
-    font-weight: 600;
-    white-space: nowrap;
-    transition: all 0.3s ease;
-}
-
-.Btn:hover,
-.logout-btn:hover {
-    background-color: black;
-    width: 125px;
-    border-radius: 40px;
-}
-
-.Btn:hover .sign,
-.logout-btn:hover .sign {
-    width: 30%;
-    padding-left: 20px;
-}
-
-.Btn:hover .sign svg path,
-.logout-btn:hover .sign svg path,
-.Btn:hover .sign i,
-.logout-btn:hover .sign i {
-    color: white;
-}
-
-.Btn:hover .text,
-.logout-btn:hover .text {
-    opacity: 1;
-    width: 70%;
-    padding-right: 10px;
-}
-
-.Btn:active,
-.logout-btn:active {
-    transform: translate(2px, 2px);
-}
+/* .logout-btn/.Btn (+ .sign/.text sliding animation) now come from assets/css/dashboard.css (Batch 10) */
 
 .content-area {
     padding: 20px;
@@ -310,29 +231,32 @@
 .wizard-container {
     max-width: 900px;
     margin: 0 auto;
-    background: white;
-    border-radius: 24px;
+    background: var(--color-white);
+    border-radius: var(--radius-lg);
     padding: 1.5rem;
+    box-shadow: var(--shadow-2);
 }
 
 .steps {
     display: flex;
     justify-content: space-between;
     margin-bottom: 1.5rem;
-    border-bottom: 2px solid #e2e8f0;
+    border-bottom: 2px solid var(--color-border);
     padding-bottom: 0.8rem;
 }
 
 .step {
     flex: 1;
     text-align: center;
-    color: #94a3b8;
+    color: var(--color-neutral-400);
     font-weight: 600;
     cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: color var(--duration-base) var(--easing-standard);
 }
 
 .step.active {
-    color: #2c5e47;
+    color: var(--color-primary-500);
 }
 
 .step-num {
@@ -340,15 +264,17 @@
     width: 28px;
     height: 28px;
     line-height: 28px;
-    border-radius: 50%;
-    background: #e2e8f0;
-    color: #64748b;
+    border-radius: var(--radius-avatar);
+    background: var(--color-neutral-200);
+    color: var(--color-neutral-500);
     margin-right: 6px;
+    transition: background var(--duration-base) var(--easing-standard),
+                color var(--duration-base) var(--easing-standard);
 }
 
 .step.active .step-num {
-    background: #2c5e47;
-    color: white;
+    background: var(--color-primary-500);
+    color: var(--color-white);
 }
 
 .step-content {
@@ -381,6 +307,7 @@
 
 input[type="range"] {
     padding: 0;
+    accent-color: var(--color-primary-500);
 }
 
 .form-actions {
@@ -394,21 +321,38 @@ input[type="range"] {
 .btn-back,
 .btn-confirm {
     padding: 8px 20px;
-    border-radius: 40px;
+    border-radius: var(--radius-pill);
     border: none;
     cursor: pointer;
     font-weight: 600;
+    transition: background var(--duration-base) var(--easing-standard);
 }
 
 .btn-next,
 .btn-confirm {
-    background: #2c5e47;
-    color: white;
+    background: var(--color-primary-500);
+    color: var(--color-white);
+}
+
+.btn-next:hover,
+.btn-confirm:hover {
+    background: var(--color-primary-600);
 }
 
 .btn-back {
-    background: #e2e8f0;
-    color: #334155;
+    background: var(--color-neutral-200);
+    color: var(--color-neutral-700);
+}
+
+.btn-back:hover {
+    background: var(--color-neutral-300);
+}
+
+.btn-next:focus-visible,
+.btn-back:focus-visible,
+.btn-confirm:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
 }
 
 .recommendations-grid {
@@ -419,21 +363,28 @@ input[type="range"] {
 
     .recommendation-summary {
         margin-bottom: 1rem;
-        color: #475569;
+        color: var(--color-neutral-600);
         font-size: 0.95rem;
         line-height: 1.6;
     }
 
     .recommendation-card {
         background: #f9fbf9;
-        border: 1px solid #e2e8f0;
-        border-radius: 20px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
         padding: 12px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
         gap: 10px;
+        transition: box-shadow var(--duration-base) var(--easing-standard),
+                    border-color var(--duration-base) var(--easing-standard);
+    }
+
+    .recommendation-card:hover {
+        border-color: var(--color-primary-300);
+        box-shadow: var(--shadow-1);
     }
 
     .recommendation-card strong {
@@ -442,7 +393,7 @@ input[type="range"] {
     }
 
     .recommendation-card .lot-type-tag {
-        color: #334155;
+        color: var(--color-neutral-700);
         font-size: 0.9rem;
         display: inline-block;
         margin-top: 4px;
@@ -456,22 +407,60 @@ input[type="range"] {
     }
 
     .recommendation-card .score {
-        background: #dcfce7;
+        background: var(--color-success-soft);
         padding: 2px 8px;
-        border-radius: 20px;
+        border-radius: var(--radius-pill);
         font-size: 0.75rem;
         font-weight: 600;
-        color: #166534;
+        color: var(--color-success-strong);
     }
 
     .select-lot-btn {
-        background: #2c5e47;
-        color: white;
+        background: var(--color-primary-500);
+        color: var(--color-white);
         border: none;
         padding: 8px 16px;
-    border-radius: 20px;
-    padding: 1rem;
-    margin-top: 1rem;
+        border-radius: var(--radius-pill);
+        font-weight: 600;
+        cursor: pointer;
+        transition: background var(--duration-base) var(--easing-standard);
+    }
+
+    .select-lot-btn:hover {
+        background: var(--color-primary-600);
+    }
+
+    .select-lot-btn:focus-visible {
+        outline: 2px solid var(--color-primary-500);
+        outline-offset: 2px;
+    }
+
+/* ---------- CONFIRMATION STEP ---------- */
+.confirmation-box {
+    background: var(--color-surface-soft);
+    border-radius: var(--radius-md);
+    padding: var(--space-5);
+}
+
+.confirmation-box p {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: 8px 0;
+    margin: 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: var(--fs-body-sm);
+    color: var(--color-text);
+}
+
+.confirmation-box p:last-child {
+    border-bottom: none;
+}
+
+.confirmation-box p.muted {
+    justify-content: flex-start;
+    color: var(--color-text-muted);
+    padding-top: var(--space-3);
 }
 
 /* ---------- RESPONSIVE ---------- */

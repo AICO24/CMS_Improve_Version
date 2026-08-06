@@ -275,9 +275,96 @@
     outline-offset: 3px;
 }
 
-/* .logout-btn/.Btn are defined per-page, but the focus-visible ring is
-   centralized here so every page gets it regardless of which file's
-   base button rule is loaded (Batch 6). */
+/*
+  Logout button (.Btn/.logout-btn + .sign/.text sliding-reveal animation).
+  This exact block used to be copy-pasted verbatim into ~14 page CSS
+  files; centralized here (Batch 10) since every page needs it and none
+  of them differed. .sign/.text are intentionally bare (not scoped to
+  .logout-btn) because a couple of pages reuse the same sliding-label
+  animation for other icon buttons (e.g. the save button's .text) via a
+  more specific descendant selector in their own page CSS, which still
+  wins for the properties it redeclares.
+*/
+.logout-btn,
+.Btn {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 45px;
+    height: 45px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.199);
+    background-color: white;
+    padding: 0;
+}
+
+.sign {
+    width: 100%;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sign svg,
+.sign i {
+    width: 17px;
+}
+
+.sign svg path,
+.sign i {
+    color: black;
+}
+
+.text {
+    position: absolute;
+    right: 0%;
+    width: 0%;
+    opacity: 0;
+    color: white;
+    font-size: 1.2em;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+}
+
+.Btn:hover,
+.logout-btn:hover {
+    background-color: black;
+    width: 125px;
+    border-radius: 40px;
+}
+
+.Btn:hover .sign,
+.logout-btn:hover .sign {
+    width: 30%;
+    padding-left: 20px;
+}
+
+.Btn:hover .sign svg path,
+.logout-btn:hover .sign svg path,
+.Btn:hover .sign i,
+.logout-btn:hover .sign i {
+    color: white;
+}
+
+.Btn:hover .text,
+.logout-btn:hover .text {
+    opacity: 1;
+    width: 70%;
+    padding-right: 10px;
+}
+
+.Btn:active,
+.logout-btn:active {
+    transform: translate(2px, 2px);
+}
+
 .logout-btn:focus-visible,
 .Btn:focus-visible {
     outline: 2px solid var(--color-primary-500);
@@ -408,6 +495,16 @@
 .status-success {
     background: var(--color-success-soft);
     color: var(--color-success-strong);
+}
+
+.status-info {
+    background: var(--color-info-soft);
+    color: var(--color-info-strong);
+}
+
+.status-neutral {
+    background: var(--color-neutral-100);
+    color: var(--color-neutral-700);
 }
 
 /*

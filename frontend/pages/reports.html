@@ -99,17 +99,17 @@
             </div>
 
             <div class="content-area">
-                <div class="report-tabs" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div class="report-tabs">
                     <div>
                         <button class="tab-btn active" data-tab="occupancy">Occupancy</button>
                         <button class="tab-btn" data-tab="revenue">Revenue</button>
                         <button class="tab-btn" data-tab="expiration">Expiration</button>
                     </div>
-                    <div style="display: flex; gap: 10px;">
-                        <button id="exportPdfBtn" style="background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                    <div class="report-tabs-actions">
+                        <button id="exportPdfBtn" class="btn btn--danger">
                             <i class="fas fa-file-pdf"></i> Export to PDF
                         </button>
-                        <button id="exportExcelBtn" style="background: #16a34a; color: white; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <button id="exportExcelBtn" class="btn btn--success">
                             <i class="fas fa-file-excel"></i> Export to Excel
                         </button>
                     </div>

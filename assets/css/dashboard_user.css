@@ -20,8 +20,17 @@
     max-width: 580px;
 }
 
-.stats-row {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+/*
+  Scoped to desktop only (Batch 10) — this used to apply unconditionally,
+  which unintentionally beat the 2-col/1-col breakpoints already defined
+  for .stats-row in dashboard.css and dashboard_staff.css (same
+  specificity, loads later), so the 3-column grid never actually
+  collapsed on narrow screens on this page.
+*/
+@media (min-width: 1025px) {
+    .stats-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
 
 .stat-card {
@@ -62,6 +71,24 @@
 
 .notification-badge.hidden {
     display: none;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: 10px 0;
+    border-bottom: 1px solid #edf2f7;
+    font-family: var(--font-sans);
+    font-size: var(--fs-body-sm);
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-row span {
+    color: var(--color-text-muted);
 }
 
 @media (max-width: 1080px) {

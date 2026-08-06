@@ -123,15 +123,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         await updateParameter(id, value, description);
     });
 
-    const health = await checkServiceHealth();
-    document.getElementById('healthStatus').innerText = health.status === 'ok' ? 'Online' : 'Offline';
-    document.getElementById('serviceHealth').innerText = health.status === 'ok' ? 'AI service is available and responding.' : `Service offline: ${health.error || 'unexpected response'}`;
-    document.getElementById('lastRefresh').innerText = new Date().toLocaleString();
+    function applyHealthState(health) {
+        const isOnline = health.status === 'ok';
+        document.getElementById('healthStatus').innerHTML = `<span class="status-badge ${isOnline ? 'status-success' : 'status-danger'}">${isOnline ? 'Online' : 'Offline'}</span>`;
+        const serviceHealthEl = document.getElementById('serviceHealth');
+        serviceHealthEl.innerText = isOnline ? 'AI service is available and responding.' : `Service offline: ${health.error || 'unexpected response'}`;
+        serviceHealthEl.classList.toggle('is-online', isOnline);
+        serviceHealthEl.classList.toggle('is-offline', !isOnline);
+        document.getElementById('lastRefresh').innerText = new Date().toLocaleString();
+    }
+
+    applyHealthState(await checkServiceHealth());
     await refreshParameters();
     setInterval(async () => {
-        const updatedHealth = await checkServiceHealth();
-        document.getElementById('healthStatus').innerText = updatedHealth.status === 'ok' ? 'Online' : 'Offline';
-        document.getElementById('serviceHealth').innerText = updatedHealth.status === 'ok' ? 'AI service is available and responding.' : `Service offline: ${updatedHealth.error || 'unexpected response'}`;
-        document.getElementById('lastRefresh').innerText = new Date().toLocaleString();
+        applyHealthState(await checkServiceHealth());
     }, 30000);
 });
