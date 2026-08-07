@@ -23,6 +23,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         btn.addEventListener('click', () => showTab(btn.dataset.tab));
     });
 
+    let revenueMonthChart = null;
+    let revenueBreakdownChartInstance = null;
+    let verificationBreakdownChartInstance = null;
+    let revenueByMethodChartInstance = null;
+    let reservationsChartInstance = null;
+    let demographicsChartInstance = null;
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
     async function updateNotificationBadge() {
         try {
             const result = await api.request('notifications/unread-count', { method: 'GET' });
@@ -52,6 +60,26 @@ document.addEventListener('DOMContentLoaded', async function() {
                 data: { labels, datasets: [{ label: 'Occupied Lots', data: values, backgroundColor: '#2c5e47' }] },
                 options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
             });
+
+            const blockCtx = document.getElementById('occupancyByBlockChart').getContext('2d');
+            new Chart(blockCtx, {
+                type: 'bar',
+                data: {
+                    labels: (data.by_block || []).map(item => `${item.block_name} (${item.section_name})`),
+                    datasets: [{ label: 'Occupied Lots', data: (data.by_block || []).map(item => item.occupied || 0), backgroundColor: '#7aa77a' }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+
+            const typeCtx = document.getElementById('occupancyByTypeChart').getContext('2d');
+            new Chart(typeCtx, {
+                type: 'bar',
+                data: {
+                    labels: (data.by_lot_type || []).map(item => item.type_name),
+                    datasets: [{ label: 'Occupied Lots', data: (data.by_lot_type || []).map(item => item.occupied || 0), backgroundColor: '#d4a373' }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+            });
         } catch (error) {
             console.error('Failed to load occupancy:', error);
         }
@@ -69,11 +97,15 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('revTotal').innerText = `₱${parseFloat(data.total?.total || 0).toLocaleString()}`;
             document.getElementById('revCount').innerText = data.total?.count || 0;
 
-            const monthData = await api.request(`payments/revenue-by-month?year=${new Date().getFullYear()}`, { method: 'GET' });
+            // Follow the selected date range instead of always showing the current
+            // calendar year, so the monthly trend actually reflects the filter above.
+            const monthYear = (to || from) ? new Date(to || from).getFullYear() : new Date().getFullYear();
+            const monthData = await api.request(`payments/revenue-by-month?year=${monthYear}`, { method: 'GET' });
             const revenueCtx = document.getElementById('revenueChart').getContext('2d');
-            new Chart(revenueCtx, {
+            if (revenueMonthChart) revenueMonthChart.destroy();
+            revenueMonthChart = new Chart(revenueCtx, {
                 type: 'line',
-                data: { labels: monthData.map(item => `Month ${item.month}`), datasets: [{ label: 'Monthly Revenue', data: monthData.map(item => item.total || 0), borderColor: '#2c5e47', fill: false }] },
+                data: { labels: monthData.map(item => `${MONTH_NAMES[item.month - 1]} ${monthYear}`), datasets: [{ label: 'Monthly Revenue', data: monthData.map(item => item.total || 0), borderColor: '#2c5e47', fill: false }] },
                 options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
             });
 
@@ -81,12 +113,93 @@ document.addEventListener('DOMContentLoaded', async function() {
             const labels = breakdown.map(item => item.transaction_type || 'Unknown');
             const values = breakdown.map(item => item.total || 0);
             const breakdownCtx = document.getElementById('revenueBreakdownChart').getContext('2d');
-            new Chart(breakdownCtx, {
+            if (revenueBreakdownChartInstance) revenueBreakdownChartInstance.destroy();
+            revenueBreakdownChartInstance = new Chart(breakdownCtx, {
                 type: 'doughnut',
                 data: { labels, datasets: [{ data: values, backgroundColor: ['#2c5e47', '#7aa77a', '#d4a373', '#b5838d', '#6d6875'] }] }
             });
+
+            const verificationBreakdown = await api.request(`payments/verification-breakdown${params.length ? '?' + params.join('&') : ''}`, { method: 'GET' });
+            const pending = verificationBreakdown.find(item => item.verification_status === 'Pending');
+            document.getElementById('revPendingCount').innerText = pending?.count || 0;
+            document.getElementById('revPendingAmount').innerText = `₱${parseFloat(pending?.total || 0).toLocaleString()} pending`;
+
+            const verificationCtx = document.getElementById('verificationBreakdownChart').getContext('2d');
+            if (verificationBreakdownChartInstance) verificationBreakdownChartInstance.destroy();
+            const verificationColors = { Pending: '#d4a373', Verified: '#2c5e47', Rejected: '#b5838d' };
+            verificationBreakdownChartInstance = new Chart(verificationCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: verificationBreakdown.map(item => item.verification_status),
+                    datasets: [{ data: verificationBreakdown.map(item => item.total || 0), backgroundColor: verificationBreakdown.map(item => verificationColors[item.verification_status] || '#6d6875') }]
+                }
+            });
+
+            const methodBreakdown = await api.request(`payments/revenue-by-method${params.length ? '?' + params.join('&') : ''}`, { method: 'GET' });
+            const methodCtx = document.getElementById('revenueByMethodChart').getContext('2d');
+            if (revenueByMethodChartInstance) revenueByMethodChartInstance.destroy();
+            revenueByMethodChartInstance = new Chart(methodCtx, {
+                type: 'bar',
+                data: {
+                    labels: methodBreakdown.map(item => item.payment_method),
+                    datasets: [{ label: 'Revenue', data: methodBreakdown.map(item => item.total || 0), backgroundColor: '#6d6875' }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
         } catch (error) {
             console.error('Failed to load revenue:', error);
+        }
+    }
+
+    async function loadReservations() {
+        try {
+            const data = await api.request(`schedules/stats?year=${new Date().getFullYear()}`, { method: 'GET' });
+            document.getElementById('resTotal').innerText = data.total || 0;
+            document.getElementById('resPending').innerText = data.pending || 0;
+            document.getElementById('resConfirmed').innerText = data.confirmed || 0;
+            document.getElementById('resCompleted').innerText = data.completed || 0;
+            document.getElementById('resCancelled').innerText = data.cancelled || 0;
+            document.getElementById('resConfirmationRate').innerText = `${data.confirmation_rate || 0}%`;
+            document.getElementById('resCancellationRate').innerText = `${data.cancellation_rate || 0}%`;
+
+            const byMonth = data.by_month || [];
+            const counts = new Array(12).fill(0);
+            byMonth.forEach(item => {
+                const idx = Number(item.month) - 1;
+                if (idx >= 0 && idx < 12) counts[idx] = Number(item.count) || 0;
+            });
+
+            const reservationsCtx = document.getElementById('reservationsChart').getContext('2d');
+            if (reservationsChartInstance) reservationsChartInstance.destroy();
+            reservationsChartInstance = new Chart(reservationsCtx, {
+                type: 'bar',
+                data: { labels: MONTH_NAMES, datasets: [{ label: 'Reservations', data: counts, backgroundColor: '#4f46e5' }] },
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+        } catch (error) {
+            console.error('Failed to load reservations:', error);
+        }
+    }
+
+    async function loadDemographics() {
+        try {
+            const data = await api.request('decedents/stats', { method: 'GET' });
+            document.getElementById('demoTotal').innerText = data.total || 0;
+            document.getElementById('demoBurials').innerText = data.burials || 0;
+            document.getElementById('demoCremations').innerText = data.cremations || 0;
+            document.getElementById('demoAvgAge').innerText = data.avg_age || 0;
+
+            const demoCtx = document.getElementById('demographicsChart').getContext('2d');
+            if (demographicsChartInstance) demographicsChartInstance.destroy();
+            demographicsChartInstance = new Chart(demoCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Burials', 'Cremations'],
+                    datasets: [{ data: [data.burials || 0, data.cremations || 0], backgroundColor: ['#2c5e47', '#d4a373'] }]
+                }
+            });
+        } catch (error) {
+            console.error('Failed to load demographics:', error);
         }
     }
 
@@ -167,6 +280,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     showTab('occupancy');
     await loadOccupancy();
     await loadRevenue();
+    await loadReservations();
+    await loadDemographics();
     await loadExpiration();
     updateNotificationBadge();
     setInterval(updateNotificationBadge, 30000);

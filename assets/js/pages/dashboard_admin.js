@@ -31,13 +31,36 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     if (pageTitle) pageTitle.textContent = 'Admin Dashboard';
 
+    async function updateNotificationBadge() {
+        try {
+            const result = await api.request('notifications/unread-count', { method: 'GET' });
+            const badge = document.getElementById('notificationBadge');
+            if (badge) {
+                badge.innerText = result.count || 0;
+                badge.style.display = result.count > 0 ? 'flex' : 'none';
+            }
+        } catch (e) {}
+    }
+    updateNotificationBadge();
+
     try {
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+        const todayStr = now.toISOString().slice(0, 10);
+
         const occupancy = await api.request('reports/occupancy', { method: 'GET' });
-        const revenueSummary = await api.request('payments/revenue', { method: 'GET' });
-        const revenueByMonth = await api.request(`payments/revenue-by-month?year=${new Date().getFullYear()}`, { method: 'GET' });
+        // Filtered to the current calendar month so the "This month" subtitle is accurate.
+        const revenueSummary = await api.request(`payments/revenue?date_from=${monthStart}&date_to=${todayStr}`, { method: 'GET' });
+        const revenueByMonth = await api.request(`payments/revenue-by-month?year=${now.getFullYear()}`, { method: 'GET' });
         let payments = await api.request(`payments?date_from=${new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().slice(0, 10)}&date_to=${new Date().toISOString().slice(0, 10)}`, { method: 'GET' });
         if (!Array.isArray(payments) || payments.length === 0) {
             payments = await api.request('payments', { method: 'GET' });
+        }
+        let availableLotList = [];
+        try {
+            availableLotList = await api.request('lots?status=Available', { method: 'GET' });
+        } catch (e) {
+            availableLotList = [];
         }
 
         const summary = occupancy.summary || {};
@@ -50,8 +73,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         setText('statRevenue', formatCurrency(Number(revenueSummary.total) || 0));
         setText('statForecast', totalLots > 0 ? `${Math.round((availableLots / totalLots) * 100)}% available` : 'No data');
 
-        setText('aiLot', availableLots > 0 ? `Lot B-${156}` : 'No available lots');
-        setText('aiNote', totalLots > 0 ? `Current occupancy is ${Math.round((occupiedLots / totalLots) * 100)}% and demand is rising.` : 'No occupancy data available.');
+        const suggestedLot = Array.isArray(availableLotList) ? availableLotList[0] : null;
+        setText('aiLot', suggestedLot ? `Lot ${suggestedLot.lot_number}${suggestedLot.section_name ? ' — ' + suggestedLot.section_name : ''}` : 'No available lots');
+        setText('aiNote', totalLots > 0 ? `${Math.round((occupiedLots / totalLots) * 100)}% of lots are currently occupied.` : 'No occupancy data available.');
 
         const mapContainer = document.getElementById('availabilityMap');
         if (mapContainer) {

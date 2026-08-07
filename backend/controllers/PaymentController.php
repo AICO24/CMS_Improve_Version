@@ -295,4 +295,12 @@ class PaymentController {
     public function revenueBreakdown($filters = []) {
         return $this->paymentModel->getRevenueBreakdown($filters);
     }
+
+    public function verificationBreakdown($filters = []) {
+        return $this->paymentModel->getVerificationBreakdown($filters);
+    }
+
+    public function revenueByMethod($filters = []) {
+        return $this->paymentModel->getRevenueByMethod($filters);
+    }
 }

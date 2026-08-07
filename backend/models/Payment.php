@@ -180,4 +180,38 @@ class Payment {
         $stmt->execute($params);
         return $stmt->fetchAll();
     }
+
+    public function getVerificationBreakdown($filters = []) {
+        $sql = "SELECT verification_status, SUM(amount) AS total, COUNT(*) AS count FROM payments WHERE 1=1";
+        $params = [];
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND payment_date >= ?";
+            $params[] = $filters['date_from'];
+        }
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND payment_date <= ?";
+            $params[] = $filters['date_to'];
+        }
+        $sql .= " GROUP BY verification_status ORDER BY verification_status";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getRevenueByMethod($filters = []) {
+        $sql = "SELECT payment_method, SUM(amount) AS total, COUNT(*) AS count FROM payments WHERE 1=1";
+        $params = [];
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND payment_date >= ?";
+            $params[] = $filters['date_from'];
+        }
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND payment_date <= ?";
+            $params[] = $filters['date_to'];
+        }
+        $sql .= " GROUP BY payment_method ORDER BY total DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
 }

@@ -4,6 +4,11 @@ require_once __DIR__ . '/../config/database.php';
 class Cremation {
     private $db;
 
+    // Default niche slots shown/assumed per columbarium when no real capacity
+    // config exists yet. Shared by getNiches() (grid template) and getStats()
+    // (capacity denominator) so the two stay consistent.
+    const DEFAULT_CAPACITY = 10;
+
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
     }
@@ -66,7 +71,7 @@ class Cremation {
         $rows = [];
         $defaultColumbarium = $columbarium ?? 'Columbarium A';
 
-        for ($i = 1; $i <= 10; $i++) {
+        for ($i = 1; $i <= self::DEFAULT_CAPACITY; $i++) {
             $rows[] = [
                 'niche_number' => 'N-' . $i,
                 'columbarium' => $defaultColumbarium,
@@ -190,14 +195,17 @@ class Cremation {
         $stmt->execute($params);
         $result = $stmt->fetch();
 
-        $total = isset($result['total']) ? (int) $result['total'] : 0;
         $occupied = isset($result['occupied']) ? (int) $result['occupied'] : 0;
-        $total = max(10, $total);
-        $available = $total - $occupied;
-        $result['total'] = $total;
+        // Capacity isn't tracked by a real column/table yet, so it's assumed to be
+        // the default niche grid size, growing to match occupied niches if that
+        // ever exceeds the default. Cancelled records are never counted as
+        // capacity used (only $occupied, which already excludes them, does).
+        $capacity = max(self::DEFAULT_CAPACITY, $occupied);
+        $available = $capacity - $occupied;
+        $result['total'] = $capacity;
         $result['occupied'] = $occupied;
         $result['available'] = $available;
-        $result['occupancy_rate'] = $total > 0 ? round(($occupied / $total) * 100) : 0;
+        $result['occupancy_rate'] = $capacity > 0 ? round(($occupied / $capacity) * 100) : 0;
 
         return $result;
     }

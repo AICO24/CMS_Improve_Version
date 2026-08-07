@@ -12,7 +12,7 @@ class ExpirationRecord {
         $sql = "SELECT e.*, l.lot_number, b.block_name, s.section_name,
                    CASE
                      WHEN e.end_date < CURDATE() THEN 'Expired'
-                     WHEN e.exhumation_status IN ('Scheduled', 'Required') THEN 'Exhumation'
+                     WHEN e.exhumation_status = 'Scheduled' THEN 'Exhumation'
                      WHEN e.renewed = 'no' AND e.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'Expiring'
                      WHEN e.renewed = 'yes' THEN 'Renewed'
                      ELSE 'Active'
@@ -58,7 +58,7 @@ class ExpirationRecord {
                     $sql .= " AND e.renewed = 'no' AND e.end_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)";
                     break;
                 case 'exhumation':
-                    $sql .= " AND e.exhumation_status IN ('Scheduled', 'Required')";
+                    $sql .= " AND e.exhumation_status = 'Scheduled'";
                     break;
                 case 'renewed':
                     $sql .= " AND e.renewed = 'yes'";
@@ -78,7 +78,7 @@ class ExpirationRecord {
         $stmt = $this->db->prepare("SELECT e.*, l.lot_number, b.block_name, s.section_name,
                    CASE
                      WHEN e.end_date < CURDATE() THEN 'Expired'
-                     WHEN e.exhumation_status IN ('Scheduled', 'Required') THEN 'Exhumation'
+                     WHEN e.exhumation_status = 'Scheduled' THEN 'Exhumation'
                      WHEN e.renewed = 'no' AND e.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'Expiring'
                      WHEN e.renewed = 'yes' THEN 'Renewed'
                      ELSE 'Active'
@@ -149,7 +149,7 @@ class ExpirationRecord {
         $stmt5->execute([$days]);
         $renewalsDue = $stmt5->fetchColumn();
 
-        $stmt6 = $this->db->prepare("SELECT COUNT(*) AS exhumations FROM expiration_records WHERE exhumation_status IN ('Scheduled', 'Required')");
+        $stmt6 = $this->db->prepare("SELECT COUNT(*) AS exhumations FROM expiration_records WHERE exhumation_status = 'Scheduled'");
         $stmt6->execute();
         $exhumations = $stmt6->fetchColumn();
 

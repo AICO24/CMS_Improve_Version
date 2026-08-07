@@ -103,6 +103,8 @@
                     <div>
                         <button class="tab-btn active" data-tab="occupancy">Occupancy</button>
                         <button class="tab-btn" data-tab="revenue">Revenue</button>
+                        <button class="tab-btn" data-tab="reservations">Reservations</button>
+                        <button class="tab-btn" data-tab="demographics">Demographics</button>
                         <button class="tab-btn" data-tab="expiration">Expiration</button>
                     </div>
                     <div style="display: flex; gap: 10px;">
@@ -124,6 +126,8 @@
                             <div class="stat-card"><div class="stat-title">Occupancy Rate</div><div class="stat-value" id="occRate">0%</div></div>
                         </div>
                         <div class="card"><h4>Occupancy by Section</h4><canvas id="occupancyChart" height="200"></canvas></div>
+                        <div class="card"><h4>Occupancy by Block</h4><canvas id="occupancyByBlockChart" height="200"></canvas></div>
+                        <div class="card"><h4>Occupancy by Lot Type</h4><canvas id="occupancyByTypeChart" height="200"></canvas></div>
                     </div>
 
                     <div id="revenueTab" class="report-content">
@@ -135,9 +139,37 @@
                         <div class="stats-row">
                             <div class="stat-card"><div class="stat-title">Total Revenue</div><div class="stat-value" id="revTotal">₱0</div></div>
                             <div class="stat-card"><div class="stat-title">Transactions</div><div class="stat-value" id="revCount">0</div></div>
+                            <div class="stat-card"><div class="stat-title">Pending Verification</div><div class="stat-value" id="revPendingCount">0</div><div class="stat-sub" id="revPendingAmount">₱0</div></div>
                         </div>
                         <div class="card"><h4>Revenue by Month</h4><canvas id="revenueChart" height="200"></canvas></div>
-                        <div class="card"><h4>Revenue Breakdown</h4><canvas id="revenueBreakdownChart" height="200"></canvas></div>
+                        <div class="card"><h4>Revenue Breakdown by Transaction Type</h4><canvas id="revenueBreakdownChart" height="200"></canvas></div>
+                        <div class="card"><h4>Revenue by Verification Status</h4><canvas id="verificationBreakdownChart" height="200"></canvas></div>
+                        <div class="card"><h4>Revenue by Payment Method</h4><canvas id="revenueByMethodChart" height="200"></canvas></div>
+                    </div>
+
+                    <div id="reservationsTab" class="report-content">
+                        <div class="stats-row">
+                            <div class="stat-card"><div class="stat-title">Total Reservations</div><div class="stat-value" id="resTotal">0</div></div>
+                            <div class="stat-card"><div class="stat-title">Pending</div><div class="stat-value" id="resPending">0</div></div>
+                            <div class="stat-card"><div class="stat-title">Confirmed</div><div class="stat-value" id="resConfirmed">0</div></div>
+                            <div class="stat-card"><div class="stat-title">Completed</div><div class="stat-value" id="resCompleted">0</div></div>
+                            <div class="stat-card"><div class="stat-title">Cancelled</div><div class="stat-value" id="resCancelled">0</div></div>
+                        </div>
+                        <div class="stats-row">
+                            <div class="stat-card"><div class="stat-title">Confirmation Rate</div><div class="stat-value" id="resConfirmationRate">0%</div><div class="stat-sub">Of decided reservations</div></div>
+                            <div class="stat-card"><div class="stat-title">Cancellation Rate</div><div class="stat-value" id="resCancellationRate">0%</div><div class="stat-sub">Of decided reservations</div></div>
+                        </div>
+                        <div class="card"><h4>Reservations by Month</h4><canvas id="reservationsChart" height="200"></canvas></div>
+                    </div>
+
+                    <div id="demographicsTab" class="report-content">
+                        <div class="stats-row">
+                            <div class="stat-card"><div class="stat-title">Total Decedents</div><div class="stat-value" id="demoTotal">0</div></div>
+                            <div class="stat-card"><div class="stat-title">Burials</div><div class="stat-value" id="demoBurials">0</div></div>
+                            <div class="stat-card"><div class="stat-title">Cremations</div><div class="stat-value" id="demoCremations">0</div></div>
+                            <div class="stat-card"><div class="stat-title">Average Age at Death</div><div class="stat-value" id="demoAvgAge">0</div></div>
+                        </div>
+                        <div class="card"><h4>Burial vs. Cremation</h4><canvas id="demographicsChart" height="200"></canvas></div>
                     </div>
 
                     <div id="expirationTab" class="report-content">

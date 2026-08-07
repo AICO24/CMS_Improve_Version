@@ -70,7 +70,7 @@
                 <div class="user-info">
                     <div class="notification-icon" id="notificationIcon">
                         <i class="fas fa-bell"></i>
-                        <span class="notification-badge" id="notificationBadge">2</span>
+                        <span class="notification-badge" id="notificationBadge">0</span>
                     </div>
                     <div class="profile">
                         <div class="profile-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
@@ -95,11 +95,11 @@
                     <div class="stat-card"><div class="stat-title">Total Occupancy</div><div class="stat-value" id="statTotal">-</div><div class="stat-sub">Lots occupied</div></div>
                     <div class="stat-card"><div class="stat-title">Available Lots</div><div class="stat-value" id="statAvailable">-</div><div class="stat-sub">Ready for assignment</div></div>
                     <div class="stat-card"><div class="stat-title">Monthly Revenue</div><div class="stat-value" id="statRevenue">-</div><div class="stat-sub">This month</div></div>
-                    <div class="stat-card"><div class="stat-title">Predicted Capacity</div><div class="stat-value" id="statForecast">-</div><div class="stat-sub">Next quarter forecast</div></div>
+                    <div class="stat-card"><div class="stat-title">Available Capacity</div><div class="stat-value" id="statForecast">-</div><div class="stat-sub">Share of lots currently available</div></div>
                 </div>
                 <div class="mid-row">
                     <div class="card availability"><h4>Real-time Availability Map</h4><div class="availability-map" id="availabilityMap"></div></div>
-                    <div class="card ai-suggest"><h4>AI Quick Suggestion</h4><div id="aiSuggestion"><p class="muted">Based on current demand patterns, we recommend:</p><div class="ai-box"><strong id="aiLot">Lot B-156</strong><div class="ai-progress"><div id="aiProgressBar"></div></div><div class="muted small" id="aiNote">High suitability for upcoming reservations</div></div></div></div>
+                    <div class="card ai-suggest"><h4>Suggested Lot</h4><div id="aiSuggestion"><p class="muted">Next available lot:</p><div class="ai-box"><strong id="aiLot">-</strong><div class="ai-progress"><div id="aiProgressBar"></div></div><div class="muted small" id="aiNote">-</div></div></div></div>
                 </div>
                 <div class="bottom-row">
                     <div class="card chart-card"><canvas id="occChart" height="160"></canvas></div>

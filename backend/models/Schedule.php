@@ -224,6 +224,53 @@ class Schedule {
         return $stmt->execute([(int) $id]);
     }
 
+    public function getStats($year = null) {
+        $year = $year ?: date('Y');
+
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) AS total,
+                   SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) AS pending,
+                   SUM(CASE WHEN status = 'Confirmed' THEN 1 ELSE 0 END) AS confirmed,
+                   SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) AS completed,
+                   SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled
+            FROM burial_schedules
+        ");
+        $stmt->execute();
+        $counts = $stmt->fetch();
+
+        $total = (int) ($counts['total'] ?? 0);
+        $pending = (int) ($counts['pending'] ?? 0);
+        $confirmed = (int) ($counts['confirmed'] ?? 0);
+        $completed = (int) ($counts['completed'] ?? 0);
+        $cancelled = (int) ($counts['cancelled'] ?? 0);
+
+        // Rates are of reservations that reached an outcome (excludes still-Pending
+        // ones, which haven't been decided yet and would otherwise dilute both rates).
+        $decided = $confirmed + $completed + $cancelled;
+        $confirmationRate = $decided > 0 ? round((($confirmed + $completed) / $decided) * 100) : 0;
+        $cancellationRate = $decided > 0 ? round(($cancelled / $decided) * 100) : 0;
+
+        $monthStmt = $this->db->prepare("
+            SELECT MONTH(schedule_date) AS month, COUNT(*) AS count
+            FROM burial_schedules
+            WHERE YEAR(schedule_date) = ?
+            GROUP BY MONTH(schedule_date)
+            ORDER BY MONTH(schedule_date)
+        ");
+        $monthStmt->execute([$year]);
+
+        return [
+            'total' => $total,
+            'pending' => $pending,
+            'confirmed' => $confirmed,
+            'completed' => $completed,
+            'cancelled' => $cancelled,
+            'confirmation_rate' => $confirmationRate,
+            'cancellation_rate' => $cancellationRate,
+            'by_month' => $monthStmt->fetchAll(),
+        ];
+    }
+
     public function getCalendar($month, $year) {
         $schedules = $this->findAll(['month' => $month, 'year' => $year]);
         $calendar = [];

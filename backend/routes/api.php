@@ -278,6 +278,13 @@ if ($path === 'schedules/recommend' && $requestMethod === 'POST') {
     exit;
 }
 
+if ($path === 'schedules/stats' && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $year = $_GET['year'] ?? null;
+    echo json_encode($scheduleController->stats($year));
+    exit;
+}
+
 if ($path === 'schedules' && $requestMethod === 'GET') {
     $filters = [];
     if (isset($_GET['lot_id'])) $filters['lot_id'] = $_GET['lot_id'];
@@ -584,6 +591,24 @@ if ($path === 'payments/revenue-breakdown' && $requestMethod === 'GET') {
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
     echo json_encode($paymentController->revenueBreakdown($filters));
+    exit;
+}
+
+if ($path === 'payments/verification-breakdown' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $filters = [];
+    if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
+    if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
+    echo json_encode($paymentController->verificationBreakdown($filters));
+    exit;
+}
+
+if ($path === 'payments/revenue-by-method' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $filters = [];
+    if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
+    if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
+    echo json_encode($paymentController->revenueByMethod($filters));
     exit;
 }
 

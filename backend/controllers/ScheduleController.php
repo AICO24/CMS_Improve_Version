@@ -234,6 +234,10 @@ class ScheduleController {
         return ['available' => !$hasConflict];
     }
 
+    public function stats($year = null) {
+        return $this->scheduleModel->getStats($year);
+    }
+
     public function calendar($month, $year) {
         if (empty($month) || empty($year)) {
             return ['error' => 'Month and year are required', 'code' => 400];
