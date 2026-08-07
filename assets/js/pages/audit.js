@@ -1,19 +1,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    try {
-        const user = await api.getMe();
-        if (!user || user.role !== 'admin') {
-            window.location.href = `${getFrontendBasePath()}/admin/dashboard.html`;
-            return;
-        }
-        document.getElementById('userName').innerText = user.full_name || user.username;
-        document.getElementById('userRole').innerText = 'Administrator';
-        document.getElementById('sidebarUserName').innerText = user.full_name || user.username;
-        document.getElementById('sidebarUserRole').innerText = 'Administrator';
-        document.querySelectorAll('.admin-only').forEach(el => { el.style.display = 'flex'; el.classList.remove('admin-only'); });
-    } catch (error) {
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-        return;
-    }
+    const user = await requireRole(['admin']);
+    if (!user) return;
 
     const tbody = document.getElementById('auditTableBody');
     const searchInput = document.getElementById('searchLogs');

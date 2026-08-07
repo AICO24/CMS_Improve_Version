@@ -300,7 +300,7 @@ if (preg_match('/^schedules\/(\d+)$/', $path, $matches) && $requestMethod === 'G
 
 if ($path === 'schedules' && $requestMethod === 'POST') {
     $input = readRequestBody();
-    $result = $scheduleController->store($input, $user['user_id']);
+    $result = $scheduleController->store($input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -309,7 +309,7 @@ if ($path === 'schedules' && $requestMethod === 'POST') {
 
 if (preg_match('/^schedules\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
     $input = readRequestBody();
-    $result = $scheduleController->update($matches[1], $input, $user['user_id']);
+    $result = $scheduleController->update($matches[1], $input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -488,9 +488,14 @@ if ($path === 'payments/mine' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $filters = [];
     if (isset($_GET['verification_status'])) $filters['verification_status'] = $_GET['verification_status'];
+    if (isset($_GET['transaction_type'])) $filters['transaction_type'] = $_GET['transaction_type'];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
-    echo json_encode($paymentController->mine($user['user_id'], $filters));
+    if (isset($_GET['reference_id'])) $filters['reference_id'] = $_GET['reference_id'];
+    $pagination = [];
+    if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
+    if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
+    echo json_encode($paymentController->mine($user['user_id'], $filters, $pagination));
     exit;
 }
 
@@ -501,12 +506,26 @@ if ($path === 'payments' && $requestMethod === 'GET') {
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
     if (isset($_GET['reference_id'])) $filters['reference_id'] = $_GET['reference_id'];
-    echo json_encode($paymentController->index($filters));
+    if (isset($_GET['verification_status'])) $filters['verification_status'] = $_GET['verification_status'];
+    $pagination = [];
+    if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
+    if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
+    echo json_encode($paymentController->index($filters, $pagination));
+    exit;
+}
+
+if ($path === 'payments' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $input = readRequestBody();
+    $result = $paymentController->store($input, $user['user_id']);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
     exit;
 }
 
 if (preg_match('/^payments\/(\d+)$/', $path, $matches) && $requestMethod === 'GET') {
-    $result = $paymentController->show($matches[1]);
+    $result = $paymentController->show($matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -516,7 +535,7 @@ if (preg_match('/^payments\/(\d+)$/', $path, $matches) && $requestMethod === 'GE
 if (preg_match('/^payments\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $input = readRequestBody();
-    $result = $paymentController->update($matches[1], $input, $user['user_id']);
+    $result = $paymentController->update($matches[1], $input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -544,6 +563,7 @@ if (preg_match('/^payments\/(\d+)$/', $path, $matches) && $requestMethod === 'DE
 }
 
 if ($path === 'payments/revenue' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $filters = [];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
@@ -552,12 +572,14 @@ if ($path === 'payments/revenue' && $requestMethod === 'GET') {
 }
 
 if ($path === 'payments/revenue-by-month' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $year = $_GET['year'] ?? date('Y');
     echo json_encode($paymentController->revenueByMonth($year));
     exit;
 }
 
 if ($path === 'payments/revenue-breakdown' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $filters = [];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];

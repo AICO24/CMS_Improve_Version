@@ -51,7 +51,7 @@ class ScheduleController {
         return $schedule ?: ['error' => 'Schedule not found', 'code' => 404];
     }
 
-    public function store($data, $userId) {
+    public function store($data, $user) {
         $required = ['lot_id', 'deceased_id', 'schedule_date'];
         foreach ($required as $field) {
             if (empty($data[$field])) {
@@ -77,8 +77,8 @@ class ScheduleController {
         }
 
         $hasConflict = $this->scheduleModel->checkConflict(
-            $data['lot_id'], 
-            $data['schedule_date'], 
+            $data['lot_id'],
+            $data['schedule_date'],
             $data['schedule_time'] ?? null
         );
 
@@ -86,14 +86,24 @@ class ScheduleController {
             return ['error' => 'This lot is already booked for the selected date/time', 'code' => 409];
         }
 
+        $userId = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        $userRole = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
+
+        // Only staff/admin may create a reservation that's already Confirmed;
+        // everyone else's booking is forced to Pending regardless of what was submitted.
+        if (!in_array($userRole, ['admin', 'staff'], true)) {
+            $data['status'] = 'Pending';
+            unset($data['confirmed_by']);
+        }
+
         $data['created_by'] = $userId;
-        $result = $this->scheduleModel->create($data);
-        if ($result) {
+        $scheduleId = $this->scheduleModel->create($data);
+        if ($scheduleId) {
             if (isset($data['status']) && $data['status'] === 'Confirmed') {
                 $this->lotModel->update($data['lot_id'], ['status' => 'Reserved']);
             }
             $this->notifySchedule($data, $userId);
-            return ['success' => true, 'message' => 'Schedule created'];
+            return ['success' => true, 'message' => 'Schedule created', 'schedule_id' => $scheduleId];
         }
 
         return ['error' => 'Failed to create schedule', 'code' => 500];
@@ -138,10 +148,26 @@ class ScheduleController {
         return mail($email, $subject, $message, $headers);
     }
 
-    public function update($id, $data, $userId) {
+    public function update($id, $data, $user) {
         $existing = $this->scheduleModel->findById($id);
         if (!$existing) {
             return ['error' => 'Schedule not found', 'code' => 404];
+        }
+
+        $userId = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        $userRole = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
+        $isStaffOrAdmin = in_array($userRole, ['admin', 'staff'], true);
+
+        if (!$isStaffOrAdmin) {
+            if ($existing['created_by'] != $userId) {
+                return ['error' => 'You may only update your own reservations', 'code' => 403];
+            }
+            if ($existing['status'] !== 'Pending') {
+                return ['error' => 'Only pending reservations may be updated', 'code' => 403];
+            }
+            // Confirming/completing a reservation and reassigning who confirmed it
+            // stay staff/admin-only actions; strip them from a self-service edit.
+            unset($data['status'], $data['confirmed_by']);
         }
 
         $lotId = isset($data['lot_id']) ? $data['lot_id'] : $existing['lot_id'];

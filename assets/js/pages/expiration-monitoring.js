@@ -1,19 +1,6 @@
 document.addEventListener('DOMContentLoaded', async function () {
-    try {
-        const user = await api.getMe();
-        document.getElementById('userName').innerText = user.full_name || user.username;
-        document.getElementById('userRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
-        document.getElementById('sidebarUserName').innerText = user.full_name || user.username;
-        document.getElementById('sidebarUserRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
-        if (user.role !== 'admin') {
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-        } else {
-            document.querySelectorAll('.admin-only').forEach(el => { el.style.display = 'flex'; el.classList.remove('admin-only'); });
-        }
-    } catch (error) {
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-        return;
-    }
+    const user = await requireRole(['admin']);
+    if (!user) return;
 
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.querySelector('.sidebar');
@@ -150,17 +137,18 @@ document.addEventListener('DOMContentLoaded', async function () {
                     notes: record.dataset.notes || ''
                 };
 
-            if (!payload.lot_id) {
-                alert('Unable to renew this record, required information missing.');
-                return;
-            }
+                if (!payload.lot_id) {
+                    alert('Unable to renew this record, required information missing.');
+                    return;
+                }
 
-            await api.request(`expiration-records/${recordId}`, {
-                method: 'PUT',
-                body: payload
-            });
-            alert('Expiration record renewed successfully.');
-            await loadExpirationData();
+                await api.request(`expiration-records/${recordId}`, {
+                    method: 'PUT',
+                    body: payload
+                });
+                alert('Expiration record renewed successfully.');
+                await loadExpirationData();
+            }
         } catch (error) {
             console.error('Expiration action failed:', error);
             alert('Action failed: ' + (error.message || 'Unknown error'));

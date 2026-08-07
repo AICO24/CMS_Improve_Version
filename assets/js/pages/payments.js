@@ -1,22 +1,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    let currentUser = null;
-
-    try {
-        const user = await api.getMe();
-        currentUser = user;
-        document.getElementById('userName').innerText = user.full_name || user.username;
-        document.getElementById('userRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
-        document.getElementById('sidebarUserName').innerText = user.full_name || user.username;
-        document.getElementById('sidebarUserRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
-        if (user.role !== 'admin') {
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-        } else {
-            document.querySelectorAll('.admin-only').forEach(el => { el.style.display = 'flex'; el.classList.remove('admin-only'); });
-        }
-    } catch (error) {
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-        return;
-    }
+    const currentUser = await requireRole(['admin', 'staff', 'user']);
+    if (!currentUser) return;
 
     const tbody = document.getElementById('paymentsTableBody');
     const statsEl = {
@@ -25,6 +9,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         transactionCount: document.getElementById('transactionCount'),
         lastPayment: document.getElementById('lastPayment')
     };
+
+    const referenceFilterInput = document.getElementById('referenceFilter');
+    const transactionTypeFilterSelect = document.getElementById('transactionTypeFilter');
+    const statusFilterSelect = document.getElementById('statusFilter');
+    const dateFromFilterInput = document.getElementById('dateFromFilter');
+    const dateToFilterInput = document.getElementById('dateToFilter');
+    const clearFiltersBtn = document.getElementById('clearFilters');
+    const paginationInfo = document.getElementById('paginationInfo');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+
+    const perPage = 10;
+    let currentPage = 1;
+    let pageCount = 1;
 
     document.getElementById('logoutBtn').addEventListener('click', () => {
         api.logout();
@@ -51,13 +49,42 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    function currentFilters() {
+        return {
+            reference_id: referenceFilterInput.value.trim(),
+            transaction_type: transactionTypeFilterSelect.value,
+            verification_status: statusFilterSelect.value,
+            date_from: dateFromFilterInput.value,
+            date_to: dateToFilterInput.value,
+        };
+    }
+
     async function loadPayments() {
-        const endpoint = currentUser && currentUser.role === 'admin' ? 'payments' : 'payments/mine';
-        return await api.request(endpoint, { method: 'GET' });
+        // Backend permits admin+staff on the full list; only 'user' is limited to their own.
+        const endpoint = currentUser.role === 'user' ? 'payments/mine' : 'payments';
+        const params = new URLSearchParams();
+        params.set('page', currentPage);
+        params.set('per_page', perPage);
+        const filters = currentFilters();
+        Object.keys(filters).forEach((key) => {
+            if (filters[key]) params.set(key, filters[key]);
+        });
+        const result = await api.request(`${endpoint}?${params.toString()}`, { method: 'GET' });
+        return result && Array.isArray(result.data) ? result : { data: [], meta: { page: 1, pages: 1, total: 0 } };
     }
 
     async function loadRevenue() {
-        return await api.request('payments/revenue', { method: 'GET' });
+        // Org-wide revenue is admin/staff-only server-side; a 'user' role viewing
+        // this page (payments.html is shared across roles) gets a 403 here, which
+        // would otherwise fail the whole Promise.all in refreshAll().
+        return await api.request('payments/revenue', { method: 'GET' }).catch(() => ({ total: 0 }));
+    }
+
+    async function loadMonthRevenue() {
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+        return await api.request(`payments/revenue?date_from=${monthStart}&date_to=${monthEnd}`, { method: 'GET' }).catch(() => ({ total: 0 }));
     }
 
     async function verifyPayment(id, status) {
@@ -74,24 +101,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     function renderTable(payments) {
         if (!payments || payments.length === 0) {
             tbody.innerHTML = '<tr><td colspan="8">No payments recorded.</td></tr>';
-            statsEl.monthRevenue.innerText = '₱0';
-            statsEl.transactionCount.innerText = 0;
-            statsEl.lastPayment.innerText = '—';
             return;
         }
 
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        let monthTotal = 0;
-        let lastPaymentDate = '—';
-
         tbody.innerHTML = payments.map(p => {
             const date = p.payment_date || p.created_at || '—';
-            if (date.startsWith(currentMonth)) {
-                monthTotal += parseFloat(p.amount || 0);
-            }
-            if (date !== '—') {
-                lastPaymentDate = date;
-            }
             return `
                 <tr data-id="${p.payment_id}" data-status="${p.verification_status || 'Pending'}">
                     <td><strong>${p.receipt_number || '—'}</strong></td>
@@ -103,15 +117,11 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <td>${p.received_by_name || 'N/A'}</td>
                     <td class="action-buttons">
                         <button class="btn-view" title="View"><i class="fas fa-eye"></i></button>
-                        <button class="btn-delete-row" title="Delete"><i class="fas fa-trash"></i></button>
+                        ${currentUser.role === 'admin' ? '<button class="btn-delete-row" title="Delete"><i class="fas fa-trash"></i></button>' : ''}
                     </td>
                 </tr>
             `;
         }).join('');
-
-        statsEl.monthRevenue.innerText = formatCurrency(monthTotal);
-        statsEl.transactionCount.innerText = payments.length;
-        statsEl.lastPayment.innerText = lastPaymentDate;
 
         tbody.querySelectorAll('.btn-view').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -136,26 +146,75 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
+    function renderPagination(meta) {
+        currentPage = meta.page || 1;
+        pageCount = meta.pages || 1;
+        const total = meta.total || 0;
+        paginationInfo.textContent = `Page ${currentPage} of ${pageCount} • ${total} payment${total === 1 ? '' : 's'}`;
+        prevPageBtn.disabled = currentPage <= 1;
+        nextPageBtn.disabled = currentPage >= pageCount;
+    }
+
+    function renderStats(revenue, monthRevenue, payments, meta) {
+        statsEl.totalRevenue.innerText = formatCurrency(revenue.total || 0);
+        statsEl.monthRevenue.innerText = formatCurrency(monthRevenue.total || 0);
+        statsEl.transactionCount.innerText = meta.total || 0;
+        // Payments are already sorted newest-first by the backend, so the first
+        // row on page 1 is the most recent payment.
+        statsEl.lastPayment.innerText = currentPage === 1 && payments.length > 0
+            ? (payments[0].payment_date || payments[0].created_at || '—')
+            : statsEl.lastPayment.innerText || '—';
+    }
+
     async function refreshAll() {
         try {
-            const [payments, revenue] = await Promise.all([loadPayments(), loadRevenue()]);
-            renderStats(revenue, payments);
+            const [paymentsResult, revenue, monthRevenue] = await Promise.all([
+                loadPayments(),
+                loadRevenue(),
+                loadMonthRevenue(),
+            ]);
+            const payments = paymentsResult.data || [];
+            const meta = paymentsResult.meta || { page: 1, pages: 1, total: payments.length };
+            renderStats(revenue, monthRevenue, payments, meta);
             renderTable(payments);
+            renderPagination(meta);
         } catch (error) {
             console.error('Refresh failed:', error);
-            tbody.innerHTML = '<tr><td colspan="7">Failed to load payments. Please refresh.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8">Failed to load payments. Please refresh.</td></tr>';
         }
     }
 
-    function renderStats(revenue, payments) {
-        statsEl.totalRevenue.innerText = formatCurrency(revenue.total || 0);
-        statsEl.transactionCount.innerText = payments.length || 0;
+    async function loadReservationDetails(payment) {
+        if (payment.transaction_type !== 'Lot Purchase' || !payment.reference_id) {
+            return null;
+        }
+        try {
+            const schedule = await api.request(`schedules/${payment.reference_id}`, { method: 'GET' });
+            return schedule && !schedule.error ? schedule : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function renderReservationSection(schedule) {
+        if (!schedule) return '';
+        return `
+            <div class="detail-section-title">Reservation Details</div>
+            <div class="detail-row"><span>Lot Number</span><strong>${schedule.lot_number || '—'}</strong></div>
+            <div class="detail-row"><span>Section</span><strong>${schedule.section_name || '—'}</strong></div>
+            <div class="detail-row"><span>Decedent</span><strong>${schedule.first_name ? `${schedule.first_name} ${schedule.last_name || ''}`.trim() : '—'}</strong></div>
+            <div class="detail-row"><span>Burial Date</span><strong>${schedule.schedule_date || '—'}${schedule.schedule_time ? ' · ' + schedule.schedule_time : ''}</strong></div>
+            <div class="detail-row"><span>Reservation Status</span><strong>${schedule.status || '—'}</strong></div>
+            <div class="detail-section-title">Payment Details</div>
+        `;
     }
 
     async function showViewModal(id) {
         try {
             const payment = await api.request(`payments/${id}`, { method: 'GET' });
+            const schedule = await loadReservationDetails(payment);
             const details = `
+                ${renderReservationSection(schedule)}
                 <div class="detail-row"><span>Receipt Number</span><strong>${payment.receipt_number || '—'}</strong></div>
                 <div class="detail-row"><span>Transaction Type</span><strong>${payment.transaction_type || '—'}</strong></div>
                 <div class="detail-row"><span>Reference ID</span><strong>${payment.reference_id || '—'}</strong></div>
@@ -260,6 +319,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             if (result.success) {
                 document.getElementById('paymentModal').style.display = 'none';
+                currentPage = 1;
                 await refreshAll();
             } else {
                 alert(result.error || 'Failed to save payment');
@@ -278,21 +338,68 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (e.target === document.getElementById('viewModal')) document.getElementById('viewModal').style.display = 'none';
     });
 
+    function debounce(fn, delay = 300) {
+        let timeout;
+        return (...args) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => fn(...args), delay);
+        };
+    }
+
+    const refreshFiltered = debounce(async () => {
+        currentPage = 1;
+        await refreshAll();
+    }, 300);
+
+    referenceFilterInput.addEventListener('input', refreshFiltered);
+    transactionTypeFilterSelect.addEventListener('change', refreshFiltered);
+    statusFilterSelect.addEventListener('change', refreshFiltered);
+    dateFromFilterInput.addEventListener('change', refreshFiltered);
+    dateToFilterInput.addEventListener('change', refreshFiltered);
+    clearFiltersBtn.addEventListener('click', async () => {
+        referenceFilterInput.value = '';
+        transactionTypeFilterSelect.value = '';
+        statusFilterSelect.value = '';
+        dateFromFilterInput.value = '';
+        dateToFilterInput.value = '';
+        currentPage = 1;
+        await refreshAll();
+    });
+
+    prevPageBtn.addEventListener('click', async () => {
+        if (currentPage <= 1) return;
+        currentPage -= 1;
+        await refreshAll();
+    });
+    nextPageBtn.addEventListener('click', async () => {
+        if (currentPage >= pageCount) return;
+        currentPage += 1;
+        await refreshAll();
+    });
+
     await refreshAll();
 
-    // Auto open payment modal if lot parameters passed via URL query params
+    // Auto open payment modal if reservation/lot parameters passed via URL query params
     const urlParams = new URLSearchParams(window.location.search);
+    const urlReservationId = urlParams.get('reservation_id');
     const urlLotId = urlParams.get('lot_id');
     const urlLotNum = urlParams.get('lot_number');
     const urlPrice = urlParams.get('price');
-    if (urlLotId || urlLotNum) {
+    const urlTransactionType = urlParams.get('transaction_type');
+    if (urlReservationId || urlLotId || urlLotNum) {
         openAddModal();
+        const refId = urlReservationId || urlLotId;
+        if (refId) {
+            document.getElementById('referenceId').value = refId;
+        }
         if (urlLotNum) {
-            document.getElementById('referenceId').value = `LOT-${urlLotNum}`;
             document.getElementById('receiptNumber').value = `REC-${urlLotNum}-${Date.now().toString().slice(-4)}`;
         }
         if (urlPrice) {
             document.getElementById('amount').value = urlPrice;
+        }
+        if (urlTransactionType) {
+            document.getElementById('transactionType').value = urlTransactionType;
         }
     }
 

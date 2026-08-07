@@ -1,25 +1,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    if (!localStorage.getItem('jwt_token')) {
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-        return;
-    }
-
-    const session = JSON.parse(localStorage.getItem('user_session') || '{}');
-    const userName = document.getElementById('userName');
-    const userRole = document.getElementById('userRole');
-    const sidebarUserName = document.getElementById('sidebarUserName');
-    const sidebarUserRole = document.getElementById('sidebarUserRole');
-
-    if (userName) userName.innerText = session.full_name || 'User';
-    if (userRole) userRole.innerText = session.role || 'Staff';
-    if (sidebarUserName) sidebarUserName.innerText = session.full_name || 'User';
-    if (sidebarUserRole) sidebarUserRole.innerText = session.role || 'Staff';
-
-    if (session.role !== 'admin') {
-        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-    } else {
-        document.querySelectorAll('.admin-only').forEach(el => { el.style.display = 'flex'; el.classList.remove('admin-only'); });
-    }
+    const session = await requireRole(['admin', 'staff']);
+    if (!session) return;
 
     document.getElementById('logoutBtn').addEventListener('click', () => {
         localStorage.removeItem('jwt_token');

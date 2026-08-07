@@ -30,10 +30,7 @@ class Payment {
         }
     }
 
-    public function findAll($filters = []) {
-        $sql = "SELECT p.*, u.full_name AS received_by_name, v.full_name AS verified_by_name FROM payments p LEFT JOIN users u ON p.received_by = u.user_id LEFT JOIN users v ON p.verified_by = v.user_id WHERE 1=1";
-        $params = [];
-
+    private function applyFilters(&$sql, &$params, $filters) {
         if (!empty($filters['transaction_type'])) {
             $sql .= " AND p.transaction_type = ?";
             $params[] = $filters['transaction_type'];
@@ -58,12 +55,44 @@ class Payment {
             $sql .= " AND p.verification_status = ?";
             $params[] = $filters['verification_status'];
         }
+    }
+
+    public function findAll($filters = [], $pagination = []) {
+        $sql = "SELECT p.*, u.full_name AS received_by_name, v.full_name AS verified_by_name FROM payments p LEFT JOIN users u ON p.received_by = u.user_id LEFT JOIN users v ON p.verified_by = v.user_id WHERE 1=1";
+        $params = [];
+        $this->applyFilters($sql, $params, $filters);
 
         $sql .= " ORDER BY p.payment_date DESC, p.created_at DESC";
+
+        $page = null;
+        $perPage = null;
+        if (!empty($pagination['page']) || !empty($pagination['per_page'])) {
+            $page = max(1, (int) ($pagination['page'] ?? 1));
+            $perPage = max(1, min(100, (int) ($pagination['per_page'] ?? 10)));
+        }
+
+        if ($page !== null && $perPage !== null) {
+            $offset = ($page - 1) * $perPage;
+            $sql .= " LIMIT ?, ?";
+            $params[] = $offset;
+            $params[] = $perPage;
+        }
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
 
         return $stmt->fetchAll();
+    }
+
+    public function countAll($filters = []) {
+        $sql = "SELECT COUNT(*) AS total FROM payments p WHERE 1=1";
+        $params = [];
+        $this->applyFilters($sql, $params, $filters);
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return (int) ($row['total'] ?? 0);
     }
 
     public function findById($id) {

@@ -1,19 +1,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    try {
-        const user = await api.getMe();
-        document.getElementById('userName').innerText = user.full_name || user.username;
-        document.getElementById('userRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
-        document.getElementById('sidebarUserName').innerText = user.full_name || user.username;
-        document.getElementById('sidebarUserRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
-        if (user.role !== 'admin') {
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-        } else {
-            document.querySelectorAll('.admin-only').forEach(el => { el.style.display = 'flex'; el.classList.remove('admin-only'); });
-        }
-    } catch (error) {
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-        return;
-    }
+    const user = await requireRole(['admin']);
+    if (!user) return;
 
     document.getElementById('logoutBtn').addEventListener('click', () => api.logout());
 

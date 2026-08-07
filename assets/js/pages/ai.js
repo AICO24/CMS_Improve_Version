@@ -1,20 +1,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    let user;
-    try {
-        user = await api.getMe();
-        document.getElementById('userName').innerText = user.full_name || user.username;
-        document.getElementById('userRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
-        document.getElementById('sidebarUserName').innerText = user.full_name || user.username;
-        document.getElementById('sidebarUserRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
-        if (user.role !== 'admin') {
-            alert('Administrator access is required to view this page.');
-            window.location.href = `${getFrontendBasePath()}/staff/dashboard.html`;
-            return;
-        }
-    } catch (error) {
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-        return;
-    }
+    const user = await requireRole(['admin']);
+    if (!user) return;
 
     document.getElementById('logoutBtn').addEventListener('click', () => api.logout());
 

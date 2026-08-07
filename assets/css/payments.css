@@ -255,7 +255,51 @@
 .toolbar-row {
     display: flex;
     justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
     margin-bottom: 20px;
+}
+
+.toolbar-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.toolbar-filters input,
+.toolbar-filters select {
+    border: 1px solid #d9e1e8;
+    border-radius: 12px;
+    padding: 10px 14px;
+    min-width: 140px;
+    font-size: 0.95rem;
+    color: #2b3658;
+    background: #fff;
+}
+
+.toolbar-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.pagination-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 18px;
+}
+
+.pagination-controls button {
+    min-width: 110px;
+}
+
+.pagination-info {
+    color: #556872;
+    font-size: 0.95rem;
 }
 
 /* .btn-add/.btn-ghost/.btn-primary/.btn-filter now come from assets/css/components/buttons.css (Batch 5) */
@@ -351,6 +395,19 @@
 }
 
 /* .form-group input/select/textarea now come from assets/css/components/forms.css (Batch 5) */
+
+.detail-section-title {
+    margin: 18px 0 4px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #6b7a73;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.detail-section-title:first-child {
+    margin-top: 0;
+}
 
 .detail-row {
     display: flex;

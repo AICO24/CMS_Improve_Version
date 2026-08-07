@@ -1,22 +1,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    let currentUser = null;
-
-    try {
-        const user = await api.getMe();
-        currentUser = user;
-        document.getElementById('userName').innerText = user.full_name || user.username;
-        document.getElementById('userRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
-        document.getElementById('sidebarUserName').innerText = user.full_name || user.username;
-        document.getElementById('sidebarUserRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
-        if (user.role !== 'admin') {
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-        } else {
-            document.querySelectorAll('.admin-only').forEach(el => { el.style.display = 'flex'; el.classList.remove('admin-only'); });
-        }
-    } catch (error) {
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-        return;
-    }
+    const currentUser = await requireRole(['user']);
+    if (!currentUser) return;
 
     const tbody = document.getElementById('paymentsTableBody');
     const statsEl = {
@@ -25,6 +9,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         transactionCount: document.getElementById('transactionCount'),
         lastPayment: document.getElementById('lastPayment')
     };
+
+    const referenceFilterInput = document.getElementById('referenceFilter');
+    const transactionTypeFilterSelect = document.getElementById('transactionTypeFilter');
+    const statusFilterSelect = document.getElementById('statusFilter');
+    const dateFromFilterInput = document.getElementById('dateFromFilter');
+    const dateToFilterInput = document.getElementById('dateToFilter');
+    const clearFiltersBtn = document.getElementById('clearFilters');
+    const paginationInfo = document.getElementById('paginationInfo');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+
+    const perPage = 10;
+    let currentPage = 1;
+    let pageCount = 1;
 
     document.getElementById('logoutBtn').addEventListener('click', () => {
         api.logout();
@@ -51,20 +49,39 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    async function loadPayments() {
-        const endpoint = currentUser && currentUser.role === 'admin' ? 'payments' : 'payments/mine';
-        return await api.request(endpoint, { method: 'GET' });
+    function currentFilters() {
+        return {
+            reference_id: referenceFilterInput.value.trim(),
+            transaction_type: transactionTypeFilterSelect.value,
+            verification_status: statusFilterSelect.value,
+            date_from: dateFromFilterInput.value,
+            date_to: dateToFilterInput.value,
+        };
     }
 
-    async function loadRevenue() {
-        return await api.request('payments/revenue', { method: 'GET' });
-    }
-
-    async function verifyPayment(id, status) {
-        return await api.request(`payments/${id}/verify`, {
-            method: 'PUT',
-            body: { verification_status: status }
+    function filterParams() {
+        const params = new URLSearchParams();
+        const filters = currentFilters();
+        Object.keys(filters).forEach((key) => {
+            if (filters[key]) params.set(key, filters[key]);
         });
+        return params;
+    }
+
+    async function loadPayments() {
+        const params = filterParams();
+        params.set('page', currentPage);
+        params.set('per_page', perPage);
+        const result = await api.request(`payments/mine?${params.toString()}`, { method: 'GET' });
+        return result && Array.isArray(result.data) ? result : { data: [], meta: { page: 1, pages: 1, total: 0 } };
+    }
+
+    // This is a user's own read-only ledger, not the org-wide revenue report, so
+    // stats are computed here from the user's own (unpaginated, filtered) payments
+    // rather than the admin/staff-only payments/revenue* endpoints.
+    async function loadOwnPaymentsForStats() {
+        const result = await api.request(`payments/mine?${filterParams().toString()}`, { method: 'GET' }).catch(() => []);
+        return Array.isArray(result) ? result : [];
     }
 
     function formatCurrency(amount) {
@@ -74,24 +91,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     function renderTable(payments) {
         if (!payments || payments.length === 0) {
             tbody.innerHTML = '<tr><td colspan="8">No payments recorded.</td></tr>';
-            statsEl.monthRevenue.innerText = '₱0';
-            statsEl.transactionCount.innerText = 0;
-            statsEl.lastPayment.innerText = '—';
             return;
         }
 
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        let monthTotal = 0;
-        let lastPaymentDate = '—';
-
         tbody.innerHTML = payments.map(p => {
             const date = p.payment_date || p.created_at || '—';
-            if (date.startsWith(currentMonth)) {
-                monthTotal += parseFloat(p.amount || 0);
-            }
-            if (date !== '—') {
-                lastPaymentDate = date;
-            }
             return `
                 <tr data-id="${p.payment_id}" data-status="${p.verification_status || 'Pending'}">
                     <td><strong>${p.receipt_number || '—'}</strong></td>
@@ -103,15 +107,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <td>${p.received_by_name || 'N/A'}</td>
                     <td class="action-buttons">
                         <button class="btn-view" title="View"><i class="fas fa-eye"></i></button>
-                        <button class="btn-delete-row" title="Delete"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
             `;
         }).join('');
-
-        statsEl.monthRevenue.innerText = formatCurrency(monthTotal);
-        statsEl.transactionCount.innerText = payments.length;
-        statsEl.lastPayment.innerText = lastPaymentDate;
 
         tbody.querySelectorAll('.btn-view').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -119,43 +118,87 @@ document.addEventListener('DOMContentLoaded', async function() {
                 showViewModal(id);
             });
         });
+    }
 
-        tbody.querySelectorAll('.btn-delete-row').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const id = btn.closest('tr').dataset.id;
-                if (!confirm('Delete this payment record?')) {
-                    return;
-                }
-                try {
-                    await api.request(`payments/${id}`, { method: 'DELETE' });
-                    await refreshAll();
-                } catch (error) {
-                    alert('Failed to delete: ' + error.message);
-                }
-            });
+    function renderPagination(meta) {
+        currentPage = meta.page || 1;
+        pageCount = meta.pages || 1;
+        const total = meta.total || 0;
+        paginationInfo.textContent = `Page ${currentPage} of ${pageCount} • ${total} payment${total === 1 ? '' : 's'}`;
+        prevPageBtn.disabled = currentPage <= 1;
+        nextPageBtn.disabled = currentPage >= pageCount;
+    }
+
+    function renderStats(ownPayments) {
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        let totalPaid = 0;
+        let monthTotal = 0;
+        ownPayments.forEach(p => {
+            const amount = parseFloat(p.amount || 0);
+            totalPaid += amount;
+            const date = p.payment_date || p.created_at || '';
+            if (date.startsWith(currentMonth)) {
+                monthTotal += amount;
+            }
         });
+
+        statsEl.totalRevenue.innerText = formatCurrency(totalPaid);
+        statsEl.monthRevenue.innerText = formatCurrency(monthTotal);
+        statsEl.transactionCount.innerText = ownPayments.length;
+        // Already sorted newest-first by the backend.
+        statsEl.lastPayment.innerText = ownPayments.length > 0
+            ? (ownPayments[0].payment_date || ownPayments[0].created_at || '—')
+            : '—';
     }
 
     async function refreshAll() {
         try {
-            const [payments, revenue] = await Promise.all([loadPayments(), loadRevenue()]);
-            renderStats(revenue, payments);
+            const [paymentsResult, ownPayments] = await Promise.all([
+                loadPayments(),
+                loadOwnPaymentsForStats(),
+            ]);
+            const payments = paymentsResult.data || [];
+            const meta = paymentsResult.meta || { page: 1, pages: 1, total: payments.length };
+            renderStats(ownPayments);
             renderTable(payments);
+            renderPagination(meta);
         } catch (error) {
             console.error('Refresh failed:', error);
-            tbody.innerHTML = '<tr><td colspan="7">Failed to load payments. Please refresh.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8">Failed to load payments. Please refresh.</td></tr>';
         }
     }
 
-    function renderStats(revenue, payments) {
-        statsEl.totalRevenue.innerText = formatCurrency(revenue.total || 0);
-        statsEl.transactionCount.innerText = payments.length || 0;
+    async function loadReservationDetails(payment) {
+        if (payment.transaction_type !== 'Lot Purchase' || !payment.reference_id) {
+            return null;
+        }
+        try {
+            const schedule = await api.request(`schedules/${payment.reference_id}`, { method: 'GET' });
+            return schedule && !schedule.error ? schedule : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function renderReservationSection(schedule) {
+        if (!schedule) return '';
+        return `
+            <div class="detail-section-title">Reservation Details</div>
+            <div class="detail-row"><span>Lot Number</span><strong>${schedule.lot_number || '—'}</strong></div>
+            <div class="detail-row"><span>Section</span><strong>${schedule.section_name || '—'}</strong></div>
+            <div class="detail-row"><span>Decedent</span><strong>${schedule.first_name ? `${schedule.first_name} ${schedule.last_name || ''}`.trim() : '—'}</strong></div>
+            <div class="detail-row"><span>Burial Date</span><strong>${schedule.schedule_date || '—'}${schedule.schedule_time ? ' · ' + schedule.schedule_time : ''}</strong></div>
+            <div class="detail-row"><span>Reservation Status</span><strong>${schedule.status || '—'}</strong></div>
+            <div class="detail-section-title">Payment Details</div>
+        `;
     }
 
     async function showViewModal(id) {
         try {
             const payment = await api.request(`payments/${id}`, { method: 'GET' });
+            const schedule = await loadReservationDetails(payment);
             const details = `
+                ${renderReservationSection(schedule)}
                 <div class="detail-row"><span>Receipt Number</span><strong>${payment.receipt_number || '—'}</strong></div>
                 <div class="detail-row"><span>Transaction Type</span><strong>${payment.transaction_type || '—'}</strong></div>
                 <div class="detail-row"><span>Reference ID</span><strong>${payment.reference_id || '—'}</strong></div>
@@ -163,138 +206,62 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <div class="detail-row"><span>Payment Date</span><strong>${payment.payment_date || '—'}</strong></div>
                 <div class="detail-row"><span>Payment Method</span><strong>${payment.payment_method || '—'}</strong></div>
                 <div class="detail-row"><span>Verification Status</span><strong>${payment.verification_status || 'Pending'}</strong></div>
-                <div class="detail-row"><span>Verified By</span><strong>${payment.verified_by_name || payment.verified_by || '—'}</strong></div>
                 <div class="detail-row"><span>Verified At</span><strong>${payment.verified_at || '—'}</strong></div>
                 <div class="detail-row"><span>Receipt</span><strong>${payment.receipt_url ? `<a href="${payment.receipt_url}" target="_blank">Download</a>` : 'Not attached'}</strong></div>
-                <div class="detail-row"><span>Received By</span><strong>${payment.received_by_name || 'N/A'}</strong></div>
                 <div class="detail-row"><span>Notes</span><strong>${payment.notes || '—'}</strong></div>
-                ${currentUser && currentUser.role === 'admin' && payment.verification_status === 'Pending' ? `
-                    <div class="action-buttons admin-verification-actions">
-                        <button id="verifyPaymentBtn" class="btn-verify"><i class="fas fa-check"></i> Verify</button>
-                        <button id="rejectPaymentBtn" class="btn-reject"><i class="fas fa-times"></i> Reject</button>
-                    </div>
-                ` : ''}
             `;
             document.getElementById('viewDetails').innerHTML = details;
             document.getElementById('viewModal').style.display = 'flex';
-
-            const verifyBtn = document.getElementById('verifyPaymentBtn');
-            const rejectBtn = document.getElementById('rejectPaymentBtn');
-            if (verifyBtn) {
-                verifyBtn.addEventListener('click', async () => {
-                    if (!confirm('Verify this payment?')) return;
-                    try {
-                        const result = await verifyPayment(id, 'Verified');
-                        if (result.success) {
-                            alert('Payment verified successfully.');
-                            document.getElementById('viewModal').style.display = 'none';
-                            await refreshAll();
-                        } else {
-                            alert(result.error || 'Failed to verify payment.');
-                        }
-                    } catch (error) {
-                        alert('Error: ' + error.message);
-                    }
-                });
-            }
-            if (rejectBtn) {
-                rejectBtn.addEventListener('click', async () => {
-                    if (!confirm('Reject this payment?')) return;
-                    try {
-                        const result = await verifyPayment(id, 'Rejected');
-                        if (result.success) {
-                            alert('Payment rejected successfully.');
-                            document.getElementById('viewModal').style.display = 'none';
-                            await refreshAll();
-                        } else {
-                            alert(result.error || 'Failed to reject payment.');
-                        }
-                    } catch (error) {
-                        alert('Error: ' + error.message);
-                    }
-                });
-            }
         } catch (error) {
             alert('Failed to load payment: ' + error.message);
         }
     }
 
-    function openAddModal() {
-        document.getElementById('modalTitle').innerText = 'Record Payment';
-        document.getElementById('paymentForm').reset();
-        document.getElementById('paymentId').value = '';
-        document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
-        document.getElementById('paymentModal').style.display = 'flex';
-    }
-
-    document.getElementById('paymentForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const id = document.getElementById('paymentId').value;
-        const formData = new FormData();
-        formData.append('transaction_type', document.getElementById('transactionType').value);
-        formData.append('reference_id', document.getElementById('referenceId').value || '');
-        formData.append('amount', document.getElementById('amount').value);
-        formData.append('payment_date', document.getElementById('paymentDate').value);
-        formData.append('payment_method', document.getElementById('paymentMethod').value);
-        formData.append('receipt_number', document.getElementById('receiptNumber').value.trim());
-        formData.append('notes', document.getElementById('paymentNotes').value.trim());
-
-        const receiptFile = document.getElementById('receiptFile').files[0];
-        if (receiptFile) {
-            formData.append('receipt_file', receiptFile);
-        }
-
-        const requiredFields = ['transaction_type', 'amount', 'payment_date', 'payment_method', 'receipt_number'];
-        for (const field of requiredFields) {
-            if (!formData.get(field) || formData.get(field).trim() === '') {
-                alert('Please fill in all required fields.');
-                return;
-            }
-        }
-
-        try {
-            const options = { body: formData };
-            const result = id
-                ? await api.request(`payments/${id}`, { method: 'PUT', ...options })
-                : await api.request('payments', { method: 'POST', ...options });
-
-            if (result.success) {
-                document.getElementById('paymentModal').style.display = 'none';
-                await refreshAll();
-            } else {
-                alert(result.error || 'Failed to save payment');
-            }
-        } catch (error) {
-            alert('Error: ' + error.message);
-        }
-    });
-
-    document.getElementById('openAddPayment').addEventListener('click', openAddModal);
-    document.querySelector('#paymentModal .close').addEventListener('click', () => document.getElementById('paymentModal').style.display = 'none');
     document.querySelector('#viewModal .close-view').addEventListener('click', () => document.getElementById('viewModal').style.display = 'none');
-
     window.addEventListener('click', (e) => {
-        if (e.target === document.getElementById('paymentModal')) document.getElementById('paymentModal').style.display = 'none';
         if (e.target === document.getElementById('viewModal')) document.getElementById('viewModal').style.display = 'none';
     });
 
-    await refreshAll();
-
-    // Auto open payment modal if lot parameters passed via URL query params
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlLotId = urlParams.get('lot_id');
-    const urlLotNum = urlParams.get('lot_number');
-    const urlPrice = urlParams.get('price');
-    if (urlLotId || urlLotNum) {
-        openAddModal();
-        if (urlLotNum) {
-            document.getElementById('referenceId').value = `LOT-${urlLotNum}`;
-            document.getElementById('receiptNumber').value = `REC-${urlLotNum}-${Date.now().toString().slice(-4)}`;
-        }
-        if (urlPrice) {
-            document.getElementById('amount').value = urlPrice;
-        }
+    function debounce(fn, delay = 300) {
+        let timeout;
+        return (...args) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => fn(...args), delay);
+        };
     }
+
+    const refreshFiltered = debounce(async () => {
+        currentPage = 1;
+        await refreshAll();
+    }, 300);
+
+    referenceFilterInput.addEventListener('input', refreshFiltered);
+    transactionTypeFilterSelect.addEventListener('change', refreshFiltered);
+    statusFilterSelect.addEventListener('change', refreshFiltered);
+    dateFromFilterInput.addEventListener('change', refreshFiltered);
+    dateToFilterInput.addEventListener('change', refreshFiltered);
+    clearFiltersBtn.addEventListener('click', async () => {
+        referenceFilterInput.value = '';
+        transactionTypeFilterSelect.value = '';
+        statusFilterSelect.value = '';
+        dateFromFilterInput.value = '';
+        dateToFilterInput.value = '';
+        currentPage = 1;
+        await refreshAll();
+    });
+
+    prevPageBtn.addEventListener('click', async () => {
+        if (currentPage <= 1) return;
+        currentPage -= 1;
+        await refreshAll();
+    });
+    nextPageBtn.addEventListener('click', async () => {
+        if (currentPage >= pageCount) return;
+        currentPage += 1;
+        await refreshAll();
+    });
+
+    await refreshAll();
 
     updateNotificationBadge();
     setInterval(updateNotificationBadge, 30000);

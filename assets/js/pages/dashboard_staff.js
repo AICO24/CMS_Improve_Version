@@ -1,10 +1,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
     const logoutBtn = document.getElementById('logoutBtn');
     const pageTitle = document.getElementById('pageTitle');
-    const sidebarUserName = document.getElementById('sidebarUserName');
-    const sidebarUserRole = document.getElementById('sidebarUserRole');
-    const userName = document.getElementById('userName');
-    const userRole = document.getElementById('userRole');
 
     function setText(id, text) {
         const el = document.getElementById(id);
@@ -21,14 +17,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         return monthNames[monthNumber - 1] || 'Unknown';
     }
 
-    function redirectToLogin() {
-        const currentPath = window.location.pathname || '';
-        const prefix = currentPath.includes('/frontend/')
-            ? currentPath.split('/frontend/')[0] + '/frontend'
-            : '/CMS/frontend';
-        window.location.href = `${window.location.origin}${prefix}/auth/login.html`;
-    }
-
     const toggleBtn = document.getElementById("toggleSidebar");
     const sidebar = document.querySelector(".sidebar");
 
@@ -38,19 +26,12 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     logoutBtn?.addEventListener('click', () => api.logout());
 
+    const user = await requireRole(['staff']);
+    if (!user) return;
+
+    if (pageTitle) pageTitle.textContent = 'Staff Dashboard';
+
     try {
-        const user = await api.getMe();
-        if (!user || !user.user_id) {
-            redirectToLogin();
-            return;
-        }
-
-        setText('sidebarUserName', user.full_name || user.username || 'User');
-        setText('sidebarUserRole', user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Staff');
-        setText('userName', user.full_name || user.username || 'User');
-        setText('userRole', user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Staff');
-        if (pageTitle) pageTitle.textContent = 'Staff Dashboard';
-
         const occupancy = await api.request('reports/occupancy', { method: 'GET' });
         const revenueSummary = await api.request('payments/revenue', { method: 'GET' });
         const revenueByMonth = await api.request(`payments/revenue-by-month?year=${new Date().getFullYear()}`, { method: 'GET' });

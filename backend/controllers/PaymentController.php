@@ -13,18 +13,54 @@ class PaymentController {
         $this->auditLogModel = new AuditLog();
     }
 
-    public function index($filters = []) {
-        return $this->paymentModel->findAll($filters);
+    public function index($filters = [], $pagination = []) {
+        return $this->paginate($filters, $pagination);
     }
 
-    public function mine($userId, $filters = []) {
+    public function mine($userId, $filters = [], $pagination = []) {
         $filters['received_by'] = $userId;
-        return $this->paymentModel->findAll($filters);
+        return $this->paginate($filters, $pagination);
     }
 
-    public function show($id) {
+    // Mirrors ScheduleController::mine()'s pagination pattern: page/per_page are
+    // optional, so callers that don't pass them keep getting a plain array back.
+    private function paginate($filters, $pagination) {
+        $page = !empty($pagination['page']) ? (int) $pagination['page'] : null;
+        $perPage = !empty($pagination['per_page']) ? (int) $pagination['per_page'] : null;
+
+        if ($page === null && $perPage === null) {
+            return $this->paymentModel->findAll($filters);
+        }
+
+        $page = max(1, $page ?: 1);
+        $perPage = max(1, min(100, $perPage ?: 10));
+        $total = $this->paymentModel->countAll($filters);
+        $data = $this->paymentModel->findAll($filters, ['page' => $page, 'per_page' => $perPage]);
+
+        return [
+            'data' => $data,
+            'meta' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'pages' => (int) ceil($total / $perPage),
+            ],
+        ];
+    }
+
+    public function show($id, $user = null) {
         $payment = $this->paymentModel->findById($id);
-        return $payment ?: ['error' => 'Payment not found', 'code' => 404];
+        if (!$payment) {
+            return ['error' => 'Payment not found', 'code' => 404];
+        }
+
+        $userId = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        $userRole = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
+        if (!in_array($userRole, ['admin', 'staff'], true) && (int) $payment['received_by'] !== (int) $userId) {
+            return ['error' => 'You may only view your own payments', 'code' => 403];
+        }
+
+        return $payment;
     }
 
     public function store($data, $userId) {
@@ -33,6 +69,10 @@ class PaymentController {
             if (empty($data[$field]) && $data[$field] !== '0') {
                 return ['error' => "Field '$field' is required", 'code' => 400];
             }
+        }
+
+        if (!is_numeric($data['amount']) || (float) $data['amount'] <= 0) {
+            return ['error' => 'Amount must be a positive number', 'code' => 400];
         }
 
         $receiptFile = $data['receipt_file'] ?? null;
@@ -57,10 +97,27 @@ class PaymentController {
         return ['error' => 'Failed to record payment', 'code' => 500];
     }
 
-    public function update($id, $data, $userId) {
+    public function update($id, $data, $user) {
         $existing = $this->paymentModel->findById($id);
         if (!$existing) {
             return ['error' => 'Payment not found', 'code' => 404];
+        }
+
+        $userId = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        $userRole = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
+        $isStaffOrAdmin = in_array($userRole, ['admin', 'staff'], true);
+
+        if (!$isStaffOrAdmin) {
+            if ((int) $existing['received_by'] !== (int) $userId) {
+                return ['error' => 'You may only update your own payments', 'code' => 403];
+            }
+            if ($existing['verification_status'] !== 'Pending') {
+                return ['error' => 'Only pending payments may be updated', 'code' => 403];
+            }
+        }
+
+        if (isset($data['amount']) && (!is_numeric($data['amount']) || (float) $data['amount'] <= 0)) {
+            return ['error' => 'Amount must be a positive number', 'code' => 400];
         }
 
         $receiptFile = $data['receipt_file'] ?? null;
@@ -79,7 +136,9 @@ class PaymentController {
             return ['error' => 'Only administrators may change payment verification status via admin approval', 'code' => 403];
         }
 
-        $data['received_by'] = $userId;
+        // Preserve who the payment belongs to unless a staff/admin explicitly reassigns it;
+        // previously this always overwrote received_by with the editor's own id.
+        $data['received_by'] = isset($data['received_by']) ? $data['received_by'] : $existing['received_by'];
         $result = $this->paymentModel->update($id, $data);
         return $result ? ['success' => true, 'message' => 'Payment updated'] : ['error' => 'Failed to update payment', 'code' => 500];
     }
@@ -155,8 +214,19 @@ class PaymentController {
             return false;
         }
 
-        $allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        if (!in_array($file['type'], $allowedTypes, true)) {
+        // Detect the type from the file's actual bytes rather than trusting the
+        // client-supplied Content-Type header, which is trivially spoofable.
+        $extensionsByType = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'application/pdf' => 'pdf',
+        ];
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $detectedType = $finfo ? finfo_file($finfo, $file['tmp_name']) : false;
+        if ($finfo) {
+            finfo_close($finfo);
+        }
+        if (!$detectedType || !isset($extensionsByType[$detectedType])) {
             return false;
         }
 
@@ -165,7 +235,7 @@ class PaymentController {
             mkdir($uploadDir, 0755, true);
         }
 
-        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $extension = $extensionsByType[$detectedType];
         $filename = 'receipt_' . time() . '_' . bin2hex(random_bytes(5)) . '.' . $extension;
         $destination = $uploadDir . '/' . $filename;
 
@@ -173,7 +243,15 @@ class PaymentController {
             return false;
         }
 
-        return 'backend/api/uploads/receipts/' . $filename;
+        // Build an absolute, origin-relative URL from the actual backend root so it
+        // resolves correctly regardless of which frontend page renders it, and so it
+        // points at where the file is really saved (backend/uploads/receipts/, a
+        // sibling of api/ rather than beneath it — anything under backend/api/ is
+        // unconditionally rewritten to api/index.php by backend/.htaccess and could
+        // never be served as a static file).
+        $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/backend/api/index.php');
+        $backendRoot = rtrim(dirname(dirname($scriptName)), '/');
+        return $backendRoot . '/uploads/receipts/' . $filename;
     }
 
     private function notifyPayment($data, $userId) {

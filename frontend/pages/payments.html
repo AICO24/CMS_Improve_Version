@@ -106,7 +106,29 @@
                 </div>
 
                 <div class="toolbar-row">
-                    <button class="btn-add" id="openAddPayment"><i class="fas fa-plus"></i> Record Payment</button>
+                    <div class="toolbar-filters">
+                        <input type="text" id="referenceFilter" placeholder="Reference #">
+                        <select id="transactionTypeFilter">
+                            <option value="">All types</option>
+                            <option value="Lot Purchase">Lot Purchase</option>
+                            <option value="Cremation">Cremation</option>
+                            <option value="Relocation">Relocation</option>
+                            <option value="Renewal">Renewal</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <select id="statusFilter">
+                            <option value="">All statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Verified">Verified</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                        <input type="date" id="dateFromFilter" aria-label="From date">
+                        <input type="date" id="dateToFilter" aria-label="To date">
+                        <button class="btn-secondary" id="clearFilters">Clear</button>
+                    </div>
+                    <div class="toolbar-actions">
+                        <button class="btn-add" id="openAddPayment"><i class="fas fa-plus"></i> Record Payment</button>
+                    </div>
                 </div>
 
                 <div class="table-container">
@@ -124,9 +146,17 @@
                             </tr>
                         </thead>
                         <tbody id="paymentsTableBody">
-                            <tr><td colspan="7">Loading payments...</td></tr>
+                            <tr><td colspan="8">Loading payments...</td></tr>
                         </tbody>
                     </table>
+                </div>
+
+                <div class="pagination-controls" id="paginationControls">
+                    <span class="pagination-info" id="paginationInfo"></span>
+                    <div>
+                        <button class="btn-secondary" id="prevPage">Previous</button>
+                        <button class="btn-secondary" id="nextPage">Next</button>
+                    </div>
                 </div>
             </div>
         </main>

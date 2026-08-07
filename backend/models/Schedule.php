@@ -176,12 +176,12 @@ class Schedule {
     }
 
     public function create($data) {
-        $stmt = $this->db->prepare(" 
-            INSERT INTO burial_schedules 
+        $stmt = $this->db->prepare("
+            INSERT INTO burial_schedules
             (lot_id, deceased_id, schedule_date, schedule_time, status, notes, created_by, confirmed_by)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        return $stmt->execute([
+        $success = $stmt->execute([
             (int) $data['lot_id'],
             (int) $data['deceased_id'],
             $data['schedule_date'],
@@ -191,6 +191,8 @@ class Schedule {
             (int) $data['created_by'],
             isset($data['confirmed_by']) ? (int) $data['confirmed_by'] : null,
         ]);
+
+        return $success ? (int) $this->db->lastInsertId() : false;
     }
 
     public function update($id, $data) {

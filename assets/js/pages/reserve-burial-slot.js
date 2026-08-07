@@ -1,24 +1,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    try {
-        const user = await api.getMe();
-        if (!user) {
-            window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-            return;
-        }
-        document.getElementById('userName').innerText = user.full_name || user.username;
-        document.getElementById('userRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
-        document.getElementById('sidebarUserName').innerText = user.full_name || user.username;
-        document.getElementById('sidebarUserRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
-        if (user.role !== 'admin') {
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-        } else {
-            document.querySelectorAll('.admin-only').forEach(el => { el.style.display = 'flex'; el.classList.remove('admin-only'); });
-        }
-    } catch (error) {
-        console.error('Auth error', error);
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-        return;
-    }
+    const user = await requireRole(['user']);
+    if (!user) return;
 
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.querySelector('.sidebar');
@@ -225,7 +207,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 body: payload
             });
             if (result.success) {
-                alert('Reservation request submitted and pending approval.');
+                const bookedLot = selectedLot;
+                const scheduleId = result.schedule_id;
                 scheduleForm.reset();
                 budgetValue.textContent = '10000';
                 prefLotNumber.value = '';
@@ -233,6 +216,19 @@ document.addEventListener('DOMContentLoaded', async function() {
                 selectedLot = null;
                 currentPreferences = {};
                 showStep(1);
+
+                const goToPayment = confirm('Reservation request submitted and pending approval. Proceed to payment now?');
+                if (goToPayment) {
+                    const params = new URLSearchParams({
+                        transaction_type: 'Lot Purchase',
+                        lot_number: bookedLot.lot_number || '',
+                        price: bookedLot.price || '',
+                    });
+                    if (scheduleId) {
+                        params.set('reservation_id', scheduleId);
+                    }
+                    window.location.href = `payments.html?${params.toString()}`;
+                }
             } else {
                 alert(result.error || 'Failed to create schedule');
             }

@@ -1,33 +1,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    if (!localStorage.getItem('jwt_token')) {
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-        return;
-    }
-
-    try {
-        const user = await api.getMe();
-        if (!user) {
-            window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-            return;
-        }
-
-        const fullName = user.full_name || user.username || 'Client';
-        const roleLabel = user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'User';
-
-        const setText = (id, value) => {
-            const el = document.getElementById(id);
-            if (el) el.innerText = value;
-        };
-
-        setText('userName', fullName);
-        setText('userRole', roleLabel);
-        setText('sidebarUserName', fullName);
-        setText('sidebarUserRole', roleLabel);
-    } catch (error) {
-        console.error('Failed to load profile', error);
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-        return;
-    }
+    const user = await requireRole(['admin', 'staff', 'user']);
+    if (!user) return;
 
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {

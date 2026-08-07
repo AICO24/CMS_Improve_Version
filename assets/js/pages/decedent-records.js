@@ -1,14 +1,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    if (!localStorage.getItem('jwt_token')) {
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-        return;
-    }
-
-    const session = await loadSession();
-    if (!session) {
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-        return;
-    }
+    const session = await requireRole(['admin']);
+    if (!session) return;
 
     const lotSelect = document.getElementById('lotNumber');
     const sectionInput = document.getElementById('section');
@@ -69,27 +61,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     await refreshPage();
-
-    async function loadSession() {
-        try {
-            const user = await api.getMe();
-            if (user && user.role) {
-                document.getElementById('userName').innerText = user.full_name || user.username;
-                document.getElementById('userRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
-                document.getElementById('sidebarUserName').innerText = user.full_name || user.username;
-                document.getElementById('sidebarUserRole').innerText = user.role === 'admin' ? 'Administrator' : 'Staff';
-                if (user.role !== 'admin') {
-                    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-                } else {
-                    document.querySelectorAll('.admin-only').forEach(el => { el.style.display = 'flex'; el.classList.remove('admin-only'); });
-                }
-                return user;
-            }
-        } catch (error) {
-            console.error('Failed to load user session', error);
-        }
-        return null;
-    }
 
     async function refreshPage() {
         try {

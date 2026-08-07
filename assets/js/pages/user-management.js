@@ -1,20 +1,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    let currentUser = null;
-    try {
-        currentUser = await api.getMe();
-        document.getElementById('userName').innerText = currentUser.full_name || currentUser.username;
-        document.getElementById('userRole').innerText = currentUser.role === 'admin' ? 'Administrator' : 'Staff';
-        document.getElementById('sidebarUserName').innerText = currentUser.full_name || currentUser.username;
-        document.getElementById('sidebarUserRole').innerText = currentUser.role === 'admin' ? 'Administrator' : 'Staff';
-        if (currentUser.role !== 'admin') {
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-        } else {
-            document.querySelectorAll('.admin-only').forEach(el => { el.style.display = 'flex'; el.classList.remove('admin-only'); });
-        }
-    } catch (error) {
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-        return;
-    }
+    const currentUser = await requireRole(['admin']);
+    if (!currentUser) return;
 
     const usersTableBody = document.getElementById('usersTableBody');
     const totalUsers = document.getElementById('totalUsers');

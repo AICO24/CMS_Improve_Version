@@ -76,6 +76,18 @@ class UserController {
         $data['role_id'] = isset($data['role_id']) ? (int) $data['role_id'] : $existing['role_id'];
         $data['is_active'] = isset($data['is_active']) ? (int) $data['is_active'] : $existing['is_active'];
 
+        $adminRoleId = $this->userModel->getRoleIdByTitle('admin');
+        $wasActiveAdmin = $adminRoleId !== null
+            && (int) $existing['role_id'] === $adminRoleId
+            && (int) $existing['is_active'] === 1;
+        $staysActiveAdmin = $adminRoleId !== null
+            && $data['role_id'] === $adminRoleId
+            && $data['is_active'] === 1;
+
+        if ($wasActiveAdmin && !$staysActiveAdmin && $this->activeAdminCount($id) === 0) {
+            return ['error' => 'Cannot remove admin access from the last active administrator account', 'code' => 403];
+        }
+
         if (!empty($data['password'])) {
             $data['password_hash'] = password_hash($data['password'], PASSWORD_BCRYPT);
         }
@@ -110,6 +122,15 @@ class UserController {
             return ['error' => 'User not found', 'code' => 404];
         }
 
+        $adminRoleId = $this->userModel->getRoleIdByTitle('admin');
+        $isActiveAdmin = $adminRoleId !== null
+            && (int) $user['role_id'] === $adminRoleId
+            && (int) $user['is_active'] === 1;
+
+        if ($isActiveAdmin && $this->activeAdminCount($id) === 0) {
+            return ['error' => 'Cannot delete the last active administrator account', 'code' => 403];
+        }
+
         $result = $this->userModel->delete($id);
         if ($result) {
             $this->auditLogModel->log(
@@ -124,6 +145,16 @@ class UserController {
         }
 
         return ['error' => 'Failed to delete user', 'code' => 500];
+    }
+
+    // Counts active admins other than $excludeUserId, so callers can check
+    // whether removing/demoting/deactivating that one user would leave zero.
+    private function activeAdminCount($excludeUserId) {
+        $admins = $this->userModel->findAll(['role' => 'admin', 'is_active' => 1]);
+        $remaining = array_filter($admins, function ($admin) use ($excludeUserId) {
+            return (int) $admin['user_id'] !== (int) $excludeUserId;
+        });
+        return count($remaining);
     }
 
     private function normalize($user) {

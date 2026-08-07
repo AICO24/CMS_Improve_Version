@@ -1,17 +1,9 @@
 document.addEventListener('DOMContentLoaded', async function() {
     try {
-        const user = await api.getMe();
-        if (!user) {
-            window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-            return;
-        }
-        document.getElementById('userName').innerText = user.full_name || user.username;
-        document.getElementById('userRole').innerText = user.role === 'admin' ? 'Administrator' : 'User';
-        document.getElementById('sidebarUserName').innerText = user.full_name || user.username;
-        document.getElementById('sidebarUserRole').innerText = user.role === 'admin' ? 'Administrator' : 'User';
+        const user = await requireRole(['user']);
+        if (!user) return;
     } catch (error) {
         console.error('Auth error', error);
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
         return;
     }
 

@@ -22,27 +22,6 @@ const buildListItem = (title, subtitle) => {
     return li;
 };
 
-const getRoleRedirect = (role) => {
-    if (!role) return null;
-    const normalized = String(role).toLowerCase();
-    if (normalized.includes('admin')) return `${getFrontendBasePath()}/pages/dashboard_admin.html`;
-    if (normalized.includes('staff')) return `${getFrontendBasePath()}/pages/dashboard_staff.html`;
-    return null;
-};
-
-const getFrontendBasePath = () => {
-    const currentPath = window.location.pathname || '';
-    if (currentPath.includes('/frontend/')) {
-        return `${window.location.origin}${currentPath.split('/frontend/')[0]}/frontend`;
-    }
-    return `${window.location.origin}/CMS/frontend`;
-};
-
-const setSidebarUser = (user) => {
-    updateText('sidebarUserName', user.full_name || user.username || 'Client');
-    updateText('sidebarUserRole', user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User');
-};
-
 const renderSchedules = (schedules) => {
     const list = document.getElementById('upcomingScheduleList');
     list.innerHTML = '';
@@ -74,21 +53,8 @@ const renderNotifications = (notifications) => {
 };
 
 const loadDashboard = async () => {
-    const user = await api.getMe();
-    if (!user) {
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-        return;
-    }
-
-    const redirectPage = getRoleRedirect(user.role);
-    if (redirectPage) {
-        window.location.href = redirectPage;
-        return;
-    }
-
-    updateText('userName', user.full_name || user.username || 'Client');
-    updateText('userRole', user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User');
-    setSidebarUser(user);
+    const user = await requireRole(['user']);
+    if (!user) return;
 
     const [notificationsUnread, notifications, allSchedules, payments] = await Promise.all([
         api.request('notifications/unread-count', { method: 'GET' }).catch(() => ({ count: 0 })),
