@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         setText('sidebarUserName', fullName);
         setText('sidebarUserRole', roleLabel);
     } catch (error) {
-        console.error('Failed to load profile', error);
+        console.error('Failed to load session', error);
         window.location.href = `${getFrontendBasePath()}/auth/login.html`;
         return;
     }

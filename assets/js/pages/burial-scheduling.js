@@ -112,7 +112,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <div>
                         <strong>${lot.lot_number} — ${lot.section_name || 'N/A'}</strong><br>
                         <span class="lot-type-tag">${lot.lot_type_name || 'N/A'}</span> | $${parseFloat(lot.price).toLocaleString()}<br>
-                        <span class="muted">Available status: ${lot.status || 'Available'}</span>
+                        <span class="status-badge status-success">${lot.status || 'Available'}</span>
                     </div>
                     <div class="recommendation-actions">
                         <div class="score">${lot.score || 0}% suitability</div>

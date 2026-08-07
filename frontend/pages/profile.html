@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile | Cemetery Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../../assets/css/tokens.css">
     <link rel="stylesheet" href="../../assets/css/typography.css">
     <link rel="stylesheet" href="../../assets/css/spacing.css">
@@ -16,6 +18,7 @@
     <link rel="stylesheet" href="../../assets/css/components/forms.css">
     <link rel="stylesheet" href="../../assets/css/components/tables.css">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard_staff.css">
     <link rel="stylesheet" href="../../assets/css/dashboard_user.css">
 </head>
 <body class="dashboard-body">
@@ -45,13 +48,56 @@
         <main class="main-content">
             <div class="top-bar">
                 <div class="top-left">
+                    <label class="hamburger">
+                        <input type="checkbox" id="toggleSidebar">
+                        <svg viewBox="0 0 32 32">
+                            <path
+                                class="line line-top-bottom"
+                                d="M27 10H13c-2.209 0-4-1.791-4-4
+                                0-2.209 1.791-4 4-4
+                                2.209 0 4 1.791 4 4v20
+                                c0 2.209-1.791 4-4 4
+                                -2.209 0-4-1.791-4-4
+                                0-2.209 1.791-4 4-4h14">
+                            </path>
+                            <path
+                                class="line"
+                                d="M7 16H27">
+                            </path>
+                        </svg>
+                    </label>
                     <h3>Profile</h3>
+                </div>
+                <div class="user-info">
+                    <div class="notification-icon" id="notificationIcon">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="notificationBadge">0</span>
+                    </div>
+                    <div class="profile">
+                        <div class="profile-avatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="profile-text">
+                            <div class="user-name" id="userName">Client</div>
+                            <div class="user-role" id="userRole">Client</div>
+                        </div>
+                    </div>
+                    <button class="Btn logout-btn" id="logoutBtn">
+                        <div class="sign">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </div>
+                        <div class="text">
+                            Logout
+                        </div>
+                    </button>
                 </div>
             </div>
             <div class="content-area">
                 <div class="card">
-                    <h4>Settings</h4>
-                    <p class="muted">This section is reserved for future user account settings and preferences.</p>
+                    <h4>Account Information</h4>
+                    <p class="muted">Your account details as registered with the Cemetery Management System.</p>
+                    <div class="detail-row"><span>Full Name</span><strong id="profileFullName">—</strong></div>
+                    <div class="detail-row"><span>Username</span><strong id="profileUsername">—</strong></div>
+                    <div class="detail-row"><span>Email</span><strong id="profileEmail">—</strong></div>
+                    <div class="detail-row"><span>Role</span><strong id="profileRole">—</strong></div>
                 </div>
             </div>
         </main>

@@ -99,6 +99,12 @@ const loadDashboard = async () => {
 const attachEvents = () => {
     document.getElementById('logoutBtn')?.addEventListener('click', () => api.logout());
     document.getElementById('notificationIcon')?.addEventListener('click', () => window.location.href = `${getFrontendBasePath()}/pages/notifications.html`);
+
+    const toggleBtn = document.getElementById('toggleSidebar');
+    const sidebar = document.querySelector('.sidebar');
+    if (toggleBtn && sidebar) {
+        toggleBtn.addEventListener('change', () => sidebar.classList.toggle('collapsed'));
+    }
 };
 
 document.addEventListener('DOMContentLoaded', async () => {

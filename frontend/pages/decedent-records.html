@@ -115,6 +115,11 @@
                             </div>
                         </div>
                     </div>
+                    <select id="typeFilter" class="filter-select" aria-label="Filter by record type">
+                        <option value="all">All Types</option>
+                        <option value="no">Burial</option>
+                        <option value="yes">Cremation</option>
+                    </select>
                     <button class="btn-add type1" id="openAddModal">
                         <span class="btn-txt">
                             <i class="fas fa-plus"></i>
@@ -142,11 +147,12 @@
                                 <th>Date of Death</th>
                                 <th>Lot Number</th>
                                 <th>Section</th>
+                                <th>Type</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
-                            <tr><td colspan="7">Loading records...</td></tr>
+                            <tr><td colspan="8">Loading records...</td></tr>
                         </tbody>
                     </table>
                 </div>

@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             allLogs = await api.request('audit-logs', { method: 'GET' });
             renderLogs(allLogs);
         } catch (err) {
-            tbody.innerHTML = `<tr><td colspan="6" style="color:red;">Failed to load logs: ${err.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="audit-error">Failed to load logs: ${err.message}</td></tr>`;
         }
     }
 
@@ -53,10 +53,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             <tr>
                 <td><small>${l.created_at || '—'}</small></td>
                 <td><strong>${l.user_full_name || l.username || 'System'}</strong></td>
-                <td><span style="background: #e2e8f0; padding: 3px 8px; border-radius: 6px; font-weight: 600;">${l.action}</span></td>
+                <td><span class="action-badge">${l.action}</span></td>
                 <td>${l.entity_type ? `${l.entity_type} #${l.entity_id || ''}` : '—'}</td>
                 <td><code>${l.ip_address || '127.0.0.1'}</code></td>
-                <td><small style="color: #475569;">${l.details || '—'}</small></td>
+                <td><small class="muted">${l.details || '—'}</small></td>
             </tr>
         `).join('');
     }

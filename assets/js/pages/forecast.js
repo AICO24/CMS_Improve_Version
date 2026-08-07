@@ -34,6 +34,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         return data.summary || { total: 0, occupied: 0, available: 0 };
     }
 
+    function trendBadge(trend) {
+        if (trend === 'increasing') return '<span class="status-badge status-warning">📈 Increasing</span>';
+        if (trend === 'decreasing') return '<span class="status-badge status-success">📉 Decreasing</span>';
+        return '<span class="status-badge status-neutral">➡️ Stable</span>';
+    }
+
     async function renderForecast(months) {
         try {
             const [forecast, occupancy] = await Promise.all([fetchForecast(months), fetchOccupancy()]);
@@ -41,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const predicted = forecast.forecast?.[forecast.forecast.length - 1]?.cumulative || 0;
             document.getElementById('predictedOccupancy').innerText = predicted;
             document.getElementById('availableFuture').innerText = Math.max(0, (occupancy.total || 0) - predicted);
-            document.getElementById('trendStatus').innerText = forecast.trend === 'increasing' ? '📈 Increasing' : forecast.trend === 'decreasing' ? '📉 Decreasing' : '➡️ Stable';
+            document.getElementById('trendStatus').innerHTML = trendBadge(forecast.trend);
 
             const ctx = document.getElementById('forecastChart').getContext('2d');
             const historical = forecast.historical || [];

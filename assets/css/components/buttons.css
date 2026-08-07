@@ -109,6 +109,13 @@
     background: transparent;
 }
 
+.btn--secondary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-ghost:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
 /* --- New variants (additive — not used by existing markup yet) --- */
 .btn--success {
     background: var(--color-success);

@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const lotSelect = document.getElementById('lotNumber');
     const sectionInput = document.getElementById('section');
     const searchInput = document.getElementById('searchInput');
+    const typeFilter = document.getElementById('typeFilter');
     const tableBody = document.getElementById('tableBody');
     const recordModal = document.getElementById('recordModal');
     const viewModal = document.getElementById('viewModal');
@@ -17,6 +18,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     let records = [];
     let currentEditId = null;
     let currentQuery = '';
+    let currentTypeFilter = 'all';
 
     document.getElementById('logoutBtn').addEventListener('click', () => {
         localStorage.removeItem('jwt_token');
@@ -44,6 +46,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         currentQuery = searchInput.value.trim();
         loadRecords();
     });
+    typeFilter.addEventListener('change', () => {
+        currentTypeFilter = typeFilter.value;
+        renderTable(getFilteredRecords());
+    });
 
     recordForm.addEventListener('submit', async function(event) {
         event.preventDefault();
@@ -69,7 +75,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             await loadStats();
         } catch (error) {
             console.error('Failed to initialize page', error);
-            tableBody.innerHTML = '<tr><td colspan="7">Could not load records. Please refresh.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8">Could not load records. Please refresh.</td></tr>';
         }
     }
 
@@ -93,7 +99,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     async function loadRecords() {
         const query = currentQuery ? `?q=${encodeURIComponent(currentQuery)}` : '';
         records = await api.request(`decedents${query}`, { method: 'GET' });
-        renderTable(records);
+        renderTable(getFilteredRecords());
+    }
+
+    function getFilteredRecords() {
+        if (currentTypeFilter === 'all') {
+            return records;
+        }
+        return records.filter((item) => item.is_cremated === currentTypeFilter);
     }
 
     async function loadStats() {
@@ -106,7 +119,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function renderTable(items) {
         if (!items || items.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7">No records found.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8">No records found.</td></tr>';
             return;
         }
 
@@ -118,6 +131,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <td>${escapeHtml(item.dod)}</td>
                 <td>${escapeHtml(item.lot_number)}</td>
                 <td>${escapeHtml(item.section_name)}</td>
+                <td><span class="status-badge ${item.is_cremated === 'yes' ? 'status-warning' : 'status-success'}">${item.is_cremated === 'yes' ? 'Cremation' : 'Burial'}</span></td>
                 <td class="action-buttons">
                     <button class="btn-view" title="View"><i class="fas fa-eye"></i></button>
                     <button class="btn-edit-row" title="Edit"><i class="fas fa-pen"></i></button>

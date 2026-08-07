@@ -1,0 +1,31 @@
+/*
+  Audit Logs module — page-specific extras only. Layout (sidebar, top-bar,
+  toolbar-row/toolbar-filters, table-container, data-table) is inherited
+  from user-management.css, already linked on this page; duplicating that
+  here would just be a second copy to keep in sync.
+*/
+
+.action-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--color-neutral-200);
+    color: var(--color-neutral-700);
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.muted {
+    color: var(--color-text-muted);
+}
+
+.audit-error {
+    color: var(--color-danger);
+}
+
+#auditTableBody code {
+    font-family: var(--font-mono);
+    font-size: var(--fs-body-sm);
+    color: var(--color-neutral-600);
+}

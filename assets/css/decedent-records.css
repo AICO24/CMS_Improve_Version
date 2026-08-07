@@ -265,6 +265,30 @@
     width:350px;
 }
 
+.filter-select {
+    height: 50px;
+    padding: 0 16px;
+    border-radius: 40px;
+    border: 2px solid #d8e5dd;
+    background: #ffffff;
+    color: #243736;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: .35s ease;
+}
+
+.filter-select:hover {
+    border-color: #2c5e47;
+}
+
+.filter-select:focus-visible {
+    outline: none;
+    border-color: #2c5e47;
+    box-shadow: 0 0 0 4px rgba(44,94,71,.15);
+}
+
 .mainbox{
 
     width:100%;
@@ -684,6 +708,35 @@
     color: #dc2626;
 }
 
+.btn-view:focus-visible,
+.btn-edit-row:focus-visible,
+.btn-delete-row:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+/* ---------- RECORD DETAILS (view modal) ---------- */
+/* .detail-row markup was already emitted by decedent-records.js but had no
+   styling in this file, so it rendered as unstyled stacked text. */
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: 8px 0;
+    border-bottom: 1px solid #edf2f7;
+    font-family: var(--font-sans);
+    font-size: var(--fs-body-sm);
+    color: var(--color-text);
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-row span {
+    color: var(--color-text-muted);
+}
+
 /* ---------- MODALS ---------- */
 /* .modal overlay now comes from assets/css/components/modals.css (Batch 5) */
 /* background/radius/padding/shadow now come from assets/css/components/modals.css (Batch 5); sizing kept as page-specific */
@@ -940,83 +993,4 @@
 }
 
 
-/* Logout button styles */
-.logout-btn,
-.Btn {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 45px;
-    height: 45px;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.199);
-    background-color: white;
-    padding: 0;
-}
-
-.sign {
-    width: 100%;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.sign svg,
-.sign i {
-    width: 17px;
-}
-
-.sign svg path,
-.sign i {
-    color: black;
-}
-
-.text {
-    position: absolute;
-    right: 0%;
-    width: 0%;
-    opacity: 0;
-    color: white;
-    font-size: 1.2em;
-    font-weight: 600;
-    white-space: nowrap;
-    transition: all 0.3s ease;
-}
-
-.Btn:hover,
-.logout-btn:hover {
-    background-color: black;
-    width: 125px;
-    border-radius: 40px;
-}
-
-.Btn:hover .sign,
-.logout-btn:hover .sign {
-    width: 30%;
-    padding-left: 20px;
-}
-
-.Btn:hover .sign svg path,
-.logout-btn:hover .sign svg path,
-.Btn:hover .sign i,
-.logout-btn:hover .sign i {
-    color: white;
-}
-
-.Btn:hover .text,
-.logout-btn:hover .text {
-    opacity: 1;
-    width: 70%;
-    padding-right: 10px;
-}
-
-.Btn:active,
-.logout-btn:active {
-    transform: translate(2px, 2px);
-}
+/* .logout-btn/.Btn (+ .sign/.text sliding animation) now come from assets/css/dashboard.css (Batch 10) */
