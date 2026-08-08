@@ -21,7 +21,7 @@ Schema changes after the baseline live in `backend/database/migration_YYYYMMDD_<
 
 Once a migration has been running in a real environment for a while, fold it into `schema.sql` (re-dump) and note it as folded-in there, the way `migration_20260729_add_payment_receipt_verification.sql` and `migration_20260730_add_user_contact_and_role.sql` were folded in on 2026-08-07 — that keeps the migrations folder from growing without bound while still leaving a record of what changed and when.
 
-## Live tables (as of 2026-08-07)
+## Live tables (as of 2026-08-08)
 
 | Table | Purpose |
 |---|---|
@@ -37,6 +37,7 @@ Once a migration has been running in a real environment for a while, fold it int
 | `audit_logs` | Mutating-action audit trail (self-created at runtime by the `AuditLog` model if missing) |
 | `ai_parameters` | Key/value config surfaced in the admin AI Configuration page; not currently read by the forecasting code itself |
 | `schema_migrations` | Which `migration_*.sql` files have been applied to this database |
+| `occupancy_snapshots` | Per-section, per-day occupancy history for trend charting. Populated automatically by `ReportController::occupancy()` on every request (upsert — no duplicate rows per day), not by a cron job. |
 
 For exact columns, types, and constraints, read `backend/database/schema.sql` directly rather than duplicating it here — a second hand-maintained copy is exactly how the previous schema.sql went stale.
 

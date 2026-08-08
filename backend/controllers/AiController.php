@@ -12,7 +12,20 @@ class AiController {
     }
 
     public function health() {
-        return ['status' => 'ok', 'service' => 'php-api'];
+        $result = $this->aiService->healthCheck();
+        if (!empty($result['error'])) {
+            return [
+                'status' => 'offline',
+                'service' => 'php-api',
+                'python_ai' => ['status' => 'offline', 'error' => $result['error']],
+            ];
+        }
+
+        return [
+            'status' => 'ok',
+            'service' => 'php-api',
+            'python_ai' => $result,
+        ];
     }
 
     public function recommend($preferences) {

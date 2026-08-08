@@ -30,6 +30,9 @@ DB_CONFIG = {
 
 warnings.filterwarnings('ignore')
 
+CAPACITY_WARNING_THRESHOLD = 0.80
+CAPACITY_CRITICAL_THRESHOLD = 0.95
+
 
 def get_connection():
     try:
@@ -163,6 +166,49 @@ def recommend_lots():
         return jsonify({'error': str(exc), 'code': 500}), 500
 
 
+def _get_capacity_snapshot() -> Dict[str, int]:
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'Occupied' THEN 1 ELSE 0 END) AS occupied
+            FROM lots
+            """
+        )
+        row = cursor.fetchone() or {}
+        cursor.close()
+        conn.close()
+    except Exception:
+        row = {}
+    total = int(row.get('total') or 0)
+    occupied = int(row.get('occupied') or 0)
+    return {'total': total, 'occupied': occupied, 'available': max(0, total - occupied)}
+
+
+def _get_reclaimable_by_month(months: int) -> Dict[str, int]:
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT DATE_FORMAT(end_date, '%%Y-%%m') AS month, COUNT(*) AS reclaimable
+            FROM expiration_records
+            WHERE renewed = 'no'
+              AND end_date >= CURDATE()
+              AND end_date <= DATE_ADD(CURDATE(), INTERVAL %s MONTH)
+            GROUP BY month
+            """,
+            (months,),
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+    except Exception:
+        rows = []
+    return {row['month']: int(row['reclaimable']) for row in rows if row.get('month')}
+
+
 @app.get('/api/forecast')
 def forecast_burials():
     try:
@@ -244,11 +290,49 @@ def forecast_burials():
             elif last_value < first_value:
                 trend = 'decreasing'
 
+        capacity = _get_capacity_snapshot()
+        reclaimable_by_month = _get_reclaimable_by_month(months)
+        total_capacity = capacity['total']
+        cumulative_reclaimed = 0
+        capacity_alert = None
+        for entry in forecast_payload:
+            reclaimable = reclaimable_by_month.get(entry['month'], 0)
+            cumulative_reclaimed += reclaimable
+            projected_occupied = capacity['occupied'] + entry['cumulative'] - cumulative_reclaimed
+            if total_capacity:
+                projected_occupied = max(0, min(total_capacity, projected_occupied))
+                occupancy_rate = projected_occupied / total_capacity
+            else:
+                projected_occupied = max(0, projected_occupied)
+                occupancy_rate = 0.0
+            projected_available = max(0, total_capacity - projected_occupied)
+
+            if occupancy_rate >= CAPACITY_CRITICAL_THRESHOLD:
+                capacity_status = 'critical'
+            elif occupancy_rate >= CAPACITY_WARNING_THRESHOLD:
+                capacity_status = 'warning'
+            else:
+                capacity_status = 'ok'
+            if capacity_status != 'ok' and capacity_alert is None:
+                capacity_alert = {
+                    'month': entry['month'],
+                    'status': capacity_status,
+                    'occupancy_rate': round(occupancy_rate, 4),
+                }
+
+            entry['reclaimable'] = reclaimable
+            entry['projected_occupied'] = projected_occupied
+            entry['projected_available'] = projected_available
+            entry['occupancy_rate'] = round(occupancy_rate, 4)
+            entry['capacity_status'] = capacity_status
+
         return jsonify({
             'historical': history,
             'forecast': forecast_payload,
             'trend': trend,
             'model': 'arima' if len(monthly_series) >= 5 else 'moving_average',
+            'capacity': capacity,
+            'capacity_alert': capacity_alert,
         })
     except Exception as exc:  # pragma: no cover - defensive path
         return jsonify({'error': str(exc), 'code': 500}), 500

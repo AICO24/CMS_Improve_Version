@@ -80,6 +80,21 @@ document.addEventListener('DOMContentLoaded', async function() {
                 },
                 options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
             });
+
+            const trend = await api.request('reports/occupancy-trend?months=12', { method: 'GET' });
+            const trendNote = document.getElementById('occupancyTrendNote');
+            trendNote.textContent = trend.length < 2
+                ? 'History is captured automatically each time this page is viewed — check back over the coming weeks to see a trend build up.'
+                : '';
+            const trendCtx = document.getElementById('occupancyTrendChart').getContext('2d');
+            new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: trend.map(item => item.snapshot_date),
+                    datasets: [{ label: 'Occupied Lots', data: trend.map(item => item.occupied || 0), borderColor: '#4f46e5', fill: false }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+            });
         } catch (error) {
             console.error('Failed to load occupancy:', error);
         }

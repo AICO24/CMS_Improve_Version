@@ -745,6 +745,13 @@ if ($path === 'reports/occupancy' && $requestMethod === 'GET') {
     exit;
 }
 
+if ($path === 'reports/occupancy-trend' && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $months = isset($_GET['months']) ? (int) $_GET['months'] : 12;
+    echo json_encode($reportController->occupancyTrend($months));
+    exit;
+}
+
 if ($path === 'reports/revenue' && $requestMethod === 'GET') {
     $filters = [];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
@@ -761,17 +768,19 @@ if ($path === 'reports/expiration' && $requestMethod === 'GET') {
 $aiController = new AiController();
 
 if ($path === 'ai/health' && $requestMethod === 'GET') {
-    echo json_encode(['status' => 'ok', 'service' => 'php-api']);
+    echo json_encode($aiController->health());
     exit;
 }
 
 if ($path === 'ai/recommend' && $requestMethod === 'POST') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
     echo json_encode($aiController->recommend($input));
     exit;
 }
 
 if ($path === 'ai/forecast' && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
     $months = isset($_GET['months']) ? $_GET['months'] : 6;
     echo json_encode($aiController->forecast($months));
     exit;

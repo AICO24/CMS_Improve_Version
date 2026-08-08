@@ -1,6 +1,12 @@
 # Environment files
 .env
 
+# Python virtual environments
+python-ai/venv/
+python-ai/.venv/
+__pycache__/
+*.py[cod]
+
 # Local runtime artifacts
 backend/storage/logs/
 backend/storage/uploads/
