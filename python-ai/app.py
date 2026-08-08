@@ -143,21 +143,26 @@ def recommend_lots():
         ranked_lots = []
         for index, lot in enumerate(lots):
             score = round(float(similarity_scores[index]) * 100, 2)
+            reasons: List[str] = []
             if lot_type and lot.get('lot_type_name') == lot_type:
                 score += 5.0
+                reasons.append('Matches your selected lot type')
             if section and lot.get('section_name') == section:
                 score += 3.0
+                reasons.append('Matches your preferred section')
             if budget is not None and budget != '':
                 try:
                     budget_value = float(budget)
                     lot_price = float(lot.get('price') or 0)
                     if lot_price <= budget_value:
                         score += 5.0
+                        reasons.append('Within your budget')
                 except (TypeError, ValueError):
                     pass
             ranked_lots.append({
                 **lot,
                 'score': round(max(0.0, min(100.0, score)), 2),
+                'reasons': reasons,
             })
 
         ranked_lots.sort(key=lambda item: item['score'], reverse=True)

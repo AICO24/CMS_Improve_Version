@@ -145,7 +145,7 @@ class ScheduleController {
         $headers = "From: noreply@cemeterysystem.local\r\n";
         $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
 
-        return mail($email, $subject, $message, $headers);
+        return @mail($email, $subject, $message, $headers);
     }
 
     public function update($id, $data, $user) {

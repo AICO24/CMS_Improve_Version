@@ -86,6 +86,53 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    function buildLotCard(lot) {
+        const reasons = Array.isArray(lot.reasons) ? lot.reasons : [];
+        const hasScore = lot.score !== undefined && lot.score !== null;
+        return `
+            <div class="recommendation-card" data-lot-id="${lot.lot_id}">
+                <div>
+                    <strong>${lot.lot_number} — ${lot.section_name || 'N/A'}</strong><br>
+                    <span class="lot-type-tag">${lot.lot_type_name || 'N/A'}</span> | $${parseFloat(lot.price).toLocaleString()}<br>
+                    <span class="muted">Available status: ${lot.status || 'Available'}</span>
+                </div>
+                <div class="recommendation-actions">
+                    ${hasScore ? `<div class="score">${lot.score || 0}% suitability</div>` : ''}
+                    ${reasons.length ? `<ul class="recommendation-reasons">${reasons.map(reason => `<li>${reason}</li>`).join('')}</ul>` : ''}
+                    <button class="select-lot-btn" type="button" data-lot='${JSON.stringify(lot)}'>Reserve</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function attachSelectHandlers() {
+        document.querySelectorAll('.select-lot-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                selectedLot = JSON.parse(btn.getAttribute('data-lot'));
+                displayConfirmation(selectedLot);
+                showStep(3);
+            });
+        });
+    }
+
+    async function showManualLotFallback() {
+        recommendationSummary.textContent = 'AI recommendations are temporarily unavailable. Showing available lots you can choose from manually.';
+        recommendationSummary.classList.add('is-fallback');
+        try {
+            const availableLots = await api.request('lots?status=Available', { method: 'GET' });
+            const lots = Array.isArray(availableLots) ? availableLots.slice(0, 10) : [];
+            if (lots.length === 0) {
+                recommendationsList.innerHTML = '<p class="text-center">No available lots to display right now. Please try again later.</p>';
+                return;
+            }
+            recommendationsList.innerHTML = lots.map(buildLotCard).join('');
+            attachSelectHandlers();
+        } catch (error) {
+            console.error('Failed to load available lots for manual browsing', error);
+            recommendationsList.innerHTML = '<p class="text-center">Could not load available lots. Please try again later.</p>';
+        }
+    }
+
     async function generateRecommendations() {
         const preferences = {
             lot_number: prefLotNumber.value.trim(),
@@ -93,44 +140,32 @@ document.addEventListener('DOMContentLoaded', async function() {
             budget: parseInt(selectBudgetInput.value, 10),
             section: selectSectionInput.value
         };
+        recommendationSummary.classList.remove('is-fallback');
         try {
             const recommendations = await api.request('schedules/recommend', {
                 method: 'POST',
                 body: preferences
             });
-            const lotCount = Array.isArray(recommendations) ? recommendations.length : 0;
+
+            if (!Array.isArray(recommendations)) {
+                await showManualLotFallback();
+                return;
+            }
+
+            const lotCount = recommendations.length;
             recommendationSummary.textContent = lotCount
                 ? `${lotCount} available recommendation${lotCount === 1 ? '' : 's'} found for your search criteria.`
                 : 'No matching lots available. Please adjust your filters or search terms.';
 
-            if (!recommendations || recommendations.length === 0) {
+            if (lotCount === 0) {
                 recommendationsList.innerHTML = '<p class="text-center">No matching lots available. Please adjust your preferences.</p>';
                 return;
             }
-            recommendationsList.innerHTML = recommendations.map(lot => `
-                <div class="recommendation-card" data-lot-id="${lot.lot_id}">
-                    <div>
-                        <strong>${lot.lot_number} — ${lot.section_name || 'N/A'}</strong><br>
-                        <span class="lot-type-tag">${lot.lot_type_name || 'N/A'}</span> | $${parseFloat(lot.price).toLocaleString()}<br>
-                        <span class="muted">Available status: ${lot.status || 'Available'}</span>
-                    </div>
-                    <div class="recommendation-actions">
-                        <div class="score">${lot.score || 0}% suitability</div>
-                        <button class="select-lot-btn" type="button" data-lot='${JSON.stringify(lot)}'>Reserve</button>
-                    </div>
-                </div>
-            `).join('');
-            document.querySelectorAll('.select-lot-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    selectedLot = JSON.parse(btn.getAttribute('data-lot'));
-                    displayConfirmation(selectedLot);
-                    showStep(3);
-                });
-            });
+            recommendationsList.innerHTML = recommendations.map(buildLotCard).join('');
+            attachSelectHandlers();
         } catch (error) {
             console.error('Recommendation API failed', error);
-            recommendationSummary.textContent = 'Could not load recommendations. Please try again later.';
-            recommendationsList.innerHTML = '<p class="text-center">Could not load recommendations. Please try again.</p>';
+            await showManualLotFallback();
         }
     }
 

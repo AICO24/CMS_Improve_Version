@@ -353,6 +353,25 @@ input[type="range"] {
         line-height: 1.6;
     }
 
+    .recommendation-summary.is-fallback {
+        color: #b45309;
+        font-weight: 600;
+    }
+
+    .recommendation-reasons {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        text-align: right;
+        font-size: 0.75rem;
+        color: #475569;
+    }
+
+    .recommendation-reasons li::before {
+        content: "✓ ";
+        color: #166534;
+    }
+
     .recommendation-card {
         background: #f9fbf9;
         border: 1px solid #e2e8f0;
