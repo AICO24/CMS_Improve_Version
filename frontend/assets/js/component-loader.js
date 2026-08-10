@@ -29,5 +29,6 @@
     for (const [selector, url] of Object.entries(placeholders)) {
       await loadPartial(selector, url);
     }
+    document.dispatchEvent(new Event('components:loaded'));
   });
 })();
