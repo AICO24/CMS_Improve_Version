@@ -352,22 +352,25 @@ function renderLots(lots) {
             return;
         }
 
-        try {
-            let result;
-            if (id) {
-                result = await apiRequest(`lots/${id}`, { method: 'PUT', body: data });
-            } else {
-                result = await apiRequest('lots', { method: 'POST', body: data });
+        const saveBtn = e.target.querySelector('button[type="submit"]');
+        await withButtonLoading(saveBtn, async () => {
+            try {
+                let result;
+                if (id) {
+                    result = await apiRequest(`lots/${id}`, { method: 'PUT', body: data });
+                } else {
+                    result = await apiRequest('lots', { method: 'POST', body: data });
+                }
+                if (result.success) {
+                    document.getElementById('lotModal').style.display = 'none';
+                    await refreshAll();
+                } else {
+                    alert(result.error || 'Failed to save lot');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
             }
-            if (result.success) {
-                document.getElementById('lotModal').style.display = 'none';
-                await refreshAll();
-            } else {
-                alert(result.error || 'Failed to save lot');
-            }
-        } catch (error) {
-            alert('Error: ' + error.message);
-        }
+        });
     });
 
     async function refreshAll() {

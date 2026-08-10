@@ -22,3 +22,13 @@
         scroll-behavior: auto !important;
     }
 }
+
+/*
+  Spinner keyframe — shared by any element that needs an indeterminate
+  loading indicator (currently: .btn--loading in components/buttons.css).
+  Left here rather than in buttons.css since it's a generic motion
+  primitive, not button-specific styling.
+*/
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

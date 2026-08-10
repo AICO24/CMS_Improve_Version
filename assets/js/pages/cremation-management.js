@@ -226,22 +226,25 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        try {
-            const result = id
-                ? await apiRequest(`cremations/${id}`, { method: 'PUT', body: data })
-                : await apiRequest('cremations', { method: 'POST', body: data });
+        const saveBtn = cremationForm.querySelector('button[type="submit"]');
+        await withButtonLoading(saveBtn, async () => {
+            try {
+                const result = id
+                    ? await apiRequest(`cremations/${id}`, { method: 'PUT', body: data })
+                    : await apiRequest('cremations', { method: 'POST', body: data });
 
-            if (result.success) {
-                cremationModal.style.display = 'none';
-                cremationForm.reset();
-                await refreshAll();
-                alert('Cremation record saved successfully.');
-            } else {
-                alert(result.error || 'Failed to save cremation record');
+                if (result.success) {
+                    cremationModal.style.display = 'none';
+                    cremationForm.reset();
+                    await refreshAll();
+                    alert('Cremation record saved successfully.');
+                } else {
+                    alert(result.error || 'Failed to save cremation record');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
             }
-        } catch (error) {
-            alert('Error: ' + error.message);
-        }
+        });
     });
 
     assignForm.addEventListener('submit', async function(e) {
@@ -260,19 +263,22 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        try {
-            const result = await apiRequest('cremations/assign', { method: 'POST', body: data });
-            if (result.success) {
-                assignModal.style.display = 'none';
-                assignForm.reset();
-                await refreshAll();
-                alert('Niche assigned successfully.');
-            } else {
-                alert(result.error || 'Failed to assign niche');
+        const assignBtn = assignForm.querySelector('button[type="submit"]');
+        await withButtonLoading(assignBtn, async () => {
+            try {
+                const result = await apiRequest('cremations/assign', { method: 'POST', body: data });
+                if (result.success) {
+                    assignModal.style.display = 'none';
+                    assignForm.reset();
+                    await refreshAll();
+                    alert('Niche assigned successfully.');
+                } else {
+                    alert(result.error || 'Failed to assign niche');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
             }
-        } catch (error) {
-            alert('Error: ' + error.message);
-        }
+        });
     });
 
     document.getElementById('openAddModal').addEventListener('click', openAddModal);

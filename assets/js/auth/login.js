@@ -25,6 +25,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (!isValid) return;
 
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn && submitBtn.disabled) return;
+        setButtonLoading(submitBtn, true);
+
         try {
             const result = await api.login(username, password, role);
             if (result.success) {
@@ -44,6 +48,8 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             alertBox.textContent = error.message || 'Login failed. Please try again.';
             alertBox.classList.add('show');
+        } finally {
+            setButtonLoading(submitBtn, false);
         }
     });
 });

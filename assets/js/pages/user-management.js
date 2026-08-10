@@ -168,20 +168,23 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        try {
-            const result = userId
-                ? await api.request(`users/${userId}`, { method: 'PUT', body: payload })
-                : await api.request('users', { method: 'POST', body: payload });
+        const saveBtn = userForm.querySelector('button[type="submit"]');
+        await withButtonLoading(saveBtn, async () => {
+            try {
+                const result = userId
+                    ? await api.request(`users/${userId}`, { method: 'PUT', body: payload })
+                    : await api.request('users', { method: 'POST', body: payload });
 
-            if (result.success) {
-                hideModal();
-                await loadUsers();
-            } else {
-                alert(result.error || 'Unable to save user');
+                if (result.success) {
+                    hideModal();
+                    await loadUsers();
+                } else {
+                    alert(result.error || 'Unable to save user');
+                }
+            } catch (error) {
+                alert(error.message || 'Failed to save user');
             }
-        } catch (error) {
-            alert(error.message || 'Failed to save user');
-        }
+        });
     });
 
     searchQuery.addEventListener('input', debounce(loadUsers, 300));

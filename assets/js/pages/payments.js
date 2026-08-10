@@ -248,35 +248,39 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (verifyBtn) {
                 verifyBtn.addEventListener('click', async () => {
                     if (!confirm('Verify this payment?')) return;
-                    try {
-                        const result = await verifyPayment(id, 'Verified');
-                        if (result.success) {
-                            alert('Payment verified successfully.');
-                            document.getElementById('viewModal').style.display = 'none';
-                            await refreshAll();
-                        } else {
-                            alert(result.error || 'Failed to verify payment.');
+                    await withButtonLoading(verifyBtn, async () => {
+                        try {
+                            const result = await verifyPayment(id, 'Verified');
+                            if (result.success) {
+                                alert('Payment verified successfully.');
+                                document.getElementById('viewModal').style.display = 'none';
+                                await refreshAll();
+                            } else {
+                                alert(result.error || 'Failed to verify payment.');
+                            }
+                        } catch (error) {
+                            alert('Error: ' + error.message);
                         }
-                    } catch (error) {
-                        alert('Error: ' + error.message);
-                    }
+                    });
                 });
             }
             if (rejectBtn) {
                 rejectBtn.addEventListener('click', async () => {
                     if (!confirm('Reject this payment?')) return;
-                    try {
-                        const result = await verifyPayment(id, 'Rejected');
-                        if (result.success) {
-                            alert('Payment rejected successfully.');
-                            document.getElementById('viewModal').style.display = 'none';
-                            await refreshAll();
-                        } else {
-                            alert(result.error || 'Failed to reject payment.');
+                    await withButtonLoading(rejectBtn, async () => {
+                        try {
+                            const result = await verifyPayment(id, 'Rejected');
+                            if (result.success) {
+                                alert('Payment rejected successfully.');
+                                document.getElementById('viewModal').style.display = 'none';
+                                await refreshAll();
+                            } else {
+                                alert(result.error || 'Failed to reject payment.');
+                            }
+                        } catch (error) {
+                            alert('Error: ' + error.message);
                         }
-                    } catch (error) {
-                        alert('Error: ' + error.message);
-                    }
+                    });
                 });
             }
         } catch (error) {
@@ -317,22 +321,25 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }
 
-        try {
-            const options = { body: formData };
-            const result = id
-                ? await api.request(`payments/${id}`, { method: 'PUT', ...options })
-                : await api.request('payments', { method: 'POST', ...options });
+        const saveBtn = e.target.querySelector('button[type="submit"]');
+        await withButtonLoading(saveBtn, async () => {
+            try {
+                const options = { body: formData };
+                const result = id
+                    ? await api.request(`payments/${id}`, { method: 'PUT', ...options })
+                    : await api.request('payments', { method: 'POST', ...options });
 
-            if (result.success) {
-                document.getElementById('paymentModal').style.display = 'none';
-                currentPage = 1;
-                await refreshAll();
-            } else {
-                alert(result.error || 'Failed to save payment');
+                if (result.success) {
+                    document.getElementById('paymentModal').style.display = 'none';
+                    currentPage = 1;
+                    await refreshAll();
+                } else {
+                    alert(result.error || 'Failed to save payment');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
             }
-        } catch (error) {
-            alert('Error: ' + error.message);
-        }
+        });
     });
 
     document.getElementById('openAddPayment').addEventListener('click', openAddModal);

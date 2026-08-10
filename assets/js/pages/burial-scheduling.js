@@ -207,8 +207,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             deceased_id: decedentId,
             decedentName: decedents.find(d => d.decedent_id.toString() === decedentId)?.first_name + ' ' + decedents.find(d => d.decedent_id.toString() === decedentId)?.last_name || ''
         };
-        await generateRecommendations();
-        showStep(2);
+        const getRecsBtn = scheduleForm.querySelector('button[type="submit"]');
+        await withButtonLoading(getRecsBtn, async () => {
+            await generateRecommendations();
+            showStep(2);
+        });
     });
 
     document.querySelectorAll('.btn-back').forEach(btn => {
@@ -223,39 +226,41 @@ document.addEventListener('DOMContentLoaded', async function() {
             alert('Please select a lot first.');
             return;
         }
-        try {
-            const conflict = await api.request(`schedules/check-conflict?lot_id=${selectedLot.lot_id}&date=${currentPreferences.date}${currentPreferences.time ? `&time=${encodeURIComponent(currentPreferences.time)}` : ''}`);
-            if (!conflict.available) {
-                alert('This lot is already booked for the selected date/time. Please choose another lot or date.');
-                return;
+        await withButtonLoading(confirmBookingButton, async () => {
+            try {
+                const conflict = await api.request(`schedules/check-conflict?lot_id=${selectedLot.lot_id}&date=${currentPreferences.date}${currentPreferences.time ? `&time=${encodeURIComponent(currentPreferences.time)}` : ''}`);
+                if (!conflict.available) {
+                    alert('This lot is already booked for the selected date/time. Please choose another lot or date.');
+                    return;
+                }
+                const payload = {
+                    lot_id: selectedLot.lot_id,
+                    deceased_id: parseInt(currentPreferences.deceased_id, 10),
+                    schedule_date: currentPreferences.date,
+                    schedule_time: currentPreferences.time,
+                    status: 'Pending',
+                    notes: currentPreferences.notes || null
+                };
+                const result = await api.request('schedules', {
+                    method: 'POST',
+                    body: payload
+                });
+                if (result.success) {
+                    alert('Reservation request submitted and pending approval.');
+                    scheduleForm.reset();
+                    budgetValue.textContent = '10000';
+                    prefLotNumber.value = '';
+                    selectTimeInput.value = '';
+                    selectedLot = null;
+                    currentPreferences = {};
+                    showStep(1);
+                } else {
+                    alert(result.error || 'Failed to create schedule');
+                }
+            } catch (error) {
+                alert(error.message || 'Error creating schedule');
             }
-            const payload = {
-                lot_id: selectedLot.lot_id,
-                deceased_id: parseInt(currentPreferences.deceased_id, 10),
-                schedule_date: currentPreferences.date,
-                schedule_time: currentPreferences.time,
-                status: 'Pending',
-                notes: currentPreferences.notes || null
-            };
-            const result = await api.request('schedules', {
-                method: 'POST',
-                body: payload
-            });
-            if (result.success) {
-                alert('Reservation request submitted and pending approval.');
-                scheduleForm.reset();
-                budgetValue.textContent = '10000';
-                prefLotNumber.value = '';
-                selectTimeInput.value = '';
-                selectedLot = null;
-                currentPreferences = {};
-                showStep(1);
-            } else {
-                alert(result.error || 'Failed to create schedule');
-            }
-        } catch (error) {
-            alert(error.message || 'Error creating schedule');
-        }
+        });
     });
 
     steps.forEach(step => {

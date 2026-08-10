@@ -33,7 +33,7 @@
     color: var(--color-white);
     transition: background var(--duration-base) var(--easing-standard),
                 border-color var(--duration-base) var(--easing-standard),
-                transform var(--duration-base) var(--easing-standard);
+                transform var(--duration-fast) var(--easing-standard);
 }
 
 .btn:hover,
@@ -50,6 +50,7 @@
 .btn-filter:active,
 .btn--primary:active {
     background: var(--color-primary-700);
+    transform: scale(0.97);
 }
 
 .btn:focus-visible,
@@ -91,13 +92,20 @@
     cursor: pointer;
     background: transparent;
     color: #2b3658;
-    transition: background var(--duration-base) var(--easing-standard);
+    transition: background var(--duration-base) var(--easing-standard),
+                transform var(--duration-fast) var(--easing-standard);
 }
 
 .btn--secondary:hover,
 .btn-secondary:hover,
 .btn-ghost:hover {
     background: var(--color-neutral-100);
+}
+
+.btn--secondary:active,
+.btn-secondary:active,
+.btn-ghost:active {
+    transform: scale(0.97);
 }
 
 .btn--secondary:disabled,
@@ -188,3 +196,53 @@
     font-size: 15.5px;
 }
 .btn--lg.btn--icon { width: 48px; height: 48px; }
+
+/*
+  --- Loading state (opt-in, UI-A) ---
+  Add alongside an existing button class: `<button class="btn-add btn--loading" disabled>`.
+  Hides the label (color: transparent keeps its layout width/height) and
+  centers a spinner over it. Works with any variant/size above without
+  needing markup changes to the label itself. JS toggles this class plus
+  the native `disabled` attribute — see assets/js/shared/button-loading.js.
+*/
+.btn--loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+}
+
+.btn--loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.45);
+    border-top-color: #fff;
+    animation: spin 0.6s linear infinite;
+}
+
+/* Light/transparent-background variants need a dark spinner instead of white */
+.btn--secondary.btn--loading::after,
+.btn-secondary.btn--loading::after,
+.btn-ghost.btn--loading::after,
+.btn--ghost.btn--loading::after,
+.btn--outline.btn--loading::after {
+    border-color: rgba(44, 94, 71, 0.25);
+    border-top-color: var(--color-primary-500);
+}
+
+.btn--sm.btn--loading::after {
+    width: 13px;
+    height: 13px;
+    margin: -6.5px 0 0 -6.5px;
+}
+
+.btn--lg.btn--loading::after {
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+}

@@ -47,7 +47,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     recordForm.addEventListener('submit', async function(event) {
         event.preventDefault();
-        await saveRecord();
+        const saveBtn = recordForm.querySelector('button[type="submit"]');
+        await withButtonLoading(saveBtn, saveRecord);
     });
 
     document.getElementById('isCremated').addEventListener('change', function() {

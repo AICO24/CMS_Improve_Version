@@ -44,6 +44,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!isValid) return;
 
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn && submitBtn.disabled) return;
+        setButtonLoading(submitBtn, true);
+
         try {
             let payload = null;
             if (role === 'user') {
@@ -72,14 +76,19 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.success) {
                 alertBox.textContent = 'Registration successful! Redirecting to login...';
                 alertBox.classList.add('show', 'alert-success');
+                // Left disabled/loading intentionally: the button stays inert
+                // through the redirect delay below instead of resetting and
+                // inviting a second submit while the user waits.
                 setTimeout(() => window.location.href = `${getFrontendBasePath()}/auth/login.html`, 1500);
             } else {
                 alertBox.textContent = result.error || 'Registration failed';
                 alertBox.classList.add('show');
+                setButtonLoading(submitBtn, false);
             }
         } catch (error) {
             alertBox.textContent = error.message || 'Registration failed. Please try again.';
             alertBox.classList.add('show');
+            setButtonLoading(submitBtn, false);
         }
     });
 });

@@ -131,47 +131,53 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             approveBtn.onclick = async () => {
                 if (!confirm('Approve this relocation request?')) return;
-                try {
-                    const result = await apiRequest(`relocations/${id}/approve`, { method: 'PUT' });
-                    if (result.success) {
-                        viewModal.style.display = 'none';
-                        await refreshAll();
-                    } else {
-                        alert(result.error);
+                await withButtonLoading(approveBtn, async () => {
+                    try {
+                        const result = await apiRequest(`relocations/${id}/approve`, { method: 'PUT' });
+                        if (result.success) {
+                            viewModal.style.display = 'none';
+                            await refreshAll();
+                        } else {
+                            alert(result.error);
+                        }
+                    } catch (error) {
+                        alert('Error: ' + error.message);
                     }
-                } catch (error) {
-                    alert('Error: ' + error.message);
-                }
+                });
             };
 
             completeBtn.onclick = async () => {
                 if (!confirm('Mark this relocation as completed?')) return;
-                try {
-                    const result = await apiRequest(`relocations/${id}/complete`, { method: 'PUT' });
-                    if (result.success) {
-                        viewModal.style.display = 'none';
-                        await refreshAll();
-                    } else {
-                        alert(result.error);
+                await withButtonLoading(completeBtn, async () => {
+                    try {
+                        const result = await apiRequest(`relocations/${id}/complete`, { method: 'PUT' });
+                        if (result.success) {
+                            viewModal.style.display = 'none';
+                            await refreshAll();
+                        } else {
+                            alert(result.error);
+                        }
+                    } catch (error) {
+                        alert('Error: ' + error.message);
                     }
-                } catch (error) {
-                    alert('Error: ' + error.message);
-                }
+                });
             };
 
             denyBtn.onclick = async () => {
                 if (!confirm('Deny this relocation request?')) return;
-                try {
-                    const result = await apiRequest(`relocations/${id}/deny`, { method: 'PUT' });
-                    if (result.success) {
-                        viewModal.style.display = 'none';
-                        await refreshAll();
-                    } else {
-                        alert(result.error);
+                await withButtonLoading(denyBtn, async () => {
+                    try {
+                        const result = await apiRequest(`relocations/${id}/deny`, { method: 'PUT' });
+                        if (result.success) {
+                            viewModal.style.display = 'none';
+                            await refreshAll();
+                        } else {
+                            alert(result.error);
+                        }
+                    } catch (error) {
+                        alert('Error: ' + error.message);
                     }
-                } catch (error) {
-                    alert('Error: ' + error.message);
-                }
+                });
             };
 
             editBtn.onclick = () => {
@@ -245,21 +251,24 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        try {
-            const result = id
-                ? await apiRequest(`relocations/${id}`, { method: 'PUT', body: data })
-                : await apiRequest('relocations', { method: 'POST', body: data });
-            if (result.success) {
-                requestModal.style.display = 'none';
-                document.getElementById('requestForm').reset();
-                await refreshAll();
-                alert('Relocation request saved successfully.');
-            } else {
-                alert(result.error || 'Failed to save request');
+        const saveBtn = e.target.querySelector('button[type="submit"]');
+        await withButtonLoading(saveBtn, async () => {
+            try {
+                const result = id
+                    ? await apiRequest(`relocations/${id}`, { method: 'PUT', body: data })
+                    : await apiRequest('relocations', { method: 'POST', body: data });
+                if (result.success) {
+                    requestModal.style.display = 'none';
+                    document.getElementById('requestForm').reset();
+                    await refreshAll();
+                    alert('Relocation request saved successfully.');
+                } else {
+                    alert(result.error || 'Failed to save request');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
             }
-        } catch (error) {
-            alert('Error: ' + error.message);
-        }
+        });
     });
 
     document.getElementById('openAddModal').addEventListener('click', openAddModal);
