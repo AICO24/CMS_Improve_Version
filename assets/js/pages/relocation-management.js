@@ -12,12 +12,27 @@ document.addEventListener('DOMContentLoaded', async function() {
     const requestModal = document.getElementById('requestModal');
     const viewModal = document.getElementById('viewModal');
 
+    const perPage = 10;
+    const paginationInfo = document.getElementById('paginationInfo');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const pagination = createPagination({
+        prevBtn: prevPageBtn,
+        nextBtn: nextPageBtn,
+        infoEl: paginationInfo,
+        itemLabel: 'request',
+        onChange: loadAndRenderRequests,
+    });
+
     async function apiRequest(endpoint, options = {}) {
         return await api.request(endpoint, options);
     }
 
     async function loadRequests() {
-        return await apiRequest('relocations');
+        const params = new URLSearchParams();
+        params.set('page', pagination.page);
+        params.set('per_page', perPage);
+        return await apiRequest(`relocations?${params.toString()}`);
     }
 
     async function loadStats() {
@@ -29,6 +44,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         statsEls.approved.innerText = stats.approved || 0;
         statsEls.completed.innerText = stats.completed || 0;
         statsEls.total.innerText = stats.total || 0;
+    }
+
+    async function loadAndRenderRequests() {
+        try {
+            const result = await loadRequests();
+            const requests = Array.isArray(result.data) ? result.data : [];
+            renderTable(requests);
+            pagination.render(result.meta || { page: 1, total_pages: 1, total: requests.length });
+        } catch (error) {
+            console.error('Failed to load relocation requests', error);
+            tbody.innerHTML = '<tr><td colspan="7">Failed to load requests. Please refresh.</td></tr>';
+            pagination.render({ page: 1, total_pages: 1, total: 0 });
+        }
     }
 
     function renderTable(requests) {
@@ -63,12 +91,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             const stats = await loadStats();
             renderStats(stats);
-            const requests = await loadRequests();
-            renderTable(requests);
         } catch (error) {
-            console.error('Refresh failed:', error);
-            tbody.innerHTML = '<tr><td colspan="7">Failed to load requests. Please refresh.</td></tr>';
+            console.error('Failed to load relocation stats', error);
         }
+        await loadAndRenderRequests();
     }
 
     async function populateDropdowns() {
@@ -260,6 +286,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (result.success) {
                     requestModal.style.display = 'none';
                     document.getElementById('requestForm').reset();
+                    pagination.reset();
                     await refreshAll();
                     alert('Relocation request saved successfully.');
                 } else {

@@ -27,6 +27,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         isActive: document.getElementById('isActive'),
     };
 
+    const perPage = 10;
+    const paginationInfo = document.getElementById('paginationInfo');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const pagination = createPagination({
+        prevBtn: prevPageBtn,
+        nextBtn: nextPageBtn,
+        infoEl: paginationInfo,
+        itemLabel: 'user',
+        onChange: loadUsers,
+    });
+
     function buildFilters() {
         const filters = {};
         if (filterRole.value) filters.role = filterRole.value;
@@ -38,28 +50,43 @@ document.addEventListener('DOMContentLoaded', async function() {
     async function loadUsers() {
         try {
             const filters = buildFilters();
-            const users = await api.request('users' + (Object.keys(filters).length ? `?${new URLSearchParams(filters)}` : ''), { method: 'GET' });
+            const params = new URLSearchParams(filters);
+            params.set('page', pagination.page);
+            params.set('per_page', perPage);
+            const result = await api.request(`users?${params.toString()}`, { method: 'GET' });
+            const users = Array.isArray(result.data) ? result.data : [];
             renderUsers(users);
-            updateStats(users);
+            pagination.render(result.meta || { page: 1, total_pages: 1, total: users.length });
+            await updateStats(filters, result.meta);
         } catch (error) {
             usersTableBody.innerHTML = '<tr><td colspan="7">Failed to load users. Please refresh.</td></tr>';
+            pagination.render({ page: 1, total_pages: 1, total: 0 });
             console.error('Failed to load users:', error);
         }
     }
 
-    function updateStats(users) {
-        if (!Array.isArray(users)) {
-            totalUsers.innerText = 0;
-            adminCount.innerText = 0;
-            staffCount.innerText = 0;
-            inactiveCount.innerText = 0;
-            return;
+    // Breakdown cards reflect the current search+filter context (matching the
+    // pre-pagination behavior of counting within the filtered result set), but
+    // can no longer be derived from the current page's rows alone — each count
+    // is a lightweight per_page=1 request whose meta.total is the real count.
+    async function updateStats(filters, meta) {
+        totalUsers.innerText = meta && typeof meta.total === 'number' ? meta.total : 0;
+        try {
+            const countFor = (overrides) => {
+                const params = new URLSearchParams({ ...filters, ...overrides, per_page: 1 });
+                return api.request(`users?${params.toString()}`, { method: 'GET' });
+            };
+            const [adminResult, staffResult, inactiveResult] = await Promise.all([
+                countFor({ role: 'admin' }),
+                countFor({ role: 'staff' }),
+                countFor({ is_active: 0 }),
+            ]);
+            adminCount.innerText = adminResult.meta && typeof adminResult.meta.total === 'number' ? adminResult.meta.total : 0;
+            staffCount.innerText = staffResult.meta && typeof staffResult.meta.total === 'number' ? staffResult.meta.total : 0;
+            inactiveCount.innerText = inactiveResult.meta && typeof inactiveResult.meta.total === 'number' ? inactiveResult.meta.total : 0;
+        } catch (error) {
+            console.error('Failed to load user breakdown stats:', error);
         }
-
-        totalUsers.innerText = users.length;
-        adminCount.innerText = users.filter(u => u.role_title && u.role_title.toLowerCase() === 'admin').length;
-        staffCount.innerText = users.filter(u => u.role_title && u.role_title.toLowerCase() === 'staff').length;
-        inactiveCount.innerText = users.filter(u => !u.is_active).length;
     }
 
     function renderUsers(users) {
@@ -177,6 +204,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
                 if (result.success) {
                     hideModal();
+                    pagination.reset();
                     await loadUsers();
                 } else {
                     alert(result.error || 'Unable to save user');
@@ -187,13 +215,25 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     });
 
-    searchQuery.addEventListener('input', debounce(loadUsers, 300));
-    filterRole.addEventListener('change', loadUsers);
-    filterActive.addEventListener('change', loadUsers);
+    const refreshFiltered = debounce(() => {
+        pagination.reset();
+        loadUsers();
+    }, 300);
+
+    searchQuery.addEventListener('input', refreshFiltered);
+    filterRole.addEventListener('change', () => {
+        pagination.reset();
+        loadUsers();
+    });
+    filterActive.addEventListener('change', () => {
+        pagination.reset();
+        loadUsers();
+    });
     clearFilters.addEventListener('click', () => {
         searchQuery.value = '';
         filterRole.value = '';
         filterActive.value = '';
+        pagination.reset();
         loadUsers();
     });
 

@@ -15,6 +15,51 @@ document.addEventListener('DOMContentLoaded', async function () {
         logoutBtn.addEventListener('click', () => api.logout());
     }
 
+    const expiredPerPage = 10;
+    const expiredPaginationInfo = document.getElementById('expiredPaginationInfo');
+    const expiredPrevPage = document.getElementById('expiredPrevPage');
+    const expiredNextPage = document.getElementById('expiredNextPage');
+    const expiredPagination = createPagination({
+        prevBtn: expiredPrevPage,
+        nextBtn: expiredNextPage,
+        infoEl: expiredPaginationInfo,
+        itemLabel: 'lot',
+        onChange: loadExpiredLots,
+    });
+
+    // Independent of the main status filter dropdown above — this table's whole
+    // purpose is showing expired lots, so it always requests status=expired
+    // (still honoring the shared search box) rather than following whatever
+    // the dropdown is set to.
+    async function loadExpiredLots() {
+        const expiredTable = document.getElementById('expiredTableBody');
+        const query = document.getElementById('expirationSearch').value.trim();
+        const params = new URLSearchParams();
+        params.set('status', 'expired');
+        if (query) params.append('q', query);
+        params.set('page', expiredPagination.page);
+        params.set('per_page', expiredPerPage);
+
+        try {
+            const result = await api.request(`expiration-records?${params.toString()}`, { method: 'GET' });
+            const expiredRecords = Array.isArray(result.data) ? result.data : [];
+            expiredTable.innerHTML = expiredRecords.length > 0 ? expiredRecords.map(record => `
+                <tr>
+                    <td>${record.lot_number || record.lot_id || 'N/A'}</td>
+                    <td>${record.section_name || 'N/A'}</td>
+                    <td>${record.end_date || 'N/A'}</td>
+                    <td><span class="status-badge status-danger">Expired</span></td>
+                    <td>${record.notes ? record.notes : '—'}</td>
+                </tr>
+            `).join('') : '<tr><td colspan="5">No expired lots found.</td></tr>';
+            expiredPagination.render(result.meta || { page: 1, total_pages: 1, total: expiredRecords.length });
+        } catch (error) {
+            console.error('Failed to load expired lots:', error);
+            expiredTable.innerHTML = '<tr><td colspan="5">Failed to load expired lots.</td></tr>';
+            expiredPagination.render({ page: 1, total_pages: 1, total: 0 });
+        }
+    }
+
     async function updateNotificationBadge() {
         try {
             const result = await api.request('notifications/unread-count', { method: 'GET' });
@@ -53,7 +98,6 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (exhumationCount) exhumationCount.innerText = stats.exhumations || 0;
 
             const upcomingTable = document.getElementById('upcomingTableBody');
-            const expiredTable = document.getElementById('expiredTableBody');
             const recordsList = Array.isArray(records) ? records : [];
 
             if (upcomingTable) {
@@ -70,35 +114,28 @@ document.addEventListener('DOMContentLoaded', async function () {
                     </tr>
                 `).join('') : '<tr><td colspan="5">No expiration records found.</td></tr>';
             }
-
-            if (expiredTable) {
-                const expiredRecords = recordsList.filter(record => (record.status || '').toLowerCase() === 'expired');
-                expiredTable.innerHTML = expiredRecords.length > 0 ? expiredRecords.map(record => `
-                    <tr>
-                        <td>${record.lot_number || record.lot_id || 'N/A'}</td>
-                        <td>${record.section_name || 'N/A'}</td>
-                        <td>${record.end_date || 'N/A'}</td>
-                        <td><span class="status-badge status-danger">Expired</span></td>
-                        <td>${record.notes ? record.notes : '—'}</td>
-                    </tr>
-                `).join('') : '<tr><td colspan="5">No expired lots found.</td></tr>';
-            }
         } catch (error) {
             console.error('Failed to load expiration data:', error);
         }
     }
 
+    async function refreshExpirationView() {
+        await loadExpirationData();
+        expiredPagination.reset();
+        await loadExpiredLots();
+    }
+
     const refreshBtn = document.getElementById('refreshExpirationData');
     if (refreshBtn) {
-        refreshBtn.addEventListener('click', loadExpirationData);
+        refreshBtn.addEventListener('click', refreshExpirationView);
     }
 
     document.getElementById('expirationSearch').addEventListener('keyup', function(event) {
         if (event.key === 'Enter') {
-            loadExpirationData();
+            refreshExpirationView();
         }
     });
-    document.getElementById('expirationStatusFilter').addEventListener('change', loadExpirationData);
+    document.getElementById('expirationStatusFilter').addEventListener('change', refreshExpirationView);
 
     document.querySelector('.content-area').addEventListener('click', async function(event) {
         const button = event.target.closest('button[data-action]');
@@ -147,7 +184,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     body: payload
                 });
                 alert('Expiration record renewed successfully.');
-                await loadExpirationData();
+                await refreshExpirationView();
             }
         } catch (error) {
             console.error('Expiration action failed:', error);
@@ -155,7 +192,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     });
 
-    await loadExpirationData();
+    await refreshExpirationView();
     await updateNotificationBadge();
     setInterval(updateNotificationBadge, 30000);
 });

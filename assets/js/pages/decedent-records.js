@@ -20,6 +20,26 @@ document.addEventListener('DOMContentLoaded', async function() {
     let currentQuery = '';
     let currentTypeFilter = 'all';
 
+    const perPage = 10;
+    const paginationInfo = document.getElementById('paginationInfo');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const pagination = createPagination({
+        prevBtn: prevPageBtn,
+        nextBtn: nextPageBtn,
+        infoEl: paginationInfo,
+        itemLabel: 'record',
+        onChange: loadRecords,
+    });
+
+    function debounce(fn, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => fn.apply(this, args), wait);
+        };
+    }
+
     document.getElementById('logoutBtn').addEventListener('click', () => {
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('cemetery_session');
@@ -42,13 +62,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (e.target === recordModal) recordModal.style.display = 'none';
         if (e.target === viewModal) viewModal.style.display = 'none';
     });
-    searchInput.addEventListener('input', () => {
+    const refreshFiltered = debounce(() => {
         currentQuery = searchInput.value.trim();
+        pagination.reset();
         loadRecords();
-    });
+    }, 300);
+    searchInput.addEventListener('input', refreshFiltered);
     typeFilter.addEventListener('change', () => {
         currentTypeFilter = typeFilter.value;
-        renderTable(getFilteredRecords());
+        pagination.reset();
+        loadRecords();
     });
 
     recordForm.addEventListener('submit', async function(event) {
@@ -98,16 +121,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function loadRecords() {
-        const query = currentQuery ? `?q=${encodeURIComponent(currentQuery)}` : '';
-        records = await api.request(`decedents${query}`, { method: 'GET' });
-        renderTable(getFilteredRecords());
-    }
-
-    function getFilteredRecords() {
-        if (currentTypeFilter === 'all') {
-            return records;
+        const params = new URLSearchParams();
+        if (currentQuery) params.set('q', currentQuery);
+        if (currentTypeFilter !== 'all') params.set('is_cremated', currentTypeFilter);
+        params.set('page', pagination.page);
+        params.set('per_page', perPage);
+        try {
+            const result = await api.request(`decedents?${params.toString()}`, { method: 'GET' });
+            records = Array.isArray(result.data) ? result.data : [];
+            renderTable(records);
+            pagination.render(result.meta || { page: 1, total_pages: 1, total: records.length });
+        } catch (error) {
+            console.error('Failed to load records', error);
+            tableBody.innerHTML = '<tr><td colspan="8">Could not load records. Please refresh.</td></tr>';
+            pagination.render({ page: 1, total_pages: 1, total: 0 });
         }
-        return records.filter((item) => item.is_cremated === currentTypeFilter);
     }
 
     async function loadStats() {
@@ -277,6 +305,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             if (result.success) {
                 recordModal.style.display = 'none';
+                pagination.reset();
                 await refreshPage();
             } else {
                 alert(result.error || 'Could not save record.');

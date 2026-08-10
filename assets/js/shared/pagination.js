@@ -5,11 +5,14 @@
 // re-fetches for the new page. onChange may return a promise; it is
 // awaited so the loading/disabled state below can wrap the whole fetch.
 //
-// render(meta) accepts { page, pages, total }. `total` is optional: pass
-// it when the endpoint returns a real count (e.g. payments, schedules/mine)
-// for a "Page X of Y • N item(s)" label; omit it (e.g. audit-logs, which
-// has no count endpoint) and the label falls back to "Page X" while
-// Prev/Next disabled-state still works off page/pages as usual.
+// render(meta) accepts { page, total_pages, total }. `total_pages` is the
+// standard key (UI-F); `pages` is accepted as a fallback since the
+// earlier Payments/Schedules/Audit endpoints (wired in UI-E) still emit
+// that name — new call sites should send total_pages. `total` is optional:
+// pass it when the endpoint returns a real count for a "Page X of Y • N
+// item(s)" label; omit it (e.g. audit-logs, which has no count endpoint)
+// and the label falls back to "Page X" while Prev/Next disabled-state
+// still works off page/total_pages as usual.
 //
 // Loading state + duplicate-click guard reuse the shared button-loading
 // helper (assets/js/shared/button-loading.js, UI-A) — load it before this
@@ -31,7 +34,7 @@ function createPagination({ prevBtn, nextBtn, infoEl, itemLabel = 'item', onChan
     function render(meta) {
         meta = meta || {};
         page = meta.page || 1;
-        pages = meta.pages || 1;
+        pages = meta.total_pages || meta.pages || 1;
 
         if (infoEl) {
             if (typeof meta.total === 'number') {
