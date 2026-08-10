@@ -2,6 +2,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     const user = await requireRole(['admin']);
     if (!user) return;
 
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        api.logout();
+    });
+
     const statsEls = {
         total: document.getElementById('totalNiches'),
         occupied: document.getElementById('occupiedNiches'),

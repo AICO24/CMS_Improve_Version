@@ -2,6 +2,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     const user = await requireRole(['admin']);
     if (!user) return;
 
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        api.logout();
+    });
+
     const statsEls = {
         pending: document.getElementById('pendingCount'),
         approved: document.getElementById('approvedCount'),

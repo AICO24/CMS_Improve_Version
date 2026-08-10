@@ -7,6 +7,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         return;
     }
 
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        api.logout();
+    });
+
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.querySelector('.sidebar');
     if (toggleBtn && sidebar) {

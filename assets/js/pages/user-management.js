@@ -2,6 +2,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     const currentUser = await requireRole(['admin']);
     if (!currentUser) return;
 
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        api.logout();
+    });
+
     const usersTableBody = document.getElementById('usersTableBody');
     const totalUsers = document.getElementById('totalUsers');
     const adminCount = document.getElementById('adminCount');

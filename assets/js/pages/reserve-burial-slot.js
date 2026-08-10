@@ -2,6 +2,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     const user = await requireRole(['user']);
     if (!user) return;
 
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        api.logout();
+    });
+
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.querySelector('.sidebar');
     if (toggleBtn && sidebar) {

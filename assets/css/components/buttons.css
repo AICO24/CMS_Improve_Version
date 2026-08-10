@@ -111,10 +111,15 @@
 .btn--secondary:disabled,
 .btn-secondary:disabled,
 .btn-ghost:disabled {
-    color: var(--color-neutral-300);
-    border-color: var(--color-neutral-200);
+    /* Matches the primary-button disabled treatment above (filled pill +
+       neutral-400 text) instead of a transparent/neutral-300 "ghost" state —
+       that combination was low-contrast enough to read as invisible,
+       especially for Prev/Next controls that are disabled by default
+       whenever a table only has one page of results. */
+    color: var(--color-neutral-400);
+    border-color: var(--color-neutral-300);
     cursor: not-allowed;
-    background: transparent;
+    background: var(--color-neutral-100);
 }
 
 .btn--secondary:focus-visible,
