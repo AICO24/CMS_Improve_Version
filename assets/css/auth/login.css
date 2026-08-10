@@ -664,3 +664,48 @@ body {
         padding: 12px;
     }
 }
+
+/* ============================================
+   AUTH TRANSITION (UI-B)
+   Full-screen overlay shown briefly after a
+   successful login, before redirecting to the
+   role dashboard. JS only ever adds `.show` from
+   the success branch in login.js — a failed
+   login never touches this element.
+   ============================================ */
+.auth-transition {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-900));
+    color: var(--color-white);
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-slow) var(--easing-standard);
+}
+
+.auth-transition.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.auth-transition__spinner {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    animation: spin 0.7s linear infinite;
+}
+
+.auth-transition__text {
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.02em;
+}
