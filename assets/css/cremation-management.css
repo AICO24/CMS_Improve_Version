@@ -257,14 +257,65 @@
     font-size: 0.75rem;
 }
 
+/* Add button — matches the animated pill (expanding-circle hover) design
+   used in Lot Management (.btn-add-lot) and Decedent Records (.btn-add),
+   replicated here for visual consistency across modules (UI-H). */
 .btn-add {
-    background: #2c5e47;
-    color: white;
-    border: none;
-    padding: 8px 18px;
-    border-radius: 40px;
+    position: relative;
+    height: 50px;
+    min-width: 200px;
+    padding: 0 24px;
+    background: transparent;
+    border: 2px solid #2c5e47;
+    border-radius: 30px;
     cursor: pointer;
-    font-weight: 600;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all .45s ease;
+}
+
+.btn-add .btn-txt {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #2c5e47;
+    font-weight: 700;
+    letter-spacing: 1px;
+    transition: .45s;
+}
+
+.btn-add::after {
+    content: "";
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    border-radius: 50%;
+    background: #2c5e47;
+    transition: .55s ease;
+}
+
+.btn-add:hover::after {
+    transform: translate(-50%, -50%) scale(35);
+}
+
+.btn-add:hover {
+    border-color: #2c5e47;
+    box-shadow: 0 8px 25px rgba(44, 94, 71, .35);
+}
+
+.btn-add:hover .btn-txt {
+    color: #fff;
+}
+
+.btn-add:active {
+    transform: scale(.96);
 }
 
 .btn-add:focus-visible {
@@ -373,18 +424,130 @@
 
 /* .form-group input/select/textarea now come from assets/css/components/forms.css (Batch 5) */
 
+/* Save button — matches the slide-reveal icon-pill design used in Lot
+   Management (.bookmarkBtn) and Decedent Records (.btn-save), replicated
+   here for visual consistency across modules (UI-H). Requires markup:
+   <span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span> */
 .btn-save {
-    background: #2c5e47;
-    color: white;
-    border: none;
-    padding: 10px;
-    width: 100%;
+    width: 170px;
+    height: 48px;
+    margin: 20px auto 0;
+    border: 1px solid rgba(255, 255, 255, .15);
     border-radius: 40px;
+    background: #2c5e47;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    margin-top: 0.8rem;
+    overflow: hidden;
+    transition: .35s ease;
 }
 
-.btn-edit,
+.btn-save .IconContainer {
+    width: 34px;
+    height: 34px;
+    background: linear-gradient(to bottom, #6bcf85, #2c8c5a);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: .35s ease;
+    z-index: 2;
+}
+
+.btn-save .IconContainer i {
+    color: white;
+    font-size: 15px;
+}
+
+.btn-save .text {
+    width: 80px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: .95rem;
+    transition: .35s ease;
+}
+
+.btn-save:hover {
+    box-shadow: 0 10px 30px rgba(44, 94, 71, .35);
+    background: #214c39;
+}
+
+.btn-save:hover .IconContainer {
+    width: 150px;
+    border-radius: 40px;
+}
+
+.btn-save:hover .text {
+    width: 0;
+    opacity: 0;
+    font-size: 0;
+}
+
+.btn-save:active {
+    transform: scale(.96);
+}
+
+/* Edit button — matches the press-shadow + icon-slide design used in Lot
+   Management's .btn-edit, replicated here for visual consistency across
+   modules (UI-H). Requires markup:
+   <span class="edit-text">Edit Record</span><i class="fas fa-pen edit-icon"></i> */
+.btn-edit {
+    position: relative;
+    width: 170px;
+    height: 48px;
+    margin-top: 20px;
+    margin-right: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 22px;
+    border: none;
+    border-radius: 14px;
+    background: #2c5e47;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    overflow: hidden;
+    transition: .35s ease;
+    box-shadow: 5px 5px 0 #214c39;
+}
+
+.btn-edit .edit-text {
+    transition: .35s ease;
+    letter-spacing: .4px;
+}
+
+.btn-edit .edit-icon {
+    position: absolute;
+    right: 20px;
+    font-size: 15px;
+    color: white;
+    transition: .35s ease;
+}
+
+.btn-edit:hover {
+    background: #24513d;
+}
+
+.btn-edit:hover .edit-text {
+    color: transparent;
+}
+
+.btn-edit:hover .edit-icon {
+    right: 50%;
+    transform: translateX(50%) rotate(-18deg) scale(1.15);
+}
+
+.btn-edit:active {
+    transform: translate(3px, 3px);
+    box-shadow: 2px 2px 0 #214c39;
+}
+
 .btn-assign {
     background: #2c5e47;
     color: white;

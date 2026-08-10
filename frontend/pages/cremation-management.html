@@ -109,7 +109,7 @@
 
                 <!-- Add button -->
                 <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
-                    <button class="btn-add" id="openAddModal"><i class="fas fa-plus"></i> Add New Niche</button>
+                    <button class="btn-add" id="openAddModal"><span class="btn-txt"><i class="fas fa-plus"></i> Add New Niche</span></button>
                 </div>
 
                 <!-- Columbarium Grid -->
@@ -163,7 +163,7 @@
                     <label>Notes</label>
                     <textarea id="cremationNotes" rows="2"></textarea>
                 </div>
-                <button type="submit" class="btn-save">Save Record</button>
+                <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span></button>
             </form>
         </div>
     </div>
@@ -190,7 +190,7 @@
                     <label>Level</label>
                     <input type="number" id="assignLevel" min="1" max="10" value="1">
                 </div>
-                <button type="submit" class="btn-save">Assign Decedent</button>
+                <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span></button>
             </form>
         </div>
     </div>
@@ -201,7 +201,7 @@
             <button type="button" class="close-view" aria-label="Close">&times;</button>
             <h3 id="viewModalTitle">Niche Details</h3>
             <div id="viewDetails"></div>
-            <button class="btn-edit" id="editFromView">Edit Record</button>
+            <button class="btn-edit" id="editFromView"><span class="edit-text">Edit Record</span><i class="fas fa-pen edit-icon"></i></button>
             <button class="btn-assign" id="assignFromView">Assign Decedent</button>
             <button class="btn-delete" id="deleteFromView">Delete Record</button>
         </div>

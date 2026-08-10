@@ -278,19 +278,65 @@
     font-size: 0.75rem;
 }
 
+/* Add button — matches the animated pill (expanding-circle hover) design
+   used in Lot Management (.btn-add-lot) and Decedent Records (.btn-add),
+   replicated here for visual consistency across modules (UI-H). */
 .btn-add {
-    background: #2c5e47;
-    color: white;
-    border: none;
-    padding: 8px 18px;
-    border-radius: 40px;
+    position: relative;
+    height: 50px;
+    min-width: 200px;
+    padding: 0 24px;
+    background: transparent;
+    border: 2px solid #2c5e47;
+    border-radius: 30px;
     cursor: pointer;
-    font-weight: 600;
-    transition: background 0.2s;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all .45s ease;
+}
+
+.btn-add .btn-txt {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #2c5e47;
+    font-weight: 700;
+    letter-spacing: 1px;
+    transition: .45s;
+}
+
+.btn-add::after {
+    content: "";
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    border-radius: 50%;
+    background: #2c5e47;
+    transition: .55s ease;
+}
+
+.btn-add:hover::after {
+    transform: translate(-50%, -50%) scale(35);
 }
 
 .btn-add:hover {
-    background: #1f4538;
+    border-color: #2c5e47;
+    box-shadow: 0 8px 25px rgba(44, 94, 71, .35);
+}
+
+.btn-add:hover .btn-txt {
+    color: #fff;
+}
+
+.btn-add:active {
+    transform: scale(.96);
 }
 
 .btn-add:focus-visible {
@@ -342,18 +388,44 @@
     gap: 8px;
 }
 
+/* Row action icon — matches the circular icon-pop design (color-fill +
+   lift + icon animation on hover) used in Decedent Records' Actions
+   column, replicated here for visual consistency across modules (UI-H). */
 .btn-view-request {
-    background: none;
+    width: 42px;
+    height: 42px;
     border: none;
+    border-radius: 50%;
+    background: #eff6ff;
+    color: #2563eb;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     cursor: pointer;
-    font-size: 1rem;
-    padding: 4px 6px;
-    border-radius: 6px;
-    color: #2c5e47;
+    overflow: hidden;
+    position: relative;
+    transition: .35s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
+}
+
+.btn-view-request i {
+    font-size: 15px;
+    transition: .35s ease;
 }
 
 .btn-view-request:hover {
-    background: #eef5f2;
+    background: #2563eb;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(37, 99, 235, .35);
+}
+
+.btn-view-request:hover i {
+    transform: scale(1.25);
+}
+
+.btn-view-request:active {
+    transform: scale(.90);
 }
 
 .btn-view-request:focus-visible {
@@ -402,53 +474,157 @@
 
 /* .form-group input/select/textarea now come from assets/css/components/forms.css (Batch 5) */
 
+/* Save button — matches the slide-reveal icon-pill design used in Lot
+   Management (.bookmarkBtn) and Decedent Records (.btn-save), replicated
+   here for visual consistency across modules (UI-H). Requires markup:
+   <span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span> */
 .btn-save {
-    background: #2c5e47;
-    color: white;
-    border: none;
-    padding: 10px;
-    width: 100%;
+    width: 170px;
+    height: 48px;
+    margin: 20px auto 0;
+    border: 1px solid rgba(255, 255, 255, .15);
     border-radius: 40px;
+    background: #2c5e47;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    margin-top: 0.8rem;
+    overflow: hidden;
+    transition: .35s ease;
+}
+
+.btn-save .IconContainer {
+    width: 34px;
+    height: 34px;
+    background: linear-gradient(to bottom, #6bcf85, #2c8c5a);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: .35s ease;
+    z-index: 2;
+}
+
+.btn-save .IconContainer i {
+    color: white;
+    font-size: 15px;
+}
+
+.btn-save .text {
+    width: 80px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: .95rem;
+    transition: .35s ease;
+}
+
+.btn-save:hover {
+    box-shadow: 0 10px 30px rgba(44, 94, 71, .35);
+    background: #214c39;
+}
+
+.btn-save:hover .IconContainer {
+    width: 150px;
+    border-radius: 40px;
+}
+
+.btn-save:hover .text {
+    width: 0;
+    opacity: 0;
+    font-size: 0;
+}
+
+.btn-save:active {
+    transform: scale(.96);
 }
 
 .modal-buttons {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
     margin-top: 1rem;
 }
 
+/* Approve / Mark Complete / Deny / Edit Request / Delete Request — outlined
+   pill that fills solid + lifts on hover (adapted from a Uiverse.io button
+   design provided by the user), colored to match each action's existing
+   semantic color (green=approve, teal=complete, red=deny/delete,
+   amber=edit) rather than the original's plain black (UI-H). */
 .btn-approve,
 .btn-complete,
 .btn-deny,
 .btn-edit {
-    padding: 6px 14px;
-    border-radius: 40px;
-    border: none;
+    appearance: none;
+    background-color: transparent;
+    border: 2px solid currentColor;
+    border-radius: 30px;
+    box-sizing: border-box;
     cursor: pointer;
-    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 10px 20px;
+    min-height: 42px;
+    transition: all 300ms cubic-bezier(.23, 1, 0.32, 1);
+    user-select: none;
 }
 
 .btn-approve {
-    background: #2c5e47;
-    color: white;
+    color: #2c5e47;
 }
 
 .btn-complete {
-    background: #7aa77a;
-    color: white;
+    color: #3f7a57;
 }
 
 .btn-deny {
-    background: #dc2626;
-    color: white;
+    color: #dc2626;
 }
 
 .btn-edit {
-    background: #eab308;
-    color: white;
+    color: #b45309;
+}
+
+.btn-approve:hover {
+    background-color: #2c5e47;
+    color: #fff;
+    box-shadow: rgba(44, 94, 71, .35) 0 8px 15px;
+    transform: translateY(-2px);
+}
+
+.btn-complete:hover {
+    background-color: #3f7a57;
+    color: #fff;
+    box-shadow: rgba(63, 122, 87, .35) 0 8px 15px;
+    transform: translateY(-2px);
+}
+
+.btn-deny:hover {
+    background-color: #dc2626;
+    color: #fff;
+    box-shadow: rgba(220, 38, 38, .35) 0 8px 15px;
+    transform: translateY(-2px);
+}
+
+.btn-edit:hover {
+    background-color: #b45309;
+    color: #fff;
+    box-shadow: rgba(180, 83, 9, .35) 0 8px 15px;
+    transform: translateY(-2px);
+}
+
+.btn-approve:active,
+.btn-complete:active,
+.btn-deny:active,
+.btn-edit:active {
+    box-shadow: none;
+    transform: translateY(0);
 }
 
 .btn-save:focus-visible,

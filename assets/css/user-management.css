@@ -169,21 +169,140 @@
     background: #fff;
 }
 
-/* .btn-secondary and .btn-add now come from assets/css/components/buttons.css (Batch 5) */
-.btn-save {
-    border: none;
-    border-radius: 14px;
-    padding: 12px 18px;
-    font-weight: 600;
+/* .btn-secondary now comes from assets/css/components/buttons.css (Batch 5) */
+
+/* Add button — matches the animated pill (expanding-circle hover) design
+   used in Lot Management (.btn-add-lot) and Decedent Records (.btn-add),
+   replicated here for visual consistency across modules (UI-H). */
+.btn-add {
+    position: relative;
+    height: 50px;
+    min-width: 200px;
+    padding: 0 24px;
+    background: transparent;
+    border: 2px solid #2c5e47;
+    border-radius: 30px;
     cursor: pointer;
-    background: var(--color-primary-300);
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all .45s ease;
+}
+
+.btn-add .btn-txt {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #2c5e47;
+    font-weight: 700;
+    letter-spacing: 1px;
+    transition: .45s;
+}
+
+.btn-add::after {
+    content: "";
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    border-radius: 50%;
+    background: #2c5e47;
+    transition: .55s ease;
+}
+
+.btn-add:hover::after {
+    transform: translate(-50%, -50%) scale(35);
+}
+
+.btn-add:hover {
+    border-color: #2c5e47;
+    box-shadow: 0 8px 25px rgba(44, 94, 71, .35);
+}
+
+.btn-add:hover .btn-txt {
     color: #fff;
-    width: 100%;
-    transition: background var(--duration-base) var(--easing-standard);
+}
+
+.btn-add:active {
+    transform: scale(.96);
+}
+
+.btn-add:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+/* Save button — matches the slide-reveal icon-pill design used in Lot
+   Management (.bookmarkBtn) and Decedent Records (.btn-save), replicated
+   here for visual consistency across modules (UI-H). Requires markup:
+   <span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span> */
+.btn-save {
+    width: 170px;
+    height: 48px;
+    margin: 20px auto 0;
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 40px;
+    background: #2c5e47;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    transition: .35s ease;
+}
+
+.btn-save .IconContainer {
+    width: 34px;
+    height: 34px;
+    background: linear-gradient(to bottom, #6bcf85, #2c8c5a);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: .35s ease;
+    z-index: 2;
+}
+
+.btn-save .IconContainer i {
+    color: white;
+    font-size: 15px;
+}
+
+.btn-save .text {
+    width: 80px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: .95rem;
+    transition: .35s ease;
 }
 
 .btn-save:hover {
-    background: var(--color-primary-400);
+    box-shadow: 0 10px 30px rgba(44, 94, 71, .35);
+    background: #214c39;
+}
+
+.btn-save:hover .IconContainer {
+    width: 150px;
+    border-radius: 40px;
+}
+
+.btn-save:hover .text {
+    width: 0;
+    opacity: 0;
+    font-size: 0;
+}
+
+.btn-save:active {
+    transform: scale(.96);
 }
 
 .btn-save:focus-visible {
@@ -214,25 +333,85 @@
     gap: 8px;
 }
 
-.action-buttons button {
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
-    border: 1px solid #d9e1e8;
-    background: #fff;
-    cursor: pointer;
+/* Row action icons — matches the circular icon-pop design (color-fill +
+   lift + icon animation on hover) used in Decedent Records' Actions
+   column, replicated here for visual consistency across modules (UI-H). */
+.btn-view {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 50%;
+    background: #eff6ff;
+    color: #2563eb;
     display: flex;
-    align-items: center;
     justify-content: center;
-    transition: transform 0.2s ease, background 0.2s ease;
+    align-items: center;
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    transition: .35s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
 }
 
-.action-buttons button:hover {
-    background: #eef3f7;
-    transform: translateY(-1px);
+.btn-view i {
+    font-size: 15px;
+    transition: .35s ease;
 }
 
-.action-buttons button:focus-visible {
+.btn-view:hover {
+    background: #2563eb;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(37, 99, 235, .35);
+}
+
+.btn-view:hover i {
+    transform: rotate(-25deg) scale(1.2);
+}
+
+.btn-view:active {
+    transform: scale(.90);
+}
+
+.btn-delete-row {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 50%;
+    background: #fff5f5;
+    color: #dc2626;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    transition: .35s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
+}
+
+.btn-delete-row i {
+    font-size: 15px;
+    transition: .35s ease;
+}
+
+.btn-delete-row:hover {
+    background: #dc2626;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(220, 38, 38, .35);
+}
+
+.btn-delete-row:hover i {
+    transform: rotate(-25deg) scale(1.2);
+}
+
+.btn-delete-row:active {
+    transform: scale(.90);
+}
+
+.btn-view:focus-visible,
+.btn-delete-row:focus-visible {
     outline: 2px solid var(--color-primary-500);
     outline-offset: 2px;
 }
