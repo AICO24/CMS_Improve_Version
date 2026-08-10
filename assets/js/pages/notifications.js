@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
 
             list.innerHTML = notifications.map(notification => `
-                <div class="notification-item ${notification.is_read ? '' : 'unread'}">
+                <div class="notification-item ${notification.is_read ? '' : 'unread'}" data-id="${notification.notification_id}">
                     <div>
                         <div class="notification-title">${notification.title}</div>
                         <div class="notification-meta">${notification.message}</div>
@@ -51,6 +51,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch (error) {
             console.error('Failed to load notifications', error);
         }
+    }
+
+    // Click an unread notification to mark just that one read (the
+    // notifications/{id}/read endpoint already existed server-side with
+    // no frontend caller). Already-read items are inert on click.
+    const notificationList = document.getElementById('notificationList');
+    if (notificationList) {
+        notificationList.addEventListener('click', async (event) => {
+            const item = event.target.closest('.notification-item.unread');
+            if (!item || !item.dataset.id) return;
+
+            item.classList.remove('unread');
+            try {
+                await api.request(`notifications/${item.dataset.id}/read`, { method: 'PUT' });
+                await updateNotificationBadge();
+            } catch (error) {
+                console.error('Failed to mark notification read', error);
+                item.classList.add('unread');
+            }
+        });
     }
 
     async function generateStarterNotifications() {

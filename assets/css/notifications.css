@@ -125,6 +125,7 @@
 
 .notification-item.unread {
     border-left: 4px solid #2b3658;
+    cursor: pointer;
 }
 
 .notification-title {

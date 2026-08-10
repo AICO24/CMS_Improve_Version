@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     logoutBtn?.addEventListener('click', () => api.logout());
+    document.getElementById('notificationIcon')?.addEventListener('click', () => window.location.href = `${getFrontendBasePath()}/pages/notifications.html`);
 
     const user = await requireRole(['staff']);
     if (!user) return;

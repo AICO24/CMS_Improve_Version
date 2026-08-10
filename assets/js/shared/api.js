@@ -185,7 +185,8 @@ function getPageFileName(href) {
 
 // Removes/hides sidebar links the current role isn't allowed to open, so a
 // page shared across roles (e.g. payments.html) never shows nav items (like
-// User Management or Audit Logs) that role can't actually access.
+// User Management or Audit Logs) that role can't actually access. This is
+// the default for every protected page.
 function filterSidebarByRole(role) {
     const roleName = String(role || '').toLowerCase();
     document.querySelectorAll('.sidebar .nav-item[href]').forEach((link) => {
@@ -196,6 +197,70 @@ function filterSidebarByRole(role) {
             link.remove();
         }
     });
+}
+
+// A handful of pages are opened by every role but ship only ONE hardcoded
+// sidebar in their static HTML, written from a single role's perspective
+// (payments.html ships admin's; notifications/profile/settings.html ship
+// user's). filterSidebarByRole() above can only ever subtract links from
+// whatever shipped, so a role that didn't match the hardcoded list ended
+// up with a near-empty or flat-out wrong sidebar — e.g. an admin or staff
+// user clicking the notification bell landed on notifications.html and
+// saw most of their normal sidebar missing, because it started from the
+// user-role list. For exactly these pages, rebuild the sidebar instead of
+// filtering it. Every other page (single-role pages, and admin/staff
+// pages that already carry their own full nav list, e.g. ai.html) keeps
+// the existing filterSidebarByRole behavior untouched.
+const PAGES_NEEDING_SIDEBAR_REBUILD = ['payments.html', 'notifications.html', 'profile.html', 'settings.html'];
+
+// Canonical sidebar nav-item sets, one per role — copied verbatim from
+// each role's own dashboard (dashboard_admin.html, dashboard_staff.html,
+// dashboard_user.html), the authoritative source per role.
+const ROLE_SIDEBAR_LINKS = {
+    admin: [
+        ['dashboard_admin.html', 'fa-gauge-high', 'Dashboard'],
+        ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
+        ['burial-scheduling.html', 'fa-monument', 'Burial Scheduling'],
+        ['cremation-management.html', 'fa-fire', 'Cremation Management'],
+        ['relocation-management.html', 'fa-truck-moving', 'Relocation Management'],
+        ['expiration-monitoring.html', 'fa-hourglass-half', 'Expiration Monitoring'],
+        ['decedent-records.html', 'fa-folder-open', 'Decedent Records'],
+        ['payments.html', 'fa-credit-card', 'Payments'],
+        ['reports.html', 'fa-chart-column', 'Reports'],
+        ['forecast.html', 'fa-chart-line', 'Capacity Forecast'],
+        ['user-management.html', 'fa-users', 'User Management'],
+        ['audit.html', 'fa-clipboard-list', 'Audit Logs'],
+    ],
+    staff: [
+        ['dashboard_staff.html', 'fa-gauge-high', 'Dashboard'],
+        ['burial-scheduling.html', 'fa-monument', 'Burial Scheduling'],
+        ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
+        ['payments.html', 'fa-credit-card', 'Payments'],
+        ['notifications.html', 'fa-bell', 'Notifications'],
+    ],
+    user: [
+        ['dashboard_user.html', 'fa-gauge-high', 'Dashboard'],
+        ['reserve-burial-slot.html', 'fa-monument', 'Reserve Burial Slot'],
+        ['my-reservations.html', 'fa-bookmark', 'My Reservations'],
+        ['payments.html', 'fa-credit-card', 'Payments'],
+        ['payment-history.html', 'fa-receipt', 'Payment History'],
+        ['my-records.html', 'fa-folder-open', 'My Records'],
+        ['notifications.html', 'fa-bell', 'Notifications'],
+        ['profile.html', 'fa-id-card', 'Profile'],
+        ['settings.html', 'fa-gear', 'Settings'],
+    ],
+};
+
+function renderSidebarForRole(role) {
+    const nav = document.querySelector('.sidebar .sidebar-nav');
+    const links = ROLE_SIDEBAR_LINKS[String(role || '').toLowerCase()];
+    if (!nav || !links) return;
+
+    const currentPage = window.location.pathname.split('/').pop();
+    nav.innerHTML = links.map(([href, icon, label]) => {
+        const isActive = href === currentPage;
+        return `<a href="${href}" class="nav-item${isActive ? ' active' : ''}"><i class="fas ${icon} icon"></i> <span>${label}</span></a>`;
+    }).join('');
 }
 
 function setUserDisplay(user) {
@@ -237,6 +302,10 @@ async function requireRole(allowedRoles) {
 
     setUserDisplay(user);
     filterSidebarByRole(roleName);
+    const currentPage = window.location.pathname.split('/').pop();
+    if (PAGES_NEEDING_SIDEBAR_REBUILD.includes(currentPage)) {
+        renderSidebarForRole(roleName);
+    }
     document.querySelectorAll('.admin-only').forEach((el) => {
         if (roleName === 'admin') {
             el.style.display = 'flex';
