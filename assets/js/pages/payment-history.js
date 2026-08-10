@@ -21,8 +21,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     const nextPageBtn = document.getElementById('nextPage');
 
     const perPage = 10;
-    let currentPage = 1;
-    let pageCount = 1;
+    const pagination = createPagination({
+        prevBtn: prevPageBtn,
+        nextBtn: nextPageBtn,
+        infoEl: paginationInfo,
+        itemLabel: 'payment',
+        onChange: refreshAll,
+    });
 
     document.getElementById('logoutBtn').addEventListener('click', () => {
         api.logout();
@@ -70,7 +75,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     async function loadPayments() {
         const params = filterParams();
-        params.set('page', currentPage);
+        params.set('page', pagination.page);
         params.set('per_page', perPage);
         const result = await api.request(`payments/mine?${params.toString()}`, { method: 'GET' });
         return result && Array.isArray(result.data) ? result : { data: [], meta: { page: 1, pages: 1, total: 0 } };
@@ -120,15 +125,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    function renderPagination(meta) {
-        currentPage = meta.page || 1;
-        pageCount = meta.pages || 1;
-        const total = meta.total || 0;
-        paginationInfo.textContent = `Page ${currentPage} of ${pageCount} • ${total} payment${total === 1 ? '' : 's'}`;
-        prevPageBtn.disabled = currentPage <= 1;
-        nextPageBtn.disabled = currentPage >= pageCount;
-    }
-
     function renderStats(ownPayments) {
         const currentMonth = new Date().toISOString().slice(0, 7);
         let totalPaid = 0;
@@ -161,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const meta = paymentsResult.meta || { page: 1, pages: 1, total: payments.length };
             renderStats(ownPayments);
             renderTable(payments);
-            renderPagination(meta);
+            pagination.render(meta);
         } catch (error) {
             console.error('Refresh failed:', error);
             tbody.innerHTML = '<tr><td colspan="8">Failed to load payments. Please refresh.</td></tr>';
@@ -231,7 +227,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     const refreshFiltered = debounce(async () => {
-        currentPage = 1;
+        pagination.reset();
         await refreshAll();
     }, 300);
 
@@ -246,18 +242,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         statusFilterSelect.value = '';
         dateFromFilterInput.value = '';
         dateToFilterInput.value = '';
-        currentPage = 1;
-        await refreshAll();
-    });
-
-    prevPageBtn.addEventListener('click', async () => {
-        if (currentPage <= 1) return;
-        currentPage -= 1;
-        await refreshAll();
-    });
-    nextPageBtn.addEventListener('click', async () => {
-        if (currentPage >= pageCount) return;
-        currentPage += 1;
+        pagination.reset();
         await refreshAll();
     });
 

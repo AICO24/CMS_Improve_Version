@@ -23,12 +23,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     const prevPage = document.getElementById('prevPage');
     const nextPage = document.getElementById('nextPage');
 
-    let currentPage = 1;
-    let pageCount = 1;
-    let totalReservations = 0;
     let perPage = 10;
     let currentQuery = '';
     let currentStatus = '';
+
+    const pagination = createPagination({
+        prevBtn: prevPage,
+        nextBtn: nextPage,
+        infoEl: paginationInfo,
+        itemLabel: 'reservation',
+        onChange: loadReservations,
+    });
 
     function buildStatusBadge(status) {
         const normalized = String(status || '').toLowerCase();
@@ -62,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     async function loadReservations() {
         reservationsBody.innerHTML = '<tr><td colspan="7">Loading reservations...</td></tr>';
         const params = new URLSearchParams();
-        params.set('page', currentPage);
+        params.set('page', pagination.page);
         params.set('per_page', perPage);
         if (currentQuery.trim()) params.set('q', currentQuery.trim());
         if (currentStatus) params.set('status', currentStatus);
@@ -70,21 +75,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             const result = await api.request(`schedules/mine?${params.toString()}`, { method: 'GET' });
             const data = Array.isArray(result.data) ? result.data : [];
-            totalReservations = result.meta?.total || 0;
-            pageCount = result.meta?.pages || 1;
-            currentPage = result.meta?.page || currentPage;
             reservationsBody.innerHTML = data.length > 0
                 ? data.map(buildReservationRow).join('')
                 : '<tr><td colspan="7">No reservations found for the selected criteria.</td></tr>';
-            paginationInfo.textContent = `Page ${currentPage} of ${pageCount} • ${totalReservations} reservation${totalReservations === 1 ? '' : 's'}`;
-            prevPage.disabled = currentPage <= 1;
-            nextPage.disabled = currentPage >= pageCount;
+            pagination.render(result.meta || { page: 1, pages: 1, total: data.length });
         } catch (error) {
             console.error('Failed to load reservations', error);
             reservationsBody.innerHTML = '<tr><td colspan="7">Unable to load reservations right now.</td></tr>';
-            paginationInfo.textContent = '';
-            prevPage.disabled = true;
-            nextPage.disabled = true;
+            pagination.render({ page: 1, pages: 1, total: 0 });
         }
     }
 
@@ -122,7 +120,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     const refreshReservations = debounce(async () => {
-        currentPage = 1;
+        pagination.reset();
         currentQuery = searchQuery.value || '';
         currentStatus = statusFilter.value || '';
         await loadReservations();
@@ -135,19 +133,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         statusFilter.value = '';
         currentQuery = '';
         currentStatus = '';
-        currentPage = 1;
-        await loadReservations();
-    });
-
-    prevPage.addEventListener('click', async () => {
-        if (currentPage <= 1) return;
-        currentPage -= 1;
-        await loadReservations();
-    });
-
-    nextPage.addEventListener('click', async () => {
-        if (currentPage >= pageCount) return;
-        currentPage += 1;
+        pagination.reset();
         await loadReservations();
     });
 

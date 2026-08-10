@@ -21,8 +21,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     const nextPageBtn = document.getElementById('nextPage');
 
     const perPage = 10;
-    let currentPage = 1;
-    let pageCount = 1;
+    const pagination = createPagination({
+        prevBtn: prevPageBtn,
+        nextBtn: nextPageBtn,
+        infoEl: paginationInfo,
+        itemLabel: 'payment',
+        onChange: refreshAll,
+    });
 
     document.getElementById('logoutBtn').addEventListener('click', () => {
         api.logout();
@@ -63,7 +68,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Backend permits admin+staff on the full list; only 'user' is limited to their own.
         const endpoint = currentUser.role === 'user' ? 'payments/mine' : 'payments';
         const params = new URLSearchParams();
-        params.set('page', currentPage);
+        params.set('page', pagination.page);
         params.set('per_page', perPage);
         const filters = currentFilters();
         Object.keys(filters).forEach((key) => {
@@ -152,22 +157,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    function renderPagination(meta) {
-        currentPage = meta.page || 1;
-        pageCount = meta.pages || 1;
-        const total = meta.total || 0;
-        paginationInfo.textContent = `Page ${currentPage} of ${pageCount} • ${total} payment${total === 1 ? '' : 's'}`;
-        prevPageBtn.disabled = currentPage <= 1;
-        nextPageBtn.disabled = currentPage >= pageCount;
-    }
-
     function renderStats(revenue, monthRevenue, payments, meta) {
         statsEl.totalRevenue.innerText = formatCurrency(revenue.total || 0);
         statsEl.monthRevenue.innerText = formatCurrency(monthRevenue.total || 0);
         statsEl.transactionCount.innerText = meta.total || 0;
         // Payments are already sorted newest-first by the backend, so the first
         // row on page 1 is the most recent payment.
-        statsEl.lastPayment.innerText = currentPage === 1 && payments.length > 0
+        statsEl.lastPayment.innerText = pagination.page === 1 && payments.length > 0
             ? (payments[0].payment_date || payments[0].created_at || '—')
             : statsEl.lastPayment.innerText || '—';
     }
@@ -183,7 +179,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const meta = paymentsResult.meta || { page: 1, pages: 1, total: payments.length };
             renderStats(revenue, monthRevenue, payments, meta);
             renderTable(payments);
-            renderPagination(meta);
+            pagination.render(meta);
         } catch (error) {
             console.error('Refresh failed:', error);
             tbody.innerHTML = '<tr><td colspan="8">Failed to load payments. Please refresh.</td></tr>';
@@ -331,7 +327,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
                 if (result.success) {
                     document.getElementById('paymentModal').style.display = 'none';
-                    currentPage = 1;
+                    pagination.reset();
                     await refreshAll();
                 } else {
                     alert(result.error || 'Failed to save payment');
@@ -360,7 +356,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     const refreshFiltered = debounce(async () => {
-        currentPage = 1;
+        pagination.reset();
         await refreshAll();
     }, 300);
 
@@ -375,18 +371,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         statusFilterSelect.value = '';
         dateFromFilterInput.value = '';
         dateToFilterInput.value = '';
-        currentPage = 1;
-        await refreshAll();
-    });
-
-    prevPageBtn.addEventListener('click', async () => {
-        if (currentPage <= 1) return;
-        currentPage -= 1;
-        await refreshAll();
-    });
-    nextPageBtn.addEventListener('click', async () => {
-        if (currentPage >= pageCount) return;
-        currentPage += 1;
+        pagination.reset();
         await refreshAll();
     });
 

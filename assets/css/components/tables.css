@@ -110,6 +110,33 @@
     color: var(--color-white);
 }
 
+/*
+  Previous/Next pagination controls (UI-D). Consolidated here from
+  payments.css/payment-history.css, which had defined identical copies —
+  this is now the single shared definition so any page using the
+  #prevPage/#nextPage + #paginationInfo pattern (see
+  assets/js/shared/pagination.js) is styled consistently without needing
+  its own copy. The per-page copies were left in place; being byte-
+  identical, they're redundant but harmless under the cascade.
+*/
+.pagination-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 18px;
+}
+
+.pagination-controls button {
+    min-width: 110px;
+}
+
+.pagination-info {
+    color: #556872;
+    font-size: 0.95rem;
+}
+
 .table-empty {
     display: flex;
     flex-direction: column;
