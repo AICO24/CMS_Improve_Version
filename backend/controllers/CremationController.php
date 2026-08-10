@@ -11,8 +11,28 @@ class CremationController {
         $this->decedentModel = new Decedent();
     }
 
-    public function index($filters = []) {
-        return $this->cremationModel->findAll($filters);
+    public function index($filters = [], $pagination = []) {
+        $page = !empty($pagination['page']) ? (int) $pagination['page'] : null;
+        $perPage = !empty($pagination['per_page']) ? (int) $pagination['per_page'] : null;
+
+        if ($page === null && $perPage === null) {
+            return $this->cremationModel->findAll($filters);
+        }
+
+        $page = max(1, $page ?: 1);
+        $perPage = max(1, min(100, $perPage ?: 10));
+        $total = $this->cremationModel->countAll($filters);
+        $data = $this->cremationModel->findAll($filters, ['page' => $page, 'per_page' => $perPage]);
+
+        return [
+            'data' => $data,
+            'meta' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'total_pages' => (int) ceil($total / $perPage),
+            ],
+        ];
     }
 
     public function show($id) {

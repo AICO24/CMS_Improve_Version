@@ -8,22 +8,7 @@ class ExpirationRecord {
         $this->db = Database::getInstance()->getConnection();
     }
 
-    public function findAll($filters = []) {
-        $sql = "SELECT e.*, l.lot_number, b.block_name, s.section_name,
-                   CASE
-                     WHEN e.end_date < CURDATE() THEN 'Expired'
-                     WHEN e.exhumation_status = 'Scheduled' THEN 'Exhumation'
-                     WHEN e.renewed = 'no' AND e.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'Expiring'
-                     WHEN e.renewed = 'yes' THEN 'Renewed'
-                     ELSE 'Active'
-                   END AS status
-                FROM expiration_records e
-                JOIN lots l ON e.lot_id = l.lot_id
-                JOIN blocks b ON l.block_id = b.block_id
-                JOIN sections s ON b.section_id = s.section_id
-                WHERE 1=1";
-        $params = [];
-
+    private function applyFilters(&$sql, &$params, $filters) {
         if (!empty($filters['renewed'])) {
             $sql .= " AND e.renewed = ?";
             $params[] = $filters['renewed'];
@@ -65,13 +50,61 @@ class ExpirationRecord {
                     break;
             }
         }
+    }
+
+    public function findAll($filters = [], $pagination = []) {
+        $sql = "SELECT e.*, l.lot_number, b.block_name, s.section_name,
+                   CASE
+                     WHEN e.end_date < CURDATE() THEN 'Expired'
+                     WHEN e.exhumation_status = 'Scheduled' THEN 'Exhumation'
+                     WHEN e.renewed = 'no' AND e.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'Expiring'
+                     WHEN e.renewed = 'yes' THEN 'Renewed'
+                     ELSE 'Active'
+                   END AS status
+                FROM expiration_records e
+                JOIN lots l ON e.lot_id = l.lot_id
+                JOIN blocks b ON l.block_id = b.block_id
+                JOIN sections s ON b.section_id = s.section_id
+                WHERE 1=1";
+        $params = [];
+        $this->applyFilters($sql, $params, $filters);
 
         $sql .= " ORDER BY e.end_date ASC, e.updated_at DESC";
+
+        $page = null;
+        $perPage = null;
+        if (!empty($pagination['page']) || !empty($pagination['per_page'])) {
+            $page = max(1, (int) ($pagination['page'] ?? 1));
+            $perPage = max(1, min(100, (int) ($pagination['per_page'] ?? 10)));
+        }
+
+        if ($page !== null && $perPage !== null) {
+            $offset = ($page - 1) * $perPage;
+            $sql .= " LIMIT ?, ?";
+            $params[] = $offset;
+            $params[] = $perPage;
+        }
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
 
         return $stmt->fetchAll();
+    }
+
+    public function countAll($filters = []) {
+        $sql = "SELECT COUNT(*) AS total
+                FROM expiration_records e
+                JOIN lots l ON e.lot_id = l.lot_id
+                JOIN blocks b ON l.block_id = b.block_id
+                JOIN sections s ON b.section_id = s.section_id
+                WHERE 1=1";
+        $params = [];
+        $this->applyFilters($sql, $params, $filters);
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return (int) ($row['total'] ?? 0);
     }
 
     public function findById($id) {
@@ -92,15 +125,61 @@ class ExpirationRecord {
         return $stmt->fetch();
     }
 
-    public function findExpiringSoon($days = 30) {
-        $stmt = $this->db->prepare("SELECT e.*, l.lot_number, b.block_name, s.section_name FROM expiration_records e JOIN lots l ON e.lot_id = l.lot_id JOIN blocks b ON l.block_id = b.block_id JOIN sections s ON b.section_id = s.section_id WHERE e.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY) ORDER BY e.end_date ASC");
-        $stmt->execute([$days]);
+    // $pagination optional, same {page, per_page} shape as findAll(); omitted
+    // (the report page's current behavior) returns every matching row.
+    public function findExpiringSoon($days = 30, $pagination = []) {
+        $sql = "SELECT e.*, l.lot_number, b.block_name, s.section_name FROM expiration_records e JOIN lots l ON e.lot_id = l.lot_id JOIN blocks b ON l.block_id = b.block_id JOIN sections s ON b.section_id = s.section_id WHERE e.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY) ORDER BY e.end_date ASC";
+        $params = [$days];
+
+        $page = null;
+        $perPage = null;
+        if (!empty($pagination['page']) || !empty($pagination['per_page'])) {
+            $page = max(1, (int) ($pagination['page'] ?? 1));
+            $perPage = max(1, min(100, (int) ($pagination['per_page'] ?? 10)));
+        }
+        if ($page !== null && $perPage !== null) {
+            $sql .= " LIMIT ?, ?";
+            $params[] = ($page - 1) * $perPage;
+            $params[] = $perPage;
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll();
     }
 
-    public function findExpired() {
-        $stmt = $this->db->query("SELECT e.*, l.lot_number, b.block_name, s.section_name FROM expiration_records e JOIN lots l ON e.lot_id = l.lot_id JOIN blocks b ON l.block_id = b.block_id JOIN sections s ON b.section_id = s.section_id WHERE e.end_date < CURDATE() ORDER BY e.end_date DESC");
+    public function countExpiringSoon($days = 30) {
+        $stmt = $this->db->prepare("SELECT COUNT(*) AS total FROM expiration_records e WHERE e.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)");
+        $stmt->execute([$days]);
+        $row = $stmt->fetch();
+        return (int) ($row['total'] ?? 0);
+    }
+
+    public function findExpired($pagination = []) {
+        $sql = "SELECT e.*, l.lot_number, b.block_name, s.section_name FROM expiration_records e JOIN lots l ON e.lot_id = l.lot_id JOIN blocks b ON l.block_id = b.block_id JOIN sections s ON b.section_id = s.section_id WHERE e.end_date < CURDATE() ORDER BY e.end_date DESC";
+        $params = [];
+
+        $page = null;
+        $perPage = null;
+        if (!empty($pagination['page']) || !empty($pagination['per_page'])) {
+            $page = max(1, (int) ($pagination['page'] ?? 1));
+            $perPage = max(1, min(100, (int) ($pagination['per_page'] ?? 10)));
+        }
+        if ($page !== null && $perPage !== null) {
+            $sql .= " LIMIT ?, ?";
+            $params[] = ($page - 1) * $perPage;
+            $params[] = $perPage;
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll();
+    }
+
+    public function countExpired() {
+        $stmt = $this->db->query("SELECT COUNT(*) AS total FROM expiration_records e WHERE e.end_date < CURDATE()");
+        $row = $stmt->fetch();
+        return (int) ($row['total'] ?? 0);
     }
 
     public function create($data) {

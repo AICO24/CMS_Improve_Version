@@ -11,8 +11,28 @@ class UserController {
         $this->auditLogModel = new AuditLog();
     }
 
-    public function index($filters = []) {
-        return $this->userModel->findAll($filters);
+    public function index($filters = [], $pagination = []) {
+        $page = !empty($pagination['page']) ? (int) $pagination['page'] : null;
+        $perPage = !empty($pagination['per_page']) ? (int) $pagination['per_page'] : null;
+
+        if ($page === null && $perPage === null) {
+            return $this->userModel->findAll($filters);
+        }
+
+        $page = max(1, $page ?: 1);
+        $perPage = max(1, min(100, $perPage ?: 10));
+        $total = $this->userModel->countAll($filters);
+        $data = $this->userModel->findAll($filters, ['page' => $page, 'per_page' => $perPage]);
+
+        return [
+            'data' => $data,
+            'meta' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'total_pages' => (int) ceil($total / $perPage),
+            ],
+        ];
     }
 
     public function show($id) {

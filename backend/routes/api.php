@@ -202,7 +202,10 @@ if ($path === 'lots' && $requestMethod === 'GET') {
     if (isset($_GET['max_price'])) $filters['max_price'] = $_GET['max_price'];
     if (isset($_GET['status'])) $filters['status'] = $_GET['status'];
     if (isset($_GET['block_id'])) $filters['block_id'] = $_GET['block_id'];
-    echo json_encode($lotController->getLots($filters));
+    $pagination = [];
+    if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
+    if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
+    echo json_encode($lotController->getLots($filters, $pagination));
     exit;
 }
 if ($path === 'lots/stats' && $requestMethod === 'GET') {
@@ -364,7 +367,10 @@ if ($path === 'cremations' && $requestMethod === 'GET') {
     if (isset($_GET['status'])) $filters['status'] = $_GET['status'];
     if (isset($_GET['columbarium'])) $filters['columbarium'] = $_GET['columbarium'];
     if (isset($_GET['deceased_id'])) $filters['deceased_id'] = $_GET['deceased_id'];
-    echo json_encode($cremationController->index($filters));
+    $pagination = [];
+    if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
+    if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
+    echo json_encode($cremationController->index($filters, $pagination));
     exit;
 }
 
@@ -418,7 +424,10 @@ if ($path === 'relocations' && $requestMethod === 'GET') {
     if (isset($_GET['deceased_id'])) $filters['deceased_id'] = $_GET['deceased_id'];
     if (isset($_GET['from_lot_id'])) $filters['from_lot_id'] = $_GET['from_lot_id'];
     if (isset($_GET['to_lot_id'])) $filters['to_lot_id'] = $_GET['to_lot_id'];
-    echo json_encode($relocationController->index($filters));
+    $pagination = [];
+    if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
+    if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
+    echo json_encode($relocationController->index($filters, $pagination));
     exit;
 }
 
@@ -698,7 +707,10 @@ if ($path === 'users' && $requestMethod === 'GET') {
     if (isset($_GET['role'])) $filters['role'] = $_GET['role'];
     if (isset($_GET['is_active'])) $filters['is_active'] = $_GET['is_active'];
     if (isset($_GET['q'])) $filters['q'] = $_GET['q'];
-    echo json_encode($userController->index($filters));
+    $pagination = [];
+    if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
+    if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
+    echo json_encode($userController->index($filters, $pagination));
     exit;
 }
 
@@ -761,7 +773,10 @@ if ($path === 'reports/revenue' && $requestMethod === 'GET') {
 }
 
 if ($path === 'reports/expiration' && $requestMethod === 'GET') {
-    echo json_encode($reportController->expiration());
+    $pagination = [];
+    if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
+    if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
+    echo json_encode($reportController->expiration($pagination));
     exit;
 }
 
@@ -812,7 +827,10 @@ if ($path === 'expiration-records' && $requestMethod === 'GET') {
     if (isset($_GET['lot_id'])) $filters['lot_id'] = $_GET['lot_id'];
     if (isset($_GET['status'])) $filters['status'] = $_GET['status'];
     if (isset($_GET['q'])) $filters['q'] = $_GET['q'];
-    echo json_encode($expirationController->index($filters));
+    $pagination = [];
+    if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
+    if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
+    echo json_encode($expirationController->index($filters, $pagination));
     exit;
 }
 
@@ -871,7 +889,10 @@ if ($path === 'decedents' && $requestMethod === 'GET') {
     if (isset($_GET['lot_id'])) $filters['lot_id'] = $_GET['lot_id'];
     if (isset($_GET['section'])) $filters['section'] = $_GET['section'];
     if (isset($_GET['is_cremated'])) $filters['is_cremated'] = $_GET['is_cremated'];
-    echo json_encode($decedentController->index($filters));
+    $pagination = [];
+    if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
+    if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
+    echo json_encode($decedentController->index($filters, $pagination));
     exit;
 }
 if ($path === 'decedents/stats' && $requestMethod === 'GET') {

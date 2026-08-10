@@ -13,18 +13,7 @@ class Cremation {
         $this->db = Database::getInstance()->getConnection();
     }
 
-    public function findAll($filters = []) {
-        $sql = "
-            SELECT c.*, 
-                   d.first_name, d.last_name,
-                   u.full_name as created_by_name
-            FROM cremation_records c
-            JOIN decedent_records d ON c.deceased_id = d.decedent_id
-            LEFT JOIN users u ON c.created_by = u.user_id
-            WHERE 1=1
-        ";
-        $params = [];
-
+    private function applyFilters(&$sql, &$params, $filters) {
         if (!empty($filters['status'])) {
             $sql .= " AND c.status = ?";
             $params[] = $filters['status'];
@@ -37,11 +26,57 @@ class Cremation {
             $sql .= " AND c.deceased_id = ?";
             $params[] = (int) $filters['deceased_id'];
         }
+    }
+
+    public function findAll($filters = [], $pagination = []) {
+        $sql = "
+            SELECT c.*,
+                   d.first_name, d.last_name,
+                   u.full_name as created_by_name
+            FROM cremation_records c
+            JOIN decedent_records d ON c.deceased_id = d.decedent_id
+            LEFT JOIN users u ON c.created_by = u.user_id
+            WHERE 1=1
+        ";
+        $params = [];
+        $this->applyFilters($sql, $params, $filters);
 
         $sql .= " ORDER BY c.created_at DESC";
+
+        $page = null;
+        $perPage = null;
+        if (!empty($pagination['page']) || !empty($pagination['per_page'])) {
+            $page = max(1, (int) ($pagination['page'] ?? 1));
+            $perPage = max(1, min(100, (int) ($pagination['per_page'] ?? 10)));
+        }
+
+        if ($page !== null && $perPage !== null) {
+            $offset = ($page - 1) * $perPage;
+            $sql .= " LIMIT ?, ?";
+            $params[] = $offset;
+            $params[] = $perPage;
+        }
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
+    }
+
+    public function countAll($filters = []) {
+        $sql = "
+            SELECT COUNT(*) AS total
+            FROM cremation_records c
+            JOIN decedent_records d ON c.deceased_id = d.decedent_id
+            LEFT JOIN users u ON c.created_by = u.user_id
+            WHERE 1=1
+        ";
+        $params = [];
+        $this->applyFilters($sql, $params, $filters);
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return (int) ($row['total'] ?? 0);
     }
 
     public function findById($id) {

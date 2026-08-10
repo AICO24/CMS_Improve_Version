@@ -52,12 +52,46 @@ class ReportController {
         return ['total' => $total, 'breakdown' => $breakdown];
     }
 
-    public function expiration() {
-        $expiring = $this->expirationModel->findExpiringSoon();
-        $expired = $this->expirationModel->findExpired();
+    // $pagination optional {page, per_page}, applied independently to each of
+    // the two lists below. Omitted (the report page's current behavior)
+    // returns both lists in full, unchanged, for backward compatibility.
+    public function expiration($pagination = []) {
+        $page = !empty($pagination['page']) ? (int) $pagination['page'] : null;
+        $perPage = !empty($pagination['per_page']) ? (int) $pagination['per_page'] : null;
+
+        if ($page === null && $perPage === null) {
+            return [
+                'expiring_soon' => $this->expirationModel->findExpiringSoon(),
+                'expired' => $this->expirationModel->findExpired(),
+            ];
+        }
+
+        $page = max(1, $page ?: 1);
+        $perPage = max(1, min(100, $perPage ?: 10));
+        $pageArgs = ['page' => $page, 'per_page' => $perPage];
+
+        $expiringTotal = $this->expirationModel->countExpiringSoon();
+        $expiredTotal = $this->expirationModel->countExpired();
+
         return [
-            'expiring_soon' => $expiring,
-            'expired' => $expired,
+            'expiring_soon' => [
+                'data' => $this->expirationModel->findExpiringSoon(30, $pageArgs),
+                'meta' => [
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $expiringTotal,
+                    'total_pages' => (int) ceil($expiringTotal / $perPage),
+                ],
+            ],
+            'expired' => [
+                'data' => $this->expirationModel->findExpired($pageArgs),
+                'meta' => [
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $expiredTotal,
+                    'total_pages' => (int) ceil($expiredTotal / $perPage),
+                ],
+            ],
         ];
     }
 

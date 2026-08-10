@@ -8,17 +8,7 @@ class Decedent {
         $this->db = Database::getInstance()->getConnection();
     }
 
-    public function findAll($filters = []) {
-        $sql = "
-            SELECT dr.*, l.lot_number, s.section_name
-            FROM decedent_records dr
-            JOIN lots l ON dr.lot_id = l.lot_id
-            JOIN blocks b ON l.block_id = b.block_id
-            JOIN sections s ON b.section_id = s.section_id
-            WHERE 1=1
-        ";
-        $params = [];
-
+    private function applyFilters(&$sql, &$params, $filters) {
         if (!empty($filters['q'])) {
             $term = '%' . $filters['q'] . '%';
             $sql .= " AND (
@@ -46,12 +36,57 @@ class Decedent {
             $sql .= " AND s.section_name = ?";
             $params[] = $filters['section'];
         }
+    }
+
+    public function findAll($filters = [], $pagination = []) {
+        $sql = "
+            SELECT dr.*, l.lot_number, s.section_name
+            FROM decedent_records dr
+            JOIN lots l ON dr.lot_id = l.lot_id
+            JOIN blocks b ON l.block_id = b.block_id
+            JOIN sections s ON b.section_id = s.section_id
+            WHERE 1=1
+        ";
+        $params = [];
+        $this->applyFilters($sql, $params, $filters);
 
         $sql .= " ORDER BY dr.dod DESC, dr.last_name, dr.first_name";
+
+        $page = null;
+        $perPage = null;
+        if (!empty($pagination['page']) || !empty($pagination['per_page'])) {
+            $page = max(1, (int) ($pagination['page'] ?? 1));
+            $perPage = max(1, min(100, (int) ($pagination['per_page'] ?? 10)));
+        }
+
+        if ($page !== null && $perPage !== null) {
+            $offset = ($page - 1) * $perPage;
+            $sql .= " LIMIT ?, ?";
+            $params[] = $offset;
+            $params[] = $perPage;
+        }
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
+    }
+
+    public function countAll($filters = []) {
+        $sql = "
+            SELECT COUNT(*) AS total
+            FROM decedent_records dr
+            JOIN lots l ON dr.lot_id = l.lot_id
+            JOIN blocks b ON l.block_id = b.block_id
+            JOIN sections s ON b.section_id = s.section_id
+            WHERE 1=1
+        ";
+        $params = [];
+        $this->applyFilters($sql, $params, $filters);
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return (int) ($row['total'] ?? 0);
     }
 
     public function findById($id) {

@@ -8,17 +8,7 @@ class Lot {
         $this->db = Database::getInstance()->getConnection();
     }
 
-    public function findAll($filters = []) {
-        $sql = "
-            SELECT l.*, b.block_name, s.section_name, t.type_name as lot_type_name
-            FROM lots l
-            JOIN blocks b ON l.block_id = b.block_id
-            JOIN sections s ON b.section_id = s.section_id
-            JOIN lot_types t ON l.lot_type_id = t.type_id
-            WHERE 1=1
-        ";
-        $params = [];
-
+    private function applyFilters(&$sql, &$params, $filters) {
         if (!empty($filters['section'])) {
             $sql .= " AND s.section_name = ?";
             $params[] = $filters['section'];
@@ -47,11 +37,57 @@ class Lot {
             $sql .= " AND l.block_id = ?";
             $params[] = $filters['block_id'];
         }
+    }
+
+    public function findAll($filters = [], $pagination = []) {
+        $sql = "
+            SELECT l.*, b.block_name, s.section_name, t.type_name as lot_type_name
+            FROM lots l
+            JOIN blocks b ON l.block_id = b.block_id
+            JOIN sections s ON b.section_id = s.section_id
+            JOIN lot_types t ON l.lot_type_id = t.type_id
+            WHERE 1=1
+        ";
+        $params = [];
+        $this->applyFilters($sql, $params, $filters);
 
         $sql .= " ORDER BY s.section_name, b.block_name, l.lot_number";
+
+        $page = null;
+        $perPage = null;
+        if (!empty($pagination['page']) || !empty($pagination['per_page'])) {
+            $page = max(1, (int) ($pagination['page'] ?? 1));
+            $perPage = max(1, min(100, (int) ($pagination['per_page'] ?? 10)));
+        }
+
+        if ($page !== null && $perPage !== null) {
+            $offset = ($page - 1) * $perPage;
+            $sql .= " LIMIT ?, ?";
+            $params[] = $offset;
+            $params[] = $perPage;
+        }
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
+    }
+
+    public function countAll($filters = []) {
+        $sql = "
+            SELECT COUNT(*) AS total
+            FROM lots l
+            JOIN blocks b ON l.block_id = b.block_id
+            JOIN sections s ON b.section_id = s.section_id
+            JOIN lot_types t ON l.lot_type_id = t.type_id
+            WHERE 1=1
+        ";
+        $params = [];
+        $this->applyFilters($sql, $params, $filters);
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return (int) ($row['total'] ?? 0);
     }
 
     public function findById($id) {

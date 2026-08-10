@@ -79,10 +79,7 @@ class User {
         return $result ? strtolower($result['title']) : null;
     }
 
-    public function findAll($filters = []) {
-        $sql = "SELECT u.*, r.title AS role_title FROM users u JOIN roles r ON u.role_id = r.role_id WHERE 1=1";
-        $params = [];
-
+    private function applyFilters(&$sql, &$params, $filters) {
         if (!empty($filters['role'])) {
             $sql .= " AND LOWER(r.title) = ?";
             $params[] = strtolower($filters['role']);
@@ -98,11 +95,43 @@ class User {
             $params[] = $query;
             $params[] = $query;
         }
+    }
+
+    public function findAll($filters = [], $pagination = []) {
+        $sql = "SELECT u.*, r.title AS role_title FROM users u JOIN roles r ON u.role_id = r.role_id WHERE 1=1";
+        $params = [];
+        $this->applyFilters($sql, $params, $filters);
 
         $sql .= " ORDER BY u.created_at DESC";
+
+        $page = null;
+        $perPage = null;
+        if (!empty($pagination['page']) || !empty($pagination['per_page'])) {
+            $page = max(1, (int) ($pagination['page'] ?? 1));
+            $perPage = max(1, min(100, (int) ($pagination['per_page'] ?? 10)));
+        }
+
+        if ($page !== null && $perPage !== null) {
+            $offset = ($page - 1) * $perPage;
+            $sql .= " LIMIT ?, ?";
+            $params[] = $offset;
+            $params[] = $perPage;
+        }
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
+    }
+
+    public function countAll($filters = []) {
+        $sql = "SELECT COUNT(*) AS total FROM users u JOIN roles r ON u.role_id = r.role_id WHERE 1=1";
+        $params = [];
+        $this->applyFilters($sql, $params, $filters);
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return (int) ($row['total'] ?? 0);
     }
 
     public function getRoleIdByTitle($title) {

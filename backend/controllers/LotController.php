@@ -91,8 +91,28 @@ class LotController {
         return ['error' => 'Failed to delete block', 'code' => 500];
     }
 
-    public function getLots($filters = []) {
-        return $this->lotModel->findAll($filters);
+    public function getLots($filters = [], $pagination = []) {
+        $page = !empty($pagination['page']) ? (int) $pagination['page'] : null;
+        $perPage = !empty($pagination['per_page']) ? (int) $pagination['per_page'] : null;
+
+        if ($page === null && $perPage === null) {
+            return $this->lotModel->findAll($filters);
+        }
+
+        $page = max(1, $page ?: 1);
+        $perPage = max(1, min(100, $perPage ?: 10));
+        $total = $this->lotModel->countAll($filters);
+        $data = $this->lotModel->findAll($filters, ['page' => $page, 'per_page' => $perPage]);
+
+        return [
+            'data' => $data,
+            'meta' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'total_pages' => (int) ceil($total / $perPage),
+            ],
+        ];
     }
 
     public function getLot($id) {
