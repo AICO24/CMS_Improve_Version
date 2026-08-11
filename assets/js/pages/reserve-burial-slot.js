@@ -61,8 +61,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function setChatPanelOpen(isOpen) {
         aiChatPanel.hidden = !isOpen;
+        // Icon swap (gate <-> chevron) is pure CSS, keyed off aria-expanded.
         aiChatToggle.setAttribute('aria-expanded', String(isOpen));
-        aiChatToggle.querySelector('i').className = isOpen ? 'fas fa-chevron-down' : 'fas fa-comments';
         if (isOpen && !chatInput.disabled) {
             chatInput.focus();
         }

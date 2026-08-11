@@ -169,7 +169,22 @@
                     <!-- Step 2: AI Recommendations -->
                     <div id="step2" class="step-content">
                         <div class="form-card">
-                            <h3><i class="fas fa-robot"></i> AI‑Powered Lot Recommendations</h3>
+                            <h3>
+                                <span class="heading-icon-gate" aria-hidden="true">
+                                    <svg viewBox="0 0 32 28" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                                        <path d="M3 24.5h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                        <rect x="4.2" y="10.5" width="2.6" height="14" rx="0.6" fill="currentColor"/>
+                                        <rect x="17.2" y="10.5" width="2.6" height="14" rx="0.6" fill="currentColor"/>
+                                        <circle cx="5.5" cy="8.3" r="1.7" fill="currentColor"/>
+                                        <circle cx="18.5" cy="8.3" r="1.7" fill="currentColor"/>
+                                        <path d="M6.6 11.6C6.6 6.4 17.4 6.4 17.4 11.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                                        <path d="M12 2.6v3.2M10.5 4.2h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                                        <circle cx="24.6" cy="16.6" r="3.6" fill="currentColor"/>
+                                        <polygon points="21.9,18.6 20.1,21.6 23.7,19.7" fill="currentColor"/>
+                                    </svg>
+                                </span>
+                                AI‑Powered Lot Recommendations
+                            </h3>
                             <div class="recommendation-summary" id="recommendationSummary">Browse available lots and reserve the best fit for your needs. All reservations stay pending until admin approval.</div>
                             <div id="recommendationsList" class="recommendations-grid">
                                 <!-- dynamically loaded recommendations -->
@@ -195,11 +210,26 @@
             </div>
         </main>
 
-        <!-- Floating AI Burial Lot Assistant (Phase 6A) -->
+        <!-- Floating Burial Assistant (Phase 6A, custom icon Phase 7B) -->
         <div class="ai-chat-widget" id="aiChatWidget">
             <div class="ai-chat-panel" id="aiChatPanel" hidden>
                 <div class="ai-chat-panel-header">
-                    <span><i class="fas fa-robot"></i> AI Burial Lot Assistant</span>
+                    <span>
+                        <span class="ai-chat-icon-gate" aria-hidden="true">
+                            <svg viewBox="0 0 32 28" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                                <path d="M3 24.5h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                <rect x="4.2" y="10.5" width="2.6" height="14" rx="0.6" fill="currentColor"/>
+                                <rect x="17.2" y="10.5" width="2.6" height="14" rx="0.6" fill="currentColor"/>
+                                <circle cx="5.5" cy="8.3" r="1.7" fill="currentColor"/>
+                                <circle cx="18.5" cy="8.3" r="1.7" fill="currentColor"/>
+                                <path d="M6.6 11.6C6.6 6.4 17.4 6.4 17.4 11.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                                <path d="M12 2.6v3.2M10.5 4.2h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                                <circle cx="24.6" cy="16.6" r="3.6" fill="currentColor"/>
+                                <polygon points="21.9,18.6 20.1,21.6 23.7,19.7" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        Burial Assistant
+                    </span>
                     <button type="button" class="ai-chat-close" id="aiChatClose" aria-label="Close chat">
                         <i class="fas fa-times"></i>
                     </button>
@@ -221,8 +251,21 @@
                     </div>
                 </div>
             </div>
-            <button type="button" class="ai-chat-toggle" id="aiChatToggle" aria-label="Open AI Burial Lot Assistant" aria-expanded="false" aria-controls="aiChatPanel">
-                <i class="fas fa-comments"></i>
+            <button type="button" class="ai-chat-toggle" id="aiChatToggle" aria-label="Open Burial Assistant" aria-expanded="false" aria-controls="aiChatPanel">
+                <span class="ai-chat-icon-gate" aria-hidden="true">
+                    <svg viewBox="0 0 32 28" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                        <path d="M3 24.5h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                        <rect x="4.2" y="10.5" width="2.6" height="14" rx="0.6" fill="currentColor"/>
+                        <rect x="17.2" y="10.5" width="2.6" height="14" rx="0.6" fill="currentColor"/>
+                        <circle cx="5.5" cy="8.3" r="1.7" fill="currentColor"/>
+                        <circle cx="18.5" cy="8.3" r="1.7" fill="currentColor"/>
+                        <path d="M6.6 11.6C6.6 6.4 17.4 6.4 17.4 11.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                        <path d="M12 2.6v3.2M10.5 4.2h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                        <circle cx="24.6" cy="16.6" r="3.6" fill="currentColor"/>
+                        <polygon points="21.9,18.6 20.1,21.6 23.7,19.7" fill="currentColor"/>
+                    </svg>
+                </span>
+                <i class="fas fa-chevron-down ai-chat-icon-close" aria-hidden="true"></i>
             </button>
         </div>
     </div>
