@@ -108,7 +108,47 @@
                     <!-- Step 1: Preferences Form -->
                     <div id="step1" class="step-content active">
                         <div class="form-card">
-                            <h3><i class="fas fa-sliders-h"></i> Set Your Preferences</h3>
+                            <h3><i class="fas fa-monument"></i> Booking Details</h3>
+                            <div class="form-group">
+                                <label>Decedent</label>
+                                <select id="prefDecedent" required>
+                                    <option value="">Loading decedents...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Desired Burial Date</label>
+                                <input type="date" id="prefDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Preferred Time (optional)</label>
+                                <input type="time" id="prefTime">
+                            </div>
+                            <div class="form-group">
+                                <label>Additional Requirements (e.g., near water feature, shaded area)</label>
+                                <textarea id="prefNotes" rows="3" placeholder="Optional"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-card chat-card">
+                            <h3><i class="fas fa-comments"></i> AI Burial Lot Assistant</h3>
+                            <p class="chat-subtitle">Tell me what you're looking for — lot type, budget, preferred section — and I'll find matching lots.</p>
+                            <div class="chat-window" id="chatWindow" aria-live="polite"></div>
+                            <div class="chat-pref-status" id="chatPrefStatus">
+                                <span class="chat-pref-chip" data-field="lot_type">Lot type: <strong>Not set</strong></span>
+                                <span class="chat-pref-chip" data-field="budget">Budget: <strong>Not set</strong></span>
+                                <span class="chat-pref-chip" data-field="section">Section: <strong>Not set</strong></span>
+                            </div>
+                            <form id="chatForm" class="chat-input-row">
+                                <input type="text" id="chatInput" placeholder="e.g., I'd like a Premium lot around 8000 in Section B" autocomplete="off" disabled>
+                                <button type="submit" class="chat-send-btn" aria-label="Send" disabled><i class="fas fa-paper-plane"></i></button>
+                            </form>
+                            <div class="chat-actions">
+                                <button type="button" id="chatFindLotsBtn" class="btn-next" disabled>Find Matching Lots →</button>
+                            </div>
+                        </div>
+
+                        <details class="form-card manual-filters-disclosure">
+                            <summary><i class="fas fa-sliders-h"></i> Prefer to search manually?</summary>
                             <form id="preferencesForm">
                                 <div class="form-group">
                                     <label>Lot Number</label>
@@ -134,29 +174,11 @@
                                         <option value="Section D">Section D</option>
                                     </select>
                                 </div>
-                                <div class="form-group">
-                                    <label>Decedent</label>
-                                    <select id="prefDecedent" required>
-                                        <option value="">Loading decedents...</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Desired Burial Date</label>
-                                    <input type="date" id="prefDate" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Preferred Time (optional)</label>
-                                    <input type="time" id="prefTime">
-                                </div>
-                                <div class="form-group">
-                                    <label>Additional Requirements (e.g., near water feature, shaded area)</label>
-                                    <textarea id="prefNotes" rows="3" placeholder="Optional"></textarea>
-                                </div>
                                 <div class="form-actions">
-                                    <button type="submit" class="btn-next">Get AI Recommendations →</button>
+                                    <button type="submit" class="btn-next">Search Manually →</button>
                                 </div>
                             </form>
-                        </div>
+                        </details>
                     </div>
 
                     <!-- Step 2: AI Recommendations -->
@@ -191,6 +213,7 @@
 
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/shared/button-loading.js"></script>
+    <script src="../../assets/js/shared/lot-chat-assistant.js"></script>
     <script src="../../assets/js/pages/reserve-burial-slot.js"></script>
 </body>
 </html>

@@ -286,6 +286,14 @@
     color: #1e2f2a;
 }
 
+.form-card {
+    margin-bottom: 1.5rem;
+}
+
+.form-card:last-child {
+    margin-bottom: 0;
+}
+
 .form-group {
     margin-bottom: 1rem;
 }
@@ -420,6 +428,157 @@ input[type="range"] {
         border-radius: 20px;
     }
 
+/* ---------- CHAT-STYLE PREFERENCE COLLECTION (Phase 6) ---------- */
+.chat-card {
+    margin-bottom: 1.5rem;
+}
+
+.chat-subtitle {
+    margin: -0.6rem 0 1rem;
+    color: var(--color-neutral-600);
+    font-size: 0.85rem;
+}
+
+.chat-window {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 12px;
+    background: var(--color-surface-soft);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: 0.8rem;
+}
+
+.chat-message {
+    max-width: 80%;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.chat-message.assistant {
+    align-self: flex-start;
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+}
+
+.chat-message.user {
+    align-self: flex-end;
+    background: var(--color-primary-500);
+    color: var(--color-white);
+}
+
+.chat-pref-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 0.8rem;
+}
+
+.chat-pref-chip {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--color-neutral-200);
+    color: var(--color-neutral-700);
+}
+
+.chat-pref-chip.filled {
+    background: var(--color-success-soft);
+    color: var(--color-success-strong);
+}
+
+.chat-input-row {
+    display: flex;
+    gap: 8px;
+}
+
+.chat-input-row input[type="text"] {
+    flex: 1;
+}
+
+.chat-send-btn {
+    background: var(--color-primary-500);
+    color: var(--color-white);
+    border: none;
+    width: 42px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background var(--duration-base) var(--easing-standard);
+}
+
+.chat-send-btn:hover {
+    background: var(--color-primary-600);
+}
+
+.chat-send-btn:disabled,
+.chat-input-row input[type="text"]:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.chat-send-btn:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+.chat-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.4rem;
+}
+
+#chatFindLotsBtn:disabled {
+    background: var(--color-neutral-300);
+    color: var(--color-neutral-600);
+    cursor: not-allowed;
+}
+
+/* ---------- MANUAL FILTERS FALLBACK (collapsed by default) ---------- */
+.manual-filters-disclosure {
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 0.9rem 1.1rem;
+}
+
+.manual-filters-disclosure summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-neutral-700);
+    list-style: none;
+}
+
+.manual-filters-disclosure summary::-webkit-details-marker {
+    display: none;
+}
+
+.manual-filters-disclosure summary::before {
+    content: '\25B8';
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform var(--duration-base) var(--easing-standard);
+}
+
+.manual-filters-disclosure[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.manual-filters-disclosure summary:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+.manual-filters-disclosure form {
+    margin-top: 1rem;
+}
+
 /* ---------- RESPONSIVE ---------- */
 /* Sidebar/rail responsive behavior now comes from the shared dashboard.css (Batch 3) */
 
@@ -430,5 +589,11 @@ input[type="range"] {
     }
     .step {
         text-align: left;
+    }
+    .chat-window {
+        max-height: 200px;
+    }
+    .manual-filters-disclosure {
+        padding: 0.75rem 0.9rem;
     }
 }

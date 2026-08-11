@@ -291,6 +291,14 @@
     color: #1e2f2a;
 }
 
+.form-card {
+    margin-bottom: 1.5rem;
+}
+
+.form-card:last-child {
+    margin-bottom: 0;
+}
+
 .form-group {
     margin-bottom: 1rem;
 }
@@ -509,6 +517,12 @@ input[type="range"] {
     .step {
         text-align: left;
     }
+    .chat-window {
+        max-height: 200px;
+    }
+    .manual-filters-disclosure {
+        padding: 0.75rem 0.9rem;
+    }
 }
 
 /* ---------- CHAT-STYLE PREFERENCE COLLECTION ---------- */
@@ -621,4 +635,43 @@ input[type="range"] {
     background: var(--color-neutral-300);
     color: var(--color-neutral-600);
     cursor: not-allowed;
+}
+
+/* ---------- MANUAL FILTERS FALLBACK (collapsed by default) ---------- */
+.manual-filters-disclosure {
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 0.9rem 1.1rem;
+}
+
+.manual-filters-disclosure summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-neutral-700);
+    list-style: none;
+}
+
+.manual-filters-disclosure summary::-webkit-details-marker {
+    display: none;
+}
+
+.manual-filters-disclosure summary::before {
+    content: '\25B8';
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform var(--duration-base) var(--easing-standard);
+}
+
+.manual-filters-disclosure[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.manual-filters-disclosure summary:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+.manual-filters-disclosure form {
+    margin-top: 1rem;
 }

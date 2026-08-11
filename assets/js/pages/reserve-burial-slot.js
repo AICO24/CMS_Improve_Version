@@ -31,12 +31,26 @@ document.addEventListener('DOMContentLoaded', async function() {
     const selectBudgetInput = budgetSlider;
     const selectTimeInput = document.getElementById('prefTime');
     const confirmBookingButton = document.getElementById('confirmBooking');
+    const chatWindow = document.getElementById('chatWindow');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const chatFindLotsBtn = document.getElementById('chatFindLotsBtn');
+    const chatPrefStatus = document.getElementById('chatPrefStatus');
 
     let currentPreferences = {};
     let selectedLot = null;
     let decedents = [];
     let lotTypes = [];
     let sections = [];
+
+    // Phase 2-5 conversational assistant (assets/js/shared/lot-chat-assistant.js).
+    // Shared with burial-scheduling.js so both wizards run the identical
+    // slot-filling/narration/capacity-advisory logic instead of forking it.
+    const chatAssistant = createLotChatAssistant({
+        chatWindow, chatForm, chatInput, chatFindLotsBtn, chatPrefStatus,
+        getLotTypes: () => lotTypes,
+        getSections: () => sections,
+    });
 
     budgetValue.textContent = budgetSlider.value;
     budgetSlider.addEventListener('input', () => {
@@ -90,8 +104,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    function buildLotCard(lot) {
+    // Phase 3: purely presentational — renders whatever reasons[] the
+    // existing recommendation engine already returned. Never invents a
+    // reason and never touches score/ranking/ordering.
+    function buildRecommendationExplanation(lot) {
         const reasons = Array.isArray(lot.reasons) ? lot.reasons : [];
+        if (!reasons.length) {
+            return '<div class="recommendation-reasons-empty">No specific preferences were matched — shown as an available lot.</div>';
+        }
+        return `
+            <div class="recommendation-reasons-label">Why this is recommended:</div>
+            <ul class="recommendation-reasons">${reasons.map(reason => `<li>${reason}</li>`).join('')}</ul>
+        `;
+    }
+
+    function buildLotCard(lot) {
         const hasScore = lot.score !== undefined && lot.score !== null;
         return `
             <div class="recommendation-card" data-lot-id="${lot.lot_id}">
@@ -102,7 +129,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 </div>
                 <div class="recommendation-actions">
                     ${hasScore ? `<div class="score">${lot.score || 0}% suitability</div>` : ''}
-                    ${reasons.length ? `<ul class="recommendation-reasons">${reasons.map(reason => `<li>${reason}</li>`).join('')}</ul>` : ''}
+                    ${buildRecommendationExplanation(lot)}
                     <button class="select-lot-btn" type="button" data-lot='${JSON.stringify(lot)}'>Reserve</button>
                 </div>
             </div>
@@ -137,13 +164,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    async function generateRecommendations() {
-        const preferences = {
-            lot_number: prefLotNumber.value.trim(),
-            lot_type: selectLotInput.value,
-            budget: parseInt(selectBudgetInput.value, 10),
-            section: selectSectionInput.value
-        };
+    // Returns a small outcome summary ({status, count}) alongside its existing
+    // DOM-rendering job, purely so callers (e.g. the chat layer) can react to
+    // what actually happened without re-fetching or re-deriving it themselves.
+    async function fetchAndRenderRecommendations(preferences) {
         recommendationSummary.classList.remove('is-fallback');
         try {
             const recommendations = await api.request('schedules/recommend', {
@@ -153,7 +177,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             if (!Array.isArray(recommendations)) {
                 await showManualLotFallback();
-                return;
+                return { status: 'error' };
             }
 
             const lotCount = recommendations.length;
@@ -163,14 +187,26 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             if (lotCount === 0) {
                 recommendationsList.innerHTML = '<p class="text-center">No matching lots available. Please adjust your preferences.</p>';
-                return;
+                return { status: 'empty', count: 0 };
             }
             recommendationsList.innerHTML = recommendations.map(buildLotCard).join('');
             attachSelectHandlers();
+            return { status: 'success', count: lotCount };
         } catch (error) {
             console.error('Recommendation API failed', error);
             await showManualLotFallback();
+            return { status: 'error' };
         }
+    }
+
+    async function generateRecommendations() {
+        const preferences = {
+            lot_number: prefLotNumber.value.trim(),
+            lot_type: selectLotInput.value,
+            budget: parseInt(selectBudgetInput.value, 10),
+            section: selectSectionInput.value
+        };
+        await fetchAndRenderRecommendations(preferences);
     }
 
     function displayConfirmation(lot) {
@@ -214,6 +250,37 @@ document.addEventListener('DOMContentLoaded', async function() {
         const getRecsBtn = scheduleForm.querySelector('button[type="submit"]');
         await withButtonLoading(getRecsBtn, async () => {
             await generateRecommendations();
+            showStep(2);
+        });
+    });
+
+    chatFindLotsBtn.addEventListener('click', async function() {
+        const decedentId = prefDecedent.value;
+        const date = prefDate.value;
+        if (!decedentId) {
+            alert('Please select a decedent.');
+            return;
+        }
+        if (!date) {
+            alert('Please select a burial date.');
+            return;
+        }
+        const decedent = decedents.find(d => d.decedent_id.toString() === decedentId);
+        const chatPreferences = chatAssistant.getPreferences();
+        currentPreferences = {
+            lot_type: chatPreferences.lot_type,
+            budget: chatPreferences.budget,
+            section: chatPreferences.section,
+            date: date,
+            time: selectTimeInput.value || null,
+            notes: selectNotesInput.value.trim(),
+            deceased_id: decedentId,
+            decedentName: decedent ? `${decedent.first_name} ${decedent.last_name}` : ''
+        };
+        await withButtonLoading(chatFindLotsBtn, async () => {
+            const outcome = await fetchAndRenderRecommendations(chatPreferences);
+            await chatAssistant.appendOutcomeMessage(outcome);
+            await chatAssistant.appendCapacityWarning(date);
             showStep(2);
         });
     });
@@ -301,7 +368,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     prefDate.setAttribute('min', new Date().toISOString().split('T')[0]);
-    
+
     // Feature 3: Disable Monday Booking
     prefDate.addEventListener('change', () => {
         if (!prefDate.value) return;
@@ -313,6 +380,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     await Promise.all([loadDecedents(), loadLookupData()]);
+    chatAssistant.init();
 
     // Check if lot_id passed via URL query params (from Interactive Slot Grid)
     const urlParams = new URLSearchParams(window.location.search);

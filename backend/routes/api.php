@@ -277,7 +277,10 @@ if ($path === 'schedules/mine' && $requestMethod === 'GET') {
 }
 
 if ($path === 'schedules/recommend' && $requestMethod === 'POST') {
-    AuthMiddleware::requireRole(['admin', 'staff']);
+    // Used by both the admin/staff wizard and the citizen "Reserve Burial
+    // Slot" wizard (Phase 6) — any authenticated role may request lot
+    // recommendations for their own booking.
+    AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $input = readRequestBody();
     echo json_encode($aiController->recommend($input));
     exit;
@@ -795,14 +798,17 @@ if ($path === 'ai/recommend' && $requestMethod === 'POST') {
 }
 
 if ($path === 'ai/forecast' && $requestMethod === 'GET') {
-    AuthMiddleware::requireRole(['admin', 'staff']);
+    // Phase 6: the citizen wizard's capacity advisory (Phase 5) also calls
+    // this, in addition to the admin/staff Capacity Forecast page.
+    AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $months = isset($_GET['months']) ? $_GET['months'] : 6;
     echo json_encode($aiController->forecast($months));
     exit;
 }
 
 if ($path === 'ai/narrate' && $requestMethod === 'POST') {
-    AuthMiddleware::requireRole(['admin', 'staff']);
+    // Phase 6: the citizen wizard's outcome narration (Phase 4) also calls this.
+    AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $input = readRequestBody();
     echo json_encode($aiController->narrate($input));
     exit;
