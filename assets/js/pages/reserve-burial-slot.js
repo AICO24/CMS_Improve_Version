@@ -52,6 +52,37 @@ document.addEventListener('DOMContentLoaded', async function() {
         getSections: () => sections,
     });
 
+    // Phase 7 (ported from Phase 6A): floating widget open/close only —
+    // purely presentational, the chat DOM/state above is untouched by
+    // opening or closing, so the conversation is preserved across toggles.
+    const aiChatToggle = document.getElementById('aiChatToggle');
+    const aiChatPanel = document.getElementById('aiChatPanel');
+    const aiChatClose = document.getElementById('aiChatClose');
+
+    function setChatPanelOpen(isOpen) {
+        aiChatPanel.hidden = !isOpen;
+        aiChatToggle.setAttribute('aria-expanded', String(isOpen));
+        aiChatToggle.querySelector('i').className = isOpen ? 'fas fa-chevron-down' : 'fas fa-comments';
+        if (isOpen && !chatInput.disabled) {
+            chatInput.focus();
+        }
+    }
+
+    aiChatToggle.addEventListener('click', () => {
+        setChatPanelOpen(aiChatPanel.hidden);
+    });
+
+    aiChatClose.addEventListener('click', () => {
+        setChatPanelOpen(false);
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !aiChatPanel.hidden) {
+            setChatPanelOpen(false);
+            aiChatToggle.focus();
+        }
+    });
+
     budgetValue.textContent = budgetSlider.value;
     budgetSlider.addEventListener('input', () => {
         budgetValue.textContent = budgetSlider.value;
@@ -282,6 +313,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             await chatAssistant.appendOutcomeMessage(outcome);
             await chatAssistant.appendCapacityWarning(date);
             showStep(2);
+            // Phase 7: collapse the floating panel so it doesn't cover the
+            // recommendation cards it just triggered (same fix as Phase 6A).
+            setChatPanelOpen(false);
         });
     });
 

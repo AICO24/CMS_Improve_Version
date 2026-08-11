@@ -129,24 +129,6 @@
                             </div>
                         </div>
 
-                        <div class="form-card chat-card">
-                            <h3><i class="fas fa-comments"></i> AI Burial Lot Assistant</h3>
-                            <p class="chat-subtitle">Tell me what you're looking for — lot type, budget, preferred section — and I'll find matching lots.</p>
-                            <div class="chat-window" id="chatWindow" aria-live="polite"></div>
-                            <div class="chat-pref-status" id="chatPrefStatus">
-                                <span class="chat-pref-chip" data-field="lot_type">Lot type: <strong>Not set</strong></span>
-                                <span class="chat-pref-chip" data-field="budget">Budget: <strong>Not set</strong></span>
-                                <span class="chat-pref-chip" data-field="section">Section: <strong>Not set</strong></span>
-                            </div>
-                            <form id="chatForm" class="chat-input-row">
-                                <input type="text" id="chatInput" placeholder="e.g., I'd like a Premium lot around 8000 in Section B" autocomplete="off" disabled>
-                                <button type="submit" class="chat-send-btn" aria-label="Send" disabled><i class="fas fa-paper-plane"></i></button>
-                            </form>
-                            <div class="chat-actions">
-                                <button type="button" id="chatFindLotsBtn" class="btn-next" disabled>Find Matching Lots →</button>
-                            </div>
-                        </div>
-
                         <details class="form-card manual-filters-disclosure">
                             <summary><i class="fas fa-sliders-h"></i> Prefer to search manually?</summary>
                             <form id="preferencesForm">
@@ -209,6 +191,37 @@
                 </div>
             </div>
         </main>
+
+        <!-- Floating AI Burial Lot Assistant (Phase 7, ported from Phase 6A) -->
+        <div class="ai-chat-widget" id="aiChatWidget">
+            <div class="ai-chat-panel" id="aiChatPanel" hidden>
+                <div class="ai-chat-panel-header">
+                    <span><i class="fas fa-robot"></i> AI Burial Lot Assistant</span>
+                    <button type="button" class="ai-chat-close" id="aiChatClose" aria-label="Close chat">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="ai-chat-panel-body">
+                    <p class="chat-subtitle">Tell me what you're looking for — lot type, budget, preferred section — and I'll find matching lots.</p>
+                    <div class="chat-window" id="chatWindow" aria-live="polite"></div>
+                    <div class="chat-pref-status" id="chatPrefStatus">
+                        <span class="chat-pref-chip" data-field="lot_type">Lot type: <strong>Not set</strong></span>
+                        <span class="chat-pref-chip" data-field="budget">Budget: <strong>Not set</strong></span>
+                        <span class="chat-pref-chip" data-field="section">Section: <strong>Not set</strong></span>
+                    </div>
+                    <form id="chatForm" class="chat-input-row">
+                        <input type="text" id="chatInput" placeholder="e.g., Premium lot, 8000" autocomplete="off" disabled>
+                        <button type="submit" class="chat-send-btn" aria-label="Send" disabled><i class="fas fa-paper-plane"></i></button>
+                    </form>
+                    <div class="chat-actions">
+                        <button type="button" id="chatFindLotsBtn" class="btn-next" disabled>Find Matching Lots →</button>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="ai-chat-toggle" id="aiChatToggle" aria-label="Open AI Burial Lot Assistant" aria-expanded="false" aria-controls="aiChatPanel">
+                <i class="fas fa-comments"></i>
+            </button>
+        </div>
     </div>
 
     <script src="../../assets/js/shared/api.js"></script>

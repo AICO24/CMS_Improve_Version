@@ -598,6 +598,24 @@ input[type="range"] {
 
 .chat-input-row input[type="text"] {
     flex: 1;
+    min-width: 0;
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    color: var(--color-text);
+    background: var(--color-white);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: border-color var(--duration-base) var(--easing-standard);
+}
+
+.chat-input-row input[type="text"]:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
 }
 
 .chat-send-btn {
@@ -605,6 +623,7 @@ input[type="range"] {
     color: var(--color-white);
     border: none;
     width: 42px;
+    flex-shrink: 0;
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: background var(--duration-base) var(--easing-standard);
