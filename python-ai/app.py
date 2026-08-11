@@ -1,9 +1,11 @@
+import json
 import os
 import math
 import warnings
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
+import anthropic
 import mysql.connector
 import numpy as np
 import pandas as pd
@@ -32,6 +34,59 @@ warnings.filterwarnings('ignore')
 
 CAPACITY_WARNING_THRESHOLD = 0.80
 CAPACITY_CRITICAL_THRESHOLD = 0.95
+
+# Phase 4: LLM narrator layer — purely cosmetic phrasing of the chat outcome
+# message. Never used for scoring, ranking, or data access; the recommendation
+# engine above is untouched. Falls back to null (caller uses its own
+# deterministic text) whenever no key is configured or the call fails for any
+# reason, so this feature is fully optional and never blocks a search.
+NARRATION_MODEL = 'claude-haiku-4-5'
+_anthropic_api_key = (os.getenv('ANTHROPIC_API_KEY') or '').strip()
+_anthropic_client = anthropic.Anthropic(api_key=_anthropic_api_key) if _anthropic_api_key else None
+
+NARRATION_SYSTEM_PROMPT = (
+    "You write a single short, warm status line for a cemetery burial-lot "
+    "search assistant chat. You are given structured facts only — never "
+    "invent details beyond them. Never mention lot numbers, prices, scores, "
+    "burial dates, burial times, decedents, or capacity/forecasting; none of "
+    "that data is available to you.\n\n"
+    "Rules by status:\n"
+    "- success: report that the given count of lots was found, briefly and "
+    "warmly, in one sentence.\n"
+    "- empty: report that no lots matched. Only suggest adjusting whichever "
+    "of lot_type, budget, or section appear in preferences_set — never "
+    "suggest adjusting one that isn't listed there.\n"
+    "- error: report that the recommendation service is temporarily "
+    "unavailable and that available lots are shown below to browse "
+    "manually. Do not say no lots were found.\n\n"
+    "Output only the message text: no preamble, no markdown, no quotes."
+)
+
+
+def _narrate_outcome(status: str, count: Optional[int], preferences: Dict[str, Any]) -> Optional[str]:
+    if _anthropic_client is None:
+        return None
+
+    facts: Dict[str, Any] = {'status': status}
+    if status == 'success':
+        facts['count'] = count
+    if status in ('success', 'empty'):
+        facts['preferences_set'] = {
+            key: value for key, value in (preferences or {}).items()
+            if value not in (None, '')
+        }
+
+    try:
+        response = _anthropic_client.with_options(timeout=8.0).messages.create(
+            model=NARRATION_MODEL,
+            max_tokens=150,
+            system=NARRATION_SYSTEM_PROMPT,
+            messages=[{'role': 'user', 'content': json.dumps(facts)}],
+        )
+        text = ''.join(block.text for block in response.content if block.type == 'text').strip()
+        return text or None
+    except Exception:
+        return None
 
 
 def get_connection():
@@ -169,6 +224,22 @@ def recommend_lots():
         return jsonify(ranked_lots[:5])
     except Exception as exc:  # pragma: no cover - defensive path
         return jsonify({'error': str(exc), 'code': 500}), 500
+
+
+@app.post('/api/narrate')
+def narrate_outcome():
+    # Cosmetic phrasing only — never ranks, scores, or touches the database.
+    # Always returns 200; 'message' is null when narration isn't available,
+    # so callers fall back to their own deterministic text.
+    try:
+        payload = request.get_json(silent=True) or {}
+        status = (payload.get('status') or '').strip()
+        if status not in ('success', 'empty', 'error'):
+            return jsonify({'message': None})
+        message = _narrate_outcome(status, payload.get('count'), payload.get('preferences') or {})
+        return jsonify({'message': message})
+    except Exception:
+        return jsonify({'message': None})
 
 
 def _get_capacity_snapshot() -> Dict[str, int]:

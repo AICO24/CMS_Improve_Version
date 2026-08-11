@@ -801,6 +801,13 @@ if ($path === 'ai/forecast' && $requestMethod === 'GET') {
     exit;
 }
 
+if ($path === 'ai/narrate' && $requestMethod === 'POST') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    echo json_encode($aiController->narrate($input));
+    exit;
+}
+
 if ($path === 'ai/parameters' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin']);
     $module = $_GET['module'] ?? null;

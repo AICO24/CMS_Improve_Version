@@ -20,6 +20,10 @@ class AIService {
         return $this->request('/api/forecast?months=' . (int) $months);
     }
 
+    public function getNarration($payload) {
+        return $this->request('/api/narrate', 'POST', $payload);
+    }
+
     private function request($path, $method = 'GET', $data = null) {
         if (!function_exists('curl_init')) {
             return ['error' => 'cURL extension is not available', 'code' => 500];

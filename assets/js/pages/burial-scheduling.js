@@ -289,17 +289,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         updateChatFindButtonState();
     }
 
-    // Phase 3: reports what fetchAndRenderRecommendations() actually did —
-    // never claims a result it didn't return, and never suggests adjusting a
-    // preference the user never set. Only mentions lot_type/budget/section;
-    // burial date/time/decedent/capacity are outside the recommendation
-    // engine's inputs and are never referenced here.
-    function appendRecommendationOutcomeMessage(outcome) {
-        if (!outcome) return;
+    // Phase 3 (kept as-is): the deterministic fallback text. Reports only
+    // what fetchAndRenderRecommendations() actually did — never claims a
+    // result it didn't return, and never suggests adjusting a preference the
+    // user never set. Only mentions lot_type/budget/section; burial
+    // date/time/decedent/capacity are outside the recommendation engine's
+    // inputs and are never referenced here.
+    function buildDeterministicOutcomeMessage(outcome) {
         if (outcome.status === 'success') {
             const count = outcome.count;
-            appendChatMessage('assistant', `Based on your preferences, I found ${count} available lot${count === 1 ? '' : 's'} that ${count === 1 ? 'matches' : 'match'} your request. Take a look below — each card explains why it was recommended.`);
-        } else if (outcome.status === 'empty') {
+            return `Based on your preferences, I found ${count} available lot${count === 1 ? '' : 's'} that ${count === 1 ? 'matches' : 'match'} your request. Take a look below — each card explains why it was recommended.`;
+        }
+        if (outcome.status === 'empty') {
             const suggestions = [];
             if (chatState.lot_type) suggestions.push('choosing a different lot type');
             if (chatState.budget !== null && chatState.budget !== '') suggestions.push('increasing your budget');
@@ -308,10 +309,40 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (suggestions.length) {
                 message += ` You could try ${suggestions.join(' or ')}.`;
             }
-            appendChatMessage('assistant', message);
-        } else {
-            appendChatMessage('assistant', "I'm having trouble reaching the recommendation service right now. I've shown the available lots below so you can browse manually instead.");
+            return message;
         }
+        return "I'm having trouble reaching the recommendation service right now. I've shown the available lots below so you can browse manually instead.";
+    }
+
+    // Phase 4: optional LLM narrator — purely rephrases the same outcome
+    // facts the Phase 3 text is built from (status/count/which preferences
+    // were set). Never ranks, scores, or supplies new facts. Returns null on
+    // any failure (no API key configured, network error, timeout) so the
+    // caller always has the deterministic Phase 3 text to fall back to.
+    async function fetchNarratedOutcomeMessage(outcome) {
+        try {
+            const payload = {
+                status: outcome.status,
+                count: outcome.status === 'success' ? outcome.count : undefined,
+                preferences: {
+                    lot_type: chatState.lot_type || null,
+                    budget: (chatState.budget === '' || chatState.budget === null) ? null : chatState.budget,
+                    section: chatState.section || null,
+                },
+            };
+            const result = await api.request('ai/narrate', { method: 'POST', body: payload });
+            const message = result && typeof result.message === 'string' ? result.message.trim() : '';
+            return message || null;
+        } catch (error) {
+            console.error('Narration request failed', error);
+            return null;
+        }
+    }
+
+    async function appendRecommendationOutcomeMessage(outcome) {
+        if (!outcome) return;
+        const narrated = await fetchNarratedOutcomeMessage(outcome);
+        appendChatMessage('assistant', narrated || buildDeterministicOutcomeMessage(outcome));
     }
 
     // Phase 3: purely presentational — renders whatever reasons[] the
@@ -502,7 +533,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 budget: currentPreferences.budget,
                 section: currentPreferences.section
             });
-            appendRecommendationOutcomeMessage(outcome);
+            await appendRecommendationOutcomeMessage(outcome);
             showStep(2);
         });
     });

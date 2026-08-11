@@ -59,6 +59,13 @@ class AiController {
         return $result;
     }
 
+    public function narrate($payload) {
+        $payload = is_array($payload) ? $payload : [];
+        $result = $this->aiService->getNarration($payload);
+        $message = (!empty($result['error']) || !is_array($result)) ? null : ($result['message'] ?? null);
+        return ['message' => is_string($message) ? $message : null];
+    }
+
     public function getParameters($module = null) {
         return $this->aiParameterModel->findAll($module);
     }
