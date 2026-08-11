@@ -373,6 +373,15 @@ input[type="range"] {
         font-weight: 600;
     }
 
+    .recommendation-reasons-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--color-neutral-600);
+        text-align: right;
+    }
+
     .recommendation-reasons {
         list-style: none;
         margin: 0;
@@ -385,6 +394,13 @@ input[type="range"] {
     .recommendation-reasons li::before {
         content: "✓ ";
         color: var(--color-success-strong);
+    }
+
+    .recommendation-reasons-empty {
+        font-size: 0.75rem;
+        font-style: italic;
+        color: var(--color-neutral-600);
+        text-align: right;
     }
 
     .recommendation-card {

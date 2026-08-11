@@ -289,8 +289,46 @@ document.addEventListener('DOMContentLoaded', async function() {
         updateChatFindButtonState();
     }
 
-    function buildLotCard(lot) {
+    // Phase 3: reports what fetchAndRenderRecommendations() actually did —
+    // never claims a result it didn't return, and never suggests adjusting a
+    // preference the user never set. Only mentions lot_type/budget/section;
+    // burial date/time/decedent/capacity are outside the recommendation
+    // engine's inputs and are never referenced here.
+    function appendRecommendationOutcomeMessage(outcome) {
+        if (!outcome) return;
+        if (outcome.status === 'success') {
+            const count = outcome.count;
+            appendChatMessage('assistant', `Based on your preferences, I found ${count} available lot${count === 1 ? '' : 's'} that ${count === 1 ? 'matches' : 'match'} your request. Take a look below — each card explains why it was recommended.`);
+        } else if (outcome.status === 'empty') {
+            const suggestions = [];
+            if (chatState.lot_type) suggestions.push('choosing a different lot type');
+            if (chatState.budget !== null && chatState.budget !== '') suggestions.push('increasing your budget');
+            if (chatState.section) suggestions.push('selecting another section');
+            let message = "I couldn't find an available lot matching your current preferences.";
+            if (suggestions.length) {
+                message += ` You could try ${suggestions.join(' or ')}.`;
+            }
+            appendChatMessage('assistant', message);
+        } else {
+            appendChatMessage('assistant', "I'm having trouble reaching the recommendation service right now. I've shown the available lots below so you can browse manually instead.");
+        }
+    }
+
+    // Phase 3: purely presentational — renders whatever reasons[] the
+    // existing recommendation engine already returned. Never invents a
+    // reason and never touches score/ranking/ordering.
+    function buildRecommendationExplanation(lot) {
         const reasons = Array.isArray(lot.reasons) ? lot.reasons : [];
+        if (!reasons.length) {
+            return '<div class="recommendation-reasons-empty">No specific preferences were matched — shown as an available lot.</div>';
+        }
+        return `
+            <div class="recommendation-reasons-label">Why this is recommended:</div>
+            <ul class="recommendation-reasons">${reasons.map(reason => `<li>${reason}</li>`).join('')}</ul>
+        `;
+    }
+
+    function buildLotCard(lot) {
         const hasScore = lot.score !== undefined && lot.score !== null;
         return `
             <div class="recommendation-card" data-lot-id="${lot.lot_id}">
@@ -301,7 +339,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 </div>
                 <div class="recommendation-actions">
                     ${hasScore ? `<div class="score">${lot.score || 0}% suitability</div>` : ''}
-                    ${reasons.length ? `<ul class="recommendation-reasons">${reasons.map(reason => `<li>${reason}</li>`).join('')}</ul>` : ''}
+                    ${buildRecommendationExplanation(lot)}
                     <button class="select-lot-btn" type="button" data-lot='${JSON.stringify(lot)}'>Reserve</button>
                 </div>
             </div>
@@ -336,6 +374,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    // Returns a small outcome summary ({status, count}) alongside its existing
+    // DOM-rendering job, purely so callers (e.g. the chat layer) can react to
+    // what actually happened without re-fetching or re-deriving it themselves.
+    // Rendering, summary text, and fallback behavior below are unchanged from
+    // Phase 1/2.
     async function fetchAndRenderRecommendations(preferences) {
         recommendationSummary.classList.remove('is-fallback');
         try {
@@ -346,7 +389,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             if (!Array.isArray(recommendations)) {
                 await showManualLotFallback();
-                return;
+                return { status: 'error' };
             }
 
             const lotCount = recommendations.length;
@@ -356,13 +399,15 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             if (lotCount === 0) {
                 recommendationsList.innerHTML = '<p class="text-center">No matching lots available. Please adjust your preferences.</p>';
-                return;
+                return { status: 'empty', count: 0 };
             }
             recommendationsList.innerHTML = recommendations.map(buildLotCard).join('');
             attachSelectHandlers();
+            return { status: 'success', count: lotCount };
         } catch (error) {
             console.error('Recommendation API failed', error);
             await showManualLotFallback();
+            return { status: 'error' };
         }
     }
 
@@ -452,11 +497,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             decedentName: decedent ? `${decedent.first_name} ${decedent.last_name}` : ''
         };
         await withButtonLoading(chatFindLotsBtn, async () => {
-            await fetchAndRenderRecommendations({
+            const outcome = await fetchAndRenderRecommendations({
                 lot_type: currentPreferences.lot_type,
                 budget: currentPreferences.budget,
                 section: currentPreferences.section
             });
+            appendRecommendationOutcomeMessage(outcome);
             showStep(2);
         });
     });

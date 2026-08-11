@@ -146,10 +146,10 @@ def recommend_lots():
             reasons: List[str] = []
             if lot_type and lot.get('lot_type_name') == lot_type:
                 score += 5.0
-                reasons.append('Matches your selected lot type')
+                reasons.append('Matches your preferred lot type')
             if section and lot.get('section_name') == section:
                 score += 3.0
-                reasons.append('Matches your preferred section')
+                reasons.append('Located in your preferred section')
             if budget is not None and budget != '':
                 try:
                     budget_value = float(budget)
