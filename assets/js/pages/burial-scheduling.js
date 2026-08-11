@@ -31,12 +31,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     const selectBudgetInput = budgetSlider;
     const selectTimeInput = document.getElementById('prefTime');
     const confirmBookingButton = document.getElementById('confirmBooking');
+    const chatWindow = document.getElementById('chatWindow');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const chatFindLotsBtn = document.getElementById('chatFindLotsBtn');
+    const chatPrefStatus = document.getElementById('chatPrefStatus');
 
     let currentPreferences = {};
     let selectedLot = null;
     let decedents = [];
     let lotTypes = [];
     let sections = [];
+    let chatState = { lot_type: null, budget: null, section: null };
 
     budgetValue.textContent = budgetSlider.value;
     budgetSlider.addEventListener('input', () => {
@@ -90,6 +96,199 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    // ---------- Conversational preference collection (Phase 2) ----------
+    // Deterministic slot-filling only: no LLM, no free-form NLP. Extracted
+    // values are always validated against the live lotTypes/sections lists
+    // fetched by loadLookupData(), never accepted as raw user text.
+    const CHAT_SKIP_PHRASES = ['any', 'anything', 'no preference', 'not sure', "doesn't matter", 'does not matter', 'skip', "i don't know", 'idk', 'n/a', 'none', 'whatever'];
+
+    function escapeRegExp(text) {
+        return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function isChatSkipMessage(text) {
+        const normalized = text.trim().toLowerCase().replace(/[.!?]+$/, '');
+        return CHAT_SKIP_PHRASES.includes(normalized);
+    }
+
+    function containsDigits(text) {
+        return /\d/.test(text);
+    }
+
+    function describeOptions(list, key) {
+        const names = list.map(item => item[key]).filter(Boolean);
+        return names.length ? names.join(', ') : 'none configured yet';
+    }
+
+    function formatBudget(value) {
+        return `₱${Number(value).toLocaleString()}`;
+    }
+
+    function extractLotTypeFromText(text) {
+        const lower = text.toLowerCase();
+        for (const type of lotTypes) {
+            const fullName = (type.type_name || '').toLowerCase();
+            if (!fullName) continue;
+            if (lower.includes(fullName)) return type.type_name;
+            const shortName = fullName.replace(/\blot\b/g, '').trim();
+            if (shortName && new RegExp(`\\b${escapeRegExp(shortName)}\\b`, 'i').test(lower)) {
+                return type.type_name;
+            }
+        }
+        return null;
+    }
+
+    function extractSectionFromText(text) {
+        const lower = text.toLowerCase();
+        for (const section of sections) {
+            const fullName = (section.section_name || '').toLowerCase();
+            if (fullName && lower.includes(fullName)) return section.section_name;
+        }
+        const match = lower.match(/section\s*([a-z0-9]+)/i);
+        if (match) {
+            const candidate = `section ${match[1]}`.toLowerCase();
+            const found = sections.find(s => (s.section_name || '').toLowerCase() === candidate);
+            if (found) return found.section_name;
+        }
+        return null;
+    }
+
+    function extractBudgetFromText(text) {
+        const cleaned = text.replace(/[₱$]/g, '').replace(/,/g, '');
+        const match = cleaned.match(/(\d+(?:\.\d+)?)\s*(k)?\b/i);
+        if (!match) return null;
+        let value = parseFloat(match[1]);
+        if (!isFinite(value) || value <= 0) return null;
+        if (match[2]) value *= 1000;
+        return Math.round(value);
+    }
+
+    function getNextMissingChatSlot() {
+        if (chatState.lot_type === null) return 'lot_type';
+        if (chatState.budget === null) return 'budget';
+        if (chatState.section === null) return 'section';
+        return null;
+    }
+
+    function questionForChatSlot(slot) {
+        if (slot === 'lot_type') {
+            return `What lot type are you looking for? Available options: ${describeOptions(lotTypes, 'type_name')}.`;
+        }
+        if (slot === 'budget') {
+            return 'What is your preferred budget? (e.g., 8000, 8,000, ₱8,000, or 8k)';
+        }
+        if (slot === 'section') {
+            return `Do you have a preferred section? Available options: ${describeOptions(sections, 'section_name')}.`;
+        }
+        return null;
+    }
+
+    function appendChatMessage(role, text) {
+        const bubble = document.createElement('div');
+        bubble.className = `chat-message ${role}`;
+        bubble.textContent = text;
+        chatWindow.appendChild(bubble);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function updateChatPreferenceChips() {
+        Object.keys(chatState).forEach(field => {
+            const chip = chatPrefStatus.querySelector(`[data-field="${field}"]`);
+            if (!chip) return;
+            const strong = chip.querySelector('strong');
+            const value = chatState[field];
+            if (value === null) {
+                strong.textContent = 'Not set';
+                chip.classList.remove('filled');
+            } else if (value === '') {
+                strong.textContent = 'No preference';
+                chip.classList.add('filled');
+            } else {
+                strong.textContent = field === 'budget' ? formatBudget(value) : value;
+                chip.classList.add('filled');
+            }
+        });
+    }
+
+    function updateChatFindButtonState() {
+        const ready = chatState.lot_type !== null && chatState.budget !== null && chatState.section !== null;
+        chatFindLotsBtn.disabled = !ready;
+    }
+
+    function processChatMessage(rawText) {
+        const text = rawText.trim();
+        if (!text) return;
+
+        appendChatMessage('user', text);
+
+        const pendingSlot = getNextMissingChatSlot();
+        const updates = {};
+
+        if (chatState.lot_type === null) {
+            const lotType = extractLotTypeFromText(text);
+            if (lotType) updates.lot_type = lotType;
+        }
+        if (chatState.section === null) {
+            const section = extractSectionFromText(text);
+            if (section) updates.section = section;
+        }
+        if (chatState.budget === null) {
+            const budget = extractBudgetFromText(text);
+            if (budget !== null) updates.budget = budget;
+        }
+
+        // Only treat the message as an explicit "skip" for the currently
+        // pending slot, and only when nothing else was recognized in it —
+        // avoids misreading unrelated text as a skip.
+        if (pendingSlot && updates[pendingSlot] === undefined && Object.keys(updates).length === 0 && isChatSkipMessage(text)) {
+            updates[pendingSlot] = '';
+        }
+
+        Object.keys(updates).forEach(field => { chatState[field] = updates[field]; });
+        updateChatPreferenceChips();
+
+        const acknowledgements = [];
+        if (updates.lot_type !== undefined) {
+            acknowledgements.push(updates.lot_type ? `Got it — ${updates.lot_type}.` : "Okay, no preference on lot type.");
+        }
+        if (updates.budget !== undefined) {
+            acknowledgements.push(updates.budget !== '' ? `Noted — budget around ${formatBudget(updates.budget)}.` : "No problem, I won't filter by budget.");
+        }
+        if (updates.section !== undefined) {
+            acknowledgements.push(updates.section ? `Noted — ${updates.section}.` : 'Okay, any section works.');
+        }
+
+        if (acknowledgements.length) {
+            appendChatMessage('assistant', acknowledgements.join(' '));
+        } else if (pendingSlot === 'lot_type') {
+            appendChatMessage('assistant', `I couldn't match that to an available lot type. Available options: ${describeOptions(lotTypes, 'type_name')}. You can also say "no preference".`);
+        } else if (pendingSlot === 'budget') {
+            appendChatMessage('assistant', containsDigits(text)
+                ? "I couldn't read a budget from that. Try formats like 8000, 8,000, ₱8,000, or 8k. You can also say \"no preference\"."
+                : 'Could you share a budget? For example: 8000 or ₱8,000. You can also say "no preference".');
+        } else if (pendingSlot === 'section') {
+            appendChatMessage('assistant', `I couldn't match that to an available section. Available options: ${describeOptions(sections, 'section_name')}. You can also say "no preference".`);
+        }
+
+        const nextSlot = getNextMissingChatSlot();
+        if (nextSlot) {
+            appendChatMessage('assistant', questionForChatSlot(nextSlot));
+        } else {
+            appendChatMessage('assistant', 'Thanks! I have enough information to search for matching lots.');
+        }
+
+        updateChatFindButtonState();
+    }
+
+    function initChat() {
+        chatInput.disabled = false;
+        chatForm.querySelector('.chat-send-btn').disabled = false;
+        appendChatMessage('assistant', `Hi! Tell me what you're looking for and I'll help find a lot — for example, "I'd like a ${lotTypes[0] ? lotTypes[0].type_name : 'Premium Lot'} around 8000 in ${sections[0] ? sections[0].section_name : 'Section A'}".`);
+        appendChatMessage('assistant', questionForChatSlot(getNextMissingChatSlot()));
+        updateChatPreferenceChips();
+        updateChatFindButtonState();
+    }
+
     function buildLotCard(lot) {
         const reasons = Array.isArray(lot.reasons) ? lot.reasons : [];
         const hasScore = lot.score !== undefined && lot.score !== null;
@@ -137,13 +336,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    async function generateRecommendations() {
-        const preferences = {
-            lot_number: prefLotNumber.value.trim(),
-            lot_type: selectLotInput.value,
-            budget: parseInt(selectBudgetInput.value, 10),
-            section: selectSectionInput.value
-        };
+    async function fetchAndRenderRecommendations(preferences) {
         recommendationSummary.classList.remove('is-fallback');
         try {
             const recommendations = await api.request('schedules/recommend', {
@@ -171,6 +364,16 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.error('Recommendation API failed', error);
             await showManualLotFallback();
         }
+    }
+
+    async function generateRecommendations() {
+        const preferences = {
+            lot_number: prefLotNumber.value.trim(),
+            lot_type: selectLotInput.value,
+            budget: parseInt(selectBudgetInput.value, 10),
+            section: selectSectionInput.value
+        };
+        await fetchAndRenderRecommendations(preferences);
     }
 
     function displayConfirmation(lot) {
@@ -214,6 +417,46 @@ document.addEventListener('DOMContentLoaded', async function() {
         const getRecsBtn = scheduleForm.querySelector('button[type="submit"]');
         await withButtonLoading(getRecsBtn, async () => {
             await generateRecommendations();
+            showStep(2);
+        });
+    });
+
+    chatForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const text = chatInput.value;
+        if (!text.trim()) return;
+        chatInput.value = '';
+        processChatMessage(text);
+    });
+
+    chatFindLotsBtn.addEventListener('click', async function() {
+        const decedentId = prefDecedent.value;
+        const date = prefDate.value;
+        if (!decedentId) {
+            alert('Please select a decedent.');
+            return;
+        }
+        if (!date) {
+            alert('Please select a burial date.');
+            return;
+        }
+        const decedent = decedents.find(d => d.decedent_id.toString() === decedentId);
+        currentPreferences = {
+            lot_type: chatState.lot_type || '',
+            budget: chatState.budget === '' || chatState.budget === null ? '' : chatState.budget,
+            section: chatState.section || '',
+            date: date,
+            time: selectTimeInput.value || null,
+            notes: selectNotesInput.value.trim(),
+            deceased_id: decedentId,
+            decedentName: decedent ? `${decedent.first_name} ${decedent.last_name}` : ''
+        };
+        await withButtonLoading(chatFindLotsBtn, async () => {
+            await fetchAndRenderRecommendations({
+                lot_type: currentPreferences.lot_type,
+                budget: currentPreferences.budget,
+                section: currentPreferences.section
+            });
             showStep(2);
         });
     });
@@ -299,6 +542,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     await Promise.all([loadDecedents(), loadLookupData()]);
+    initChat();
 
     // Check if lot_id passed via URL query params (from Interactive Slot Grid)
     const urlParams = new URLSearchParams(window.location.search);
