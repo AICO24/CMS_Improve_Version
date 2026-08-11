@@ -345,6 +345,44 @@ document.addEventListener('DOMContentLoaded', async function() {
         appendChatMessage('assistant', narrated || buildDeterministicOutcomeMessage(outcome));
     }
 
+    // Phase 5: capacity-aware date warning. Reuses the existing, unchanged
+    // /api/forecast endpoint (ai/forecast) as-is — no new backend code, no
+    // change to recommend_lots() or the scoring engine. The requested burial
+    // date is used ONLY to look up an existing forecast month's
+    // capacity_status; it is never fed into lot ranking/scoring. Silently
+    // shows nothing if the date has no matching forecast entry (current
+    // month, or beyond the 24-month forecast horizon) or the forecast call
+    // fails — this is advisory only and must never block a search.
+    function monthsAheadFor(dateStr) {
+        const target = new Date(`${dateStr}T00:00:00`);
+        const now = new Date();
+        const months = (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth()) + 1;
+        return Math.max(1, Math.min(24, months));
+    }
+
+    function formatMonthLabel(yyyyMm) {
+        const [year, month] = yyyyMm.split('-').map(Number);
+        return new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+    async function fetchCapacityWarningMessage(dateStr) {
+        if (!dateStr) return null;
+        try {
+            const forecast = await api.request(`ai/forecast?months=${monthsAheadFor(dateStr)}`, { method: 'GET' });
+            if (!forecast || !Array.isArray(forecast.forecast)) return null;
+            const targetMonth = dateStr.slice(0, 7);
+            const entry = forecast.forecast.find(item => item.month === targetMonth);
+            if (!entry || entry.capacity_status === 'ok') return null;
+            const monthLabel = formatMonthLabel(entry.month);
+            const severity = entry.capacity_status === 'critical' ? 'at critical capacity' : 'projected to be near capacity';
+            const occupancyPct = Math.round((entry.occupancy_rate || 0) * 100);
+            return `Heads up — ${monthLabel} is ${severity} based on current burial trends (about ${occupancyPct}% occupied).`;
+        } catch (error) {
+            console.error('Capacity forecast check failed', error);
+            return null;
+        }
+    }
+
     // Phase 3: purely presentational — renders whatever reasons[] the
     // existing recommendation engine already returned. Never invents a
     // reason and never touches score/ranking/ordering.
@@ -534,6 +572,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 section: currentPreferences.section
             });
             await appendRecommendationOutcomeMessage(outcome);
+            const capacityWarning = await fetchCapacityWarningMessage(date);
+            if (capacityWarning) {
+                appendChatMessage('assistant', capacityWarning);
+            }
             showStep(2);
         });
     });
