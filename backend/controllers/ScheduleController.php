@@ -3,7 +3,6 @@ require_once __DIR__ . '/../models/Schedule.php';
 require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../models/User.php';
-require_once __DIR__ . '/AiController.php';
 
 class ScheduleController {
     private $scheduleModel;
@@ -243,10 +242,5 @@ class ScheduleController {
             return ['error' => 'Month and year are required', 'code' => 400];
         }
         return $this->scheduleModel->getCalendar($month, $year);
-    }
-
-    public function recommend($preferences) {
-        $aiController = new AiController();
-        return $aiController->recommend($preferences);
     }
 }

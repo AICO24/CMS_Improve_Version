@@ -112,8 +112,8 @@ def recommend_lots():
             lots = cursor.fetchall()
             cursor.close()
             conn.close()
-        except Exception:
-            return jsonify([])
+        except Exception as exc:
+            return jsonify({'error': f'Unable to retrieve available lots: {exc}', 'code': 503}), 503
 
         if not lots:
             return jsonify([])

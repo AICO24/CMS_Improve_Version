@@ -115,6 +115,7 @@ if ($path === 'auth/me' && $requestMethod === 'GET') {
 $lotController = new LotController();
 $decedentController = new DecedentController();
 $scheduleController = new ScheduleController();
+$aiController = new AiController();
 
 if ($path === 'sections' && $requestMethod === 'GET') {
     echo json_encode($lotController->getSections());
@@ -276,8 +277,9 @@ if ($path === 'schedules/mine' && $requestMethod === 'GET') {
 }
 
 if ($path === 'schedules/recommend' && $requestMethod === 'POST') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
-    echo json_encode($scheduleController->recommend($input));
+    echo json_encode($aiController->recommend($input));
     exit;
 }
 
@@ -779,8 +781,6 @@ if ($path === 'reports/expiration' && $requestMethod === 'GET') {
     echo json_encode($reportController->expiration($pagination));
     exit;
 }
-
-$aiController = new AiController();
 
 if ($path === 'ai/health' && $requestMethod === 'GET') {
     echo json_encode($aiController->health());
