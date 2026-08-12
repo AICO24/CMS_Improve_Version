@@ -270,9 +270,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         a.remove();
     }
 
+    // #reportExportContainer holds all 5 tabs at once (inactive ones are
+    // display:none, per .report-content in reports.css), so both exports
+    // must scope to the active tab only:
+    //  - html2canvas throws ("0 width or height") if it has to walk into a
+    //    hidden tab's Chart.js canvas, since display:none collapses it to 0x0.
+    //  - <table> elements only exist on the Expiration tab, so exporting the
+    //    whole container silently returned Expiration data no matter which
+    //    tab the user was actually looking at.
+    function getActiveReportTab() {
+        return document.querySelector('#reportExportContainer .report-content.active')
+            || document.getElementById('reportExportContainer');
+    }
+
+    function getActiveTabLabel() {
+        const btn = document.querySelector('.tab-btn.active');
+        return btn ? btn.textContent.trim() : 'Report';
+    }
+
     async function generatePdfExport() {
-        const element = document.getElementById('reportExportContainer');
-        const filename = `Cemetery_Management_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+        const element = getActiveReportTab();
+        const filename = `Cemetery_Management_${getActiveTabLabel()}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
         if (typeof html2pdf === 'undefined') {
             window.print();
             return null;
@@ -290,9 +308,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         return { url, filename };
     }
 
+    // XLSX.utils has no html_to_sheet — that call always threw on every tab
+    // except Expiration (the only one with a <table>). Build a plain
+    // metric/value sheet from the visible .stat-card tiles instead.
+    function buildStatSheet(container) {
+        const rows = [['Metric', 'Value']];
+        container.querySelectorAll('.stat-card').forEach(card => {
+            const title = card.querySelector('.stat-title')?.textContent.trim();
+            const value = card.querySelector('.stat-value')?.textContent.trim();
+            if (title) rows.push([title, value || '']);
+        });
+        return XLSX.utils.aoa_to_sheet(rows);
+    }
+
     function generateExcelExport() {
         const wb = XLSX.utils.book_new();
-        const container = document.getElementById('reportExportContainer');
+        const container = getActiveReportTab();
         const tables = container.querySelectorAll('table');
         if (tables.length > 0) {
             tables.forEach((tbl, idx) => {
@@ -300,10 +331,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 XLSX.utils.book_append_sheet(wb, ws, `Report_Data_${idx + 1}`);
             });
         } else {
-            const ws = XLSX.utils.html_to_sheet(container);
+            const ws = buildStatSheet(container);
             XLSX.utils.book_append_sheet(wb, ws, "Report Summary");
         }
-        const filename = `Cemetery_Management_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+        const filename = `Cemetery_Management_${getActiveTabLabel()}_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
         const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
         const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
@@ -315,43 +346,69 @@ document.addEventListener('DOMContentLoaded', async function() {
     // animation) -> Open/Saved. The 3900ms floor matches the CSS "installed"
     // delay in download-toggle.css so the button only flips once the file
     // is actually ready, even if generation resolves faster than the animation.
+    //
+    // `generation` guards against a stale in-flight run: reset() (called on
+    // every tab switch) doesn't cancel a runGeneration() that's still
+    // mid-flight from a previous click — e.g. switch tabs while the ~3.9s
+    // animation wait from the last export is still ticking. Without this
+    // guard, that stale run resolves later and force-sets state back to
+    // 'ready' with a result reset() already nulled out, which makes the
+    // *next* click on the new tab a silent no-op (preventDefault fires,
+    // onOpen(null) does nothing — no error, no download).
     function setupDownloadToggle(id, { run, onOpen }) {
         const checkbox = document.getElementById(id);
         if (!checkbox) return { reset() {} };
         const MIN_ANIMATION_MS = 3900;
         let state = 'idle';
         let result = null;
+        let generation = 0;
 
-        checkbox.addEventListener('click', (e) => {
-            if (state === 'ready') {
-                e.preventDefault();
-                onOpen(result);
-            }
-        });
-
-        checkbox.addEventListener('change', async () => {
-            if (!checkbox.checked) return;
+        async function runGeneration() {
+            const myGeneration = ++generation;
             state = 'working';
             checkbox.disabled = true;
             const start = Date.now();
+            let localResult;
             try {
-                result = await run();
+                localResult = await run();
             } catch (error) {
                 console.error('Export failed:', error);
-                checkbox.checked = false;
-                checkbox.disabled = false;
-                state = 'idle';
-                alert('Export failed. Please try again.');
+                if (myGeneration === generation) {
+                    checkbox.checked = false;
+                    checkbox.disabled = false;
+                    state = 'idle';
+                    alert('Export failed. Please try again.');
+                }
                 return;
             }
             const remaining = MIN_ANIMATION_MS - (Date.now() - start);
             if (remaining > 0) await new Promise(r => setTimeout(r, remaining));
+            if (myGeneration !== generation) return; // superseded by a reset() meanwhile
+            result = localResult;
             checkbox.disabled = false;
             state = 'ready';
+        }
+
+        checkbox.addEventListener('click', (e) => {
+            if (state === 'working') {
+                e.preventDefault();
+                return;
+            }
+            if (state === 'ready') {
+                e.preventDefault();
+                onOpen(result);
+                return;
+            }
+            // state === 'idle': let the native check happen, then generate on
+            // the next tick so we don't touch `disabled` mid-click (doing so
+            // before the browser applies this same click's default action can
+            // suppress that action in some engines).
+            setTimeout(runGeneration, 0);
         });
 
         return {
             reset() {
+                generation++; // invalidate any in-flight runGeneration
                 if (result?.url) URL.revokeObjectURL(result.url);
                 result = null;
                 state = 'idle';
