@@ -14,19 +14,10 @@
     min-height: 100vh;
 }
 
-/* ---------- SIDEBAR (FIXED, NO SCROLL) ---------- */
-.sidebar {
-    width: 260px;
-    background: #2b3658;
-    color: #fff;
-    position: fixed;
-    height: 100vh;
-    overflow-y: visible;
-    padding-top: 0;
-    display: flex;
-    flex-direction: column;
-    z-index: 100;
-}
+/* Sidebar sizing/position now comes solely from the shared responsive
+   shell in dashboard.css (Phase 8 audit fix) — this page's own copy was
+   unconditional and silently defeated dashboard.css's 1024px/768px
+   collapse breakpoints by winning the cascade at every width. */
 
 .sidebar-header {
     padding: 12px 16px;
@@ -134,13 +125,11 @@
 
 /* ---------- MAIN CONTENT ---------- */
 .main-content {
-    margin-left: 260px;
     flex: 1;
     min-height: 100vh;
-    transition: margin-left 220ms ease;
 }
 
-/* .sidebar.collapsed pin/unpin now comes from the shared dashboard.css (Batch 3) */
+/* margin-left/transition and .sidebar.collapsed pin/unpin now come from the shared dashboard.css (Batch 3 / Phase 8) */
 
 /* ---------- TOP BAR ---------- */
 .top-bar {

@@ -18,7 +18,6 @@ body {
     padding: 1.5rem;
     background: #0f172a;
     position: relative;
-    overflow: hidden;
 }
 
 /* ============================================
@@ -29,6 +28,9 @@ body {
     position: fixed;
     inset: 0;
     z-index: 0;
+    overflow: hidden; /* clips the ::before pulse animation's scale(1.1) bleed —
+                          moved here from body (Phase 8 audit fix) so body can
+                          scroll when the card is taller than the viewport */
     background: 
         radial-gradient(ellipse at 20% 50%, rgba(44, 94, 71, 0.3) 0%, transparent 60%),
         radial-gradient(ellipse at 80% 50%, rgba(44, 94, 71, 0.2) 0%, transparent 60%),
@@ -311,7 +313,7 @@ body {
     font-size: 0.9rem;
     transition: all 0.3s;
     z-index: 2;
-    padding: 4px;
+    padding: 10px;
 }
 
 .toggle-password:hover {

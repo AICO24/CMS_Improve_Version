@@ -10,20 +10,12 @@
     min-height: 100vh;
 }
 
-.sidebar {
-    width: 260px;
-    background: #2b3658;
-    color: #fff;
-    position: fixed;
-    height: 100vh;
-    overflow-y: auto;
-    padding-top: 0;
-    box-shadow: 0 6px 18px rgba(16,24,40,0.06);
-    transition: transform 220ms ease;
-    display: flex;
-    flex-direction: column;
-    z-index: 100;
-}
+/* Sidebar sizing/position now comes solely from the shared responsive
+   shell in dashboard.css (Phase 8 audit fix). A comment further down
+   this file already claimed the shared shell governed this — it didn't,
+   because this unconditional copy was still winning the cascade at
+   every width and silently defeating dashboard.css's 1024px/768px
+   collapse breakpoints. */
 
 .sidebar-header {
     padding: 12px 16px;
@@ -63,10 +55,9 @@
     color: #06321a;
 }
 
+/* margin-left/transition now come from the shared dashboard.css (Phase 8) */
 .main-content {
-    margin-left: 260px;
     min-height: 100vh;
-    transition: margin-left 220ms ease;
     flex: 1;
 }
 
