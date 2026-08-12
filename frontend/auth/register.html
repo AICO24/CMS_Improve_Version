@@ -14,146 +14,138 @@
     <link rel="stylesheet" href="../../assets/css/shared/base.css">
     <link rel="stylesheet" href="../../assets/css/components/buttons.css">
     <link rel="stylesheet" href="../../assets/css/auth/register.css">
+    <script src="https://cdn.lordicon.com/lordicon.js"></script>
 </head>
 <body>
 
-    <!-- Animated Background Overlay (SAME AS LOGIN) -->
     <div class="bg-overlay"></div>
 
-    <div class="register-container">
-        <div class="register-card">
-            <!-- Decorative top accent (SAME AS LOGIN) -->
-            <div class="card-accent"></div>
-            
-            <!-- Decorative corner elements (SAME AS LOGIN) -->
-            <div class="corner-decoration corner-tl"></div>
-            <div class="corner-decoration corner-tr"></div>
-            <div class="corner-decoration corner-bl"></div>
-            <div class="corner-decoration corner-br"></div>
-
-            <div class="logo">
-                <div class="logo-icon-wrapper">
+    <div class="register-shell">
+        <div class="register-panel register-panel--visual">
+            <div class="register-panel__content">
+                <div class="register-panel__icon">
                     <lord-icon
                         src="https://cdn.lordicon.com/hhxmdqos.json"
-                        trigger="hover"
-                        colors="primary:#2c5e47,secondary:#7aa77a"
-                        style="width:70px;height:70px;">
+                        trigger="loop"
+                        delay="2000"
+                        colors="primary:#ffffff,secondary:#7aa77a"
+                        style="width:60px;height:60px;">
                     </lord-icon>
                 </div>
-                <h1>Create New Account</h1>
-                <p>Register a new account (User, Staff, or Administrator)</p>
-                <div class="divider">
+                <h1>Create Account</h1>
+                <div class="divider divider--light">
                     <span></span>
                     <i class="fas fa-leaf"></i>
                     <span></span>
                 </div>
-                <p class="sub-text">Complete the form below to create your account</p>
+                <p>Register as a citizen user to reserve burial slots, track payments, and manage your records.</p>
             </div>
+        </div>
 
-            <div id="alert" class="alert" role="alert" aria-live="polite"></div>
-
-            <form id="registerForm" action="javascript:void(0);">
-                <!-- Full Name -->
-                <div class="input-field">
-                    <label for="full_name">Full Name</label>
-                    <div class="input-wrapper">
-                        <span class="input-icon"><i class="fas fa-user"></i></span>
-                        <input type="text" id="full_name" placeholder="Enter full name" required aria-describedby="fullNameError">
-                    </div>
-                    <div class="error-message" id="fullNameError" role="alert"></div>
+        <div class="register-panel register-panel--form">
+            <div class="register-form-inner">
+                <div class="register-form-header">
+                    <h2>Register a New Account</h2>
+                    <p class="register-subtitle">Complete the form below to create your account</p>
                 </div>
 
-                <!-- Email -->
-                <div class="input-field">
-                    <label for="email">Email Address</label>
-                    <div class="input-wrapper">
-                        <span class="input-icon"><i class="fas fa-envelope"></i></span>
-                        <input type="email" id="email" placeholder="Enter email address" required aria-describedby="emailError">
+                <div id="alert" class="alert" role="alert" aria-live="polite"></div>
+
+                <form id="registerForm" action="javascript:void(0);">
+                    <div class="form-grid">
+                        <!-- Full Name -->
+                        <div class="input-field">
+                            <label for="full_name">Full Name</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon"><i class="fas fa-user"></i></span>
+                                <input type="text" id="full_name" placeholder="Enter full name" required aria-describedby="fullNameError">
+                            </div>
+                            <div class="error-message" id="fullNameError" role="alert"></div>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="input-field">
+                            <label for="email">Email Address</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon"><i class="fas fa-envelope"></i></span>
+                                <input type="email" id="email" placeholder="Enter email address" required aria-describedby="emailError">
+                            </div>
+                            <div class="error-message" id="emailError" role="alert"></div>
+                        </div>
+
+                        <!-- Username (optional) -->
+                        <div class="input-field">
+                            <label for="username">Username <span class="label-hint">(optional)</span></label>
+                            <div class="input-wrapper">
+                                <span class="input-icon"><i class="fas fa-user-circle"></i></span>
+                                <input type="text" id="username" placeholder="Choose a username" aria-describedby="usernameError">
+                            </div>
+                            <div class="error-message" id="usernameError" role="alert"></div>
+                        </div>
+
+                        <!-- Contact Number -->
+                        <div class="input-field">
+                            <label for="contact_number">Contact Number</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon"><i class="fas fa-phone"></i></span>
+                                <input type="text" id="contact_number" placeholder="Enter contact number" aria-describedby="contactError">
+                            </div>
+                            <div class="error-message" id="contactError" role="alert"></div>
+                        </div>
+
+                        <!-- Address (full width) -->
+                        <div class="input-field input-field--full">
+                            <label for="address">Address</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon"><i class="fas fa-map-marker-alt"></i></span>
+                                <input type="text" id="address" placeholder="Enter address" aria-describedby="addressError">
+                            </div>
+                            <div class="error-message" id="addressError" role="alert"></div>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="input-field">
+                            <label for="password">Password</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon"><i class="fas fa-lock"></i></span>
+                                <input type="password" id="password" placeholder="Create a password" required aria-describedby="passwordError">
+                                <button type="button" class="toggle-password" data-target="password" onclick="togglePassword('password')" aria-label="Show password">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="error-message" id="passwordError" role="alert"></div>
+                        </div>
+
+                        <!-- Confirm Password -->
+                        <div class="input-field">
+                            <label for="confirm_password">Confirm Password</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon"><i class="fas fa-shield-alt"></i></span>
+                                <input type="password" id="confirm_password" placeholder="Confirm your password" required aria-describedby="confirmError">
+                                <button type="button" class="toggle-password" data-target="confirm_password" onclick="togglePassword('confirm_password')" aria-label="Show password">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="error-message" id="confirmError" role="alert"></div>
+                        </div>
                     </div>
-                    <div class="error-message" id="emailError" role="alert"></div>
+
+                    <button type="submit" class="btn-register">
+                        <span>Register Account</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </form>
+
+                <div class="auth-divider"><span></span><span>or</span><span></span></div>
+
+                <a href="login.html" class="btn-sign-in-instead">
+                    <i class="fas fa-arrow-right-to-bracket"></i>
+                    <span>Already have an account? Sign in</span>
+                </a>
+
+                <div class="footer-text">
+                    <p>© 2026 Cemetery Management System. All rights reserved.</p>
                 </div>
-
-                <!-- Username (optional for public users) -->
-                <div class="input-field">
-                    <label for="username">Username (leave blank if registering as User)</label>
-                    <div class="input-wrapper">
-                        <span class="input-icon"><i class="fas fa-user-circle"></i></span>
-                        <input type="text" id="username" placeholder="Choose a username (optional)" aria-describedby="usernameError">
-                    </div>
-                    <div class="error-message" id="usernameError" role="alert"></div>
-                </div>
-
-                <!-- Role -->
-                <div class="input-field">
-                    <label for="role">Role</label>
-                    <div class="input-wrapper">
-                        <span class="input-icon"><i class="fas fa-user-tag"></i></span>
-                        <select id="role" required>
-                            <option value="user">User</option>
-                            <option value="staff">Staff</option>
-                            <option value="admin">Administrator</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Contact Number -->
-                <div class="input-field">
-                    <label for="contact_number">Contact Number</label>
-                    <div class="input-wrapper">
-                        <span class="input-icon"><i class="fas fa-phone"></i></span>
-                        <input type="text" id="contact_number" placeholder="Enter contact number" aria-describedby="contactError">
-                    </div>
-                    <div class="error-message" id="contactError" role="alert"></div>
-                </div>
-
-                <!-- Address -->
-                <div class="input-field">
-                    <label for="address">Address</label>
-                    <div class="input-wrapper">
-                        <span class="input-icon"><i class="fas fa-map-marker-alt"></i></span>
-                        <input type="text" id="address" placeholder="Enter address" aria-describedby="addressError">
-                    </div>
-                    <div class="error-message" id="addressError" role="alert"></div>
-                </div>
-
-                <!-- Password -->
-                <div class="input-field">
-                    <label for="password">Password</label>
-                    <div class="input-wrapper">
-                        <span class="input-icon"><i class="fas fa-lock"></i></span>
-                        <input type="password" id="password" placeholder="Create a password" required aria-describedby="passwordError">
-                        <button type="button" class="toggle-password" data-target="password" onclick="togglePassword('password')" aria-label="Show password">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                    <div class="error-message" id="passwordError" role="alert"></div>
-                </div>
-
-                <!-- Confirm Password -->
-                <div class="input-field">
-                    <label for="confirm_password">Confirm Password</label>
-                    <div class="input-wrapper">
-                        <span class="input-icon"><i class="fas fa-shield-alt"></i></span>
-                        <input type="password" id="confirm_password" placeholder="Confirm your password" required aria-describedby="confirmError">
-                        <button type="button" class="toggle-password" data-target="confirm_password" onclick="togglePassword('confirm_password')" aria-label="Show password">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                    <div class="error-message" id="confirmError" role="alert"></div>
-                </div>
-
-                <button type="submit" class="btn-register">
-                    <span>Register Account</span>
-                    <i class="fas fa-arrow-right"></i>
-                </button>
-            </form>
-
-            <div class="login-link">
-                <p>Already have an account? <a href="login.html">Sign in here</a></p>
-            </div>
-
-            <div class="footer-text">
-                <p>© 2026 Cemetery Management System. All rights reserved.</p>
             </div>
         </div>
     </div>

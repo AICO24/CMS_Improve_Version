@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('registerForm');
     const alertBox = document.getElementById('alert');
-    const roleMap = { user: 3, staff: 2, admin: 1 };
 
     if (!form) return;
 
@@ -10,7 +9,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const fullName = document.getElementById('full_name').value.trim();
         const email = document.getElementById('email').value.trim();
         const username = document.getElementById('username').value.trim();
-        const role = document.getElementById('role').value;
         const contact = document.getElementById('contact_number').value.trim();
         const address = document.getElementById('address').value.trim();
         const password = document.getElementById('password').value;
@@ -26,11 +24,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (!email || !email.includes('@')) {
             document.getElementById('emailError').textContent = 'Valid email required';
-            isValid = false;
-        }
-        // Username is required only for staff/admin registrations
-        if ((role === 'staff' || role === 'admin') && !username) {
-            document.getElementById('usernameError').textContent = 'Username required for staff/admin accounts';
             isValid = false;
         }
         if (password !== confirm) {
@@ -49,27 +42,18 @@ document.addEventListener('DOMContentLoaded', function() {
         setButtonLoading(submitBtn, true);
 
         try {
-            let payload = null;
-            if (role === 'user') {
-                // public user registration - backend will assign User role
-                payload = {
-                    full_name: fullName,
-                    email: email,
-                    contact_number: contact || null,
-                    address: address || null,
-                    password: password,
-                    confirm_password: confirm,
-                };
-            } else {
-                // staff/admin registration via admin UI - send role name and username
-                payload = {
-                    full_name: fullName,
-                    email: email,
-                    username: username,
-                    role: role,
-                    password: password,
-                };
-            }
+            // Public self-registration is User-only; staff/admin accounts are
+            // created by an administrator via User Management. Backend
+            // assigns the User role automatically.
+            const payload = {
+                full_name: fullName,
+                email: email,
+                username: username || null,
+                contact_number: contact || null,
+                address: address || null,
+                password: password,
+                confirm_password: confirm,
+            };
 
             const result = await api.register(payload);
 

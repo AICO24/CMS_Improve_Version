@@ -1,6 +1,10 @@
 /* ============================================
-   ELEGANT REGISTER PAGE - CAPSTONE DESIGN
-   EXACTLY MATCHES LOGIN PAGE
+   REGISTER PAGE — SPLIT-SCREEN DESIGN (Batch C)
+   Mirrors login.css's structure/tokens; visual
+   panel uses a solid brand gradient instead of
+   a photo, and the form uses a 2-column grid to
+   fit the larger field count without excess
+   vertical scroll.
    ============================================ */
 
 * {
@@ -21,17 +25,15 @@ body {
 }
 
 /* ============================================
-   ANIMATED BACKGROUND (EXACTLY SAME AS LOGIN)
+   ANIMATED BACKGROUND (page backdrop only)
    ============================================ */
 
 .bg-overlay {
     position: fixed;
     inset: 0;
     z-index: 0;
-    overflow: hidden; /* clips the ::before pulse animation's scale(1.1) bleed —
-                          moved here from body (Phase 8 audit fix) so body can
-                          scroll when the card is taller than the viewport */
-    background: 
+    overflow: hidden;
+    background:
         radial-gradient(ellipse at 20% 50%, rgba(44, 94, 71, 0.3) 0%, transparent 60%),
         radial-gradient(ellipse at 80% 50%, rgba(44, 94, 71, 0.2) 0%, transparent 60%),
         radial-gradient(ellipse at 50% 100%, rgba(44, 94, 71, 0.15) 0%, transparent 50%),
@@ -42,7 +44,7 @@ body {
     content: '';
     position: absolute;
     inset: 0;
-    background: 
+    background:
         radial-gradient(circle at 30% 40%, rgba(44, 94, 71, 0.08) 0%, transparent 50%),
         radial-gradient(circle at 70% 60%, rgba(44, 94, 71, 0.06) 0%, transparent 50%);
     animation: bgPulse 8s ease-in-out infinite alternate;
@@ -53,144 +55,69 @@ body {
     100% { opacity: 1; transform: scale(1.1); }
 }
 
-.bg-overlay::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: 
-        radial-gradient(2px 2px at 10% 20%, rgba(255,255,255,0.1), transparent),
-        radial-gradient(2px 2px at 30% 60%, rgba(255,255,255,0.08), transparent),
-        radial-gradient(2px 2px at 50% 30%, rgba(255,255,255,0.12), transparent),
-        radial-gradient(2px 2px at 70% 70%, rgba(255,255,255,0.06), transparent),
-        radial-gradient(2px 2px at 90% 40%, rgba(255,255,255,0.1), transparent),
-        radial-gradient(1px 1px at 15% 80%, rgba(255,255,255,0.08), transparent),
-        radial-gradient(1px 1px at 45% 10%, rgba(255,255,255,0.06), transparent),
-        radial-gradient(1px 1px at 65% 90%, rgba(255,255,255,0.1), transparent),
-        radial-gradient(1px 1px at 85% 15%, rgba(255,255,255,0.08), transparent),
-        radial-gradient(1px 1px at 5% 45%, rgba(255,255,255,0.06), transparent);
-    background-size: 200px 200px;
-    animation: particleFloat 20s linear infinite;
-}
-
-@keyframes particleFloat {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(-200px); }
-}
-
 /* ============================================
-   REGISTER CARD (EXACTLY SAME AS LOGIN CARD)
+   SPLIT-SCREEN SHELL
    ============================================ */
 
-.register-container {
+.register-shell {
     width: 100%;
-    max-width: 480px;
+    max-width: 1040px;
+    max-height: 90vh;
+    min-width: 0;
     position: relative;
     z-index: 1;
-}
-
-.register-card {
-    background: rgba(255, 255, 255, 0.97);
-    backdrop-filter: blur(20px);
-    border-radius: 28px;
-    padding: 2.5rem 2.2rem;
-    box-shadow: 
-        0 40px 80px -20px rgba(0, 0, 0, 0.6),
-        0 0 0 1px rgba(255, 255, 255, 0.05) inset,
-        0 0 40px rgba(44, 94, 71, 0.05);
-    position: relative;
-    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    display: flex;
+    background: var(--color-neutral-50);
+    border-radius: 24px;
     overflow: hidden;
+    box-shadow:
+        0 40px 80px -20px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 }
 
-.register-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 
-        0 50px 100px -20px rgba(0, 0, 0, 0.7),
-        0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+.register-panel {
+    display: flex;
 }
 
-/* ============================================
-   CARD DECORATIVE ELEMENTS (SAME AS LOGIN)
-   ============================================ */
+/* --- Visual panel (solid brand gradient, no photo) --- */
 
-.card-accent {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--color-primary-500), var(--color-primary-300), var(--color-primary-500));
-    background-size: 200% 100%;
-    animation: shimmer 3s linear infinite;
-}
-
-@keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-}
-
-.corner-decoration {
-    position: absolute;
-    width: 40px;
-    height: 40px;
-    border: 2px solid rgba(44, 94, 71, 0.08);
-    opacity: 0.6;
-}
-
-.corner-tl { top: 16px; left: 16px; border-right: none; border-bottom: none; border-radius: 4px 0 0 0; }
-.corner-tr { top: 16px; right: 16px; border-left: none; border-bottom: none; border-radius: 0 4px 0 0; }
-.corner-bl { bottom: 16px; left: 16px; border-right: none; border-top: none; border-radius: 0 0 0 4px; }
-.corner-br { bottom: 16px; right: 16px; border-left: none; border-top: none; border-radius: 0 0 4px 0; }
-
-/* ============================================
-   LOGO SECTION (SAME AS LOGIN)
-   ============================================ */
-
-.logo {
-    text-align: center;
-    margin-bottom: 2rem;
-}
-
-.logo-icon-wrapper {
-    display: inline-block;
+.register-panel--visual {
     position: relative;
-    margin-bottom: 0.8rem;
+    flex: 1 1 32%;
+    min-height: 560px;
+    align-items: center;
+    background:
+        radial-gradient(circle at 30% 20%, rgba(122, 167, 122, 0.35) 0%, transparent 55%),
+        linear-gradient(160deg, var(--color-primary-700) 0%, var(--color-primary-900) 100%);
 }
 
-.logo-icon-wrapper::before {
-    content: '';
-    position: absolute;
-    inset: -8px;
-    border-radius: 50%;
-    background: radial-gradient(circle at center, rgba(44, 94, 71, 0.15), transparent 70%);
-    animation: glowPulse 3s ease-in-out infinite;
+.register-panel__content {
+    position: relative;
+    z-index: 1;
+    padding: var(--space-8) var(--space-6);
+    color: var(--color-white);
+    text-align: center;
+    width: 100%;
 }
 
-@keyframes glowPulse {
-    0%, 100% { transform: scale(1); opacity: 0.6; }
-    50% { transform: scale(1.2); opacity: 1; }
+.register-panel__icon {
+    margin-bottom: var(--space-4);
 }
 
-.logo h1 {
+.register-panel--visual h1 {
     font-family: 'Playfair Display', serif;
     font-size: 1.6rem;
     font-weight: 700;
-    color: #1a2a3a;
-    letter-spacing: -0.5px;
+    line-height: 1.25;
     margin-bottom: 0.2rem;
 }
 
-.logo p {
-    color: #66806b;
+.register-panel--visual p {
     font-size: 0.85rem;
     font-weight: 500;
-    letter-spacing: 0.3px;
-}
-
-.logo .sub-text {
-    color: var(--color-text-faint);
-    font-size: 0.8rem;
-    font-weight: 400;
+    color: rgba(255, 255, 255, 0.82);
+    letter-spacing: 0.2px;
+    line-height: 1.5;
 }
 
 .divider {
@@ -198,7 +125,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 14px;
-    margin: 0.8rem 0 0.6rem;
+    margin: 0.7rem 0;
 }
 
 .divider span {
@@ -214,12 +141,68 @@ body {
     opacity: 0.6;
 }
 
+.divider--light span {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+}
+
+.divider--light i {
+    color: #7aa77a;
+    opacity: 0.9;
+}
+
+/* --- Form panel --- */
+
+.register-panel--form {
+    flex: 1 1 68%;
+    min-width: 0;
+    overflow-y: auto;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-7) var(--space-8);
+}
+
+.register-form-inner {
+    width: 100%;
+    min-width: 0;
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+.register-form-header {
+    margin-bottom: var(--space-5);
+}
+
+.register-form-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a2a3a;
+    letter-spacing: -0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.register-subtitle {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+}
+
 /* ============================================
-   FORM FIELDS (SAME AS LOGIN)
+   FORM GRID — two columns so 7 fields fit in
+   4 rows instead of 7 stacked rows.
    ============================================ */
 
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 var(--space-4);
+}
+
+.input-field--full {
+    grid-column: 1 / -1;
+}
+
 .input-field {
-    margin-bottom: 1.2rem;
+    margin-bottom: var(--space-4);
 }
 
 .input-field label {
@@ -231,15 +214,16 @@ body {
     letter-spacing: 0.2px;
 }
 
+.label-hint {
+    font-weight: 400;
+    color: var(--color-text-faint);
+}
+
 .input-wrapper {
     position: relative;
     display: flex;
     align-items: center;
 }
-
-/* ============================================
-   INPUT ICON - VISIBLE INSIDE THE BOX (SAME AS LOGIN)
-   ============================================ */
 
 .input-icon {
     position: absolute;
@@ -260,14 +244,11 @@ body {
     color: var(--color-primary-500);
 }
 
-/* ============================================
-   INPUT FIELDS (SAME AS LOGIN)
-   ============================================ */
-
 .input-wrapper input,
 .input-wrapper select {
     width: 100%;
-    padding: 12px 16px 12px 44px;
+    min-width: 0;
+    padding: 11px 16px 11px 44px;
     font-size: 0.9rem;
     border: 1.5px solid var(--color-border);
     border-radius: var(--radius-md);
@@ -283,7 +264,6 @@ body {
     border-color: var(--color-primary-500);
     background: var(--color-white);
     box-shadow: 0 0 0 4px rgba(44, 94, 71, 0.08), 0 0 0 2px rgba(44, 94, 71, 0.02);
-    transform: translateY(-1px);
 }
 
 .input-wrapper input::placeholder {
@@ -292,17 +272,8 @@ body {
     font-size: 0.85rem;
 }
 
-.input-wrapper select {
-    appearance: none;
-    cursor: pointer;
-    padding-right: 40px;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2366806b' stroke-width='2'><polyline points='6 9 12 15 18 9'></polyline></svg>");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-}
-
 /* ============================================
-   PASSWORD TOGGLE (SAME AS LOGIN)
+   PASSWORD TOGGLE
    ============================================ */
 
 .toggle-password {
@@ -313,7 +284,7 @@ body {
     font-size: 0.9rem;
     transition: all 0.3s;
     z-index: 2;
-    padding: 10px;
+    padding: 8px;
     background: none;
     border: none;
     font-family: inherit;
@@ -322,7 +293,6 @@ body {
 
 .toggle-password:hover {
     color: var(--color-primary-500);
-    transform: scale(1.1);
 }
 
 .toggle-password:focus-visible {
@@ -330,17 +300,8 @@ body {
     outline-offset: 2px;
 }
 
-.toggle-password i {
-    animation: iconFade 4s ease-in-out infinite;
-}
-
-@keyframes iconFade {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
 /* ============================================
-   REGISTER BUTTON (SAME AS LOGIN BUTTON)
+   REGISTER BUTTON
    ============================================ */
 
 .btn-register {
@@ -348,7 +309,7 @@ body {
     background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700));
     color: white;
     border: none;
-    padding: 14px;
+    padding: 13px;
     font-size: 0.95rem;
     font-weight: 600;
     border-radius: var(--radius-md);
@@ -360,7 +321,7 @@ body {
     gap: 10px;
     position: relative;
     overflow: hidden;
-    margin-top: 0.5rem;
+    margin-top: 0.25rem;
 }
 
 .btn-register::before {
@@ -382,25 +343,9 @@ body {
     z-index: 1;
 }
 
-.btn-register i {
-    font-size: 0.9rem;
-    transition: transform 0.3s;
-    animation: arrowSlide 1.5s ease-in-out infinite;
-}
-
-@keyframes arrowSlide {
-    0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(5px); }
-}
-
 .btn-register:hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 30px -8px rgba(44, 94, 71, 0.4);
-}
-
-.btn-register:hover i {
-    animation: none;
-    transform: translateX(8px);
 }
 
 .btn-register:active {
@@ -413,65 +358,71 @@ body {
 }
 
 /* ============================================
-   LOGIN LINK (SAME AS LOGIN)
+   "OR" DIVIDER + SIGN-IN-INSTEAD BUTTON
    ============================================ */
 
-.login-link {
-    text-align: center;
-    margin-top: 1.5rem;
-    font-size: 0.85rem;
-    color: var(--color-text-muted);
-}
-
-.login-link a {
-    color: var(--color-primary-500);
-    text-decoration: none;
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 1.1rem 0;
+    color: var(--color-text-faint);
+    font-size: 0.7rem;
     font-weight: 600;
-    transition: all 0.3s;
-    position: relative;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
 
-.login-link a::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 0;
-    height: 1.5px;
-    background: var(--color-primary-500);
-    transition: width 0.3s;
+.auth-divider span:first-child,
+.auth-divider span:last-child {
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
 }
 
-.login-link a:hover::after {
+.btn-sign-in-instead {
     width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--color-white);
+    color: var(--color-primary-600);
+    border: 1.5px solid var(--color-primary-300);
+    padding: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s;
 }
 
-.login-link a:hover {
-    color: var(--color-primary-700);
+.btn-sign-in-instead:hover {
+    background: var(--color-primary-50);
+    border-color: var(--color-primary-500);
+    transform: translateY(-1px);
 }
 
-.login-link a:focus-visible {
+.btn-sign-in-instead:focus-visible {
     outline: 2px solid var(--color-primary-500);
     outline-offset: 3px;
-    border-radius: 2px;
 }
 
 /* ============================================
-   FOOTER (SAME AS LOGIN)
+   FOOTER
    ============================================ */
 
 .footer-text {
     text-align: center;
-    margin-top: 1.5rem;
+    margin-top: var(--space-6);
     font-size: 0.7rem;
     color: var(--color-text-faint);
     letter-spacing: 0.3px;
-    border-top: 1px solid #f1f5f9;
-    padding-top: 1.2rem;
 }
 
 /* ============================================
-   ALERT & ERROR MESSAGES (SAME AS LOGIN)
+   ALERT MESSAGES
    ============================================ */
 
 .alert {
@@ -479,7 +430,7 @@ body {
     border-left: 4px solid var(--color-danger);
     padding: 10px 14px;
     border-radius: 10px;
-    margin-bottom: 1.2rem;
+    margin-bottom: var(--space-4);
     font-size: 0.85rem;
     display: none;
     animation: fadeSlide 0.3s ease;
@@ -508,44 +459,84 @@ body {
 }
 
 /* ============================================
-   RESPONSIVE (SAME AS LOGIN)
+   RESPONSIVE
    ============================================ */
 
-@media (max-width: 550px) {
-    .register-card {
-        padding: 2rem 1.5rem;
-        border-radius: 20px;
+/* Collapse the 2-column field grid to 1 column before dropping the
+   visual panel, so fields never get too cramped mid-range. */
+@media (max-width: 980px) {
+    .form-grid {
+        grid-template-columns: 1fr;
     }
-    
-    .logo h1 {
-        font-size: 1.3rem;
-    }
-    
-    .corner-decoration {
-        display: none;
+
+    .input-field--full {
+        grid-column: auto;
     }
 }
 
-@media (max-width: 420px) {
-    .register-container { padding: 0 0.5rem; }
-    
-    .logo-icon-wrapper lord-icon {
-        width: 50px !important;
-        height: 50px !important;
+@media (max-width: 860px) {
+    .register-shell {
+        max-height: none;
     }
-    
-    .logo h1 {
-        font-size: 1.1rem;
+
+    .register-panel--visual {
+        display: none;
     }
-    
+
+    .register-panel--form {
+        flex: 1 1 100%;
+        overflow-y: visible;
+    }
+}
+
+@media (max-width: 520px) {
+    body {
+        padding: 0;
+    }
+
+    .register-shell {
+        border-radius: 0;
+        min-height: 100vh;
+    }
+
+    .register-panel--form {
+        padding: var(--space-7) var(--space-5);
+    }
+
+    .register-form-header h2 {
+        font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 380px) {
     .input-wrapper input,
     .input-wrapper select {
         font-size: 0.82rem;
         padding: 10px 14px 10px 38px;
     }
-    
-    .btn-register {
+
+    .btn-register,
+    .btn-sign-in-instead {
         font-size: 0.85rem;
-        padding: 12px;
+        padding: 11px;
+    }
+}
+
+/* Short viewports: tighten vertical rhythm instead of growing the page. */
+@media (max-height: 700px) and (min-width: 861px) {
+    .register-shell {
+        max-height: 94vh;
+    }
+
+    .register-panel--visual {
+        min-height: 0;
+    }
+
+    .register-form-header {
+        margin-bottom: var(--space-3);
+    }
+
+    .input-field {
+        margin-bottom: var(--space-3);
     }
 }
