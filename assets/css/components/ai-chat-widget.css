@@ -7,7 +7,7 @@
 
   Depends on: assets/css/dashboard.css (.sidebar / .sidebar.collapsed
   mobile drawer) for the z-index fix below, and tokens.css for the
-  --color-*/--radius-*/--shadow-*/--space-* custom properties.
+  --color-, --radius-, --shadow- and --space- custom properties.
 */
 
 .ai-chat-widget {
