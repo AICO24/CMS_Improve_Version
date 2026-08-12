@@ -188,7 +188,7 @@
     align-items: center;
 }
 
-.toolbar-filters input,
+.toolbar-filters input[type="date"],
 .toolbar-filters select {
     border: 1px solid #d9e1e8;
     border-radius: 12px;

@@ -1,0 +1,114 @@
+/*
+  Design System — Component: Search Input
+  Floating-label search field (adapted from a Uiverse.io concept by
+  antonypjohnson) used in module toolbars. Replaces the ad-hoc plain
+  inputs (.toolbar-filters input, .search-field) and the bespoke pill
+  search box (.search-box/.mainbox) with one shared component.
+
+  Markup:
+    <div class="search-field">
+        <input type="text" id="X" class="search-field__input" placeholder=" ">
+        <label for="X" class="search-field__label">Search...</label>
+        <span class="search-field__icon" aria-hidden="true"><svg>...</svg></span>
+    </div>
+
+  The label doubles as the placeholder: it sits centered over the input
+  until the input is focused or non-empty, then floats above it. This
+  needs placeholder=" " (a single space, not empty) so :placeholder-shown
+  keeps matching an untouched input.
+*/
+
+.search-field {
+    position: relative;
+    flex: 1 1 220px;
+    min-width: 220px;
+    max-width: 360px;
+}
+
+.search-field__input {
+    width: 100%;
+    height: 50px;
+    padding: 0 44px 0 var(--space-4);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-white);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    color: var(--color-text);
+    appearance: none;
+    transition: border-color var(--duration-base) var(--easing-standard),
+                box-shadow var(--duration-base) var(--easing-standard);
+}
+
+.search-field__input::placeholder {
+    color: transparent;
+}
+
+.search-field__input:hover {
+    border-color: var(--color-primary-300);
+}
+
+.search-field__input:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px rgba(44, 94, 71, 0.15);
+}
+
+.search-field__label {
+    position: absolute;
+    left: var(--space-4);
+    top: 50%;
+    transform: translateY(-50%);
+    max-width: calc(100% - 60px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--fs-body);
+    color: var(--color-text-faint);
+    background: var(--color-white);
+    padding: 0 var(--space-1);
+    pointer-events: none;
+    transition: top var(--duration-base) var(--easing-standard),
+                transform var(--duration-base) var(--easing-standard),
+                font-size var(--duration-base) var(--easing-standard),
+                color var(--duration-base) var(--easing-standard);
+}
+
+.search-field__input:focus ~ .search-field__label,
+.search-field__input:not(:placeholder-shown) ~ .search-field__label {
+    top: 0;
+    transform: translateY(-50%) scale(0.85);
+    font-size: var(--fs-body);
+    color: var(--color-text-muted);
+}
+
+.search-field__input:focus ~ .search-field__label {
+    color: var(--color-primary-500);
+}
+
+.search-field__icon {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    color: var(--color-text-faint);
+    pointer-events: none;
+    transition: color var(--duration-base) var(--easing-standard);
+}
+
+.search-field__icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.search-field__input:focus ~ .search-field__icon {
+    color: var(--color-primary-500);
+}
+
+@media (max-width: 640px) {
+    .search-field {
+        max-width: none;
+        width: 100%;
+    }
+}
