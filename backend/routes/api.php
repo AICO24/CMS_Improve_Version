@@ -99,6 +99,33 @@ if ($path === 'auth/logout' && $requestMethod === 'POST') {
     exit;
 }
 
+if ($path === 'auth/forgot-password' && $requestMethod === 'POST') {
+    $input = readRequestBody();
+    $result = $controller->forgotPassword($input);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if ($path === 'auth/verify-reset-code' && $requestMethod === 'POST') {
+    $input = readRequestBody();
+    $result = $controller->verifyResetCode($input);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if ($path === 'auth/reset-password' && $requestMethod === 'POST') {
+    $input = readRequestBody();
+    $result = $controller->resetPassword($input);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 try {
     $user = AuthMiddleware::authenticate();
 } catch (Exception $e) {

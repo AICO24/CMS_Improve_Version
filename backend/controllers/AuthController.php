@@ -135,6 +135,99 @@ class AuthController {
         return ['success' => true, 'message' => 'Logged out'];
     }
 
+    // Dev-mode password reset: no SMTP/mail capability exists in this
+    // codebase, so instead of emailing the code, it's returned directly in
+    // the response as `dev_code` for the frontend to display. When real
+    // email delivery is added later, stop returning `dev_code` and send
+    // the code instead — verifyResetCode()/resetPassword() below don't
+    // need to change.
+    public function forgotPassword($data) {
+        $email = trim((string) ($data['email'] ?? ''));
+        if ($email === '') {
+            return ['error' => 'Email is required', 'code' => 400];
+        }
+
+        $genericResponse = [
+            'success' => true,
+            'message' => 'If an account exists for that email, a verification code has been generated.',
+        ];
+
+        $user = $this->userModel->findByEmail($email);
+        if (!$user) {
+            // Same response whether or not the account exists, so this
+            // endpoint can't be used to enumerate registered emails.
+            return $genericResponse;
+        }
+
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $expiresAt = date('Y-m-d H:i:s', time() + 600); // 10 minutes
+        $this->userModel->setResetToken($user['user_id'], hash('sha256', $code), $expiresAt);
+
+        $this->auditLogModel->log(
+            'Password reset requested',
+            $user['user_id'],
+            $user['username'],
+            'Authentication',
+            $user['user_id'],
+            'Verification code generated'
+        );
+
+        $genericResponse['dev_code'] = $code;
+        $genericResponse['expires_in_minutes'] = 10;
+        return $genericResponse;
+    }
+
+    public function verifyResetCode($data) {
+        $email = trim((string) ($data['email'] ?? ''));
+        $code = trim((string) ($data['code'] ?? ''));
+        if ($email === '' || $code === '') {
+            return ['error' => 'Email and code are required', 'code' => 400];
+        }
+
+        $user = $this->userModel->verifyResetCode($email, $code);
+        if (!$user) {
+            return ['error' => 'Invalid or expired code', 'code' => 400];
+        }
+
+        return ['success' => true];
+    }
+
+    public function resetPassword($data) {
+        $email = trim((string) ($data['email'] ?? ''));
+        $code = trim((string) ($data['code'] ?? ''));
+        $password = (string) ($data['password'] ?? '');
+        $confirmPassword = (string) ($data['confirm_password'] ?? '');
+
+        if ($email === '' || $code === '' || $password === '' || $confirmPassword === '') {
+            return ['error' => 'Email, code, and both password fields are required', 'code' => 400];
+        }
+        if ($password !== $confirmPassword) {
+            return ['error' => 'Password confirmation does not match', 'code' => 400];
+        }
+        if (strlen($password) < 6) {
+            return ['error' => 'Password must be at least 6 characters', 'code' => 400];
+        }
+
+        $user = $this->userModel->verifyResetCode($email, $code);
+        if (!$user) {
+            return ['error' => 'Invalid or expired code', 'code' => 400];
+        }
+
+        $this->userModel->updatePasswordHash($user['user_id'], password_hash($password, PASSWORD_BCRYPT));
+        $this->userModel->clearResetToken($user['user_id']);
+
+        $this->auditLogModel->log(
+            'Password reset completed',
+            $user['user_id'],
+            $user['username'],
+            'Authentication',
+            $user['user_id'],
+            'Password changed via forgot-password flow'
+        );
+
+        return ['success' => true, 'message' => 'Password reset successful'];
+    }
+
     public function me($userId) {
         $user = $this->userModel->findById($userId);
         if (!$user) {

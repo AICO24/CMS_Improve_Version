@@ -120,6 +120,27 @@ class ApiClient {
         });
     }
 
+    async forgotPassword(email) {
+        return await this.request('auth/forgot-password', {
+            method: 'POST',
+            body: { email },
+        });
+    }
+
+    async verifyResetCode(email, code) {
+        return await this.request('auth/verify-reset-code', {
+            method: 'POST',
+            body: { email, code },
+        });
+    }
+
+    async resetPassword(email, code, password, confirmPassword) {
+        return await this.request('auth/reset-password', {
+            method: 'POST',
+            body: { email, code, password, confirm_password: confirmPassword },
+        });
+    }
+
     async getMe() {
         const result = await this.request('auth/me', { method: 'GET' });
         if (result && result.role) {

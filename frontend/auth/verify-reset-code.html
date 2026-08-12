@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Code | Cemetery Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/tokens.css">
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/spacing.css">
+    <link rel="stylesheet" href="../../assets/css/shadows.css">
+    <link rel="stylesheet" href="../../assets/css/animations.css">
+    <link rel="stylesheet" href="../../assets/css/shared/base.css">
+    <link rel="stylesheet" href="../../assets/css/components/buttons.css">
+    <link rel="stylesheet" href="../../assets/css/auth/reset-flow.css">
+</head>
+<body>
+
+    <div class="bg-overlay"></div>
+
+    <div class="reset-container">
+        <div class="reset-card">
+            <div class="step-indicator">
+                <span class="step-indicator__dot is-done"></span>
+                <span class="step-indicator__dot is-active"></span>
+                <span class="step-indicator__dot"></span>
+            </div>
+
+            <div class="reset-icon"><i class="fas fa-shield-halved"></i></div>
+
+            <div class="reset-header">
+                <h1>Verify Code</h1>
+                <p class="reset-subtitle">Enter the 6-digit verification code from the previous step.</p>
+            </div>
+
+            <div id="alert" class="alert" role="alert" aria-live="polite"></div>
+
+            <div id="devCodePanel" class="dev-code-panel" aria-live="polite">
+                <div class="dev-code-panel__label">Your verification code</div>
+                <div class="dev-code-panel__code" id="devCodeValue">------</div>
+                <div class="dev-code-panel__note">Shown here because this project doesn't have email sending configured yet.</div>
+            </div>
+
+            <form id="verifyCodeForm" action="javascript:void(0);">
+                <div class="code-input-row" role="group" aria-label="6-digit verification code">
+                    <input type="text" inputmode="numeric" maxlength="1" class="code-digit" data-index="0" autocomplete="one-time-code">
+                    <input type="text" inputmode="numeric" maxlength="1" class="code-digit" data-index="1">
+                    <input type="text" inputmode="numeric" maxlength="1" class="code-digit" data-index="2">
+                    <input type="text" inputmode="numeric" maxlength="1" class="code-digit" data-index="3">
+                    <input type="text" inputmode="numeric" maxlength="1" class="code-digit" data-index="4">
+                    <input type="text" inputmode="numeric" maxlength="1" class="code-digit" data-index="5">
+                </div>
+                <div class="error-message" id="codeError" role="alert" style="text-align:center; margin-bottom: var(--space-4);"></div>
+
+                <div class="resend-row">
+                    Didn't receive the code?
+                    <button type="button" class="resend-link" id="resendBtn">Resend</button>
+                </div>
+
+                <button type="submit" class="btn-primary-action" id="submitBtn">
+                    <span>Verify Code</span>
+                    <i class="fas fa-check"></i>
+                </button>
+            </form>
+
+            <div class="reset-links">
+                <p>Wrong email? <a href="forgot-password.html">Start over</a></p>
+            </div>
+
+            <div class="footer-text">
+                <p>© 2026 Cemetery Management System. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../assets/js/shared/api.js"></script>
+    <script src="../../assets/js/shared/button-loading.js"></script>
+    <script src="../../assets/js/auth/verify-reset-code.js"></script>
+</body>
+</html>

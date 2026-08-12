@@ -202,6 +202,34 @@ class User {
         return $stmt->execute([$newHash, $userId]);
     }
 
+    public function setResetToken($userId, $tokenHash, $expiresAt) {
+        $stmt = $this->db->prepare("UPDATE users SET reset_token_hash = ?, reset_token_expires_at = ? WHERE user_id = ?");
+        return $stmt->execute([$tokenHash, $expiresAt, $userId]);
+    }
+
+    public function clearResetToken($userId) {
+        $stmt = $this->db->prepare("UPDATE users SET reset_token_hash = NULL, reset_token_expires_at = NULL WHERE user_id = ?");
+        return $stmt->execute([$userId]);
+    }
+
+    // Verifies a plaintext reset code against the stored hash for this
+    // email and confirms it hasn't expired. Returns the user row on
+    // success, or null if the email is unknown, no code is pending, the
+    // code doesn't match, or it has expired.
+    public function verifyResetCode($email, $code) {
+        $user = $this->findByEmail($email);
+        if (!$user || empty($user['reset_token_hash']) || empty($user['reset_token_expires_at'])) {
+            return null;
+        }
+        if (strtotime($user['reset_token_expires_at']) < time()) {
+            return null;
+        }
+        if (!hash_equals($user['reset_token_hash'], hash('sha256', $code))) {
+            return null;
+        }
+        return $user;
+    }
+
     public function repairDefaultUserHashes() {
         $defaults = [
             'admin' => 'admin123',

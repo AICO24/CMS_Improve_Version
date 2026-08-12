@@ -1,0 +1,446 @@
+/* ============================================
+   PASSWORD RESET FLOW — shared styles for
+   forgot-password.html, verify-reset-code.html,
+   reset-password.html (Batch D). Same tokens and
+   card language as login/register, but a single
+   centered card per step instead of a split
+   screen — matches the approved 3-step mockup.
+   ============================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: var(--color-neutral-900);
+    position: relative;
+}
+
+.bg-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    background:
+        radial-gradient(ellipse at 20% 50%, rgba(44, 94, 71, 0.3) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 50%, rgba(44, 94, 71, 0.2) 0%, transparent 60%),
+        radial-gradient(ellipse at 50% 100%, rgba(44, 94, 71, 0.15) 0%, transparent 50%),
+        linear-gradient(135deg, #0f172a 0%, #1a2a3a 50%, #0f172a 100%);
+}
+
+.bg-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 30% 40%, rgba(44, 94, 71, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 70% 60%, rgba(44, 94, 71, 0.06) 0%, transparent 50%);
+    animation: bgPulse 8s ease-in-out infinite alternate;
+}
+
+@keyframes bgPulse {
+    0% { opacity: 0.5; transform: scale(1); }
+    100% { opacity: 1; transform: scale(1.1); }
+}
+
+/* ============================================
+   CARD
+   ============================================ */
+
+.reset-container {
+    width: 100%;
+    max-width: 420px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    z-index: 1;
+}
+
+.reset-card {
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 2.2rem 2rem;
+    box-shadow:
+        0 40px 80px -20px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+
+/* --- Step indicator (1 Request -> 2 Verify -> 3 Reset) --- */
+
+.step-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: var(--space-6);
+}
+
+.step-indicator__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-neutral-200);
+    transition: background 0.3s, width 0.3s;
+}
+
+.step-indicator__dot.is-active {
+    background: var(--color-primary-500);
+    width: 22px;
+    border-radius: 4px;
+}
+
+.step-indicator__dot.is-done {
+    background: var(--color-primary-300);
+}
+
+/* --- Header --- */
+
+.reset-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto var(--space-4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--color-primary-50), var(--color-primary-100));
+    color: var(--color-primary-600);
+    font-size: 1.5rem;
+}
+
+.reset-header {
+    text-align: center;
+    margin-bottom: var(--space-6);
+}
+
+.reset-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a2a3a;
+    margin-bottom: 0.3rem;
+}
+
+.reset-subtitle {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+/* ============================================
+   FORM FIELDS (shared with login/register)
+   ============================================ */
+
+.input-field {
+    margin-bottom: var(--space-4);
+}
+
+.input-field label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-neutral-700);
+    margin-bottom: 6px;
+    letter-spacing: 0.2px;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 14px;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.input-wrapper input:focus ~ .input-icon {
+    color: var(--color-primary-500);
+}
+
+.input-wrapper input {
+    width: 100%;
+    min-width: 0;
+    padding: 12px 16px 12px 44px;
+    font-size: 0.9rem;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-neutral-50);
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    outline: none;
+    color: #1a2a3a;
+}
+
+.input-wrapper input:focus {
+    border-color: var(--color-primary-500);
+    background: var(--color-white);
+    box-shadow: 0 0 0 4px rgba(44, 94, 71, 0.08), 0 0 0 2px rgba(44, 94, 71, 0.02);
+}
+
+.input-wrapper input::placeholder {
+    color: var(--color-text-faint);
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 14px;
+    cursor: pointer;
+    color: var(--color-text-faint);
+    font-size: 0.9rem;
+    padding: 8px;
+    background: none;
+    border: none;
+    font-family: inherit;
+    border-radius: var(--radius-sm);
+    z-index: 2;
+}
+
+.toggle-password:hover {
+    color: var(--color-primary-500);
+}
+
+.toggle-password:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+/* ============================================
+   6-DIGIT CODE INPUT
+   ============================================ */
+
+.code-input-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: var(--space-5);
+}
+
+.code-input-row input {
+    width: 44px;
+    height: 52px;
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1a2a3a;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-neutral-50);
+    outline: none;
+    transition: all 0.3s;
+}
+
+.code-input-row input:focus {
+    border-color: var(--color-primary-500);
+    background: var(--color-white);
+    box-shadow: 0 0 0 4px rgba(44, 94, 71, 0.08);
+}
+
+.resend-row {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-5);
+}
+
+.resend-link {
+    color: var(--color-primary-500);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font: inherit;
+    padding: 0;
+}
+
+.resend-link:hover:not(:disabled) {
+    color: var(--color-primary-700);
+    text-decoration: underline;
+}
+
+.resend-link:disabled {
+    color: var(--color-text-faint);
+    cursor: not-allowed;
+}
+
+/* ============================================
+   DEV-MODE CODE DISPLAY
+   (no SMTP configured yet — see Batch D notes)
+   ============================================ */
+
+.dev-code-panel {
+    display: none;
+    background: var(--color-primary-50);
+    border: 1.5px dashed var(--color-primary-300);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    margin-bottom: var(--space-5);
+    text-align: center;
+}
+
+.dev-code-panel.show {
+    display: block;
+}
+
+.dev-code-panel__label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary-600);
+    margin-bottom: 6px;
+}
+
+.dev-code-panel__code {
+    font-family: 'Inter', monospace;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #1a2a3a;
+}
+
+.dev-code-panel__note {
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.btn-primary-action {
+    width: 100%;
+    background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700));
+    color: white;
+    border: none;
+    padding: 13px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.btn-primary-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px -8px rgba(44, 94, 71, 0.4);
+}
+
+.btn-primary-action:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.btn-primary-action:focus-visible {
+    outline: 2px solid var(--color-primary-300);
+    outline-offset: 3px;
+}
+
+.reset-links {
+    text-align: center;
+    margin-top: var(--space-5);
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}
+
+.reset-links a {
+    color: var(--color-primary-500);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.reset-links a:hover {
+    color: var(--color-primary-700);
+    text-decoration: underline;
+}
+
+.footer-text {
+    text-align: center;
+    margin-top: var(--space-6);
+    font-size: 0.7rem;
+    color: var(--color-text-faint);
+}
+
+/* ============================================
+   ALERT MESSAGES
+   ============================================ */
+
+.alert {
+    background: var(--color-danger-soft);
+    border-left: 4px solid var(--color-danger);
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin-bottom: var(--space-4);
+    font-size: 0.85rem;
+    display: none;
+    animation: fadeSlide 0.3s ease;
+}
+
+.alert.show {
+    display: block;
+}
+
+.alert-success {
+    background: var(--color-success-soft);
+    border-left-color: var(--color-success);
+    color: var(--color-success-strong);
+}
+
+@keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.error-message {
+    color: var(--color-danger);
+    font-size: 0.7rem;
+    margin-top: 5px;
+    margin-left: 4px;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 480px) {
+    body {
+        padding: 0.75rem;
+    }
+
+    .reset-card {
+        padding: 1.75rem 1.5rem;
+        border-radius: 20px;
+    }
+}
+
+@media (max-height: 700px) {
+    .reset-header {
+        margin-bottom: var(--space-4);
+    }
+
+    .input-field {
+        margin-bottom: var(--space-3);
+    }
+}
