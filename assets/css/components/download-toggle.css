@@ -1,0 +1,247 @@
+/*
+  Design System — Component: Download Toggle
+  Animated "Download -> Open/Saved" checkbox button (adapted from a
+  Uiverse.io concept by Na3ar-17) used for the Reports export actions.
+  Geometry/timing kept close to the original — the 3.5s "installed"
+  delay is load-bearing: reports.js waits out the same duration before
+  treating the export as ready, so the animation finishing lines up
+  with the generated file actually being available.
+
+  Markup:
+    <div class="dl-toggle dl-toggle--pdf">
+        <label class="dl-toggle__label">
+            <input type="checkbox" class="dl-toggle__input" id="X">
+            <span class="dl-toggle__circle">
+                <i class="fas fa-file-pdf dl-toggle__icon"></i>
+                <div class="dl-toggle__square"></div>
+            </span>
+            <span class="dl-toggle__title">Download</span>
+            <span class="dl-toggle__title dl-toggle__title--done">Open</span>
+        </label>
+    </div>
+
+  JS owns the click/change wiring (see reports.js) — this file is
+  presentation only.
+*/
+
+.dl-toggle {
+    display: inline-flex;
+}
+
+.dl-toggle--pdf {
+    --dl-color: var(--color-danger);
+    --dl-color-dark: var(--color-danger-strong);
+}
+
+.dl-toggle--excel {
+    --dl-color: var(--color-success);
+    --dl-color-dark: #128a3e;
+}
+
+.dl-toggle__label {
+    background-color: transparent;
+    border: 2px solid var(--dl-color);
+    display: flex;
+    align-items: center;
+    border-radius: var(--radius-pill);
+    width: 160px;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    padding: 5px;
+    position: relative;
+}
+
+.dl-toggle__label::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--color-white);
+    width: 8px;
+    height: 8px;
+    transition: all 0.4s ease;
+    border-radius: 100%;
+    margin: auto;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.dl-toggle__input {
+    display: none;
+}
+
+.dl-toggle__title {
+    font-size: var(--fs-body);
+    font-family: var(--font-sans);
+    font-weight: var(--fw-semibold);
+    color: var(--color-white);
+    transition: all 0.4s ease;
+    position: absolute;
+    right: 18px;
+    bottom: 14px;
+    text-align: center;
+}
+
+.dl-toggle__title--done {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.dl-toggle__circle {
+    height: 45px;
+    width: 45px;
+    border-radius: 50%;
+    background-color: var(--dl-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.4s ease;
+    position: relative;
+    box-shadow: 0 0 0 0 rgb(255, 255, 255);
+    overflow: hidden;
+}
+
+.dl-toggle__icon {
+    color: var(--color-white);
+    font-size: 18px;
+    width: 30px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.4s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dl-toggle__square {
+    aspect-ratio: 1;
+    width: 15px;
+    border-radius: 2px;
+    background-color: var(--color-white);
+    opacity: 0;
+    visibility: hidden;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.4s ease;
+}
+
+.dl-toggle__circle::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    background-color: var(--dl-color-dark);
+    width: 100%;
+    height: 0;
+    transition: all 0.4s ease;
+}
+
+/* Generating — checkbox is disabled by JS while the export builds */
+.dl-toggle__label:has(.dl-toggle__input:disabled) {
+    cursor: wait;
+}
+
+/* Checked = generating -> installed sequence (see @keyframes below) */
+.dl-toggle__label:has(.dl-toggle__input:checked) {
+    width: 57px;
+    animation: dl-toggle-installed 0.4s ease 3.5s forwards;
+}
+
+.dl-toggle__label:has(.dl-toggle__input:checked)::before {
+    animation: dl-toggle-rotate 3s ease-in-out 0.4s forwards;
+}
+
+.dl-toggle__input:checked + .dl-toggle__circle {
+    animation:
+        dl-toggle-pulse 1s forwards,
+        dl-toggle-circle-delete 0.2s ease 3.5s forwards;
+    rotate: 180deg;
+}
+
+.dl-toggle__input:checked + .dl-toggle__circle::before {
+    animation: dl-toggle-installing 3s ease-in-out forwards;
+}
+
+.dl-toggle__input:checked + .dl-toggle__circle .dl-toggle__icon {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.dl-toggle__input:checked ~ .dl-toggle__circle .dl-toggle__square {
+    opacity: 1;
+    visibility: visible;
+}
+
+.dl-toggle__input:checked ~ .dl-toggle__title {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.dl-toggle__input:checked ~ .dl-toggle__title--done {
+    animation: dl-toggle-show-done 0.4s ease 3.5s forwards;
+}
+
+@keyframes dl-toggle-pulse {
+    0% {
+        scale: 0.95;
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+    }
+    70% {
+        scale: 1;
+        box-shadow: 0 0 0 16px rgba(255, 255, 255, 0);
+    }
+    100% {
+        scale: 0.95;
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    }
+}
+
+@keyframes dl-toggle-installing {
+    from { height: 0; }
+    to { height: 100%; }
+}
+
+@keyframes dl-toggle-rotate {
+    0% {
+        transform: rotate(-90deg) translate(27px) rotate(0);
+        opacity: 1;
+        visibility: visible;
+    }
+    99% {
+        transform: rotate(270deg) translate(27px) rotate(270deg);
+        opacity: 1;
+        visibility: visible;
+    }
+    100% {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+@keyframes dl-toggle-installed {
+    100% {
+        width: 150px;
+        border-color: var(--color-success);
+    }
+}
+
+@keyframes dl-toggle-circle-delete {
+    100% {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+@keyframes dl-toggle-show-done {
+    100% {
+        opacity: 1;
+        visibility: visible;
+        right: 56px;
+    }
+}

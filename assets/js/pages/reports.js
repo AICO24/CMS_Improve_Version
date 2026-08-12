@@ -254,26 +254,43 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    document.getElementById('applyRevenueFilter').addEventListener('click', loadRevenue);
+    document.getElementById('applyRevenueFilter').addEventListener('click', () => {
+        loadRevenue();
+        pdfToggle.reset();
+        excelToggle.reset();
+    });
 
     // Feature 12: PDF & Excel Export
-    document.getElementById('exportPdfBtn').addEventListener('click', () => {
+    function triggerFileDownload(url, filename) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+
+    async function generatePdfExport() {
         const element = document.getElementById('reportExportContainer');
+        const filename = `Cemetery_Management_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+        if (typeof html2pdf === 'undefined') {
+            window.print();
+            return null;
+        }
         const opt = {
             margin:       0.5,
-            filename:     `Cemetery_Management_Report_${new Date().toISOString().split('T')[0]}.pdf`,
+            filename,
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { scale: 2 },
             jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
         };
-        if (typeof html2pdf !== 'undefined') {
-            html2pdf().set(opt).from(element).save();
-        } else {
-            window.print();
-        }
-    });
+        const blob = await html2pdf().set(opt).from(element).outputPdf('blob');
+        const url = URL.createObjectURL(blob);
+        triggerFileDownload(url, filename);
+        return { url, filename };
+    }
 
-    document.getElementById('exportExcelBtn').addEventListener('click', () => {
+    function generateExcelExport() {
         const wb = XLSX.utils.book_new();
         const container = document.getElementById('reportExportContainer');
         const tables = container.querySelectorAll('table');
@@ -286,7 +303,79 @@ document.addEventListener('DOMContentLoaded', async function() {
             const ws = XLSX.utils.html_to_sheet(container);
             XLSX.utils.book_append_sheet(wb, ws, "Report Summary");
         }
-        XLSX.writeFile(wb, `Cemetery_Management_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+        const filename = `Cemetery_Management_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        triggerFileDownload(url, filename);
+        return { url, filename };
+    }
+
+    // Drives the .dl-toggle checkbox through Download -> (generating, ~3.9s
+    // animation) -> Open/Saved. The 3900ms floor matches the CSS "installed"
+    // delay in download-toggle.css so the button only flips once the file
+    // is actually ready, even if generation resolves faster than the animation.
+    function setupDownloadToggle(id, { run, onOpen }) {
+        const checkbox = document.getElementById(id);
+        if (!checkbox) return { reset() {} };
+        const MIN_ANIMATION_MS = 3900;
+        let state = 'idle';
+        let result = null;
+
+        checkbox.addEventListener('click', (e) => {
+            if (state === 'ready') {
+                e.preventDefault();
+                onOpen(result);
+            }
+        });
+
+        checkbox.addEventListener('change', async () => {
+            if (!checkbox.checked) return;
+            state = 'working';
+            checkbox.disabled = true;
+            const start = Date.now();
+            try {
+                result = await run();
+            } catch (error) {
+                console.error('Export failed:', error);
+                checkbox.checked = false;
+                checkbox.disabled = false;
+                state = 'idle';
+                alert('Export failed. Please try again.');
+                return;
+            }
+            const remaining = MIN_ANIMATION_MS - (Date.now() - start);
+            if (remaining > 0) await new Promise(r => setTimeout(r, remaining));
+            checkbox.disabled = false;
+            state = 'ready';
+        });
+
+        return {
+            reset() {
+                if (result?.url) URL.revokeObjectURL(result.url);
+                result = null;
+                state = 'idle';
+                checkbox.checked = false;
+                checkbox.disabled = false;
+            }
+        };
+    }
+
+    const pdfToggle = setupDownloadToggle('exportPdfBtn', {
+        run: generatePdfExport,
+        onOpen: (result) => { if (result?.url) window.open(result.url, '_blank'); }
+    });
+
+    const excelToggle = setupDownloadToggle('exportExcelBtn', {
+        run: generateExcelExport,
+        onOpen: (result) => { if (result) triggerFileDownload(result.url, result.filename); }
+    });
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            pdfToggle.reset();
+            excelToggle.reset();
+        });
     });
 
     document.getElementById('revDateFrom').value = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0];

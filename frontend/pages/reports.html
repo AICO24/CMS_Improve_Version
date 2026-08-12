@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="../../assets/css/components/tables.css">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/reports.css">
+    <link rel="stylesheet" href="../../assets/css/components/download-toggle.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="dashboard-body">
@@ -108,12 +109,28 @@
                         <button class="tab-btn" data-tab="expiration">Expiration</button>
                     </div>
                     <div class="report-tabs-actions">
-                        <button id="exportPdfBtn" class="btn btn--danger">
-                            <i class="fas fa-file-pdf"></i> Export to PDF
-                        </button>
-                        <button id="exportExcelBtn" class="btn btn--success">
-                            <i class="fas fa-file-excel"></i> Export to Excel
-                        </button>
+                        <div class="dl-toggle dl-toggle--pdf">
+                            <label class="dl-toggle__label">
+                                <input type="checkbox" class="dl-toggle__input" id="exportPdfBtn" aria-label="Export report to PDF">
+                                <span class="dl-toggle__circle">
+                                    <i class="fas fa-file-pdf dl-toggle__icon"></i>
+                                    <div class="dl-toggle__square"></div>
+                                </span>
+                                <span class="dl-toggle__title">Download</span>
+                                <span class="dl-toggle__title dl-toggle__title--done">Open</span>
+                            </label>
+                        </div>
+                        <div class="dl-toggle dl-toggle--excel">
+                            <label class="dl-toggle__label">
+                                <input type="checkbox" class="dl-toggle__input" id="exportExcelBtn" aria-label="Export report to Excel">
+                                <span class="dl-toggle__circle">
+                                    <i class="fas fa-file-excel dl-toggle__icon"></i>
+                                    <div class="dl-toggle__square"></div>
+                                </span>
+                                <span class="dl-toggle__title">Download</span>
+                                <span class="dl-toggle__title dl-toggle__title--done">Saved</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
