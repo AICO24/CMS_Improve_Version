@@ -622,6 +622,13 @@ body {
 /* Short viewports (the original "have to zoom out" complaint): let the
    form panel scroll internally instead of growing the page. */
 @media (max-height: 700px) and (min-width: 861px) {
+    /* body's own padding sits on top of the shell's max-height, so it
+       has to shrink too or 94vh + 1.5rem of padding can still exceed
+       100vh on short viewports and force a page-level scrollbar. */
+    body {
+        padding: 0.75rem;
+    }
+
     .login-shell {
         max-height: 94vh;
     }

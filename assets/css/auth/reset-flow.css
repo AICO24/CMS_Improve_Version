@@ -60,6 +60,7 @@ body {
     max-width: 420px;
     max-height: 90vh;
     overflow-y: auto;
+    overflow-x: hidden;
     position: relative;
     z-index: 1;
 }
@@ -432,6 +433,29 @@ body {
     .reset-card {
         padding: 1.75rem 1.5rem;
         border-radius: 20px;
+    }
+}
+
+/* The 6 code boxes at their default 44px+8px gap need ~304px, which
+   doesn't fit inside the card below ~380px viewports — shrink them so
+   the row fits with room to spare instead of overflowing the card. */
+@media (max-width: 380px) {
+    body {
+        padding: 0.5rem;
+    }
+
+    .reset-card {
+        padding: 1.5rem 1rem;
+    }
+
+    .code-input-row {
+        gap: 6px;
+    }
+
+    .code-input-row input {
+        width: 36px;
+        height: 46px;
+        font-size: 1.1rem;
     }
 }
 
