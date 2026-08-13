@@ -274,6 +274,22 @@ body.dark .ui-switch .slider {
     background: rgba(44, 94, 71, 0.08);
 }
 
+.btn-nav-cta {
+    background-color: var(--primary);
+    color: #fff;
+    padding: 10px 22px;
+    border-radius: 999px;
+    font-weight: 700;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+.btn-nav-cta:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
 .hamburger {
     display: none;
     flex-direction: column;
@@ -628,21 +644,8 @@ body.dark .developers {
 }
 .footer .container {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-.footer-socials {
-    display: flex;
-    gap: 20px;
-}
-.footer-socials a {
-    color: #94a3b8;
-    transition: color 0.2s;
-}
-.footer-socials a:hover {
-    color: #fff;
 }
 
 /* ============================================
