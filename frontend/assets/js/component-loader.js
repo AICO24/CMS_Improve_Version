@@ -5,6 +5,8 @@
   const placeholders = {
     '#navbar-placeholder': `${basePath}src/components/layout/navbar.html`,
     '#hero-placeholder': `${basePath}src/components/sections/hero.html`,
+    '#features-placeholder': `${basePath}src/components/sections/features.html`,
+    '#how-it-works-placeholder': `${basePath}src/components/sections/how-it-works.html`,
     '#main-content': `${basePath}src/components/sections/developer-team.html`,
     '#page-footer': `${basePath}src/components/layout/footer.html`
   };
