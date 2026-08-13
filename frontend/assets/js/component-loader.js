@@ -29,9 +29,9 @@
   }
 
   document.addEventListener('DOMContentLoaded', async function () {
-    for (const [selector, url] of Object.entries(placeholders)) {
-      await loadPartial(selector, url);
-    }
+    await Promise.all(
+      Object.entries(placeholders).map(([selector, url]) => loadPartial(selector, url))
+    );
     document.dispatchEvent(new Event('components:loaded'));
   });
 })();
