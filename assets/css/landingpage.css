@@ -8,7 +8,7 @@
 }
 
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--font-sans);
     background-color: var(--bg);
     color: var(--text);
     line-height: 1.6;
@@ -33,30 +33,30 @@ ul {
 
 :root {
     color-scheme: light;
-    --bg: #f5f7fb;
-    --surface: #ffffff;
-    --surface-soft: #eef2f6;
-    --text: #0f172a;
-    --muted: #475569;
-    --primary: #3b82f6;
-    --primary-dark: #2563eb;
-    --border: rgba(15, 23, 42, 0.08);
+    --bg: var(--color-bg);
+    --surface: var(--color-surface);
+    --surface-soft: var(--color-surface-soft);
+    --text: var(--color-text);
+    --muted: var(--color-text-muted);
+    --primary: var(--color-primary-500);
+    --primary-dark: var(--color-primary-700);
+    --border: var(--color-border);
     --shadow: 0 16px 50px rgba(15, 23, 42, 0.08);
-    --accent: #10b981;
+    --accent: var(--color-success);
 }
 
 body.dark {
     color-scheme: dark;
-    --bg: #0b1220;
-    --surface: #111827;
-    --surface-soft: #1f2937;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --primary: #60a5fa;
-    --primary-dark: #93c5fd;
-    --border: rgba(148, 163, 184, 0.15);
+    --bg: var(--color-primary-900);
+    --surface: var(--color-neutral-800);
+    --surface-soft: var(--color-primary-800);
+    --text: var(--color-neutral-50);
+    --muted: var(--color-neutral-300);
+    --primary: var(--color-primary-300);
+    --primary-dark: var(--color-primary-200);
+    --border: rgba(166, 205, 182, 0.18);
     --shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
-    --accent: #34d399;
+    --accent: var(--color-success);
 }
 
 body,
@@ -224,12 +224,12 @@ body.dark .navbar {
 }
 
 .ui-switch input:checked + .slider {
-    background: rgba(96, 165, 250, 0.24);
+    background: rgba(122, 167, 122, 0.24);
 }
 
 .ui-switch input:checked + .slider .circle {
     transform: translateX(24px);
-    background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+    background: linear-gradient(135deg, var(--color-primary-300) 0%, var(--color-primary-600) 100%);
 }
 
 body.dark .ui-switch {
@@ -307,7 +307,7 @@ body.dark .ui-switch .slider {
     background: var(--surface-soft);
 }
 body.dark .developers {
-    background: #111827;
+    background: var(--surface-soft);
 }
 
 .team-grid.team-accordion {
@@ -323,14 +323,14 @@ body.dark .developers {
     border-radius: 22px;
     background: var(--surface);
     overflow: hidden;
-    border: 1px solid rgba(255, 90, 145, 0.2);
+    border: 1px solid var(--color-primary-200);
     transition: flex 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
     display: flex;
     flex-direction: column;
 }
 .team-card:hover {
     flex: 3;
-    border-color: rgba(255, 90, 145, 0.45);
+    border-color: var(--color-primary-400);
     box-shadow: 0 28px 70px rgba(15, 23, 42, 0.18);
 }
 .card-panel {
