@@ -4,6 +4,7 @@
     : '/';
   const placeholders = {
     '#navbar-placeholder': `${basePath}src/components/layout/navbar.html`,
+    '#hero-placeholder': `${basePath}src/components/sections/hero.html`,
     '#main-content': `${basePath}src/components/sections/developer-team.html`,
     '#page-footer': `${basePath}src/components/layout/footer.html`
   };
