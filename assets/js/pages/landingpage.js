@@ -3,11 +3,6 @@
 //  are fetched asynchronously by component-loader.js)
 // ============================================
 document.addEventListener('components:loaded', function () {
-    // ============================================
-    //  MOBILE NAV TOGGLE
-    // ============================================
-    const hamburger = document.getElementById('hamburger');
-    const navLinks = document.getElementById('navLinks');
     const themeToggle = document.getElementById('themeToggle');
     const storedTheme = localStorage.getItem('siteTheme');
 
@@ -30,21 +25,6 @@ document.addEventListener('components:loaded', function () {
             const nextTheme = themeToggle.checked ? 'dark' : 'light';
             applyTheme(nextTheme);
             localStorage.setItem('siteTheme', nextTheme);
-        });
-    }
-
-    if (hamburger && navLinks) {
-        hamburger.addEventListener('click', () => {
-            const isOpen = navLinks.classList.toggle('open');
-            hamburger.setAttribute('aria-expanded', String(isOpen));
-        });
-
-        // Close nav when a link is clicked
-        navLinks.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => {
-                navLinks.classList.remove('open');
-                hamburger.setAttribute('aria-expanded', 'false');
-            });
         });
     }
 
