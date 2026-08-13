@@ -1,10 +1,9 @@
 /* ============================================
    REGISTER PAGE — SPLIT-SCREEN DESIGN (Batch C)
-   Mirrors login.css's structure/tokens; visual
-   panel uses a solid brand gradient instead of
-   a photo, and the form uses a 2-column grid to
-   fit the larger field count without excess
-   vertical scroll.
+   Mirrors login.css's structure/tokens, including
+   the photo + scrim visual panel; the form uses a
+   2-column grid to fit the larger field count
+   without excess vertical scroll.
    ============================================ */
 
 * {
@@ -79,16 +78,30 @@ body {
     display: flex;
 }
 
-/* --- Visual panel (solid brand gradient, no photo) --- */
+/* --- Visual panel (photo, mirrors login.css's .login-panel--visual) --- */
 
 .register-panel--visual {
     position: relative;
     flex: 1 1 32%;
     min-height: 560px;
-    align-items: center;
+    align-items: flex-end;
+}
+
+.register-panel__photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.register-panel__scrim {
+    position: absolute;
+    inset: 0;
     background:
-        radial-gradient(circle at 30% 20%, rgba(122, 167, 122, 0.35) 0%, transparent 55%),
-        linear-gradient(160deg, var(--color-primary-700) 0%, var(--color-primary-900) 100%);
+        linear-gradient(180deg, rgba(15, 23, 42, 0.35) 0%, rgba(15, 23, 42, 0.55) 55%, rgba(15, 23, 42, 0.92) 100%),
+        radial-gradient(circle at 30% 20%, rgba(44, 94, 71, 0.35) 0%, transparent 55%);
 }
 
 .register-panel__content {
