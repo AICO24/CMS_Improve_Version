@@ -35,13 +35,15 @@ document.addEventListener('components:loaded', function () {
 
     if (hamburger && navLinks) {
         hamburger.addEventListener('click', () => {
-            navLinks.classList.toggle('open');
+            const isOpen = navLinks.classList.toggle('open');
+            hamburger.setAttribute('aria-expanded', String(isOpen));
         });
 
         // Close nav when a link is clicked
         navLinks.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', () => {
                 navLinks.classList.remove('open');
+                hamburger.setAttribute('aria-expanded', 'false');
             });
         });
     }

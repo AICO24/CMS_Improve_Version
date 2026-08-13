@@ -67,6 +67,24 @@ textarea {
 }
 
 /* ============================================
+   FOCUS STATES
+   ============================================ */
+a:focus-visible,
+button:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 3px;
+    border-radius: var(--radius-sm);
+}
+.ui-switch input:focus-visible + .slider {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+.team-card:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 3px;
+}
+
+/* ============================================
    BUTTONS
    ============================================ */
 .btn-primary {
@@ -299,6 +317,9 @@ body.dark .ui-switch .slider {
     width: 40px;
     height: 40px;
     cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 0;
 }
 .hamburger span {
     width: 22px;
@@ -555,7 +576,8 @@ body.dark .developers {
     display: flex;
     flex-direction: column;
 }
-.team-card:hover {
+.team-card:hover,
+.team-card:focus-visible {
     flex: 3;
     border-color: var(--color-primary-400);
     box-shadow: 0 28px 70px rgba(15, 23, 42, 0.18);
@@ -573,7 +595,8 @@ body.dark .developers {
     object-fit: cover;
     transition: transform 0.4s ease;
 }
-.team-card:hover .card-panel img {
+.team-card:hover .card-panel img,
+.team-card:focus-visible .card-panel img {
     transform: scale(1.08);
 }
 .card-meta {
