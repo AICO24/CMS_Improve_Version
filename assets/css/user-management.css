@@ -307,12 +307,10 @@
     min-width: 900px;
 }
 
-/* .data-table th/td padding/color now come from assets/css/components/tables.css (Batch 5);
-   this file's own .data-table tr border-bottom rule below is kept as-is */
-
-.data-table tr {
-    border-bottom: 1px solid #edf2f7;
-}
+/* .data-table th/td padding/color/border now come from assets/css/components/tables.css
+   (Table UI Enhancement batch); this file's own .data-table tr border-bottom rule was
+   removed since it conflicted with the shared tinted separator (same specificity,
+   plain gray would win the cascade over the new tinted color) */
 
 .data-table tr:last-child {
     border-bottom: none;
