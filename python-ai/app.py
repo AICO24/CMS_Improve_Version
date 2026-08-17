@@ -108,7 +108,8 @@ EXTRACTION_SYSTEM_PROMPT = (
     "object — no markdown, no code fences, no prose, no explanation.\n\n"
     "Schema: {\"lot_type\": string|null, \"budget\": number|null, "
     "\"section\": string|null, \"lot_type_no_preference\": boolean, "
-    "\"budget_no_preference\": boolean, \"section_no_preference\": boolean}\n\n"
+    "\"budget_no_preference\": boolean, \"section_no_preference\": boolean, "
+    "\"lot_type_recommend_requested\": boolean}\n\n"
     "You are given valid_lot_types and valid_sections (the only real options "
     "in this cemetery) and pending_slot (which single slot the assistant had "
     "just asked about, or null).\n\n"
@@ -122,13 +123,21 @@ EXTRACTION_SYSTEM_PROMPT = (
     "\"50000\", \"around 50k\", \"under 30,000\", \"P50,000\"). Never invent "
     "a number for a vague word alone like \"affordable\" or \"cheap\" — "
     "leave budget null in that case.\n"
-    "- Set a *_no_preference flag to true only when the message explicitly "
-    "says it doesn't matter / doesn't know / any is fine for that specific "
-    "slot. A vague reply with no field named (e.g. \"I don't know\", \"you "
-    "decide\", \"recommend one for me\", \"whatever\") addresses ONLY "
-    "pending_slot — set that one slot's *_no_preference to true and leave "
-    "the other two slots null/false. Never set a *_no_preference flag for a "
-    "slot the message doesn't actually address.\n"
+    "- lot_type_recommend_requested is true ONLY when pending_slot is "
+    "\"lot_type\" and the message asks the assistant to pick/suggest/"
+    "recommend a lot type for them (e.g. \"recommend one for me\", \"which "
+    "type do you suggest\", \"you decide\", \"I don't know, what do you "
+    "think is best\"). This is different from simply not caring — use it "
+    "when the user wants an actual suggestion. When this is true, leave "
+    "lot_type_no_preference false.\n"
+    "- Otherwise, set a *_no_preference flag to true only when the message "
+    "explicitly says it doesn't matter / any is fine for that specific slot "
+    "(e.g. \"any section is fine\", \"whatever budget\"). A vague reply with "
+    "no field named and no request for a recommendation (e.g. \"whatever\", "
+    "\"doesn't matter\") addresses ONLY pending_slot — set that one slot's "
+    "*_no_preference to true and leave the other two slots null/false. "
+    "Never set a *_no_preference flag for a slot the message doesn't "
+    "actually address.\n"
     "- Only extract what this message actually states. Never invent facts "
     "beyond the message text."
 )
@@ -219,6 +228,85 @@ def health_check():
     return jsonify({'status': 'ok', 'service': 'python-ai'})
 
 
+def _fetch_available_lots() -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        """
+        SELECT l.lot_id, l.lot_number, l.price, l.status,
+               t.type_name AS lot_type_name,
+               s.section_name
+        FROM lots l
+        JOIN blocks b ON l.block_id = b.block_id
+        JOIN sections s ON b.section_id = s.section_id
+        JOIN lot_types t ON l.lot_type_id = t.type_id
+        WHERE l.status = 'Available'
+        ORDER BY s.section_name, b.block_name, l.lot_number
+        """
+    )
+    lots = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return lots
+
+
+def _rank_lots(lots: List[Dict[str, Any]], lot_type: str, budget: Optional[float], section: str) -> List[Dict[str, Any]]:
+    # Shared by /api/recommend (specific-lot ranking) and /api/recommend-type
+    # (Batch M4 lot-type ranking) so both reuse the exact same per-lot
+    # scoring — the type ranker is an aggregation over this score, never a
+    # second, separately-maintained scoring model. Behavior here is
+    # byte-for-byte what /api/recommend always did before this refactor.
+    max_price = max((float(lot.get('price') or 0) for lot in lots), default=0.0)
+    lot_types = sorted({lot.get('lot_type_name') for lot in lots if lot.get('lot_type_name')})
+    sections = sorted({lot.get('section_name') for lot in lots if lot.get('section_name')})
+    lot_vectors = [
+        _create_feature_vector(lot, max_price, lot_types, sections)
+        for lot in lots
+    ]
+    user_vector = _create_user_vector(
+        {'lot_type': lot_type, 'budget': budget, 'section': section},
+        max_price,
+        lot_types,
+        sections,
+    )
+
+    if np.allclose(user_vector, 0):
+        user_vector = np.ones_like(user_vector) * 0.0
+
+    matrix = np.vstack(lot_vectors) if lot_vectors else np.array([])
+    if matrix.size == 0:
+        return []
+
+    similarity_scores = cosine_similarity([user_vector], matrix)[0]
+    ranked_lots = []
+    for index, lot in enumerate(lots):
+        score = round(float(similarity_scores[index]) * 100, 2)
+        reasons: List[str] = []
+        if lot_type and lot.get('lot_type_name') == lot_type:
+            score += 5.0
+            reasons.append('Matches your preferred lot type')
+        if section and lot.get('section_name') == section:
+            score += 3.0
+            reasons.append('Located in your preferred section')
+        if budget is not None and budget != '':
+            try:
+                budget_value = float(budget)
+                lot_price = float(lot.get('price') or 0)
+                if lot_price <= budget_value:
+                    score += 5.0
+                    reasons.append('Within your budget')
+            except (TypeError, ValueError):
+                pass
+        ranked_lots.append({
+            **lot,
+            'score': round(max(0.0, min(100.0, score)), 2),
+            'reasons': reasons,
+        })
+
+    ranked_lots.sort(key=lambda item: item['score'], reverse=True)
+    return ranked_lots
+
+
 @app.post('/api/recommend')
 def recommend_lots():
     try:
@@ -228,79 +316,78 @@ def recommend_lots():
         section = (preferences.get('section') or '').strip()
 
         try:
-            conn = get_connection()
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute(
-                """
-                SELECT l.lot_id, l.lot_number, l.price, l.status,
-                       t.type_name AS lot_type_name,
-                       s.section_name
-                FROM lots l
-                JOIN blocks b ON l.block_id = b.block_id
-                JOIN sections s ON b.section_id = s.section_id
-                JOIN lot_types t ON l.lot_type_id = t.type_id
-                WHERE l.status = 'Available'
-                ORDER BY s.section_name, b.block_name, l.lot_number
-                """
-            )
-            lots = cursor.fetchall()
-            cursor.close()
-            conn.close()
+            lots = _fetch_available_lots()
         except Exception as exc:
             return jsonify({'error': f'Unable to retrieve available lots: {exc}', 'code': 503}), 503
 
         if not lots:
             return jsonify([])
 
-        max_price = max((float(lot.get('price') or 0) for lot in lots), default=0.0)
-        lot_types = sorted({lot.get('lot_type_name') for lot in lots if lot.get('lot_type_name')})
-        sections = sorted({lot.get('section_name') for lot in lots if lot.get('section_name')})
-        lot_vectors = [
-            _create_feature_vector(lot, max_price, lot_types, sections)
-            for lot in lots
-        ]
-        user_vector = _create_user_vector(
-            {'lot_type': lot_type, 'budget': budget, 'section': section},
-            max_price,
-            lot_types,
-            sections,
-        )
+        ranked_lots = _rank_lots(lots, lot_type, budget, section)
+        return jsonify(ranked_lots[:5])
+    except Exception as exc:  # pragma: no cover - defensive path
+        return jsonify({'error': str(exc), 'code': 500}), 500
 
-        if np.allclose(user_vector, 0):
-            user_vector = np.ones_like(user_vector) * 0.0
 
-        matrix = np.vstack(lot_vectors) if lot_vectors else np.array([])
-        if matrix.size == 0:
-            return jsonify([])
+@app.post('/api/recommend-type')
+def recommend_lot_type():
+    # Batch M4: ranks lot TYPES rather than specific lots — a distinct AI
+    # output from /api/recommend, directly answering the adviser's "AI
+    # should recommend the appropriate TYPE of lot" requirement instead of
+    # only ever ranking within an already-chosen type. Reuses _rank_lots
+    # (same scoring as /api/recommend) and aggregates by lot_type_name.
+    # lot_type is intentionally never read from the request body here —
+    # that's the very thing being recommended — only budget/section, if
+    # already known, bias the ranking exactly like they do for /api/recommend.
+    try:
+        preferences = request.get_json(silent=True) or {}
+        budget = preferences.get('budget')
+        section = (preferences.get('section') or '').strip()
 
-        similarity_scores = cosine_similarity([user_vector], matrix)[0]
-        ranked_lots = []
-        for index, lot in enumerate(lots):
-            score = round(float(similarity_scores[index]) * 100, 2)
+        try:
+            lots = _fetch_available_lots()
+        except Exception as exc:
+            return jsonify({'error': f'Unable to retrieve available lots: {exc}', 'code': 503}), 503
+
+        if not lots:
+            return jsonify({'types': []})
+
+        ranked_lots = _rank_lots(lots, '', budget, section)
+
+        by_type: Dict[str, List[Dict[str, Any]]] = {}
+        for lot in ranked_lots:
+            type_name = lot.get('lot_type_name')
+            if not type_name:
+                continue
+            by_type.setdefault(type_name, []).append(lot)
+
+        types_out = []
+        for type_name, type_lots in by_type.items():
+            prices = [float(lot.get('price') or 0) for lot in type_lots]
+            avg_score = sum(lot['score'] for lot in type_lots) / len(type_lots)
+            min_price = min(prices) if prices else 0.0
+
             reasons: List[str] = []
-            if lot_type and lot.get('lot_type_name') == lot_type:
-                score += 5.0
-                reasons.append('Matches your preferred lot type')
-            if section and lot.get('section_name') == section:
-                score += 3.0
-                reasons.append('Located in your preferred section')
-            if budget is not None and budget != '':
+            if budget not in (None, ''):
                 try:
                     budget_value = float(budget)
-                    lot_price = float(lot.get('price') or 0)
-                    if lot_price <= budget_value:
-                        score += 5.0
-                        reasons.append('Within your budget')
+                    if min_price <= budget_value:
+                        reasons.append('Has options within your budget')
                 except (TypeError, ValueError):
                     pass
-            ranked_lots.append({
-                **lot,
-                'score': round(max(0.0, min(100.0, score)), 2),
+            if len(type_lots) >= 3:
+                reasons.append('Good current availability')
+
+            types_out.append({
+                'type_name': type_name,
+                'available_count': len(type_lots),
+                'min_price': round(min_price, 2),
+                'score': round(avg_score, 2),
                 'reasons': reasons,
             })
 
-        ranked_lots.sort(key=lambda item: item['score'], reverse=True)
-        return jsonify(ranked_lots[:5])
+        types_out.sort(key=lambda item: item['score'], reverse=True)
+        return jsonify({'types': types_out})
     except Exception as exc:  # pragma: no cover - defensive path
         return jsonify({'error': str(exc), 'code': 500}), 500
 
@@ -356,8 +443,14 @@ def extract_preferences():
                 budget = None
         result['budget'] = budget
 
-        for flag in ('lot_type_no_preference', 'budget_no_preference', 'section_no_preference'):
+        for flag in ('lot_type_no_preference', 'budget_no_preference', 'section_no_preference', 'lot_type_recommend_requested'):
             result[flag] = bool(result.get(flag))
+
+        # A recommend-request supersedes a simultaneous no-preference claim
+        # for the same slot — asking to be told the best option is a
+        # different intent than not caring at all.
+        if result['lot_type_recommend_requested']:
+            result['lot_type_no_preference'] = False
 
         return jsonify({'result': result})
     except Exception:

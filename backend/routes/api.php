@@ -313,6 +313,18 @@ if ($path === 'schedules/recommend' && $requestMethod === 'POST') {
     exit;
 }
 
+if ($path === 'schedules/recommend-type' && $requestMethod === 'POST') {
+    // Batch M4: lot-type ranking, called by the chat assistant when the user
+    // explicitly asks it to recommend a type instead of naming one. Same
+    // caller pattern/role gate as schedules/recommend above — deliberately
+    // NOT added under ai/* to avoid recreating the ai/recommend-vs-
+    // schedules/recommend duplicate-route situation the Batch M audit found.
+    AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $input = readRequestBody();
+    echo json_encode($aiController->recommendTypes($input));
+    exit;
+}
+
 if ($path === 'schedules/stats' && $requestMethod === 'GET') {
     AuthMiddleware::requireRole(['admin', 'staff']);
     $year = $_GET['year'] ?? null;

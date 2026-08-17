@@ -44,6 +44,25 @@ class AiController {
         return $result;
     }
 
+    // Batch M4: lot-TYPE ranking, distinct from recommend()'s specific-lot
+    // ranking above. lot_type is deliberately not part of $preferences here —
+    // it's the thing being recommended, not an input.
+    public function recommendTypes($preferences) {
+        $payload = is_array($preferences) ? $preferences : [];
+        $result = $this->aiService->getTypeRecommendations($payload);
+
+        if (!empty($result['error']) || !is_array($result)) {
+            return [
+                'success' => false,
+                'message' => $result['error'] ?? 'Unable to rank lot types',
+                'types' => [],
+                'fallback' => true,
+            ];
+        }
+
+        return $result;
+    }
+
     public function forecast($months = 6) {
         $result = $this->aiService->getForecast((int) $months);
 

@@ -22,6 +22,11 @@
 // are re-validated against the live lists before being applied. Sends only
 // the message text + live lookup lists (never decedent/user/booking data).
 // Falls back to Phase 2's existing clarification message on any failure.
+// Batch M4: when M3's extraction detects the user asked the assistant to
+// recommend a lot TYPE (rather than just skip it), fetches ranked type
+// suggestions (POST schedules/recommend-type) and shows them as a message.
+// Purely informational — never auto-fills state.lot_type; the user still
+// has to name a type or say "no preference" for the slot to fill.
 //
 // createLotChatAssistant(options) -> assistant
 //   options.chatWindow, chatForm, chatInput, chatFindLotsBtn, chatPrefStatus:
@@ -200,6 +205,7 @@ function createLotChatAssistant(options) {
     async function tryLlmExtraction(text, pendingSlot) {
         const validLotTypes = (getLotTypes() || []).map(t => t.type_name).filter(Boolean);
         const validSections = (getSections() || []).map(s => s.section_name).filter(Boolean);
+        const empty = { updates: {}, recommendTypeRequested: false };
 
         try {
             const response = await api.request('ai/extract', {
@@ -207,7 +213,7 @@ function createLotChatAssistant(options) {
                 body: { message: text, pending_slot: pendingSlot, lot_types: validLotTypes, sections: validSections },
             });
             const result = response && response.result;
-            if (!result || typeof result !== 'object') return {};
+            if (!result || typeof result !== 'object') return empty;
 
             const updates = {};
             if (state.lot_type === null) {
@@ -231,10 +237,54 @@ function createLotChatAssistant(options) {
                     updates.budget = Math.round(result.budget);
                 }
             }
-            return updates;
+
+            // Batch M4: distinct signal from lot_type_no_preference — only
+            // meaningful while lot_type is still pending and nothing else
+            // was resolved for it above (a named/skip answer always wins).
+            const recommendTypeRequested = pendingSlot === 'lot_type'
+                && state.lot_type === null
+                && updates.lot_type === undefined
+                && Boolean(result.lot_type_recommend_requested);
+
+            return { updates, recommendTypeRequested };
         } catch (error) {
             console.error('LLM-assisted extraction failed', error);
-            return {};
+            return empty;
+        }
+    }
+
+    // Batch M4: fetches ranked lot-TYPE suggestions (POST
+    // schedules/recommend-type) and shows them as a chat message — the AI
+    // recommending a TYPE, distinct from its existing specific-lot ranking.
+    // Purely informational: it never sets state.lot_type itself, so the
+    // user still has to name one of the suggestions (or say "no
+    // preference") for the slot to actually fill, keeping "user accepts the
+    // recommendation" an explicit step, same as how specific-lot cards
+    // already require a "Reserve" click rather than auto-selecting.
+    async function suggestLotTypes() {
+        try {
+            const response = await api.request('schedules/recommend-type', {
+                method: 'POST',
+                body: {
+                    budget: state.budget === '' || state.budget === null ? '' : state.budget,
+                    section: state.section || '',
+                },
+            });
+            const types = response && Array.isArray(response.types) ? response.types : null;
+            if (!types || types.length === 0) return false;
+
+            const top = types.slice(0, 3);
+            const lines = top.map((type, index) => {
+                const detail = `${type.available_count} available, from ${formatBudget(type.min_price || 0)}`;
+                return index === 0
+                    ? `${type.type_name} (${detail}) looks like the best fit right now.`
+                    : `${type.type_name} (${detail}) is also open.`;
+            });
+            appendMessage('assistant', `Based on what's currently available: ${lines.join(' ')} Just tell me which one you'd like, or say "no preference" and I'll consider all of them.`);
+            return true;
+        } catch (error) {
+            console.error('Lot-type suggestion request failed', error);
+            return false;
         }
     }
 
@@ -272,12 +322,14 @@ function createLotChatAssistant(options) {
         // user to rephrase. Covers phrasing the regex extractors can't, e.g.
         // "around 50k for my dad" or "I don't know, you decide" for whichever
         // slot is currently pending.
+        let recommendTypeRequested = false;
         if (pendingSlot && Object.keys(updates).length === 0) {
             setInputEnabled(false);
             const typingBubble = appendTypingIndicator();
-            const llmUpdates = await tryLlmExtraction(text, pendingSlot);
+            const llmResult = await tryLlmExtraction(text, pendingSlot);
             typingBubble.remove();
-            Object.keys(llmUpdates).forEach(field => { updates[field] = llmUpdates[field]; });
+            Object.keys(llmResult.updates).forEach(field => { updates[field] = llmResult.updates[field]; });
+            recommendTypeRequested = llmResult.recommendTypeRequested;
             setInputEnabled(true);
             chatInput.focus();
         }
@@ -298,6 +350,10 @@ function createLotChatAssistant(options) {
 
         if (acknowledgements.length) {
             appendMessage('assistant', acknowledgements.join(' '));
+        } else if (recommendTypeRequested) {
+            // Batch M4: handled below via suggestLotTypes() — skip the
+            // generic "I couldn't match that" text since we DID understand
+            // the request, we just have a suggestion to show first.
         } else if (pendingSlot === 'lot_type') {
             appendMessage('assistant', `I couldn't match that to an available lot type. Available options: ${describeOptions(getLotTypes(), 'type_name')}. You can also say "no preference".`);
         } else if (pendingSlot === 'budget') {
@@ -308,10 +364,25 @@ function createLotChatAssistant(options) {
             appendMessage('assistant', `I couldn't match that to an available section. Available options: ${describeOptions(getSections(), 'section_name')}. You can also say "no preference".`);
         }
 
+        // Batch M4: the user asked the assistant to recommend a lot type —
+        // show ranked suggestions (AI output), then skip the generic
+        // "What lot type are you looking for?" re-ask below only if a
+        // suggestion actually rendered, so a failed/empty lookup still
+        // falls through to the normal question rather than going silent.
+        let suggestedTypes = false;
+        if (recommendTypeRequested) {
+            setInputEnabled(false);
+            const typingBubble = appendTypingIndicator();
+            suggestedTypes = await suggestLotTypes();
+            typingBubble.remove();
+            setInputEnabled(true);
+            chatInput.focus();
+        }
+
         const nextSlot = getNextMissingSlot();
-        if (nextSlot) {
+        if (nextSlot && !(suggestedTypes && nextSlot === 'lot_type')) {
             appendMessage('assistant', questionForSlot(nextSlot));
-        } else {
+        } else if (!nextSlot) {
             appendMessage('assistant', 'Thanks! I have enough information to search for matching lots.');
         }
 

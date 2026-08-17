@@ -16,6 +16,10 @@ class AIService {
         return $this->request('/api/recommend', 'POST', $preferences);
     }
 
+    public function getTypeRecommendations($preferences) {
+        return $this->request('/api/recommend-type', 'POST', $preferences);
+    }
+
     public function getForecast($months = 6) {
         return $this->request('/api/forecast?months=' . (int) $months);
     }
