@@ -177,10 +177,15 @@
                 <input type="hidden" id="paymentId">
                 <div class="form-group"><label>Transaction Type</label><select id="transactionType" required><option value="Lot Purchase">Lot Purchase</option><option value="Cremation">Cremation</option><option value="Relocation">Relocation</option><option value="Renewal">Renewal</option><option value="Other">Other</option></select></div>
                 <div class="form-group"><label>Reference ID (e.g., Lot ID, Schedule ID)</label><input type="number" id="referenceId" required></div>
-                <div class="form-group"><label>Amount (₱)</label><input type="number" id="amount" step="0.01" required></div>
+                <div class="form-group">
+                    <label>Amount (₱)</label>
+                    <input type="number" id="amount" step="0.01" required>
+                    <div class="help" id="expectedAmountHint" style="display:none;"></div>
+                    <div class="help" id="amountMismatchWarning" style="display:none; color: var(--color-warning-strong);"></div>
+                </div>
                 <div class="form-group"><label>Payment Date</label><input type="date" id="paymentDate" required></div>
                 <div class="form-group"><label>Payment Method</label><select id="paymentMethod" required><option value="Cash">Cash</option><option value="Card">Card</option><option value="Bank Transfer">Bank Transfer</option><option value="GCash">GCash</option><option value="PayMaya">PayMaya</option><option value="Other">Other</option></select></div>
-                <div class="form-group"><label>Receipt Number</label><input type="text" id="receiptNumber" required placeholder="e.g., R-2026-001"></div>
+                <div class="form-group"><label>Receipt Number</label><input type="text" id="receiptNumber" placeholder="Leave blank to auto-generate"></div>
                 <div class="form-group"><label>Receipt Upload</label><input type="file" id="receiptFile" accept="image/*,.pdf"></div>
                 <div class="form-group"><label>Notes</label><textarea id="paymentNotes" rows="2"></textarea></div>
                 <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span></button>

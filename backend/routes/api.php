@@ -562,6 +562,14 @@ if ($path === 'payments' && $requestMethod === 'GET') {
     exit;
 }
 
+if ($path === 'payments/expected-amount' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $transactionType = $_GET['transaction_type'] ?? null;
+    $referenceId = $_GET['reference_id'] ?? null;
+    echo json_encode($paymentController->resolveExpectedAmount($transactionType, $referenceId));
+    exit;
+}
+
 if ($path === 'payments' && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $input = readRequestBody();
@@ -603,7 +611,7 @@ if (preg_match('/^payments\/(\d+)\/verify$/', $path, $matches) && $requestMethod
 
 if (preg_match('/^payments\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
     $user = AuthMiddleware::requireRole(['admin']);
-    $result = $paymentController->destroy($matches[1]);
+    $result = $paymentController->destroy($matches[1], $user['user_id']);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);

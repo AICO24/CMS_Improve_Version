@@ -101,20 +101,43 @@ class Payment {
         return $stmt->fetch();
     }
 
+    // Returns the new payment_id on success (or false on failure) rather than a
+    // plain bool, so callers can use it both as a truthy success check (existing
+    // behavior, since AUTO_INCREMENT ids are always > 0) and to auto-generate a
+    // receipt number that embeds the id (see below).
     public function create($data) {
+        $providedReceiptNumber = isset($data['receipt_number']) ? trim($data['receipt_number']) : '';
+
         $stmt = $this->db->prepare("INSERT INTO payments (transaction_type, reference_id, amount, payment_date, payment_method, receipt_number, notes, received_by, receipt_url, verification_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        return $stmt->execute([
+        $success = $stmt->execute([
             $data['transaction_type'],
             $data['reference_id'] ?? null,
             $data['amount'],
             $data['payment_date'],
             $data['payment_method'],
-            $data['receipt_number'],
+            $providedReceiptNumber,
             $data['notes'] ?? null,
             $data['received_by'] ?? null,
             $data['receipt_url'] ?? null,
             $data['verification_status'] ?? 'Pending',
         ]);
+
+        if (!$success) {
+            return false;
+        }
+
+        $paymentId = (int) $this->db->lastInsertId();
+
+        // No receipt number was supplied — generate one deterministically from the
+        // id MySQL just assigned, so it's guaranteed unique without a pre-insert
+        // lookup or a schema change (RCPT-{year}-{payment_id}).
+        if ($providedReceiptNumber === '') {
+            $generated = 'RCPT-' . date('Y') . '-' . $paymentId;
+            $update = $this->db->prepare("UPDATE payments SET receipt_number = ? WHERE payment_id = ?");
+            $update->execute([$generated, $paymentId]);
+        }
+
+        return $paymentId;
     }
 
     public function update($id, $data) {

@@ -3,6 +3,8 @@ require_once __DIR__ . '/../models/Payment.php';
 require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/AuditLog.php';
+require_once __DIR__ . '/../models/Schedule.php';
+require_once __DIR__ . '/../models/Lot.php';
 
 class PaymentController {
     private $paymentModel;
@@ -48,6 +50,48 @@ class PaymentController {
         ];
     }
 
+    // Resolves the trusted "expected" amount for a payment from server-side data
+    // only (never from anything the frontend claims the price is), so the amount
+    // field can be checked/displayed without relying on a client-supplied price.
+    // Only 'Lot Purchase' has a resolvable price today — Cremation/Relocation/
+    // Renewal/Other have no linked price column anywhere in the schema, so those
+    // simply resolve to null (handled as "not available" by callers).
+    public function resolveExpectedAmount($transactionType, $referenceId) {
+        if ($transactionType !== 'Lot Purchase' || empty($referenceId)) {
+            return ['expected_amount' => null];
+        }
+
+        $scheduleModel = new Schedule();
+        $lotModel = new Lot();
+
+        // reference_id for 'Lot Purchase' is, in practice, either a schedule_id
+        // (the normal "reserve then pay" flow) or a raw lot_id (the Lot
+        // Management "Pay Now" shortcut used before any schedule exists) — try
+        // schedule first since that's the more common path, then fall back.
+        $schedule = $scheduleModel->findById($referenceId);
+        if ($schedule && !empty($schedule['lot_id'])) {
+            $lot = $lotModel->findById($schedule['lot_id']);
+            if ($lot && isset($lot['price'])) {
+                return [
+                    'expected_amount' => (float) $lot['price'],
+                    'lot_number' => $lot['lot_number'] ?? null,
+                    'source' => 'schedule',
+                ];
+            }
+        }
+
+        $lot = $lotModel->findById($referenceId);
+        if ($lot && isset($lot['price'])) {
+            return [
+                'expected_amount' => (float) $lot['price'],
+                'lot_number' => $lot['lot_number'] ?? null,
+                'source' => 'lot',
+            ];
+        }
+
+        return ['expected_amount' => null];
+    }
+
     public function show($id, $user = null) {
         $payment = $this->paymentModel->findById($id);
         if (!$payment) {
@@ -64,7 +108,10 @@ class PaymentController {
     }
 
     public function store($data, $userId) {
-        $required = ['transaction_type', 'amount', 'payment_date', 'payment_method', 'receipt_number'];
+        // receipt_number is intentionally NOT required here — Payment::create()
+        // auto-generates one (RCPT-{year}-{payment_id}) when it's left blank, so
+        // an omitted/empty value is valid input, not a validation error.
+        $required = ['transaction_type', 'amount', 'payment_date', 'payment_method'];
         foreach ($required as $field) {
             if (empty($data[$field]) && $data[$field] !== '0') {
                 return ['error' => "Field '$field' is required", 'code' => 400];
@@ -89,10 +136,25 @@ class PaymentController {
 
         $data['received_by'] = $userId;
         $data['verification_status'] = 'Pending';
-        $result = $this->paymentModel->create($data);
-        if ($result) {
+        $paymentId = $this->paymentModel->create($data);
+        if ($paymentId) {
             $this->notifyPayment($data, $userId);
-            return ['success' => true, 'message' => 'Payment recorded and pending verification'];
+
+            // Non-blocking, informational only — the amount was already accepted
+            // above; this just lets the frontend/caller know if it diverged from
+            // the trusted server-side price so staff can double-check it later.
+            $expected = $this->resolveExpectedAmount($data['transaction_type'], $data['reference_id'] ?? null);
+            $saved = $this->paymentModel->findById($paymentId);
+
+            return [
+                'success' => true,
+                'message' => 'Payment recorded and pending verification',
+                'payment_id' => $paymentId,
+                'receipt_number' => $saved['receipt_number'] ?? null,
+                'expected_amount' => $expected['expected_amount'],
+                'amount_mismatch' => $expected['expected_amount'] !== null
+                    && abs((float) $data['amount'] - $expected['expected_amount']) > 0.001,
+            ];
         }
         return ['error' => 'Failed to record payment', 'code' => 500];
     }
@@ -140,7 +202,41 @@ class PaymentController {
         // previously this always overwrote received_by with the editor's own id.
         $data['received_by'] = isset($data['received_by']) ? $data['received_by'] : $existing['received_by'];
         $result = $this->paymentModel->update($id, $data);
-        return $result ? ['success' => true, 'message' => 'Payment updated'] : ['error' => 'Failed to update payment', 'code' => 500];
+
+        if (!$result) {
+            return ['error' => 'Failed to update payment', 'code' => 500];
+        }
+
+        // Same AuditLog mechanism/shape already used by verify() below — records
+        // which fields actually changed, not a full before/after dump.
+        $changedFields = [];
+        foreach (['transaction_type', 'reference_id', 'amount', 'payment_date', 'payment_method', 'receipt_number', 'notes'] as $field) {
+            if (isset($data[$field]) && (string) $data[$field] !== (string) ($existing[$field] ?? '')) {
+                $changedFields[$field] = ['from' => $existing[$field] ?? null, 'to' => $data[$field]];
+            }
+        }
+        $this->auditLogModel->log(
+            'Payment updated',
+            $userId,
+            null,
+            'Payment',
+            $id,
+            ['receipt_number' => $existing['receipt_number'] ?? null, 'changed' => $changedFields]
+        );
+
+        $expected = $this->resolveExpectedAmount(
+            $data['transaction_type'] ?? $existing['transaction_type'],
+            $data['reference_id'] ?? $existing['reference_id']
+        );
+        $submittedAmount = isset($data['amount']) ? (float) $data['amount'] : (float) $existing['amount'];
+
+        return [
+            'success' => true,
+            'message' => 'Payment updated',
+            'expected_amount' => $expected['expected_amount'],
+            'amount_mismatch' => $expected['expected_amount'] !== null
+                && abs($submittedAmount - $expected['expected_amount']) > 0.001,
+        ];
     }
 
     public function verify($id, $status, $adminId) {
@@ -276,12 +372,36 @@ class PaymentController {
         }
     }
 
-    public function destroy($id) {
-        if (!$this->paymentModel->findById($id)) {
+    // $deletedBy is optional (defaults to null) purely so any other, unaudited
+    // caller of this method doesn't break — the route handler always passes the
+    // authenticated admin's id.
+    public function destroy($id, $deletedBy = null) {
+        $existing = $this->paymentModel->findById($id);
+        if (!$existing) {
             return ['error' => 'Payment not found', 'code' => 404];
         }
         $result = $this->paymentModel->delete($id);
-        return $result ? ['success' => true, 'message' => 'Payment deleted'] : ['error' => 'Failed to delete payment', 'code' => 500];
+        if (!$result) {
+            return ['error' => 'Failed to delete payment', 'code' => 500];
+        }
+
+        // Snapshot taken before delete() above, since the row no longer exists
+        // afterward — same AuditLog mechanism already used by verify()/update().
+        $this->auditLogModel->log(
+            'Payment deleted',
+            $deletedBy,
+            null,
+            'Payment',
+            $id,
+            [
+                'receipt_number' => $existing['receipt_number'] ?? null,
+                'amount' => $existing['amount'] ?? null,
+                'transaction_type' => $existing['transaction_type'] ?? null,
+                'verification_status' => $existing['verification_status'] ?? null,
+            ]
+        );
+
+        return ['success' => true, 'message' => 'Payment deleted'];
     }
 
     public function revenue($filters = []) {

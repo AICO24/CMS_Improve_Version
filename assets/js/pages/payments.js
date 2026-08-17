@@ -284,11 +284,67 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    const expectedAmountHint = document.getElementById('expectedAmountHint');
+    const amountMismatchWarning = document.getElementById('amountMismatchWarning');
+    const transactionTypeSelect = document.getElementById('transactionType');
+    const referenceIdInput = document.getElementById('referenceId');
+    const amountInput = document.getElementById('amount');
+    let expectedAmountForCurrentReference = null;
+
+    function updateMismatchWarning() {
+        const entered = parseFloat(amountInput.value);
+        if (expectedAmountForCurrentReference === null || isNaN(entered)) {
+            amountMismatchWarning.style.display = 'none';
+            return;
+        }
+        const differs = Math.abs(entered - expectedAmountForCurrentReference) > 0.001;
+        amountMismatchWarning.textContent = differs
+            ? 'Payment amount differs from the expected lot amount. Please verify the amount before submitting.'
+            : '';
+        amountMismatchWarning.style.display = differs ? 'block' : 'none';
+    }
+
+    // Non-blocking: only ever informs the user, never prevents submission — the
+    // system may legitimately support partial payments or other scenarios where
+    // the amount won't match the lot price exactly.
+    const refreshExpectedAmount = debounce(async () => {
+        const transactionType = transactionTypeSelect.value;
+        const referenceId = referenceIdInput.value.trim();
+        expectedAmountForCurrentReference = null;
+        expectedAmountHint.style.display = 'none';
+        amountMismatchWarning.style.display = 'none';
+
+        if (!transactionType || !referenceId) {
+            return;
+        }
+
+        try {
+            const params = new URLSearchParams({ transaction_type: transactionType, reference_id: referenceId });
+            const result = await api.request(`payments/expected-amount?${params.toString()}`, { method: 'GET' });
+            if (result && result.expected_amount !== null && result.expected_amount !== undefined) {
+                expectedAmountForCurrentReference = parseFloat(result.expected_amount);
+                expectedAmountHint.textContent = `Expected Amount: ${formatCurrency(expectedAmountForCurrentReference)}`;
+                expectedAmountHint.style.display = 'block';
+                updateMismatchWarning();
+            }
+        } catch (error) {
+            // Silently ignore — this is an informational lookup only, and a
+            // failure here must never block the payment form itself.
+        }
+    }, 300);
+
+    transactionTypeSelect.addEventListener('change', refreshExpectedAmount);
+    referenceIdInput.addEventListener('input', refreshExpectedAmount);
+    amountInput.addEventListener('input', updateMismatchWarning);
+
     function openAddModal() {
         document.getElementById('modalTitle').innerText = 'Record Payment';
         document.getElementById('paymentForm').reset();
         document.getElementById('paymentId').value = '';
         document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
+        expectedAmountForCurrentReference = null;
+        expectedAmountHint.style.display = 'none';
+        amountMismatchWarning.style.display = 'none';
         document.getElementById('paymentModal').style.display = 'flex';
     }
 
@@ -309,7 +365,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             formData.append('receipt_file', receiptFile);
         }
 
-        const requiredFields = ['transaction_type', 'amount', 'payment_date', 'payment_method', 'receipt_number'];
+        // receipt_number is intentionally excluded — leaving it blank is valid;
+        // the backend auto-generates one (RCPT-{year}-{payment_id}) when omitted.
+        const requiredFields = ['transaction_type', 'amount', 'payment_date', 'payment_method'];
         for (const field of requiredFields) {
             if (!formData.get(field) || formData.get(field).trim() === '') {
                 alert('Please fill in all required fields.');
@@ -399,6 +457,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (urlTransactionType) {
             document.getElementById('transactionType').value = urlTransactionType;
         }
+        refreshExpectedAmount();
     }
 
     updateNotificationBadge();
