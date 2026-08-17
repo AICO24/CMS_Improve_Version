@@ -53,6 +53,7 @@ function createLotChatAssistant(options) {
         chatForm,
         chatInput,
         chatFindLotsBtn,
+        chatSuggestTypeBtn,
         chatPrefStatus,
         getLotTypes,
         getSections,
@@ -125,10 +126,15 @@ function createLotChatAssistant(options) {
         return Math.round(value);
     }
 
+    // Batch M9: section is intentionally NOT one of the assistant's asked
+    // slots — it's an internal cemetery classification, not something a
+    // citizen should be required to pick. It can still be captured (see
+    // extractSectionFromText()/tryLlmExtraction() below) if a user
+    // volunteers one unprompted, and is still sent to the recommendation
+    // engine as an internal ranking input either way.
     function getNextMissingSlot() {
         if (state.lot_type === null) return 'lot_type';
         if (state.budget === null) return 'budget';
-        if (state.section === null) return 'section';
         return null;
     }
 
@@ -138,9 +144,6 @@ function createLotChatAssistant(options) {
         }
         if (slot === 'budget') {
             return 'What is your preferred budget? (e.g., 8000, 8,000, ₱8,000, or 8k)';
-        }
-        if (slot === 'section') {
-            return `Do you have a preferred section? Available options: ${describeOptions(getSections(), 'section_name')}.`;
         }
         return null;
     }
@@ -173,14 +176,19 @@ function createLotChatAssistant(options) {
     }
 
     function updateFindButtonState() {
-        const ready = state.lot_type !== null && state.budget !== null && state.section !== null;
+        const ready = state.lot_type !== null && state.budget !== null;
         chatFindLotsBtn.disabled = !ready;
+        // Batch M9: a type recommendation only makes sense while lot_type
+        // is still undecided — once the user has named/skipped one, offering
+        // to "recommend a type" again would be confusing.
+        if (chatSuggestTypeBtn) chatSuggestTypeBtn.disabled = state.lot_type !== null;
         if (typeof onReady === 'function') onReady(ready);
     }
 
     function setInputEnabled(enabled) {
         chatInput.disabled = !enabled;
         chatForm.querySelector('.chat-send-btn').disabled = !enabled;
+        if (chatSuggestTypeBtn && state.lot_type === null) chatSuggestTypeBtn.disabled = !enabled;
     }
 
     function appendTypingIndicator() {
@@ -288,6 +296,27 @@ function createLotChatAssistant(options) {
         }
     }
 
+    // Batch M9: deterministic entry point for the same type-suggestion
+    // feature M4 built — previously only reachable if the optional LLM
+    // extraction (ai/extract) happened to detect a "recommend one for me"
+    // phrasing. This lets a user request it directly (e.g. via a button),
+    // with no LLM/API-key dependency, reusing suggestLotTypes() as-is (same
+    // ranking call, same "present, don't auto-fill" behavior).
+    async function requestTypeSuggestion() {
+        if (state.lot_type !== null) return false;
+        appendMessage('user', 'Recommend a type for me');
+        setInputEnabled(false);
+        const typingBubble = appendTypingIndicator();
+        const suggested = await suggestLotTypes();
+        typingBubble.remove();
+        setInputEnabled(true);
+        chatInput.focus();
+        if (!suggested) {
+            appendMessage('assistant', questionForSlot('lot_type'));
+        }
+        return suggested;
+    }
+
     async function processMessage(rawText) {
         const text = rawText.trim();
         if (!text) return;
@@ -360,8 +389,6 @@ function createLotChatAssistant(options) {
             appendMessage('assistant', containsDigits(text)
                 ? "I couldn't read a budget from that. Try formats like 8000, 8,000, ₱8,000, or 8k. You can also say \"no preference\"."
                 : 'Could you share a budget? For example: 8000 or ₱8,000. You can also say "no preference".');
-        } else if (pendingSlot === 'section') {
-            appendMessage('assistant', `I couldn't match that to an available section. Available options: ${describeOptions(getSections(), 'section_name')}. You can also say "no preference".`);
         }
 
         // Batch M4: the user asked the assistant to recommend a lot type —
@@ -511,7 +538,7 @@ function createLotChatAssistant(options) {
     return {
         state,
         init,
-        isReady: () => state.lot_type !== null && state.budget !== null && state.section !== null,
+        isReady: () => state.lot_type !== null && state.budget !== null,
         getPreferences: () => ({
             lot_type: state.lot_type || '',
             budget: state.budget === '' || state.budget === null ? '' : state.budget,
@@ -520,5 +547,6 @@ function createLotChatAssistant(options) {
         appendMessage,
         appendOutcomeMessage,
         appendCapacityWarning,
+        requestTypeSuggestion,
     };
 }

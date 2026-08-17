@@ -5,6 +5,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     createBookingWizard({
         allowedRoles: ['admin', 'staff'],
+        showLotNumberField: true,
         renderStatusBadge: (lot) => `<span class="status-badge status-success">${lot.status || 'Available'}</span>`,
         onBookingSuccess: () => {
             alert('Reservation request submitted and pending approval.');

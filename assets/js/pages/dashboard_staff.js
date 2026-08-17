@@ -57,26 +57,44 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!Array.isArray(payments) || payments.length === 0) {
             payments = await api.request('payments', { method: 'GET' });
         }
-        let availableLotList = [];
+        // Batch M9: was previously just availableLotList[0] — the first row
+        // of an unranked "Available" query — displayed under an "ai-suggest"
+        // label despite having no AI/ranking involved. Now a genuine ranked
+        // pick from the same recommendation engine the booking wizard uses
+        // (schedules/recommend, no preferences supplied), so this card
+        // actually reflects what it claims to be.
+        let suggestedLot = null;
+        let suggestionReason = null;
         try {
-            availableLotList = await api.request('lots?status=Available', { method: 'GET' });
+            const recommendations = await api.request('schedules/recommend', {
+                method: 'POST',
+                body: { lot_type: '', budget: '', section: '' }
+            });
+            if (Array.isArray(recommendations) && recommendations.length > 0) {
+                suggestedLot = recommendations[0];
+                // With no preferences supplied every lot scores 0 (nothing
+                // to compare against) — a literal "0% suitability" note
+                // would read as broken, so only surface the score when it's
+                // actually above zero.
+                suggestionReason = Array.isArray(suggestedLot.reasons) && suggestedLot.reasons.length
+                    ? suggestedLot.reasons[0]
+                    : (suggestedLot.score ? `${suggestedLot.score}% suitability` : null);
+            }
         } catch (e) {
-            availableLotList = [];
+            suggestedLot = null;
         }
 
         const summary = occupancy.summary || {};
         const totalLots = Number(summary.total) || 0;
         const availableLots = Number(summary.available) || 0;
-        const occupiedLots = Number(summary.occupied) || 0;
 
         setText('statTotal', totalLots.toString());
         setText('statAvailable', availableLots.toString());
         setText('statRevenue', formatCurrency(Number(revenueSummary.total) || 0));
         setText('statForecast', totalLots > 0 ? `${Math.round((availableLots / totalLots) * 100)}% available` : 'No data');
 
-        const suggestedLot = Array.isArray(availableLotList) ? availableLotList[0] : null;
         setText('aiLot', suggestedLot ? `Lot ${suggestedLot.lot_number}${suggestedLot.section_name ? ' — ' + suggestedLot.section_name : ''}` : 'No available lots');
-        setText('aiNote', totalLots > 0 ? `${Math.round((occupiedLots / totalLots) * 100)}% of lots are currently occupied.` : 'No occupancy data available.');
+        setText('aiNote', suggestedLot ? (suggestionReason || 'Top-ranked available lot right now.') : 'No AI recommendation available right now.');
 
         const mapContainer = document.getElementById('availabilityMap');
         if (mapContainer) {

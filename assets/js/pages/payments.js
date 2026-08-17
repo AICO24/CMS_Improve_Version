@@ -325,6 +325,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 expectedAmountForCurrentReference = parseFloat(result.expected_amount);
                 expectedAmountHint.textContent = `Expected Amount: ${formatCurrency(expectedAmountForCurrentReference)}`;
                 expectedAmountHint.style.display = 'block';
+                // Batch M9: pre-fill rather than leave the user to retype a
+                // number the system already knows — only when the field is
+                // still empty, so this never clobbers an amount the user
+                // already typed (e.g. a deliberate partial payment).
+                if (!amountInput.value.trim()) {
+                    amountInput.value = expectedAmountForCurrentReference.toFixed(2);
+                }
                 updateMismatchWarning();
             }
         } catch (error) {

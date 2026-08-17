@@ -21,16 +21,212 @@
 //     booking has been created AND the form/step have already been reset —
 //     admin/staff shows a plain confirmation alert; citizen offers to jump
 //     straight to payment.
+//   options.showLotNumberField: bool — the one remaining real content
+//     difference between the two pages' markup (see renderWizardMarkup()
+//     below). Staff/admin still search by lot number; citizens don't know
+//     lot numbers, so that field is omitted for them (Batch M9 / A.4).
 //
 // wizard.init(): runs the page's full DOMContentLoaded sequence (role
 //   check, wiring, initial data load). Call this from the page's own
 //   DOMContentLoaded listener.
+
+// Batch M9 (B.7): the wizard-container + floating chat-widget markup was
+// ~97% byte-identical HTML duplicated across burial-scheduling.html and
+// reserve-burial-slot.html — the same class of duplication M5 already fixed
+// for this file's JS. Built here once instead, and injected into two empty
+// mount points each page now provides (#wizardContainerMount,
+// #aiChatWidgetMount) before init() looks up any of its child elements.
+// showLotNumberField is the one genuine content difference left; everything
+// else in these two blocks was byte-identical between the two pages.
+function renderWizardMarkup({ wizardMount, chatWidgetMount, showLotNumberField }) {
+    const lotNumberField = showLotNumberField ? `
+                                <div class="form-group">
+                                    <label>Lot Number</label>
+                                    <input type="text" id="prefLotNumber" placeholder="Search by lot number">
+                                </div>` : '';
+
+    wizardMount.innerHTML = `
+                <!-- Multi-step wizard -->
+                <div class="wizard-container">
+                    <!-- Step indicators -->
+                    <div class="steps">
+                        <div class="step active" data-step="1"><span class="step-num">1</span> Preferences</div>
+                        <div class="step" data-step="2"><span class="step-num">2</span> AI Recommendations</div>
+                        <div class="step" data-step="3"><span class="step-num">3</span> Confirmation</div>
+                    </div>
+
+                    <!-- Step 1: Preferences Form -->
+                    <div id="step1" class="step-content active">
+                        <div class="form-card">
+                            <h3><i class="fas fa-monument"></i> Booking Details</h3>
+                            <div class="form-group">
+                                <label>Decedent</label>
+                                <select id="prefDecedent" required>
+                                    <option value="">Loading decedents...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Desired Burial Date</label>
+                                <input type="date" id="prefDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Preferred Time (optional)</label>
+                                <input type="time" id="prefTime">
+                            </div>
+                            <div class="form-group">
+                                <label>Additional Requirements (e.g., near water feature, shaded area)</label>
+                                <textarea id="prefNotes" rows="3" placeholder="Optional"></textarea>
+                            </div>
+                        </div>
+
+                        <details class="form-card manual-filters-disclosure">
+                            <summary><i class="fas fa-sliders-h"></i> Prefer to search manually?</summary>
+                            <form id="preferencesForm">${lotNumberField}
+                                <div class="form-group">
+                                    <label>Category / Lot Type</label>
+                                    <select id="prefLotType" required>
+                                        <option value="">Select lot type</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Budget Range: ₱<span id="budgetValue">10,000</span></label>
+                                    <input type="range" id="prefBudget" min="2000" max="30000" step="500" value="10000">
+                                </div>
+                                <div class="form-group">
+                                    <label>Preferred Section (optional)</label>
+                                    <select id="prefSection">
+                                        <option value="">Any section</option>
+                                        <option value="Section A">Section A</option>
+                                        <option value="Section B">Section B</option>
+                                        <option value="Section C">Section C</option>
+                                        <option value="Section D">Section D</option>
+                                    </select>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="btn-next">Search Manually →</button>
+                                </div>
+                            </form>
+                        </details>
+                    </div>
+
+                    <!-- Step 2: AI Recommendations -->
+                    <div id="step2" class="step-content">
+                        <div class="form-card">
+                            <h3>
+                                <span class="heading-icon-gate" aria-hidden="true">
+                                    <svg viewBox="0 0 32 28" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                                        <path d="M3 24.5h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                        <rect x="4.2" y="10.5" width="2.6" height="14" rx="0.6" fill="currentColor"/>
+                                        <rect x="17.2" y="10.5" width="2.6" height="14" rx="0.6" fill="currentColor"/>
+                                        <circle cx="5.5" cy="8.3" r="1.7" fill="currentColor"/>
+                                        <circle cx="18.5" cy="8.3" r="1.7" fill="currentColor"/>
+                                        <path d="M6.6 11.6C6.6 6.4 17.4 6.4 17.4 11.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                                        <path d="M12 2.6v3.2M10.5 4.2h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                                        <circle cx="24.6" cy="16.6" r="3.6" fill="currentColor"/>
+                                        <polygon points="21.9,18.6 20.1,21.6 23.7,19.7" fill="currentColor"/>
+                                    </svg>
+                                </span>
+                                AI‑Powered Lot Recommendations
+                            </h3>
+                            <div class="recommendation-summary" id="recommendationSummary">Browse available lots and reserve the best fit for your needs. All reservations stay pending until admin approval.</div>
+                            <div id="recommendationsList" class="recommendations-grid">
+                                <!-- dynamically loaded recommendations -->
+                            </div>
+                            <div class="form-actions">
+                                <button class="btn-back" data-back="1">← Back to Preferences</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Confirmation -->
+                    <div id="step3" class="step-content">
+                        <div class="form-card">
+                            <h3><i class="fas fa-check-circle"></i> Confirm Booking</h3>
+                            <div id="confirmationDetails"></div>
+                            <div class="form-actions">
+                                <button class="btn-back" data-back="2">← Back</button>
+                                <button id="confirmBooking" class="btn-confirm">Confirm & Save Schedule</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+    chatWidgetMount.innerHTML = `
+        <!-- Floating Burial Assistant -->
+        <div class="ai-chat-widget" id="aiChatWidget">
+            <div class="ai-chat-panel" id="aiChatPanel" hidden>
+                <div class="ai-chat-panel-header">
+                    <span>
+                        <span class="ai-chat-icon-gate" aria-hidden="true">
+                            <svg viewBox="0 0 32 28" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                                <path d="M3 24.5h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                <rect x="4.2" y="10.5" width="2.6" height="14" rx="0.6" fill="currentColor"/>
+                                <rect x="17.2" y="10.5" width="2.6" height="14" rx="0.6" fill="currentColor"/>
+                                <circle cx="5.5" cy="8.3" r="1.7" fill="currentColor"/>
+                                <circle cx="18.5" cy="8.3" r="1.7" fill="currentColor"/>
+                                <path d="M6.6 11.6C6.6 6.4 17.4 6.4 17.4 11.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                                <path d="M12 2.6v3.2M10.5 4.2h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                                <circle cx="24.6" cy="16.6" r="3.6" fill="currentColor"/>
+                                <polygon points="21.9,18.6 20.1,21.6 23.7,19.7" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        Burial Assistant
+                    </span>
+                    <button type="button" class="ai-chat-close" id="aiChatClose" aria-label="Close chat">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="ai-chat-panel-body">
+                    <p class="chat-subtitle">Tell me what you're looking for — lot type, budget, preferred section — and I'll find matching lots.</p>
+                    <div class="chat-window" id="chatWindow" aria-live="polite"></div>
+                    <div class="chat-pref-status" id="chatPrefStatus">
+                        <span class="chat-pref-chip" data-field="lot_type">Lot type: <strong>Not set</strong></span>
+                        <span class="chat-pref-chip" data-field="budget">Budget: <strong>Not set</strong></span>
+                        <span class="chat-pref-chip" data-field="section">Section: <strong>Not set</strong></span>
+                    </div>
+                    <form id="chatForm" class="chat-input-row">
+                        <input type="text" id="chatInput" placeholder="e.g., Premium lot, 8000" autocomplete="off" disabled>
+                        <button type="submit" class="chat-send-btn" aria-label="Send" disabled><i class="fas fa-paper-plane"></i></button>
+                    </form>
+                    <div class="chat-actions">
+                        <button type="button" id="chatSuggestTypeBtn" class="btn-next">Recommend a type for me</button>
+                        <button type="button" id="chatFindLotsBtn" class="btn-next" disabled>Find Matching Lots →</button>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="ai-chat-toggle" id="aiChatToggle" aria-label="Open Burial Assistant" aria-expanded="false" aria-controls="aiChatPanel">
+                <span class="ai-chat-icon-gate" aria-hidden="true">
+                    <svg viewBox="0 0 32 28" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                        <path d="M3 24.5h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                        <rect x="4.2" y="10.5" width="2.6" height="14" rx="0.6" fill="currentColor"/>
+                        <rect x="17.2" y="10.5" width="2.6" height="14" rx="0.6" fill="currentColor"/>
+                        <circle cx="5.5" cy="8.3" r="1.7" fill="currentColor"/>
+                        <circle cx="18.5" cy="8.3" r="1.7" fill="currentColor"/>
+                        <path d="M6.6 11.6C6.6 6.4 17.4 6.4 17.4 11.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                        <path d="M12 2.6v3.2M10.5 4.2h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                        <circle cx="24.6" cy="16.6" r="3.6" fill="currentColor"/>
+                        <polygon points="21.9,18.6 20.1,21.6 23.7,19.7" fill="currentColor"/>
+                    </svg>
+                </span>
+                <i class="fas fa-chevron-down ai-chat-icon-close" aria-hidden="true"></i>
+            </button>
+        </div>`;
+}
+
 function createBookingWizard(options) {
-    const { allowedRoles, renderStatusBadge, onBookingSuccess } = options;
+    const { allowedRoles, renderStatusBadge, onBookingSuccess, showLotNumberField } = options;
 
     async function init() {
         const user = await requireRole(allowedRoles);
         if (!user) return;
+
+        // Inject the shared wizard/chat markup before any lookups below —
+        // the two pages now only provide empty mount points for this.
+        renderWizardMarkup({
+            wizardMount: document.getElementById('wizardContainerMount'),
+            chatWidgetMount: document.getElementById('aiChatWidgetMount'),
+            showLotNumberField,
+        });
 
         document.getElementById('logoutBtn').addEventListener('click', () => {
             api.logout();
@@ -65,6 +261,7 @@ function createBookingWizard(options) {
         const chatForm = document.getElementById('chatForm');
         const chatInput = document.getElementById('chatInput');
         const chatFindLotsBtn = document.getElementById('chatFindLotsBtn');
+        const chatSuggestTypeBtn = document.getElementById('chatSuggestTypeBtn');
         const chatPrefStatus = document.getElementById('chatPrefStatus');
 
         let currentPreferences = {};
@@ -77,10 +274,20 @@ function createBookingWizard(options) {
         // shared by both wizards so they run the identical slot-filling/
         // narration/capacity-advisory/type-recommendation logic.
         const chatAssistant = createLotChatAssistant({
-            chatWindow, chatForm, chatInput, chatFindLotsBtn, chatPrefStatus,
+            chatWindow, chatForm, chatInput, chatFindLotsBtn, chatSuggestTypeBtn, chatPrefStatus,
             getLotTypes: () => lotTypes,
             getSections: () => sections,
         });
+
+        // Batch M9: deterministic trigger for M4's lot-type recommendation —
+        // no longer only reachable through LLM phrasing detection.
+        if (chatSuggestTypeBtn) {
+            chatSuggestTypeBtn.addEventListener('click', async function() {
+                await withButtonLoading(chatSuggestTypeBtn, async () => {
+                    await chatAssistant.requestTypeSuggestion();
+                });
+            });
+        }
 
         // Floating widget open/close only — purely presentational, the chat
         // DOM/state above is untouched by opening or closing, so the
@@ -168,7 +375,15 @@ function createBookingWizard(options) {
         // Phase 3: purely presentational — renders whatever reasons[] the
         // existing recommendation engine already returned. Never invents a
         // reason and never touches score/ranking/ordering.
-        function buildRecommendationExplanation(lot) {
+        // Batch M9: isFallback distinguishes "the AI engine ran and had
+        // nothing specific to say about this lot" from "the AI engine was
+        // unreachable, this is a plain unranked list" — those previously
+        // rendered identical text, which misrepresented the second case as
+        // an AI outcome.
+        function buildRecommendationExplanation(lot, isFallback) {
+            if (isFallback) {
+                return '<div class="recommendation-reasons-empty">AI recommendations are temporarily unavailable — shown for manual browsing.</div>';
+            }
             const reasons = Array.isArray(lot.reasons) ? lot.reasons : [];
             if (!reasons.length) {
                 return '<div class="recommendation-reasons-empty">No specific preferences were matched — shown as an available lot.</div>';
@@ -179,8 +394,8 @@ function createBookingWizard(options) {
             `;
         }
 
-        function buildLotCard(lot) {
-            const hasScore = lot.score !== undefined && lot.score !== null;
+        function buildLotCard(lot, isFallback) {
+            const hasScore = !isFallback && lot.score !== undefined && lot.score !== null;
             return `
                 <div class="recommendation-card" data-lot-id="${lot.lot_id}">
                     <div>
@@ -190,7 +405,7 @@ function createBookingWizard(options) {
                     </div>
                     <div class="recommendation-actions">
                         ${hasScore ? `<div class="score">${lot.score || 0}% suitability</div>` : ''}
-                        ${buildRecommendationExplanation(lot)}
+                        ${buildRecommendationExplanation(lot, isFallback)}
                         <button class="select-lot-btn" type="button" data-lot='${JSON.stringify(lot)}'>Reserve</button>
                     </div>
                 </div>
@@ -217,7 +432,10 @@ function createBookingWizard(options) {
                     recommendationsList.innerHTML = '<p class="text-center">No available lots to display right now. Please try again later.</p>';
                     return;
                 }
-                recommendationsList.innerHTML = lots.map(buildLotCard).join('');
+                // Explicit arrow, not a bare `lots.map(buildLotCard)` — Array.map
+                // passes (element, index) to its callback, and index 0 would
+                // otherwise be misread as isFallback=false for the first card.
+                recommendationsList.innerHTML = lots.map(lot => buildLotCard(lot, true)).join('');
                 attachSelectHandlers();
             } catch (error) {
                 console.error('Failed to load available lots for manual browsing', error);
@@ -250,7 +468,11 @@ function createBookingWizard(options) {
                     recommendationsList.innerHTML = '<p class="text-center">No matching lots available. Please adjust your preferences.</p>';
                     return { status: 'empty', count: 0 };
                 }
-                recommendationsList.innerHTML = recommendations.map(buildLotCard).join('');
+                // Explicit arrow — see the isFallback note on buildLotCard/
+                // showManualLotFallback: a bare `.map(buildLotCard)` would
+                // pass Array.map's index as isFallback, wrongly marking
+                // every card past the first as a non-AI fallback card.
+                recommendationsList.innerHTML = recommendations.map(lot => buildLotCard(lot)).join('');
                 attachSelectHandlers();
                 return { status: 'success', count: lotCount };
             } catch (error) {
@@ -262,7 +484,11 @@ function createBookingWizard(options) {
 
         async function generateRecommendations() {
             const preferences = {
-                lot_number: prefLotNumber.value.trim(),
+                // Batch M9: prefLotNumber no longer exists on the citizen
+                // page (reserve-burial-slot.html) — lot numbers are an
+                // internal staff/admin concept, not something a citizen
+                // would know. Still present on burial-scheduling.html.
+                lot_number: prefLotNumber ? prefLotNumber.value.trim() : '',
                 lot_type: selectLotInput.value,
                 budget: parseInt(selectBudgetInput.value, 10),
                 section: selectSectionInput.value
@@ -386,7 +612,7 @@ function createBookingWizard(options) {
                         const scheduleId = result.schedule_id;
                         scheduleForm.reset();
                         budgetValue.textContent = '10,000';
-                        prefLotNumber.value = '';
+                        if (prefLotNumber) prefLotNumber.value = '';
                         selectTimeInput.value = '';
                         selectedLot = null;
                         currentPreferences = {};
@@ -434,6 +660,13 @@ function createBookingWizard(options) {
 
         await Promise.all([loadDecedents(), loadLookupData()]);
         chatAssistant.init();
+
+        // Batch M9: the chat assistant is the intended primary way to search
+        // for a lot (natural language, AI-explained results) — the manual
+        // filter <details> stays the secondary fallback it already was.
+        // Open the panel by default instead of leaving it collapsed behind
+        // an extra click.
+        setChatPanelOpen(true);
 
         // Check if lot_id passed via URL query params (from Interactive Slot Grid)
         const urlParams = new URLSearchParams(window.location.search);

@@ -5,6 +5,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     createBookingWizard({
         allowedRoles: ['user'],
+        showLotNumberField: false,
         renderStatusBadge: (lot) => `<span class="muted">Available status: ${lot.status || 'Available'}</span>`,
         onBookingSuccess: ({ scheduleId, bookedLot }) => {
             const goToPayment = confirm('Reservation request submitted and pending approval. Proceed to payment now?');
