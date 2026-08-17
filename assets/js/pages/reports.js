@@ -28,6 +28,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     let verificationBreakdownChartInstance = null;
     let revenueByMethodChartInstance = null;
     let reservationsChartInstance = null;
+
+    function formatPeso(value) {
+        return `₱${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
     let demographicsChartInstance = null;
     const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -109,7 +113,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (to) params.push(`date_to=${encodeURIComponent(to)}`);
             const url = `reports/revenue${params.length ? '?' + params.join('&') : ''}`;
             const data = await api.request(url, { method: 'GET' });
-            document.getElementById('revTotal').innerText = `₱${parseFloat(data.total?.total || 0).toLocaleString()}`;
+            document.getElementById('revTotal').innerText = formatPeso(data.total?.total);
             document.getElementById('revCount').innerText = data.total?.count || 0;
 
             // Follow the selected date range instead of always showing the current
@@ -121,7 +125,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             revenueMonthChart = new Chart(revenueCtx, {
                 type: 'line',
                 data: { labels: monthData.map(item => `${MONTH_NAMES[item.month - 1]} ${monthYear}`), datasets: [{ label: 'Monthly Revenue', data: monthData.map(item => item.total || 0), borderColor: '#2c5e47', fill: false }] },
-                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                options: {
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: ctx => formatPeso(ctx.parsed.y) } }
+                    },
+                    scales: { y: { beginAtZero: true, ticks: { callback: formatPeso } } }
+                }
             });
 
             const breakdown = data.breakdown || [];
@@ -131,13 +141,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (revenueBreakdownChartInstance) revenueBreakdownChartInstance.destroy();
             revenueBreakdownChartInstance = new Chart(breakdownCtx, {
                 type: 'doughnut',
-                data: { labels, datasets: [{ data: values, backgroundColor: ['#2c5e47', '#7aa77a', '#d4a373', '#b5838d', '#6d6875'] }] }
+                data: { labels, datasets: [{ data: values, backgroundColor: ['#2c5e47', '#7aa77a', '#d4a373', '#b5838d', '#6d6875'] }] },
+                options: { plugins: { tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatPeso(ctx.parsed)}` } } } }
             });
 
             const verificationBreakdown = await api.request(`payments/verification-breakdown${params.length ? '?' + params.join('&') : ''}`, { method: 'GET' });
             const pending = verificationBreakdown.find(item => item.verification_status === 'Pending');
             document.getElementById('revPendingCount').innerText = pending?.count || 0;
-            document.getElementById('revPendingAmount').innerText = `₱${parseFloat(pending?.total || 0).toLocaleString()} pending`;
+            document.getElementById('revPendingAmount').innerText = `${formatPeso(pending?.total)} pending`;
 
             const verificationCtx = document.getElementById('verificationBreakdownChart').getContext('2d');
             if (verificationBreakdownChartInstance) verificationBreakdownChartInstance.destroy();
@@ -147,7 +158,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 data: {
                     labels: verificationBreakdown.map(item => item.verification_status),
                     datasets: [{ data: verificationBreakdown.map(item => item.total || 0), backgroundColor: verificationBreakdown.map(item => verificationColors[item.verification_status] || '#6d6875') }]
-                }
+                },
+                options: { plugins: { tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatPeso(ctx.parsed)}` } } } }
             });
 
             const methodBreakdown = await api.request(`payments/revenue-by-method${params.length ? '?' + params.join('&') : ''}`, { method: 'GET' });
@@ -159,7 +171,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                     labels: methodBreakdown.map(item => item.payment_method),
                     datasets: [{ label: 'Revenue', data: methodBreakdown.map(item => item.total || 0), backgroundColor: '#6d6875' }]
                 },
-                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                options: {
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: ctx => formatPeso(ctx.parsed.y) } }
+                    },
+                    scales: { y: { beginAtZero: true, ticks: { callback: formatPeso } } }
+                }
             });
         } catch (error) {
             console.error('Failed to load revenue:', error);

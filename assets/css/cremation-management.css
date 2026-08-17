@@ -218,32 +218,15 @@
 }
 
 /* ---------- CREMATION MANAGEMENT SPECIFIC ---------- */
-.stats-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 18px;
-    margin-bottom: 24px;
-}
+/* .stats-row / .stat-card / .stat-title / .stat-value / .stat-sub now come from
+   assets/css/dashboard.css so this module's stat cards match every other module. */
 
-.stat-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 16px;
-}
-
-.stat-title {
-    color: #556969;
-    font-size: 0.85rem;
-}
-
-.stat-value {
-    font-size: 1.6rem;
-    font-weight: 800;
-}
-
-.stat-sub {
-    color: #7a8b82;
-    font-size: 0.75rem;
+.toolbar-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-bottom: 20px;
 }
 
 /* Add button — matches the animated pill (expanding-circle hover) design
@@ -382,34 +365,11 @@
     width: 90%;
 }
 
-.close,
-.close-view {
-    float: right;
-    font-size: 1.3rem;
-    cursor: pointer;
-    background: none;
-    border: none;
-    font-family: inherit;
-    border-radius: var(--radius-sm);
-}
+/* .close / .close-view now come from assets/css/components/modals.css so this
+   module's modal close button matches every other module. */
 
-.close:focus-visible,
-.close-view:focus-visible {
-    outline: 2px solid var(--color-primary-500);
-    outline-offset: 2px;
-}
-
-.form-group {
-    margin-bottom: 0.8rem;
-}
-
-.form-group label {
-    display: block;
-    font-weight: 600;
-    font-size: 0.85rem;
-    margin-bottom: 4px;
-    color: #2d3e3a;
-}
+/* .form-group / .form-group label now come from assets/css/components/forms.css
+   so this page's form spacing/labels match every other module. */
 
 /* .form-group input/select/textarea now come from assets/css/components/forms.css (Batch 5) */
 

@@ -311,17 +311,8 @@
     margin-bottom: 0;
 }
 
-.form-group {
-    margin-bottom: 1rem;
-}
-
-.form-group label {
-    display: block;
-    font-weight: 600;
-    font-size: 0.85rem;
-    margin-bottom: 4px;
-    color: #2d3e3a;
-}
+/* .form-group / .form-group label now come from assets/css/components/forms.css
+   so this page's form spacing/labels match every other module. */
 
 /* .form-group input/select/textarea now come from assets/css/components/forms.css (Batch 5) */
 

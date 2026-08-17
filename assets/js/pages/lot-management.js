@@ -134,7 +134,7 @@ function renderMatrixGrid(lots, sectionName) {
         else if (lot.status === 'Expired') code = 'E';
 
         return `
-            <div class="slot-box status-${lot.status}" data-id="${lot.lot_id}" title="Lot ${lot.lot_number} (${lot.status}) - $${parseFloat(lot.price).toLocaleString()}">
+            <div class="slot-box status-${lot.status}" data-id="${lot.lot_id}" title="Lot ${lot.lot_number} (${lot.status}) - ₱${parseFloat(lot.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}">
                 <div class="slot-icon">${code}</div>
                 <div class="slot-num">${lot.lot_number}</div>
             </div>
@@ -186,7 +186,7 @@ function renderLots(lots) {
                         <span class="lot-status status-${lot.status}">${lot.status}</span>
                     </div>
                     <div class="lot-info">
-                        <div class="info-row"><i class="fas fa-dollar-sign"></i><span>Price</span><strong>$${parseFloat(lot.price).toLocaleString()}</strong></div>
+                        <div class="info-row"><i class="fas fa-dollar-sign"></i><span>Price</span><strong>₱${parseFloat(lot.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
                         <div class="info-row"><i class="fas fa-map-marker-alt"></i><span>Section</span><strong>${lot.section_name}</strong></div>
                         <div class="info-row"><i class="fas fa-th-large"></i><span>Block</span><strong>${lot.block_name || "N/A"}</strong></div>
                         <div class="info-row"><i class="fas fa-ruler-combined"></i><span>Size</span><strong>${lot.dimensions || "--"}</strong></div>
@@ -230,7 +230,7 @@ function renderLots(lots) {
                 <div class="detail-row"><span>Section</span><strong>${lot.section_name}</strong></div>
                 <div class="detail-row"><span>Block</span><strong>${lot.block_name || 'N/A'}</strong></div>
                 <div class="detail-row"><span>Type</span><strong>${lot.lot_type_name}</strong></div>
-                <div class="detail-row"><span>Price</span><strong>$${parseFloat(lot.price).toLocaleString()}</strong></div>
+                <div class="detail-row"><span>Price</span><strong>₱${parseFloat(lot.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
                 <div class="detail-row"><span>Status</span><strong>${lot.status}</strong></div>
                 <div class="detail-row"><span>Dimensions</span><strong>${lot.dimensions || '—'}</strong></div>
                 <div class="detail-row"><span>Notes</span><strong>${lot.location_notes || 'None'}</strong></div>

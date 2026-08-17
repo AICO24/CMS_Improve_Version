@@ -140,38 +140,8 @@
     padding: 24px;
 }
 
-.stats-row {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 18px;
-    margin-bottom: 24px;
-}
-
-.stat-card {
-    background: #fff;
-    border-radius: 18px;
-    padding: 20px;
-    box-shadow: 0 8px 24px rgba(15,23,42,0.05);
-}
-
-.stat-title {
-    font-size: 0.85rem;
-    color: #6b7a73;
-    margin-bottom: 10px;
-    font-weight: 600;
-}
-
-.stat-value {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #243736;
-}
-
-.stat-sub {
-    margin-top: 8px;
-    color: #8494a5;
-    font-size: 0.82rem;
-}
+/* .stats-row / .stat-card / .stat-title / .stat-value / .stat-sub now come from
+   assets/css/dashboard.css so this module's stat cards match every other module. */
 
 .toolbar-row {
     display: flex;
@@ -252,57 +222,51 @@
     gap: 8px;
 }
 
-.btn-view,
-.btn-delete-row,
-.btn-verify,
-.btn-reject {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
+/* .btn-view — matches the circular icon-button design used everywhere else
+   this "view" action appears (Decedent Records, My Records, Users, Relocation,
+   Payments); this page previously had its own smaller, unanimated variant.
+   .btn-delete-row / .btn-verify / .btn-reject removed — this page (a citizen's
+   read-only payment history) never renders those actions. */
+.btn-view {
+    width: 42px;
+    height: 42px;
     border: none;
-    background: transparent;
+    border-radius: 50%;
+    background: #eff6ff;
+    color: #2563eb;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     cursor: pointer;
-    color: #2b3658;
-    font-size: 1rem;
-    border-radius: var(--radius-sm);
-    transition: background var(--duration-base) var(--easing-standard);
+    overflow: hidden;
+    position: relative;
+    transition: .35s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
 }
 
-.btn-view,
-.btn-delete-row {
-    width: 34px;
-    height: 34px;
+.btn-view i {
+    font-size: 15px;
+    transition: .35s ease;
 }
 
-.btn-verify,
-.btn-reject {
-    padding: 8px 14px;
-    font-size: 0.9rem;
-    font-weight: 600;
+.btn-view:hover {
+    background: #2563eb;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(37, 99, 235, .35);
 }
 
-.btn-view:hover,
-.btn-delete-row:hover,
-.btn-verify:hover,
-.btn-reject:hover {
-    background: var(--color-neutral-100);
+.btn-view:hover i {
+    transform: scale(1.25);
 }
 
-.btn-view:focus-visible,
-.btn-delete-row:focus-visible,
-.btn-verify:focus-visible,
-.btn-reject:focus-visible {
+.btn-view:active {
+    transform: scale(.90);
+}
+
+.btn-view:focus-visible {
     outline: 2px solid var(--color-primary-500);
     outline-offset: 2px;
-}
-
-.btn-verify {
-    color: #0f766e;
-}
-
-.btn-reject {
-    color: var(--color-danger-strong);
 }
 
 /* .modal overlay now comes from assets/css/components/modals.css (Batch 5) */
@@ -317,39 +281,11 @@
     font-size: 1.3rem;
 }
 
-.close,
-.close-view {
-    position: absolute;
-    top: 18px;
-    right: 18px;
-    font-size: 1.4rem;
-    color: #6b7a73;
-    cursor: pointer;
-    background: none;
-    border: none;
-    font-family: inherit;
-    border-radius: var(--radius-sm);
-}
+/* .close / .close-view now come from assets/css/components/modals.css so this
+   module's modal close button matches every other module. */
 
-.close:focus-visible,
-.close-view:focus-visible {
-    outline: 2px solid var(--color-primary-500);
-    outline-offset: 2px;
-}
-
-.form-group {
-    display: grid;
-    gap: 8px;
-    margin-bottom: 16px;
-}
-
-.form-group label {
-    font-size: 0.9rem;
-    color: #4b5d67;
-    font-weight: 600;
-}
-
-/* .form-group input/select/textarea now come from assets/css/components/forms.css (Batch 5) */
+/* .form-group / .form-group label / input / select / textarea now come from
+   assets/css/components/forms.css so this page's forms match every other module. */
 
 .detail-section-title {
     margin: 18px 0 4px;

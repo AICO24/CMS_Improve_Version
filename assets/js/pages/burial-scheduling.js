@@ -83,9 +83,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 
-    budgetValue.textContent = budgetSlider.value;
+    budgetValue.textContent = Number(budgetSlider.value).toLocaleString();
     budgetSlider.addEventListener('input', () => {
-        budgetValue.textContent = budgetSlider.value;
+        budgetValue.textContent = Number(budgetSlider.value).toLocaleString();
     });
 
     function showStep(stepNumber) {
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             <div class="recommendation-card" data-lot-id="${lot.lot_id}">
                 <div>
                     <strong>${lot.lot_number} — ${lot.section_name || 'N/A'}</strong><br>
-                    <span class="lot-type-tag">${lot.lot_type_name || 'N/A'}</span> | $${parseFloat(lot.price).toLocaleString()}<br>
+                    <span class="lot-type-tag">${lot.lot_type_name || 'N/A'}</span> | ₱${parseFloat(lot.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}<br>
                     <span class="status-badge status-success">${lot.status || 'Available'}</span>
                 </div>
                 <div class="recommendation-actions">
@@ -245,7 +245,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             <div class="confirmation-box">
                 <p><strong>Lot:</strong> ${lot.lot_number} (${lot.section_name || 'N/A'})</p>
                 <p><strong>Type:</strong> ${lot.lot_type_name || 'N/A'}</p>
-                <p><strong>Price:</strong> $${parseFloat(lot.price).toLocaleString()}</p>
+                <p><strong>Price:</strong> ₱${parseFloat(lot.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <p><strong>Burial Date:</strong> ${currentPreferences.date}</p>
                 <p><strong>Burial Time:</strong> ${currentPreferences.time || 'Not specified'}</p>
                 <p><strong>Decedent:</strong> ${currentPreferences.decedentName || 'N/A'}</p>
@@ -354,7 +354,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (result.success) {
                     alert('Reservation request submitted and pending approval.');
                     scheduleForm.reset();
-                    budgetValue.textContent = '10000';
+                    budgetValue.textContent = '10,000';
                     prefLotNumber.value = '';
                     selectTimeInput.value = '';
                     selectedLot = null;
@@ -415,7 +415,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (lot.lot_type_name) selectLotInput.value = lot.lot_type_name;
                 if (lot.price) {
                     budgetSlider.value = lot.price;
-                    budgetValue.textContent = lot.price;
+                    budgetValue.textContent = Number(lot.price).toLocaleString();
                 }
             }
         } catch (err) {

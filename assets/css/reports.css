@@ -147,32 +147,8 @@
     display: block;
 }
 
-.stats-row {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 18px;
-    margin-bottom: 24px;
-}
-
-.stat-card {
-    background: #fff;
-    border-radius: 20px;
-    padding: 20px;
-    box-shadow: 0 16px 32px rgba(15,23,42,0.05);
-}
-
-.stat-title {
-    color: #6b7a73;
-    font-size: 0.85rem;
-    margin-bottom: 10px;
-    font-weight: 600;
-}
-
-.stat-value {
-    font-size: 2rem;
-    color: #243736;
-    font-weight: 700;
-}
+/* .stats-row / .stat-card / .stat-title / .stat-value now come from
+   assets/css/dashboard.css so this module's stat cards match every other module. */
 
 .filter-bar {
     display: flex;
@@ -215,14 +191,8 @@
 
 /* .data-table th/td styling now comes from assets/css/components/tables.css (Batch 5) */
 
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 8px 12px;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 700;
-}
+/* .status-badge base (shape/padding/size) now comes from assets/css/dashboard.css so
+   this module's badges match the rest of the app; only state colors stay local. */
 
 .status-warning {
     background: #fff4e5;

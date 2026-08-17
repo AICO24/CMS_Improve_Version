@@ -6,11 +6,12 @@
   page currently has a checkbox or radio inside a .form-group, so this
   is purely additive groundwork, not a change to anything rendered today.
 
-  NOT covered here: page-specific .form-group overrides in
+  Page-specific .form-group overrides that used to exist in
   cremation-management.css, burial-scheduling.css, my-records.css,
   lot-management.css, user-management.css, decedent-records.css,
-  reserve-burial-slot.css. Those still render from their own files —
-  see the Batch 2 report.
+  reserve-burial-slot.css, payments.css, payment-history.css, and
+  relocation-management.css were removed (Batch K) so every module now
+  renders from this one shared definition.
 */
 
 .form-group {

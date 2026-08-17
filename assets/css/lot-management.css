@@ -241,32 +241,17 @@
 }
 
 /* ---------- LOT MANAGEMENT SPECIFIC ---------- */
-.stats-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 18px;
-    margin-bottom: 24px;
-}
+/* .stats-row / .stat-card / .stat-title / .stat-value / .stat-sub intentionally
+   not redeclared here — this page uses the shared definitions from dashboard.css
+   so its stats row matches the rest of the app. */
 
-.stat-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 16px;
-}
-
-.stat-title {
-    color: #556969;
-    font-size: 0.85rem;
-}
-
-.stat-value {
-    font-size: 1.6rem;
-    font-weight: 800;
-}
-
-.stat-sub {
-    color: #7a8b82;
-    font-size: 0.75rem;
+.toolbar-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
 }
 
 .section-tabs {
@@ -399,9 +384,9 @@
     padding:22px;
 }
 
-/* TOP */
+/* HEADER (lot number/type + status badge) */
 
-.lot-top{
+.lot-header{
     display:flex;
     justify-content:space-between;
     align-items:center;
@@ -423,18 +408,37 @@
     font-weight:700;
 }
 
-/* PRICE */
+/* INFO ROWS (price/section/block/size) */
 
-.lot-price{
-    font-size:2rem;
-    font-weight:800;
-    color:#2c5e47;
+.lot-info{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
     margin-bottom:16px;
 }
 
-.lot-price i{
-    font-size:1rem;
-    margin-right:4px;
+.info-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    color:#64748b;
+    font-size:.85rem;
+}
+
+.info-row i{
+    width:16px;
+    text-align:center;
+    color:#7aa77a;
+    font-size:.85rem;
+}
+
+.info-row span{
+    flex:1;
+}
+
+.info-row strong{
+    color:#243736;
+    font-weight:700;
 }
 
 /* STATUS */
@@ -451,8 +455,6 @@
     font-size:.75rem;
 
     font-weight:700;
-
-    margin-bottom:18px;
 }
 
 .status-Available{
@@ -473,26 +475,6 @@
 .status-Expired{
     background:#ececec;
     color:#555;
-}
-
-/* FOOTER */
-
-.lot-meta{
-    display:flex;
-    align-items:center;
-    gap:8px;
-
-    color:#64748b;
-
-    font-size:.85rem;
-
-    border-top:1px solid #edf2f7;
-
-    padding-top:15px;
-}
-
-.divider{
-    color:#cbd5e1;
 }
 
 /* HOVER LINE */
@@ -592,34 +574,11 @@
     width: 90%;
 }
 
-.close,
-.close-view {
-    float: right;
-    font-size: 1.3rem;
-    cursor: pointer;
-    background: none;
-    border: none;
-    font-family: inherit;
-    border-radius: var(--radius-sm);
-}
+/* .close / .close-view now come from assets/css/components/modals.css so this
+   module's modal close button matches every other module. */
 
-.close:focus-visible,
-.close-view:focus-visible {
-    outline: 2px solid var(--color-primary-500);
-    outline-offset: 2px;
-}
-
-.form-group {
-    margin-bottom: 0.8rem;
-}
-
-.form-group label {
-    display: block;
-    font-weight: 600;
-    font-size: 0.85rem;
-}
-
-/* .form-group input/select/textarea now come from assets/css/components/forms.css (Batch 5) */
+/* .form-group / .form-group label / input / select / textarea now come from
+   assets/css/components/forms.css so this page's forms match every other module. */
 
 .btn-save {
     width: 160px;
@@ -774,16 +733,7 @@
 
 /* ---------- RESPONSIVE ---------- */
 /* Sidebar/rail responsive behavior now comes from the shared dashboard.css (Batch 3) */
-@media (max-width: 1024px) {
-    .stats-row {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
 @media (max-width: 768px) {
-    .stats-row {
-        grid-template-columns: 1fr;
-    }
     .lot-grid {
         grid-template-columns: 1fr;
     }

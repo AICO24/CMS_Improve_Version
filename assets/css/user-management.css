@@ -102,37 +102,8 @@
 
 /* .logout-btn/.Btn (+ .sign/.text sliding animation) now come from assets/css/dashboard.css (Batch 10; previously duplicated here in Batch 8) */
 
-.stats-row {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-}
-
-.stat-card {
-    background: #fff;
-    border-radius: 18px;
-    padding: 20px;
-    box-shadow: 0 10px 30px rgba(34, 77, 102, 0.08);
-}
-
-.stat-title {
-    font-size: 0.9rem;
-    color: #6c7a89;
-    margin-bottom: 10px;
-}
-
-.stat-value {
-    font-size: 2.2rem;
-    font-weight: 700;
-    color: #243736;
-}
-
-.stat-sub {
-    margin-top: 10px;
-    color: #8a9aad;
-    font-size: 0.85rem;
-}
+/* .stats-row / .stat-card / .stat-title / .stat-value / .stat-sub now come from
+   assets/css/dashboard.css so this module's stat cards match every other module. */
 
 .toolbar-row {
     display: flex;
@@ -416,36 +387,13 @@
     font-size: 1.45rem;
 }
 
-.close {
-    position: absolute;
-    right: 24px;
-    top: 24px;
-    font-size: 1.6rem;
-    color: #243736;
-    cursor: pointer;
-    background: none;
-    border: none;
-    font-family: inherit;
-    border-radius: var(--radius-sm);
-}
+/* .close / .close-view now come from assets/css/components/modals.css so this
+   module's modal close button matches every other module (and is correctly
+   anchored to .modal-content, fixing a bug where it was previously pinned
+   to the fixed full-viewport overlay instead of the modal card). */
 
-.close:focus-visible {
-    outline: 2px solid var(--color-primary-500);
-    outline-offset: 2px;
-}
-
-.form-group {
-    display: grid;
-    gap: 8px;
-    margin-bottom: 16px;
-}
-
-.form-group label {
-    font-weight: 600;
-    color: #344055;
-}
-
-/* .form-group input/select now come from assets/css/components/forms.css (Batch 5) */
+/* .form-group / .form-group label / input / select now come from
+   assets/css/components/forms.css so this page's forms match every other module. */
 
 @media (max-width: 980px) {
     .stats-row {

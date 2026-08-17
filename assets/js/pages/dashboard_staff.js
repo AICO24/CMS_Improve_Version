@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function formatCurrency(value) {
         const amount = Number(value) || 0;
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+        return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
     }
 
     function getMonthName(monthNumber) {

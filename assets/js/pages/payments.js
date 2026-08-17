@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function formatCurrency(amount) {
-        return `₱${parseFloat(amount || 0).toLocaleString()}`;
+        return `₱${parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
 
     function statusBadgeClass(status) {

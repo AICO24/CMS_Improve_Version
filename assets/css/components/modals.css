@@ -26,6 +26,7 @@
 }
 
 .modal-content {
+    position: relative;
     background: var(--color-surface);
     border-radius: var(--radius-lg);
     padding: var(--space-6);
@@ -33,6 +34,29 @@
     max-height: 90vh;
     overflow: auto;
     box-shadow: var(--shadow-3);
+}
+
+/* Canonical modal close ("x") control — anchors to .modal-content via the
+   position: relative above, so it stays pinned to the modal card itself
+   rather than the fixed full-viewport .modal overlay. */
+.close,
+.close-view {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    font-size: 1.4rem;
+    color: #6b7a73;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+    line-height: 1;
+}
+
+.close:focus-visible,
+.close-view:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
 }
 
 /* --- New sub-parts (additive) --- */
