@@ -26,5 +26,5 @@ The "Capacity Forecast" page (admin) and lot-recommendation feature depend on a 
 1. `cd python-ai`
 2. Run `run.bat` (Windows) or `run.sh` (macOS/Linux) — creates a venv, installs `requirements.txt`, and starts the service on `http://127.0.0.1:5000` (configurable via `python-ai/.env`).
 3. Verify it's up: `GET http://127.0.0.1:5000/api/health`, or check the "AI Configuration" page in the admin dashboard, which shows live service status.
-4. If this service is not running, `ai/forecast` and `ai/recommend` degrade gracefully (the PHP API and frontend both detect and report the outage instead of failing silently) — but no real forecast or recommendation data is available until it's started.
+4. If this service is not running, `ai/forecast` and `schedules/recommend` degrade gracefully (the PHP API and frontend both detect and report the outage instead of failing silently) — but no real forecast or recommendation data is available until it's started.
 

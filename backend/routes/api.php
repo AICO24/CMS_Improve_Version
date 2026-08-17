@@ -841,12 +841,12 @@ if ($path === 'ai/health' && $requestMethod === 'GET') {
     exit;
 }
 
-if ($path === 'ai/recommend' && $requestMethod === 'POST') {
-    AuthMiddleware::requireRole(['admin', 'staff']);
-    $input = readRequestBody();
-    echo json_encode($aiController->recommend($input));
-    exit;
-}
+// Batch M7: the 'ai/recommend' route (admin/staff only) was removed here —
+// it called the exact same AiController::recommend() as 'schedules/recommend'
+// below (open to admin/staff/user), had zero frontend callers (confirmed via
+// repo-wide search), and its presence risked a future developer "fixing" a
+// route nothing actually used. AiController::recommend() itself is untouched
+// and still live via schedules/recommend.
 
 if ($path === 'ai/forecast' && $requestMethod === 'GET') {
     // Phase 6: the citizen wizard's capacity advisory (Phase 5) also calls
