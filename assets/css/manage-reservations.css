@@ -258,6 +258,32 @@
     align-items: center;
 }
 
+.count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    margin-left: 6px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+#toggleAwaitingConfirmation[aria-pressed="true"] {
+    background: #2c5e47;
+    border-color: #2c5e47;
+    color: #fff;
+}
+
+#toggleAwaitingConfirmation[aria-pressed="true"] .count-badge {
+    background: #fff;
+    color: #2c5e47;
+}
+
 /* .table-container / .data-table / .pagination-controls / .pagination-info
    come from assets/css/components/tables.css (Batch 5). */
 

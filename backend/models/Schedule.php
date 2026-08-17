@@ -64,6 +64,12 @@ class Schedule {
             $params[] = $filters['year'];
             $params[] = $filters['month'];
         }
+        if (!empty($filters['awaiting_confirmation'])) {
+            $sql .= " AND s.status = 'Pending' AND EXISTS (
+                SELECT 1 FROM payments pay
+                WHERE pay.reference_id = s.schedule_id AND pay.verification_status = 'Verified'
+            )";
+        }
 
         $sql .= " ORDER BY s.schedule_date ASC, s.schedule_time ASC";
 
@@ -134,6 +140,12 @@ class Schedule {
             $sql .= " AND YEAR(s.schedule_date) = ? AND MONTH(s.schedule_date) = ?";
             $params[] = $filters['year'];
             $params[] = $filters['month'];
+        }
+        if (!empty($filters['awaiting_confirmation'])) {
+            $sql .= " AND s.status = 'Pending' AND EXISTS (
+                SELECT 1 FROM payments pay
+                WHERE pay.reference_id = s.schedule_id AND pay.verification_status = 'Verified'
+            )";
         }
 
         $stmt = $this->db->prepare($sql);

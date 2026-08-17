@@ -28,10 +28,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     const paginationInfo = document.getElementById('paginationInfo');
     const prevPageBtn = document.getElementById('prevPage');
     const nextPageBtn = document.getElementById('nextPage');
+    const toggleAwaitingBtn = document.getElementById('toggleAwaitingConfirmation');
+    const awaitingCountBadge = document.getElementById('awaitingConfirmationCount');
 
     const perPage = 10;
     let currentQuery = '';
     let currentStatus = '';
+    let awaitingConfirmationOnly = false;
 
     const pagination = createPagination({
         prevBtn: prevPageBtn,
@@ -89,7 +92,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         params.set('page', pagination.page);
         params.set('per_page', perPage);
         if (currentQuery.trim()) params.set('q', currentQuery.trim());
-        if (currentStatus) params.set('status', currentStatus);
+        if (awaitingConfirmationOnly) {
+            params.set('awaiting_confirmation', '1');
+        } else if (currentStatus) {
+            params.set('status', currentStatus);
+        }
         return await api.request(`schedules?${params.toString()}`, { method: 'GET' });
     }
 
@@ -102,6 +109,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         statsEls.confirmed.innerText = stats.confirmed || 0;
         statsEls.completed.innerText = stats.completed || 0;
         statsEls.cancelled.innerText = stats.cancelled || 0;
+    }
+
+    async function refreshAwaitingConfirmationCount() {
+        try {
+            const result = await api.request('schedules?awaiting_confirmation=1&page=1&per_page=1', { method: 'GET' });
+            awaitingCountBadge.textContent = (result.meta && result.meta.total) || 0;
+        } catch (error) {
+            console.error('Failed to load awaiting-confirmation count', error);
+        }
     }
 
     async function loadAndRenderReservations() {
@@ -127,6 +143,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch (error) {
             console.error('Failed to load reservation stats', error);
         }
+        await refreshAwaitingConfirmationCount();
         await loadAndRenderReservations();
     }
 
@@ -207,11 +224,25 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     searchQuery.addEventListener('input', refreshFiltered);
     statusFilter.addEventListener('change', refreshFiltered);
+
+    toggleAwaitingBtn.addEventListener('click', async () => {
+        awaitingConfirmationOnly = !awaitingConfirmationOnly;
+        toggleAwaitingBtn.setAttribute('aria-pressed', String(awaitingConfirmationOnly));
+        // The filter is inherently Pending-only server-side; disable the status
+        // dropdown while active so it can't silently conflict with the toggle.
+        statusFilter.disabled = awaitingConfirmationOnly;
+        pagination.reset();
+        await loadAndRenderReservations();
+    });
+
     clearFilters.addEventListener('click', async () => {
         searchQuery.value = '';
         statusFilter.value = '';
+        statusFilter.disabled = false;
         currentQuery = '';
         currentStatus = '';
+        awaitingConfirmationOnly = false;
+        toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
         pagination.reset();
         await loadAndRenderReservations();
     });

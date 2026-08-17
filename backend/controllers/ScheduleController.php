@@ -155,6 +155,47 @@ class ScheduleController {
         }
     }
 
+    // Notifies the reservation's owner about a status change made by staff/admin
+    // (or by the owner cancelling their own reservation). Mirrors notifySchedule()
+    // above, which only ever fires on creation — confirmation/completion/cancellation
+    // were previously silent.
+    private function notifyScheduleStatusChange($schedule, $status, $recipientUserId) {
+        $notificationModel = new Notification();
+        $userModel = new User();
+        $lot = $this->lotModel->findById($schedule['lot_id']);
+        $recipient = $userModel->findById($recipientUserId);
+
+        $titles = [
+            'Confirmed' => 'Burial Schedule Confirmed',
+            'Completed' => 'Burial Service Completed',
+            'Cancelled' => 'Reservation Cancelled',
+        ];
+        $verbs = [
+            'Confirmed' => 'has been confirmed',
+            'Completed' => 'has been marked completed',
+            'Cancelled' => 'has been cancelled',
+        ];
+        $title = $titles[$status] ?? ('Reservation ' . $status);
+        $message = sprintf(
+            'Your burial reservation for lot %s on %s%s %s.',
+            $lot['lot_number'] ?? 'Unknown',
+            $schedule['schedule_date'],
+            !empty($schedule['schedule_time']) ? ' at ' . $schedule['schedule_time'] : '',
+            $verbs[$status] ?? 'was updated'
+        );
+
+        $notificationModel->create([
+            'title' => $title,
+            'message' => $message,
+            'notification_type' => 'Schedule',
+            'is_read' => 0,
+        ]);
+
+        if (!empty($recipient['email'])) {
+            $this->sendEmail($recipient['email'], $title, $message);
+        }
+    }
+
     private function sendEmail($email, $subject, $message) {
         if (empty($email)) {
             return false;
@@ -208,10 +249,12 @@ class ScheduleController {
         $result = $this->scheduleModel->update($id, $data);
         if ($result) {
             $lotId = $data['lot_id'] ?? $existing['lot_id'];
-            if (isset($data['status']) && $data['status'] === 'Confirmed') {
+            if (isset($data['status']) && $data['status'] === 'Confirmed' && $existing['status'] !== 'Confirmed') {
                 $this->lotModel->update($lotId, ['status' => 'Reserved']);
-            } elseif (isset($data['status']) && $data['status'] === 'Completed') {
+                $this->notifyScheduleStatusChange($existing, 'Confirmed', $existing['created_by']);
+            } elseif (isset($data['status']) && $data['status'] === 'Completed' && $existing['status'] !== 'Completed') {
                 $this->lotModel->update($lotId, ['status' => 'Occupied']);
+                $this->notifyScheduleStatusChange($existing, 'Completed', $existing['created_by']);
             }
             return ['success' => true, 'message' => 'Schedule updated'];
         }
@@ -240,6 +283,7 @@ class ScheduleController {
             if (in_array($existing['status'], ['Confirmed', 'Pending'], true)) {
                 $this->lotModel->update($existing['lot_id'], ['status' => 'Available']);
             }
+            $this->notifyScheduleStatusChange($existing, 'Cancelled', $existing['created_by']);
             return ['success' => true, 'message' => 'Schedule deleted'];
         }
 
