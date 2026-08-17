@@ -127,7 +127,12 @@ class Lot {
     }
 
     public function update($id, $data) {
-        $stmt = $this->db->prepare(" 
+        $existing = $this->findById($id);
+        if (!$existing) {
+            return false;
+        }
+
+        $stmt = $this->db->prepare("
             UPDATE lots SET
                 block_id = ?,
                 lot_number = ?,
@@ -141,15 +146,15 @@ class Lot {
             WHERE lot_id = ?
         ");
         return $stmt->execute([
-            $data['block_id'],
-            $data['lot_number'],
-            $data['lot_type_id'],
-            $data['status'] ?? 'Available',
-            $data['price'],
-            $data['dimensions'] ?? null,
-            $data['location_notes'] ?? null,
-            $data['lease_start_date'] ?? null,
-            $data['lease_end_date'] ?? null,
+            $data['block_id'] ?? $existing['block_id'],
+            $data['lot_number'] ?? $existing['lot_number'],
+            $data['lot_type_id'] ?? $existing['lot_type_id'],
+            $data['status'] ?? $existing['status'],
+            $data['price'] ?? $existing['price'],
+            array_key_exists('dimensions', $data) ? $data['dimensions'] : $existing['dimensions'],
+            array_key_exists('location_notes', $data) ? $data['location_notes'] : $existing['location_notes'],
+            array_key_exists('lease_start_date', $data) ? $data['lease_start_date'] : $existing['lease_start_date'],
+            array_key_exists('lease_end_date', $data) ? $data['lease_end_date'] : $existing['lease_end_date'],
             $id,
         ]);
     }
