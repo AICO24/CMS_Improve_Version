@@ -14,6 +14,25 @@ class ScheduleController {
     }
 
     public function index($filters = []) {
+        $page = !empty($filters['page']) ? (int) $filters['page'] : null;
+        $perPage = !empty($filters['per_page']) ? (int) $filters['per_page'] : null;
+
+        if ($page !== null || $perPage !== null) {
+            $page = max(1, $page ?: 1);
+            $perPage = max(1, min(100, $perPage ?: 10));
+            $total = $this->scheduleModel->countAll($filters);
+            $data = $this->scheduleModel->findAll($filters, ['page' => $page, 'per_page' => $perPage]);
+            return [
+                'data' => $data,
+                'meta' => [
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $total,
+                    'pages' => (int) ceil($total / $perPage),
+                ],
+            ];
+        }
+
         return $this->scheduleModel->findAll($filters);
     }
 
@@ -188,9 +207,11 @@ class ScheduleController {
         $data['confirmed_by'] = isset($data['confirmed_by']) ? $data['confirmed_by'] : $userId;
         $result = $this->scheduleModel->update($id, $data);
         if ($result) {
+            $lotId = $data['lot_id'] ?? $existing['lot_id'];
             if (isset($data['status']) && $data['status'] === 'Confirmed') {
-                $lotId = $data['lot_id'] ?? $existing['lot_id'];
                 $this->lotModel->update($lotId, ['status' => 'Reserved']);
+            } elseif (isset($data['status']) && $data['status'] === 'Completed') {
+                $this->lotModel->update($lotId, ['status' => 'Occupied']);
             }
             return ['success' => true, 'message' => 'Schedule updated'];
         }

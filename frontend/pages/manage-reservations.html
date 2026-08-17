@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relocation & Exhumation | Cemetery Management</title>
+    <title>Manage Reservations | Cemetery Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../../assets/css/tokens.css">
@@ -18,7 +18,8 @@
     <link rel="stylesheet" href="../../assets/css/components/forms.css">
     <link rel="stylesheet" href="../../assets/css/components/tables.css">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
-    <link rel="stylesheet" href="../../assets/css/relocation-management.css">
+    <link rel="stylesheet" href="../../assets/css/components/search-input.css">
+    <link rel="stylesheet" href="../../assets/css/manage-reservations.css">
 </head>
 <body class="dashboard-body">
     <div class="dashboard-container">
@@ -32,9 +33,9 @@
                 <a href="dashboard_admin.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
                 <a href="lot-management.html" class="nav-item"><i class="fas fa-map-location-dot icon"></i> <span>Lot Management</span></a>
                 <a href="burial-scheduling.html" class="nav-item"><i class="fas fa-monument icon"></i> <span>Burial Scheduling</span></a>
-                <a href="manage-reservations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Reservations</span></a>
+                <a href="manage-reservations.html" class="nav-item active"><i class="fas fa-calendar-check icon"></i> <span>Manage Reservations</span></a>
                 <a href="cremation-management.html" class="nav-item"><i class="fas fa-fire icon"></i> <span>Cremation Management</span></a>
-                <a href="relocation-management.html" class="nav-item active"><i class="fas fa-truck-moving icon"></i> <span>Relocation Management</span></a>
+                <a href="relocation-management.html" class="nav-item"><i class="fas fa-truck-moving icon"></i> <span>Relocation Management</span></a>
                 <a href="expiration-monitoring.html" class="nav-item"><i class="fas fa-hourglass-half icon"></i> <span>Expiration Monitoring</span></a>
                 <a href="decedent-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>Decedent Records</span></a>
                 <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
@@ -57,7 +58,6 @@
                 <div class="top-left">
                     <label class="hamburger">
                         <input type="checkbox" id="toggleSidebar">
-
                         <svg viewBox="0 0 32 32">
                             <path
                                 class="line line-top-bottom"
@@ -68,19 +68,18 @@
                                 -2.209 0-4-1.791-4-4
                                 0-2.209 1.791-4 4-4h14">
                             </path>
-
                             <path
                                 class="line"
                                 d="M7 16H27">
                             </path>
                         </svg>
                     </label>
-                    <h3 id="pageTitle">Relocation & Exhumation</h3>
+                    <h3 id="pageTitle">Manage Reservations</h3>
                 </div>
                 <div class="user-info">
                     <div class="notification-icon" id="notificationIcon">
                         <i class="fas fa-bell"></i>
-                        <span class="notification-badge" id="notificationBadge">3</span>
+                        <span class="notification-badge" id="notificationBadge">0</span>
                     </div>
                     <div class="profile">
                         <div class="profile-avatar" id="userAvatar"><i class="fas fa-user-tie"></i></div>
@@ -93,7 +92,6 @@
                         <div class="sign">
                             <i class="fas fa-sign-out-alt"></i>
                         </div>
-
                         <div class="text">
                             Logout
                         </div>
@@ -105,125 +103,85 @@
                 <!-- Stats row -->
                 <div class="stats-row">
                     <div class="stat-card">
-                        <div class="stat-title">Pending Requests</div>
+                        <div class="stat-title">Pending</div>
                         <div class="stat-value" id="pendingCount">0</div>
-                        <div class="stat-sub">Awaiting approval</div>
+                        <div class="stat-sub">Awaiting confirmation</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-title">Approved</div>
-                        <div class="stat-value" id="approvedCount">0</div>
-                        <div class="stat-sub">Ready for execution</div>
+                        <div class="stat-title">Confirmed</div>
+                        <div class="stat-value" id="confirmedCount">0</div>
+                        <div class="stat-sub">Ready for burial</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-title">Completed</div>
                         <div class="stat-value" id="completedCount">0</div>
-                        <div class="stat-sub">Finished relocations</div>
+                        <div class="stat-sub">Finished burials</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-title">Total Requests</div>
-                        <div class="stat-value" id="totalCount">0</div>
-                        <div class="stat-sub">All time</div>
+                        <div class="stat-title">Cancelled</div>
+                        <div class="stat-value" id="cancelledCount">0</div>
+                        <div class="stat-sub">Not proceeding</div>
                     </div>
                 </div>
 
-                <!-- Add button -->
-                <div class="toolbar-row">
-                    <button class="btn-add" id="openAddModal"><span class="btn-txt"><i class="fas fa-plus"></i> New Relocation Request</span></button>
-                </div>
+                <div class="card">
+                    <div class="toolbar-row">
+                        <div class="toolbar-filters">
+                            <div class="search-field">
+                                <input type="text" id="searchQuery" class="search-field__input" placeholder=" ">
+                                <label for="searchQuery" class="search-field__label">Search by lot, section or decedent</label>
+                                <span class="search-field__icon" aria-hidden="true">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
+                                </span>
+                            </div>
+                            <select id="statusFilter" aria-label="Filter by status">
+                                <option value="">All statuses</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Confirmed">Confirmed</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="toolbar-actions">
+                            <button class="btn-secondary" id="clearFilters">Clear</button>
+                        </div>
+                    </div>
 
-                <!-- Requests table -->
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Request ID</th>
-                                <th>Decedent</th>
-                                <th>From Lot</th>
-                                <th>To Lot</th>
-                                <th>Reason</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="requestsTableBody">
-                            <tr><td colspan="7">Loading requests...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+                    <div class="table-container">
+                        <table class="data-table" id="reservationsTable">
+                            <thead>
+                                <tr>
+                                    <th>Booking</th>
+                                    <th>Decedent</th>
+                                    <th>Lot</th>
+                                    <th>Section</th>
+                                    <th>Burial Date</th>
+                                    <th>Requested By</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reservationsBody">
+                                <tr><td colspan="8">Loading reservations...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-                <div class="pagination-controls" id="paginationControls">
-                    <span class="pagination-info" id="paginationInfo"></span>
-                    <div>
-                        <button class="btn-secondary" id="prevPage">Previous</button>
-                        <button class="btn-secondary" id="nextPage">Next</button>
+                    <div class="pagination-controls" id="paginationControls">
+                        <span class="pagination-info" id="paginationInfo"></span>
+                        <div>
+                            <button class="btn-secondary" id="prevPage">Previous</button>
+                            <button class="btn-secondary" id="nextPage">Next</button>
+                        </div>
                     </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Add/Edit Request Modal -->
-    <div id="requestModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="modal-content">
-            <button type="button" class="close" aria-label="Close">&times;</button>
-            <h3 id="modalTitle">New Relocation Request</h3>
-            <form id="requestForm">
-                <input type="hidden" id="requestId">
-                <div class="form-group">
-                    <label>Decedent</label>
-                    <select id="decedentId" required>
-                        <option value="">Select decedent</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>From Lot (Current)</label>
-                    <select id="fromLotId" required>
-                        <option value="">Select current lot</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>To Lot (Destination)</label>
-                    <select id="toLotId" required>
-                        <option value="">Select destination lot</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Reason for relocation / exhumation</label>
-                    <textarea id="reason" rows="3" required placeholder="e.g., Family request, lease expiration, etc."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Status</label>
-                    <select id="requestStatus">
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="completed">Completed</option>
-                        <option value="denied">Denied</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span></button>
-            </form>
-        </div>
-    </div>
-
-    <!-- View/Approve Modal -->
-    <div id="viewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
-        <div class="modal-content">
-            <button type="button" class="close-view" aria-label="Close">&times;</button>
-            <h3 id="viewModalTitle">Request Details</h3>
-            <div id="viewDetails"></div>
-            <div class="modal-buttons">
-                <button class="btn-approve" id="approveBtn">Approve</button>
-                <button class="btn-complete" id="completeBtn">Mark Complete</button>
-                <button class="btn-deny" id="denyBtn">Deny</button>
-                <button class="btn-edit" id="editFromView">Edit Request</button>
-                <button class="btn-deny" id="deleteFromView" style="display:none;">Delete Request</button>
-            </div>
-        </div>
-    </div>
-
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/shared/button-loading.js"></script>
     <script src="../../assets/js/shared/pagination.js"></script>
-    <script src="../../assets/js/pages/relocation-management.js"></script>
+    <script src="../../assets/js/pages/manage-reservations.js"></script>
 </body>
 </html>

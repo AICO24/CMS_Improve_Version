@@ -328,6 +328,9 @@ if ($path === 'schedules' && $requestMethod === 'GET') {
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
     if (isset($_GET['month'])) $filters['month'] = $_GET['month'];
     if (isset($_GET['year'])) $filters['year'] = $_GET['year'];
+    if (isset($_GET['q'])) $filters['q'] = $_GET['q'];
+    if (isset($_GET['page'])) $filters['page'] = $_GET['page'];
+    if (isset($_GET['per_page'])) $filters['per_page'] = $_GET['per_page'];
     echo json_encode($scheduleController->index($filters));
     exit;
 }

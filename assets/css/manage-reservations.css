@@ -1,0 +1,385 @@
+/* ============================================
+   MANAGE RESERVATIONS MODULE STYLES
+   Sidebar matches dashboard – fixed, no internal scroll
+   ============================================ */
+
+.dashboard-body {
+    background: #f4f7fa;
+    font-family: 'Inter', sans-serif;
+    color: #243736;
+}
+
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar sizing/position comes solely from the shared responsive shell in
+   dashboard.css (matches the Relocation Management / Burial Scheduling
+   convention) — only the visual/color styling stays page-local. */
+
+.sidebar-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    flex-shrink: 0;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.brand i {
+    background: #fff;
+    color: #2b3658;
+    padding: 6px;
+    border-radius: 8px;
+}
+
+.sidebar-nav {
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    overflow-y: visible;
+}
+
+.nav-item,
+.nav-item * {
+    text-decoration: none !important;
+}
+
+.nav-item {
+    padding: 10px 12px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    color: #d6def3;
+    border-radius: 8px;
+    margin: 0;
+    cursor: pointer;
+    transition: all 0.16s ease;
+}
+
+.nav-item .icon {
+    font-size: 1.1rem;
+    width: 22px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.nav-item span:not(.icon) {
+    font-size: 0.9rem;
+}
+
+.nav-item:hover {
+    background: rgba(255,255,255,0.03);
+    transform: translateX(4px);
+    color: #fff;
+}
+
+.nav-item.active {
+    background: #7aa77a;
+    color: #06321a;
+}
+
+.sidebar-footer {
+    padding: 12px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+}
+
+.user-chip {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.user-chip:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+.user-chip i {
+    font-size: 1.5rem;
+    color: #7aa77a;
+    flex-shrink: 0;
+}
+
+.user-chip div {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.user-chip span {
+    display: block;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #fff;
+}
+
+.user-chip small {
+    color: #a0a8b5;
+    font-size: 0.7rem;
+}
+
+/* ---------- MAIN CONTENT ---------- */
+.main-content {
+    flex: 1;
+    min-height: 100vh;
+}
+
+/* ---------- TOP BAR ---------- */
+.top-bar {
+    background: #fff;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.top-left {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.notification-icon {
+    font-size: 1.1rem;
+    color: #2b3658;
+    cursor: pointer;
+    position: relative;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #ef4444;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: bold;
+}
+
+.profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.profile-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #eef3f7;
+    color: #2b3658;
+}
+
+.profile-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.user-name {
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 2px;
+}
+
+.user-role {
+    color: #6b7a73;
+    font-size: 0.8rem;
+}
+
+.content-area {
+    padding: 20px;
+}
+
+/* ---------- MODULE SPECIFIC STYLES ---------- */
+/* .stats-row / .stat-card / .stat-title / .stat-value / .stat-sub come from
+   assets/css/dashboard.css so this module's stat cards match every other module. */
+
+/* .card comes from assets/css/components/cards.css */
+
+.toolbar-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.toolbar-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.toolbar-filters select {
+    border: 1px solid #d9e1e8;
+    border-radius: 12px;
+    padding: 10px 14px;
+    min-width: 160px;
+    font-size: 0.95rem;
+    color: #2b3658;
+    background: #fff;
+}
+
+.toolbar-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* .table-container / .data-table / .pagination-controls / .pagination-info
+   come from assets/css/components/tables.css (Batch 5). */
+
+/* Status badges — base shape/padding/size come from assets/css/dashboard.css;
+   only state colors stay local, matching the citizen-facing My Reservations
+   page's exact palette so the same status reads identically everywhere. */
+.status-badge.pending {
+    background: #f7f0ff;
+    color: #6d3d9d;
+}
+
+.status-badge.confirmed {
+    background: #e6f8ef;
+    color: #147046;
+}
+
+.status-badge.cancelled {
+    background: #fff1f2;
+    color: #9e1a24;
+}
+
+.status-badge.completed {
+    background: #e8f5ff;
+    color: #1d4ed8;
+}
+
+/* Row action buttons — small pill buttons, colored to match the same
+   semantic palette used by Relocation Management's Approve/Complete/Deny
+   (green=confirm, teal=complete, red=cancel). */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-row-action {
+    appearance: none;
+    border: 2px solid currentColor;
+    background-color: transparent;
+    border-radius: 20px;
+    box-sizing: border-box;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 6px 14px;
+    min-height: 32px;
+    transition: all 250ms cubic-bezier(.23, 1, 0.32, 1);
+    user-select: none;
+}
+
+.btn-row-action--confirm {
+    color: #2c5e47;
+}
+
+.btn-row-action--confirm:hover {
+    background-color: #2c5e47;
+    color: #fff;
+    box-shadow: rgba(44, 94, 71, .3) 0 6px 12px;
+    transform: translateY(-2px);
+}
+
+.btn-row-action--complete {
+    color: #3f7a57;
+}
+
+.btn-row-action--complete:hover {
+    background-color: #3f7a57;
+    color: #fff;
+    box-shadow: rgba(63, 122, 87, .3) 0 6px 12px;
+    transform: translateY(-2px);
+}
+
+.btn-row-action--cancel {
+    color: #dc2626;
+}
+
+.btn-row-action--cancel:hover {
+    background-color: #dc2626;
+    color: #fff;
+    box-shadow: rgba(220, 38, 38, .3) 0 6px 12px;
+    transform: translateY(-2px);
+}
+
+.btn-row-action:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.btn-row-action:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+.btn-row-action:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 1024px) {
+    .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .stats-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 980px) {
+    .toolbar-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .toolbar-actions {
+        justify-content: flex-end;
+    }
+}

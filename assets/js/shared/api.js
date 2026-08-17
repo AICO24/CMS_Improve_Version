@@ -171,6 +171,7 @@ const PAGE_ROLE_ACCESS = {
     'dashboard_user.html': ['user'],
     'lot-management.html': ['admin', 'staff'],
     'burial-scheduling.html': ['admin', 'staff'],
+    'manage-reservations.html': ['admin', 'staff'],
     'cremation-management.html': ['admin'],
     'relocation-management.html': ['admin'],
     'expiration-monitoring.html': ['admin'],
@@ -242,6 +243,7 @@ const ROLE_SIDEBAR_LINKS = {
         ['dashboard_admin.html', 'fa-gauge-high', 'Dashboard'],
         ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
         ['burial-scheduling.html', 'fa-monument', 'Burial Scheduling'],
+        ['manage-reservations.html', 'fa-calendar-check', 'Manage Reservations'],
         ['cremation-management.html', 'fa-fire', 'Cremation Management'],
         ['relocation-management.html', 'fa-truck-moving', 'Relocation Management'],
         ['expiration-monitoring.html', 'fa-hourglass-half', 'Expiration Monitoring'],
@@ -255,6 +257,7 @@ const ROLE_SIDEBAR_LINKS = {
     staff: [
         ['dashboard_staff.html', 'fa-gauge-high', 'Dashboard'],
         ['burial-scheduling.html', 'fa-monument', 'Burial Scheduling'],
+        ['manage-reservations.html', 'fa-calendar-check', 'Manage Reservations'],
         ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
         ['payments.html', 'fa-credit-card', 'Payments'],
         ['notifications.html', 'fa-bell', 'Notifications'],

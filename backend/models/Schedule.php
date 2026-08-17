@@ -196,7 +196,12 @@ class Schedule {
     }
 
     public function update($id, $data) {
-        $stmt = $this->db->prepare(" 
+        $existing = $this->findById($id);
+        if (!$existing) {
+            return false;
+        }
+
+        $stmt = $this->db->prepare("
             UPDATE burial_schedules SET
                 lot_id = ?,
                 deceased_id = ?,
@@ -208,13 +213,13 @@ class Schedule {
             WHERE schedule_id = ?
         ");
         return $stmt->execute([
-            (int) $data['lot_id'],
-            (int) $data['deceased_id'],
-            $data['schedule_date'],
-            $data['schedule_time'] ?? null,
-            $data['status'] ?? 'Pending',
-            $data['notes'] ?? null,
-            isset($data['confirmed_by']) ? (int) $data['confirmed_by'] : null,
+            (int) ($data['lot_id'] ?? $existing['lot_id']),
+            (int) ($data['deceased_id'] ?? $existing['deceased_id']),
+            $data['schedule_date'] ?? $existing['schedule_date'],
+            array_key_exists('schedule_time', $data) ? $data['schedule_time'] : $existing['schedule_time'],
+            $data['status'] ?? $existing['status'],
+            array_key_exists('notes', $data) ? $data['notes'] : $existing['notes'],
+            isset($data['confirmed_by']) ? (int) $data['confirmed_by'] : $existing['confirmed_by'],
             (int) $id,
         ]);
     }
