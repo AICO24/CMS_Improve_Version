@@ -16,6 +16,12 @@
 // Phase 5: capacity-aware date advisory (GET ai/forecast), advisory only —
 // never blocks a search, silently shows nothing on failure or when the
 // date has no matching forecast entry.
+// Batch M3: optional LLM-assisted extraction (POST ai/extract), used ONLY
+// when Phase 2's deterministic extractor finds nothing at all in a message.
+// Same never-trust-raw-text contract as Phase 2: lot_type/section values
+// are re-validated against the live lists before being applied. Sends only
+// the message text + live lookup lists (never decedent/user/booking data).
+// Falls back to Phase 2's existing clarification message on any failure.
 //
 // createLotChatAssistant(options) -> assistant
 //   options.chatWindow, chatForm, chatInput, chatFindLotsBtn, chatPrefStatus:
@@ -167,7 +173,72 @@ function createLotChatAssistant(options) {
         if (typeof onReady === 'function') onReady(ready);
     }
 
-    function processMessage(rawText) {
+    function setInputEnabled(enabled) {
+        chatInput.disabled = !enabled;
+        chatForm.querySelector('.chat-send-btn').disabled = !enabled;
+    }
+
+    function appendTypingIndicator() {
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-message assistant chat-typing-indicator';
+        bubble.textContent = '…';
+        chatWindow.appendChild(bubble);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        return bubble;
+    }
+
+    // Batch M3: optional LLM-assisted extraction (POST ai/extract) — used
+    // ONLY as a fallback when the deterministic extractors above (and the
+    // skip-phrase check) found nothing at all for this message. Sends only
+    // the raw message text plus the live lot-type/section lists (never
+    // decedent/user/booking data — mirrors the exact data-minimal contract
+    // already proven by the narration feature). lot_type/section values are
+    // re-validated here against the same live lists before being applied,
+    // never trusted as free text; budget must be a finite positive number.
+    // Any failure/timeout/missing-API-key resolves to {} so the caller falls
+    // straight through to its existing "I couldn't understand that" message.
+    async function tryLlmExtraction(text, pendingSlot) {
+        const validLotTypes = (getLotTypes() || []).map(t => t.type_name).filter(Boolean);
+        const validSections = (getSections() || []).map(s => s.section_name).filter(Boolean);
+
+        try {
+            const response = await api.request('ai/extract', {
+                method: 'POST',
+                body: { message: text, pending_slot: pendingSlot, lot_types: validLotTypes, sections: validSections },
+            });
+            const result = response && response.result;
+            if (!result || typeof result !== 'object') return {};
+
+            const updates = {};
+            if (state.lot_type === null) {
+                if (result.lot_type_no_preference) {
+                    updates.lot_type = '';
+                } else if (typeof result.lot_type === 'string' && validLotTypes.includes(result.lot_type)) {
+                    updates.lot_type = result.lot_type;
+                }
+            }
+            if (state.section === null) {
+                if (result.section_no_preference) {
+                    updates.section = '';
+                } else if (typeof result.section === 'string' && validSections.includes(result.section)) {
+                    updates.section = result.section;
+                }
+            }
+            if (state.budget === null) {
+                if (result.budget_no_preference) {
+                    updates.budget = '';
+                } else if (typeof result.budget === 'number' && isFinite(result.budget) && result.budget > 0) {
+                    updates.budget = Math.round(result.budget);
+                }
+            }
+            return updates;
+        } catch (error) {
+            console.error('LLM-assisted extraction failed', error);
+            return {};
+        }
+    }
+
+    async function processMessage(rawText) {
         const text = rawText.trim();
         if (!text) return;
 
@@ -194,6 +265,21 @@ function createLotChatAssistant(options) {
         // avoids misreading unrelated text as a skip.
         if (pendingSlot && updates[pendingSlot] === undefined && Object.keys(updates).length === 0 && isChatSkipMessage(text)) {
             updates[pendingSlot] = '';
+        }
+
+        // Batch M3: deterministic parsing found nothing usable at all — try
+        // the optional LLM-assisted fallback before giving up and asking the
+        // user to rephrase. Covers phrasing the regex extractors can't, e.g.
+        // "around 50k for my dad" or "I don't know, you decide" for whichever
+        // slot is currently pending.
+        if (pendingSlot && Object.keys(updates).length === 0) {
+            setInputEnabled(false);
+            const typingBubble = appendTypingIndicator();
+            const llmUpdates = await tryLlmExtraction(text, pendingSlot);
+            typingBubble.remove();
+            Object.keys(llmUpdates).forEach(field => { updates[field] = llmUpdates[field]; });
+            setInputEnabled(true);
+            chatInput.focus();
         }
 
         Object.keys(updates).forEach(field => { state[field] = updates[field]; });
@@ -233,8 +319,7 @@ function createLotChatAssistant(options) {
     }
 
     function init() {
-        chatInput.disabled = false;
-        chatForm.querySelector('.chat-send-btn').disabled = false;
+        setInputEnabled(true);
         const lotTypes = getLotTypes();
         const sections = getSections();
         appendMessage('assistant', `Hi! Tell me what you're looking for and I'll help find a lot — for example, "I'd like a ${lotTypes[0] ? lotTypes[0].type_name : 'Premium Lot'} around 8000 in ${sections[0] ? sections[0].section_name : 'Section A'}".`);
@@ -344,12 +429,12 @@ function createLotChatAssistant(options) {
         if (message) appendMessage('assistant', message);
     }
 
-    chatForm.addEventListener('submit', function(event) {
+    chatForm.addEventListener('submit', async function(event) {
         event.preventDefault();
         const text = chatInput.value;
         if (!text.trim()) return;
         chatInput.value = '';
-        processMessage(text);
+        await processMessage(text);
     });
 
     return {

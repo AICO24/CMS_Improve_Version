@@ -66,6 +66,13 @@ class AiController {
         return ['message' => is_string($message) ? $message : null];
     }
 
+    public function extract($payload) {
+        $payload = is_array($payload) ? $payload : [];
+        $result = $this->aiService->getExtraction($payload);
+        $data = (!empty($result['error']) || !is_array($result)) ? null : ($result['result'] ?? null);
+        return ['result' => is_array($data) ? $data : null];
+    }
+
     public function getParameters($module = null) {
         return $this->aiParameterModel->findAll($module);
     }

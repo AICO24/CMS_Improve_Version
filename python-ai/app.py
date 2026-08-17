@@ -89,6 +89,85 @@ def _narrate_outcome(status: str, count: Optional[int], preferences: Dict[str, A
         return None
 
 
+# Batch M3: LLM-assisted preference extraction — an optional fallback the chat
+# assistant calls only when its own deterministic regex/keyword extraction
+# found nothing at all in a message. Same safety contract as the narrator
+# above: structured facts only (the raw message text plus the caller's own
+# live lot-type/section lists — never decedent/user/booking data), the model
+# may only choose lot_type/section values verbatim from the lists it was
+# given (re-validated server-side below, never trusted as free text), budget
+# must be a number the message actually states or clearly implies (never
+# invented from a vague word like "affordable" alone), and any failure/missing
+# key/timeout returns null so the caller falls back to its own "I couldn't
+# understand that" clarification — this endpoint never blocks the chat.
+EXTRACTION_MODEL = 'claude-haiku-4-5'
+
+EXTRACTION_SYSTEM_PROMPT = (
+    "You extract burial-lot search preferences from one short user chat "
+    "message for a cemetery booking assistant. Output ONLY a compact JSON "
+    "object — no markdown, no code fences, no prose, no explanation.\n\n"
+    "Schema: {\"lot_type\": string|null, \"budget\": number|null, "
+    "\"section\": string|null, \"lot_type_no_preference\": boolean, "
+    "\"budget_no_preference\": boolean, \"section_no_preference\": boolean}\n\n"
+    "You are given valid_lot_types and valid_sections (the only real options "
+    "in this cemetery) and pending_slot (which single slot the assistant had "
+    "just asked about, or null).\n\n"
+    "Rules:\n"
+    "- lot_type MUST be exactly one string from valid_lot_types, or null. "
+    "Never invent or paraphrase a lot type name.\n"
+    "- section MUST be exactly one string from valid_sections, or null. "
+    "Never invent or paraphrase a section name.\n"
+    "- budget is a plain number (no currency symbol, no commas) only when "
+    "the message states or clearly implies a specific figure (e.g. "
+    "\"50000\", \"around 50k\", \"under 30,000\", \"P50,000\"). Never invent "
+    "a number for a vague word alone like \"affordable\" or \"cheap\" — "
+    "leave budget null in that case.\n"
+    "- Set a *_no_preference flag to true only when the message explicitly "
+    "says it doesn't matter / doesn't know / any is fine for that specific "
+    "slot. A vague reply with no field named (e.g. \"I don't know\", \"you "
+    "decide\", \"recommend one for me\", \"whatever\") addresses ONLY "
+    "pending_slot — set that one slot's *_no_preference to true and leave "
+    "the other two slots null/false. Never set a *_no_preference flag for a "
+    "slot the message doesn't actually address.\n"
+    "- Only extract what this message actually states. Never invent facts "
+    "beyond the message text."
+)
+
+
+def _strip_json_fences(text: str) -> str:
+    stripped = text.strip()
+    if stripped.startswith('```'):
+        stripped = stripped.split('\n', 1)[-1]
+        if stripped.endswith('```'):
+            stripped = stripped.rsplit('```', 1)[0]
+    return stripped.strip()
+
+
+def _extract_preferences(message: str, lot_types: List[str], sections: List[str], pending_slot: Optional[str]) -> Optional[Dict[str, Any]]:
+    if _anthropic_client is None or not message:
+        return None
+
+    payload = {
+        'message': message,
+        'valid_lot_types': lot_types,
+        'valid_sections': sections,
+        'pending_slot': pending_slot,
+    }
+
+    try:
+        response = _anthropic_client.with_options(timeout=8.0).messages.create(
+            model=EXTRACTION_MODEL,
+            max_tokens=200,
+            system=EXTRACTION_SYSTEM_PROMPT,
+            messages=[{'role': 'user', 'content': json.dumps(payload)}],
+        )
+        text = ''.join(block.text for block in response.content if block.type == 'text').strip()
+        parsed = json.loads(_strip_json_fences(text))
+        return parsed if isinstance(parsed, dict) else None
+    except Exception:
+        return None
+
+
 def get_connection():
     try:
         return mysql.connector.connect(**DB_CONFIG)
@@ -240,6 +319,49 @@ def narrate_outcome():
         return jsonify({'message': message})
     except Exception:
         return jsonify({'message': None})
+
+
+@app.post('/api/extract')
+def extract_preferences():
+    # Always returns 200; 'result' is null whenever extraction isn't
+    # available/didn't parse, so the caller falls back to its own
+    # deterministic clarification message.
+    try:
+        payload = request.get_json(silent=True) or {}
+        message = (payload.get('message') or '').strip()
+        lot_types = payload.get('lot_types')
+        sections = payload.get('sections')
+        pending_slot = payload.get('pending_slot')
+
+        if not message or not isinstance(lot_types, list) or not isinstance(sections, list):
+            return jsonify({'result': None})
+
+        result = _extract_preferences(message, lot_types, sections, pending_slot)
+        if not result:
+            return jsonify({'result': None})
+
+        # Never trust the model's strings verbatim even though the prompt
+        # constrains it to the provided lists — re-validate membership here.
+        if result.get('lot_type') not in lot_types:
+            result['lot_type'] = None
+        if result.get('section') not in sections:
+            result['section'] = None
+
+        budget = result.get('budget')
+        if budget is not None:
+            try:
+                budget = float(budget)
+                budget = budget if budget > 0 else None
+            except (TypeError, ValueError):
+                budget = None
+        result['budget'] = budget
+
+        for flag in ('lot_type_no_preference', 'budget_no_preference', 'section_no_preference'):
+            result[flag] = bool(result.get(flag))
+
+        return jsonify({'result': result})
+    except Exception:
+        return jsonify({'result': None})
 
 
 def _get_capacity_snapshot() -> Dict[str, int]:

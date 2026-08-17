@@ -24,6 +24,10 @@ class AIService {
         return $this->request('/api/narrate', 'POST', $payload);
     }
 
+    public function getExtraction($payload) {
+        return $this->request('/api/extract', 'POST', $payload);
+    }
+
     private function request($path, $method = 'GET', $data = null) {
         if (!function_exists('curl_init')) {
             return ['error' => 'cURL extension is not available', 'code' => 500];

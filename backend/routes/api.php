@@ -853,6 +853,16 @@ if ($path === 'ai/narrate' && $requestMethod === 'POST') {
     exit;
 }
 
+if ($path === 'ai/extract' && $requestMethod === 'POST') {
+    // Batch M3: LLM-assisted preference extraction, called by the shared chat
+    // assistant (both wizards) only when its deterministic extractor found
+    // nothing in a message. Same role gate as ai/narrate/ai/forecast above.
+    AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $input = readRequestBody();
+    echo json_encode($aiController->extract($input));
+    exit;
+}
+
 if ($path === 'ai/parameters' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin']);
     $module = $_GET['module'] ?? null;
