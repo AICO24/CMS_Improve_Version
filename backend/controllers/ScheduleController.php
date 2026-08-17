@@ -81,6 +81,20 @@ class ScheduleController {
             return ['error' => 'Lot and schedule date are required', 'code' => 400];
         }
 
+        // A recommended/selected lot can go stale between when it was shown to the
+        // user and when they submit the booking (another reservation gets confirmed,
+        // an admin edits the lot directly, etc.). The date/time conflict check below
+        // only catches double-booking the same lot/date/time — it says nothing about
+        // whether the lot itself is still bookable at all, so re-check status here
+        // against the authoritative lots table rather than trusting the lot_id alone.
+        $lot = $this->lotModel->findById($data['lot_id']);
+        if (!$lot) {
+            return ['error' => 'Lot not found', 'code' => 404];
+        }
+        if ($lot['status'] !== 'Available') {
+            return ['error' => 'This lot is no longer available for booking', 'code' => 409];
+        }
+
         $scheduleDate = strtotime($data['schedule_date']);
         if ($scheduleDate === false) {
             return ['error' => 'Invalid schedule date format', 'code' => 400];
