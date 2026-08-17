@@ -8,18 +8,51 @@ class DecedentController {
         $this->decedentModel = new Decedent();
     }
 
-    public function index($filters = [], $pagination = []) {
+    // Batch M6: decedent_records has no owner/user column, so there is no
+    // way to filter WHICH rows a non-staff caller may see (that would need
+    // a schema change, out of scope here). Instead, redact WHICH FIELDS a
+    // non-admin/staff caller receives — every citizen can still browse/pick
+    // any decedent by name to book a burial (unchanged), but the sensitive
+    // fields (dob, dod, cause_of_death, contact_name, contact_number, ...)
+    // for every OTHER family are no longer exposed to them.
+    private function isFullAccessRole($user) {
+        $role = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
+        return in_array($role, ['admin', 'staff'], true);
+    }
+
+    private function redactDecedent($decedent) {
+        if (!is_array($decedent)) {
+            return $decedent;
+        }
+        return [
+            'decedent_id' => $decedent['decedent_id'] ?? null,
+            'first_name' => $decedent['first_name'] ?? null,
+            'last_name' => $decedent['last_name'] ?? null,
+            'middle_name' => $decedent['middle_name'] ?? null,
+            'suffix' => $decedent['suffix'] ?? null,
+            'lot_id' => $decedent['lot_id'] ?? null,
+            'lot_number' => $decedent['lot_number'] ?? null,
+            'section_name' => $decedent['section_name'] ?? null,
+        ];
+    }
+
+    public function index($filters = [], $pagination = [], $user = null) {
         $page = !empty($pagination['page']) ? (int) $pagination['page'] : null;
         $perPage = !empty($pagination['per_page']) ? (int) $pagination['per_page'] : null;
+        $fullAccess = $this->isFullAccessRole($user);
 
         if ($page === null && $perPage === null) {
-            return $this->decedentModel->findAll($filters);
+            $data = $this->decedentModel->findAll($filters);
+            return $fullAccess ? $data : array_map([$this, 'redactDecedent'], $data);
         }
 
         $page = max(1, $page ?: 1);
         $perPage = max(1, min(100, $perPage ?: 10));
         $total = $this->decedentModel->countAll($filters);
         $data = $this->decedentModel->findAll($filters, ['page' => $page, 'per_page' => $perPage]);
+        if (!$fullAccess) {
+            $data = array_map([$this, 'redactDecedent'], $data);
+        }
 
         return [
             'data' => $data,
@@ -32,9 +65,12 @@ class DecedentController {
         ];
     }
 
-    public function show($id) {
+    public function show($id, $user = null) {
         $decedent = $this->decedentModel->findById($id);
-        return $decedent ?: ['error' => 'Decedent record not found', 'code' => 404];
+        if (!$decedent) {
+            return ['error' => 'Decedent record not found', 'code' => 404];
+        }
+        return $this->isFullAccessRole($user) ? $decedent : $this->redactDecedent($decedent);
     }
 
     public function store($data) {

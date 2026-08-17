@@ -64,9 +64,24 @@ class ScheduleController {
         return $this->scheduleModel->findAll($filters);
     }
 
-    public function show($id) {
+    // Batch M6: previously returned any schedule by ID to any authenticated
+    // user regardless of role/ownership — update()/destroy() below already
+    // restrict non-staff/admin callers to their own reservations, this
+    // brings read access in line with the same rule (mirrors
+    // PaymentController::show()'s pattern).
+    public function show($id, $user = null) {
         $schedule = $this->scheduleModel->findById($id);
-        return $schedule ?: ['error' => 'Schedule not found', 'code' => 404];
+        if (!$schedule) {
+            return ['error' => 'Schedule not found', 'code' => 404];
+        }
+
+        $userId = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        $userRole = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
+        if (!in_array($userRole, ['admin', 'staff'], true) && (int) $schedule['created_by'] !== (int) $userId) {
+            return ['error' => 'You may only view your own reservations', 'code' => 403];
+        }
+
+        return $schedule;
     }
 
     public function store($data, $user) {

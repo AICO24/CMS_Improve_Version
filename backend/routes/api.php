@@ -349,7 +349,7 @@ if ($path === 'schedules' && $requestMethod === 'GET') {
 }
 
 if (preg_match('/^schedules\/(\d+)$/', $path, $matches) && $requestMethod === 'GET') {
-    $result = $scheduleController->show($matches[1]);
+    $result = $scheduleController->show($matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -966,7 +966,7 @@ if ($path === 'decedents' && $requestMethod === 'GET') {
     $pagination = [];
     if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
     if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
-    echo json_encode($decedentController->index($filters, $pagination));
+    echo json_encode($decedentController->index($filters, $pagination, $user));
     exit;
 }
 if ($path === 'decedents/stats' && $requestMethod === 'GET') {
@@ -974,7 +974,7 @@ if ($path === 'decedents/stats' && $requestMethod === 'GET') {
     exit;
 }
 if (preg_match('/^decedents\/(\d+)$/', $path, $matches) && $requestMethod === 'GET') {
-    echo json_encode($decedentController->show($matches[1]));
+    echo json_encode($decedentController->show($matches[1], $user));
     exit;
 }
 if ($path === 'decedents' && $requestMethod === 'POST') {
