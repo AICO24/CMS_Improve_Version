@@ -793,6 +793,12 @@ function createLotChatAssistant(options) {
 
         let dateValidationError = null;
         let dateCorrected = false;
+        // Batch P bugfix: true only when THIS message contained a date
+        // pattern that was actually rejected by validateDate() (Monday/past,
+        // etc) — not just "no date mentioned." Gates the time block below so
+        // a rejected date can't let that same message's time slip through;
+        // see the time block's comment for why.
+        let dateRejectedThisMessage = false;
         if (state.date === null) {
             const parsedDate = extractDateFromText(text);
             if (parsedDate) {
@@ -801,6 +807,7 @@ function createLotChatAssistant(options) {
                     updates.date = parsedDate;
                 } else {
                     dateValidationError = validation.reason;
+                    dateRejectedThisMessage = true;
                 }
             }
         } else if (hasCorrectionSignal) {
@@ -812,19 +819,37 @@ function createLotChatAssistant(options) {
                     dateCorrected = true;
                 } else {
                     dateValidationError = validation.reason;
+                    dateRejectedThisMessage = true;
                 }
             }
         }
 
+        // Bugfix (found during browser verification): date and time are
+        // parsed independently, so a message like "August 31 at 10 AM" used
+        // to let the time commit even though the date got rejected as a
+        // Monday — state.time silently became "10:00" with nothing to show
+        // for it. Because time was then "already set," a later plain
+        // "September 1 at 3 PM" (no correction wording) couldn't update it
+        // either, since a plain restatement only overwrites an unset field.
+        // The booking could go through with a time the user never actually
+        // confirmed. Fix: a message whose own date failed validation can't
+        // commit ITS time either — the whole date/time pair from that
+        // message is provisional and is discarded together. This only
+        // gates messages that contained a rejected date; a message with no
+        // date at all, or a valid one, still updates time exactly as
+        // before (including the existing correction-signal requirement for
+        // an already-set time).
         let timeCorrected = false;
-        if (state.time === null) {
-            const parsedTime = extractTimeFromText(text);
-            if (parsedTime) updates.time = parsedTime;
-        } else if (hasCorrectionSignal) {
-            const parsedTime = extractTimeFromText(text);
-            if (parsedTime && parsedTime !== state.time) {
-                updates.time = parsedTime;
-                timeCorrected = true;
+        if (!dateRejectedThisMessage) {
+            if (state.time === null) {
+                const parsedTime = extractTimeFromText(text);
+                if (parsedTime) updates.time = parsedTime;
+            } else if (hasCorrectionSignal) {
+                const parsedTime = extractTimeFromText(text);
+                if (parsedTime && parsedTime !== state.time) {
+                    updates.time = parsedTime;
+                    timeCorrected = true;
+                }
             }
         }
 
