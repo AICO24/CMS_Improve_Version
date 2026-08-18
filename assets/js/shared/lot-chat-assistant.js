@@ -27,47 +27,67 @@
 // suggestions (POST schedules/recommend-type) and shows them as a message.
 // Purely informational — never auto-fills state.lot_type; the user still
 // has to name a type or say "no preference" for the slot to fill.
-// Batch N3 (adviser feedback 2026-08-18): captures decedent/date/time from
-// chat too, so the booker doesn't have to fill out the separate "Booking
-// Details" form by hand. These are DETERMINISTIC ONLY (name/date/time
-// pattern-matching against the real decedent list) — deliberately no LLM
-// fallback here, unlike lot_type/budget/section's ai/extract path, since
-// M3's stated privacy contract is to never send decedent/user/booking data
-// to the LLM endpoint. An ambiguous or unparsed message just falls through
-// to the always-visible Booking Details fields as a manual fallback — chat
-// never silently guesses which family member or date the booker meant.
+// Batch N3: captures decedent/date/time from chat too, so the booker
+// doesn't have to fill out a separate form by hand. These are
+// DETERMINISTIC ONLY (name/date/time pattern-matching against the real
+// decedent list) — deliberately no LLM fallback here, unlike lot_type/
+// budget/section's ai/extract path, since M3's stated privacy contract is
+// to never send decedent/user/booking data to the LLM endpoint.
+// Batch N (adviser feedback 2026-08-18, "make burial scheduling fully
+// chat-based, like ChatGPT"): this module is now the ENTIRE booking
+// interface, not a widget alongside a form/wizard. Added:
+//   - appendRichMessage(): lets the caller (booking-wizard.js) render
+//     arbitrary HTML — recommendation cards, the booking confirmation box —
+//     as a message in the same conversation thread, instead of a separate
+//     step/page.
+//   - onLotPreferencesReady / onStateChanged hooks: the assistant now
+//     proactively drives the flow forward (auto-searches once lot
+//     preferences are known, lets the caller re-check "ready to book?"
+//     after every relevant update) instead of waiting on a manual button.
+//   - A small escape hatch for decedent/date specifically: if either is
+//     still unresolved after a few messages, a tiny inline picker (real
+//     <select>/<input type=date>, not free text) appears so the user is
+//     never stuck rephrasing forever — this was an explicit user decision
+//     (AskUserQuestion) weighing "pure chat, zero fallback" against this,
+//     since there's no LLM configured in this dev environment and a wrong
+//     guess on decedent/date is worse than asking again. Deliberately NOT
+//     applied to lot_type (already has the "Recommend a type for me"
+//     button as its out) or budget (robust regex + "no preference" already
+//     works) or time (optional, never blocks booking).
 //
 // createLotChatAssistant(options) -> assistant
-//   options.chatWindow, chatForm, chatInput, chatFindLotsBtn, chatPrefStatus:
-//     the DOM elements (same markup/IDs used by burial-scheduling.html).
+//   options.chatWindow, chatForm, chatInput, chatPrefStatus: the DOM
+//     elements (same markup/IDs used by burial-scheduling.html).
+//   options.chatSuggestTypeBtn: optional quick-action button.
 //   options.getLotTypes(), options.getSections(): return the live lookup
 //     arrays ({type_name}/{section_name} objects) at call time.
 //   options.getDecedents(): returns the live decedent list ({decedent_id,
 //     first_name, last_name}) at call time. Optional — decedent extraction
-//     is skipped entirely if omitted.
+//     and its escape hatch are skipped entirely if omitted.
 //   options.validateDate(dateStr): optional, returns {valid, reason} — used
-//     to apply the same past-date/Monday-block business rules the Booking
-//     Details date field already enforces, so a chat-parsed date can never
-//     bypass them.
+//     to apply the same past-date/Monday-block business rules everywhere a
+//     date can be set (chat text, escape hatch), so neither can bypass them.
 //   options.onDetailExtracted(field, value): optional, called whenever chat
-//     resolves 'decedent_id' | 'date' | 'time' — the caller applies it to
-//     the corresponding Booking Details form field.
-//   options.onReady(isReady): optional, called whenever readiness changes
-//     (assistant already disables/enables chatFindLotsBtn itself; use this
-//     only if the page needs to react further).
+//     resolves 'decedent_id' | 'date' | 'time'.
+//   options.onLotPreferencesReady(): optional, called exactly once, the
+//     moment lot_type+budget are both resolved — the caller should fetch
+//     and render recommendations at this point (via appendRichMessage).
+//   options.onStateChanged(): optional, called after every resolved update
+//     (including escape-hatch resolutions) — the caller can re-check
+//     "do I now have everything needed to finalize a booking?".
+//   options.onReady(isReady): optional, called whenever lot_type/budget
+//     readiness changes.
 //
 // assistant.init(): greets the user and asks the first question.
 // assistant.state: { lot_type, budget, section, decedent_id, date, time } —
 //   null until captured, '' means "explicitly no preference" (lot_type/
 //   budget/section only — decedent/date/time have no "no preference").
-// assistant.isReady(): true once lot_type/budget are captured/skipped (the
-//   same two slots that have always gated the recommendation search;
-//   decedent/date/time stay optional in chat since the Booking Details
-//   fields remain the authoritative, independently-validated source for
-//   them — see the module comment above).
+// assistant.isReady(): true once lot_type/budget are captured/skipped.
 // assistant.getPreferences(): { lot_type, budget, section } shaped for
 //   schedules/recommend (null/'' become '').
 // assistant.appendMessage(role, text): manual chat bubble (role: 'assistant'|'user').
+// assistant.appendRichMessage(html): manual rich HTML bubble, returns the
+//   bubble element so the caller can query/wire elements inside it.
 // assistant.appendOutcomeMessage(outcome): Phase 3/4 — outcome is
 //   { status: 'success'|'empty'|'error', count? }.
 // assistant.appendCapacityWarning(dateStr): Phase 5.
@@ -76,7 +96,6 @@ function createLotChatAssistant(options) {
         chatWindow,
         chatForm,
         chatInput,
-        chatFindLotsBtn,
         chatSuggestTypeBtn,
         chatPrefStatus,
         getLotTypes,
@@ -84,15 +103,23 @@ function createLotChatAssistant(options) {
         getDecedents,
         validateDate,
         onDetailExtracted,
+        onLotPreferencesReady,
+        onStateChanged,
         onReady,
     } = options;
 
     const CHAT_SKIP_PHRASES = ['any', 'anything', 'no preference', 'not sure', "doesn't matter", 'does not matter', 'skip', "i don't know", 'idk', 'n/a', 'none', 'whatever'];
     const MONTH_NAMES = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
     const MONTH_ABBR = MONTH_NAMES.map(m => m.slice(0, 3));
+    const ESCAPE_HATCH_THRESHOLD = 3;
 
     const state = { lot_type: null, budget: null, section: null, decedent_id: null, date: null, time: null };
     let decedentLabel = null;
+    let lotPreferencesReadyFired = false;
+    let decedentAttempts = 0;
+    let dateAttempts = 0;
+    let decedentEscapeShown = false;
+    let dateEscapeShown = false;
 
     function escapeRegExp(text) {
         return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -146,22 +173,30 @@ function createLotChatAssistant(options) {
         return null;
     }
 
+    // Batch N: now that a single message can carry decedent/date/lot/budget
+    // all at once ("Juan Dela Cruz, August 25, Premium Lot, 8000"), this
+    // must scan every digit run in the message, not just the first — the
+    // first one is often a day-of-month, not the budget. Each match checks
+    // its OWN immediately-preceding currency symbol (not "does the message
+    // contain a ₱ anywhere"), so "August 25, ₱8000" can't let the 25 slip
+    // through just because a symbol exists elsewhere in the same message.
     function extractBudgetFromText(text) {
-        const hasCurrencySymbol = /[₱$]/.test(text);
-        const cleaned = text.replace(/[₱$]/g, '').replace(/,/g, '');
-        const match = cleaned.match(/(\d+(?:\.\d+)?)\s*(k)?\b/i);
-        if (!match) return null;
-        let value = parseFloat(match[1]);
-        if (!isFinite(value) || value <= 0) return null;
-        const hasKSuffix = Boolean(match[2]);
-        if (hasKSuffix) value *= 1000;
-        // Batch N3: since a message can now also carry a date/day-of-month
-        // in the same breath ("December 25, 2026"), require an explicit
-        // currency symbol, a k-suffix, or a value already in a plausible
-        // lot-price range before accepting it as a budget — otherwise a
-        // stray day number would get misread as a ₱25 budget.
-        if (!hasCurrencySymbol && !hasKSuffix && value < 1000) return null;
-        return Math.round(value);
+        const cleaned = text.replace(/,/g, '');
+        const matches = cleaned.matchAll(/([₱$])?\s*(\d+(?:\.\d+)?)\s*(k)?\b/gi);
+        for (const match of matches) {
+            const hasCurrencySymbol = Boolean(match[1]);
+            let value = parseFloat(match[2]);
+            if (!isFinite(value) || value <= 0) continue;
+            const hasKSuffix = Boolean(match[3]);
+            if (hasKSuffix) value *= 1000;
+            // Require an explicit currency symbol, a k-suffix, or a value
+            // already in a plausible lot-price range before accepting it as
+            // a budget — otherwise a stray day number would get misread as
+            // a ₱25 budget.
+            if (!hasCurrencySymbol && !hasKSuffix && value < 1000) continue;
+            return Math.round(value);
+        }
+        return null;
     }
 
     function pad2(n) {
@@ -346,6 +381,20 @@ function createLotChatAssistant(options) {
         bubble.textContent = text;
         chatWindow.appendChild(bubble);
         chatWindow.scrollTop = chatWindow.scrollHeight;
+        return bubble;
+    }
+
+    // Batch N: the assistant is now the entire booking surface — recommendation
+    // cards and the booking confirmation render as messages in this same
+    // thread via this, instead of a separate step/page. Returns the bubble
+    // so the caller can query/wire elements inside the HTML it supplied.
+    function appendRichMessage(html) {
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-message assistant chat-message--rich';
+        bubble.innerHTML = html;
+        chatWindow.appendChild(bubble);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        return bubble;
     }
 
     function updateChips() {
@@ -379,9 +428,8 @@ function createLotChatAssistant(options) {
         });
     }
 
-    function updateFindButtonState() {
+    function updateReadiness() {
         const ready = state.lot_type !== null && state.budget !== null;
-        chatFindLotsBtn.disabled = !ready;
         // Batch M9: a type recommendation only makes sense while lot_type
         // is still undecided — once the user has named/skipped one, offering
         // to "recommend a type" again would be confusing.
@@ -402,6 +450,69 @@ function createLotChatAssistant(options) {
         chatWindow.appendChild(bubble);
         chatWindow.scrollTop = chatWindow.scrollHeight;
         return bubble;
+    }
+
+    // Batch N: small inline escape hatches for decedent/date specifically —
+    // see the module comment for why these two (and not lot_type/budget/
+    // time) get one. A real <select>/<input type=date> rather than free
+    // text, so picking from it can never be ambiguous the way a typed
+    // message can be.
+    function appendDecedentEscapeHatch() {
+        const decedents = typeof getDecedents === 'function' ? (getDecedents() || []) : [];
+        const optionsHtml = decedents.map(d => `<option value="${d.decedent_id}">${d.first_name} ${d.last_name}</option>`).join('');
+        const bubble = appendRichMessage(`
+            <div class="chat-escape-hatch">
+                <label>Or pick directly:</label>
+                <select class="chat-escape-select">
+                    <option value="">Select decedent</option>
+                    ${optionsHtml}
+                </select>
+                <button type="button" class="btn-secondary chat-escape-btn">Set</button>
+            </div>
+        `);
+        const select = bubble.querySelector('.chat-escape-select');
+        const btn = bubble.querySelector('.chat-escape-btn');
+        btn.addEventListener('click', () => {
+            const id = select.value;
+            if (!id) return;
+            const decedent = decedents.find(d => d.decedent_id.toString() === id);
+            if (!decedent) return;
+            state.decedent_id = Number(id);
+            decedentLabel = `${decedent.first_name} ${decedent.last_name}`;
+            updateChips();
+            bubble.remove();
+            appendMessage('assistant', `Got it — this booking is for ${decedentLabel}.`);
+            if (typeof onDetailExtracted === 'function') onDetailExtracted('decedent_id', state.decedent_id);
+            if (typeof onStateChanged === 'function') onStateChanged();
+        });
+    }
+
+    function appendDateEscapeHatch() {
+        const bubble = appendRichMessage(`
+            <div class="chat-escape-hatch">
+                <label>Or pick directly:</label>
+                <input type="date" class="chat-escape-date">
+                <button type="button" class="btn-secondary chat-escape-btn">Set</button>
+            </div>
+        `);
+        const input = bubble.querySelector('.chat-escape-date');
+        const btn = bubble.querySelector('.chat-escape-btn');
+        input.min = new Date().toISOString().split('T')[0];
+        btn.addEventListener('click', () => {
+            const value = input.value;
+            if (!value) return;
+            const validation = typeof validateDate === 'function' ? validateDate(value) : { valid: true };
+            if (!validation.valid) {
+                appendMessage('assistant', validation.reason);
+                return;
+            }
+            state.date = value;
+            updateChips();
+            bubble.remove();
+            appendMessage('assistant', `Burial date set to ${formatDateLabel(value)}.`);
+            if (typeof onDetailExtracted === 'function') onDetailExtracted('date', value);
+            if (typeof onStateChanged === 'function') onStateChanged();
+        });
     }
 
     // Batch M3: optional LLM-assisted extraction (POST ai/extract) — used
@@ -551,11 +662,6 @@ function createLotChatAssistant(options) {
         // even though the date was already resolved deterministically.
         const corePrefUpdateCount = Object.keys(updates).length;
 
-        // Batch N3: decedent/date/time are captured opportunistically on
-        // every message (like section already was) rather than gating the
-        // lot_type/budget question sequence — the always-visible Booking
-        // Details fields remain the authoritative source for them, so chat
-        // is a convenience, not a new requirement.
         let newDecedentLabel = null;
         let ambiguousDecedentCandidates = null;
         if (state.decedent_id === null) {
@@ -595,9 +701,7 @@ function createLotChatAssistant(options) {
 
         // Batch M3: deterministic parsing found nothing usable at all — try
         // the optional LLM-assisted fallback before giving up and asking the
-        // user to rephrase. Covers phrasing the regex extractors can't, e.g.
-        // "around 50k for my dad" or "I don't know, you decide" for whichever
-        // slot is currently pending. Gated on corePrefUpdateCount (not the
+        // user to rephrase. Gated on corePrefUpdateCount (not the
         // now-larger `updates`) so a resolved date/decedent/time never
         // silently suppresses this fallback for lot_type/budget.
         let recommendTypeRequested = false;
@@ -625,11 +729,6 @@ function createLotChatAssistant(options) {
         if (updates.section !== undefined) {
             acknowledgements.push(updates.section ? `Noted — ${updates.section}.` : 'Okay, any section works.');
         }
-        // Batch N3: decedent/date/time acknowledgements — folded into the
-        // same array as lot_type/budget/section so a message that only
-        // conveyed one of these (e.g. just a date) shows a positive
-        // acknowledgement instead of falling through to the "I couldn't
-        // match that" clarification meant for lot_type/budget.
         if (updates.decedent_id !== undefined) {
             decedentLabel = newDecedentLabel;
             acknowledgements.push(`Got it — this booking is for ${newDecedentLabel}.`);
@@ -658,13 +757,9 @@ function createLotChatAssistant(options) {
                 : 'Could you share a budget? For example: 8000 or ₱8,000. You can also say "no preference".');
         }
 
-        // Batch N3: these are independent asides about the decedent/date
-        // parsing attempt itself — always surfaced when present, regardless
-        // of what else happened in this turn (e.g. a message can both
-        // resolve a budget AND hit an ambiguous decedent name).
         if (ambiguousDecedentCandidates && ambiguousDecedentCandidates.length) {
             const names = ambiguousDecedentCandidates.slice(0, 5).map(d => `${d.first_name} ${d.last_name}`).join(', ');
-            appendMessage('assistant', `I found more than one matching record: ${names}. Please pick the correct one from the Decedent dropdown above.`);
+            appendMessage('assistant', `I found more than one matching record: ${names}. Could you be more specific, or use the picker below?`);
         }
         if (dateValidationError) {
             appendMessage('assistant', dateValidationError);
@@ -688,34 +783,49 @@ function createLotChatAssistant(options) {
         const nextSlot = getNextMissingSlot();
         if (nextSlot && !(suggestedTypes && nextSlot === 'lot_type')) {
             appendMessage('assistant', questionForSlot(nextSlot));
-        } else if (!nextSlot) {
-            appendMessage('assistant', 'Thanks! I have enough information to search for matching lots.');
-            // Batch N3: decedent/date aren't gating slots (see the module
-            // comment), but "Find Matching Lots" still needs them — nudge
-            // once lot preferences are otherwise complete instead of letting
-            // the user hit the button and only find out from an alert().
-            const stillNeeded = [];
-            if (state.decedent_id === null) stillNeeded.push('who this booking is for');
-            if (state.date === null) stillNeeded.push('the burial date');
-            if (stillNeeded.length) {
-                appendMessage('assistant', `Just one more thing — I still need ${stillNeeded.join(' and ')}. You can tell me here, or fill it in on the left.`);
+        } else if (!nextSlot && !lotPreferencesReadyFired) {
+            // Batch N: the moment lot_type+budget are both known, proactively
+            // move the conversation forward instead of waiting on a button —
+            // the caller fetches/renders recommendations as the next message.
+            lotPreferencesReadyFired = true;
+            if (typeof onLotPreferencesReady === 'function') onLotPreferencesReady();
+        }
+
+        // Escape hatches: tracked independently of the lot_type/budget
+        // sequence above (a user might struggle with the decedent name
+        // before ever discussing lot preferences), so these tick on every
+        // message regardless of what else happened in this turn.
+        if (state.decedent_id === null) {
+            decedentAttempts++;
+            if (decedentAttempts >= ESCAPE_HATCH_THRESHOLD && !decedentEscapeShown && typeof getDecedents === 'function') {
+                decedentEscapeShown = true;
+                appendMessage('assistant', "Still having trouble figuring out who this is for —");
+                appendDecedentEscapeHatch();
+            }
+        }
+        if (state.date === null) {
+            dateAttempts++;
+            if (dateAttempts >= ESCAPE_HATCH_THRESHOLD && !dateEscapeShown) {
+                dateEscapeShown = true;
+                appendMessage('assistant', "Still having trouble with the date —");
+                appendDateEscapeHatch();
             }
         }
 
-        updateFindButtonState();
+        updateReadiness();
+        if (typeof onStateChanged === 'function') onStateChanged();
     }
 
     function init() {
         setInputEnabled(true);
-        // Adviser feedback (2026-08-18): the old welcome message modeled an
-        // example that named a specific lot type and section, implying the
-        // booker needs to already know the cemetery's layout/terminology.
-        // Lead with the budget instead — the one detail a booker naturally
-        // knows — and let the AI recommend the type/lot from there.
-        appendMessage('assistant', "Hi! You can just tell me who this is for, your preferred burial date, and your budget, all in one message if you like — I'll pick it up and recommend a lot type and specific lots for you. Not sure where to start? Just tap \"Recommend a type for me\" below.");
+        // Adviser feedback: leads with budget instead of a hardcoded example
+        // naming a specific lot type/section (the booker shouldn't need to
+        // already know cemetery terminology), and now also invites decedent/
+        // date up front since this is the whole booking interface.
+        appendMessage('assistant', "Hi! I'm your Burial Assistant — I can handle the whole reservation right here. Tell me who this is for, your preferred burial date, and your budget (all in one message if you like), and I'll take it from there. Not sure where to start on lot type? Just tap \"Recommend a type for me\" below.");
         appendMessage('assistant', questionForSlot(getNextMissingSlot()));
         updateChips();
-        updateFindButtonState();
+        updateReadiness();
     }
 
     // Phase 3: the deterministic fallback text. Reports only what the
@@ -837,6 +947,7 @@ function createLotChatAssistant(options) {
             section: state.section || '',
         }),
         appendMessage,
+        appendRichMessage,
         appendOutcomeMessage,
         appendCapacityWarning,
         requestTypeSuggestion,

@@ -18,7 +18,6 @@
     <link rel="stylesheet" href="../../assets/css/components/forms.css">
     <link rel="stylesheet" href="../../assets/css/components/tables.css">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
-    <link rel="stylesheet" href="../../assets/css/components/ai-chat-widget.css">
     <link rel="stylesheet" href="../../assets/css/reserve-burial-slot.css">
 </head>
 <body class="dashboard-body">
@@ -96,17 +95,13 @@
                 </div>
             </div>
 
-            <!-- Batch M9 (B.7): wizard-container markup is now built once by
-                 assets/js/shared/booking-wizard.js's renderWizardMarkup()
-                 instead of being duplicated verbatim here and in
-                 burial-scheduling.html — this page omits the manual "Lot
-                 Number" field (Batch M9 / A.4) via an option passed from
-                 assets/js/pages/reserve-burial-slot.js. -->
+            <!-- Batch N (adviser feedback: "fully chat-based, like ChatGPT"):
+                 the entire booking interface is now a single chat thread,
+                 built by assets/js/shared/booking-wizard.js's
+                 renderChatPageMarkup() into this one mount point — no more
+                 stepper/wizard divs or a separate floating widget. -->
             <div class="content-area" id="wizardContainerMount"></div>
         </main>
-
-        <!-- Floating Burial Assistant markup: see the comment above. -->
-        <div id="aiChatWidgetMount"></div>
     </div>
 
     <script src="../../assets/js/shared/api.js"></script>

@@ -223,67 +223,41 @@
 
 /* .logout-btn/.Btn (+ .sign/.text sliding animation) now come from assets/css/dashboard.css (Batch 10) */
 
+/* Batch N (adviser feedback: "fully chat-based, like ChatGPT"): the page is
+   now a single full-height chat interface, not a stepper wizard beside a
+   floating widget. .main-content/.content-area/.ai-chat-page form one flex
+   chain (each level flex:1;min-height:0) so the message thread scrolls
+   internally while the input stays pinned at the bottom. */
+.main-content {
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.top-bar {
+    flex-shrink: 0;
+}
+
 .content-area {
+    flex: 1;
+    min-height: 0;
+    display: flex;
     padding: 20px;
 }
 
-/* ---------- WIZARD SPECIFIC ---------- */
-.wizard-container {
+.ai-chat-page {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
     max-width: 900px;
     margin: 0 auto;
+    width: 100%;
     background: white;
     border-radius: 24px;
-    padding: 1.5rem;
-}
-
-.steps {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 1.5rem;
-    border-bottom: 2px solid #e2e8f0;
-    padding-bottom: 0.8rem;
-}
-
-.step {
-    flex: 1;
-    text-align: center;
-    color: #94a3b8;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.step.active {
-    color: #2c5e47;
-}
-
-.step-num {
-    display: inline-block;
-    width: 28px;
-    height: 28px;
-    line-height: 28px;
-    border-radius: 50%;
-    background: #e2e8f0;
-    color: #64748b;
-    margin-right: 6px;
-}
-
-.step.active .step-num {
-    background: #2c5e47;
-    color: white;
-}
-
-.step-content {
-    display: none;
-}
-
-.step-content.active {
-    display: block;
-}
-
-.form-card h3 {
-    margin-bottom: 1.2rem;
-    font-size: 1.2rem;
-    color: #1e2f2a;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
 }
 
 .heading-icon-gate {
@@ -298,53 +272,18 @@
     width: auto;
 }
 
-.form-card {
-    margin-bottom: 1.5rem;
-}
-
-.form-card:last-child {
-    margin-bottom: 0;
-}
-
-/* .form-group / .form-group label now come from assets/css/components/forms.css
-   so this page's form spacing/labels match every other module. */
-
-/* .form-group input/select/textarea now come from assets/css/components/forms.css (Batch 5) */
-
-input[type="range"] {
-    padding: 0;
-}
-
-.form-actions {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 1.2rem;
-    gap: 1rem;
-}
-
 .btn-next,
-.btn-back,
 .btn-confirm {
     padding: 8px 20px;
     border-radius: 40px;
     border: none;
     cursor: pointer;
     font-weight: 600;
-}
-
-.btn-next,
-.btn-confirm {
     background: #2c5e47;
     color: white;
 }
 
-.btn-back {
-    background: #e2e8f0;
-    color: #334155;
-}
-
 .btn-next:focus-visible,
-.btn-back:focus-visible,
 .btn-confirm:focus-visible,
 .select-lot-btn:focus-visible {
     outline: 2px solid var(--color-primary-500);
@@ -357,16 +296,13 @@ input[type="range"] {
     margin: 1rem 0;
 }
 
-    .recommendation-summary {
-        margin-bottom: 1rem;
+    .recommendation-reasons-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
         color: #475569;
-        font-size: 0.95rem;
-        line-height: 1.6;
-    }
-
-    .recommendation-summary.is-fallback {
-        color: #b45309;
-        font-weight: 600;
+        text-align: right;
     }
 
     .recommendation-reasons {
@@ -381,6 +317,13 @@ input[type="range"] {
     .recommendation-reasons li::before {
         content: "✓ ";
         color: #166534;
+    }
+
+    .recommendation-reasons-empty {
+        font-size: 0.75rem;
+        font-style: italic;
+        color: #475569;
+        text-align: right;
     }
 
     .recommendation-card {
@@ -431,35 +374,60 @@ input[type="range"] {
         border-radius: 20px;
     }
 
-/* ---------- CHAT-STYLE PREFERENCE COLLECTION (Phase 6) ---------- */
-.chat-card {
-    margin-bottom: 1.5rem;
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.2rem;
+    gap: 1rem;
 }
 
-.chat-subtitle {
-    margin: -0.6rem 0 1rem;
-    color: var(--color-neutral-600);
-    font-size: 0.85rem;
+/* ---------- CONFIRMATION STEP (was previously missing from this file —
+   the citizen confirmation box rendered unstyled; added to match
+   burial-scheduling.css's version, adapted to this file's color convention) ---------- */
+.confirmation-box {
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 20px;
 }
 
+.confirmation-box p {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    margin: 0;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.9rem;
+    color: #1e2f2a;
+}
+
+.confirmation-box p:last-child {
+    border-bottom: none;
+}
+
+.confirmation-box p.muted {
+    justify-content: flex-start;
+    color: #64748b;
+    padding-top: 8px;
+}
+
+/* ---------- CHAT THREAD (Batch N: the whole booking interface) ---------- */
 .chat-window {
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    max-height: 260px;
+    gap: 12px;
     overflow-y: auto;
-    padding: 12px;
+    padding: 20px;
     background: var(--color-surface-soft);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    margin-bottom: 0.8rem;
 }
 
 .chat-message {
     max-width: 80%;
-    padding: 8px 12px;
+    padding: 10px 14px;
     border-radius: var(--radius-md);
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     line-height: 1.5;
     word-wrap: break-word;
 }
@@ -477,11 +445,22 @@ input[type="range"] {
     color: var(--color-white);
 }
 
+/* Rich messages (recommendation cards, confirmation box, escape hatches)
+   carry structured content, not just text, so they get more room than a
+   plain 80%-width bubble. */
+.chat-message--rich {
+    max-width: 92%;
+    padding: 14px;
+}
+
 .chat-pref-status {
+    flex-shrink: 0;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 0.8rem;
+    padding: 10px 20px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-white);
 }
 
 .chat-pref-chip {
@@ -498,24 +477,25 @@ input[type="range"] {
 }
 
 .chat-input-row {
+    flex-shrink: 0;
     display: flex;
     gap: 8px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-white);
 }
 
 .chat-input-row input[type="text"] {
     flex: 1;
     min-width: 0;
-    height: 38px;
-    padding: 0 12px;
+    height: 42px;
+    padding: 0 14px;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     font-family: var(--font-sans);
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: var(--color-text);
     background: var(--color-white);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
     transition: border-color var(--duration-base) var(--easing-standard);
 }
 
@@ -528,7 +508,7 @@ input[type="range"] {
     background: var(--color-primary-500);
     color: var(--color-white);
     border: none;
-    width: 42px;
+    width: 46px;
     flex-shrink: 0;
     border-radius: var(--radius-md);
     cursor: pointer;
@@ -551,73 +531,61 @@ input[type="range"] {
 }
 
 .chat-actions {
+    flex-shrink: 0;
     display: flex;
-    justify-content: flex-end;
-    margin-top: 0.4rem;
+    justify-content: center;
+    padding: 0 20px 14px;
+    background: var(--color-white);
 }
 
-#chatFindLotsBtn:disabled {
+#chatSuggestTypeBtn:disabled {
     background: var(--color-neutral-300);
     color: var(--color-neutral-600);
     cursor: not-allowed;
 }
 
-/* Floating AI chat widget styles (.ai-chat-*) moved to the shared
-   assets/css/components/ai-chat-widget.css (Phase 8 audit fix) — this
-   file used to carry a byte-identical copy of burial-scheduling.css's
-   widget CSS, which made every widget fix a two-file edit. */
-
-/* ---------- MANUAL FILTERS FALLBACK (collapsed by default) ---------- */
-.manual-filters-disclosure {
-    border: 1px dashed var(--color-border);
-    border-radius: var(--radius-md);
-    padding: 0.9rem 1.1rem;
+/* Escape hatch (adviser-approved fallback for decedent/date only — see
+   lot-chat-assistant.js's module comment): a real <select>/<input
+   type=date>, styled as a small inline strip within its own rich message
+   bubble rather than a competing visible form. */
+.chat-escape-hatch {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
 }
 
-.manual-filters-disclosure summary {
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.95rem;
-    color: var(--color-neutral-700);
-    list-style: none;
+.chat-escape-hatch label {
+    font-size: 0.8rem;
+    color: var(--color-neutral-600);
 }
 
-.manual-filters-disclosure summary::-webkit-details-marker {
-    display: none;
+.chat-escape-hatch select,
+.chat-escape-hatch input {
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
 }
 
-.manual-filters-disclosure summary::before {
-    content: '\25B8';
-    display: inline-block;
-    margin-right: 8px;
-    transition: transform var(--duration-base) var(--easing-standard);
-}
-
-.manual-filters-disclosure[open] summary::before {
-    transform: rotate(90deg);
-}
-
-.manual-filters-disclosure summary:focus-visible {
-    outline: 2px solid var(--color-primary-500);
-    outline-offset: 2px;
-}
-
-.manual-filters-disclosure form {
-    margin-top: 1rem;
-}
+/* Floating AI chat widget styles (.ai-chat-*) previously lived in the
+   shared assets/css/components/ai-chat-widget.css — that widget no longer
+   exists (Batch N: chat is the entire page, not a floating panel), so this
+   page's <link> to that stylesheet was removed along with the widget
+   markup it styled. */
 
 /* ---------- RESPONSIVE ---------- */
 /* Sidebar/rail responsive behavior now comes from the shared dashboard.css (Batch 3) */
 
 @media (max-width: 768px) {
-    .steps {
-        flex-direction: column;
-        gap: 8px;
+    .content-area {
+        padding: 12px;
     }
-    .step {
-        text-align: left;
+    .ai-chat-page {
+        border-radius: 12px;
     }
-    .manual-filters-disclosure {
-        padding: 0.75rem 0.9rem;
+    .chat-message {
+        max-width: 92%;
     }
 }

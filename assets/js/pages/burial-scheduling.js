@@ -1,11 +1,11 @@
-// Admin/staff burial-scheduling wizard — thin wrapper around the shared
-// assets/js/shared/booking-wizard.js (Batch M5). See that file for the full
-// wizard logic; only the role gate, status-badge markup, and post-booking
-// behavior differ from the citizen wizard (reserve-burial-slot.js).
+// Admin/staff Burial Scheduling page — thin wrapper around the shared
+// assets/js/shared/booking-wizard.js (Batch N: full-page chat interface).
+// See that file for the full logic; only the role gate, status-badge
+// markup, and post-booking behavior differ from the citizen page
+// (reserve-burial-slot.js).
 document.addEventListener('DOMContentLoaded', function() {
     createBookingWizard({
         allowedRoles: ['admin', 'staff'],
-        showLotNumberField: true,
         renderStatusBadge: (lot) => `<span class="status-badge status-success">${lot.status || 'Available'}</span>`,
         onBookingSuccess: () => {
             alert('Reservation request submitted and pending approval.');
