@@ -477,6 +477,24 @@
     padding: 14px;
 }
 
+/* Batch O: a superseded recommendation set (preferences changed, new cards
+   rendered below) stays visible as thread history but is visually
+   de-emphasized and its Reserve buttons are disabled (in JS) so a user
+   can't act on an outdated card by mistake. */
+.chat-message--rich.recommendations-stale {
+    opacity: 0.55;
+}
+
+.chat-message--rich.recommendations-stale::after {
+    content: "Superseded — see the updated recommendations below";
+    display: block;
+    margin-top: 10px;
+    font-size: 0.75rem;
+    font-style: italic;
+    font-weight: 600;
+    color: var(--color-neutral-600);
+}
+
 .chat-pref-status {
     flex-shrink: 0;
     display: flex;
@@ -558,6 +576,7 @@
     flex-shrink: 0;
     display: flex;
     justify-content: center;
+    gap: 10px;
     padding: 0 20px 14px;
     background: var(--color-white);
 }

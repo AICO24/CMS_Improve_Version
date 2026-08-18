@@ -63,8 +63,52 @@ function renderChatPageMarkup({ mount }) {
             </form>
             <div class="chat-actions">
                 <button type="button" id="chatSuggestTypeBtn" class="btn-next">Recommend a type for me</button>
+                <button type="button" id="chatStartOverBtn" class="btn-secondary">Start Over</button>
             </div>
         </div>`;
+}
+
+// Batch O: resolves chat text like "the first one"/"the cheapest one"/
+// "Lot A-102" against whichever recommendation set was most recently
+// rendered. Lives here (not lot-chat-assistant.js) because only this module
+// knows about lot data/pricing — the chat assistant is deliberately
+// lot-data-agnostic. Returns null (not a guess) when the message doesn't
+// look like a selection at all, so normal chat parsing still runs.
+const LOT_ORDINAL_WORDS = {
+    first: 0, second: 1, third: 2, fourth: 3, fifth: 4, sixth: 5,
+    '1st': 0, '2nd': 1, '3rd': 2, '4th': 3, '5th': 4, '6th': 5,
+};
+
+function parseLotSelectionIntent(text) {
+    const lower = text.toLowerCase();
+    // Real lot numbers are always letter-hyphen-digits (e.g. "L-001") —
+    // requiring that shape (or a bare 2+ digit run) instead of any single
+    // digit after "lot" avoids misreading something like "a Lawn Lot 2"
+    // as a lot-number reference.
+    const lotNumberMatch = lower.match(/\blot\s*([a-z]-\d+|\d{2,})\b/i);
+    if (lotNumberMatch) return { type: 'lot_number', value: lotNumberMatch[1].toUpperCase() };
+    if (/\b(cheapest|most affordable|least expensive|lowest price)\b/.test(lower)) return { type: 'cheapest' };
+    const ordinalMatch = lower.match(/\b(first|second|third|fourth|fifth|sixth|1st|2nd|3rd|4th|5th|6th)\b/);
+    if (ordinalMatch && /\b(one|option|lot|choice|pick|take|choose|reserve|select)\b/.test(lower)) {
+        return { type: 'ordinal', index: LOT_ORDINAL_WORDS[ordinalMatch[1]] };
+    }
+    return null;
+}
+
+function resolveLotFromIntent(intent, recommendations) {
+    if (!recommendations.length) return null;
+    if (intent.type === 'lot_number') {
+        return recommendations.find(lot => (lot.lot_number || '').toUpperCase() === intent.value) || null;
+    }
+    if (intent.type === 'ordinal') {
+        return recommendations[intent.index] || null;
+    }
+    if (intent.type === 'cheapest') {
+        return recommendations.reduce((cheapest, lot) => (
+            cheapest === null || parseFloat(lot.price) < parseFloat(cheapest.price) ? lot : cheapest
+        ), null);
+    }
+    return null;
 }
 
 function createBookingWizard(options) {
@@ -92,13 +136,21 @@ function createBookingWizard(options) {
         const chatForm = document.getElementById('chatForm');
         const chatInput = document.getElementById('chatInput');
         const chatSuggestTypeBtn = document.getElementById('chatSuggestTypeBtn');
+        const chatStartOverBtn = document.getElementById('chatStartOverBtn');
         const chatPrefStatus = document.getElementById('chatPrefStatus');
 
         let selectedLot = null;
         let confirmationShown = false;
+        let confirmationBubble = null;
         let decedents = [];
         let lotTypes = [];
         let sections = [];
+        // Batch O: the currently active recommendation set/bubble — text-based
+        // lot selection ("the second one") and re-selection after a
+        // preference correction both resolve against this, never a
+        // possibly-stale DOM query.
+        let latestRecommendations = [];
+        let latestRecommendationBubble = null;
 
         // Same past-date/Monday-block rule everywhere a date can be set —
         // chat text extraction and the escape hatch both funnel through
@@ -198,6 +250,8 @@ function createBookingWizard(options) {
                     `<div class="recommendations-grid">${lots.map(lot => buildLotCard(lot, true)).join('')}</div>`
                 );
                 attachSelectHandlers(bubble);
+                latestRecommendations = lots;
+                latestRecommendationBubble = bubble;
             } catch (error) {
                 console.error('Failed to load available lots for manual browsing', error);
                 chatAssistant.appendMessage('assistant', 'Could not load available lots. Please try again later.');
@@ -209,7 +263,22 @@ function createBookingWizard(options) {
         // required. Renders the outcome as a message, then the cards
         // themselves as the next message, matching how a human assistant
         // would say "I found N options" before listing them.
+        // Batch O: marks whatever recommendation set is currently "active" as
+        // stale BEFORE running the new fetch — covers every outcome (success,
+        // empty, error/fallback) uniformly, since the audit's requirement is
+        // "preferences changed -> the old set is outdated," not conditional
+        // on the new fetch actually succeeding.
+        function invalidateActiveRecommendations() {
+            if (latestRecommendationBubble) {
+                latestRecommendationBubble.classList.add('recommendations-stale');
+                latestRecommendationBubble.querySelectorAll('.select-lot-btn').forEach(btn => { btn.disabled = true; });
+            }
+            latestRecommendationBubble = null;
+            latestRecommendations = [];
+        }
+
         async function fetchAndRenderRecommendations(preferences) {
+            invalidateActiveRecommendations();
             try {
                 const recommendations = await api.request('schedules/recommend', {
                     method: 'POST',
@@ -230,6 +299,8 @@ function createBookingWizard(options) {
                     `<div class="recommendations-grid">${recommendations.map(lot => buildLotCard(lot)).join('')}</div>`
                 );
                 attachSelectHandlers(bubble);
+                latestRecommendations = recommendations;
+                latestRecommendationBubble = bubble;
 
                 if (chatAssistant.state.date) {
                     await chatAssistant.appendCapacityWarning(chatAssistant.state.date);
@@ -244,6 +315,13 @@ function createBookingWizard(options) {
         function selectLot(lot) {
             selectedLot = lot;
             confirmationShown = false;
+            // Batch O: a user picking a different lot (via a card click or a
+            // conversational reference) after already confirming one earlier
+            // must not leave the old, now-wrong confirmation box on screen.
+            if (confirmationBubble) {
+                confirmationBubble.remove();
+                confirmationBubble = null;
+            }
             chatAssistant.appendMessage('user', `Reserve Lot ${lot.lot_number}`);
             renderConfirmationIfReady();
         }
@@ -282,6 +360,7 @@ function createBookingWizard(options) {
                     </div>
                 </div>`;
             const bubble = chatAssistant.appendRichMessage(html);
+            confirmationBubble = bubble;
             const confirmBtn = bubble.querySelector('.confirm-booking-btn');
             confirmBtn.addEventListener('click', () => submitBooking(bubble, confirmBtn));
         }
@@ -292,6 +371,12 @@ function createBookingWizard(options) {
                 try {
                     const conflict = await api.request(`schedules/check-conflict?lot_id=${selectedLot.lot_id}&date=${state.date}${state.time ? `&time=${encodeURIComponent(state.time)}` : ''}`);
                     if (!conflict.available) {
+                        // Batch O: also remove the stale confirmation bubble —
+                        // leaving it would let the user click "Confirm & Book"
+                        // a second time with selectedLot already null below,
+                        // which previously would have thrown on selectedLot.lot_id.
+                        bubble.remove();
+                        confirmationBubble = null;
                         chatAssistant.appendMessage('assistant', 'This lot is already booked for the selected date/time. Please choose another lot or a different date.');
                         confirmationShown = false;
                         selectedLot = null;
@@ -310,6 +395,7 @@ function createBookingWizard(options) {
                         const bookedLot = selectedLot;
                         const scheduleId = result.schedule_id;
                         bubble.remove();
+                        confirmationBubble = null;
                         chatAssistant.appendMessage('assistant', `Your reservation for Lot ${bookedLot.lot_number} is confirmed and pending approval.`);
                         onBookingSuccess({ scheduleId, bookedLot });
                     } else {
@@ -321,17 +407,64 @@ function createBookingWizard(options) {
             });
         }
 
+        // Batch O: intercepts messages that look like a lot selection
+        // ("the second one", "pick the cheapest", "Lot A-102") before the
+        // chat assistant's own slot-filling parsing runs, resolves them
+        // against latestRecommendations, and echoes+responds itself. Returns
+        // false for anything that doesn't look like a selection so normal
+        // parsing continues untouched.
+        async function tryHandleLotSelectionText(text) {
+            const intent = parseLotSelectionIntent(text);
+            if (!intent) return false;
+
+            chatAssistant.appendMessage('user', text);
+
+            if (!latestRecommendations.length) {
+                chatAssistant.appendMessage('assistant', "I don't have any recommendations to choose from right now. Let's find some lots first — what's your budget or preferred lot type?");
+                return true;
+            }
+
+            const lot = resolveLotFromIntent(intent, latestRecommendations);
+            if (!lot) {
+                chatAssistant.appendMessage('assistant', 'I couldn\'t match that to one of the options currently shown. Try "the first one", "the cheapest one", or a lot number like "A-102".');
+                return true;
+            }
+
+            selectLot(lot);
+            return true;
+        }
+
         const chatAssistant = createLotChatAssistant({
             chatWindow, chatForm, chatInput, chatSuggestTypeBtn, chatPrefStatus,
             getLotTypes: () => lotTypes,
             getSections: () => sections,
             getDecedents: () => decedents,
             validateDate: validateBookingDate,
+            interceptMessage: tryHandleLotSelectionText,
             onLotPreferencesReady: () => {
                 fetchAndRenderRecommendations(chatAssistant.getPreferences());
             },
+            onPreferencesCorrected: async () => {
+                await fetchAndRenderRecommendations(chatAssistant.getPreferences());
+            },
+            onBookingDetailsCorrected: () => {
+                if (confirmationBubble) {
+                    confirmationBubble.remove();
+                    confirmationBubble = null;
+                    confirmationShown = false;
+                    chatAssistant.appendMessage('assistant', "Since your details changed, here's the updated summary once everything is set.");
+                }
+                if (selectedLot) renderConfirmationIfReady();
+            },
             onStateChanged: () => {
                 if (selectedLot && !confirmationShown) renderConfirmationIfReady();
+            },
+            onReset: () => {
+                selectedLot = null;
+                confirmationShown = false;
+                confirmationBubble = null;
+                latestRecommendations = [];
+                latestRecommendationBubble = null;
             },
         });
 
@@ -340,6 +473,14 @@ function createBookingWizard(options) {
                 await withButtonLoading(chatSuggestTypeBtn, async () => {
                     await chatAssistant.requestTypeSuggestion();
                 });
+            });
+        }
+
+        if (chatStartOverBtn) {
+            chatStartOverBtn.addEventListener('click', function() {
+                if (confirm('Start over? This will clear the current conversation and any selections.')) {
+                    chatAssistant.reset();
+                }
             });
         }
 

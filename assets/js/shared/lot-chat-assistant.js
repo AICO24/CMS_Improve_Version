@@ -33,6 +33,39 @@
 // decedent list) — deliberately no LLM fallback here, unlike lot_type/
 // budget/section's ai/extract path, since M3's stated privacy contract is
 // to never send decedent/user/booking data to the LLM endpoint.
+// Batch O (adviser follow-up 2026-08-18: "complete the remaining
+// conversational gaps" — correction, re-selection, reset): previously every
+// extractor above was gated `if (state.field === null)`, permanently
+// locking a field the instant it was first set. Added:
+//   - Correction support: once a field is set, a message containing an
+//     explicit correction signal ("actually", "change", "instead", "make
+//     it", "different", ...) is allowed to re-run that field's existing
+//     extractor. A concrete new value that differs from the current one
+//     replaces it; if the message names the field but the extractor still
+//     finds nothing (e.g. "I want a different lot type" with no type
+//     named), the field is cleared back to null so the normal
+//     re-ask/question flow naturally kicks in. No correction signal ->
+//     already-set fields are left untouched, exactly as before, so a
+//     message mentioning an unrelated number/date can't silently overwrite
+//     a resolved field.
+//   - onPreferencesCorrected()/onBookingDetailsCorrected(): fired
+//     (separately from the one-time onLotPreferencesReady/onDetailExtracted
+//     hooks) whenever a correction actually changes a resolved
+//     lot_type/budget/section or decedent/date/time value respectively, so
+//     the caller can re-run recommendations or refresh a stale confirmation
+//     box without the user restarting.
+//   - interceptMessage(text) -> Promise<boolean>: optional hook called
+//     before any built-in parsing. If it returns true, this module assumes
+//     the caller fully handled the message (including echoing it) and does
+//     nothing further. Used by booking-wizard.js to resolve "pick the
+//     second one"/"the cheapest one"/"Lot A-102" against whichever
+//     recommendation set it most recently rendered — this module has no
+//     knowledge of lot data, so that resolution has to live in the caller.
+//   - Reset: "start over"/"restart"/"start again"/"clear everything" (as
+//     the entire message, mirroring the existing skip-phrase convention)
+//     clears all state, notifies the caller via onReset() so it can drop
+//     its own selected-lot/recommendation-set state, and re-greets. Also
+//     exposed as assistant.reset() for a visible "Start Over" button.
 // Batch N (adviser feedback 2026-08-18, "make burial scheduling fully
 // chat-based, like ChatGPT"): this module is now the ENTIRE booking
 // interface, not a widget alongside a form/wizard. Added:
@@ -106,9 +139,20 @@ function createLotChatAssistant(options) {
         onLotPreferencesReady,
         onStateChanged,
         onReady,
+        interceptMessage,
+        onPreferencesCorrected,
+        onBookingDetailsCorrected,
+        onReset,
     } = options;
 
     const CHAT_SKIP_PHRASES = ['any', 'anything', 'no preference', 'not sure', "doesn't matter", 'does not matter', 'skip', "i don't know", 'idk', 'n/a', 'none', 'whatever'];
+    const RESET_PHRASES = ['start over', 'start again', 'restart', 'reset', 'reset conversation', 'reset the conversation', 'clear everything', 'clear all', 'begin again'];
+    const CORRECTION_SIGNAL_RE = /\b(actually|instead|change|update|switch|correct|different|rather|make it)\b/i;
+    const FIELD_KEYWORD_RE = {
+        lot_type: /\b(lot\s*type|type of lot)\b/i,
+        section: /\bsection\b/i,
+        budget: /\bbudget\b/i,
+    };
     const MONTH_NAMES = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
     const MONTH_ABBR = MONTH_NAMES.map(m => m.slice(0, 3));
     const ESCAPE_HATCH_THRESHOLD = 3;
@@ -128,6 +172,15 @@ function createLotChatAssistant(options) {
     function isChatSkipMessage(text) {
         const normalized = text.trim().toLowerCase().replace(/[.!?]+$/, '');
         return CHAT_SKIP_PHRASES.includes(normalized);
+    }
+
+    function isResetPhrase(text) {
+        const normalized = text.trim().toLowerCase().replace(/[.!?]+$/, '');
+        return RESET_PHRASES.includes(normalized);
+    }
+
+    function isUnset(value) {
+        return value === null || value === '';
     }
 
     function containsDigits(text) {
@@ -632,26 +685,80 @@ function createLotChatAssistant(options) {
         return suggested;
     }
 
+    // Batch O: full reset — clears every slot, the caller's own selected-lot/
+    // recommendation-set state (via onReset), and re-greets. Triggered by a
+    // reset phrase typed in chat or by the caller's visible "Start Over"
+    // button (both funnel through assistant.reset()).
+    function performReset() {
+        state.lot_type = null;
+        state.budget = null;
+        state.section = null;
+        state.decedent_id = null;
+        state.date = null;
+        state.time = null;
+        decedentLabel = null;
+        lotPreferencesReadyFired = false;
+        decedentAttempts = 0;
+        dateAttempts = 0;
+        decedentEscapeShown = false;
+        dateEscapeShown = false;
+        if (typeof onReset === 'function') onReset();
+        chatWindow.innerHTML = '';
+        init();
+    }
+
     async function processMessage(rawText) {
         const text = rawText.trim();
         if (!text) return;
+
+        if (isResetPhrase(text)) {
+            performReset();
+            return;
+        }
+
+        if (typeof interceptMessage === 'function') {
+            const handled = await interceptMessage(text);
+            if (handled) return;
+        }
 
         appendMessage('user', text);
 
         const pendingSlot = getNextMissingSlot();
         const updates = {};
+        const hasCorrectionSignal = CORRECTION_SIGNAL_RE.test(text);
 
-        if (state.lot_type === null) {
+        if (isUnset(state.lot_type)) {
             const lotType = extractLotTypeFromText(text);
             if (lotType) updates.lot_type = lotType;
+        } else if (hasCorrectionSignal) {
+            const lotType = extractLotTypeFromText(text);
+            if (lotType && lotType !== state.lot_type) {
+                updates.lot_type = lotType;
+            } else if (!lotType && FIELD_KEYWORD_RE.lot_type.test(text)) {
+                updates.lot_type = null;
+            }
         }
-        if (state.section === null) {
+        if (isUnset(state.section)) {
             const section = extractSectionFromText(text);
             if (section) updates.section = section;
+        } else if (hasCorrectionSignal) {
+            const section = extractSectionFromText(text);
+            if (section && section !== state.section) {
+                updates.section = section;
+            } else if (!section && FIELD_KEYWORD_RE.section.test(text)) {
+                updates.section = null;
+            }
         }
-        if (state.budget === null) {
+        if (isUnset(state.budget)) {
             const budget = extractBudgetFromText(text);
             if (budget !== null) updates.budget = budget;
+        } else if (hasCorrectionSignal) {
+            const budget = extractBudgetFromText(text);
+            if (budget !== null && budget !== state.budget) {
+                updates.budget = budget;
+            } else if (budget === null && FIELD_KEYWORD_RE.budget.test(text)) {
+                updates.budget = null;
+            }
         }
 
         // Everything below is decedent/date/time, which must NOT influence
@@ -664,6 +771,7 @@ function createLotChatAssistant(options) {
 
         let newDecedentLabel = null;
         let ambiguousDecedentCandidates = null;
+        let decedentCorrected = false;
         if (state.decedent_id === null) {
             const decedentResult = extractDecedentFromText(text);
             if (decedentResult.match) {
@@ -672,9 +780,19 @@ function createLotChatAssistant(options) {
             } else if (decedentResult.ambiguous) {
                 ambiguousDecedentCandidates = decedentResult.candidates;
             }
+        } else if (hasCorrectionSignal) {
+            const decedentResult = extractDecedentFromText(text);
+            if (decedentResult.match && decedentResult.match.decedent_id !== state.decedent_id) {
+                updates.decedent_id = decedentResult.match.decedent_id;
+                newDecedentLabel = `${decedentResult.match.first_name} ${decedentResult.match.last_name}`;
+                decedentCorrected = true;
+            } else if (decedentResult.ambiguous) {
+                ambiguousDecedentCandidates = decedentResult.candidates;
+            }
         }
 
         let dateValidationError = null;
+        let dateCorrected = false;
         if (state.date === null) {
             const parsedDate = extractDateFromText(text);
             if (parsedDate) {
@@ -685,11 +803,29 @@ function createLotChatAssistant(options) {
                     dateValidationError = validation.reason;
                 }
             }
+        } else if (hasCorrectionSignal) {
+            const parsedDate = extractDateFromText(text);
+            if (parsedDate && parsedDate !== state.date) {
+                const validation = typeof validateDate === 'function' ? validateDate(parsedDate) : { valid: true };
+                if (validation.valid) {
+                    updates.date = parsedDate;
+                    dateCorrected = true;
+                } else {
+                    dateValidationError = validation.reason;
+                }
+            }
         }
 
+        let timeCorrected = false;
         if (state.time === null) {
             const parsedTime = extractTimeFromText(text);
             if (parsedTime) updates.time = parsedTime;
+        } else if (hasCorrectionSignal) {
+            const parsedTime = extractTimeFromText(text);
+            if (parsedTime && parsedTime !== state.time) {
+                updates.time = parsedTime;
+                timeCorrected = true;
+            }
         }
 
         // Only treat the message as an explicit "skip" for the currently
@@ -721,25 +857,37 @@ function createLotChatAssistant(options) {
 
         const acknowledgements = [];
         if (updates.lot_type !== undefined) {
-            acknowledgements.push(updates.lot_type ? `Got it — ${updates.lot_type}.` : "Okay, no preference on lot type.");
+            if (updates.lot_type === null) {
+                acknowledgements.push('No problem — what lot type would you like instead?');
+            } else {
+                acknowledgements.push(updates.lot_type ? `Got it — ${updates.lot_type}.` : "Okay, no preference on lot type.");
+            }
         }
         if (updates.budget !== undefined) {
-            acknowledgements.push(updates.budget !== '' ? `Noted — budget around ${formatBudget(updates.budget)}.` : "No problem, I won't filter by budget.");
+            if (updates.budget === null) {
+                acknowledgements.push('No problem — what would you like your budget to be instead?');
+            } else {
+                acknowledgements.push(updates.budget !== '' ? `Noted — budget around ${formatBudget(updates.budget)}.` : "No problem, I won't filter by budget.");
+            }
         }
         if (updates.section !== undefined) {
-            acknowledgements.push(updates.section ? `Noted — ${updates.section}.` : 'Okay, any section works.');
+            if (updates.section === null) {
+                acknowledgements.push('Got it — which section would you prefer instead?');
+            } else {
+                acknowledgements.push(updates.section ? `Noted — ${updates.section}.` : 'Okay, any section works.');
+            }
         }
         if (updates.decedent_id !== undefined) {
             decedentLabel = newDecedentLabel;
-            acknowledgements.push(`Got it — this booking is for ${newDecedentLabel}.`);
+            acknowledgements.push(decedentCorrected ? `Got it — updating to ${newDecedentLabel}.` : `Got it — this booking is for ${newDecedentLabel}.`);
             if (typeof onDetailExtracted === 'function') onDetailExtracted('decedent_id', updates.decedent_id);
         }
         if (updates.date !== undefined) {
-            acknowledgements.push(`Burial date set to ${formatDateLabel(updates.date)}.`);
+            acknowledgements.push(dateCorrected ? `Updated the burial date to ${formatDateLabel(updates.date)}.` : `Burial date set to ${formatDateLabel(updates.date)}.`);
             if (typeof onDetailExtracted === 'function') onDetailExtracted('date', updates.date);
         }
         if (updates.time !== undefined) {
-            acknowledgements.push(`Time noted as ${formatTimeLabel(updates.time)}.`);
+            acknowledgements.push(timeCorrected ? `Updated the time to ${formatTimeLabel(updates.time)}.` : `Time noted as ${formatTimeLabel(updates.time)}.`);
             if (typeof onDetailExtracted === 'function') onDetailExtracted('time', updates.time);
         }
 
@@ -810,6 +958,32 @@ function createLotChatAssistant(options) {
                 appendMessage('assistant', "Still having trouble with the date —");
                 appendDateEscapeHatch();
             }
+        }
+
+        // Batch O: recommendation-relevant fields changed AFTER recommendations
+        // were already shown at least once (lotPreferencesReadyFired) — the
+        // previously shown set is now outdated. Only fires once the corrected
+        // state is actually complete again (lot_type+budget both resolved) —
+        // a correction that clears a field back to null (e.g. "a different
+        // lot type" with no type named) waits for the follow-up answer
+        // instead of re-fetching with an incomplete preference set.
+        const recommendationFieldsTouched = ['lot_type', 'budget', 'section'].some(field => updates[field] !== undefined);
+        const isReadyNow = state.lot_type !== null && state.budget !== null;
+        if (recommendationFieldsTouched && lotPreferencesReadyFired && isReadyNow && typeof onPreferencesCorrected === 'function') {
+            setInputEnabled(false);
+            const typingBubble = appendTypingIndicator();
+            await onPreferencesCorrected();
+            typingBubble.remove();
+            setInputEnabled(true);
+            chatInput.focus();
+        }
+
+        // Batch O: decedent/date/time changed after being previously
+        // resolved — the caller (booking-wizard.js) may already have a
+        // confirmation box on screen quoting the old value(s) and needs to
+        // invalidate/refresh it.
+        if ((decedentCorrected || dateCorrected || timeCorrected) && typeof onBookingDetailsCorrected === 'function') {
+            onBookingDetailsCorrected();
         }
 
         updateReadiness();
@@ -951,5 +1125,6 @@ function createLotChatAssistant(options) {
         appendOutcomeMessage,
         appendCapacityWarning,
         requestTypeSuggestion,
+        reset: performReset,
     };
 }
