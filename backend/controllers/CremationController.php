@@ -141,6 +141,35 @@ class CremationController {
         return $this->cremationModel->getStats($columbarium);
     }
 
+    public function columbariums() {
+        $list = $this->cremationModel->getDistinctColumbariums();
+        // Always offer the default even before any real record uses it —
+        // otherwise a brand-new install would show an empty dropdown.
+        if (!in_array('Columbarium A', $list, true)) {
+            array_unshift($list, 'Columbarium A');
+        }
+        return $list;
+    }
+
+    public function suggestNiche($columbarium = null) {
+        // getNiches()/the virtual 10-slot grid only correctly represents a
+        // SINGLE columbarium at a time — passing null merges every
+        // columbarium's records into one grid keyed by niche_number suffix,
+        // so two columbariums that each have an "N-2" would collide and
+        // overwrite each other. Always pin to a real columbarium here
+        // (defaulting to the same 'Columbarium A' default used elsewhere)
+        // so the suggestion is never computed against that merged view.
+        $columbarium = $columbarium ?: 'Columbarium A';
+        $suggestion = $this->cremationModel->findNextAvailableNiche($columbarium);
+        if (!$suggestion) {
+            return [
+                'available' => false,
+                'message' => 'No available niches in this columbarium. Try another columbarium.',
+            ];
+        }
+        return array_merge(['available' => true], $suggestion);
+    }
+
     public function assignNiche($data, $userId) {
         if (empty($data['deceased_id']) || empty($data['niche_number'])) {
             return ['error' => 'Decedent ID and niche number are required', 'code' => 400];

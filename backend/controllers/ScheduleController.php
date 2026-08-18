@@ -13,7 +13,20 @@ class ScheduleController {
         $this->lotModel = new Lot();
     }
 
-    public function index($filters = []) {
+    // Batch N5: $user is optional (existing callers pass none) but, when
+    // given, a non-admin/staff caller is force-scoped to their own
+    // schedules regardless of any client-supplied filter — added because
+    // this endpoint is now reachable from the Payments page's reference
+    // picker (any authenticated role), and without this a citizen could
+    // search/browse every other citizen's reservation by name or lot
+    // number. Mirrors the same server-enforced-ownership pattern already
+    // used by show()/update()/destroy() in this file.
+    public function index($filters = [], $user = null) {
+        $role = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
+        if ($user && !in_array($role, ['admin', 'staff'], true)) {
+            $filters['created_by'] = $user['user_id'];
+        }
+
         $page = !empty($filters['page']) ? (int) $filters['page'] : null;
         $perPage = !empty($filters['per_page']) ? (int) $filters['per_page'] : null;
 

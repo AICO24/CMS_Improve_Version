@@ -137,11 +137,82 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    const columbariumSelect = document.getElementById('columbarium');
+    const columbariumNewInput = document.getElementById('columbariumNew');
+    const suggestNicheBtn = document.getElementById('suggestNicheBtn');
+    const suggestNicheHint = document.getElementById('suggestNicheHint');
+    const NEW_COLUMBARIUM_VALUE = '__new__';
+
+    // Batch N6 (adviser feedback 2026-08-18): a free-text Columbarium field
+    // drifts into inconsistent spellings over time ("Columbarium A" vs
+    // "columbarium a" vs "Col. A") — offering the real, already-in-use
+    // names as a dropdown keeps the data centralized/consistent, with an
+    // explicit "add new" escape hatch so a genuinely new columbarium can
+    // still be created (never a functionality regression, just a default).
+    async function populateColumbariums(selectedValue = null) {
+        try {
+            const list = await apiRequest('cremations/columbariums');
+            const options = Array.isArray(list) ? list : [];
+            columbariumSelect.innerHTML = options.map(name => `<option value="${name}">${name}</option>`).join('')
+                + `<option value="${NEW_COLUMBARIUM_VALUE}">+ Add new columbarium...</option>`;
+            if (selectedValue && options.includes(selectedValue)) {
+                columbariumSelect.value = selectedValue;
+            } else if (selectedValue) {
+                // Editing a record whose columbarium somehow isn't in the
+                // distinct list (e.g. it was blanked out elsewhere) — fall
+                // back to "add new" pre-filled with that value rather than
+                // silently switching it to a different columbarium.
+                columbariumSelect.value = NEW_COLUMBARIUM_VALUE;
+                columbariumNewInput.value = selectedValue;
+            } else {
+                columbariumSelect.value = options[0] || NEW_COLUMBARIUM_VALUE;
+            }
+        } catch (error) {
+            console.error('Failed to load columbariums', error);
+            columbariumSelect.innerHTML = `<option value="Columbarium A">Columbarium A</option><option value="${NEW_COLUMBARIUM_VALUE}">+ Add new columbarium...</option>`;
+        }
+        columbariumNewInput.style.display = columbariumSelect.value === NEW_COLUMBARIUM_VALUE ? 'block' : 'none';
+    }
+
+    function currentColumbariumValue() {
+        return columbariumSelect.value === NEW_COLUMBARIUM_VALUE
+            ? columbariumNewInput.value.trim()
+            : columbariumSelect.value;
+    }
+
+    columbariumSelect.addEventListener('change', () => {
+        const isNew = columbariumSelect.value === NEW_COLUMBARIUM_VALUE;
+        columbariumNewInput.style.display = isNew ? 'block' : 'none';
+        if (isNew) columbariumNewInput.focus();
+    });
+
+    suggestNicheBtn.addEventListener('click', async () => {
+        const columbarium = currentColumbariumValue() || 'Columbarium A';
+        await withButtonLoading(suggestNicheBtn, async () => {
+            try {
+                const result = await apiRequest(`cremations/suggest-niche?columbarium=${encodeURIComponent(columbarium)}`);
+                if (result.available) {
+                    document.getElementById('nicheNumber').value = result.niche_number;
+                    document.getElementById('level').value = result.level || 1;
+                    suggestNicheHint.textContent = `Suggested niche ${result.niche_number} in ${result.columbarium} — you can still change it.`;
+                    suggestNicheHint.style.display = 'block';
+                } else {
+                    suggestNicheHint.textContent = result.message || 'No available niches in this columbarium.';
+                    suggestNicheHint.style.display = 'block';
+                }
+            } catch (error) {
+                suggestNicheHint.textContent = 'Could not fetch a suggestion — please enter a niche number manually.';
+                suggestNicheHint.style.display = 'block';
+            }
+        });
+    });
+
     async function openAddModal() {
         document.getElementById('modalTitle').innerText = 'Add New Cremation Record';
         cremationForm.reset();
         document.getElementById('cremationId').value = '';
-        await populateDecedents();
+        suggestNicheHint.style.display = 'none';
+        await Promise.all([populateDecedents(), populateColumbariums()]);
         cremationModal.style.display = 'flex';
     }
 
@@ -156,13 +227,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('cremationId').value = record.cremation_id;
             document.getElementById('deceasedId').value = record.deceased_id;
             document.getElementById('nicheNumber').value = record.niche_number || '';
-            document.getElementById('columbarium').value = record.columbarium || '';
             document.getElementById('level').value = record.level || 1;
             document.getElementById('cremationDate').value = record.cremation_date || '';
             document.getElementById('cremationStatus').value = record.status || 'Scheduled';
             document.getElementById('ashStorage').value = record.ash_storage_location || '';
             document.getElementById('cremationNotes').value = record.notes || '';
-            await populateDecedents(record.deceased_id);
+            suggestNicheHint.style.display = 'none';
+            await Promise.all([populateDecedents(record.deceased_id), populateColumbariums(record.columbarium)]);
             cremationModal.style.display = 'flex';
         } catch (error) {
             alert('Failed to load record: ' + error.message);
@@ -216,7 +287,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             deceased_id: deceasedId,
             niche_number: nicheNumber,
             nicheNumber,
-            columbarium: document.getElementById('columbarium').value.trim() || null,
+            columbarium: currentColumbariumValue() || null,
             level: parseInt(document.getElementById('level').value, 10) || null,
             cremation_date: document.getElementById('cremationDate').value || null,
             status: document.getElementById('cremationStatus').value || 'Scheduled',

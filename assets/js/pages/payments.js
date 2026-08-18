@@ -344,6 +344,145 @@ document.addEventListener('DOMContentLoaded', async function() {
     referenceIdInput.addEventListener('input', refreshExpectedAmount);
     amountInput.addEventListener('input', updateMismatchWarning);
 
+    // Batch N5 (adviser feedback 2026-08-18): "lot id/sched id diff — it
+    // should be set automatically" — replaces the bare numeric Reference ID
+    // field with a search-as-you-type picker over the real records, so
+    // staff no longer have to already know/guess the internal ID. The
+    // manual number input (referenceId) stays as the actual value the rest
+    // of this form/submission already reads — this only adds a friendlier
+    // way to fill it, with a collapsed manual fallback for Renewal/Other
+    // (which have no single searchable entity) or edge cases.
+    const referenceSearchWrap = document.getElementById('referenceSearchWrap');
+    const referenceSearchInput = document.getElementById('referenceSearchInput');
+    const referenceSearchResults = document.getElementById('referenceSearchResults');
+    const referenceSelectedLabel = document.getElementById('referenceSelectedLabel');
+    const referenceManualToggle = document.getElementById('referenceManualToggle');
+
+    const REFERENCE_SEARCH_CONFIG = {
+        'Lot Purchase': {
+            endpoint: 'schedules',
+            placeholder: 'Search by decedent name or lot number...',
+            mapResult: (s) => ({
+                id: s.schedule_id,
+                label: `Lot ${s.lot_number || '—'} — ${s.section_name || 'N/A'} — ${[s.first_name, s.last_name].filter(Boolean).join(' ') || 'Unknown'} — ${s.schedule_date || 'No date'}`,
+            }),
+        },
+        'Cremation': {
+            endpoint: 'cremations',
+            placeholder: 'Search by decedent name or niche number...',
+            mapResult: (c) => ({
+                id: c.cremation_id,
+                label: `Niche ${c.niche_number || '—'} — ${c.columbarium || 'N/A'} — ${[c.first_name, c.last_name].filter(Boolean).join(' ') || 'Unknown'}`,
+            }),
+        },
+        'Relocation': {
+            endpoint: 'relocations',
+            placeholder: 'Search by decedent name or lot number...',
+            mapResult: (r) => ({
+                id: r.request_id,
+                label: `${[r.first_name, r.last_name].filter(Boolean).join(' ') || 'Unknown'} — ${r.from_lot_number || '—'} → ${r.to_lot_number || '—'} (${r.status || 'Pending'})`,
+            }),
+        },
+    };
+
+    function setReferenceValue(id, label) {
+        referenceIdInput.value = id;
+        referenceIdInput.dispatchEvent(new Event('input', { bubbles: true }));
+        if (label) {
+            referenceSelectedLabel.textContent = `Selected: ${label}`;
+            referenceSelectedLabel.style.display = 'block';
+        } else {
+            referenceSelectedLabel.style.display = 'none';
+        }
+    }
+
+    function clearReferenceSelection() {
+        referenceSearchInput.value = '';
+        referenceSearchResults.hidden = true;
+        referenceSearchResults.innerHTML = '';
+        referenceSelectedLabel.style.display = 'none';
+        referenceIdInput.value = '';
+    }
+
+    function renderReferenceResults(items) {
+        if (!items.length) {
+            referenceSearchResults.innerHTML = '<div class="reference-search-result is-empty">No matches found.</div>';
+            referenceSearchResults.hidden = false;
+            return;
+        }
+        referenceSearchResults.innerHTML = items.map((item, idx) => `
+            <div class="reference-search-result" data-idx="${idx}" tabindex="0" role="button">${item.label}</div>
+        `).join('');
+        referenceSearchResults.hidden = false;
+        referenceSearchResults.querySelectorAll('.reference-search-result[data-idx]').forEach((el) => {
+            const item = items[Number(el.dataset.idx)];
+            const select = () => {
+                setReferenceValue(item.id, item.label);
+                referenceSearchInput.value = item.label;
+                referenceSearchResults.hidden = true;
+                referenceSearchResults.innerHTML = '';
+            };
+            el.addEventListener('click', select);
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(); }
+            });
+        });
+    }
+
+    const runReferenceSearch = debounce(async () => {
+        const config = REFERENCE_SEARCH_CONFIG[transactionTypeSelect.value];
+        const query = referenceSearchInput.value.trim();
+        if (!config || query.length < 2) {
+            referenceSearchResults.hidden = true;
+            referenceSearchResults.innerHTML = '';
+            return;
+        }
+        try {
+            const params = new URLSearchParams({ q: query, per_page: 8, page: 1 });
+            const result = await api.request(`${config.endpoint}?${params.toString()}`, { method: 'GET' });
+            const rows = result && Array.isArray(result.data) ? result.data : [];
+            renderReferenceResults(rows.map(config.mapResult));
+        } catch (error) {
+            // Search is a convenience layer only — the manual fallback below
+            // always still works, so a failed lookup must never block the form.
+            referenceSearchResults.hidden = true;
+            referenceSearchResults.innerHTML = '';
+        }
+    }, 300);
+
+    referenceSearchInput.addEventListener('input', () => {
+        // Typing again after picking a result means the user is searching
+        // anew — the previous selection is no longer necessarily correct.
+        referenceIdInput.value = '';
+        referenceSelectedLabel.style.display = 'none';
+        runReferenceSearch();
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!referenceSearchWrap.contains(e.target)) {
+            referenceSearchResults.hidden = true;
+        }
+    });
+
+    function updateReferenceModeForType() {
+        const config = REFERENCE_SEARCH_CONFIG[transactionTypeSelect.value];
+        clearReferenceSelection();
+        if (config) {
+            referenceSearchWrap.style.display = '';
+            referenceSearchInput.disabled = false;
+            referenceSearchInput.placeholder = config.placeholder;
+            referenceManualToggle.open = false;
+        } else {
+            // Renewal / Other: no single searchable entity exists for these
+            // yet, so go straight to the manual fallback instead of showing
+            // a search box that can never return results.
+            referenceSearchWrap.style.display = 'none';
+            referenceManualToggle.open = true;
+        }
+    }
+
+    transactionTypeSelect.addEventListener('change', updateReferenceModeForType);
+
     function openAddModal() {
         document.getElementById('modalTitle').innerText = 'Record Payment';
         document.getElementById('paymentForm').reset();
@@ -352,6 +491,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         expectedAmountForCurrentReference = null;
         expectedAmountHint.style.display = 'none';
         amountMismatchWarning.style.display = 'none';
+        updateReferenceModeForType();
         document.getElementById('paymentModal').style.display = 'flex';
     }
 
@@ -451,18 +591,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     const urlTransactionType = urlParams.get('transaction_type');
     if (urlReservationId || urlLotId || urlLotNum) {
         openAddModal();
+        if (urlTransactionType) {
+            document.getElementById('transactionType').value = urlTransactionType;
+        }
+        // Re-sync the reference picker to the actual transaction type before
+        // setting its value — openAddModal() only set it up for the default
+        // (first option) type.
+        updateReferenceModeForType();
         const refId = urlReservationId || urlLotId;
         if (refId) {
-            document.getElementById('referenceId').value = refId;
+            setReferenceValue(refId, urlLotNum ? `Lot ${urlLotNum}` : null);
+            if (urlLotNum) referenceSearchInput.value = `Lot ${urlLotNum}`;
         }
         if (urlLotNum) {
             document.getElementById('receiptNumber').value = `REC-${urlLotNum}-${Date.now().toString().slice(-4)}`;
         }
         if (urlPrice) {
             document.getElementById('amount').value = urlPrice;
-        }
-        if (urlTransactionType) {
-            document.getElementById('transactionType').value = urlTransactionType;
         }
         refreshExpectedAmount();
     }

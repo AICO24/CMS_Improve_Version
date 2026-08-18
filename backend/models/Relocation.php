@@ -25,6 +25,14 @@ class Relocation {
             $sql .= " AND r.to_lot_id = ?";
             $params[] = (int) $filters['to_lot_id'];
         }
+        if (!empty($filters['q'])) {
+            $sql .= " AND (d.first_name LIKE ? OR d.last_name LIKE ? OR from_lot.lot_number LIKE ? OR to_lot.lot_number LIKE ?)";
+            $search = '%' . $filters['q'] . '%';
+            $params[] = $search;
+            $params[] = $search;
+            $params[] = $search;
+            $params[] = $search;
+        }
     }
 
     private function baseSelect() {

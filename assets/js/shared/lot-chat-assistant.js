@@ -27,20 +27,44 @@
 // suggestions (POST schedules/recommend-type) and shows them as a message.
 // Purely informational — never auto-fills state.lot_type; the user still
 // has to name a type or say "no preference" for the slot to fill.
+// Batch N3 (adviser feedback 2026-08-18): captures decedent/date/time from
+// chat too, so the booker doesn't have to fill out the separate "Booking
+// Details" form by hand. These are DETERMINISTIC ONLY (name/date/time
+// pattern-matching against the real decedent list) — deliberately no LLM
+// fallback here, unlike lot_type/budget/section's ai/extract path, since
+// M3's stated privacy contract is to never send decedent/user/booking data
+// to the LLM endpoint. An ambiguous or unparsed message just falls through
+// to the always-visible Booking Details fields as a manual fallback — chat
+// never silently guesses which family member or date the booker meant.
 //
 // createLotChatAssistant(options) -> assistant
 //   options.chatWindow, chatForm, chatInput, chatFindLotsBtn, chatPrefStatus:
 //     the DOM elements (same markup/IDs used by burial-scheduling.html).
 //   options.getLotTypes(), options.getSections(): return the live lookup
 //     arrays ({type_name}/{section_name} objects) at call time.
+//   options.getDecedents(): returns the live decedent list ({decedent_id,
+//     first_name, last_name}) at call time. Optional — decedent extraction
+//     is skipped entirely if omitted.
+//   options.validateDate(dateStr): optional, returns {valid, reason} — used
+//     to apply the same past-date/Monday-block business rules the Booking
+//     Details date field already enforces, so a chat-parsed date can never
+//     bypass them.
+//   options.onDetailExtracted(field, value): optional, called whenever chat
+//     resolves 'decedent_id' | 'date' | 'time' — the caller applies it to
+//     the corresponding Booking Details form field.
 //   options.onReady(isReady): optional, called whenever readiness changes
 //     (assistant already disables/enables chatFindLotsBtn itself; use this
 //     only if the page needs to react further).
 //
 // assistant.init(): greets the user and asks the first question.
-// assistant.state: { lot_type, budget, section } — null until captured,
-//   '' means "explicitly no preference".
-// assistant.isReady(): true once all three slots are captured/skipped.
+// assistant.state: { lot_type, budget, section, decedent_id, date, time } —
+//   null until captured, '' means "explicitly no preference" (lot_type/
+//   budget/section only — decedent/date/time have no "no preference").
+// assistant.isReady(): true once lot_type/budget are captured/skipped (the
+//   same two slots that have always gated the recommendation search;
+//   decedent/date/time stay optional in chat since the Booking Details
+//   fields remain the authoritative, independently-validated source for
+//   them — see the module comment above).
 // assistant.getPreferences(): { lot_type, budget, section } shaped for
 //   schedules/recommend (null/'' become '').
 // assistant.appendMessage(role, text): manual chat bubble (role: 'assistant'|'user').
@@ -57,12 +81,18 @@ function createLotChatAssistant(options) {
         chatPrefStatus,
         getLotTypes,
         getSections,
+        getDecedents,
+        validateDate,
+        onDetailExtracted,
         onReady,
     } = options;
 
     const CHAT_SKIP_PHRASES = ['any', 'anything', 'no preference', 'not sure', "doesn't matter", 'does not matter', 'skip', "i don't know", 'idk', 'n/a', 'none', 'whatever'];
+    const MONTH_NAMES = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+    const MONTH_ABBR = MONTH_NAMES.map(m => m.slice(0, 3));
 
-    const state = { lot_type: null, budget: null, section: null };
+    const state = { lot_type: null, budget: null, section: null, decedent_id: null, date: null, time: null };
+    let decedentLabel = null;
 
     function escapeRegExp(text) {
         return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -117,13 +147,175 @@ function createLotChatAssistant(options) {
     }
 
     function extractBudgetFromText(text) {
+        const hasCurrencySymbol = /[₱$]/.test(text);
         const cleaned = text.replace(/[₱$]/g, '').replace(/,/g, '');
         const match = cleaned.match(/(\d+(?:\.\d+)?)\s*(k)?\b/i);
         if (!match) return null;
         let value = parseFloat(match[1]);
         if (!isFinite(value) || value <= 0) return null;
-        if (match[2]) value *= 1000;
+        const hasKSuffix = Boolean(match[2]);
+        if (hasKSuffix) value *= 1000;
+        // Batch N3: since a message can now also carry a date/day-of-month
+        // in the same breath ("December 25, 2026"), require an explicit
+        // currency symbol, a k-suffix, or a value already in a plausible
+        // lot-price range before accepting it as a budget — otherwise a
+        // stray day number would get misread as a ₱25 budget.
+        if (!hasCurrencySymbol && !hasKSuffix && value < 1000) return null;
         return Math.round(value);
+    }
+
+    function pad2(n) {
+        return String(n).padStart(2, '0');
+    }
+
+    // Rejects dates that Date's own constructor would silently roll over
+    // (e.g. Feb 30 -> Mar 2) instead of accepting a wrong date.
+    function toIsoDate(year, monthIndex, day) {
+        const d = new Date(year, monthIndex, day);
+        if (d.getFullYear() !== year || d.getMonth() !== monthIndex || d.getDate() !== day) return null;
+        return `${year}-${pad2(monthIndex + 1)}-${pad2(day)}`;
+    }
+
+    function resolveMonthIndex(token) {
+        const t = token.toLowerCase();
+        let idx = MONTH_NAMES.indexOf(t);
+        if (idx === -1) idx = MONTH_ABBR.indexOf(t.slice(0, 3));
+        return idx;
+    }
+
+    // If no year was stated and the resolved date already passed this year,
+    // assume next year — a booker saying "August 25" in November obviously
+    // doesn't mean the August that already happened.
+    function rollToFutureIfPast(year, monthIndex, day, yearWasStated) {
+        let iso = toIsoDate(year, monthIndex, day);
+        if (iso && !yearWasStated) {
+            const now = new Date();
+            const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            if (new Date(year, monthIndex, day) < today0) {
+                iso = toIsoDate(year + 1, monthIndex, day);
+            }
+        }
+        return iso;
+    }
+
+    // Deterministic only (see module comment) — covers today/tomorrow, ISO
+    // (2026-08-25), slash (8/25/2026, 8/25), and "Month Day[, Year]" /
+    // "Day Month[, Year]" forms. Deliberately does NOT attempt relative
+    // weekdays ("next Tuesday") — too ambiguous to parse reliably without a
+    // date library, and a wrong guess here is worse than just asking.
+    function extractDateFromText(text) {
+        const lower = text.toLowerCase();
+        const now = new Date();
+
+        if (/\btoday\b/.test(lower)) {
+            return toIsoDate(now.getFullYear(), now.getMonth(), now.getDate());
+        }
+        if (/\btomorrow\b/.test(lower)) {
+            const t = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+            return toIsoDate(t.getFullYear(), t.getMonth(), t.getDate());
+        }
+
+        let m = lower.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+        if (m) {
+            const iso = toIsoDate(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+            if (iso) return iso;
+        }
+
+        m = lower.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+        if (m) {
+            let year = m[3] ? parseInt(m[3], 10) : now.getFullYear();
+            if (year < 100) year += 2000;
+            const iso = rollToFutureIfPast(year, parseInt(m[1], 10) - 1, parseInt(m[2], 10), Boolean(m[3]));
+            if (iso) return iso;
+        }
+
+        const monthPattern = MONTH_NAMES.map((n, i) => `${n}|${MONTH_ABBR[i]}`).join('|');
+        let re = new RegExp(`\\b(${monthPattern})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(\\d{4}))?\\b`, 'i');
+        m = lower.match(re);
+        if (m) {
+            const monthIndex = resolveMonthIndex(m[1]);
+            const year = m[3] ? parseInt(m[3], 10) : now.getFullYear();
+            const iso = rollToFutureIfPast(year, monthIndex, parseInt(m[2], 10), Boolean(m[3]));
+            if (iso) return iso;
+        }
+
+        re = new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(${monthPattern})\\.?(?:,?\\s+(\\d{4}))?\\b`, 'i');
+        m = lower.match(re);
+        if (m) {
+            const monthIndex = resolveMonthIndex(m[2]);
+            const year = m[3] ? parseInt(m[3], 10) : now.getFullYear();
+            const iso = rollToFutureIfPast(year, monthIndex, parseInt(m[1], 10), Boolean(m[3]));
+            if (iso) return iso;
+        }
+
+        return null;
+    }
+
+    function formatDateLabel(iso) {
+        return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function extractTimeFromText(text) {
+        const lower = text.toLowerCase();
+        if (/\bmorning\b/.test(lower)) return '09:00';
+        if (/\bafternoon\b/.test(lower)) return '14:00';
+        if (/\bevening\b/.test(lower)) return '17:00';
+
+        let m = lower.match(/\b(\d{1,2}):(\d{2})\s*(am|pm)?\b/);
+        if (m) {
+            let hour = parseInt(m[1], 10);
+            const minute = parseInt(m[2], 10);
+            if (m[3] === 'pm' && hour < 12) hour += 12;
+            if (m[3] === 'am' && hour === 12) hour = 0;
+            if (hour > 23 || minute > 59) return null;
+            return `${pad2(hour)}:${pad2(minute)}`;
+        }
+
+        m = lower.match(/\b(\d{1,2})\s*(am|pm)\b/);
+        if (m) {
+            let hour = parseInt(m[1], 10);
+            if (m[2] === 'pm' && hour < 12) hour += 12;
+            if (m[2] === 'am' && hour === 12) hour = 0;
+            if (hour > 23) return null;
+            return `${pad2(hour)}:00`;
+        }
+
+        return null;
+    }
+
+    function formatTimeLabel(hhmm) {
+        const [h, m] = hhmm.split(':').map(Number);
+        const period = h >= 12 ? 'PM' : 'AM';
+        const hour12 = h % 12 === 0 ? 12 : h % 12;
+        return `${hour12}:${pad2(m)} ${period}`;
+    }
+
+    // Only resolves on an unambiguous match — a name shared by two decedent
+    // records (or too common to isolate) is deliberately left unset rather
+    // than guessing which family member the booker meant.
+    function extractDecedentFromText(text) {
+        const decedents = typeof getDecedents === 'function' ? (getDecedents() || []) : [];
+        if (!decedents.length) return { match: null, ambiguous: false };
+        const lower = text.toLowerCase();
+
+        const matches = decedents.filter(d => {
+            const first = (d.first_name || '').toLowerCase().trim();
+            const last = (d.last_name || '').toLowerCase().trim();
+            const full = `${first} ${last}`.trim();
+            if (full && lower.includes(full)) return true;
+            if (last && new RegExp(`\\b${escapeRegExp(last)}\\b`, 'i').test(lower)) return true;
+            if (first && first.length > 2 && new RegExp(`\\b${escapeRegExp(first)}\\b`, 'i').test(lower)) return true;
+            return false;
+        });
+
+        // A full "first last" match is unambiguous even if other decedents
+        // separately share just the first or last name — prefer it.
+        const fullNameMatches = matches.filter(d => lower.includes(`${(d.first_name || '').toLowerCase().trim()} ${(d.last_name || '').toLowerCase().trim()}`.trim()));
+        if (fullNameMatches.length === 1) return { match: fullNameMatches[0], ambiguous: false };
+
+        if (matches.length === 1) return { match: matches[0], ambiguous: false };
+        if (matches.length > 1) return { match: null, ambiguous: true, candidates: matches };
+        return { match: null, ambiguous: false };
     }
 
     // Batch M9: section is intentionally NOT one of the assistant's asked
@@ -140,7 +332,7 @@ function createLotChatAssistant(options) {
 
     function questionForSlot(slot) {
         if (slot === 'lot_type') {
-            return `What lot type are you looking for? Available options: ${describeOptions(getLotTypes(), 'type_name')}.`;
+            return `What lot type are you looking for? Available options: ${describeOptions(getLotTypes(), 'type_name')}. Not sure? Tap "Recommend a type for me" below and I'll pick one for you.`;
         }
         if (slot === 'budget') {
             return 'What is your preferred budget? (e.g., 8000, 8,000, ₱8,000, or 8k)';
@@ -168,8 +360,20 @@ function createLotChatAssistant(options) {
             } else if (value === '') {
                 strong.textContent = 'No preference';
                 chip.classList.add('filled');
+            } else if (field === 'budget') {
+                strong.textContent = formatBudget(value);
+                chip.classList.add('filled');
+            } else if (field === 'decedent_id') {
+                strong.textContent = decedentLabel || 'Set';
+                chip.classList.add('filled');
+            } else if (field === 'date') {
+                strong.textContent = formatDateLabel(value);
+                chip.classList.add('filled');
+            } else if (field === 'time') {
+                strong.textContent = formatTimeLabel(value);
+                chip.classList.add('filled');
             } else {
-                strong.textContent = field === 'budget' ? formatBudget(value) : value;
+                strong.textContent = value;
                 chip.classList.add('filled');
             }
         });
@@ -339,10 +543,53 @@ function createLotChatAssistant(options) {
             if (budget !== null) updates.budget = budget;
         }
 
+        // Everything below is decedent/date/time, which must NOT influence
+        // the skip-detection/LLM-fallback decisions further down — those are
+        // about whether lot_type/section/budget were found in this message,
+        // tracked separately here so a message like "August 25, fifty
+        // thousand" still gets the LLM fallback's shot at "fifty thousand"
+        // even though the date was already resolved deterministically.
+        const corePrefUpdateCount = Object.keys(updates).length;
+
+        // Batch N3: decedent/date/time are captured opportunistically on
+        // every message (like section already was) rather than gating the
+        // lot_type/budget question sequence — the always-visible Booking
+        // Details fields remain the authoritative source for them, so chat
+        // is a convenience, not a new requirement.
+        let newDecedentLabel = null;
+        let ambiguousDecedentCandidates = null;
+        if (state.decedent_id === null) {
+            const decedentResult = extractDecedentFromText(text);
+            if (decedentResult.match) {
+                updates.decedent_id = decedentResult.match.decedent_id;
+                newDecedentLabel = `${decedentResult.match.first_name} ${decedentResult.match.last_name}`;
+            } else if (decedentResult.ambiguous) {
+                ambiguousDecedentCandidates = decedentResult.candidates;
+            }
+        }
+
+        let dateValidationError = null;
+        if (state.date === null) {
+            const parsedDate = extractDateFromText(text);
+            if (parsedDate) {
+                const validation = typeof validateDate === 'function' ? validateDate(parsedDate) : { valid: true };
+                if (validation.valid) {
+                    updates.date = parsedDate;
+                } else {
+                    dateValidationError = validation.reason;
+                }
+            }
+        }
+
+        if (state.time === null) {
+            const parsedTime = extractTimeFromText(text);
+            if (parsedTime) updates.time = parsedTime;
+        }
+
         // Only treat the message as an explicit "skip" for the currently
         // pending slot, and only when nothing else was recognized in it —
         // avoids misreading unrelated text as a skip.
-        if (pendingSlot && updates[pendingSlot] === undefined && Object.keys(updates).length === 0 && isChatSkipMessage(text)) {
+        if (pendingSlot && updates[pendingSlot] === undefined && corePrefUpdateCount === 0 && isChatSkipMessage(text)) {
             updates[pendingSlot] = '';
         }
 
@@ -350,9 +597,11 @@ function createLotChatAssistant(options) {
         // the optional LLM-assisted fallback before giving up and asking the
         // user to rephrase. Covers phrasing the regex extractors can't, e.g.
         // "around 50k for my dad" or "I don't know, you decide" for whichever
-        // slot is currently pending.
+        // slot is currently pending. Gated on corePrefUpdateCount (not the
+        // now-larger `updates`) so a resolved date/decedent/time never
+        // silently suppresses this fallback for lot_type/budget.
         let recommendTypeRequested = false;
-        if (pendingSlot && Object.keys(updates).length === 0) {
+        if (pendingSlot && corePrefUpdateCount === 0 && updates[pendingSlot] === undefined) {
             setInputEnabled(false);
             const typingBubble = appendTypingIndicator();
             const llmResult = await tryLlmExtraction(text, pendingSlot);
@@ -376,6 +625,24 @@ function createLotChatAssistant(options) {
         if (updates.section !== undefined) {
             acknowledgements.push(updates.section ? `Noted — ${updates.section}.` : 'Okay, any section works.');
         }
+        // Batch N3: decedent/date/time acknowledgements — folded into the
+        // same array as lot_type/budget/section so a message that only
+        // conveyed one of these (e.g. just a date) shows a positive
+        // acknowledgement instead of falling through to the "I couldn't
+        // match that" clarification meant for lot_type/budget.
+        if (updates.decedent_id !== undefined) {
+            decedentLabel = newDecedentLabel;
+            acknowledgements.push(`Got it — this booking is for ${newDecedentLabel}.`);
+            if (typeof onDetailExtracted === 'function') onDetailExtracted('decedent_id', updates.decedent_id);
+        }
+        if (updates.date !== undefined) {
+            acknowledgements.push(`Burial date set to ${formatDateLabel(updates.date)}.`);
+            if (typeof onDetailExtracted === 'function') onDetailExtracted('date', updates.date);
+        }
+        if (updates.time !== undefined) {
+            acknowledgements.push(`Time noted as ${formatTimeLabel(updates.time)}.`);
+            if (typeof onDetailExtracted === 'function') onDetailExtracted('time', updates.time);
+        }
 
         if (acknowledgements.length) {
             appendMessage('assistant', acknowledgements.join(' '));
@@ -389,6 +656,18 @@ function createLotChatAssistant(options) {
             appendMessage('assistant', containsDigits(text)
                 ? "I couldn't read a budget from that. Try formats like 8000, 8,000, ₱8,000, or 8k. You can also say \"no preference\"."
                 : 'Could you share a budget? For example: 8000 or ₱8,000. You can also say "no preference".');
+        }
+
+        // Batch N3: these are independent asides about the decedent/date
+        // parsing attempt itself — always surfaced when present, regardless
+        // of what else happened in this turn (e.g. a message can both
+        // resolve a budget AND hit an ambiguous decedent name).
+        if (ambiguousDecedentCandidates && ambiguousDecedentCandidates.length) {
+            const names = ambiguousDecedentCandidates.slice(0, 5).map(d => `${d.first_name} ${d.last_name}`).join(', ');
+            appendMessage('assistant', `I found more than one matching record: ${names}. Please pick the correct one from the Decedent dropdown above.`);
+        }
+        if (dateValidationError) {
+            appendMessage('assistant', dateValidationError);
         }
 
         // Batch M4: the user asked the assistant to recommend a lot type —
@@ -411,6 +690,16 @@ function createLotChatAssistant(options) {
             appendMessage('assistant', questionForSlot(nextSlot));
         } else if (!nextSlot) {
             appendMessage('assistant', 'Thanks! I have enough information to search for matching lots.');
+            // Batch N3: decedent/date aren't gating slots (see the module
+            // comment), but "Find Matching Lots" still needs them — nudge
+            // once lot preferences are otherwise complete instead of letting
+            // the user hit the button and only find out from an alert().
+            const stillNeeded = [];
+            if (state.decedent_id === null) stillNeeded.push('who this booking is for');
+            if (state.date === null) stillNeeded.push('the burial date');
+            if (stillNeeded.length) {
+                appendMessage('assistant', `Just one more thing — I still need ${stillNeeded.join(' and ')}. You can tell me here, or fill it in on the left.`);
+            }
         }
 
         updateFindButtonState();
@@ -418,9 +707,12 @@ function createLotChatAssistant(options) {
 
     function init() {
         setInputEnabled(true);
-        const lotTypes = getLotTypes();
-        const sections = getSections();
-        appendMessage('assistant', `Hi! Tell me what you're looking for and I'll help find a lot — for example, "I'd like a ${lotTypes[0] ? lotTypes[0].type_name : 'Premium Lot'} around 8000 in ${sections[0] ? sections[0].section_name : 'Section A'}".`);
+        // Adviser feedback (2026-08-18): the old welcome message modeled an
+        // example that named a specific lot type and section, implying the
+        // booker needs to already know the cemetery's layout/terminology.
+        // Lead with the budget instead — the one detail a booker naturally
+        // knows — and let the AI recommend the type/lot from there.
+        appendMessage('assistant', "Hi! You can just tell me who this is for, your preferred burial date, and your budget, all in one message if you like — I'll pick it up and recommend a lot type and specific lots for you. Not sure where to start? Just tap \"Recommend a type for me\" below.");
         appendMessage('assistant', questionForSlot(getNextMissingSlot()));
         updateChips();
         updateFindButtonState();

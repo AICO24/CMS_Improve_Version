@@ -549,3 +549,18 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Batch N6: auto-assign niche suggestion (Add New Cremation Record modal) */
+.niche-suggest-row {
+    display: flex;
+    gap: 8px;
+}
+
+.niche-suggest-row input {
+    flex: 1;
+}
+
+.niche-suggest-row .btn-secondary {
+    flex-shrink: 0;
+    white-space: nowrap;
+}

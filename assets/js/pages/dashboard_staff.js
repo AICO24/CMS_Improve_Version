@@ -57,33 +57,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!Array.isArray(payments) || payments.length === 0) {
             payments = await api.request('payments', { method: 'GET' });
         }
-        // Batch M9: was previously just availableLotList[0] — the first row
-        // of an unranked "Available" query — displayed under an "ai-suggest"
-        // label despite having no AI/ranking involved. Now a genuine ranked
-        // pick from the same recommendation engine the booking wizard uses
-        // (schedules/recommend, no preferences supplied), so this card
-        // actually reflects what it claims to be.
-        let suggestedLot = null;
-        let suggestionReason = null;
-        try {
-            const recommendations = await api.request('schedules/recommend', {
-                method: 'POST',
-                body: { lot_type: '', budget: '', section: '' }
-            });
-            if (Array.isArray(recommendations) && recommendations.length > 0) {
-                suggestedLot = recommendations[0];
-                // With no preferences supplied every lot scores 0 (nothing
-                // to compare against) — a literal "0% suitability" note
-                // would read as broken, so only surface the score when it's
-                // actually above zero.
-                suggestionReason = Array.isArray(suggestedLot.reasons) && suggestedLot.reasons.length
-                    ? suggestedLot.reasons[0]
-                    : (suggestedLot.score ? `${suggestedLot.score}% suitability` : null);
-            }
-        } catch (e) {
-            suggestedLot = null;
-        }
-
+        // Batch N4 (adviser feedback 2026-08-18): this card used to make its
+        // own separate schedules/recommend call (with no preferences, so
+        // effectively an arbitrary "top" pick) to show a standalone
+        // "Suggested Lot" tile — redundant with the real, interactive AI
+        // recommendation already in the booking chatbot. Removed in favor
+        // of a plain CTA into that chatbot (see dashboard_staff.html) —
+        // one recommendation surface instead of two.
         const summary = occupancy.summary || {};
         const totalLots = Number(summary.total) || 0;
         const availableLots = Number(summary.available) || 0;
@@ -92,9 +72,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         setText('statAvailable', availableLots.toString());
         setText('statRevenue', formatCurrency(Number(revenueSummary.total) || 0));
         setText('statForecast', totalLots > 0 ? `${Math.round((availableLots / totalLots) * 100)}% available` : 'No data');
-
-        setText('aiLot', suggestedLot ? `Lot ${suggestedLot.lot_number}${suggestedLot.section_name ? ' — ' + suggestedLot.section_name : ''}` : 'No available lots');
-        setText('aiNote', suggestedLot ? (suggestionReason || 'Top-ranked available lot right now.') : 'No AI recommendation available right now.');
 
         const mapContainer = document.getElementById('availabilityMap');
         if (mapContainer) {
@@ -105,13 +82,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const sectionOccupied = Number(section.occupied) || 0;
                     const fillPercent = sectionTotal > 0 ? Math.round((sectionOccupied / sectionTotal) * 100) : 0;
                     const sectionItem = document.createElement('div');
-                    sectionItem.style.marginBottom = '14px';
+                    sectionItem.style.marginBottom = '8px';
                     sectionItem.innerHTML = `
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:0.85rem;">
                             <strong>${section.section_name || 'Section'}</strong>
                             <span>${sectionOccupied}/${sectionTotal} occupied</span>
                         </div>
-                        <div style="height:12px;background:#e5e7eb;border-radius:999px;overflow:hidden;">
+                        <div style="height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden;">
                             <div style="width:${fillPercent}%;height:100%;background:linear-gradient(90deg, #4f46e5, #38bdf8);"></div>
                         </div>
                     `;

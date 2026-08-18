@@ -513,6 +513,62 @@
     border-bottom: none;
 }
 
+/* Batch N5: Record Payment's reference picker — a search-as-you-type box
+   over the real lot/schedule/cremation/relocation records, replacing a bare
+   numeric ID field. */
+.reference-search {
+    position: relative;
+}
+
+.reference-search-results {
+    position: absolute;
+    z-index: 20;
+    left: 0;
+    right: 0;
+    top: calc(100% + 4px);
+    max-height: 220px;
+    overflow-y: auto;
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-md, 8px);
+    box-shadow: var(--shadow-2, 0 4px 12px rgba(0, 0, 0, 0.12));
+}
+
+.reference-search-result {
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.reference-search-result:last-child {
+    border-bottom: none;
+}
+
+.reference-search-result:hover,
+.reference-search-result:focus-visible {
+    background: var(--color-neutral-100, #f1f5f9);
+}
+
+.reference-search-result.is-empty {
+    cursor: default;
+    color: var(--color-text-muted, #6b7a73);
+}
+
+.reference-manual-toggle {
+    margin-top: 8px;
+}
+
+.reference-manual-toggle summary {
+    cursor: pointer;
+    font-size: var(--fs-caption, 0.8rem);
+    color: var(--color-text-muted, #6b7a73);
+}
+
+.reference-manual-toggle input {
+    margin-top: 8px;
+}
+
 .detail-row span {
     color: #64748b;
 }

@@ -38,12 +38,47 @@
 // #aiChatWidgetMount) before init() looks up any of its child elements.
 // showLotNumberField is the one genuine content difference left; everything
 // else in these two blocks was byte-identical between the two pages.
-function renderWizardMarkup({ wizardMount, chatWidgetMount, showLotNumberField }) {
+function renderWizardMarkup({ wizardMount, chatWidgetMount, showLotNumberField, showManualFilters }) {
     const lotNumberField = showLotNumberField ? `
                                 <div class="form-group">
                                     <label>Lot Number</label>
                                     <input type="text" id="prefLotNumber" placeholder="Search by lot number">
                                 </div>` : '';
+
+    // Adviser feedback (2026-08-18): a citizen booking shouldn't have to
+    // know/pick cemetery sections, lot types, or budget ranges directly —
+    // that's exactly what the chat assistant (AI type + lot recommendation)
+    // is for. Staff/admin keep the manual fallback since they may need to
+    // place a specific family in a specific section for operational reasons.
+    const manualFiltersBlock = showManualFilters ? `
+                        <details class="form-card manual-filters-disclosure">
+                            <summary><i class="fas fa-sliders-h"></i> Prefer to search manually?</summary>
+                            <form id="preferencesForm">${lotNumberField}
+                                <div class="form-group">
+                                    <label>Category / Lot Type</label>
+                                    <select id="prefLotType" required>
+                                        <option value="">Select lot type</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Budget Range: ₱<span id="budgetValue">10,000</span></label>
+                                    <input type="range" id="prefBudget" min="2000" max="30000" step="500" value="10000">
+                                </div>
+                                <div class="form-group">
+                                    <label>Preferred Section (optional)</label>
+                                    <select id="prefSection">
+                                        <option value="">Any section</option>
+                                        <option value="Section A">Section A</option>
+                                        <option value="Section B">Section B</option>
+                                        <option value="Section C">Section C</option>
+                                        <option value="Section D">Section D</option>
+                                    </select>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="btn-next">Search Manually →</button>
+                                </div>
+                            </form>
+                        </details>` : '';
 
     wizardMount.innerHTML = `
                 <!-- Multi-step wizard -->
@@ -78,35 +113,7 @@ function renderWizardMarkup({ wizardMount, chatWidgetMount, showLotNumberField }
                                 <textarea id="prefNotes" rows="3" placeholder="Optional"></textarea>
                             </div>
                         </div>
-
-                        <details class="form-card manual-filters-disclosure">
-                            <summary><i class="fas fa-sliders-h"></i> Prefer to search manually?</summary>
-                            <form id="preferencesForm">${lotNumberField}
-                                <div class="form-group">
-                                    <label>Category / Lot Type</label>
-                                    <select id="prefLotType" required>
-                                        <option value="">Select lot type</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Budget Range: ₱<span id="budgetValue">10,000</span></label>
-                                    <input type="range" id="prefBudget" min="2000" max="30000" step="500" value="10000">
-                                </div>
-                                <div class="form-group">
-                                    <label>Preferred Section (optional)</label>
-                                    <select id="prefSection">
-                                        <option value="">Any section</option>
-                                        <option value="Section A">Section A</option>
-                                        <option value="Section B">Section B</option>
-                                        <option value="Section C">Section C</option>
-                                        <option value="Section D">Section D</option>
-                                    </select>
-                                </div>
-                                <div class="form-actions">
-                                    <button type="submit" class="btn-next">Search Manually →</button>
-                                </div>
-                            </form>
-                        </details>
+${manualFiltersBlock}
                     </div>
 
                     <!-- Step 2: AI Recommendations -->
@@ -177,9 +184,11 @@ function renderWizardMarkup({ wizardMount, chatWidgetMount, showLotNumberField }
                     </button>
                 </div>
                 <div class="ai-chat-panel-body">
-                    <p class="chat-subtitle">Tell me what you're looking for — lot type, budget, preferred section — and I'll find matching lots.</p>
+                    <p class="chat-subtitle">Tell me who this is for, your preferred burial date, lot type, and budget — I'll take it from there.</p>
                     <div class="chat-window" id="chatWindow" aria-live="polite"></div>
                     <div class="chat-pref-status" id="chatPrefStatus">
+                        <span class="chat-pref-chip" data-field="decedent_id">Decedent: <strong>Not set</strong></span>
+                        <span class="chat-pref-chip" data-field="date">Date: <strong>Not set</strong></span>
                         <span class="chat-pref-chip" data-field="lot_type">Lot type: <strong>Not set</strong></span>
                         <span class="chat-pref-chip" data-field="budget">Budget: <strong>Not set</strong></span>
                         <span class="chat-pref-chip" data-field="section">Section: <strong>Not set</strong></span>
@@ -214,7 +223,7 @@ function renderWizardMarkup({ wizardMount, chatWidgetMount, showLotNumberField }
 }
 
 function createBookingWizard(options) {
-    const { allowedRoles, renderStatusBadge, onBookingSuccess, showLotNumberField } = options;
+    const { allowedRoles, renderStatusBadge, onBookingSuccess, showLotNumberField, showManualFilters = true } = options;
 
     async function init() {
         const user = await requireRole(allowedRoles);
@@ -226,6 +235,7 @@ function createBookingWizard(options) {
             wizardMount: document.getElementById('wizardContainerMount'),
             chatWidgetMount: document.getElementById('aiChatWidgetMount'),
             showLotNumberField,
+            showManualFilters,
         });
 
         document.getElementById('logoutBtn').addEventListener('click', () => {
@@ -273,10 +283,42 @@ function createBookingWizard(options) {
         // Phase 2-5 conversational assistant (assets/js/shared/lot-chat-assistant.js),
         // shared by both wizards so they run the identical slot-filling/
         // narration/capacity-advisory/type-recommendation logic.
+        // Batch N3: the same past-date/Monday-block rule the Booking Details
+        // date field already enforces (see the prefDate 'change' listener
+        // below), reused so a chat-parsed date can't bypass it.
+        function validateBookingDate(dateStr) {
+            const todayIso = new Date().toISOString().split('T')[0];
+            if (dateStr < todayIso) {
+                return { valid: false, reason: 'That date has already passed. Could you give me a future date?' };
+            }
+            const selected = new Date(`${dateStr}T00:00:00`);
+            if (selected.getDay() === 1) { // 1 = Monday
+                return { valid: false, reason: 'Monday booking is not allowed. Please select another day of the week.' };
+            }
+            return { valid: true };
+        }
+
+        // Batch N3: applies a chat-resolved decedent/date/time onto the
+        // always-visible Booking Details fields, which stay the single
+        // source of truth the rest of the wizard (chatFindLotsBtn,
+        // confirmBooking) already reads from.
+        function applyExtractedDetail(field, value) {
+            if (field === 'decedent_id' && prefDecedent) {
+                prefDecedent.value = String(value);
+            } else if (field === 'date' && prefDate) {
+                prefDate.value = value;
+            } else if (field === 'time' && selectTimeInput) {
+                selectTimeInput.value = value;
+            }
+        }
+
         const chatAssistant = createLotChatAssistant({
             chatWindow, chatForm, chatInput, chatFindLotsBtn, chatSuggestTypeBtn, chatPrefStatus,
             getLotTypes: () => lotTypes,
             getSections: () => sections,
+            getDecedents: () => decedents,
+            validateDate: validateBookingDate,
+            onDetailExtracted: applyExtractedDetail,
         });
 
         // Batch M9: deterministic trigger for M4's lot-type recommendation —
@@ -320,10 +362,12 @@ function createBookingWizard(options) {
             }
         });
 
-        budgetValue.textContent = Number(budgetSlider.value).toLocaleString();
-        budgetSlider.addEventListener('input', () => {
+        if (budgetSlider && budgetValue) {
             budgetValue.textContent = Number(budgetSlider.value).toLocaleString();
-        });
+            budgetSlider.addEventListener('input', () => {
+                budgetValue.textContent = Number(budgetSlider.value).toLocaleString();
+            });
+        }
 
         function showStep(stepNumber) {
             steps.forEach((step, idx) => {
@@ -360,13 +404,21 @@ function createBookingWizard(options) {
                 sections = Array.isArray(sectionsResponse) ? sectionsResponse : [];
                 lotTypes = Array.isArray(lotTypesResponse) ? lotTypesResponse : [];
 
-                selectSectionInput.innerHTML = '<option value="">Any section</option>' + sections.map(section => `
-                    <option value="${section.section_name}">${section.section_name}</option>
-                `).join('');
+                // These selects only exist when the manual-filters fallback
+                // is enabled (showManualFilters) — the chat assistant reads
+                // `sections`/`lotTypes` directly via getSections()/getLotTypes()
+                // regardless of whether these DOM elements are present.
+                if (selectSectionInput) {
+                    selectSectionInput.innerHTML = '<option value="">Any section</option>' + sections.map(section => `
+                        <option value="${section.section_name}">${section.section_name}</option>
+                    `).join('');
+                }
 
-                selectLotInput.innerHTML = '<option value="">Select lot type</option>' + lotTypes.map(type => `
-                    <option value="${type.type_name}">${type.type_name}</option>
-                `).join('');
+                if (selectLotInput) {
+                    selectLotInput.innerHTML = '<option value="">Select lot type</option>' + lotTypes.map(type => `
+                        <option value="${type.type_name}">${type.type_name}</option>
+                    `).join('');
+                }
             } catch (error) {
                 console.error('Failed to load lookup data', error);
             }
@@ -512,34 +564,36 @@ function createBookingWizard(options) {
             confirmationDetails.innerHTML = details;
         }
 
-        scheduleForm.addEventListener('submit', async function(event) {
-            event.preventDefault();
-            const decedentId = prefDecedent.value;
-            const date = prefDate.value;
-            if (!decedentId) {
-                alert('Please select a decedent.');
-                return;
-            }
-            if (!date) {
-                alert('Please select a burial date.');
-                return;
-            }
-            currentPreferences = {
-                lot_type: selectLotInput.value,
-                budget: parseInt(selectBudgetInput.value, 10),
-                section: selectSectionInput.value,
-                date: date,
-                time: selectTimeInput.value || null,
-                notes: selectNotesInput.value.trim(),
-                deceased_id: decedentId,
-                decedentName: decedents.find(d => d.decedent_id.toString() === decedentId)?.first_name + ' ' + decedents.find(d => d.decedent_id.toString() === decedentId)?.last_name || ''
-            };
-            const getRecsBtn = scheduleForm.querySelector('button[type="submit"]');
-            await withButtonLoading(getRecsBtn, async () => {
-                await generateRecommendations();
-                showStep(2);
+        if (scheduleForm) {
+            scheduleForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const decedentId = prefDecedent.value;
+                const date = prefDate.value;
+                if (!decedentId) {
+                    alert('Please select a decedent.');
+                    return;
+                }
+                if (!date) {
+                    alert('Please select a burial date.');
+                    return;
+                }
+                currentPreferences = {
+                    lot_type: selectLotInput.value,
+                    budget: parseInt(selectBudgetInput.value, 10),
+                    section: selectSectionInput.value,
+                    date: date,
+                    time: selectTimeInput.value || null,
+                    notes: selectNotesInput.value.trim(),
+                    deceased_id: decedentId,
+                    decedentName: decedents.find(d => d.decedent_id.toString() === decedentId)?.first_name + ' ' + decedents.find(d => d.decedent_id.toString() === decedentId)?.last_name || ''
+                };
+                const getRecsBtn = scheduleForm.querySelector('button[type="submit"]');
+                await withButtonLoading(getRecsBtn, async () => {
+                    await generateRecommendations();
+                    showStep(2);
+                });
             });
-        });
+        }
 
         chatFindLotsBtn.addEventListener('click', async function() {
             const decedentId = prefDecedent.value;
@@ -610,8 +664,8 @@ function createBookingWizard(options) {
                     if (result.success) {
                         const bookedLot = selectedLot;
                         const scheduleId = result.schedule_id;
-                        scheduleForm.reset();
-                        budgetValue.textContent = '10,000';
+                        if (scheduleForm) scheduleForm.reset();
+                        if (budgetValue) budgetValue.textContent = '10,000';
                         if (prefLotNumber) prefLotNumber.value = '';
                         selectTimeInput.value = '';
                         selectedLot = null;
@@ -651,9 +705,9 @@ function createBookingWizard(options) {
         // Feature 3: Disable Monday Booking
         prefDate.addEventListener('change', () => {
             if (!prefDate.value) return;
-            const selected = new Date(prefDate.value + 'T00:00:00');
-            if (selected.getDay() === 1) { // 1 = Monday
-                alert('Monday booking is not allowed. Please select another day of the week.');
+            const validation = validateBookingDate(prefDate.value);
+            if (!validation.valid) {
+                alert(validation.reason);
                 prefDate.value = '';
             }
         });
@@ -676,9 +730,9 @@ function createBookingWizard(options) {
                 const lot = await api.request(`lots/${urlLotId}`);
                 if (lot && !lot.error) {
                     selectedLot = lot;
-                    if (lot.section_name) selectSectionInput.value = lot.section_name;
-                    if (lot.lot_type_name) selectLotInput.value = lot.lot_type_name;
-                    if (lot.price) {
+                    if (lot.section_name && selectSectionInput) selectSectionInput.value = lot.section_name;
+                    if (lot.lot_type_name && selectLotInput) selectLotInput.value = lot.lot_type_name;
+                    if (lot.price && budgetSlider && budgetValue) {
                         budgetSlider.value = lot.price;
                         budgetValue.textContent = Number(lot.price).toLocaleString();
                     }

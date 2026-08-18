@@ -26,6 +26,13 @@ class Cremation {
             $sql .= " AND c.deceased_id = ?";
             $params[] = (int) $filters['deceased_id'];
         }
+        if (!empty($filters['q'])) {
+            $sql .= " AND (c.niche_number LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ?)";
+            $search = '%' . $filters['q'] . '%';
+            $params[] = $search;
+            $params[] = $search;
+            $params[] = $search;
+        }
     }
 
     public function findAll($filters = [], $pagination = []) {
@@ -243,6 +250,38 @@ class Cremation {
         $result['occupancy_rate'] = $capacity > 0 ? round(($occupied / $capacity) * 100) : 0;
 
         return $result;
+    }
+
+    // Batch N6 (adviser feedback 2026-08-18): "suggest na i-automate" the
+    // cremation board — staff currently has to invent a niche_number/level
+    // by hand. Reuses getNiches()'s existing virtual-grid logic (same
+    // DEFAULT_CAPACITY-slot model already used for the grid display and
+    // stats) so the suggestion can never drift from what the grid/stats
+    // themselves consider "available".
+    public function findNextAvailableNiche($columbarium = null) {
+        foreach ($this->getNiches($columbarium) as $niche) {
+            if ($niche['status'] === 'available') {
+                return [
+                    'niche_number' => $niche['niche_number'],
+                    'columbarium' => $niche['columbarium'],
+                    'level' => $niche['level'],
+                ];
+            }
+        }
+        return null;
+    }
+
+    // Real columbarium names actually in use, so the frontend can offer a
+    // dropdown instead of a free-text field that drifts into inconsistent
+    // spellings ("Columbarium A" vs "columbarium a" vs "Col. A") over time.
+    public function getDistinctColumbariums() {
+        $stmt = $this->db->prepare("
+            SELECT DISTINCT columbarium FROM cremation_records
+            WHERE columbarium IS NOT NULL AND columbarium != ''
+            ORDER BY columbarium
+        ");
+        $stmt->execute();
+        return array_column($stmt->fetchAll(), 'columbarium');
     }
 
     public function isNicheAvailable($nicheNumber) {

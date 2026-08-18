@@ -133,12 +133,17 @@
                     <select id="deceasedId" required></select>
                 </div>
                 <div class="form-group">
-                    <label>Niche Number</label>
-                    <input type="text" id="nicheNumber" placeholder="e.g., N-001">
+                    <label>Columbarium</label>
+                    <select id="columbarium"></select>
+                    <input type="text" id="columbariumNew" placeholder="New columbarium name" style="display:none; margin-top:8px;">
                 </div>
                 <div class="form-group">
-                    <label>Columbarium</label>
-                    <input type="text" id="columbarium" placeholder="e.g., Columbarium A">
+                    <label>Niche Number</label>
+                    <div class="niche-suggest-row">
+                        <input type="text" id="nicheNumber" placeholder="e.g., N-001">
+                        <button type="button" class="btn-secondary" id="suggestNicheBtn">Suggest Niche</button>
+                    </div>
+                    <div class="help" id="suggestNicheHint" style="display:none;"></div>
                 </div>
                 <div class="form-group">
                     <label>Level</label>

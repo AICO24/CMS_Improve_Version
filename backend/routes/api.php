@@ -344,7 +344,7 @@ if ($path === 'schedules' && $requestMethod === 'GET') {
     if (isset($_GET['page'])) $filters['page'] = $_GET['page'];
     if (isset($_GET['per_page'])) $filters['per_page'] = $_GET['per_page'];
     if (isset($_GET['awaiting_confirmation'])) $filters['awaiting_confirmation'] = true;
-    echo json_encode($scheduleController->index($filters));
+    echo json_encode($scheduleController->index($filters, $user));
     exit;
 }
 
@@ -400,6 +400,17 @@ if ($path === 'cremations/niches' && $requestMethod === 'GET') {
     exit;
 }
 
+if ($path === 'cremations/columbariums' && $requestMethod === 'GET') {
+    echo json_encode($cremationController->columbariums());
+    exit;
+}
+
+if ($path === 'cremations/suggest-niche' && $requestMethod === 'GET') {
+    $columbarium = $_GET['columbarium'] ?? null;
+    echo json_encode($cremationController->suggestNiche($columbarium));
+    exit;
+}
+
 if ($path === 'cremations/assign' && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
@@ -415,6 +426,7 @@ if ($path === 'cremations' && $requestMethod === 'GET') {
     if (isset($_GET['status'])) $filters['status'] = $_GET['status'];
     if (isset($_GET['columbarium'])) $filters['columbarium'] = $_GET['columbarium'];
     if (isset($_GET['deceased_id'])) $filters['deceased_id'] = $_GET['deceased_id'];
+    if (isset($_GET['q'])) $filters['q'] = $_GET['q'];
     $pagination = [];
     if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
     if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
@@ -472,6 +484,7 @@ if ($path === 'relocations' && $requestMethod === 'GET') {
     if (isset($_GET['deceased_id'])) $filters['deceased_id'] = $_GET['deceased_id'];
     if (isset($_GET['from_lot_id'])) $filters['from_lot_id'] = $_GET['from_lot_id'];
     if (isset($_GET['to_lot_id'])) $filters['to_lot_id'] = $_GET['to_lot_id'];
+    if (isset($_GET['q'])) $filters['q'] = $_GET['q'];
     $pagination = [];
     if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
     if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
