@@ -1,13 +1,16 @@
 <?php
 require_once __DIR__ . '/../models/AiParameter.php';
+require_once __DIR__ . '/../models/AiKnowledge.php';
 require_once __DIR__ . '/../services/AIService.php';
 
 class AiController {
     private $aiParameterModel;
+    private $aiKnowledgeModel;
     private $aiService;
 
     public function __construct() {
         $this->aiParameterModel = new AiParameter();
+        $this->aiKnowledgeModel = new AiKnowledge();
         $this->aiService = new AIService();
     }
 
@@ -90,6 +93,70 @@ class AiController {
         $result = $this->aiService->getExtraction($payload);
         $data = (!empty($result['error']) || !is_array($result)) ? null : ($result['result'] ?? null);
         return ['result' => is_array($data) ? $data : null];
+    }
+
+    // General Q&A layer (see docs/plans burial-scheduling AI Q&A): answers
+    // real questions ("what documents do I need?") grounded only in the
+    // ai_knowledge content an admin/staff member has reviewed — never
+    // touches booking state, never blocks/replaces the deterministic
+    // slot-filling flow. Always resolves to a usable shape (answered:false
+    // on any failure) so the caller's existing behavior is unaffected when
+    // this is unavailable.
+    public function chat($payload) {
+        $payload = is_array($payload) ? $payload : [];
+        $result = $this->aiService->getChatAnswer($payload);
+        if (!empty($result['error']) || !is_array($result)) {
+            return ['answered' => false, 'message' => null];
+        }
+        return [
+            'answered' => (bool) ($result['answered'] ?? false),
+            'message' => is_string($result['message'] ?? null) ? $result['message'] : null,
+        ];
+    }
+
+    public function getKnowledge() {
+        return $this->aiKnowledgeModel->findAll();
+    }
+
+    public function createKnowledge($data) {
+        $data = is_array($data) ? $data : [];
+        if (empty($data['topic']) || empty($data['content'])) {
+            return ['error' => 'topic and content are required', 'code' => 400];
+        }
+
+        $result = $this->aiKnowledgeModel->create($data);
+        if ($result) {
+            return ['success' => true, 'message' => 'Knowledge entry created'];
+        }
+        return ['error' => 'Failed to create knowledge entry', 'code' => 500];
+    }
+
+    public function updateKnowledge($id, $data) {
+        if (empty($id)) {
+            return ['error' => 'Knowledge ID is required', 'code' => 400];
+        }
+        $data = is_array($data) ? $data : [];
+        if (empty($data['topic']) || empty($data['content'])) {
+            return ['error' => 'topic and content are required', 'code' => 400];
+        }
+
+        $result = $this->aiKnowledgeModel->update($id, $data);
+        if ($result) {
+            return ['success' => true, 'message' => 'Knowledge entry updated'];
+        }
+        return ['error' => 'Failed to update knowledge entry', 'code' => 500];
+    }
+
+    public function deleteKnowledge($id) {
+        if (empty($id)) {
+            return ['error' => 'Knowledge ID is required', 'code' => 400];
+        }
+
+        $result = $this->aiKnowledgeModel->delete($id);
+        if ($result) {
+            return ['success' => true, 'message' => 'Knowledge entry deleted'];
+        }
+        return ['error' => 'Failed to delete knowledge entry', 'code' => 500];
     }
 
     public function getParameters($module = null) {

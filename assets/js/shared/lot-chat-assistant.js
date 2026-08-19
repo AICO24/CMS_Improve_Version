@@ -649,6 +649,40 @@ function createLotChatAssistant(options) {
         }
     }
 
+    // General Q&A layer (POST ai/chat): answers real questions about the
+    // burial-scheduling process/policies ("what documents do I need?"),
+    // grounded server-side in admin/staff-reviewed content — this module
+    // never sees or sends that content itself. Called by processMessage()
+    // only when nothing else was recognized in the message at all (see
+    // nothingRecognizedThisMessage there), so it never overrides a real
+    // slot-filling match. Sends only the message text, whichever slot is
+    // currently pending (so the model can tell "bad attempt at that slot"
+    // apart from "real question"), and non-PII booleans for what's already
+    // resolved — never decedent_id/date/lot_type/budget values themselves.
+    // Returns null on any failure/no-answer, same never-block contract as
+    // tryLlmExtraction above.
+    async function tryAnswerGeneralQuestion(text, pendingSlot) {
+        try {
+            const response = await api.request('ai/chat', {
+                method: 'POST',
+                body: {
+                    message: text,
+                    pending_slot: pendingSlot,
+                    state_flags: {
+                        lot_type_set: state.lot_type !== null,
+                        budget_set: state.budget !== null,
+                        decedent_set: state.decedent_id !== null,
+                        date_set: state.date !== null,
+                    },
+                },
+            });
+            return response && response.answered && typeof response.message === 'string' ? response.message : null;
+        } catch (error) {
+            console.error('General Q&A request failed', error);
+            return null;
+        }
+    }
+
     // Batch M4: fetches ranked lot-TYPE suggestions (POST
     // schedules/recommend-type) and shows them as a chat message — the AI
     // recommending a TYPE, distinct from its existing specific-lot ranking.
@@ -880,6 +914,43 @@ function createLotChatAssistant(options) {
         // is for, unlike lot_type/budget.
         if (pendingSlot && pendingSlot !== 'decedent_id' && updates[pendingSlot] === undefined && corePrefUpdateCount === 0 && isChatSkipMessage(text)) {
             updates[pendingSlot] = '';
+        }
+
+        // General Q&A: true only when this message didn't match ANY of the
+        // extraction above — lot_type/section/budget, decedent, date, time,
+        // or the skip-phrase check just above. Excludes hasCorrectionSignal
+        // messages entirely (not just decedent ones) as a blanket safety
+        // margin: a correction attempt that fails to resolve (e.g. "actually
+        // a different lot type" with no type named, or an ambiguous
+        // decedent-name correction) can still contain a person's name, and
+        // this module's privacy contract is to never forward that text to
+        // any LLM endpoint — simpler and safer than re-deriving exactly
+        // which correction touched decedent data. decedent_id itself is
+        // excluded as pendingSlot for the same reason tryLlmExtraction
+        // excludes it below (a first-attempt name that failed to match is
+        // still a name).
+        const nothingRecognizedThisMessage = corePrefUpdateCount === 0
+            && updates.decedent_id === undefined
+            && updates.date === undefined
+            && updates.time === undefined
+            && !dateRejectedThisMessage
+            && !ambiguousDecedentCandidates
+            && (pendingSlot === null || updates[pendingSlot] === undefined);
+
+        if (pendingSlot !== 'decedent_id' && !hasCorrectionSignal && nothingRecognizedThisMessage) {
+            setInputEnabled(false);
+            const typingBubble = appendTypingIndicator();
+            const answer = await tryAnswerGeneralQuestion(text, pendingSlot);
+            typingBubble.remove();
+            if (answer) {
+                appendMessage('assistant', answer);
+                if (pendingSlot) appendMessage('assistant', questionForSlot(pendingSlot));
+                setInputEnabled(true);
+                chatInput.focus();
+                return;
+            }
+            setInputEnabled(true);
+            chatInput.focus();
         }
 
         // Batch M3: deterministic parsing found nothing usable at all — try

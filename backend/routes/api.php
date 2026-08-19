@@ -888,6 +888,55 @@ if ($path === 'ai/extract' && $requestMethod === 'POST') {
     exit;
 }
 
+if ($path === 'ai/chat' && $requestMethod === 'POST') {
+    // General Q&A layer: answers real questions ("what documents do I
+    // need?") grounded in the admin-editable ai_knowledge content, called by
+    // the shared chat assistant only when the deterministic extractor AND
+    // ai/extract both found nothing usable in a message. Same role gate as
+    // ai/narrate/ai/extract/ai/forecast above — reachable by both wizards.
+    AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $input = readRequestBody();
+    echo json_encode($aiController->chat($input));
+    exit;
+}
+
+if ($path === 'ai/knowledge' && $requestMethod === 'GET') {
+    // admin+staff: staff should be able to review/correct FAQ content too,
+    // not just admins (unlike ai/parameters' tunable numeric weights below).
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    echo json_encode($aiController->getKnowledge());
+    exit;
+}
+
+if ($path === 'ai/knowledge' && $requestMethod === 'POST') {
+    AuthMiddleware::requireRole(['admin']);
+    $input = readRequestBody();
+    $result = $aiController->createKnowledge($input);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^ai\/knowledge\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
+    AuthMiddleware::requireRole(['admin']);
+    $input = readRequestBody();
+    $result = $aiController->updateKnowledge($matches[1], $input);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^ai\/knowledge\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
+    AuthMiddleware::requireRole(['admin']);
+    $result = $aiController->deleteKnowledge($matches[1]);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 if ($path === 'ai/parameters' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin']);
     $module = $_GET['module'] ?? null;

@@ -124,6 +124,31 @@
                     </div>
                     <div class="ai-message" id="aiMessage"></div>
                 </div>
+
+                <div class="card">
+                    <div class="table-toolbar">
+                        <div>
+                            <h3>Assistant Knowledge Base</h3>
+                            <p class="muted small">Content the burial-scheduling chat assistant uses to answer general questions (e.g. "what documents do I need?"). Review and correct the placeholder text below before relying on it — the assistant only answers from what's written here, so it stays accurate and never invents policy.</p>
+                        </div>
+                        <button class="btn btn-primary" id="addKnowledgeBtn"><i class="fas fa-plus"></i> Add Topic</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table ai-knowledge-table">
+                            <thead>
+                                <tr>
+                                    <th>Topic</th>
+                                    <th>Content</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="aiKnowledgeBody">
+                                <tr><td colspan="3">Loading knowledge base...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="ai-message" id="aiKnowledgeMessage"></div>
+                </div>
             </div>
         </main>
     </div>

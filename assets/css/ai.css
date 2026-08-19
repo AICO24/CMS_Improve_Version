@@ -56,6 +56,34 @@
     font-size: 0.88rem;
 }
 
+.ai-knowledge-table input[type="text"],
+.ai-knowledge-table textarea {
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #111827;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.ai-knowledge-table textarea {
+    min-height: 4.5rem;
+}
+
+.ai-knowledge-table .knowledge-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ai-knowledge-table .btn-small {
+    padding: 0.55rem 0.9rem;
+    font-size: 0.88rem;
+    white-space: nowrap;
+}
+
 .ai-message {
     margin-top: 1rem;
     min-height: 1.8rem;

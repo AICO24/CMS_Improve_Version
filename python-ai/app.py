@@ -5,13 +5,14 @@ import warnings
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
-import anthropic
 import mysql.connector
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from google import genai
+from google.genai import types as genai_types
 from sklearn.metrics.pairwise import cosine_similarity
 from statsmodels.tsa.arima.model import ARIMA
 
@@ -40,9 +41,24 @@ CAPACITY_CRITICAL_THRESHOLD = 0.95
 # engine above is untouched. Falls back to null (caller uses its own
 # deterministic text) whenever no key is configured or the call fails for any
 # reason, so this feature is fully optional and never blocks a search.
-NARRATION_MODEL = 'claude-haiku-4-5'
-_anthropic_api_key = (os.getenv('ANTHROPIC_API_KEY') or '').strip()
-_anthropic_client = anthropic.Anthropic(api_key=_anthropic_api_key) if _anthropic_api_key else None
+# Uses the Gemini API (free tier available at aistudio.google.com) rather
+# than a paid provider — all three LLM features below (narrate/extract/chat)
+# share one client/timeout convention so they can't drift onto different
+# providers independently.
+NARRATION_MODEL = 'gemini-3.6-flash'
+# The Gemini API rejects any HttpOptions.timeout below 10s outright (400
+# INVALID_ARGUMENT) — unlike the old Anthropic client's 8.0s, which was just
+# a client-side cutoff. 12s leaves a small margin above that hard floor.
+_LLM_TIMEOUT_MS = 12000
+# gemini-3.6-flash spends part of max_output_tokens on internal "thinking"
+# before the visible answer — thinking_budget=0 is rejected outright for
+# this model (400 INVALID_ARGUMENT), so 'low' plus a generous token budget
+# per call site is the fix; without it, short structured-JSON responses were
+# silently getting cut off mid-object (verified while debugging the extract
+# endpoint returning null for every request).
+_THINKING_CONFIG = genai_types.ThinkingConfig(thinking_level='low')
+_gemini_api_key = (os.getenv('GEMINI_API_KEY') or '').strip()
+_gemini_client = genai.Client(api_key=_gemini_api_key) if _gemini_api_key else None
 
 NARRATION_SYSTEM_PROMPT = (
     "You write a single short, warm status line for a cemetery burial-lot "
@@ -64,7 +80,7 @@ NARRATION_SYSTEM_PROMPT = (
 
 
 def _narrate_outcome(status: str, count: Optional[int], preferences: Dict[str, Any]) -> Optional[str]:
-    if _anthropic_client is None:
+    if _gemini_client is None:
         return None
 
     facts: Dict[str, Any] = {'status': status}
@@ -77,13 +93,18 @@ def _narrate_outcome(status: str, count: Optional[int], preferences: Dict[str, A
         }
 
     try:
-        response = _anthropic_client.with_options(timeout=8.0).messages.create(
+        response = _gemini_client.models.generate_content(
             model=NARRATION_MODEL,
-            max_tokens=150,
-            system=NARRATION_SYSTEM_PROMPT,
-            messages=[{'role': 'user', 'content': json.dumps(facts)}],
+            contents=json.dumps(facts),
+            config=genai_types.GenerateContentConfig(
+                system_instruction=NARRATION_SYSTEM_PROMPT,
+                max_output_tokens=512,
+                temperature=0.3,
+                thinking_config=_THINKING_CONFIG,
+                http_options=genai_types.HttpOptions(timeout=_LLM_TIMEOUT_MS),
+            ),
         )
-        text = ''.join(block.text for block in response.content if block.type == 'text').strip()
+        text = (response.text or '').strip()
         return text or None
     except Exception:
         return None
@@ -100,7 +121,7 @@ def _narrate_outcome(status: str, count: Optional[int], preferences: Dict[str, A
 # invented from a vague word like "affordable" alone), and any failure/missing
 # key/timeout returns null so the caller falls back to its own "I couldn't
 # understand that" clarification — this endpoint never blocks the chat.
-EXTRACTION_MODEL = 'claude-haiku-4-5'
+EXTRACTION_MODEL = 'gemini-3.6-flash'
 
 EXTRACTION_SYSTEM_PROMPT = (
     "You extract burial-lot search preferences from one short user chat "
@@ -153,7 +174,7 @@ def _strip_json_fences(text: str) -> str:
 
 
 def _extract_preferences(message: str, lot_types: List[str], sections: List[str], pending_slot: Optional[str]) -> Optional[Dict[str, Any]]:
-    if _anthropic_client is None or not message:
+    if _gemini_client is None or not message:
         return None
 
     payload = {
@@ -164,17 +185,111 @@ def _extract_preferences(message: str, lot_types: List[str], sections: List[str]
     }
 
     try:
-        response = _anthropic_client.with_options(timeout=8.0).messages.create(
+        response = _gemini_client.models.generate_content(
             model=EXTRACTION_MODEL,
-            max_tokens=200,
-            system=EXTRACTION_SYSTEM_PROMPT,
-            messages=[{'role': 'user', 'content': json.dumps(payload)}],
+            contents=json.dumps(payload),
+            config=genai_types.GenerateContentConfig(
+                system_instruction=EXTRACTION_SYSTEM_PROMPT,
+                max_output_tokens=1024,
+                temperature=0,
+                response_mime_type='application/json',
+                thinking_config=_THINKING_CONFIG,
+                http_options=genai_types.HttpOptions(timeout=_LLM_TIMEOUT_MS),
+            ),
         )
-        text = ''.join(block.text for block in response.content if block.type == 'text').strip()
+        text = (response.text or '').strip()
         parsed = json.loads(_strip_json_fences(text))
         return parsed if isinstance(parsed, dict) else None
     except Exception:
         return None
+
+
+# General Q&A layer: answers real questions about the burial-scheduling
+# process/policies ("what documents do I need?"), called by the chat
+# assistant only when its deterministic extractor AND the /api/extract
+# fallback both found nothing usable in a message. Strictly grounded in the
+# admin/staff-reviewed ai_knowledge table content passed in as
+# knowledge_entries — never invents policy beyond it, and explicitly refuses
+# (answered: false) whenever the message looks like a struggling attempt to
+# fill pending_slot rather than a genuine question, so the caller's existing
+# "I couldn't match that" clarification still plays instead of a wrong or
+# misleading answer. Same never-fail contract as narrate/extract above: any
+# missing key/timeout/parse failure resolves to answered: false so this
+# endpoint can never block the chat.
+CHAT_MODEL = 'gemini-3.6-flash'
+
+CHAT_SYSTEM_PROMPT = (
+    "You answer questions for a cemetery burial-scheduling assistant chat. "
+    "You are given a list of knowledge_entries (topic + content, reviewed by "
+    "cemetery staff) and the user's message. Output ONLY a compact JSON "
+    "object — no markdown, no code fences, no prose.\n\n"
+    "Schema: {\"answered\": boolean, \"message\": string|null}\n\n"
+    "Rules:\n"
+    "- Answer ONLY using facts present in knowledge_entries. Never invent "
+    "policy, prices, documents, or rules not stated there.\n"
+    "- Set answered=true and write a short, warm, direct message ONLY when "
+    "the user's message is a genuine question and knowledge_entries actually "
+    "covers it.\n"
+    "- Set answered=false (message=null) when: the knowledge_entries don't "
+    "cover the topic; the message isn't really a question at all; or — this "
+    "is important — the message looks like an attempt to answer whichever "
+    "slot the assistant had just asked about (given as pending_slot, e.g. a "
+    "name, a number, a lot type, 'no preference', a date) rather than a real "
+    "question. When in doubt between 'this is a bad attempt at the pending "
+    "slot' and 'this is a genuine question', prefer answered=false — the "
+    "caller has its own clarification message for that slot.\n"
+    "- Never mention decedent names, specific lot numbers, prices, or any "
+    "booking-specific data; none of that is available to you, only the "
+    "generic knowledge_entries content."
+)
+
+
+def _fetch_knowledge_base() -> List[Dict[str, str]]:
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT topic, content FROM ai_knowledge ORDER BY topic")
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return rows
+    except Exception:
+        return []
+
+
+def _answer_question(message: str, knowledge_entries: List[Dict[str, str]], pending_slot: Optional[str]) -> Dict[str, Any]:
+    empty = {'answered': False, 'message': None}
+    if _gemini_client is None or not message or not knowledge_entries:
+        return empty
+
+    payload = {
+        'message': message,
+        'pending_slot': pending_slot,
+        'knowledge_entries': knowledge_entries,
+    }
+
+    try:
+        response = _gemini_client.models.generate_content(
+            model=CHAT_MODEL,
+            contents=json.dumps(payload),
+            config=genai_types.GenerateContentConfig(
+                system_instruction=CHAT_SYSTEM_PROMPT,
+                max_output_tokens=1024,
+                temperature=0,
+                response_mime_type='application/json',
+                thinking_config=_THINKING_CONFIG,
+                http_options=genai_types.HttpOptions(timeout=_LLM_TIMEOUT_MS),
+            ),
+        )
+        text = (response.text or '').strip()
+        parsed = json.loads(_strip_json_fences(text))
+        if not isinstance(parsed, dict):
+            return empty
+        if not parsed.get('answered') or not isinstance(parsed.get('message'), str) or not parsed['message'].strip():
+            return empty
+        return {'answered': True, 'message': parsed['message'].strip()}
+    except Exception:
+        return empty
 
 
 def get_connection():
@@ -455,6 +570,25 @@ def extract_preferences():
         return jsonify({'result': result})
     except Exception:
         return jsonify({'result': None})
+
+
+@app.post('/api/chat')
+def chat_answer():
+    # Always returns 200; answered:false whenever an answer isn't available,
+    # so the caller falls back to its own existing deterministic behavior.
+    try:
+        payload = request.get_json(silent=True) or {}
+        message = (payload.get('message') or '').strip()
+        pending_slot = payload.get('pending_slot')
+
+        if not message:
+            return jsonify({'answered': False, 'message': None})
+
+        knowledge_entries = _fetch_knowledge_base()
+        result = _answer_question(message, knowledge_entries, pending_slot)
+        return jsonify(result)
+    except Exception:
+        return jsonify({'answered': False, 'message': None})
 
 
 def _get_capacity_snapshot() -> Dict[str, int]:

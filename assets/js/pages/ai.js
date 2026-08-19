@@ -124,4 +124,151 @@ document.addEventListener('DOMContentLoaded', async function() {
     setInterval(async () => {
         applyHealthState(await checkServiceHealth());
     }, 30000);
+
+    // Assistant knowledge base: the content ai/chat answers general
+    // burial-scheduling questions from. Same list+inline-edit pattern as the
+    // parameters table above, plus create/delete since staff should be able
+    // to add a new FAQ topic without a code change.
+    function showKnowledgeMessage(message, type = 'info') {
+        const messageBox = document.getElementById('aiKnowledgeMessage');
+        messageBox.innerText = message;
+        messageBox.className = `ai-message ${type}`;
+        setTimeout(() => {
+            messageBox.innerText = '';
+            messageBox.className = 'ai-message';
+        }, 4500);
+    }
+
+    // Unlike the single-line param values on the table above, knowledge
+    // content is free-text/multi-line and far more likely to contain
+    // quotes/angle brackets — escape before interpolating into the
+    // attribute value / textarea body, or a stray `"` or `</textarea>` in
+    // someone's draft policy text would break the row markup.
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function knowledgeRowHtml(entry) {
+        const id = entry.knowledge_id;
+        return `
+            <tr data-id="${id}">
+                <td><input type="text" class="knowledge-topic" data-id="${id}" value="${escapeHtml(entry.topic)}" /></td>
+                <td><textarea class="knowledge-content" data-id="${id}">${escapeHtml(entry.content)}</textarea></td>
+                <td>
+                    <div class="knowledge-actions">
+                        <button class="btn btn-small btn-primary update-knowledge" data-id="${id}">Update</button>
+                        <button class="btn-delete-row delete-knowledge" data-id="${id}" title="Delete"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    function newKnowledgeRowHtml() {
+        return `
+            <tr data-id="new">
+                <td><input type="text" class="knowledge-topic" data-id="new" placeholder="topic_slug" /></td>
+                <td><textarea class="knowledge-content" data-id="new" placeholder="Content the assistant may answer with..."></textarea></td>
+                <td>
+                    <div class="knowledge-actions">
+                        <button class="btn btn-small btn-primary create-knowledge">Create</button>
+                        <button class="btn btn-small btn-secondary cancel-knowledge">Cancel</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    async function fetchKnowledge() {
+        return await api.request('ai/knowledge', { method: 'GET' });
+    }
+
+    function renderKnowledge(entries) {
+        const tbody = document.getElementById('aiKnowledgeBody');
+        if (!Array.isArray(entries) || entries.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3">No knowledge base topics yet.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = entries.map(knowledgeRowHtml).join('');
+    }
+
+    async function refreshKnowledge() {
+        const entries = await fetchKnowledge();
+        renderKnowledge(entries);
+    }
+
+    document.getElementById('addKnowledgeBtn').addEventListener('click', () => {
+        const tbody = document.getElementById('aiKnowledgeBody');
+        if (tbody.querySelector('[data-id="new"]')) return;
+        if (tbody.querySelector('td[colspan]')) tbody.innerHTML = '';
+        tbody.insertAdjacentHTML('afterbegin', newKnowledgeRowHtml());
+    });
+
+    document.getElementById('aiKnowledgeBody').addEventListener('click', async event => {
+        const updateBtn = event.target.closest('.update-knowledge');
+        const deleteBtn = event.target.closest('.delete-knowledge');
+        const createBtn = event.target.closest('.create-knowledge');
+        const cancelBtn = event.target.closest('.cancel-knowledge');
+
+        if (updateBtn) {
+            const id = updateBtn.dataset.id;
+            const topic = document.querySelector(`.knowledge-topic[data-id="${id}"]`).value.trim();
+            const content = document.querySelector(`.knowledge-content[data-id="${id}"]`).value.trim();
+            if (!topic || !content) {
+                showKnowledgeMessage('Topic and content are both required.', 'error');
+                return;
+            }
+            try {
+                const result = await api.request(`ai/knowledge/${id}`, { method: 'PUT', body: { topic, content } });
+                if (result.success) {
+                    showKnowledgeMessage('Knowledge entry updated.', 'success');
+                    await refreshKnowledge();
+                } else {
+                    showKnowledgeMessage(result.error || 'Failed to update knowledge entry.', 'error');
+                }
+            } catch (error) {
+                showKnowledgeMessage(error.message, 'error');
+            }
+        } else if (deleteBtn) {
+            const id = deleteBtn.dataset.id;
+            if (!confirm('Delete this knowledge base topic? The assistant will no longer be able to answer questions about it.')) return;
+            try {
+                const result = await api.request(`ai/knowledge/${id}`, { method: 'DELETE' });
+                if (result.success) {
+                    showKnowledgeMessage('Knowledge entry deleted.', 'success');
+                    await refreshKnowledge();
+                } else {
+                    showKnowledgeMessage(result.error || 'Failed to delete knowledge entry.', 'error');
+                }
+            } catch (error) {
+                showKnowledgeMessage(error.message, 'error');
+            }
+        } else if (createBtn) {
+            const topic = document.querySelector('.knowledge-topic[data-id="new"]').value.trim();
+            const content = document.querySelector('.knowledge-content[data-id="new"]').value.trim();
+            if (!topic || !content) {
+                showKnowledgeMessage('Topic and content are both required.', 'error');
+                return;
+            }
+            try {
+                const result = await api.request('ai/knowledge', { method: 'POST', body: { topic, content } });
+                if (result.success) {
+                    showKnowledgeMessage('Knowledge entry created.', 'success');
+                    await refreshKnowledge();
+                } else {
+                    showKnowledgeMessage(result.error || 'Failed to create knowledge entry.', 'error');
+                }
+            } catch (error) {
+                showKnowledgeMessage(error.message, 'error');
+            }
+        } else if (cancelBtn) {
+            await refreshKnowledge();
+        }
+    });
+
+    await refreshKnowledge();
 });
