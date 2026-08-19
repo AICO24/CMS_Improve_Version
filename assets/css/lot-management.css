@@ -731,11 +731,372 @@
     border-bottom: 1px solid #edf2f7;
 }
 
+/* ---------- SEARCH + FILTER TOOLBAR ---------- */
+.filter-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    padding: 14px 18px;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    margin-bottom: 20px;
+}
+
+.filter-search {
+    position: relative;
+    flex: 1 1 260px;
+    min-width: 220px;
+}
+
+.filter-search i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+.filter-search input {
+    width: 100%;
+    padding: 10px 14px 10px 36px;
+    border: 1px solid #cbd5e1;
+    border-radius: 30px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    color: #243736;
+    background: #f8fafc;
+    transition: border-color .2s ease, background .2s ease;
+}
+
+.filter-search input:focus {
+    outline: none;
+    border-color: #2c5e47;
+    background: #fff;
+}
+
+.filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.filter-controls select {
+    padding: 9px 14px;
+    border-radius: 30px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #334155;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.filter-controls select:focus {
+    outline: none;
+    border-color: #2c5e47;
+}
+
+.btn-reset-filters {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border-radius: 30px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+
+.btn-reset-filters:hover {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+/* ---------- LOT HIERARCHY: CATEGORY -> SECTION -> LOT ---------- */
+.lot-hierarchy {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.category-group {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.06);
+    overflow: hidden;
+}
+
+.category-header {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 18px 22px;
+    border: none;
+    background: linear-gradient(135deg, #2c5e47, #24503b);
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+}
+
+.category-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 180px;
+}
+
+.category-icon {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.15);
+    border-radius: 50%;
+    font-size: 1rem;
+}
+
+.category-name {
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.category-counts,
+.section-counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.count-chip {
+    padding: 5px 12px;
+    border-radius: 30px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+    background: rgba(255,255,255,0.14);
+    color: #fff;
+}
+
+.section-header .count-chip {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.count-chip.available {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.count-chip.occupied {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.count-chip.reserved {
+    background: #fff7db;
+    color: #b45309;
+}
+
+.chevron {
+    font-size: 0.9rem;
+    transition: transform .25s ease;
+    flex-shrink: 0;
+}
+
+.chevron.expanded {
+    transform: rotate(180deg);
+}
+
+.category-body {
+    padding: 18px 22px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: #f8fafc;
+}
+
+.section-group {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.section-header {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border: none;
+    background: #fff;
+    color: #243736;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+}
+
+.section-header:hover {
+    background: #f8fafc;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 140px;
+}
+
+.section-icon {
+    color: #7aa77a;
+    font-size: 0.9rem;
+}
+
+.section-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.section-header .chevron {
+    color: #64748b;
+}
+
+.section-body {
+    padding: 16px 18px 20px;
+    border-top: 1px solid #eef2f6;
+}
+
+.section-lot-grid {
+    margin: 0;
+}
+
+.section-matrix .slots-matrix {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 12px;
+}
+
+/* ---------- EMPTY / LOADING / ERROR STATES ---------- */
+.no-lots,
+.hierarchy-loading,
+.hierarchy-error {
+    text-align: center;
+    padding: 50px 20px;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    color: #64748b;
+}
+
+.no-lots-inline {
+    padding: 24px 16px;
+    box-shadow: none;
+    background: transparent;
+}
+
+.no-lots i,
+.hierarchy-loading i,
+.hierarchy-error i {
+    font-size: 2.2rem;
+    color: #94a3b8;
+    margin-bottom: 12px;
+    display: block;
+}
+
+.no-lots h3,
+.hierarchy-error h3 {
+    font-size: 1.05rem;
+    color: #243736;
+    margin-bottom: 6px;
+}
+
+.no-lots p,
+.hierarchy-loading p,
+.hierarchy-error p {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.hierarchy-loading i {
+    color: #2c5e47;
+}
+
+.hierarchy-error i {
+    color: #dc2626;
+}
+
+.btn-retry {
+    margin-top: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 30px;
+    border: none;
+    background: #2c5e47;
+    color: #fff;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.btn-retry:hover {
+    background: #244d3a;
+}
+
 /* ---------- RESPONSIVE ---------- */
 /* Sidebar/rail responsive behavior now comes from the shared dashboard.css (Batch 3) */
 @media (max-width: 768px) {
     .lot-grid {
         grid-template-columns: 1fr;
+    }
+
+    .filter-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-controls {
+        justify-content: stretch;
+    }
+
+    .filter-controls select,
+    .btn-reset-filters {
+        flex: 1 1 auto;
+    }
+
+    .category-header,
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .category-counts,
+    .section-counts {
+        width: 100%;
     }
 }
 

@@ -139,6 +139,33 @@
                     </button>
                 </div>
 
+                <!-- Search + filter toolbar -->
+                <div class="filter-toolbar" id="filterToolbar">
+                    <div class="filter-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="lotSearchInput"
+                            placeholder="Search by lot number, category, section, or block...">
+                    </div>
+                    <div class="filter-controls">
+                        <select id="filterCategory" aria-label="Filter by category">
+                            <option value="">All Categories</option>
+                        </select>
+                        <select id="filterSection" aria-label="Filter by section">
+                            <option value="">All Sections</option>
+                        </select>
+                        <select id="filterStatus" aria-label="Filter by status">
+                            <option value="">All Status</option>
+                            <option value="Available">Available</option>
+                            <option value="Occupied">Occupied</option>
+                            <option value="Reserved">Reserved</option>
+                            <option value="Expired">Expired</option>
+                        </select>
+                        <button type="button" class="btn-reset-filters" id="btnResetFilters">
+                            <i class="fas fa-rotate-left"></i> Reset Filters
+                        </button>
+                    </div>
+                </div>
+
                 <div class="grid-legend" id="gridLegend"
                     style="display: none; margin-bottom: 16px; background: #fff; padding: 10px 18px; border-radius: 12px;">
                     <span style="color: #475569;">Slot Legend:</span>
@@ -147,9 +174,8 @@
                     <div class="legend-item"><span class="legend-badge reserved">R</span> Reserved</div>
                 </div>
 
-                <div class="section-tabs" id="sectionTabs"></div>
-                <div id="lotGrid" class="lot-grid"></div>
-                <div id="lotMatrixGrid" class="matrix-grid-container" style="display: none;"></div>
+                <!-- Category -> Section -> Lot hierarchy -->
+                <div id="lotHierarchy" class="lot-hierarchy" aria-live="polite"></div>
             </div>
         </main>
     </div>

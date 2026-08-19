@@ -8,9 +8,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         window.location.href = `${getFrontendBasePath()}/auth/login.html`;
     });
 
-    let currentSection = '';
+    let allLots = [];
     let allSections = [];
     let lotTypes = [];
+    let hierarchyInitialized = false;
+
+    const filters = { search: '', category: '', section: '', status: '' };
+    const expandedCategories = new Set();
+    const expandedSections = new Set();
 
     const statsEl = {
         available: document.getElementById('availableCount'),
@@ -18,8 +23,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         reserved: document.getElementById('reservedCount'),
         total: document.getElementById('totalCount')
     };
-    const tabsContainer = document.getElementById('sectionTabs');
-    const gridContainer = document.getElementById('lotGrid');
+    const hierarchyEl = document.getElementById('lotHierarchy');
 
     async function apiRequest(endpoint, options = {}) {
         const token = localStorage.getItem('jwt_token');
@@ -46,19 +50,44 @@ document.addEventListener('DOMContentLoaded', async function() {
         return data;
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[ch]));
+    }
+
+    function formatPrice(price) {
+        return parseFloat(price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function debounce(fn, delay) {
+        let timer;
+        return (...args) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => fn(...args), delay);
+        };
+    }
+
+    function categoryIcon(name) {
+        const key = (name || '').toLowerCase();
+        if (key.includes('lawn')) return 'fa-seedling';
+        if (key.includes('family')) return 'fa-people-roof';
+        if (key.includes('mausoleum')) return 'fa-building-columns';
+        if (key.includes('niche') || key.includes('cremation')) return 'fa-fire';
+        if (key.includes('memorial')) return 'fa-dove';
+        return 'fa-map-location-dot';
+    }
+
     async function loadSections() {
-        allSections = await apiRequest('sections');
-        return allSections;
+        return await apiRequest('sections');
     }
 
     async function loadLotTypes() {
-        lotTypes = await apiRequest('lot-types');
-        return lotTypes;
+        return await apiRequest('lot-types');
     }
 
-    async function loadLots(sectionName = '') {
-        const endpoint = sectionName ? `lots?section=${encodeURIComponent(sectionName)}` : 'lots';
-        return await apiRequest(endpoint);
+    async function loadLots() {
+        return await apiRequest('lots');
     }
 
     async function loadStats() {
@@ -72,24 +101,298 @@ document.addEventListener('DOMContentLoaded', async function() {
         statsEl.total.innerText = stats.total || 0;
     }
 
-    function renderTabs(sections, activeSection) {
-        tabsContainer.innerHTML = sections.map(section => `
-            <button class="tab-btn ${section.section_name === activeSection ? 'active' : ''}" data-section="${section.section_name}">
-                ${section.section_name}
-            </button>
-        `).join('');
+    // ---------- Filtering + grouping ----------
 
-        tabsContainer.querySelectorAll('.tab-btn').forEach(button => {
-            button.addEventListener('click', () => {
-                currentSection = button.dataset.section;
-                renderTabs(allSections, currentSection);
-                loadAndRenderLots(currentSection);
-            });
+    function applyFilters(lots) {
+        const term = filters.search.trim().toLowerCase();
+        return lots.filter(lot => {
+            if (filters.category && lot.lot_type_name !== filters.category) return false;
+            if (filters.section && lot.section_name !== filters.section) return false;
+            if (filters.status && lot.status !== filters.status) return false;
+            if (term) {
+                const haystack = [lot.lot_number, lot.lot_type_name, lot.section_name, lot.block_name]
+                    .filter(Boolean).join(' ').toLowerCase();
+                if (!haystack.includes(term)) return false;
+            }
+            return true;
         });
     }
 
+    function computeCounts(lots) {
+        return lots.reduce((acc, lot) => {
+            acc.total++;
+            if (lot.status === 'Available') acc.available++;
+            else if (lot.status === 'Occupied') acc.occupied++;
+            else if (lot.status === 'Reserved') acc.reserved++;
+            return acc;
+        }, { total: 0, available: 0, occupied: 0, reserved: 0 });
+    }
+
+    function groupLotsByCategory(lots) {
+        const categories = {};
+        lots.forEach(lot => {
+            const catName = lot.lot_type_name || 'Uncategorized';
+            const secName = lot.section_name || 'Unassigned';
+            if (!categories[catName]) categories[catName] = { name: catName, lots: [], sections: {} };
+            const cat = categories[catName];
+            cat.lots.push(lot);
+            if (!cat.sections[secName]) cat.sections[secName] = { name: secName, lots: [] };
+            cat.sections[secName].lots.push(lot);
+        });
+
+        return Object.values(categories)
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map(cat => ({
+                name: cat.name,
+                counts: computeCounts(cat.lots),
+                sections: Object.values(cat.sections)
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(sec => ({ name: sec.name, lots: sec.lots, counts: computeCounts(sec.lots) })),
+            }));
+    }
+
+    // ---------- Rendering ----------
+
+    function emptyStateHtml(icon, title, message, inline = false) {
+        return `
+            <div class="no-lots${inline ? ' no-lots-inline' : ''}">
+                <i class="fas ${icon}"></i>
+                <h3>${escapeHtml(title)}</h3>
+                <p>${escapeHtml(message)}</p>
+            </div>
+        `;
+    }
+
     let activeViewMode = 'card';
-    const matrixGridContainer = document.getElementById('lotMatrixGrid');
+
+    function renderLotCardHtml(lot) {
+        return `
+            <div class="lot-card" data-id="${lot.lot_id}">
+                <div class="card-border">
+                    <div class="card-content">
+                        <div class="lot-header">
+                            <div>
+                                <div class="lot-number">${escapeHtml(lot.lot_number)}</div>
+                                <div class="lot-type">${escapeHtml(lot.lot_type_name || 'N/A')}</div>
+                            </div>
+                            <span class="lot-status status-${lot.status}">${escapeHtml(lot.status)}</span>
+                        </div>
+                        <div class="lot-info">
+                            <div class="info-row"><i class="fas fa-dollar-sign"></i><span>Price</span><strong>₱${formatPrice(lot.price)}</strong></div>
+                            <div class="info-row"><i class="fas fa-map-marker-alt"></i><span>Section</span><strong>${escapeHtml(lot.section_name)}</strong></div>
+                            <div class="info-row"><i class="fas fa-th-large"></i><span>Block</span><strong>${escapeHtml(lot.block_name || 'N/A')}</strong></div>
+                            <div class="info-row"><i class="fas fa-ruler-combined"></i><span>Size</span><strong>${escapeHtml(lot.dimensions || '--')}</strong></div>
+                        </div>
+                        <div class="card-footer">
+                            <span>View Details</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function buildMatrixBoxHtml(lot) {
+        let code = 'O';
+        if (lot.status === 'Occupied') code = 'X';
+        else if (lot.status === 'Reserved') code = 'R';
+        else if (lot.status === 'Expired') code = 'E';
+
+        return `
+            <div class="slot-box status-${lot.status}" data-id="${lot.lot_id}" title="Lot ${escapeHtml(lot.lot_number)} (${escapeHtml(lot.status)}) - ₱${formatPrice(lot.price)}">
+                <div class="slot-icon">${code}</div>
+                <div class="slot-num">${escapeHtml(lot.lot_number)}</div>
+            </div>
+        `;
+    }
+
+    function renderSectionLotsHtml(lots) {
+        if (activeViewMode === 'grid') {
+            return `<div class="section-matrix"><div class="slots-matrix">${lots.map(buildMatrixBoxHtml).join('')}</div></div>`;
+        }
+        return `<div class="section-lot-grid lot-grid">${lots.map(renderLotCardHtml).join('')}</div>`;
+    }
+
+    function renderSectionHtml(categoryName, sec) {
+        const key = `${categoryName}::${sec.name}`;
+        const isExpanded = expandedSections.has(key);
+        const secId = 'sec-' + encodeURIComponent(categoryName) + '-' + encodeURIComponent(sec.name);
+
+        return `
+            <div class="section-group">
+                <button type="button" class="section-header" data-section-key="${escapeHtml(key)}" aria-expanded="${isExpanded}" aria-controls="${secId}">
+                    <span class="section-title">
+                        <i class="fas fa-map-marker-alt section-icon"></i>
+                        <span class="section-name">${escapeHtml(sec.name)}</span>
+                    </span>
+                    <span class="section-counts">
+                        <span class="count-chip total">${sec.counts.total} Lots</span>
+                        <span class="count-chip available">${sec.counts.available} Available</span>
+                        <span class="count-chip occupied">${sec.counts.occupied} Occupied</span>
+                        <span class="count-chip reserved">${sec.counts.reserved} Reserved</span>
+                    </span>
+                    <i class="fas fa-chevron-down chevron ${isExpanded ? 'expanded' : ''}"></i>
+                </button>
+                <div class="section-body" id="${secId}" ${isExpanded ? '' : 'hidden'}>
+                    ${sec.lots.length ? renderSectionLotsHtml(sec.lots) : emptyStateHtml('fa-border-all', 'No Lots', 'No lots found in this section.', true)}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderCategoryHtml(cat) {
+        const isExpanded = expandedCategories.has(cat.name);
+        const catId = 'cat-' + encodeURIComponent(cat.name);
+        const icon = categoryIcon(cat.name);
+
+        return `
+            <div class="category-group">
+                <button type="button" class="category-header" data-category="${escapeHtml(cat.name)}" aria-expanded="${isExpanded}" aria-controls="${catId}">
+                    <span class="category-title">
+                        <i class="fas ${icon} category-icon"></i>
+                        <span class="category-name">${escapeHtml(cat.name)}</span>
+                    </span>
+                    <span class="category-counts">
+                        <span class="count-chip total">${cat.counts.total} Total</span>
+                        <span class="count-chip available">${cat.counts.available} Available</span>
+                        <span class="count-chip occupied">${cat.counts.occupied} Occupied</span>
+                        <span class="count-chip reserved">${cat.counts.reserved} Reserved</span>
+                    </span>
+                    <i class="fas fa-chevron-down chevron ${isExpanded ? 'expanded' : ''}"></i>
+                </button>
+                <div class="category-body" id="${catId}" ${isExpanded ? '' : 'hidden'}>
+                    ${cat.sections.length
+                        ? cat.sections.map(sec => renderSectionHtml(cat.name, sec)).join('')
+                        : emptyStateHtml('fa-map', 'No Sections', 'No sections are currently assigned to this category.', true)}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderHierarchyRoot() {
+        if (!allLots.length) {
+            hierarchyEl.innerHTML = emptyStateHtml('fa-tree', 'No Lots Found', 'No lots have been added yet. Click "Add New Lot" to get started.');
+            return;
+        }
+
+        const filtered = applyFilters(allLots);
+        const groups = groupLotsByCategory(filtered);
+
+        if (!groups.length) {
+            const hasActiveFilter = filters.search || filters.category || filters.section || filters.status;
+            hierarchyEl.innerHTML = hasActiveFilter
+                ? emptyStateHtml('fa-filter-circle-xmark', 'No Matches', filters.search ? 'No lots match your search.' : 'No lots match the selected filters.')
+                : emptyStateHtml('fa-tree', 'No Lots Found', 'No lots have been added yet.');
+            return;
+        }
+
+        hierarchyEl.innerHTML = groups.map(renderCategoryHtml).join('');
+    }
+
+    function showLoadingState() {
+        hierarchyEl.innerHTML = `
+            <div class="hierarchy-loading">
+                <i class="fas fa-circle-notch fa-spin"></i>
+                <p>Loading lot data...</p>
+            </div>
+        `;
+    }
+
+    function showErrorState(message) {
+        hierarchyEl.innerHTML = `
+            <div class="hierarchy-error">
+                <i class="fas fa-triangle-exclamation"></i>
+                <h3>Unable to Load Lot Information</h3>
+                <p>${escapeHtml(message || 'Something went wrong while loading lots.')}</p>
+                <button type="button" class="btn-retry" id="btnRetryLoad"><i class="fas fa-rotate-right"></i> Retry</button>
+            </div>
+        `;
+        const retryBtn = document.getElementById('btnRetryLoad');
+        if (retryBtn) retryBtn.addEventListener('click', () => refreshAll());
+    }
+
+    // ---------- Event delegation over the hierarchy container ----------
+
+    hierarchyEl.addEventListener('click', (e) => {
+        const catHeader = e.target.closest('.category-header');
+        if (catHeader) {
+            const name = catHeader.dataset.category;
+            if (expandedCategories.has(name)) expandedCategories.delete(name);
+            else expandedCategories.add(name);
+            renderHierarchyRoot();
+            return;
+        }
+
+        const secHeader = e.target.closest('.section-header');
+        if (secHeader) {
+            const key = secHeader.dataset.sectionKey;
+            if (expandedSections.has(key)) expandedSections.delete(key);
+            else expandedSections.add(key);
+            renderHierarchyRoot();
+            return;
+        }
+
+        const lotCard = e.target.closest('.lot-card');
+        if (lotCard) {
+            showViewModal(lotCard.dataset.id);
+            return;
+        }
+
+        const slotBox = e.target.closest('.slot-box');
+        if (slotBox) {
+            showViewModal(slotBox.dataset.id);
+        }
+    });
+
+    // ---------- Filter toolbar wiring ----------
+
+    const searchInput = document.getElementById('lotSearchInput');
+    const categoryFilterSelect = document.getElementById('filterCategory');
+    const sectionFilterSelect = document.getElementById('filterSection');
+    const statusFilterSelect = document.getElementById('filterStatus');
+
+    searchInput.addEventListener('input', debounce(() => {
+        filters.search = searchInput.value;
+        renderHierarchyRoot();
+    }, 200));
+
+    categoryFilterSelect.addEventListener('change', () => {
+        filters.category = categoryFilterSelect.value;
+        renderHierarchyRoot();
+    });
+
+    sectionFilterSelect.addEventListener('change', () => {
+        filters.section = sectionFilterSelect.value;
+        renderHierarchyRoot();
+    });
+
+    statusFilterSelect.addEventListener('change', () => {
+        filters.status = statusFilterSelect.value;
+        renderHierarchyRoot();
+    });
+
+    document.getElementById('btnResetFilters').addEventListener('click', () => {
+        filters.search = '';
+        filters.category = '';
+        filters.section = '';
+        filters.status = '';
+        searchInput.value = '';
+        categoryFilterSelect.value = '';
+        sectionFilterSelect.value = '';
+        statusFilterSelect.value = '';
+        renderHierarchyRoot();
+    });
+
+    function populateFilterDropdowns() {
+        categoryFilterSelect.innerHTML = '<option value="">All Categories</option>' +
+            lotTypes.map(type => `<option value="${escapeHtml(type.type_name)}">${escapeHtml(type.type_name)}</option>`).join('');
+        sectionFilterSelect.innerHTML = '<option value="">All Sections</option>' +
+            allSections.map(section => `<option value="${escapeHtml(section.section_name)}">${escapeHtml(section.section_name)}</option>`).join('');
+    }
+
+    // ---------- View mode toggle (Card / Interactive Slot Grid) ----------
+
     const gridLegend = document.getElementById('gridLegend');
     const btnCardView = document.getElementById('btnCardView');
     const btnGridView = document.getElementById('btnGridView');
@@ -99,123 +402,20 @@ document.addEventListener('DOMContentLoaded', async function() {
             activeViewMode = 'card';
             btnCardView.classList.add('active');
             btnGridView.classList.remove('active');
-            gridContainer.style.display = 'grid';
-            matrixGridContainer.style.display = 'none';
             gridLegend.style.display = 'none';
+            renderHierarchyRoot();
         });
 
         btnGridView.addEventListener('click', () => {
             activeViewMode = 'grid';
             btnGridView.classList.add('active');
             btnCardView.classList.remove('active');
-            gridContainer.style.display = 'none';
-            matrixGridContainer.style.display = 'block';
             gridLegend.style.display = 'flex';
-            loadAndRenderLots(currentSection);
+            renderHierarchyRoot();
         });
     }
 
-function renderMatrixGrid(lots, sectionName) {
-    if (!lots || lots.length === 0) {
-        matrixGridContainer.innerHTML = `
-            <div class="no-lots">
-                <i class="fas fa-border-all"></i>
-                <h3>No Slots Found</h3>
-                <p>There are no slots available in ${sectionName || 'this section'}.</p>
-            </div>
-        `;
-        return;
-    }
-
-    const slotBoxesHtml = lots.map(lot => {
-        let code = 'O';
-        if (lot.status === 'Occupied') code = 'X';
-        else if (lot.status === 'Reserved') code = 'R';
-        else if (lot.status === 'Expired') code = 'E';
-
-        return `
-            <div class="slot-box status-${lot.status}" data-id="${lot.lot_id}" title="Lot ${lot.lot_number} (${lot.status}) - ₱${parseFloat(lot.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}">
-                <div class="slot-icon">${code}</div>
-                <div class="slot-num">${lot.lot_number}</div>
-            </div>
-        `;
-    }).join('');
-
-    matrixGridContainer.innerHTML = `
-        <div class="matrix-header">
-            <i class="fas fa-map-marked-alt"></i> ${sectionName || 'Section Grid'} Matrix Layout
-        </div>
-        <div class="slots-matrix">
-            ${slotBoxesHtml}
-        </div>
-    `;
-
-    matrixGridContainer.querySelectorAll('.slot-box').forEach(box => {
-        box.addEventListener('click', () => {
-            showViewModal(box.dataset.id);
-        });
-    });
-}
-
-function renderLots(lots) {
-    if (activeViewMode === 'grid') {
-        renderMatrixGrid(lots, currentSection);
-        return;
-    }
-
-    if (!lots || lots.length === 0) {
-        gridContainer.innerHTML = `
-            <div class="no-lots">
-                <i class="fas fa-tree"></i>
-                <h3>No Lots Found</h3>
-                <p>There are no lots in this section yet.</p>
-            </div>
-        `;
-        return;
-    }
-
-    gridContainer.innerHTML = lots.map(lot => `
-        <div class="lot-card" data-id="${lot.lot_id}">
-            <div class="card-border">
-                <div class="card-content">
-                    <div class="lot-header">
-                        <div>
-                            <div class="lot-number">${lot.lot_number}</div>
-                            <div class="lot-type">${lot.lot_type_name || "N/A"}</div>
-                        </div>
-                        <span class="lot-status status-${lot.status}">${lot.status}</span>
-                    </div>
-                    <div class="lot-info">
-                        <div class="info-row"><i class="fas fa-dollar-sign"></i><span>Price</span><strong>₱${parseFloat(lot.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
-                        <div class="info-row"><i class="fas fa-map-marker-alt"></i><span>Section</span><strong>${lot.section_name}</strong></div>
-                        <div class="info-row"><i class="fas fa-th-large"></i><span>Block</span><strong>${lot.block_name || "N/A"}</strong></div>
-                        <div class="info-row"><i class="fas fa-ruler-combined"></i><span>Size</span><strong>${lot.dimensions || "--"}</strong></div>
-                    </div>
-                    <div class="card-footer">
-                        <span>View Details</span>
-                        <i class="fas fa-arrow-right"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `).join("");
-
-    document.querySelectorAll(".lot-card").forEach(card => {
-        card.addEventListener("click", () => {
-            showViewModal(card.dataset.id);
-        });
-    });
-}
-
-    async function loadAndRenderLots(sectionName) {
-        try {
-            const lots = await loadLots(sectionName);
-            renderLots(lots);
-        } catch (error) {
-            console.error('Failed to load lots:', error);
-            gridContainer.innerHTML = '<div class="error">Failed to load lots. Please refresh.</div>';
-        }
-    }
+    // ---------- View/Add/Edit modals (unchanged behavior) ----------
 
     async function showViewModal(lotId) {
         try {
@@ -373,41 +573,35 @@ function renderLots(lots) {
         });
     });
 
+    // ---------- Initial load / refresh ----------
+
     async function refreshAll() {
+        showLoadingState();
         try {
-            const stats = await loadStats();
+            const [stats, sections, types, lots] = await Promise.all([
+                loadStats(), loadSections(), loadLotTypes(), loadLots(),
+            ]);
+
             renderStats(stats);
-
-            const sections = await loadSections();
             allSections = sections;
-            if (!currentSection && sections.length > 0) {
-                currentSection = sections[0].section_name;
+            lotTypes = types;
+            allLots = lots;
+            populateFilterDropdowns();
+
+            if (!hierarchyInitialized) {
+                const initialGroups = groupLotsByCategory(allLots);
+                if (initialGroups.length) expandedCategories.add(initialGroups[0].name);
+                hierarchyInitialized = true;
             }
-            renderTabs(sections, currentSection);
-            await loadAndRenderLots(currentSection);
+
+            renderHierarchyRoot();
         } catch (error) {
-            console.error('Refresh failed:', error);
+            console.error('Failed to load lot data:', error);
+            showErrorState(error.message);
         }
     }
 
-    try {
-        await loadLotTypes();
-        const stats = await loadStats();
-        renderStats(stats);
-
-        const sections = await loadSections();
-        allSections = sections;
-        if (sections.length > 0) {
-            currentSection = sections[0].section_name;
-            renderTabs(sections, currentSection);
-            await loadAndRenderLots(currentSection);
-        } else {
-            gridContainer.innerHTML = '<div class="no-lots">No sections found. Please create a section first.</div>';
-        }
-    } catch (error) {
-        console.error('Initialization failed:', error);
-        alert('Failed to load lot data. Please check your connection and try again.');
-    }
+    await refreshAll();
 
     document.getElementById('openAddLotModal').addEventListener('click', openAddModal);
     document.querySelector('.close').addEventListener('click', () => document.getElementById('lotModal').style.display = 'none');
