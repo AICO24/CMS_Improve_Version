@@ -120,7 +120,7 @@ class Decedent {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
-        return $stmt->execute([
+        $success = $stmt->execute([
             (int) $data['lot_id'],
             $data['first_name'],
             $data['last_name'],
@@ -134,6 +134,8 @@ class Decedent {
             $data['is_cremated'] ?? 'no',
             $data['ash_storage'] ?? null,
         ]);
+
+        return $success ? (int) $this->db->lastInsertId() : false;
     }
 
     public function update($id, $data) {

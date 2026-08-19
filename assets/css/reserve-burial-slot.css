@@ -588,6 +588,38 @@
     font-size: 0.85rem;
 }
 
+/* Citizen-initiated decedent registration request form — same small
+   inline-strip treatment as the escape hatch above, three inputs instead
+   of one. */
+.chat-decedent-request {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.chat-decedent-request label {
+    font-size: 0.8rem;
+    color: var(--color-neutral-600);
+    width: 100%;
+}
+
+.chat-decedent-request input {
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+}
+
+.chat-decedent-request .chat-request-name {
+    flex: 1 1 160px;
+}
+
+.chat-decedent-request .chat-request-relationship {
+    flex: 1 1 120px;
+}
+
 /* Floating AI chat widget styles (.ai-chat-*) previously lived in the
    shared assets/css/components/ai-chat-widget.css — that widget no longer
    exists (Batch N: chat is the entire page, not a floating panel), so this

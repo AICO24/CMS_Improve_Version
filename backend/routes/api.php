@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../controllers/AuthController.php';
 require_once __DIR__ . '/../controllers/LotController.php';
 require_once __DIR__ . '/../controllers/DecedentController.php';
+require_once __DIR__ . '/../controllers/DecedentRequestController.php';
 require_once __DIR__ . '/../controllers/ScheduleController.php';
 require_once __DIR__ . '/../controllers/CremationController.php';
 require_once __DIR__ . '/../controllers/RelocationController.php';
@@ -141,6 +142,7 @@ if ($path === 'auth/me' && $requestMethod === 'GET') {
 
 $lotController = new LotController();
 $decedentController = new DecedentController();
+$decedentRequestController = new DecedentRequestController();
 $scheduleController = new ScheduleController();
 $aiController = new AiController();
 
@@ -1060,6 +1062,55 @@ if (preg_match('/^decedents\/(\d+)$/', $path, $matches) && $requestMethod === 'P
 if (preg_match('/^decedents\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $result = $decedentController->destroy($matches[1]);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+// Citizen-initiated decedent registration requests: bridges "citizen names
+// someone not yet in decedent_records" to staff's existing review/creation
+// flow, without ever letting a citizen create or read the sensitive
+// decedent_records fields directly. See the chat assistant's inline request
+// form (lot-chat-assistant.js) and the Decedent Records page's "Pending
+// Requests" tab for the two surfaces that call these.
+if ($path === 'decedent-requests' && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $status = $_GET['status'] ?? null;
+    echo json_encode($decedentRequestController->index($status));
+    exit;
+}
+
+if ($path === 'decedent-requests/mine' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    echo json_encode($decedentRequestController->mine($user['user_id']));
+    exit;
+}
+
+if ($path === 'decedent-requests' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $input = readRequestBody();
+    $result = $decedentRequestController->store($input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^decedent-requests\/(\d+)\/approve$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $result = $decedentRequestController->approve($matches[1], $input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^decedent-requests\/(\d+)\/reject$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $result = $decedentRequestController->reject($matches[1], $input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);

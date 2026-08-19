@@ -84,7 +84,7 @@ class DecedentController {
         $data['is_cremated'] = isset($data['is_cremated']) && $data['is_cremated'] === 'yes' ? 'yes' : 'no';
 
         $result = $this->decedentModel->create($data);
-        return $result ? ['success' => true, 'message' => 'Decedent record created'] : ['error' => 'Failed to create decedent record', 'code' => 500];
+        return $result ? ['success' => true, 'message' => 'Decedent record created', 'decedent_id' => $result] : ['error' => 'Failed to create decedent record', 'code' => 500];
     }
 
     public function update($id, $data) {

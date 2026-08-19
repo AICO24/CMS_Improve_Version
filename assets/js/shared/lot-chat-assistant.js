@@ -560,6 +560,58 @@ function createLotChatAssistant(options) {
         });
     }
 
+    // Citizen-initiated decedent registration requests: when a name truly
+    // isn't in decedent_records yet (not just a spelling mismatch), there's
+    // no picker to fall back on — the person doesn't exist in the system at
+    // all. Shown on the FIRST no-match (unlike the escape hatches above,
+    // which wait for repeated struggling), since there's nothing to wait
+    // for: this never resolves decedent_id itself, only queues a request
+    // for staff to review via the Decedent Records page's "Pending
+    // Requests" tab. Deliberately asks for only non-sensitive fields (name,
+    // approximate date of death, relationship) — staff still creates the
+    // real decedent_records row (lot assignment, cause of death, contact
+    // info) through the existing form, this is only an intake queue.
+    function escapeHtmlAttr(value) {
+        return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function appendDecedentRequestForm(prefillName) {
+        const bubble = appendRichMessage(`
+            <div class="chat-decedent-request">
+                <label>Request to add this person:</label>
+                <input type="text" class="chat-request-name" placeholder="Full name" value="${escapeHtmlAttr(prefillName)}">
+                <input type="date" class="chat-request-dod" max="${new Date().toISOString().split('T')[0]}">
+                <input type="text" class="chat-request-relationship" placeholder="Relationship (optional)">
+                <button type="button" class="btn-secondary chat-request-btn">Send request</button>
+            </div>
+        `);
+        const nameInput = bubble.querySelector('.chat-request-name');
+        const dodInput = bubble.querySelector('.chat-request-dod');
+        const relationshipInput = bubble.querySelector('.chat-request-relationship');
+        const btn = bubble.querySelector('.chat-request-btn');
+        btn.addEventListener('click', async () => {
+            const fullName = nameInput.value.trim();
+            if (!fullName) return;
+            btn.disabled = true;
+            try {
+                await api.request('decedent-requests', {
+                    method: 'POST',
+                    body: {
+                        full_name: fullName,
+                        approximate_dod: dodInput.value || null,
+                        relationship: relationshipInput.value.trim() || null,
+                    },
+                });
+                bubble.remove();
+                appendMessage('assistant', "Thanks — I've sent this to our staff for review. I'll let you know here once it's added, or you can check back later.");
+            } catch (error) {
+                console.error('Decedent request submission failed', error);
+                btn.disabled = false;
+                appendMessage('assistant', "Sorry, I couldn't send that request right now. Please try again in a moment.");
+            }
+        });
+    }
+
     function appendDateEscapeHatch() {
         const bubble = appendRichMessage(`
             <div class="chat-escape-hatch">
@@ -1027,7 +1079,8 @@ function createLotChatAssistant(options) {
                 ? "I couldn't read a budget from that. Try formats like 8000, 8,000, ₱8,000, or 8k. You can also say \"no preference\"."
                 : 'Could you share a budget? For example: 8000 or ₱8,000. You can also say "no preference".');
         } else if (pendingSlot === 'decedent_id' && !(ambiguousDecedentCandidates && ambiguousDecedentCandidates.length)) {
-            appendMessage('assistant', "I couldn't find a decedent record matching that name. Could you check the spelling, or confirm the record already exists in Decedent Records?");
+            appendMessage('assistant', "I couldn't find a decedent record matching that name. Could you check the spelling? If they're genuinely not in our system yet, you can request to add them below.");
+            appendDecedentRequestForm(text);
         }
 
         if (ambiguousDecedentCandidates && ambiguousDecedentCandidates.length) {
@@ -1115,8 +1168,31 @@ function createLotChatAssistant(options) {
         if (typeof onStateChanged === 'function') onStateChanged();
     }
 
-    function init() {
+    // Citizen-initiated decedent registration requests, continued: this is
+    // the entire "notify the citizen" mechanism (deliberately not the
+    // shared/global notifications table — it has no per-user targeting, so
+    // a private "your request was approved" message doesn't fit it without
+    // separate work). Checked once per chat load; ignores rejected requests
+    // (out of scope for this batch — see the request-flow plan).
+    async function checkMyDecedentRequests() {
+        try {
+            const requests = await api.request('decedent-requests/mine', { method: 'GET' });
+            if (!Array.isArray(requests)) return;
+            requests.forEach(request => {
+                if (request.status === 'approved') {
+                    appendMessage('assistant', `Update: ${request.full_name} has been added to our records — you can book for them now.`);
+                } else if (request.status === 'pending') {
+                    appendMessage('assistant', `Your request to add ${request.full_name} is still awaiting staff review.`);
+                }
+            });
+        } catch (error) {
+            console.error('Failed to check decedent requests', error);
+        }
+    }
+
+    async function init() {
         setInputEnabled(true);
+        if (typeof getDecedents === 'function') await checkMyDecedentRequests();
         // Adviser feedback: leads with budget instead of a hardcoded example
         // naming a specific lot type/section (the booker shouldn't need to
         // already know cemetery terminology), and now also invites decedent/

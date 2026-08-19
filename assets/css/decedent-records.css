@@ -815,3 +815,29 @@
 
 
 /* .logout-btn/.Btn (+ .sign/.text sliding animation) now come from assets/css/dashboard.css (Batch 10) */
+
+/* Pending Requests tab (citizen-initiated decedent registration requests) */
+#pendingRequestsCard {
+    margin-bottom: 1.5rem;
+}
+
+.btn-approve-request,
+.btn-reject-request {
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-approve-request {
+    background: var(--color-success-soft, #dcfce7);
+    color: var(--color-success-strong, #166534);
+}
+
+.btn-reject-request {
+    background: var(--color-danger-soft, #fee2e2);
+    color: var(--color-danger-strong, #991b1b);
+    margin-left: 0.5rem;
+}

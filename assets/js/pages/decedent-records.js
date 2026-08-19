@@ -19,6 +19,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     let currentEditId = null;
     let currentQuery = '';
     let currentTypeFilter = 'all';
+    let pendingRequests = [];
+    // Set only when "Approve" was clicked on a pending request — saveRecord()
+    // checks this after a successful CREATE (never on edit) and links the new
+    // decedent_id back to the request. Cleared on any modal close/cancel so a
+    // plain "Add New Record" afterward doesn't accidentally approve anything.
+    let approvingRequestId = null;
 
     const perPage = 10;
     const paginationInfo = document.getElementById('paginationInfo');
@@ -55,11 +61,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    document.getElementById('openAddModal').addEventListener('click', openAddModal);
-    document.querySelector('.close').addEventListener('click', () => recordModal.style.display = 'none');
+    document.getElementById('openAddModal').addEventListener('click', () => {
+        approvingRequestId = null;
+        openAddModal();
+    });
+    document.querySelector('.close').addEventListener('click', () => {
+        approvingRequestId = null;
+        recordModal.style.display = 'none';
+    });
     document.querySelector('.close-view').addEventListener('click', () => viewModal.style.display = 'none');
     window.addEventListener('click', (e) => {
-        if (e.target === recordModal) recordModal.style.display = 'none';
+        if (e.target === recordModal) {
+            approvingRequestId = null;
+            recordModal.style.display = 'none';
+        }
         if (e.target === viewModal) viewModal.style.display = 'none';
     });
     const refreshFiltered = debounce(() => {
@@ -97,9 +112,89 @@ document.addEventListener('DOMContentLoaded', async function() {
             await loadLots();
             await loadRecords();
             await loadStats();
+            await loadPendingRequests();
         } catch (error) {
             console.error('Failed to initialize page', error);
             tableBody.innerHTML = '<tr><td colspan="8">Could not load records. Please refresh.</td></tr>';
+        }
+    }
+
+    async function loadPendingRequests() {
+        const pendingRequestsBody = document.getElementById('pendingRequestsBody');
+        try {
+            pendingRequests = await api.request('decedent-requests?status=pending', { method: 'GET' });
+            renderPendingRequests();
+        } catch (error) {
+            console.error('Failed to load pending decedent requests', error);
+            pendingRequestsBody.innerHTML = '<tr><td colspan="6">Could not load pending requests.</td></tr>';
+        }
+    }
+
+    function renderPendingRequests() {
+        const pendingRequestsBody = document.getElementById('pendingRequestsBody');
+        if (!Array.isArray(pendingRequests) || pendingRequests.length === 0) {
+            pendingRequestsBody.innerHTML = '<tr><td colspan="6">No pending requests.</td></tr>';
+            return;
+        }
+
+        pendingRequestsBody.innerHTML = pendingRequests.map((request) => `
+            <tr data-request-id="${request.request_id}">
+                <td>${escapeHtml(request.full_name)}</td>
+                <td>${escapeHtml(request.approximate_dod || '—')}</td>
+                <td>${escapeHtml(request.relationship || '—')}</td>
+                <td>${escapeHtml(request.requested_by_name || 'Unknown')}</td>
+                <td>${escapeHtml(request.created_at)}</td>
+                <td class="action-buttons">
+                    <button class="btn-approve-request" data-id="${request.request_id}">Approve</button>
+                    <button class="btn-reject-request" data-id="${request.request_id}">Reject</button>
+                </td>
+            </tr>
+        `).join('');
+
+        pendingRequestsBody.querySelectorAll('.btn-approve-request').forEach((btn) => {
+            btn.addEventListener('click', () => approveRequest(parseInt(btn.dataset.id, 10)));
+        });
+        pendingRequestsBody.querySelectorAll('.btn-reject-request').forEach((btn) => {
+            btn.addEventListener('click', () => rejectRequest(parseInt(btn.dataset.id, 10)));
+        });
+    }
+
+    // Approve doesn't create the decedent_records row itself — it opens the
+    // SAME Add Decedent form staff already uses (pre-filled with just the
+    // name/dod the citizen supplied), so staff still fills in and verifies
+    // every sensitive/required field (lot, dob, cause of death, contact
+    // info) by hand. saveRecord() links the request to whatever decedent_id
+    // that form creates.
+    function approveRequest(requestId) {
+        const request = pendingRequests.find((item) => item.request_id === requestId);
+        if (!request) return;
+
+        approvingRequestId = requestId;
+        openAddModal();
+
+        const nameParts = request.full_name.trim().split(/\s+/);
+        document.getElementById('firstName').value = nameParts[0] || '';
+        document.getElementById('lastName').value = nameParts.slice(1).join(' ') || '';
+        if (request.approximate_dod) {
+            document.getElementById('dod').value = request.approximate_dod;
+        }
+    }
+
+    async function rejectRequest(requestId) {
+        const reason = prompt('Reason for rejecting this request (shown to no one automatically — staff\'s own record):');
+        if (!reason || !reason.trim()) return;
+        try {
+            const result = await api.request(`decedent-requests/${requestId}/reject`, {
+                method: 'PUT',
+                body: { rejection_reason: reason.trim() },
+            });
+            if (result.success) {
+                await loadPendingRequests();
+            } else {
+                alert(result.error || 'Could not reject request.');
+            }
+        } catch (error) {
+            alert(error.message || 'Could not reject request.');
         }
     }
 
@@ -304,6 +399,22 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
 
             if (result.success) {
+                // Only on CREATE (id was empty) and only when this save
+                // started from "Approve" on a pending request — links the
+                // brand-new decedent_id back so the request stops showing
+                // as pending. A failure here is logged but doesn't block
+                // the record itself, which is already saved.
+                if (!id && approvingRequestId && result.decedent_id) {
+                    try {
+                        await api.request(`decedent-requests/${approvingRequestId}/approve`, {
+                            method: 'PUT',
+                            body: { decedent_id: result.decedent_id },
+                        });
+                    } catch (linkError) {
+                        console.error('Record was created but linking the pending request failed', linkError);
+                    }
+                }
+                approvingRequestId = null;
                 recordModal.style.display = 'none';
                 pagination.reset();
                 await refreshPage();
