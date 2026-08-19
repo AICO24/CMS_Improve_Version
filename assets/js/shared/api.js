@@ -251,6 +251,7 @@ const ROLE_SIDEBAR_LINKS = {
         ['payments.html', 'fa-credit-card', 'Payments'],
         ['reports.html', 'fa-chart-column', 'Reports'],
         ['forecast.html', 'fa-chart-line', 'Capacity Forecast'],
+        ['ai.html', 'fa-robot', 'AI Configuration'],
         ['user-management.html', 'fa-users', 'User Management'],
         ['audit.html', 'fa-clipboard-list', 'Audit Logs'],
     ],
