@@ -187,14 +187,14 @@
             <h3 id="modalTitle">Add New Lot</h3>
             <form id="lotForm">
                 <input type="hidden" id="lotId">
-                <div class="form-group"><label>Lot Number</label><input type="text" id="lotNumber" required></div>
+                <div class="form-group"><label>Lot Number (optional)</label><input type="text" id="lotNumber" placeholder="Leave blank to auto-generate"></div>
                 <div class="form-group"><label>Section</label><select id="lotSection" required>
                         <option value="Section A">Section A</option>
                         <option value="Section B">Section B</option>
                         <option value="Section C">Section C</option>
                         <option value="Section D">Section D</option>
                     </select></div>
-                <div class="form-group"><label>Block (optional)</label><input type="text" id="lotBlock"></div>
+                <div class="form-group"><label>Block</label><select id="lotBlock" required></select></div>
                 <div class="form-group"><label>Lot Type</label><select id="lotType" required>
                         <option value="Lawn Lot">Lawn Lot</option>
                         <option value="Family Lot">Family Lot</option>

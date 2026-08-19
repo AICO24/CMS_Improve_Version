@@ -288,10 +288,51 @@ class PaymentController {
                 $this->sendEmail($user['email'], 'Payment ' . $status, 'Your payment has been ' . strtolower($status) . '.');
             }
 
+            if ($status === 'Verified' && $payment['transaction_type'] === 'Lot Purchase') {
+                $this->syncLotStatusForVerifiedPurchase($payment);
+            }
+
             return ['success' => true, 'message' => 'Payment ' . strtolower($status) . ' successfully'];
         }
 
         return ['error' => 'Failed to update payment verification status', 'code' => 500];
+    }
+
+    // A verified Lot Purchase payment means the lot has been bought, so it should
+    // no longer read as Available — mirrors ScheduleController's own
+    // Confirmed -> Reserved transition rather than jumping straight to Occupied,
+    // since a payment alone doesn't mean the burial itself has taken place yet.
+    // Resolves the lot the same way resolveExpectedAmount() does: reference_id is
+    // in practice either a schedule_id (normal reserve-then-pay flow) or a raw
+    // lot_id (the Lot Management "Pay Now" shortcut). Never downgrades a lot
+    // that's already past Available (Reserved/Occupied/Expired left untouched).
+    private function syncLotStatusForVerifiedPurchase($payment) {
+        if (empty($payment['reference_id'])) {
+            return;
+        }
+
+        $scheduleModel = new Schedule();
+        $lotModel = new Lot();
+
+        $lotId = null;
+        $schedule = $scheduleModel->findById($payment['reference_id']);
+        if ($schedule && !empty($schedule['lot_id'])) {
+            $lotId = $schedule['lot_id'];
+        } else {
+            $lot = $lotModel->findById($payment['reference_id']);
+            if ($lot) {
+                $lotId = $lot['lot_id'];
+            }
+        }
+
+        if (!$lotId) {
+            return;
+        }
+
+        $lot = $lotModel->findById($lotId);
+        if ($lot && $lot['status'] === 'Available') {
+            $lotModel->update($lotId, ['status' => 'Reserved']);
+        }
     }
 
     private function sendEmail($email, $subject, $message) {

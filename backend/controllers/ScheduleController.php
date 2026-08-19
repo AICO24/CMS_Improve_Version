@@ -3,14 +3,21 @@ require_once __DIR__ . '/../models/Schedule.php';
 require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../models/User.php';
+require_once __DIR__ . '/../models/ExpirationRecord.php';
 
 class ScheduleController {
     private $scheduleModel;
     private $lotModel;
+    private $expirationModel;
+
+    // Default lease term applied to the expiration_records row auto-created
+    // when a burial schedule is marked Completed (Batch LM-AUTOMATION, Phase C).
+    private const DEFAULT_LEASE_YEARS = 5;
 
     public function __construct() {
         $this->scheduleModel = new Schedule();
         $this->lotModel = new Lot();
+        $this->expirationModel = new ExpirationRecord();
     }
 
     // Batch N5: $user is optional (existing callers pass none) but, when
@@ -238,6 +245,40 @@ class ScheduleController {
         }
     }
 
+    // Completing a burial schedule is the moment a lot's lease actually starts,
+    // but nothing previously created the expiration_records row that Expiration
+    // Monitoring (and Lot::syncExpiredLots()) rely on to ever flag/expire it later
+    // — staff had to remember to add it by hand.
+    //
+    // Dedupes on (lot_id, start_date) rather than lot_id alone: a lot can be
+    // freed (relocation, or a manual reset after expiring) and rebooked later,
+    // and that new occupancy needs its own lease record with its own start/end
+    // dates. Keying on lot_id alone would see the old, already-lapsed record
+    // and silently skip creating one for the new tenant — leaving nothing for
+    // syncExpiredLots() to key off going forward. Only guards against the same
+    // schedule being marked Completed twice (identical start_date).
+    private function createLeaseRecordIfMissing($lotId, $startDate) {
+        $start = $startDate ?: date('Y-m-d');
+
+        $existingRecords = $this->expirationModel->findAll(['lot_id' => $lotId]);
+        foreach ($existingRecords as $record) {
+            if ($record['start_date'] === $start) {
+                return;
+            }
+        }
+
+        $endDate = date('Y-m-d', strtotime($start . ' +' . self::DEFAULT_LEASE_YEARS . ' years'));
+
+        $this->expirationModel->create([
+            'lot_id' => $lotId,
+            'start_date' => $start,
+            'end_date' => $endDate,
+            'renewed' => 'no',
+            'exhumation_status' => 'Pending',
+            'notes' => 'Auto-created on burial schedule completion (' . self::DEFAULT_LEASE_YEARS . '-year lease term).',
+        ]);
+    }
+
     private function sendEmail($email, $subject, $message) {
         if (empty($email)) {
             return false;
@@ -296,6 +337,7 @@ class ScheduleController {
                 $this->notifyScheduleStatusChange($existing, 'Confirmed', $existing['created_by']);
             } elseif (isset($data['status']) && $data['status'] === 'Completed' && $existing['status'] !== 'Completed') {
                 $this->lotModel->update($lotId, ['status' => 'Occupied']);
+                $this->createLeaseRecordIfMissing($lotId, $existing['schedule_date']);
                 $this->notifyScheduleStatusChange($existing, 'Completed', $existing['created_by']);
             }
             return ['success' => true, 'message' => 'Schedule updated'];

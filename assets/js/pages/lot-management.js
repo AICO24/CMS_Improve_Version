@@ -499,39 +499,63 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('lotId').value = lot.lot_id;
             document.getElementById('lotNumber').value = lot.lot_number;
             document.getElementById('lotSection').value = lot.section_name || '';
-            document.getElementById('lotBlock').value = lot.block_id || '';
             document.getElementById('lotType').value = lot.lot_type_id || '';
             document.getElementById('lotPrice').value = lot.price;
             document.getElementById('lotStatus').value = lot.status;
             document.getElementById('lotDimensions').value = lot.dimensions || '';
             document.getElementById('lotNotes').value = lot.location_notes || '';
-            await populateFormDropdowns(lot.section_name);
+            await populateFormDropdowns(lot.section_name, lot.block_id);
             document.getElementById('lotModal').style.display = 'flex';
         } catch (error) {
             alert('Failed to load lot: ' + error.message);
         }
     }
 
-    async function populateFormDropdowns(selectedSection = '') {
+    // Shows what the backend will auto-generate (Lot::generateLotNumber(), 'L' +
+    // count-in-block + 1) as a placeholder so staff can leave Lot Number blank.
+    // Never writes into the input's value — the count here is only as fresh as
+    // the last full lot fetch, so the actually-submitted number must come from
+    // the backend's live count at insert time, not this client-side preview.
+    function updateLotNumberPreview() {
+        const lotNumberInput = document.getElementById('lotNumber');
+        const isEditMode = !!document.getElementById('lotId').value;
+        if (isEditMode) return;
+
+        const blockId = parseInt(document.getElementById('lotBlock').value, 10);
+        if (!blockId) {
+            lotNumberInput.placeholder = 'Leave blank to auto-generate';
+            return;
+        }
+        const countInBlock = allLots.filter(lot => lot.block_id === blockId).length;
+        lotNumberInput.placeholder = `e.g. L${countInBlock + 1} (leave blank to auto-generate)`;
+    }
+
+    async function populateFormDropdowns(selectedSection = '', selectedBlockId = '') {
         const sectionSelect = document.getElementById('lotSection');
         sectionSelect.innerHTML = allSections.map(section =>
             `<option value="${section.section_name}" ${section.section_name === selectedSection ? 'selected' : ''}>${section.section_name}</option>`
         ).join('');
 
         const sectionName = sectionSelect.value;
+        const blockSelect = document.getElementById('lotBlock');
         if (sectionName) {
             const section = allSections.find(item => item.section_name === sectionName);
             if (section) {
                 const blocks = await apiRequest(`blocks?section_id=${section.section_id}`);
-                const blockSelect = document.getElementById('lotBlock');
-                blockSelect.innerHTML = '<option value="">Select a block</option>' + blocks.map(block => `<option value="${block.block_id}">${block.block_name}</option>`).join('');
+                blockSelect.innerHTML = '<option value="">Select a block</option>' + blocks.map(block =>
+                    `<option value="${block.block_id}" ${String(block.block_id) === String(selectedBlockId) ? 'selected' : ''}>${block.block_name}</option>`
+                ).join('');
             }
+        } else {
+            blockSelect.innerHTML = '<option value="">Select a block</option>';
         }
 
         const typeSelect = document.getElementById('lotType');
         typeSelect.innerHTML = lotTypes.map(type => `<option value="${type.type_id}">${type.type_name}</option>`).join('');
 
         sectionSelect.onchange = () => populateFormDropdowns(sectionSelect.value);
+        blockSelect.onchange = () => updateLotNumberPreview();
+        updateLotNumberPreview();
     }
 
     document.getElementById('lotForm').addEventListener('submit', async function(e) {
@@ -547,7 +571,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             location_notes: document.getElementById('lotNotes').value.trim() || null,
         };
 
-        if (!data.block_id || !data.lot_number || !data.lot_type_id || !data.price) {
+        if (!data.block_id || !data.lot_type_id || !data.price) {
             alert('Please fill in all required fields.');
             return;
         }

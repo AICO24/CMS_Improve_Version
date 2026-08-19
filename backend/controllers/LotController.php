@@ -121,7 +121,10 @@ class LotController {
     }
 
     public function createLot($data) {
-        $required = ['block_id', 'lot_number', 'lot_type_id', 'price'];
+        // lot_number is intentionally not required — Lot::create() auto-generates
+        // one (via generateLotNumber()) when it's left blank, matching the
+        // Lot Management form's optional Lot Number field.
+        $required = ['block_id', 'lot_type_id', 'price'];
         foreach ($required as $field) {
             if (!array_key_exists($field, $data) || $data[$field] === '' || $data[$field] === null) {
                 return ['error' => "Field '$field' is required", 'code' => 400];

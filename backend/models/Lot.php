@@ -8,6 +8,38 @@ class Lot {
         $this->db = Database::getInstance()->getConnection();
     }
 
+    // Follows the same "sync lazily on read" convention already used by
+    // ReportController::occupancy() for occupancy_snapshots (see docs/database.md)
+    // rather than a cron job, since this app has no scheduler set up. Only flips
+    // Occupied lots whose latest expiration_records lease has lapsed and was
+    // never marked renewed. Deliberately excludes Reserved: a lot can be
+    // rebooked after being freed (manually reset from Expired to Available,
+    // then re-confirmed), and during the window between that re-confirmation
+    // and the new burial's completion the "latest" expiration record on file is
+    // still the *previous* tenant's — touching Reserved here would wrongly
+    // re-expire a lot that's actively being booked again. ScheduleController's
+    // createLeaseRecordIfMissing() keys its own dedupe on (lot_id, start_date)
+    // for the same reason, so a genuinely new occupancy always gets its own
+    // fresh record once it completes.
+    private function syncExpiredLots() {
+        $this->db->exec("
+            UPDATE lots l
+            JOIN (
+                SELECT er.lot_id, er.end_date, er.renewed
+                FROM expiration_records er
+                INNER JOIN (
+                    SELECT lot_id, MAX(expiration_id) AS max_id
+                    FROM expiration_records
+                    GROUP BY lot_id
+                ) latest ON latest.lot_id = er.lot_id AND latest.max_id = er.expiration_id
+            ) e ON e.lot_id = l.lot_id
+            SET l.status = 'Expired'
+            WHERE e.renewed = 'no'
+              AND e.end_date < CURDATE()
+              AND l.status = 'Occupied'
+        ");
+    }
+
     private function applyFilters(&$sql, &$params, $filters) {
         if (!empty($filters['section'])) {
             $sql .= " AND s.section_name = ?";
@@ -40,6 +72,7 @@ class Lot {
     }
 
     public function findAll($filters = [], $pagination = []) {
+        $this->syncExpiredLots();
         $sql = "
             SELECT l.*, b.block_name, s.section_name, t.type_name as lot_type_name
             FROM lots l
@@ -73,6 +106,7 @@ class Lot {
     }
 
     public function countAll($filters = []) {
+        $this->syncExpiredLots();
         $sql = "
             SELECT COUNT(*) AS total
             FROM lots l
@@ -91,7 +125,8 @@ class Lot {
     }
 
     public function findById($id) {
-        $stmt = $this->db->prepare(" 
+        $this->syncExpiredLots();
+        $stmt = $this->db->prepare("
             SELECT l.*, b.block_name, s.section_name, t.type_name as lot_type_name
             FROM lots l
             JOIN blocks b ON l.block_id = b.block_id
@@ -109,9 +144,14 @@ class Lot {
             $lotNumber = $this->generateLotNumber((int) $data['block_id']);
         }
 
-        $stmt = $this->db->prepare(" 
-            INSERT INTO lots (block_id, lot_number, lot_type_id, status, price, dimensions, location_notes, lease_start_date, lease_end_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        // lease_start_date/lease_end_date are intentionally not written here —
+        // expiration_records is the sole source of truth for lease dates (see
+        // ScheduleController, which creates one automatically on schedule
+        // completion); these lots columns were never populated by any code
+        // path and existed only as a dead, disconnected duplicate.
+        $stmt = $this->db->prepare("
+            INSERT INTO lots (block_id, lot_number, lot_type_id, status, price, dimensions, location_notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
         return $stmt->execute([
             $data['block_id'],
@@ -121,8 +161,6 @@ class Lot {
             $data['price'],
             $data['dimensions'] ?? null,
             $data['location_notes'] ?? null,
-            $data['lease_start_date'] ?? null,
-            $data['lease_end_date'] ?? null,
         ]);
     }
 
@@ -140,9 +178,7 @@ class Lot {
                 status = ?,
                 price = ?,
                 dimensions = ?,
-                location_notes = ?,
-                lease_start_date = ?,
-                lease_end_date = ?
+                location_notes = ?
             WHERE lot_id = ?
         ");
         return $stmt->execute([
@@ -153,8 +189,6 @@ class Lot {
             $data['price'] ?? $existing['price'],
             array_key_exists('dimensions', $data) ? $data['dimensions'] : $existing['dimensions'],
             array_key_exists('location_notes', $data) ? $data['location_notes'] : $existing['location_notes'],
-            array_key_exists('lease_start_date', $data) ? $data['lease_start_date'] : $existing['lease_start_date'],
-            array_key_exists('lease_end_date', $data) ? $data['lease_end_date'] : $existing['lease_end_date'],
             $id,
         ]);
     }
@@ -191,7 +225,8 @@ class Lot {
     }
 
     public function getStats() {
-        $stmt = $this->db->query(" 
+        $this->syncExpiredLots();
+        $stmt = $this->db->query("
             SELECT
                 COUNT(*) as total,
                 SUM(CASE WHEN status = 'Available' THEN 1 ELSE 0 END) as available,
