@@ -335,11 +335,25 @@ function createBookingWizard(options) {
         function renderConfirmationIfReady() {
             if (!selectedLot || confirmationShown) return;
             const state = chatAssistant.state;
-            const missing = [];
-            if (state.decedent_id === null) missing.push('who this booking is for');
-            if (state.date === null) missing.push('the burial date');
-            if (missing.length) {
-                chatAssistant.appendMessage('assistant', `Great choice — Lot ${selectedLot.lot_number}. Before I can finalize this booking, I still need ${missing.join(' and ')}.`);
+            // Batch Q: decedent is now asked before lot preferences (see
+            // getNextMissingSlot() in lot-chat-assistant.js), so in the normal
+            // flow date is the only thing left missing here — phrase that
+            // case as a direct question, matching how a human assistant would
+            // ask it ("What date would you prefer?"), instead of the generic
+            // "I still need X" fallback still used for the rarer case (e.g.
+            // the ?lot_id= pre-select path) where both are still missing.
+            const decedentMissing = state.decedent_id === null;
+            const dateMissing = state.date === null;
+            if (decedentMissing && dateMissing) {
+                chatAssistant.appendMessage('assistant', `Great choice — Lot ${selectedLot.lot_number}. Before I can finalize this booking, I still need who this booking is for and the burial date.`);
+                return;
+            }
+            if (decedentMissing) {
+                chatAssistant.appendMessage('assistant', `Great choice — Lot ${selectedLot.lot_number}. Who is this burial for?`);
+                return;
+            }
+            if (dateMissing) {
+                chatAssistant.appendMessage('assistant', `Great choice — Lot ${selectedLot.lot_number}. What date would you prefer for the burial?`);
                 return;
             }
 

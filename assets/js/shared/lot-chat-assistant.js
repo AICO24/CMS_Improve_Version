@@ -412,13 +412,33 @@ function createLotChatAssistant(options) {
     // extractSectionFromText()/tryLlmExtraction() below) if a user
     // volunteers one unprompted, and is still sent to the recommendation
     // engine as an internal ranking input either way.
+    //
+    // Batch Q (adviser follow-up: the assistant's own greeting promises to
+    // ask "who this is for, your preferred burial date, and your budget",
+    // but only lot_type/budget were ever actually asked as a question —
+    // decedent/date were silently extraction-only, so a user who didn't
+    // volunteer them unprompted got no natural follow-up question at all
+    // until either they mentioned it or the 3-message escape hatch kicked
+    // in. decedent_id now leads the sequence (matches the mockup's
+    // name-first flow) so it's asked like every other required slot. date
+    // deliberately stays OUT of this pipeline — the mockup asks for it only
+    // after a lot is picked ("What date would you prefer?" comes right
+    // after choosing A-102), and renderConfirmationIfReady() in
+    // booking-wizard.js already asks for it explicitly at that point; date's
+    // own extractDateFromText() call further down still runs unconditionally
+    // whenever state.date is null, so an early "August 25" is still captured
+    // if volunteered.
     function getNextMissingSlot() {
+        if (state.decedent_id === null && typeof getDecedents === 'function') return 'decedent_id';
         if (state.lot_type === null) return 'lot_type';
         if (state.budget === null) return 'budget';
         return null;
     }
 
     function questionForSlot(slot) {
+        if (slot === 'decedent_id') {
+            return "Who is this burial for? Please give me the decedent's full name.";
+        }
         if (slot === 'lot_type') {
             return `What lot type are you looking for? Available options: ${describeOptions(getLotTypes(), 'type_name')}. Not sure? Tap "Recommend a type for me" below and I'll pick one for you.`;
         }
@@ -855,8 +875,10 @@ function createLotChatAssistant(options) {
 
         // Only treat the message as an explicit "skip" for the currently
         // pending slot, and only when nothing else was recognized in it —
-        // avoids misreading unrelated text as a skip.
-        if (pendingSlot && updates[pendingSlot] === undefined && corePrefUpdateCount === 0 && isChatSkipMessage(text)) {
+        // avoids misreading unrelated text as a skip. decedent_id is
+        // excluded (Batch Q): there's no "no preference" for who a burial
+        // is for, unlike lot_type/budget.
+        if (pendingSlot && pendingSlot !== 'decedent_id' && updates[pendingSlot] === undefined && corePrefUpdateCount === 0 && isChatSkipMessage(text)) {
             updates[pendingSlot] = '';
         }
 
@@ -864,9 +886,14 @@ function createLotChatAssistant(options) {
         // the optional LLM-assisted fallback before giving up and asking the
         // user to rephrase. Gated on corePrefUpdateCount (not the
         // now-larger `updates`) so a resolved date/decedent/time never
-        // silently suppresses this fallback for lot_type/budget.
+        // silently suppresses this fallback for lot_type/budget. Batch Q:
+        // also excludes decedent_id — tryLlmExtraction only ever resolves
+        // lot_type/section/budget, and this module's own privacy contract
+        // (see the module header) is to never send decedent/user/booking
+        // data to the LLM endpoint, so a message naming a person can't be
+        // forwarded here just because decedent_id happens to be pending.
         let recommendTypeRequested = false;
-        if (pendingSlot && corePrefUpdateCount === 0 && updates[pendingSlot] === undefined) {
+        if (pendingSlot && pendingSlot !== 'decedent_id' && corePrefUpdateCount === 0 && updates[pendingSlot] === undefined) {
             setInputEnabled(false);
             const typingBubble = appendTypingIndicator();
             const llmResult = await tryLlmExtraction(text, pendingSlot);
@@ -928,6 +955,8 @@ function createLotChatAssistant(options) {
             appendMessage('assistant', containsDigits(text)
                 ? "I couldn't read a budget from that. Try formats like 8000, 8,000, ₱8,000, or 8k. You can also say \"no preference\"."
                 : 'Could you share a budget? For example: 8000 or ₱8,000. You can also say "no preference".');
+        } else if (pendingSlot === 'decedent_id' && !(ambiguousDecedentCandidates && ambiguousDecedentCandidates.length)) {
+            appendMessage('assistant', "I couldn't find a decedent record matching that name. Could you check the spelling, or confirm the record already exists in Decedent Records?");
         }
 
         if (ambiguousDecedentCandidates && ambiguousDecedentCandidates.length) {
