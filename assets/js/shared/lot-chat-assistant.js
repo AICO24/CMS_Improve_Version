@@ -1347,6 +1347,7 @@ function createLotChatAssistant(options) {
         appendOutcomeMessage,
         appendCapacityWarning,
         requestTypeSuggestion,
+        processMessage: (text) => processMessage(text),
         reset: performReset,
     };
 }

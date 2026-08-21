@@ -1,79 +1,153 @@
 // Shared burial-lot booking assistant.
-// Batch N (adviser feedback 2026-08-18, "make burial scheduling fully
-// chat-based, like ChatGPT"): this used to be a 3-step wizard (Booking
-// Details form -> AI Recommendations grid -> Confirmation page) with a
-// small floating chat widget alongside it. It is now a single full-page
-// chat interface — the assistant (assets/js/shared/lot-chat-assistant.js)
-// drives the ENTIRE flow: it collects decedent/date/time/lot preferences
-// conversationally, automatically fetches and renders recommendation cards
-// as a message the moment lot_type+budget are known (no button needed),
-// and renders the final booking confirmation + "Confirm & Book" action as
-// a message too, once a lot is picked and decedent/date are known. Nothing
-// about the underlying booking flow changed — same endpoints, same
-// conflict/Monday/past-date checks, same RBAC — only the presentation
-// layer moved from a stepper+form into the chat thread. Load this after
-// shared/api.js, shared/button-loading.js, and shared/lot-chat-assistant.js,
-// and before a page's own thin wrapper script.
-//
-// createBookingWizard(options) -> wizard
-//   options.allowedRoles: string[] passed straight to requireRole().
-//   options.renderStatusBadge(lot): string — HTML for a recommendation
-//     card's status line; the two pages have always styled this
-//     differently (admin/staff: `.status-badge.status-success`; citizen:
-//     `.muted`), preserved here since that's a visual choice outside this
-//     redesign's scope.
-//   options.onBookingSuccess({ scheduleId, bookedLot }): called once the
-//     booking has been created — admin/staff shows a plain confirmation
-//     alert; citizen offers to jump straight to payment.
-//
-// wizard.init(): runs the page's full DOMContentLoaded sequence (role
-//   check, wiring, initial data load). Call this from the page's own
-//   DOMContentLoaded listener.
-//
-// Deliberately dropped in this redesign (disclosed, not silent):
-//   - The "Additional Requirements" free-text notes field from the old
-//     Booking Details form. It was optional and low-stakes; there's no
-//     clean slot-filling equivalent for open-ended free text without
-//     adding another required conversational turn. Booking payloads now
-//     always send notes: null. Can be re-added later as an explicit
-//     "anything else?" question if wanted.
-//   - Staff's manual Section/Lot Type/Budget/Lot Number filters (already
-//     retired for citizens in an earlier batch, now retired for staff too)
-//     — superseded by the escape hatches in lot-chat-assistant.js
-//     (decedent/date) and the existing "Recommend a type for me"/"no
-//     preference" outs (lot_type/budget/section). A staff member who wants
-//     a SPECIFIC known lot can still reach it via Lot Management's
-//     "Book This Lot" action, which pre-selects the lot through the
-//     existing ?lot_id= URL parameter (unchanged, see the end of init()).
+// Modern Intelligence Workspace edition (AI-Driven Scheduling Suite).
+// Transforms the interface into a two-column intelligence workspace
+// featuring conversational assistant, live booking blueprint HUD,
+// rich recommendation cards with match suitability, and digital voucher confirmation.
 
 function renderChatPageMarkup({ mount }) {
     mount.innerHTML = `
-        <div class="ai-chat-page">
-            <div class="chat-window" id="chatWindow" aria-live="polite"></div>
-            <div class="chat-pref-status" id="chatPrefStatus">
-                <span class="chat-pref-chip" data-field="decedent_id">Decedent: <strong>Not set</strong></span>
-                <span class="chat-pref-chip" data-field="date">Date: <strong>Not set</strong></span>
-                <span class="chat-pref-chip" data-field="lot_type">Lot type: <strong>Not set</strong></span>
-                <span class="chat-pref-chip" data-field="budget">Budget: <strong>Not set</strong></span>
-                <span class="chat-pref-chip" data-field="section">Section: <strong>Not set</strong></span>
+        <div class="ai-chat-layout">
+            <!-- LEFT COLUMN: Main Conversational Assistant -->
+            <div class="ai-chat-main">
+                <!-- Assistant Top Header Bar -->
+                <div class="ai-assistant-header">
+                    <div class="ai-assistant-brand">
+                        <div class="ai-avatar-badge">
+                            <div class="ai-avatar-glow"></div>
+                            <i class="fas fa-monument"></i>
+                        </div>
+                        <div class="ai-assistant-meta">
+                            <div class="ai-title-row">
+                                <h4 class="ai-assistant-name">AI Burial Booking Assistant</h4>
+                                <span class="ai-status-pill"><span class="status-pulse-dot"></span> Online</span>
+                            </div>
+                            <p class="ai-assistant-desc">Conversational lot matching, conflict prevention & instant scheduling</p>
+                        </div>
+                    </div>
+                    <div class="ai-header-actions">
+                        <button type="button" id="chatStartOverBtn" class="ai-action-btn" title="Clear conversation and start over">
+                            <i class="fas fa-rotate-right"></i> <span>Reset</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chat Stream Window -->
+                <div class="chat-window" id="chatWindow" aria-live="polite"></div>
+
+                <!-- Contextual Quick Action Suggestions -->
+                <div class="chat-prompt-suggestions" id="chatPromptSuggestions"></div>
+
+                <!-- Interactive Preference Ribbon -->
+                <div class="chat-pref-status" id="chatPrefStatus">
+                    <div class="pref-chips-container">
+                        <span class="chat-pref-chip" data-field="decedent_id"><i class="fas fa-user"></i> Decedent: <strong>Not set</strong></span>
+                        <span class="chat-pref-chip" data-field="date"><i class="fas fa-calendar-day"></i> Date: <strong>Not set</strong></span>
+                        <span class="chat-pref-chip" data-field="lot_type"><i class="fas fa-monument"></i> Type: <strong>Not set</strong></span>
+                        <span class="chat-pref-chip" data-field="budget"><i class="fas fa-peso-sign"></i> Budget: <strong>Not set</strong></span>
+                        <span class="chat-pref-chip" data-field="section"><i class="fas fa-map-pin"></i> Section: <strong>Not set</strong></span>
+                    </div>
+                </div>
+
+                <!-- Message Input Bar -->
+                <form id="chatForm" class="chat-input-row">
+                    <div class="chat-input-wrapper">
+                        <i class="fas fa-comment-dots chat-input-icon"></i>
+                        <input type="text" id="chatInput" placeholder="Type a message, decedent name, budget, or preferred date..." autocomplete="off" disabled>
+                    </div>
+                    <button type="submit" class="chat-send-btn" aria-label="Send message" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+
+                <!-- Auxiliary Action Strip -->
+                <div class="chat-actions">
+                    <button type="button" id="chatSuggestTypeBtn" class="btn-suggest-type">
+                        <i class="fas fa-wand-magic-sparkles"></i> <span>Recommend a type for me</span>
+                    </button>
+                </div>
             </div>
-            <form id="chatForm" class="chat-input-row">
-                <input type="text" id="chatInput" placeholder="Type a message..." autocomplete="off" disabled>
-                <button type="submit" class="chat-send-btn" aria-label="Send" disabled><i class="fas fa-paper-plane"></i></button>
-            </form>
-            <div class="chat-actions">
-                <button type="button" id="chatSuggestTypeBtn" class="btn-next">Recommend a type for me</button>
-                <button type="button" id="chatStartOverBtn" class="btn-secondary">Start Over</button>
-            </div>
+
+            <!-- RIGHT COLUMN: Live Booking Blueprint HUD -->
+            <aside class="ai-booking-blueprint" id="bookingBlueprint">
+                <div class="blueprint-header">
+                    <div class="blueprint-title">
+                        <i class="fas fa-clipboard-check"></i>
+                        <span>Live Booking Blueprint</span>
+                    </div>
+                    <span class="blueprint-badge" id="blueprintProgressBadge">Step 1 of 4</span>
+                </div>
+
+                <div class="blueprint-body">
+                    <!-- Progress Stepper Track -->
+                    <div class="blueprint-steps">
+                        <div class="blueprint-step active" id="stepIndicatorDecedent" data-step="1">
+                            <div class="step-num"><i class="fas fa-user"></i></div>
+                            <div class="step-content">
+                                <span class="step-label">1. Decedent Record</span>
+                                <strong class="step-value" id="hudDecedentName">Pending</strong>
+                            </div>
+                        </div>
+                        <div class="blueprint-step" id="stepIndicatorSchedule" data-step="2">
+                            <div class="step-num"><i class="fas fa-calendar-alt"></i></div>
+                            <div class="step-content">
+                                <span class="step-label">2. Burial Schedule</span>
+                                <strong class="step-value" id="hudScheduleDate">Pending</strong>
+                            </div>
+                        </div>
+                        <div class="blueprint-step" id="stepIndicatorLot" data-step="3">
+                            <div class="step-num"><i class="fas fa-monument"></i></div>
+                            <div class="step-content">
+                                <span class="step-label">3. Lot Allocation</span>
+                                <strong class="step-value" id="hudLotSelected">None selected</strong>
+                            </div>
+                        </div>
+                        <div class="blueprint-step" id="stepIndicatorReview" data-step="4">
+                            <div class="step-num"><i class="fas fa-check-double"></i></div>
+                            <div class="step-content">
+                                <span class="step-label">4. Review & Confirm</span>
+                                <strong class="step-value" id="hudStatus">In Progress</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Selected Lot Card -->
+                    <div class="blueprint-lot-card" id="hudSelectedLotCard" style="display: none;">
+                        <div class="hud-card-header">
+                            <span class="hud-lot-num" id="hudLotNum">Lot A-101</span>
+                            <span class="hud-lot-type" id="hudLotType">Lawn Lot</span>
+                        </div>
+                        <div class="hud-card-body">
+                            <div class="hud-detail-row">
+                                <span><i class="fas fa-layer-group"></i> Section:</span>
+                                <strong id="hudLotSection">North Lawn</strong>
+                            </div>
+                            <div class="hud-detail-row">
+                                <span><i class="fas fa-tag"></i> Lot Price:</span>
+                                <strong class="hud-price" id="hudLotPrice">₱0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Intelligent Assistance Tips -->
+                    <div class="blueprint-ai-tips">
+                        <div class="tip-header"><i class="fas fa-lightbulb"></i> <span>Smart Tip</span></div>
+                        <p class="tip-text" id="hudSmartTip">You can specify decedent name, date, and budget in one sentence (e.g. <em>"Booking for Juan Cruz, August 28, budget 25k"</em>).</p>
+                    </div>
+                </div>
+
+                <div class="blueprint-footer">
+                    <div class="blueprint-total-row">
+                        <span class="total-label">Estimated Total</span>
+                        <span class="total-amount" id="hudTotalAmount">₱0.00</span>
+                    </div>
+                </div>
+            </aside>
         </div>`;
 }
 
 // Batch O: resolves chat text like "the first one"/"the cheapest one"/
 // "Lot A-102" against whichever recommendation set was most recently
-// rendered. Lives here (not lot-chat-assistant.js) because only this module
-// knows about lot data/pricing — the chat assistant is deliberately
-// lot-data-agnostic. Returns null (not a guess) when the message doesn't
-// look like a selection at all, so normal chat parsing still runs.
+// rendered.
 const LOT_ORDINAL_WORDS = {
     first: 0, second: 1, third: 2, fourth: 3, fifth: 4, sixth: 5,
     '1st': 0, '2nd': 1, '3rd': 2, '4th': 3, '5th': 4, '6th': 5,
@@ -81,10 +155,6 @@ const LOT_ORDINAL_WORDS = {
 
 function parseLotSelectionIntent(text) {
     const lower = text.toLowerCase();
-    // Real lot numbers are always letter-hyphen-digits (e.g. "L-001") —
-    // requiring that shape (or a bare 2+ digit run) instead of any single
-    // digit after "lot" avoids misreading something like "a Lawn Lot 2"
-    // as a lot-number reference.
     const lotNumberMatch = lower.match(/\blot\s*([a-z]-\d+|\d{2,})\b/i);
     if (lotNumberMatch) return { type: 'lot_number', value: lotNumberMatch[1].toUpperCase() };
     if (/\b(cheapest|most affordable|least expensive|lowest price)\b/.test(lower)) return { type: 'cheapest' };
@@ -120,9 +190,12 @@ function createBookingWizard(options) {
 
         renderChatPageMarkup({ mount: document.getElementById('wizardContainerMount') });
 
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            api.logout();
-        });
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                api.logout();
+            });
+        }
 
         const toggleBtn = document.getElementById('toggleSidebar');
         const sidebar = document.querySelector('.sidebar');
@@ -138,6 +211,26 @@ function createBookingWizard(options) {
         const chatSuggestTypeBtn = document.getElementById('chatSuggestTypeBtn');
         const chatStartOverBtn = document.getElementById('chatStartOverBtn');
         const chatPrefStatus = document.getElementById('chatPrefStatus');
+        const chatPromptSuggestions = document.getElementById('chatPromptSuggestions');
+
+        // Blueprint HUD elements
+        const hudDecedentName = document.getElementById('hudDecedentName');
+        const hudScheduleDate = document.getElementById('hudScheduleDate');
+        const hudLotSelected = document.getElementById('hudLotSelected');
+        const hudStatus = document.getElementById('hudStatus');
+        const hudSelectedLotCard = document.getElementById('hudSelectedLotCard');
+        const hudLotNum = document.getElementById('hudLotNum');
+        const hudLotType = document.getElementById('hudLotType');
+        const hudLotSection = document.getElementById('hudLotSection');
+        const hudLotPrice = document.getElementById('hudLotPrice');
+        const hudTotalAmount = document.getElementById('hudTotalAmount');
+        const hudSmartTip = document.getElementById('hudSmartTip');
+        const blueprintProgressBadge = document.getElementById('blueprintProgressBadge');
+
+        const stepIndicatorDecedent = document.getElementById('stepIndicatorDecedent');
+        const stepIndicatorSchedule = document.getElementById('stepIndicatorSchedule');
+        const stepIndicatorLot = document.getElementById('stepIndicatorLot');
+        const stepIndicatorReview = document.getElementById('stepIndicatorReview');
 
         let selectedLot = null;
         let confirmationShown = false;
@@ -145,24 +238,140 @@ function createBookingWizard(options) {
         let decedents = [];
         let lotTypes = [];
         let sections = [];
-        // Batch O: the currently active recommendation set/bubble — text-based
-        // lot selection ("the second one") and re-selection after a
-        // preference correction both resolve against this, never a
-        // possibly-stale DOM query.
         let latestRecommendations = [];
         let latestRecommendationBubble = null;
 
-        // Same past-date/Monday-block rule everywhere a date can be set —
-        // chat text extraction and the escape hatch both funnel through
-        // this, so they can never disagree or be bypassed.
+        function updateBlueprintHUD() {
+            const state = chatAssistant ? chatAssistant.state : {};
+            const decedent = decedents.find(d => d.decedent_id === state.decedent_id);
+            const decedentName = decedent ? `${decedent.first_name} ${decedent.last_name}` : null;
+
+            // 1. Decedent Step
+            if (decedentName) {
+                hudDecedentName.textContent = decedentName;
+                stepIndicatorDecedent.className = 'blueprint-step completed';
+            } else {
+                hudDecedentName.textContent = 'Pending';
+                stepIndicatorDecedent.className = 'blueprint-step active';
+            }
+
+            // 2. Schedule Step
+            if (state.date) {
+                const dateStr = new Date(`${state.date}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const timeStr = state.time ? ` (${state.time})` : '';
+                hudScheduleDate.textContent = `${dateStr}${timeStr}`;
+                stepIndicatorSchedule.className = 'blueprint-step completed';
+            } else {
+                hudScheduleDate.textContent = 'Pending';
+                stepIndicatorSchedule.className = decedentName ? 'blueprint-step active' : 'blueprint-step';
+            }
+
+            // 3. Lot Step
+            if (selectedLot) {
+                hudLotSelected.textContent = `${selectedLot.lot_number} (${selectedLot.lot_type_name || 'Lawn'})`;
+                stepIndicatorLot.className = 'blueprint-step completed';
+
+                hudSelectedLotCard.style.display = 'flex';
+                hudLotNum.textContent = selectedLot.lot_number;
+                hudLotType.textContent = selectedLot.lot_type_name || 'Available Lot';
+                hudLotSection.textContent = selectedLot.section_name || 'Standard Section';
+                const formattedPrice = `₱${parseFloat(selectedLot.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                hudLotPrice.textContent = formattedPrice;
+                hudTotalAmount.textContent = formattedPrice;
+            } else {
+                hudLotSelected.textContent = state.lot_type ? `Type: ${state.lot_type}` : 'None selected';
+                hudSelectedLotCard.style.display = 'none';
+                hudTotalAmount.textContent = '₱0.00';
+                stepIndicatorLot.className = (decedentName && state.date) ? 'blueprint-step active' : 'blueprint-step';
+            }
+
+            // 4. Review Step
+            if (confirmationShown && selectedLot && decedentName && state.date) {
+                hudStatus.textContent = 'Ready to Confirm';
+                stepIndicatorReview.className = 'blueprint-step active';
+                blueprintProgressBadge.textContent = 'Step 4 of 4';
+                hudSmartTip.innerHTML = 'Review the booking voucher summary on the left and tap <strong>Confirm & Book</strong> to submit.';
+            } else if (selectedLot) {
+                blueprintProgressBadge.textContent = 'Step 3 of 4';
+                hudStatus.textContent = 'Finalizing Details';
+                hudSmartTip.innerHTML = 'Lot selected! Provide any remaining booking date or time details to proceed.';
+            } else if (state.lot_type || state.budget) {
+                blueprintProgressBadge.textContent = 'Step 2 of 4';
+                hudStatus.textContent = 'Lot Matching';
+                hudSmartTip.innerHTML = 'Review recommended lots below or tell me if you have a budget adjustment.';
+            } else {
+                blueprintProgressBadge.textContent = 'Step 1 of 4';
+                hudStatus.textContent = 'In Progress';
+                hudSmartTip.innerHTML = 'Tell me who this booking is for, preferred date, and budget (e.g. <em>"Juan Cruz, August 28, budget 25k"</em>).';
+            }
+        }
+
+        function updatePromptSuggestions() {
+            if (!chatPromptSuggestions) return;
+            const state = chatAssistant ? chatAssistant.state : {};
+            chatPromptSuggestions.innerHTML = '';
+
+            const suggestions = [];
+
+            if (state.decedent_id === null && decedents.length > 0) {
+                const sampleDecedents = decedents.slice(0, 3);
+                sampleDecedents.forEach(d => {
+                    suggestions.push({
+                        label: `👤 ${d.first_name} ${d.last_name}`,
+                        text: `${d.first_name} ${d.last_name}`,
+                    });
+                });
+            } else if (state.lot_type === null) {
+                suggestions.push({ label: '✨ Recommend a type for me', text: 'Recommend a type for me' });
+                if (lotTypes.length > 0) {
+                    lotTypes.slice(0, 3).forEach(t => {
+                        suggestions.push({ label: `🏛️ ${t.type_name}`, text: t.type_name });
+                    });
+                }
+                suggestions.push({ label: '⏭️ No preference on type', text: 'no preference' });
+            } else if (state.budget === null) {
+                suggestions.push({ label: '💰 Budget under ₱20,000', text: '20000' });
+                suggestions.push({ label: '💰 Budget under ₱40,000', text: '40000' });
+                suggestions.push({ label: '💰 Budget under ₱60,000', text: '60000' });
+                suggestions.push({ label: '⏭️ Any budget / No limit', text: 'no preference' });
+            } else if (state.date === null) {
+                const now = new Date();
+                const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+                // Avoid Monday for default prompt
+                if (tomorrow.getDay() === 1) tomorrow.setDate(tomorrow.getDate() + 1);
+                const dateIso = tomorrow.toISOString().split('T')[0];
+                const dateLabel = tomorrow.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                suggestions.push({ label: `📅 ${dateLabel}`, text: dateIso });
+                suggestions.push({ label: '🌅 Morning 9:00 AM', text: 'Morning 9:00 AM' });
+                suggestions.push({ label: '☀️ Afternoon 2:00 PM', text: 'Afternoon 2:00 PM' });
+            }
+
+            if (suggestions.length === 0) {
+                suggestions.push({ label: '❓ What documents are required?', text: 'What documents are required for burial?' });
+                suggestions.push({ label: '❓ Can we book on weekends?', text: 'Can we schedule burials on weekends?' });
+            }
+
+            suggestions.forEach(item => {
+                const chip = document.createElement('span');
+                chip.className = 'prompt-chip';
+                chip.innerHTML = item.label;
+                chip.addEventListener('click', () => {
+                    if (chatAssistant && !chatInput.disabled) {
+                        chatAssistant.processMessage(item.text);
+                    }
+                });
+                chatPromptSuggestions.appendChild(chip);
+            });
+        }
+
         function validateBookingDate(dateStr) {
             const todayIso = new Date().toISOString().split('T')[0];
             if (dateStr < todayIso) {
-                return { valid: false, reason: 'That date has already passed. Could you give me a future date?' };
+                return { valid: false, reason: 'That date has already passed. Please provide a future burial date.' };
             }
             const selected = new Date(`${dateStr}T00:00:00`);
             if (selected.getDay() === 1) { // 1 = Monday
-                return { valid: false, reason: 'Monday booking is not allowed. Please select another day of the week.' };
+                return { valid: false, reason: 'Monday burial booking is not permitted due to weekly cemetery maintenance. Please select another day.' };
             }
             return { valid: true };
         }
@@ -190,45 +399,50 @@ function createBookingWizard(options) {
             }
         }
 
-        // Phase 3: purely presentational — renders whatever reasons[] the
-        // existing recommendation engine already returned. Never invents a
-        // reason and never touches score/ranking/ordering.
         function buildRecommendationExplanation(lot, isFallback) {
             if (isFallback) {
-                return '<div class="recommendation-reasons-empty">AI recommendations are temporarily unavailable — shown for manual browsing.</div>';
+                return '<div class="recommendation-reasons-empty">AI recommendations are temporarily unavailable — showing available lots for direct selection.</div>';
             }
             const reasons = Array.isArray(lot.reasons) ? lot.reasons : [];
             if (!reasons.length) {
-                return '<div class="recommendation-reasons-empty">No specific preferences were matched — shown as an available lot.</div>';
+                return '<div class="recommendation-reasons-empty">Available lot matching general cemetery capacity.</div>';
             }
             return `
-                <div class="recommendation-reasons-label">Why this is recommended:</div>
+                <div class="recommendation-reasons-label"><i class="fas fa-wand-magic-sparkles"></i> Why this is recommended:</div>
                 <ul class="recommendation-reasons">${reasons.map(reason => `<li>${reason}</li>`).join('')}</ul>
             `;
         }
 
         function buildLotCard(lot, isFallback) {
             const hasScore = !isFallback && lot.score !== undefined && lot.score !== null;
+            const priceFormatted = `₱${parseFloat(lot.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const scoreHtml = hasScore ? `<span class="score-badge"><i class="fas fa-wand-magic-sparkles"></i> ${lot.score}% Match</span>` : '';
             return `
                 <div class="recommendation-card" data-lot-id="${lot.lot_id}">
                     <div>
-                        <strong>${lot.lot_number} — ${lot.section_name || 'N/A'}</strong><br>
-                        <span class="lot-type-tag">${lot.lot_type_name || 'N/A'}</span> | ₱${parseFloat(lot.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}<br>
-                        ${renderStatusBadge(lot)}
+                        <div class="card-header-badge-row">
+                            <div class="lot-num-title"><i class="fas fa-monument"></i> ${lot.lot_number}</div>
+                            ${scoreHtml}
+                        </div>
+                        <div class="card-meta-pills">
+                            <span class="meta-pill section"><i class="fas fa-map-pin"></i> ${lot.section_name || 'Standard Section'}</span>
+                            <span class="meta-pill"><i class="fas fa-layer-group"></i> ${lot.lot_type_name || 'Lawn Lot'}</span>
+                            <span class="meta-pill price">${priceFormatted}</span>
+                        </div>
+                        <div style="margin-top: 8px;">
+                            ${renderStatusBadge(lot)}
+                        </div>
                     </div>
-                    <div class="recommendation-actions">
-                        ${hasScore ? `<div class="score">${lot.score || 0}% suitability</div>` : ''}
+                    <div class="recommendation-reasons-box">
                         ${buildRecommendationExplanation(lot, isFallback)}
-                        <button class="select-lot-btn" type="button" data-lot='${JSON.stringify(lot)}'>Reserve</button>
                     </div>
+                    <button class="select-lot-btn" type="button" data-lot='${JSON.stringify(lot)}'>
+                        <i class="fas fa-check-circle"></i> Reserve This Lot
+                    </button>
                 </div>
             `;
         }
 
-        // Scoped to the specific rich-message bubble that was just rendered
-        // — earlier recommendation messages stay visible in the thread as
-        // history, so a global querySelectorAll here would re-wire (and
-        // eventually double-fire) listeners on old cards too.
         function attachSelectHandlers(bubble) {
             bubble.querySelectorAll('.select-lot-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -243,7 +457,7 @@ function createBookingWizard(options) {
                 const availableLots = await api.request('lots?status=Available', { method: 'GET' });
                 const lots = Array.isArray(availableLots) ? availableLots.slice(0, 10) : [];
                 if (lots.length === 0) {
-                    chatAssistant.appendMessage('assistant', 'No available lots to display right now. Please try again later.');
+                    chatAssistant.appendMessage('assistant', 'No available lots to display right now. Please check back later.');
                     return;
                 }
                 const bubble = chatAssistant.appendRichMessage(
@@ -258,16 +472,6 @@ function createBookingWizard(options) {
             }
         }
 
-        // Batch N: called automatically the moment lot_type+budget are
-        // known (see onLotPreferencesReady below) — no button click
-        // required. Renders the outcome as a message, then the cards
-        // themselves as the next message, matching how a human assistant
-        // would say "I found N options" before listing them.
-        // Batch O: marks whatever recommendation set is currently "active" as
-        // stale BEFORE running the new fetch — covers every outcome (success,
-        // empty, error/fallback) uniformly, since the audit's requirement is
-        // "preferences changed -> the old set is outdated," not conditional
-        // on the new fetch actually succeeding.
         function invalidateActiveRecommendations() {
             if (latestRecommendationBubble) {
                 latestRecommendationBubble.classList.add('recommendations-stale');
@@ -315,68 +519,94 @@ function createBookingWizard(options) {
         function selectLot(lot) {
             selectedLot = lot;
             confirmationShown = false;
-            // Batch O: a user picking a different lot (via a card click or a
-            // conversational reference) after already confirming one earlier
-            // must not leave the old, now-wrong confirmation box on screen.
             if (confirmationBubble) {
                 confirmationBubble.remove();
                 confirmationBubble = null;
             }
             chatAssistant.appendMessage('user', `Reserve Lot ${lot.lot_number}`);
+            updateBlueprintHUD();
             renderConfirmationIfReady();
         }
 
-        // The single place that decides "do we have everything needed to
-        // finalize a booking yet?" — called right after a lot is picked,
-        // and again via onStateChanged whenever decedent/date resolve
-        // afterward (chat, or the escape hatch), so the confirmation
-        // appears automatically the moment the last piece falls into place
-        // regardless of which order the user provided things in.
         function renderConfirmationIfReady() {
             if (!selectedLot || confirmationShown) return;
             const state = chatAssistant.state;
-            // Batch Q: decedent is now asked before lot preferences (see
-            // getNextMissingSlot() in lot-chat-assistant.js), so in the normal
-            // flow date is the only thing left missing here — phrase that
-            // case as a direct question, matching how a human assistant would
-            // ask it ("What date would you prefer?"), instead of the generic
-            // "I still need X" fallback still used for the rarer case (e.g.
-            // the ?lot_id= pre-select path) where both are still missing.
             const decedentMissing = state.decedent_id === null;
             const dateMissing = state.date === null;
+
             if (decedentMissing && dateMissing) {
-                chatAssistant.appendMessage('assistant', `Great choice — Lot ${selectedLot.lot_number}. Before I can finalize this booking, I still need who this booking is for and the burial date.`);
+                chatAssistant.appendMessage('assistant', `Great choice — Lot ${selectedLot.lot_number}. Before I finalize this reservation, who is this booking for and what is the burial date?`);
+                updateBlueprintHUD();
                 return;
             }
             if (decedentMissing) {
                 chatAssistant.appendMessage('assistant', `Great choice — Lot ${selectedLot.lot_number}. Who is this burial for?`);
+                updateBlueprintHUD();
                 return;
             }
             if (dateMissing) {
                 chatAssistant.appendMessage('assistant', `Great choice — Lot ${selectedLot.lot_number}. What date would you prefer for the burial?`);
+                updateBlueprintHUD();
                 return;
             }
 
             confirmationShown = true;
             const decedent = decedents.find(d => d.decedent_id === state.decedent_id);
             const decedentName = decedent ? `${decedent.first_name} ${decedent.last_name}` : 'N/A';
+            const priceFormatted = `₱${parseFloat(selectedLot.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const dateFormatted = new Date(`${state.date}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
             const html = `
-                <div class="confirmation-box">
-                    <p><strong>Lot:</strong> ${selectedLot.lot_number} (${selectedLot.section_name || 'N/A'})</p>
-                    <p><strong>Type:</strong> ${selectedLot.lot_type_name || 'N/A'}</p>
-                    <p><strong>Price:</strong> ₱${parseFloat(selectedLot.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                    <p><strong>Burial Date:</strong> ${state.date}</p>
-                    <p><strong>Burial Time:</strong> ${state.time || 'Not specified'}</p>
-                    <p><strong>Decedent:</strong> ${decedentName}</p>
-                    <p class="muted">This reservation will remain pending until an administrator or staff member reviews and approves it.</p>
-                    <div class="form-actions">
-                        <button type="button" class="btn-confirm confirm-booking-btn">Confirm & Book</button>
+                <div class="reservation-voucher">
+                    <div class="voucher-header">
+                        <div class="voucher-title">
+                            <i class="fas fa-file-invoice"></i>
+                            <span>Official Reservation Summary</span>
+                        </div>
+                        <span class="voucher-status-pill">Pending Review</span>
                     </div>
+
+                    <div class="voucher-grid">
+                        <div class="voucher-item">
+                            <span class="voucher-item-label"><i class="fas fa-user"></i> Decedent Name</span>
+                            <span class="voucher-item-val">${decedentName}</span>
+                        </div>
+                        <div class="voucher-item">
+                            <span class="voucher-item-label"><i class="fas fa-monument"></i> Allocated Lot</span>
+                            <span class="voucher-item-val">${selectedLot.lot_number} (${selectedLot.section_name || 'N/A'})</span>
+                        </div>
+                        <div class="voucher-item">
+                            <span class="voucher-item-label"><i class="fas fa-calendar-alt"></i> Scheduled Date</span>
+                            <span class="voucher-item-val">${dateFormatted}</span>
+                        </div>
+                        <div class="voucher-item">
+                            <span class="voucher-item-label"><i class="fas fa-clock"></i> Scheduled Time</span>
+                            <span class="voucher-item-val">${state.time ? state.time : 'Standard Schedule'}</span>
+                        </div>
+                        <div class="voucher-item">
+                            <span class="voucher-item-label"><i class="fas fa-layer-group"></i> Lot Type</span>
+                            <span class="voucher-item-val">${selectedLot.lot_type_name || 'Standard'}</span>
+                        </div>
+                        <div class="voucher-item">
+                            <span class="voucher-item-label"><i class="fas fa-tag"></i> Estimated Amount</span>
+                            <span class="voucher-item-val highlight">${priceFormatted}</span>
+                        </div>
+                    </div>
+
+                    <div class="voucher-notice">
+                        <i class="fas fa-info-circle"></i> This reservation request will be recorded and queued for administration review and lot allotment verification.
+                    </div>
+
+                    <button type="button" class="btn-confirm confirm-booking-btn">
+                        <i class="fas fa-check-double"></i> Confirm & Submit Reservation
+                    </button>
                 </div>`;
+
             const bubble = chatAssistant.appendRichMessage(html);
             confirmationBubble = bubble;
             const confirmBtn = bubble.querySelector('.confirm-booking-btn');
             confirmBtn.addEventListener('click', () => submitBooking(bubble, confirmBtn));
+            updateBlueprintHUD();
         }
 
         async function submitBooking(bubble, confirmBtn) {
@@ -385,15 +615,12 @@ function createBookingWizard(options) {
                 try {
                     const conflict = await api.request(`schedules/check-conflict?lot_id=${selectedLot.lot_id}&date=${state.date}${state.time ? `&time=${encodeURIComponent(state.time)}` : ''}`);
                     if (!conflict.available) {
-                        // Batch O: also remove the stale confirmation bubble —
-                        // leaving it would let the user click "Confirm & Book"
-                        // a second time with selectedLot already null below,
-                        // which previously would have thrown on selectedLot.lot_id.
                         bubble.remove();
                         confirmationBubble = null;
                         chatAssistant.appendMessage('assistant', 'This lot is already booked for the selected date/time. Please choose another lot or a different date.');
                         confirmationShown = false;
                         selectedLot = null;
+                        updateBlueprintHUD();
                         return;
                     }
                     const payload = {
@@ -410,7 +637,8 @@ function createBookingWizard(options) {
                         const scheduleId = result.schedule_id;
                         bubble.remove();
                         confirmationBubble = null;
-                        chatAssistant.appendMessage('assistant', `Your reservation for Lot ${bookedLot.lot_number} is confirmed and pending approval.`);
+                        chatAssistant.appendMessage('assistant', `🎉 Success! Your reservation for Lot ${bookedLot.lot_number} is confirmed and queued for approval.`);
+                        updateBlueprintHUD();
                         onBookingSuccess({ scheduleId, bookedLot });
                     } else {
                         chatAssistant.appendMessage('assistant', result.error || 'Failed to create schedule.');
@@ -421,12 +649,6 @@ function createBookingWizard(options) {
             });
         }
 
-        // Batch O: intercepts messages that look like a lot selection
-        // ("the second one", "pick the cheapest", "Lot A-102") before the
-        // chat assistant's own slot-filling parsing runs, resolves them
-        // against latestRecommendations, and echoes+responds itself. Returns
-        // false for anything that doesn't look like a selection so normal
-        // parsing continues untouched.
         async function tryHandleLotSelectionText(text) {
             const intent = parseLotSelectionIntent(text);
             if (!intent) return false;
@@ -457,9 +679,13 @@ function createBookingWizard(options) {
             interceptMessage: tryHandleLotSelectionText,
             onLotPreferencesReady: () => {
                 fetchAndRenderRecommendations(chatAssistant.getPreferences());
+                updateBlueprintHUD();
+                updatePromptSuggestions();
             },
             onPreferencesCorrected: async () => {
                 await fetchAndRenderRecommendations(chatAssistant.getPreferences());
+                updateBlueprintHUD();
+                updatePromptSuggestions();
             },
             onBookingDetailsCorrected: () => {
                 if (confirmationBubble) {
@@ -468,9 +694,13 @@ function createBookingWizard(options) {
                     confirmationShown = false;
                     chatAssistant.appendMessage('assistant', "Since your details changed, here's the updated summary once everything is set.");
                 }
+                updateBlueprintHUD();
                 if (selectedLot) renderConfirmationIfReady();
+                updatePromptSuggestions();
             },
             onStateChanged: () => {
+                updateBlueprintHUD();
+                updatePromptSuggestions();
                 if (selectedLot && !confirmationShown) renderConfirmationIfReady();
             },
             onReset: () => {
@@ -479,6 +709,8 @@ function createBookingWizard(options) {
                 confirmationBubble = null;
                 latestRecommendations = [];
                 latestRecommendationBubble = null;
+                updateBlueprintHUD();
+                updatePromptSuggestions();
             },
         });
 
@@ -500,10 +732,9 @@ function createBookingWizard(options) {
 
         await Promise.all([loadDecedents(), loadLookupData()]);
         chatAssistant.init();
+        updateBlueprintHUD();
+        updatePromptSuggestions();
 
-        // Lot Management's "Book This Lot" action links here with ?lot_id=
-        // — pre-select that lot and let the chat collect whatever's still
-        // missing (decedent/date), same as picking a lot from chat results.
         const urlParams = new URLSearchParams(window.location.search);
         const urlLotId = urlParams.get('lot_id');
         if (urlLotId) {
@@ -512,6 +743,7 @@ function createBookingWizard(options) {
                 if (lot && !lot.error) {
                     selectedLot = lot;
                     chatAssistant.appendMessage('assistant', `I've pre-selected Lot ${lot.lot_number} for you from Lot Management. Let's get the rest sorted — who is this booking for, and what burial date would you like?`);
+                    updateBlueprintHUD();
                     renderConfirmationIfReady();
                 }
             } catch (err) {
