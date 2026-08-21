@@ -76,4 +76,25 @@ class DecedentRequestController {
         $result = $this->requestModel->reject($id, $data['rejection_reason'], $reviewerId);
         return $result ? ['success' => true, 'message' => 'Request rejected'] : ['error' => 'Failed to reject request', 'code' => 500];
     }
+
+    // Called by the chat assistant right after it shows a status line for
+    // this request, so the same "still pending"/"has been added" message
+    // doesn't repeat on every future chat load. Ownership-checked — a
+    // citizen may only acknowledge their own request; admin/staff can
+    // acknowledge any (mirrors how they can already see/act on any request).
+    public function acknowledge($id, $user) {
+        $request = $this->requestModel->findById($id);
+        if (!$request) {
+            return ['error' => 'Request not found', 'code' => 404];
+        }
+
+        $userId = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        $role = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
+        if (!in_array($role, ['admin', 'staff'], true) && (int) $request['requested_by'] !== (int) $userId) {
+            return ['error' => 'You may only acknowledge your own requests', 'code' => 403];
+        }
+
+        $result = $this->requestModel->markNotified($id, $request['status']);
+        return $result ? ['success' => true] : ['error' => 'Failed to acknowledge request', 'code' => 500];
+    }
 }

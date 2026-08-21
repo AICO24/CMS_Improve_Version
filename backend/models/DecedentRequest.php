@@ -70,4 +70,13 @@ class DecedentRequest {
         ");
         return $stmt->execute([$reason, $reviewedBy, $id]);
     }
+
+    // Records which status the citizen was actually shown, so the chat
+    // assistant's status line only reappears when status changes again
+    // (approve()/reject() above never touch this column themselves) instead
+    // of on every single chat load forever.
+    public function markNotified($id, $status) {
+        $stmt = $this->db->prepare("UPDATE decedent_requests SET last_notified_status = ? WHERE request_id = ?");
+        return $stmt->execute([$status, $id]);
+    }
 }

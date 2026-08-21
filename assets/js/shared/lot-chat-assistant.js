@@ -571,15 +571,18 @@ function createLotChatAssistant(options) {
     // approximate date of death, relationship) — staff still creates the
     // real decedent_records row (lot assignment, cause of death, contact
     // info) through the existing form, this is only an intake queue.
-    function escapeHtmlAttr(value) {
-        return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    function appendDecedentRequestForm(prefillName) {
+    //
+    // Bugfix (found live): this used to pre-fill the name input with the
+    // raw chat message that triggered it (e.g. "I need burial for my friend
+    // John Doe.") on the assumption the user would edit it down to just a
+    // name — in practice they usually didn't, so that whole sentence became
+    // the submitted full_name. Left blank now, forcing a deliberate, clean
+    // name instead of a guess nobody double-checks.
+    function appendDecedentRequestForm() {
         const bubble = appendRichMessage(`
             <div class="chat-decedent-request">
                 <label>Request to add this person:</label>
-                <input type="text" class="chat-request-name" placeholder="Full name" value="${escapeHtmlAttr(prefillName)}">
+                <input type="text" class="chat-request-name" placeholder="Full name">
                 <input type="date" class="chat-request-dod" max="${new Date().toISOString().split('T')[0]}">
                 <input type="text" class="chat-request-relationship" placeholder="Relationship (optional)">
                 <button type="button" class="btn-secondary chat-request-btn">Send request</button>
@@ -1080,7 +1083,7 @@ function createLotChatAssistant(options) {
                 : 'Could you share a budget? For example: 8000 or ₱8,000. You can also say "no preference".');
         } else if (pendingSlot === 'decedent_id' && !(ambiguousDecedentCandidates && ambiguousDecedentCandidates.length)) {
             appendMessage('assistant', "I couldn't find a decedent record matching that name. Could you check the spelling? If they're genuinely not in our system yet, you can request to add them below.");
-            appendDecedentRequestForm(text);
+            appendDecedentRequestForm();
         }
 
         if (ambiguousDecedentCandidates && ambiguousDecedentCandidates.length) {
@@ -1172,19 +1175,37 @@ function createLotChatAssistant(options) {
     // the entire "notify the citizen" mechanism (deliberately not the
     // shared/global notifications table — it has no per-user targeting, so
     // a private "your request was approved" message doesn't fit it without
-    // separate work). Checked once per chat load; ignores rejected requests
-    // (out of scope for this batch — see the request-flow plan).
+    // separate work). Ignores rejected requests (out of scope for this
+    // batch — see the request-flow plan).
+    //
+    // Bugfix (found live): this used to show a status line for EVERY
+    // pending/approved request on EVERY chat load, forever — a request
+    // that had already been approved (and already announced) kept
+    // reappearing on every single visit with no way to stop it. Now only
+    // fires when request.status differs from request.last_notified_status
+    // (server-tracked — see DecedentRequestController::acknowledge()),
+    // and immediately acknowledges it after showing so the same status
+    // doesn't repeat. A later status change (e.g. a second request later
+    // gets approved) still shows again, since that's a genuinely new update.
     async function checkMyDecedentRequests() {
         try {
             const requests = await api.request('decedent-requests/mine', { method: 'GET' });
             if (!Array.isArray(requests)) return;
-            requests.forEach(request => {
+            for (const request of requests) {
+                if (request.status === request.last_notified_status) continue;
                 if (request.status === 'approved') {
                     appendMessage('assistant', `Update: ${request.full_name} has been added to our records — you can book for them now.`);
                 } else if (request.status === 'pending') {
                     appendMessage('assistant', `Your request to add ${request.full_name} is still awaiting staff review.`);
+                } else {
+                    continue;
                 }
-            });
+                try {
+                    await api.request(`decedent-requests/${request.request_id}/acknowledge`, { method: 'PUT' });
+                } catch (ackError) {
+                    console.error('Failed to acknowledge decedent request notification', ackError);
+                }
+            }
         } catch (error) {
             console.error('Failed to check decedent requests', error);
         }

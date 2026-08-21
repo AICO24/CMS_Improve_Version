@@ -1135,5 +1135,14 @@ if (preg_match('/^decedent-requests\/(\d+)\/reject$/', $path, $matches) && $requ
     exit;
 }
 
+if (preg_match('/^decedent-requests\/(\d+)\/acknowledge$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $decedentRequestController->acknowledge($matches[1], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 http_response_code(404);
 echo json_encode(['error' => 'Endpoint not found']);
