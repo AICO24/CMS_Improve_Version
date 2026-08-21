@@ -1,9 +1,6 @@
 /* Payments module styles */
 .dashboard-body {
-    background:
-        radial-gradient(circle at 14% 8%, rgba(44, 94, 71, 0.10), transparent 28%),
-        radial-gradient(circle at 88% 18%, rgba(37, 99, 235, 0.08), transparent 24%),
-        linear-gradient(180deg, #f6faf7 0%, #f4f7fa 42%, #eef3f7 100%);
+    background: #f4f7fa;
     font-family: 'Inter', sans-serif;
     color: #243736;
 }
@@ -77,35 +74,10 @@
     margin-left: 260px;
     min-height: 100vh;
     transition: margin-left 220ms ease;
-    position: relative;
-    isolation: isolate;
-    background:
-        radial-gradient(circle at 12% 6%, rgba(44, 94, 71, 0.20), transparent 32%),
-        radial-gradient(circle at 88% 14%, rgba(37, 99, 235, 0.14), transparent 28%),
-        linear-gradient(180deg, #eef8f1 0%, #f4f7fa 44%, #eaf0f4 100%);
-}
-
-.main-content::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    background:
-        radial-gradient(circle at 20% 28%, rgba(122, 167, 122, 0.34), transparent 24%),
-        radial-gradient(circle at 78% 42%, rgba(43, 54, 88, 0.16), transparent 26%),
-        linear-gradient(135deg, rgba(44, 94, 71, 0.14), rgba(37, 99, 235, 0.09) 45%, rgba(244, 247, 250, 0));
-}
-
-.top-bar,
-.content-area {
-    position: relative;
-    z-index: 1;
 }
 
 .top-bar {
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(234, 243, 238, 0.74)),
-        linear-gradient(90deg, rgba(44, 94, 71, 0.12), rgba(37, 99, 235, 0.07));
+    background: #fff;
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     padding: 16px 24px;
