@@ -96,7 +96,7 @@ class Payment {
     }
 
     public function findById($id) {
-        $stmt = $this->db->prepare("SELECT p.*, u.full_name AS received_by_name FROM payments p LEFT JOIN users u ON p.received_by = u.user_id WHERE p.payment_id = ?");
+        $stmt = $this->db->prepare("SELECT p.*, u.full_name AS received_by_name, v.full_name AS verified_by_name FROM payments p LEFT JOIN users u ON p.received_by = u.user_id LEFT JOIN users v ON p.verified_by = v.user_id WHERE p.payment_id = ?");
         $stmt->execute([$id]);
         return $stmt->fetch();
     }
@@ -162,6 +162,12 @@ class Payment {
     public function delete($id) {
         $stmt = $this->db->prepare("DELETE FROM payments WHERE payment_id = ?");
         return $stmt->execute([$id]);
+    }
+
+    public function receiptNumberExists($receiptNumber) {
+        $stmt = $this->db->prepare("SELECT COUNT(*) AS total FROM payments WHERE receipt_number = ?");
+        $stmt->execute([$receiptNumber]);
+        return (int) ($stmt->fetch()['total'] ?? 0) > 0;
     }
 
     public function getRevenue($filters = []) {

@@ -15,7 +15,7 @@ class AuthController {
     public function login($data) {
         $inputUser = trim((string) ($data['username'] ?? $data['email'] ?? ''));
         $password = (string) ($data['password'] ?? '');
-        $selectedRole = isset($data['role']) ? strtolower((string) $data['role']) : null;
+        $selectedRole = isset($data['role']) ? $this->normalizeRoleKey($data['role']) : null;
 
         if ($inputUser === '' || $password === '') {
             return ['error' => 'Email/Username and password are required', 'code' => 400];
@@ -38,7 +38,7 @@ class AuthController {
             return ['error' => 'Account is deactivated', 'code' => 403];
         }
 
-        $role = $this->userModel->getRole($user['user_id']);
+        $role = $this->normalizeRoleKey($this->userModel->getRole($user['user_id']));
         if ($selectedRole && $role && $selectedRole !== $role) {
             return ['error' => 'Selected role does not match the account role', 'code' => 403];
         }
@@ -77,6 +77,27 @@ class AuthController {
                 'is_active' => (bool) ($user['is_active'] ?? 1),
             ],
         ];
+    }
+
+    private function normalizeRoleKey($role) {
+        $value = strtolower(trim((string) $role));
+        if ($value === '') {
+            return null;
+        }
+
+        if (strpos($value, 'admin') !== false) {
+            return 'admin';
+        }
+
+        if (strpos($value, 'staff') !== false) {
+            return 'staff';
+        }
+
+        if (strpos($value, 'user') !== false) {
+            return 'user';
+        }
+
+        return $value;
     }
 
     public function register($data) {

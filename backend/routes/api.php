@@ -640,6 +640,24 @@ if (preg_match('/^payments\/(\d+)\/verify$/', $path, $matches) && $requestMethod
     exit;
 }
 
+if ($path === 'payments/pending/verify-all' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin']);
+    $result = $paymentController->verifyAllPending('Verified', $user['user_id']);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if ($path === 'payments/pending/reject-all' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin']);
+    $result = $paymentController->verifyAllPending('Rejected', $user['user_id']);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 if (preg_match('/^payments\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
     $user = AuthMiddleware::requireRole(['admin']);
     $result = $paymentController->destroy($matches[1], $user['user_id']);

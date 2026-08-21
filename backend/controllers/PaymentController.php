@@ -5,6 +5,9 @@ require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../models/Schedule.php';
 require_once __DIR__ . '/../models/Lot.php';
+require_once __DIR__ . '/../models/Cremation.php';
+require_once __DIR__ . '/../models/Relocation.php';
+require_once __DIR__ . '/../models/ExpirationRecord.php';
 
 class PaymentController {
     private $paymentModel;
@@ -57,7 +60,10 @@ class PaymentController {
     // Renewal/Other have no linked price column anywhere in the schema, so those
     // simply resolve to null (handled as "not available" by callers).
     public function resolveExpectedAmount($transactionType, $referenceId) {
-        if ($transactionType !== 'Lot Purchase' || empty($referenceId)) {
+        $transactionType = $this->normalizeTransactionType($transactionType);
+        $referenceId = $this->normalizeReferenceId($referenceId);
+
+        if ($transactionType !== 'Lot Purchase' || $referenceId === null) {
             return ['expected_amount' => null];
         }
 
@@ -92,6 +98,153 @@ class PaymentController {
         return ['expected_amount' => null];
     }
 
+    private function normalizeTransactionType($transactionType) {
+        $value = strtolower(trim((string) $transactionType));
+        $map = [
+            'lot purchase' => 'Lot Purchase',
+            'cremation' => 'Cremation',
+            'relocation' => 'Relocation',
+            'renewal' => 'Renewal',
+            'other' => 'Other',
+        ];
+
+        return $map[$value] ?? null;
+    }
+
+    private function normalizeReferenceId($referenceId) {
+        if ($referenceId === null || $referenceId === '') {
+            return null;
+        }
+
+        if (!is_numeric($referenceId)) {
+            return null;
+        }
+
+        return (int) $referenceId;
+    }
+
+    // Confirms reference_id actually points at a real, payable record before a
+    // payment is accepted for it — mirrors resolveExpectedAmount()'s own
+    // schedule-then-lot fallback for Lot Purchase, and adds the same kind of
+    // existence/state check for the transaction types that had none before.
+    private function validatePaymentReference($transactionType, $referenceId, $userId, $userRole) {
+        $transactionType = $this->normalizeTransactionType($transactionType);
+        if ($transactionType === null) {
+            return ['error' => 'Invalid transaction type', 'code' => 400];
+        }
+
+        $referenceId = $this->normalizeReferenceId($referenceId);
+        $roleName = strtolower(trim((string) $userRole));
+
+        switch ($transactionType) {
+            case 'Lot Purchase':
+                if ($referenceId === null) {
+                    return ['error' => 'Lot Purchase payments require a valid reservation or lot reference', 'code' => 400];
+                }
+
+                $scheduleModel = new Schedule();
+                $lotModel = new Lot();
+                $schedule = $scheduleModel->findById($referenceId);
+                if ($schedule) {
+                    if ($roleName === 'user' && (int) ($schedule['created_by'] ?? 0) !== (int) $userId) {
+                        return ['error' => 'You may only pay for your own reservation', 'code' => 403];
+                    }
+                    if (($schedule['status'] ?? '') === 'Cancelled') {
+                        return ['error' => 'Cancelled reservations cannot be paid', 'code' => 409];
+                    }
+
+                    $lot = $lotModel->findById($schedule['lot_id']);
+                    if (!$lot) {
+                        return ['error' => 'Reservation lot not found', 'code' => 404];
+                    }
+
+                    return [
+                        'reference_id' => $referenceId,
+                        'reference_label' => 'Reservation #' . $schedule['schedule_id'] . ' - Lot ' . ($schedule['lot_number'] ?? 'N/A'),
+                    ];
+                }
+
+                if ($roleName === 'user') {
+                    return ['error' => 'User payments must reference a valid reservation', 'code' => 403];
+                }
+
+                $lot = $lotModel->findById($referenceId);
+                if (!$lot) {
+                    return ['error' => 'Lot reference not found', 'code' => 404];
+                }
+
+                return [
+                    'reference_id' => $referenceId,
+                    'reference_label' => 'Lot ' . ($lot['lot_number'] ?? $referenceId),
+                ];
+
+            case 'Cremation':
+                if ($referenceId === null) {
+                    return ['error' => 'Cremation payments require a valid cremation reference', 'code' => 400];
+                }
+
+                $cremationModel = new Cremation();
+                $cremation = $cremationModel->findById($referenceId);
+                if (!$cremation) {
+                    return ['error' => 'Cremation reference not found', 'code' => 404];
+                }
+                if (($cremation['status'] ?? '') === 'Cancelled') {
+                    return ['error' => 'Cancelled cremation records cannot be paid', 'code' => 409];
+                }
+
+                return [
+                    'reference_id' => $referenceId,
+                    'reference_label' => 'Cremation #' . $cremation['cremation_id'],
+                ];
+
+            case 'Relocation':
+                if ($referenceId === null) {
+                    return ['error' => 'Relocation payments require a valid relocation reference', 'code' => 400];
+                }
+
+                $relocationModel = new Relocation();
+                $relocation = $relocationModel->findById($referenceId);
+                if (!$relocation) {
+                    return ['error' => 'Relocation reference not found', 'code' => 404];
+                }
+                if (($relocation['status'] ?? '') === 'Denied') {
+                    return ['error' => 'Denied relocation requests cannot be paid', 'code' => 409];
+                }
+
+                return [
+                    'reference_id' => $referenceId,
+                    'reference_label' => 'Relocation #' . $relocation['request_id'],
+                ];
+
+            case 'Renewal':
+                if ($referenceId === null) {
+                    return ['error' => 'Renewal payments require an expiration record reference', 'code' => 400];
+                }
+
+                $expirationModel = new ExpirationRecord();
+                $expiration = $expirationModel->findById($referenceId);
+                if (!$expiration) {
+                    return ['error' => 'Expiration reference not found', 'code' => 404];
+                }
+                if (($expiration['renewed'] ?? 'no') === 'yes') {
+                    return ['error' => 'This expiration record has already been renewed', 'code' => 409];
+                }
+
+                return [
+                    'reference_id' => $referenceId,
+                    'reference_label' => 'Expiration #' . $expiration['expiration_id'] . ' - Lot ' . ($expiration['lot_number'] ?? 'N/A'),
+                ];
+
+            case 'Other':
+                return [
+                    'reference_id' => $referenceId,
+                    'reference_label' => $referenceId === null ? null : ('Reference #' . $referenceId),
+                ];
+        }
+
+        return ['error' => 'Invalid transaction type', 'code' => 400];
+    }
+
     public function show($id, $user = null) {
         $payment = $this->paymentModel->findById($id);
         if (!$payment) {
@@ -122,6 +275,23 @@ class PaymentController {
             return ['error' => 'Amount must be a positive number', 'code' => 400];
         }
 
+        $transactionType = $this->normalizeTransactionType($data['transaction_type']);
+        if ($transactionType === null) {
+            return ['error' => 'Invalid transaction type', 'code' => 400];
+        }
+
+        $receiptNumber = trim((string) ($data['receipt_number'] ?? ''));
+        if ($receiptNumber !== '' && $this->paymentModel->receiptNumberExists($receiptNumber)) {
+            return ['error' => 'Receipt number already exists', 'code' => 409];
+        }
+
+        $userModel = new User();
+        $userRole = strtolower((string) $userModel->getRole($userId));
+        $referenceCheck = $this->validatePaymentReference($transactionType, $data['reference_id'] ?? null, $userId, $userRole);
+        if (isset($referenceCheck['error'])) {
+            return $referenceCheck;
+        }
+
         $receiptFile = $data['receipt_file'] ?? null;
         if (empty($receiptFile) && !empty($data['files']['receipt_file'])) {
             $receiptFile = $data['files']['receipt_file'];
@@ -134,6 +304,8 @@ class PaymentController {
             $data['receipt_url'] = $receiptUrl;
         }
 
+        $data['transaction_type'] = $transactionType;
+        $data['reference_id'] = $referenceCheck['reference_id'];
         $data['received_by'] = $userId;
         $data['verification_status'] = 'Pending';
         $paymentId = $this->paymentModel->create($data);
@@ -151,6 +323,7 @@ class PaymentController {
                 'message' => 'Payment recorded and pending verification',
                 'payment_id' => $paymentId,
                 'receipt_number' => $saved['receipt_number'] ?? null,
+                'reference_label' => $referenceCheck['reference_label'] ?? null,
                 'expected_amount' => $expected['expected_amount'],
                 'amount_mismatch' => $expected['expected_amount'] !== null
                     && abs((float) $data['amount'] - $expected['expected_amount']) > 0.001,
@@ -169,17 +342,36 @@ class PaymentController {
         $userRole = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
         $isStaffOrAdmin = in_array($userRole, ['admin', 'staff'], true);
 
+        // Once a payment has been verified/rejected it's part of the audit trail —
+        // nobody, including staff/admin, edits it after the fact anymore (mirrors
+        // destroy()'s new "Verified payments cannot be deleted" guard below).
+        if (($existing['verification_status'] ?? 'Pending') !== 'Pending') {
+            return ['error' => 'Only pending payments may be updated', 'code' => 403];
+        }
+
         if (!$isStaffOrAdmin) {
             if ((int) $existing['received_by'] !== (int) $userId) {
                 return ['error' => 'You may only update your own payments', 'code' => 403];
-            }
-            if ($existing['verification_status'] !== 'Pending') {
-                return ['error' => 'Only pending payments may be updated', 'code' => 403];
             }
         }
 
         if (isset($data['amount']) && (!is_numeric($data['amount']) || (float) $data['amount'] <= 0)) {
             return ['error' => 'Amount must be a positive number', 'code' => 400];
+        }
+
+        $transactionType = $this->normalizeTransactionType($data['transaction_type'] ?? $existing['transaction_type']);
+        if ($transactionType === null) {
+            return ['error' => 'Invalid transaction type', 'code' => 400];
+        }
+
+        $referenceCheck = $this->validatePaymentReference(
+            $transactionType,
+            $data['reference_id'] ?? $existing['reference_id'],
+            $userId,
+            $userRole
+        );
+        if (isset($referenceCheck['error'])) {
+            return $referenceCheck;
         }
 
         $receiptFile = $data['receipt_file'] ?? null;
@@ -198,10 +390,31 @@ class PaymentController {
             return ['error' => 'Only administrators may change payment verification status via admin approval', 'code' => 403];
         }
 
+        $receiptNumber = trim((string) ($data['receipt_number'] ?? ''));
+        if ($receiptNumber === '') {
+            $receiptNumber = (string) ($existing['receipt_number'] ?? '');
+        } elseif ($receiptNumber !== (string) ($existing['receipt_number'] ?? '') && $this->paymentModel->receiptNumberExists($receiptNumber)) {
+            return ['error' => 'Receipt number already exists', 'code' => 409];
+        }
+
         // Preserve who the payment belongs to unless a staff/admin explicitly reassigns it;
         // previously this always overwrote received_by with the editor's own id.
         $data['received_by'] = isset($data['received_by']) ? $data['received_by'] : $existing['received_by'];
-        $result = $this->paymentModel->update($id, $data);
+        $updatePayload = [
+            'transaction_type' => $transactionType,
+            'reference_id' => $referenceCheck['reference_id'],
+            'amount' => $data['amount'] ?? $existing['amount'],
+            'payment_date' => $data['payment_date'] ?? $existing['payment_date'],
+            'payment_method' => $data['payment_method'] ?? $existing['payment_method'],
+            'receipt_number' => $receiptNumber,
+            'notes' => array_key_exists('notes', $data) ? $data['notes'] : $existing['notes'],
+            'received_by' => $data['received_by'],
+            'receipt_url' => $data['receipt_url'] ?? $existing['receipt_url'],
+            'verification_status' => $existing['verification_status'],
+            'verified_by' => $existing['verified_by'] ?? null,
+            'verified_at' => $existing['verified_at'] ?? null,
+        ];
+        $result = $this->paymentModel->update($id, $updatePayload);
 
         if (!$result) {
             return ['error' => 'Failed to update payment', 'code' => 500];
@@ -211,8 +424,8 @@ class PaymentController {
         // which fields actually changed, not a full before/after dump.
         $changedFields = [];
         foreach (['transaction_type', 'reference_id', 'amount', 'payment_date', 'payment_method', 'receipt_number', 'notes'] as $field) {
-            if (isset($data[$field]) && (string) $data[$field] !== (string) ($existing[$field] ?? '')) {
-                $changedFields[$field] = ['from' => $existing[$field] ?? null, 'to' => $data[$field]];
+            if (isset($updatePayload[$field]) && (string) $updatePayload[$field] !== (string) ($existing[$field] ?? '')) {
+                $changedFields[$field] = ['from' => $existing[$field] ?? null, 'to' => $updatePayload[$field]];
             }
         }
         $this->auditLogModel->log(
@@ -224,15 +437,13 @@ class PaymentController {
             ['receipt_number' => $existing['receipt_number'] ?? null, 'changed' => $changedFields]
         );
 
-        $expected = $this->resolveExpectedAmount(
-            $data['transaction_type'] ?? $existing['transaction_type'],
-            $data['reference_id'] ?? $existing['reference_id']
-        );
-        $submittedAmount = isset($data['amount']) ? (float) $data['amount'] : (float) $existing['amount'];
+        $expected = $this->resolveExpectedAmount($updatePayload['transaction_type'], $updatePayload['reference_id']);
+        $submittedAmount = (float) $updatePayload['amount'];
 
         return [
             'success' => true,
             'message' => 'Payment updated',
+            'reference_label' => $referenceCheck['reference_label'] ?? null,
             'expected_amount' => $expected['expected_amount'],
             'amount_mismatch' => $expected['expected_amount'] !== null
                 && abs($submittedAmount - $expected['expected_amount']) > 0.001,
@@ -335,6 +546,39 @@ class PaymentController {
         }
     }
 
+    // Bulk counterpart to verify() for the "Verify All Pending" / "Reject All
+    // Pending" toolbar actions — runs the exact same per-payment update +
+    // notification + lot-sync path as verify(), just looped, so a bulk Verify
+    // still flips any linked Lot Purchase lots the same way a single verify would.
+    public function verifyAllPending($status, $adminId) {
+        if (!in_array($status, ['Verified', 'Rejected'], true)) {
+            return ['error' => 'Invalid verification status', 'code' => 400];
+        }
+
+        $pendingPayments = $this->paymentModel->findAll(['verification_status' => 'Pending']);
+        if (empty($pendingPayments)) {
+            return [
+                'success' => true,
+                'message' => 'No pending payments found',
+                'updated' => 0,
+            ];
+        }
+
+        $updated = 0;
+        foreach ($pendingPayments as $payment) {
+            $result = $this->verify($payment['payment_id'], $status, $adminId);
+            if (!empty($result['success'])) {
+                $updated++;
+            }
+        }
+
+        return [
+            'success' => true,
+            'message' => sprintf('%d pending payment(s) %s', $updated, strtolower($status)),
+            'updated' => $updated,
+        ];
+    }
+
     private function sendEmail($email, $subject, $message) {
         if (empty($email)) {
             return false;
@@ -421,6 +665,11 @@ class PaymentController {
         if (!$existing) {
             return ['error' => 'Payment not found', 'code' => 404];
         }
+
+        if (($existing['verification_status'] ?? 'Pending') === 'Verified') {
+            return ['error' => 'Verified payments cannot be deleted', 'code' => 403];
+        }
+
         $result = $this->paymentModel->delete($id);
         if (!$result) {
             return ['error' => 'Failed to delete payment', 'code' => 500];

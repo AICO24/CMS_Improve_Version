@@ -9,6 +9,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         transactionCount: document.getElementById('transactionCount'),
         lastPayment: document.getElementById('lastPayment')
     };
+    const statParts = {
+        totalRevenueTitle: statsEl.totalRevenue.closest('.stat-card')?.querySelector('.stat-title'),
+        totalRevenueSub: statsEl.totalRevenue.closest('.stat-card')?.querySelector('.stat-sub'),
+        monthRevenueTitle: statsEl.monthRevenue.closest('.stat-card')?.querySelector('.stat-title'),
+        monthRevenueSub: statsEl.monthRevenue.closest('.stat-card')?.querySelector('.stat-sub'),
+        transactionCountTitle: statsEl.transactionCount.closest('.stat-card')?.querySelector('.stat-title'),
+        transactionCountSub: statsEl.transactionCount.closest('.stat-card')?.querySelector('.stat-sub'),
+    };
 
     const referenceFilterInput = document.getElementById('referenceFilter');
     const transactionTypeFilterSelect = document.getElementById('transactionTypeFilter');
@@ -16,14 +24,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     const dateFromFilterInput = document.getElementById('dateFromFilter');
     const dateToFilterInput = document.getElementById('dateToFilter');
     const clearFiltersBtn = document.getElementById('clearFilters');
+    const activeFilterChips = document.getElementById('activeFilterChips');
+    const verifyAllPaymentsBtn = document.getElementById('verifyAllPaymentsBtn');
+    const rejectAllPaymentsBtn = document.getElementById('rejectAllPaymentsBtn');
     const paginationInfo = document.getElementById('paginationInfo');
     const prevPageBtn = document.getElementById('prevPage');
     const nextPageBtn = document.getElementById('nextPage');
+    const pageJumpForm = document.getElementById('paginationJumpForm');
+    const pageJumpInput = document.getElementById('pageJumpInput');
+    const pageJumpBtn = document.getElementById('pageJumpBtn');
 
     const perPage = 10;
     const pagination = createPagination({
         prevBtn: prevPageBtn,
         nextBtn: nextPageBtn,
+        jumpForm: pageJumpForm,
+        jumpInput: pageJumpInput,
+        jumpBtn: pageJumpBtn,
         infoEl: paginationInfo,
         itemLabel: 'payment',
         onChange: refreshAll,
@@ -99,6 +116,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
+    async function verifyAllPending(status) {
+        const endpoint = status === 'Verified'
+            ? 'payments/pending/verify-all'
+            : 'payments/pending/reject-all';
+        return await api.request(endpoint, { method: 'POST' });
+    }
+
     function formatCurrency(amount) {
         return `₱${parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
@@ -109,9 +133,29 @@ document.addEventListener('DOMContentLoaded', async function() {
         return 'status-warning';
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char]));
+    }
+
     function renderTable(payments) {
         if (!payments || payments.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8">No payments recorded.</td></tr>';
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8">
+                        <div class="payments-empty-state">
+                            <i class="fas fa-receipt"></i>
+                            <strong>No payments found</strong>
+                            <span>Adjust the filters or record a new payment.</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
             return;
         }
 
@@ -119,16 +163,16 @@ document.addEventListener('DOMContentLoaded', async function() {
             const date = p.payment_date || p.created_at || '—';
             return `
                 <tr data-id="${p.payment_id}" data-status="${p.verification_status || 'Pending'}">
-                    <td><strong>${p.receipt_number || '—'}</strong></td>
-                    <td>${p.transaction_type || '—'}</td>
-                    <td>${formatCurrency(p.amount)}</td>
-                    <td>${date}</td>
-                    <td>${p.payment_method || '—'}</td>
+                    <td><span class="receipt-chip">${p.receipt_number || '—'}</span></td>
+                    <td><span class="transaction-type">${p.transaction_type || '—'}</span></td>
+                    <td class="amount-cell">${formatCurrency(p.amount)}</td>
+                    <td class="date-cell">${date}</td>
+                    <td><span class="method-chip">${p.payment_method || '—'}</span></td>
                     <td><span class="status-badge ${statusBadgeClass(p.verification_status || 'Pending')}">${p.verification_status || 'Pending'}</span></td>
-                    <td>${p.received_by_name || 'N/A'}</td>
+                    <td class="received-by-cell">${p.received_by_name || 'N/A'}</td>
                     <td class="action-buttons">
                         <button class="btn-view" title="View"><i class="fas fa-eye"></i></button>
-                        ${currentUser.role === 'admin' ? '<button class="btn-delete-row" title="Delete"><i class="fas fa-trash"></i></button>' : ''}
+                        ${currentUser.role === 'admin' && (p.verification_status || 'Pending') !== 'Verified' ? '<button class="btn-delete-row" title="Delete"><i class="fas fa-trash"></i></button>' : ''}
                     </td>
                 </tr>
             `;
@@ -157,10 +201,59 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
+    function renderActiveFilterChips() {
+        const chips = [
+            { key: 'reference_id', label: 'Reference', value: referenceFilterInput.value.trim(), clear: () => { referenceFilterInput.value = ''; } },
+            { key: 'transaction_type', label: 'Type', value: transactionTypeFilterSelect.value, clear: () => { transactionTypeFilterSelect.value = ''; } },
+            { key: 'verification_status', label: 'Status', value: statusFilterSelect.value, clear: () => { statusFilterSelect.value = ''; } },
+            { key: 'date_from', label: 'From', value: dateFromFilterInput.value, clear: () => { dateFromFilterInput.value = ''; } },
+            { key: 'date_to', label: 'To', value: dateToFilterInput.value, clear: () => { dateToFilterInput.value = ''; } },
+        ].filter((chip) => chip.value);
+
+        if (!activeFilterChips) return;
+        activeFilterChips.innerHTML = chips.map((chip) => `
+            <span class="filter-chip" data-filter-key="${chip.key}">
+                ${escapeHtml(chip.label)}: ${escapeHtml(chip.value)}
+                <button type="button" aria-label="Remove ${escapeHtml(chip.label)} filter">&times;</button>
+            </span>
+        `).join('');
+
+        activeFilterChips.querySelectorAll('.filter-chip').forEach((chipEl) => {
+            const chip = chips.find((item) => item.key === chipEl.dataset.filterKey);
+            const button = chipEl.querySelector('button');
+            if (!chip || !button) return;
+            button.addEventListener('click', async () => {
+                chip.clear();
+                pagination.reset();
+                await refreshAll();
+            });
+        });
+    }
+
     function renderStats(revenue, monthRevenue, payments, meta) {
-        statsEl.totalRevenue.innerText = formatCurrency(revenue.total || 0);
-        statsEl.monthRevenue.innerText = formatCurrency(monthRevenue.total || 0);
-        statsEl.transactionCount.innerText = meta.total || 0;
+        if (currentUser.role === 'user') {
+            const visiblePending = payments.filter((payment) => (payment.verification_status || 'Pending') === 'Pending').length;
+            const visibleVerified = payments.filter((payment) => payment.verification_status === 'Verified').length;
+            if (statParts.totalRevenueTitle) statParts.totalRevenueTitle.innerText = 'My Payments';
+            if (statParts.monthRevenueTitle) statParts.monthRevenueTitle.innerText = 'Pending';
+            if (statParts.transactionCountTitle) statParts.transactionCountTitle.innerText = 'Verified';
+            if (statParts.totalRevenueSub) statParts.totalRevenueSub.innerText = 'Matching filters';
+            if (statParts.monthRevenueSub) statParts.monthRevenueSub.innerText = 'Visible page';
+            if (statParts.transactionCountSub) statParts.transactionCountSub.innerText = 'Visible page';
+            statsEl.totalRevenue.innerText = meta.total || 0;
+            statsEl.monthRevenue.innerText = visiblePending;
+            statsEl.transactionCount.innerText = visibleVerified;
+        } else {
+            if (statParts.totalRevenueTitle) statParts.totalRevenueTitle.innerText = 'Total Revenue';
+            if (statParts.monthRevenueTitle) statParts.monthRevenueTitle.innerText = 'This Month';
+            if (statParts.transactionCountTitle) statParts.transactionCountTitle.innerText = 'Transactions';
+            if (statParts.totalRevenueSub) statParts.totalRevenueSub.innerText = 'All time';
+            if (statParts.monthRevenueSub) statParts.monthRevenueSub.innerText = 'Current month';
+            if (statParts.transactionCountSub) statParts.transactionCountSub.innerText = 'Total count';
+            statsEl.totalRevenue.innerText = formatCurrency(revenue.total || 0);
+            statsEl.monthRevenue.innerText = formatCurrency(monthRevenue.total || 0);
+            statsEl.transactionCount.innerText = meta.total || 0;
+        }
         // Payments are already sorted newest-first by the backend, so the first
         // row on page 1 is the most recent payment.
         statsEl.lastPayment.innerText = pagination.page === 1 && payments.length > 0
@@ -178,6 +271,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const payments = paymentsResult.data || [];
             const meta = paymentsResult.meta || { page: 1, pages: 1, total: payments.length };
             renderStats(revenue, monthRevenue, payments, meta);
+            renderActiveFilterChips();
             renderTable(payments);
             pagination.render(meta);
         } catch (error) {
@@ -216,6 +310,20 @@ document.addEventListener('DOMContentLoaded', async function() {
             const payment = await api.request(`payments/${id}`, { method: 'GET' });
             const schedule = await loadReservationDetails(payment);
             const details = `
+                <div class="payment-detail-summary">
+                    <div>
+                        <span>Amount</span>
+                        <strong>${formatCurrency(payment.amount)}</strong>
+                    </div>
+                    <div>
+                        <span>Status</span>
+                        <span class="status-badge ${statusBadgeClass(payment.verification_status || 'Pending')}">${payment.verification_status || 'Pending'}</span>
+                    </div>
+                    <div>
+                        <span>Receipt</span>
+                        <strong>${payment.receipt_number || '—'}</strong>
+                    </div>
+                </div>
                 ${renderReservationSection(schedule)}
                 <div class="detail-row"><span>Receipt Number</span><strong>${payment.receipt_number || '—'}</strong></div>
                 <div class="detail-row"><span>Transaction Type</span><strong>${payment.transaction_type || '—'}</strong></div>
@@ -579,6 +687,46 @@ document.addEventListener('DOMContentLoaded', async function() {
         pagination.reset();
         await refreshAll();
     });
+
+    if (verifyAllPaymentsBtn) {
+        verifyAllPaymentsBtn.addEventListener('click', async () => {
+            if (!confirm('Verify all pending payments?')) return;
+            await withButtonLoading(verifyAllPaymentsBtn, async () => {
+                try {
+                    const result = await verifyAllPending('Verified');
+                    if (result.success) {
+                        alert(result.message || 'All pending payments verified.');
+                        pagination.reset();
+                        await refreshAll();
+                    } else {
+                        alert(result.error || 'Failed to verify pending payments.');
+                    }
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            });
+        });
+    }
+
+    if (rejectAllPaymentsBtn) {
+        rejectAllPaymentsBtn.addEventListener('click', async () => {
+            if (!confirm('Reject all pending payments?')) return;
+            await withButtonLoading(rejectAllPaymentsBtn, async () => {
+                try {
+                    const result = await verifyAllPending('Rejected');
+                    if (result.success) {
+                        alert(result.message || 'All pending payments rejected.');
+                        pagination.reset();
+                        await refreshAll();
+                    } else {
+                        alert(result.error || 'Failed to reject pending payments.');
+                    }
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            });
+        });
+    }
 
     await refreshAll();
 

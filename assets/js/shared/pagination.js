@@ -21,7 +21,7 @@
 // onChange settles, so rapid Prev/Next clicks can't fire overlapping
 // requests. The disabled state is always restored in a `finally`, even if
 // onChange throws, so an error doesn't leave the controls stuck.
-function createPagination({ prevBtn, nextBtn, infoEl, itemLabel = 'item', onChange }) {
+function createPagination({ prevBtn, nextBtn, infoEl, jumpForm, jumpInput, jumpBtn, itemLabel = 'item', onChange }) {
     let page = 1;
     let pages = 1;
     let busy = false;
@@ -29,6 +29,8 @@ function createPagination({ prevBtn, nextBtn, infoEl, itemLabel = 'item', onChan
     function applyButtonState() {
         if (prevBtn) prevBtn.disabled = busy || page <= 1;
         if (nextBtn) nextBtn.disabled = busy || page >= pages;
+        if (jumpInput) jumpInput.disabled = busy || pages <= 1;
+        if (jumpBtn) jumpBtn.disabled = busy || pages <= 1;
     }
 
     function render(meta) {
@@ -43,6 +45,10 @@ function createPagination({ prevBtn, nextBtn, infoEl, itemLabel = 'item', onChan
             } else {
                 infoEl.textContent = `Page ${page}`;
             }
+        }
+        if (jumpInput) {
+            jumpInput.max = pages;
+            jumpInput.placeholder = 'Enter page number';
         }
         applyButtonState();
     }
@@ -68,16 +74,46 @@ function createPagination({ prevBtn, nextBtn, infoEl, itemLabel = 'item', onChan
         }
     }
 
+    async function jumpTo(targetPage, triggerBtn) {
+        if (busy) return;
+        const nextPage = Number.parseInt(targetPage, 10);
+        if (!Number.isInteger(nextPage)) return;
+        const clampedPage = Math.max(1, Math.min(nextPage, pages));
+        if (clampedPage === page) {
+            if (jumpInput) jumpInput.value = '';
+            return;
+        }
+        page = clampedPage;
+        busy = true;
+        applyButtonState();
+        setButtonLoading(triggerBtn, true);
+        try {
+            await onChange();
+            if (jumpInput) jumpInput.value = '';
+        } finally {
+            busy = false;
+            setButtonLoading(triggerBtn, false);
+            applyButtonState();
+        }
+    }
+
     if (prevBtn) {
         prevBtn.addEventListener('click', () => goTo(-1, prevBtn));
     }
     if (nextBtn) {
         nextBtn.addEventListener('click', () => goTo(1, nextBtn));
     }
+    if (jumpForm && jumpInput) {
+        jumpForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            jumpTo(jumpInput.value, jumpBtn);
+        });
+    }
 
     return {
         render,
         reset,
+        jumpTo,
         get page() { return page; },
     };
 }
