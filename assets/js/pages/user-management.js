@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const filterRole = document.getElementById('filterRole');
     const filterActive = document.getElementById('filterActive');
     const clearFilters = document.getElementById('clearFilters');
+    const activeFilterChips = document.getElementById('activeFilterChips');
     const openAddUser = document.getElementById('openAddUser');
     const userModal = document.getElementById('userModal');
     const modalTitle = document.getElementById('modalTitle');
@@ -35,13 +36,56 @@ document.addEventListener('DOMContentLoaded', async function() {
     const paginationInfo = document.getElementById('paginationInfo');
     const prevPageBtn = document.getElementById('prevPage');
     const nextPageBtn = document.getElementById('nextPage');
+    const pageJumpForm = document.getElementById('paginationJumpForm');
+    const pageJumpInput = document.getElementById('pageJumpInput');
+    const pageJumpBtn = document.getElementById('pageJumpBtn');
     const pagination = createPagination({
         prevBtn: prevPageBtn,
         nextBtn: nextPageBtn,
+        jumpForm: pageJumpForm,
+        jumpInput: pageJumpInput,
+        jumpBtn: pageJumpBtn,
         infoEl: paginationInfo,
         itemLabel: 'user',
         onChange: loadUsers,
     });
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char]));
+    }
+
+    function renderActiveFilterChips() {
+        const chips = [
+            { key: 'q', label: 'Search', value: searchQuery.value.trim(), clear: () => { searchQuery.value = ''; } },
+            { key: 'role', label: 'Role', value: filterRole.value, clear: () => { filterRole.value = ''; } },
+            { key: 'is_active', label: 'Status', value: filterActive.value, clear: () => { filterActive.value = ''; } },
+        ].filter((chip) => chip.value !== '');
+
+        if (!activeFilterChips) return;
+        activeFilterChips.innerHTML = chips.map((chip) => `
+            <span class="filter-chip" data-filter-key="${chip.key}">
+                ${escapeHtml(chip.label)}: ${escapeHtml(chip.value)}
+                <button type="button" aria-label="Remove ${escapeHtml(chip.label)} filter">&times;</button>
+            </span>
+        `).join('');
+
+        activeFilterChips.querySelectorAll('.filter-chip').forEach((chipEl) => {
+            const chip = chips.find((item) => item.key === chipEl.dataset.filterKey);
+            const button = chipEl.querySelector('button');
+            if (!chip || !button) return;
+            button.addEventListener('click', () => {
+                chip.clear();
+                pagination.reset();
+                loadUsers();
+            });
+        });
+    }
 
     function buildFilters() {
         const filters = {};
@@ -60,6 +104,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const result = await api.request(`users?${params.toString()}`, { method: 'GET' });
             const users = Array.isArray(result.data) ? result.data : [];
             renderUsers(users);
+            renderActiveFilterChips();
             pagination.render(result.meta || { page: 1, total_pages: 1, total: users.length });
             await updateStats(filters, result.meta);
         } catch (error) {
@@ -95,7 +140,17 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function renderUsers(users) {
         if (!Array.isArray(users) || users.length === 0) {
-            usersTableBody.innerHTML = '<tr><td colspan="7">No users found.</td></tr>';
+            usersTableBody.innerHTML = `
+                <tr>
+                    <td colspan="7">
+                        <div class="usermgmt-empty-state">
+                            <i class="fas fa-users"></i>
+                            <strong>No users found</strong>
+                            <span>Adjust the filters or add a new user.</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
             return;
         }
 
