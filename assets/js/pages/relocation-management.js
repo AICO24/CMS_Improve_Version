@@ -20,9 +20,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     const paginationInfo = document.getElementById('paginationInfo');
     const prevPageBtn = document.getElementById('prevPage');
     const nextPageBtn = document.getElementById('nextPage');
+    const pageJumpForm = document.getElementById('paginationJumpForm');
+    const pageJumpInput = document.getElementById('pageJumpInput');
+    const pageJumpBtn = document.getElementById('pageJumpBtn');
     const pagination = createPagination({
         prevBtn: prevPageBtn,
         nextBtn: nextPageBtn,
+        jumpForm: pageJumpForm,
+        jumpInput: pageJumpInput,
+        jumpBtn: pageJumpBtn,
         infoEl: paginationInfo,
         itemLabel: 'request',
         onChange: loadAndRenderRequests,
@@ -65,7 +71,17 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function renderTable(requests) {
         if (!Array.isArray(requests) || requests.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7">No relocation requests found.</td></tr>';
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7">
+                        <div class="reloc-empty-state">
+                            <i class="fas fa-truck-moving"></i>
+                            <strong>No relocation requests found</strong>
+                            <span>New relocation requests will appear here.</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
             return;
         }
 
