@@ -30,13 +30,58 @@ document.addEventListener('DOMContentLoaded', async function() {
     const paginationInfo = document.getElementById('paginationInfo');
     const prevPageBtn = document.getElementById('prevPage');
     const nextPageBtn = document.getElementById('nextPage');
+    const pageJumpForm = document.getElementById('paginationJumpForm');
+    const pageJumpInput = document.getElementById('pageJumpInput');
+    const pageJumpBtn = document.getElementById('pageJumpBtn');
+    const activeFilterChips = document.getElementById('activeFilterChips');
     const pagination = createPagination({
         prevBtn: prevPageBtn,
         nextBtn: nextPageBtn,
+        jumpForm: pageJumpForm,
+        jumpInput: pageJumpInput,
+        jumpBtn: pageJumpBtn,
         infoEl: paginationInfo,
         itemLabel: 'record',
         onChange: loadRecords,
     });
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char]));
+    }
+
+    const TYPE_FILTER_LABELS = { no: 'Burial', yes: 'Cremation' };
+
+    function renderActiveFilterChips() {
+        const chips = [
+            { key: 'q', label: 'Search', value: currentQuery, clear: () => { searchInput.value = ''; currentQuery = ''; } },
+            { key: 'type', label: 'Type', value: currentTypeFilter !== 'all' ? (TYPE_FILTER_LABELS[currentTypeFilter] || currentTypeFilter) : '', clear: () => { typeFilter.value = 'all'; currentTypeFilter = 'all'; } },
+        ].filter((chip) => chip.value);
+
+        if (!activeFilterChips) return;
+        activeFilterChips.innerHTML = chips.map((chip) => `
+            <span class="filter-chip" data-filter-key="${chip.key}">
+                ${escapeHtml(chip.label)}: ${escapeHtml(chip.value)}
+                <button type="button" aria-label="Remove ${escapeHtml(chip.label)} filter">&times;</button>
+            </span>
+        `).join('');
+
+        activeFilterChips.querySelectorAll('.filter-chip').forEach((chipEl) => {
+            const chip = chips.find((item) => item.key === chipEl.dataset.filterKey);
+            const button = chipEl.querySelector('button');
+            if (!chip || !button) return;
+            button.addEventListener('click', () => {
+                chip.clear();
+                pagination.reset();
+                loadRecords();
+            });
+        });
+    }
 
     function debounce(fn, wait) {
         let timeout;
@@ -133,7 +178,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     function renderPendingRequests() {
         const pendingRequestsBody = document.getElementById('pendingRequestsBody');
         if (!Array.isArray(pendingRequests) || pendingRequests.length === 0) {
-            pendingRequestsBody.innerHTML = '<tr><td colspan="6">No pending requests.</td></tr>';
+            pendingRequestsBody.innerHTML = `
+                <tr>
+                    <td colspan="6">
+                        <div class="pending-requests-empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <strong>No pending requests</strong>
+                            <span>Citizen-submitted decedent requests will appear here.</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
             return;
         }
 
@@ -225,6 +280,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const result = await api.request(`decedents?${params.toString()}`, { method: 'GET' });
             records = Array.isArray(result.data) ? result.data : [];
             renderTable(records);
+            renderActiveFilterChips();
             pagination.render(result.meta || { page: 1, total_pages: 1, total: records.length });
         } catch (error) {
             console.error('Failed to load records', error);
@@ -243,7 +299,17 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function renderTable(items) {
         if (!items || items.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="8">No records found.</td></tr>';
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="8">
+                        <div class="decrec-empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <strong>No records found</strong>
+                            <span>Adjust the filters or add a new decedent record.</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
             return;
         }
 

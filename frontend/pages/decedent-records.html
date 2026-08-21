@@ -152,8 +152,10 @@
                     </button>
                 </div>
 
+                <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
+
                 <!-- Stats Row -->
-                <div class="stats-row">
+                <div class="stats-row decrec-stats">
                     <div class="stat-card"><div class="stat-title">Total Records</div><div class="stat-value" id="totalCount">0</div><div class="stat-sub">Decedents</div></div>
                     <div class="stat-card"><div class="stat-title">Burials</div><div class="stat-value" id="burialCount">0</div><div class="stat-sub">Interred</div></div>
                     <div class="stat-card"><div class="stat-title">Cremations</div><div class="stat-value" id="cremationCount">0</div><div class="stat-sub">Ashes stored</div></div>
@@ -183,9 +185,15 @@
 
                 <div class="pagination-controls" id="paginationControls">
                     <span class="pagination-info" id="paginationInfo"></span>
-                    <div>
-                        <button class="btn-secondary" id="prevPage">Previous</button>
-                        <button class="btn-secondary" id="nextPage">Next</button>
+                    <div class="pagination-actions">
+                        <form class="pagination-jump" id="paginationJumpForm">
+                            <label for="pageJumpInput">Jump to page</label>
+                            <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Enter page number">
+                            <button class="btn-secondary" id="pageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
+                        </form>
+                        <span class="pagination-divider" aria-hidden="true"></span>
+                        <button class="btn-secondary" id="prevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
+                        <button class="btn-secondary" id="nextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
                     </div>
                 </div>
             </div>
@@ -199,13 +207,14 @@
             <h3 id="modalTitle">Add Decedent Record</h3>
             <form id="recordForm">
                 <input type="hidden" id="recordId">
+                <div class="decrec-form-grid">
                 <div class="form-group"><label>First Name</label><input type="text" id="firstName" required></div>
                 <div class="form-group"><label>Last Name</label><input type="text" id="lastName" required></div>
                 <div class="form-group"><label>Middle Name</label><input type="text" id="middleName"></div>
                 <div class="form-group"><label>Suffix (Jr., Sr., etc.)</label><input type="text" id="suffix"></div>
                 <div class="form-group"><label>Date of Birth</label><input type="date" id="dob" required></div>
                 <div class="form-group"><label>Date of Death</label><input type="date" id="dod" required></div>
-                <div class="form-group"><label>Cause of Death</label><textarea id="cause" rows="2"></textarea></div>
+                <div class="form-group full-width"><label>Cause of Death</label><textarea id="cause" rows="2"></textarea></div>
                 <div class="form-group"><label>Lot Number</label><select id="lotNumber" required><option value="">Select a lot</option></select></div>
                 <div class="form-group"><label>Section</label><input type="text" id="section" readonly></div>
                 <div class="form-group"><label>Family Contact Name</label><input type="text" id="contactName"></div>
@@ -216,7 +225,8 @@
                         <option value="yes">Yes</option>
                     </select>
                 </div>
-                <div class="form-group" id="ashStorageGroup" style="display:none;"><label>Ash Storage Location</label><input type="text" id="ashStorage"></div>
+                <div class="form-group full-width" id="ashStorageGroup" style="display:none;"><label>Ash Storage Location</label><input type="text" id="ashStorage"></div>
+                </div>
                 <button type="submit" class="btn-save bookmarkBtn">
                     <span class="IconContainer">
                         <i class="fas fa-save icon"></i>
