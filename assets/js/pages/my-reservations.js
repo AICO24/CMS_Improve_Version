@@ -22,10 +22,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     const searchQuery = document.getElementById('searchQuery');
     const statusFilter = document.getElementById('statusFilter');
     const clearFilters = document.getElementById('clearFilters');
+    const activeFilterChips = document.getElementById('activeFilterChips');
     const reservationsBody = document.getElementById('reservationsBody');
     const paginationInfo = document.getElementById('paginationInfo');
     const prevPage = document.getElementById('prevPage');
     const nextPage = document.getElementById('nextPage');
+    const pageJumpForm = document.getElementById('paginationJumpForm');
+    const pageJumpInput = document.getElementById('pageJumpInput');
+    const pageJumpBtn = document.getElementById('pageJumpBtn');
 
     let perPage = 10;
     let currentQuery = '';
@@ -34,10 +38,49 @@ document.addEventListener('DOMContentLoaded', async function() {
     const pagination = createPagination({
         prevBtn: prevPage,
         nextBtn: nextPage,
+        jumpForm: pageJumpForm,
+        jumpInput: pageJumpInput,
+        jumpBtn: pageJumpBtn,
         infoEl: paginationInfo,
         itemLabel: 'reservation',
         onChange: loadReservations,
     });
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char]));
+    }
+
+    function renderActiveFilterChips() {
+        const chips = [
+            { key: 'q', label: 'Search', value: currentQuery, clear: () => { searchQuery.value = ''; currentQuery = ''; } },
+            { key: 'status', label: 'Status', value: currentStatus, clear: () => { statusFilter.value = ''; currentStatus = ''; } },
+        ].filter((chip) => chip.value);
+
+        if (!activeFilterChips) return;
+        activeFilterChips.innerHTML = chips.map((chip) => `
+            <span class="filter-chip" data-filter-key="${chip.key}">
+                ${escapeHtml(chip.label)}: ${escapeHtml(chip.value)}
+                <button type="button" aria-label="Remove ${escapeHtml(chip.label)} filter">&times;</button>
+            </span>
+        `).join('');
+
+        activeFilterChips.querySelectorAll('.filter-chip').forEach((chipEl) => {
+            const chip = chips.find((item) => item.key === chipEl.dataset.filterKey);
+            const button = chipEl.querySelector('button');
+            if (!chip || !button) return;
+            button.addEventListener('click', async () => {
+                chip.clear();
+                pagination.reset();
+                await loadReservations();
+            });
+        });
+    }
 
     function buildStatusBadge(status) {
         const normalized = String(status || '').toLowerCase();
@@ -81,7 +124,18 @@ document.addEventListener('DOMContentLoaded', async function() {
             const data = Array.isArray(result.data) ? result.data : [];
             reservationsBody.innerHTML = data.length > 0
                 ? data.map(buildReservationRow).join('')
-                : '<tr><td colspan="7">No reservations found for the selected criteria.</td></tr>';
+                : `
+                    <tr>
+                        <td colspan="7">
+                            <div class="usermgmt-empty-state">
+                                <i class="fas fa-calendar-xmark"></i>
+                                <strong>No reservations found</strong>
+                                <span>Adjust the filters to see more of your reservations.</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            renderActiveFilterChips();
             pagination.render(result.meta || { page: 1, pages: 1, total: data.length });
         } catch (error) {
             console.error('Failed to load reservations', error);

@@ -22,26 +22,11 @@
     <link rel="stylesheet" href="../../assets/css/user-management.css">
     <link rel="stylesheet" href="../../assets/css/components/search-input.css">
     <style>
-        .toolbar-actions {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .pagination-controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 18px;
-        }
-        .pagination-controls button {
-            min-width: 110px;
-        }
-        .pagination-info {
-            color: #556872;
-            font-size: 0.95rem;
-        }
+        /* Toolbar/pagination layout (toolbar-action-row, status-select-field,
+           active-filter-chips, pagination-actions/jump) now come from the
+           shared user-management.css this page already loads — only the
+           status-badge palette stays page-local since it's specific to
+           reservation statuses, not user accounts. */
         .status-badge.pending {
             background: #f7f0ff;
             color: #6d3d9d;
@@ -57,15 +42,6 @@
         .status-badge.completed {
             background: #e8f5ff;
             color: #1d4ed8;
-        }
-        @media (max-width: 980px) {
-            .toolbar-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .toolbar-actions {
-                justify-content: flex-end;
-            }
         }
     </style>
 </head>
@@ -128,26 +104,37 @@
             <div class="content-area">
                 <div class="card">
                     <div class="toolbar-row">
-                        <div class="toolbar-filters">
-                            <div class="search-field">
-                                <input type="text" id="searchQuery" class="search-field__input" placeholder=" ">
-                                <label for="searchQuery" class="search-field__label">Search by lot, section or decedent</label>
-                                <span class="search-field__icon" aria-hidden="true">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
-                                </span>
+                        <div class="toolbar-action-row">
+                            <div class="toolbar-section-label">
+                                <i class="fas fa-filter"></i>
+                                <span>Filters</span>
                             </div>
-                            <select id="statusFilter" aria-label="Filter by status">
-                                <option value="">All statuses</option>
-                                <option value="Pending">Pending</option>
-                                <option value="Confirmed">Confirmed</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Cancelled">Cancelled</option>
-                            </select>
                         </div>
-                        <div class="toolbar-actions">
-                            <button class="btn-secondary" id="clearFilters">Clear</button>
+                        <div class="toolbar-main-row">
+                            <div class="toolbar-filters">
+                                <div class="search-field">
+                                    <input type="text" id="searchQuery" class="search-field__input" placeholder=" ">
+                                    <label for="searchQuery" class="search-field__label">Search by lot, section or decedent</label>
+                                    <span class="search-field__icon" aria-hidden="true">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
+                                    </span>
+                                </div>
+                                <label class="status-select-field" for="statusFilter">
+                                    <span>Status</span>
+                                    <select id="statusFilter" aria-label="Filter by status">
+                                    <option value="">All statuses</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Confirmed">Confirmed</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                    </select>
+                                </label>
+                                <button class="btn-secondary" id="clearFilters">Clear</button>
+                            </div>
                         </div>
                     </div>
+
+                    <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
 
                     <div class="table-container">
                         <table class="data-table" id="reservationsTable">
@@ -170,9 +157,15 @@
 
                     <div class="pagination-controls" id="paginationControls">
                         <span class="pagination-info" id="paginationInfo"></span>
-                        <div>
-                            <button class="btn-secondary" id="prevPage">Previous</button>
-                            <button class="btn-secondary" id="nextPage">Next</button>
+                        <div class="pagination-actions">
+                            <form class="pagination-jump" id="paginationJumpForm">
+                                <label for="pageJumpInput">Jump to page</label>
+                                <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Enter page number">
+                                <button class="btn-secondary" id="pageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
+                            </form>
+                            <span class="pagination-divider" aria-hidden="true"></span>
+                            <button class="btn-secondary" id="prevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
+                            <button class="btn-secondary" id="nextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
                         </div>
                     </div>
                 </div>
