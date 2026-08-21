@@ -19,13 +19,58 @@ document.addEventListener('DOMContentLoaded', async function () {
     const expiredPaginationInfo = document.getElementById('expiredPaginationInfo');
     const expiredPrevPage = document.getElementById('expiredPrevPage');
     const expiredNextPage = document.getElementById('expiredNextPage');
+    const expiredPageJumpForm = document.getElementById('expiredPaginationJumpForm');
+    const expiredPageJumpInput = document.getElementById('expiredPageJumpInput');
+    const expiredPageJumpBtn = document.getElementById('expiredPageJumpBtn');
+    const activeFilterChips = document.getElementById('activeFilterChips');
     const expiredPagination = createPagination({
         prevBtn: expiredPrevPage,
         nextBtn: expiredNextPage,
+        jumpForm: expiredPageJumpForm,
+        jumpInput: expiredPageJumpInput,
+        jumpBtn: expiredPageJumpBtn,
         infoEl: expiredPaginationInfo,
         itemLabel: 'lot',
         onChange: loadExpiredLots,
     });
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char]));
+    }
+
+    function renderActiveFilterChips() {
+        const searchValue = document.getElementById('expirationSearch').value.trim();
+        const statusSelect = document.getElementById('expirationStatusFilter');
+        const statusValue = statusSelect.value !== 'all' ? statusSelect.options[statusSelect.selectedIndex].text : '';
+        const chips = [
+            { key: 'q', label: 'Search', value: searchValue, clear: () => { document.getElementById('expirationSearch').value = ''; } },
+            { key: 'status', label: 'Status', value: statusValue, clear: () => { statusSelect.value = 'all'; } },
+        ].filter((chip) => chip.value);
+
+        if (!activeFilterChips) return;
+        activeFilterChips.innerHTML = chips.map((chip) => `
+            <span class="filter-chip" data-filter-key="${chip.key}">
+                ${escapeHtml(chip.label)}: ${escapeHtml(chip.value)}
+                <button type="button" aria-label="Remove ${escapeHtml(chip.label)} filter">&times;</button>
+            </span>
+        `).join('');
+
+        activeFilterChips.querySelectorAll('.filter-chip').forEach((chipEl) => {
+            const chip = chips.find((item) => item.key === chipEl.dataset.filterKey);
+            const button = chipEl.querySelector('button');
+            if (!chip || !button) return;
+            button.addEventListener('click', async () => {
+                chip.clear();
+                await refreshExpirationView();
+            });
+        });
+    }
 
     // Independent of the main status filter dropdown above — this table's whole
     // purpose is showing expired lots, so it always requests status=expired
@@ -51,7 +96,17 @@ document.addEventListener('DOMContentLoaded', async function () {
                     <td><span class="status-badge status-danger">Expired</span></td>
                     <td>${record.notes ? record.notes : '—'}</td>
                 </tr>
-            `).join('') : '<tr><td colspan="5">No expired lots found.</td></tr>';
+            `).join('') : `
+                <tr>
+                    <td colspan="5">
+                        <div class="expmon-empty-state">
+                            <i class="fas fa-circle-check"></i>
+                            <strong>No expired lots found</strong>
+                            <span>All lots are within their lease period.</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
             expiredPagination.render(result.meta || { page: 1, total_pages: 1, total: expiredRecords.length });
         } catch (error) {
             console.error('Failed to load expired lots:', error);
@@ -112,8 +167,19 @@ document.addEventListener('DOMContentLoaded', async function () {
                             ${record.status === 'Expiring' ? `<button class="btn-ghost" data-action="renew" data-id="${record.expiration_id}">Renew</button>` : ''}
                         </td>
                     </tr>
-                `).join('') : '<tr><td colspan="5">No expiration records found.</td></tr>';
+                `).join('') : `
+                    <tr>
+                        <td colspan="5">
+                            <div class="expmon-empty-state">
+                                <i class="fas fa-hourglass"></i>
+                                <strong>No expiration records found</strong>
+                                <span>Adjust the filters to see more records.</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
             }
+            renderActiveFilterChips();
         } catch (error) {
             console.error('Failed to load expiration data:', error);
         }

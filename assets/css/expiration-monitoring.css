@@ -106,21 +106,346 @@
 /* .stats-row / .stat-card / .stat-title / .stat-value now come from
    assets/css/dashboard.css so this module's stat cards match every other module. */
 
-.control-row {
-    display: flex;
+/* Gradient stat cards (mirrors Payments' .payment-stats visual language). */
+.expmon-stats {
+    align-items: stretch;
     gap: 14px;
-    flex-wrap: wrap;
-    align-items: center;
-    margin-bottom: 24px;
 }
 
-.filter-select {
+.expmon-stats > .stat-card {
+    position: relative;
+    min-height: 136px;
+    padding: 18px 18px 16px;
+    overflow: hidden;
+    border: 1px solid rgba(194, 65, 12, 0.20);
+    border-left: 8px solid #7c2d12;
+    background: linear-gradient(135deg, #c2410c 0%, #dd6a3a 100%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.09);
+    transition: transform 260ms cubic-bezier(0.2, 0, 0.2, 1),
+                box-shadow 260ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.expmon-stats > .stat-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 52%);
+    pointer-events: none;
+}
+
+.expmon-stats > .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.13);
+}
+
+.expmon-stats > .stat-card .stat-title,
+.expmon-stats > .stat-card .stat-value,
+.expmon-stats > .stat-card .stat-sub {
+    position: relative;
+    z-index: 1;
+}
+
+.expmon-stats > .stat-card .stat-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding-right: 12px;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 0.82rem;
+    margin-bottom: 14px;
+}
+
+.expmon-stats > .stat-card .stat-title::before {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-md);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 14px;
+    text-transform: none;
+}
+
+.expmon-stats > .stat-card:nth-child(1) .stat-title::before {
+    content: "\f017";
+}
+
+.expmon-stats > .stat-card:nth-child(2) {
+    border-left-color: #7f1d1d;
+    background: linear-gradient(135deg, #b91c1c 0%, #d33f3f 100%);
+}
+
+.expmon-stats > .stat-card:nth-child(2) .stat-title::before {
+    content: "\f071";
+}
+
+.expmon-stats > .stat-card:nth-child(3) {
+    border-left-color: #1d4ed8;
+    background: linear-gradient(135deg, #2563eb 0%, #4f7fdc 100%);
+}
+
+.expmon-stats > .stat-card:nth-child(3) .stat-title::before {
+    content: "\f2f9";
+}
+
+.expmon-stats > .stat-card:nth-child(4) {
+    border-left-color: #163229;
+    background: linear-gradient(135deg, #2c5e47 0%, #3b7055 100%);
+}
+
+.expmon-stats > .stat-card:nth-child(4) .stat-title::before {
+    content: "\f725";
+}
+
+.expmon-stats > .stat-card .stat-value {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    color: #fff;
+    font-size: 1.35rem;
+    line-height: 1.2;
+    text-shadow: 0 1px 1px rgba(15, 23, 42, 0.16);
+}
+
+.expmon-stats > .stat-card .stat-sub {
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.8rem;
+}
+
+.control-row {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 24px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-left: 6px solid #c2410c;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.toolbar-action-row {
+    padding-bottom: 14px;
+    border-bottom: 1px solid #eef1f4;
+}
+
+.toolbar-section-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: #243736;
+    font-size: 0.85rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.toolbar-section-label i {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff1e8;
+    color: #c2410c;
+}
+
+.toolbar-main-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 14px;
+}
+
+.status-select-field {
+    height: 46px;
+    min-width: 180px;
+    padding: 0 12px;
     border: 1px solid #d6dbe6;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.status-select-field span {
+    color: #556872;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.status-select-field select {
+    height: 23px;
+    width: 100%;
+    padding: 0 20px 0 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    color: #243736;
+    font-size: 0.9rem;
+}
+
+.status-select-field select:focus {
+    outline: none;
+}
+
+.status-select-field:focus-within {
+    border-color: #c2410c;
+    box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.14);
+}
+
+.status-select-field:hover {
+    transform: translateY(-1px);
+    border-color: #c2410c;
+}
+
+.control-row .search-field {
+    height: 46px;
+    min-width: 240px;
+}
+
+.control-row .btn-primary {
+    height: 46px;
+}
+
+.active-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 20px;
+}
+
+.active-filter-chips:empty {
+    display: none;
+}
+
+.filter-chip {
+    height: 34px;
+    padding: 0 10px 0 12px;
+    border: 1px solid #d6dbe6;
+    border-radius: 999px;
+    background: #fff1e8;
+    color: #7c2d12;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.filter-chip button {
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 50%;
+    background: #fde3d3;
+    color: #7c2d12;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.filter-chip button:hover {
+    background: #fbd0b3;
+}
+
+.pagination-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.pagination-actions > button {
+    min-width: 100px;
+}
+
+.pagination-divider {
+    width: 1px;
+    height: 34px;
+    background: #e2e8f0;
+    display: inline-block;
+}
+
+.pagination-jump {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.pagination-jump label {
+    color: #243736;
+    font-size: 0.85rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.pagination-jump input {
+    width: 150px;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid #d6dbe6;
+    border-radius: 12px;
     background: #fff;
     color: #243736;
-    padding: 12px 14px;
-    border-radius: 14px;
-    min-width: 220px;
+    font-size: 0.9rem;
+}
+
+.pagination-jump input:focus {
+    outline: none;
+    border-color: #c2410c;
+    box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.14);
+}
+
+.pagination-jump button {
+    min-width: 64px;
+    height: 40px;
+}
+
+.expmon-empty-state {
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: #64748b;
+}
+
+.expmon-empty-state i {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff1e8;
+    color: #c2410c;
+    font-size: 18px;
+}
+
+.expmon-empty-state strong {
+    color: #243736;
+    font-size: 1rem;
+}
+
+.expmon-empty-state span {
+    font-size: 0.82rem;
 }
 
 /* .btn-primary now comes from assets/css/components/buttons.css (Batch 5) */
@@ -212,6 +537,40 @@
     .card-grid,
     .activity-row {
         grid-template-columns: 1fr;
+    }
+    .expmon-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .expmon-stats {
+        grid-template-columns: 1fr;
+    }
+    .toolbar-main-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .control-row .search-field,
+    .status-select-field,
+    .control-row .btn-primary {
+        width: 100%;
+    }
+    .pagination-controls,
+    .pagination-actions,
+    .pagination-jump {
+        align-items: stretch;
+        flex-direction: column;
+    }
+    .pagination-actions > button,
+    .pagination-divider,
+    .pagination-jump,
+    .pagination-jump input,
+    .pagination-jump button {
+        width: 100%;
+    }
+    .pagination-divider {
+        height: 1px;
     }
 }
 
