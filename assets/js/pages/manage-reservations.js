@@ -24,10 +24,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     const searchQuery = document.getElementById('searchQuery');
     const statusFilter = document.getElementById('statusFilter');
     const clearFilters = document.getElementById('clearFilters');
+    const activeFilterChips = document.getElementById('activeFilterChips');
     const reservationsBody = document.getElementById('reservationsBody');
     const paginationInfo = document.getElementById('paginationInfo');
     const prevPageBtn = document.getElementById('prevPage');
     const nextPageBtn = document.getElementById('nextPage');
+    const pageJumpForm = document.getElementById('paginationJumpForm');
+    const pageJumpInput = document.getElementById('pageJumpInput');
+    const pageJumpBtn = document.getElementById('pageJumpBtn');
     const toggleAwaitingBtn = document.getElementById('toggleAwaitingConfirmation');
     const awaitingCountBadge = document.getElementById('awaitingConfirmationCount');
 
@@ -39,10 +43,54 @@ document.addEventListener('DOMContentLoaded', async function() {
     const pagination = createPagination({
         prevBtn: prevPageBtn,
         nextBtn: nextPageBtn,
+        jumpForm: pageJumpForm,
+        jumpInput: pageJumpInput,
+        jumpBtn: pageJumpBtn,
         infoEl: paginationInfo,
         itemLabel: 'reservation',
         onChange: loadAndRenderReservations,
     });
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char]));
+    }
+
+    function renderActiveFilterChips() {
+        const chips = [
+            { key: 'q', label: 'Search', value: currentQuery, clear: () => { searchQuery.value = ''; currentQuery = ''; } },
+            { key: 'status', label: 'Status', value: currentStatus, clear: () => { statusFilter.value = ''; currentStatus = ''; } },
+            { key: 'awaiting', label: 'Filter', value: awaitingConfirmationOnly ? 'Paid, Awaiting Confirmation' : '', clear: () => {
+                awaitingConfirmationOnly = false;
+                toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+                statusFilter.disabled = false;
+            } },
+        ].filter((chip) => chip.value);
+
+        if (!activeFilterChips) return;
+        activeFilterChips.innerHTML = chips.map((chip) => `
+            <span class="filter-chip" data-filter-key="${chip.key}">
+                ${escapeHtml(chip.label)}: ${escapeHtml(chip.value)}
+                <button type="button" aria-label="Remove ${escapeHtml(chip.label)} filter">&times;</button>
+            </span>
+        `).join('');
+
+        activeFilterChips.querySelectorAll('.filter-chip').forEach((chipEl) => {
+            const chip = chips.find((item) => item.key === chipEl.dataset.filterKey);
+            const button = chipEl.querySelector('button');
+            if (!chip || !button) return;
+            button.addEventListener('click', async () => {
+                chip.clear();
+                pagination.reset();
+                await loadAndRenderReservations();
+            });
+        });
+    }
 
     function buildStatusBadge(status) {
         const normalized = String(status || '').toLowerCase();
@@ -127,7 +175,18 @@ document.addEventListener('DOMContentLoaded', async function() {
             const data = Array.isArray(result.data) ? result.data : [];
             reservationsBody.innerHTML = data.length > 0
                 ? data.map(buildReservationRow).join('')
-                : '<tr><td colspan="8">No reservations found for the selected criteria.</td></tr>';
+                : `
+                    <tr>
+                        <td colspan="8">
+                            <div class="mgmtres-empty-state">
+                                <i class="fas fa-calendar-xmark"></i>
+                                <strong>No reservations found</strong>
+                                <span>Adjust the filters to see more reservations.</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            renderActiveFilterChips();
             pagination.render(result.meta || { page: 1, pages: 1, total: data.length });
         } catch (error) {
             console.error('Failed to load reservations', error);
