@@ -44,7 +44,13 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function renderNiches(niches) {
         if (!Array.isArray(niches) || niches.length === 0) {
-            gridContainer.innerHTML = '<div class="no-lots">No niches available. Click "Add New Cremation Record" to create one.</div>';
+            gridContainer.innerHTML = `
+                <div class="cremation-empty-state">
+                    <i class="fas fa-urn"></i>
+                    <strong>No niches available</strong>
+                    <span>Click "Add New Cremation Record" to create one.</span>
+                </div>
+            `;
             return;
         }
 
