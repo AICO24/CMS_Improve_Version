@@ -96,7 +96,7 @@
             </div>
 
             <div class="content-area">
-                <div class="stats-row">
+                <div class="stats-row payhist-stats">
                     <div class="stat-card"><div class="stat-title">Total Paid</div><div class="stat-value" id="totalRevenue">₱0</div><div class="stat-sub">All time</div></div>
                     <div class="stat-card"><div class="stat-title">This Month</div><div class="stat-value" id="monthRevenue">₱0</div><div class="stat-sub">Current month</div></div>
                     <div class="stat-card"><div class="stat-title">Transactions</div><div class="stat-value" id="transactionCount">0</div><div class="stat-sub">Total count</div></div>
@@ -104,6 +104,12 @@
                 </div>
 
                 <div class="toolbar-row">
+                    <div class="toolbar-action-row">
+                        <div class="toolbar-section-label">
+                            <i class="fas fa-filter"></i>
+                            <span>Filters</span>
+                        </div>
+                    </div>
                     <div class="toolbar-filters">
                         <div class="search-field">
                             <input type="text" id="referenceFilter" class="search-field__input" placeholder=" ">
@@ -120,17 +126,28 @@
                             <option value="Renewal">Renewal</option>
                             <option value="Other">Other</option>
                         </select>
-                        <select id="statusFilter">
+                        <label class="status-select-field" for="statusFilter">
+                            <span>Status</span>
+                            <select id="statusFilter" aria-label="Payment status">
                             <option value="">All statuses</option>
                             <option value="Pending">Pending</option>
                             <option value="Verified">Verified</option>
                             <option value="Rejected">Rejected</option>
-                        </select>
-                        <input type="date" id="dateFromFilter" aria-label="From date">
-                        <input type="date" id="dateToFilter" aria-label="To date">
+                            </select>
+                        </label>
+                        <label class="date-filter-field">
+                            <span>From</span>
+                            <input type="date" id="dateFromFilter" aria-label="From date">
+                        </label>
+                        <label class="date-filter-field">
+                            <span>To</span>
+                            <input type="date" id="dateToFilter" aria-label="To date">
+                        </label>
                         <button class="btn-secondary" id="clearFilters">Clear</button>
                     </div>
                 </div>
+
+                <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
 
                 <div class="table-container">
                     <table class="data-table">
@@ -154,9 +171,15 @@
 
                 <div class="pagination-controls" id="paginationControls">
                     <span class="pagination-info" id="paginationInfo"></span>
-                    <div>
-                        <button class="btn-secondary" id="prevPage">Previous</button>
-                        <button class="btn-secondary" id="nextPage">Next</button>
+                    <div class="pagination-actions">
+                        <form class="pagination-jump" id="paginationJumpForm">
+                            <label for="pageJumpInput">Jump to page</label>
+                            <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Enter page number">
+                            <button class="btn-secondary" id="pageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
+                        </form>
+                        <span class="pagination-divider" aria-hidden="true"></span>
+                        <button class="btn-secondary" id="prevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
+                        <button class="btn-secondary" id="nextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
                     </div>
                 </div>
             </div>

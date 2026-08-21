@@ -16,14 +16,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     const dateFromFilterInput = document.getElementById('dateFromFilter');
     const dateToFilterInput = document.getElementById('dateToFilter');
     const clearFiltersBtn = document.getElementById('clearFilters');
+    const activeFilterChips = document.getElementById('activeFilterChips');
     const paginationInfo = document.getElementById('paginationInfo');
     const prevPageBtn = document.getElementById('prevPage');
     const nextPageBtn = document.getElementById('nextPage');
+    const pageJumpForm = document.getElementById('paginationJumpForm');
+    const pageJumpInput = document.getElementById('pageJumpInput');
+    const pageJumpBtn = document.getElementById('pageJumpBtn');
 
     const perPage = 10;
     const pagination = createPagination({
         prevBtn: prevPageBtn,
         nextBtn: nextPageBtn,
+        jumpForm: pageJumpForm,
+        jumpInput: pageJumpInput,
+        jumpBtn: pageJumpBtn,
         infoEl: paginationInfo,
         itemLabel: 'payment',
         onChange: refreshAll,
@@ -93,9 +100,29 @@ document.addEventListener('DOMContentLoaded', async function() {
         return `₱${parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char]));
+    }
+
     function renderTable(payments) {
         if (!payments || payments.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8">No payments recorded.</td></tr>';
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8">
+                        <div class="payhist-empty-state">
+                            <i class="fas fa-receipt"></i>
+                            <strong>No payments found</strong>
+                            <span>Adjust the filters to see more of your payment history.</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
             return;
         }
 
@@ -147,6 +174,35 @@ document.addEventListener('DOMContentLoaded', async function() {
             : '—';
     }
 
+    function renderActiveFilterChips() {
+        const chips = [
+            { key: 'reference_id', label: 'Reference', value: referenceFilterInput.value.trim(), clear: () => { referenceFilterInput.value = ''; } },
+            { key: 'transaction_type', label: 'Type', value: transactionTypeFilterSelect.value, clear: () => { transactionTypeFilterSelect.value = ''; } },
+            { key: 'verification_status', label: 'Status', value: statusFilterSelect.value, clear: () => { statusFilterSelect.value = ''; } },
+            { key: 'date_from', label: 'From', value: dateFromFilterInput.value, clear: () => { dateFromFilterInput.value = ''; } },
+            { key: 'date_to', label: 'To', value: dateToFilterInput.value, clear: () => { dateToFilterInput.value = ''; } },
+        ].filter((chip) => chip.value);
+
+        if (!activeFilterChips) return;
+        activeFilterChips.innerHTML = chips.map((chip) => `
+            <span class="filter-chip" data-filter-key="${chip.key}">
+                ${escapeHtml(chip.label)}: ${escapeHtml(chip.value)}
+                <button type="button" aria-label="Remove ${escapeHtml(chip.label)} filter">&times;</button>
+            </span>
+        `).join('');
+
+        activeFilterChips.querySelectorAll('.filter-chip').forEach((chipEl) => {
+            const chip = chips.find((item) => item.key === chipEl.dataset.filterKey);
+            const button = chipEl.querySelector('button');
+            if (!chip || !button) return;
+            button.addEventListener('click', async () => {
+                chip.clear();
+                pagination.reset();
+                await refreshAll();
+            });
+        });
+    }
+
     async function refreshAll() {
         try {
             const [paymentsResult, ownPayments] = await Promise.all([
@@ -156,6 +212,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const payments = paymentsResult.data || [];
             const meta = paymentsResult.meta || { page: 1, pages: 1, total: payments.length };
             renderStats(ownPayments);
+            renderActiveFilterChips();
             renderTable(payments);
             pagination.render(meta);
         } catch (error) {
