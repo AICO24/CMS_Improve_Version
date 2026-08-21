@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     const paginationInfo = document.getElementById('paginationInfo');
     const prevPageBtn = document.getElementById('prevPage');
     const nextPageBtn = document.getElementById('nextPage');
+    const pageJumpForm = document.getElementById('paginationJumpForm');
+    const pageJumpInput = document.getElementById('pageJumpInput');
+    const pageJumpBtn = document.getElementById('pageJumpBtn');
 
     const perPage = 20;
 
@@ -26,6 +29,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     const pagination = createPagination({
         prevBtn: prevPageBtn,
         nextBtn: nextPageBtn,
+        jumpForm: pageJumpForm,
+        jumpInput: pageJumpInput,
+        jumpBtn: pageJumpBtn,
         infoEl: paginationInfo,
         itemLabel: 'log',
         onChange: loadAuditLogs,
