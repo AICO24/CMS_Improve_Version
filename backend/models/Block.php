@@ -22,7 +22,8 @@ class Block {
 
     public function create($data) {
         $stmt = $this->db->prepare("INSERT INTO blocks (section_id, block_name, description) VALUES (?, ?, ?)");
-        return $stmt->execute([$data['section_id'], $data['block_name'], $data['description'] ?? '']);
+        $success = $stmt->execute([$data['section_id'], $data['block_name'], $data['description'] ?? '']);
+        return $success ? (int) $this->db->lastInsertId() : false;
     }
 
     public function update($id, $data) {

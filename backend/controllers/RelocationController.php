@@ -2,16 +2,19 @@
 require_once __DIR__ . '/../models/Relocation.php';
 require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/../models/Decedent.php';
+require_once __DIR__ . '/../models/AuditLog.php';
 
 class RelocationController {
     private $relocationModel;
     private $lotModel;
     private $decedentModel;
+    private $auditLogModel;
 
     public function __construct() {
         $this->relocationModel = new Relocation();
         $this->lotModel = new Lot();
         $this->decedentModel = new Decedent();
+        $this->auditLogModel = new AuditLog();
     }
 
     public function index($filters = [], $pagination = []) {
@@ -122,6 +125,14 @@ class RelocationController {
         $result = $this->relocationModel->updateStatus($id, 'Approved', $userId);
         if ($result) {
             $this->lotModel->update($request['to_lot_id'], ['status' => 'Reserved']);
+            $this->auditLogModel->log(
+                'Relocation approved',
+                $userId,
+                null,
+                'Relocation',
+                $id,
+                ['deceased_id' => $request['deceased_id'] ?? null, 'from_lot_id' => $request['from_lot_id'] ?? null, 'to_lot_id' => $request['to_lot_id'] ?? null]
+            );
             return ['success' => true, 'message' => 'Relocation request approved'];
         }
 
@@ -141,7 +152,18 @@ class RelocationController {
         $this->lotModel->update($request['to_lot_id'], ['status' => 'Occupied']);
 
         $result = $this->relocationModel->updateStatus($id, 'Completed', $userId);
-        return $result ? ['success' => true, 'message' => 'Relocation completed'] : ['error' => 'Failed to complete relocation', 'code' => 500];
+        if ($result) {
+            $this->auditLogModel->log(
+                'Relocation completed',
+                $userId,
+                null,
+                'Relocation',
+                $id,
+                ['deceased_id' => $request['deceased_id'] ?? null, 'from_lot_id' => $request['from_lot_id'] ?? null, 'to_lot_id' => $request['to_lot_id'] ?? null]
+            );
+            return ['success' => true, 'message' => 'Relocation completed'];
+        }
+        return ['error' => 'Failed to complete relocation', 'code' => 500];
     }
 
     public function deny($id, $userId) {
@@ -154,7 +176,18 @@ class RelocationController {
         }
 
         $result = $this->relocationModel->updateStatus($id, 'Denied', $userId);
-        return $result ? ['success' => true, 'message' => 'Relocation request denied'] : ['error' => 'Failed to deny request', 'code' => 500];
+        if ($result) {
+            $this->auditLogModel->log(
+                'Relocation denied',
+                $userId,
+                null,
+                'Relocation',
+                $id,
+                ['deceased_id' => $request['deceased_id'] ?? null, 'from_lot_id' => $request['from_lot_id'] ?? null, 'to_lot_id' => $request['to_lot_id'] ?? null]
+            );
+            return ['success' => true, 'message' => 'Relocation request denied'];
+        }
+        return ['error' => 'Failed to deny request', 'code' => 500];
     }
 
     public function destroy($id, $userId) {
@@ -167,7 +200,18 @@ class RelocationController {
         }
 
         $result = $this->relocationModel->delete($id);
-        return $result ? ['success' => true, 'message' => 'Relocation request deleted'] : ['error' => 'Failed to delete request', 'code' => 500];
+        if ($result) {
+            $this->auditLogModel->log(
+                'Relocation deleted',
+                $userId,
+                null,
+                'Relocation',
+                $id,
+                ['deceased_id' => $request['deceased_id'] ?? null, 'from_lot_id' => $request['from_lot_id'] ?? null, 'to_lot_id' => $request['to_lot_id'] ?? null]
+            );
+            return ['success' => true, 'message' => 'Relocation request deleted'];
+        }
+        return ['error' => 'Failed to delete request', 'code' => 500];
     }
 
     public function stats() {

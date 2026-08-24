@@ -177,7 +177,7 @@ class Cremation {
             (deceased_id, niche_number, columbarium, level, cremation_date, status, ash_storage_location, notes, created_by)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        return $stmt->execute([
+        $success = $stmt->execute([
             (int) $data['deceased_id'],
             $data['niche_number'] ?? null,
             $data['columbarium'] ?? null,
@@ -188,6 +188,7 @@ class Cremation {
             $data['notes'] ?? null,
             (int) $data['created_by']
         ]);
+        return $success ? (int) $this->db->lastInsertId() : false;
     }
 
     public function update($id, $data) {

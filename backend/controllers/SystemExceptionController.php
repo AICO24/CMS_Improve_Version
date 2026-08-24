@@ -1,11 +1,14 @@
 <?php
 require_once __DIR__ . '/../models/SystemException.php';
+require_once __DIR__ . '/../models/AuditLog.php';
 
 class SystemExceptionController {
     private $exceptionModel;
+    private $auditLogModel;
 
     public function __construct() {
         $this->exceptionModel = new SystemException();
+        $this->auditLogModel = new AuditLog();
     }
 
     public function index($filters = []) {
@@ -28,7 +31,18 @@ class SystemExceptionController {
         }
 
         $result = $this->exceptionModel->resolve($id, $resolvedBy, $notes);
-        return $result ? ['success' => true, 'message' => 'Exception resolved'] : ['error' => 'Failed to resolve exception', 'code' => 500];
+        if ($result) {
+            $this->auditLogModel->log(
+                'Exception resolved',
+                $resolvedBy,
+                is_array($user) ? ($user['username'] ?? null) : null,
+                $exception['entity_type'] ?? 'SystemException',
+                $exception['entity_id'] ?? $id,
+                ['exception_id' => (int) $id, 'event' => $exception['event'] ?? null, 'resolution_notes' => $notes]
+            );
+            return ['success' => true, 'message' => 'Exception resolved'];
+        }
+        return ['error' => 'Failed to resolve exception', 'code' => 500];
     }
 
     public function countOpen() {

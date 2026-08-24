@@ -1,14 +1,17 @@
 <?php
 require_once __DIR__ . '/../models/Cremation.php';
 require_once __DIR__ . '/../models/Decedent.php';
+require_once __DIR__ . '/../models/AuditLog.php';
 
 class CremationController {
     private $cremationModel;
     private $decedentModel;
+    private $auditLogModel;
 
     public function __construct() {
         $this->cremationModel = new Cremation();
         $this->decedentModel = new Decedent();
+        $this->auditLogModel = new AuditLog();
     }
 
     public function index($filters = [], $pagination = []) {
@@ -73,6 +76,14 @@ class CremationController {
                 $updateData['is_cremated'] = isset($data['status']) && $data['status'] === 'Completed' ? 'yes' : 'no';
                 $this->decedentModel->patchCremationStatus($data['deceased_id'], $updateData);
             }
+            $this->auditLogModel->log(
+                'Cremation record created',
+                $userId,
+                null,
+                'Cremation',
+                $result,
+                ['deceased_id' => (int) $data['deceased_id'], 'niche_number' => $data['niche_number'] ?? null, 'status' => $data['status'] ?? 'Scheduled']
+            );
             return ['success' => true, 'message' => 'Cremation record created'];
         }
 
@@ -109,13 +120,28 @@ class CremationController {
             if (!empty($decedentData)) {
                 $this->decedentModel->patchCremationStatus($existing['deceased_id'], $decedentData);
             }
+
+            $changed = [];
+            foreach (['status', 'niche_number', 'columbarium', 'level', 'ash_storage_location'] as $field) {
+                if (array_key_exists($field, $data) && (string) $data[$field] !== (string) ($existing[$field] ?? '')) {
+                    $changed[$field] = ['from' => $existing[$field] ?? null, 'to' => $data[$field]];
+                }
+            }
+            $this->auditLogModel->log(
+                'Cremation record updated',
+                $userId,
+                null,
+                'Cremation',
+                $id,
+                $changed ?: ['note' => 'Updated cremation record']
+            );
             return ['success' => true, 'message' => 'Cremation record updated'];
         }
 
         return ['error' => 'Failed to update cremation record', 'code' => 500];
     }
 
-    public function destroy($id) {
+    public function destroy($id, $userId = null) {
         $existing = $this->cremationModel->findById($id);
         if (!$existing) {
             return ['error' => 'Cremation record not found', 'code' => 404];
@@ -127,6 +153,14 @@ class CremationController {
                 'is_cremated' => 'no',
                 'ash_storage' => null
             ]);
+            $this->auditLogModel->log(
+                'Cremation record deleted',
+                $userId,
+                null,
+                'Cremation',
+                $id,
+                ['deceased_id' => $existing['deceased_id'] ?? null, 'niche_number' => $existing['niche_number'] ?? null]
+            );
             return ['success' => true, 'message' => 'Cremation record deleted'];
         }
 
@@ -200,6 +234,14 @@ class CremationController {
                 'is_cremated' => 'yes',
                 'ash_storage' => $data['niche_number']
             ]);
+            $this->auditLogModel->log(
+                'Cremation niche assigned',
+                $userId,
+                null,
+                'Cremation',
+                $result,
+                ['deceased_id' => (int) $data['deceased_id'], 'niche_number' => $data['niche_number'], 'columbarium' => $data['columbarium'] ?? null]
+            );
             return ['success' => true, 'message' => 'Decedent assigned to niche'];
         }
 

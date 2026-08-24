@@ -2,16 +2,27 @@
 require_once __DIR__ . '/../models/AiParameter.php';
 require_once __DIR__ . '/../models/AiKnowledge.php';
 require_once __DIR__ . '/../services/AIService.php';
+require_once __DIR__ . '/../models/AuditLog.php';
 
 class AiController {
     private $aiParameterModel;
     private $aiKnowledgeModel;
     private $aiService;
+    private $auditLogModel;
 
     public function __construct() {
         $this->aiParameterModel = new AiParameter();
         $this->aiKnowledgeModel = new AiKnowledge();
         $this->aiService = new AIService();
+        $this->auditLogModel = new AuditLog();
+    }
+
+    private static function actorId($actor) {
+        return is_array($actor) ? ($actor['user_id'] ?? null) : $actor;
+    }
+
+    private static function actorUsername($actor) {
+        return is_array($actor) ? ($actor['username'] ?? null) : null;
     }
 
     public function health() {
@@ -134,7 +145,7 @@ class AiController {
         return $this->aiKnowledgeModel->findAll();
     }
 
-    public function createKnowledge($data) {
+    public function createKnowledge($data, $actor = null) {
         $data = is_array($data) ? $data : [];
         if (empty($data['topic']) || empty($data['content'])) {
             return ['error' => 'topic and content are required', 'code' => 400];
@@ -142,12 +153,20 @@ class AiController {
 
         $result = $this->aiKnowledgeModel->create($data);
         if ($result) {
+            $this->auditLogModel->log(
+                'AI knowledge entry created',
+                self::actorId($actor),
+                self::actorUsername($actor),
+                'AiKnowledge',
+                $result,
+                ['topic' => $data['topic']]
+            );
             return ['success' => true, 'message' => 'Knowledge entry created'];
         }
         return ['error' => 'Failed to create knowledge entry', 'code' => 500];
     }
 
-    public function updateKnowledge($id, $data) {
+    public function updateKnowledge($id, $data, $actor = null) {
         if (empty($id)) {
             return ['error' => 'Knowledge ID is required', 'code' => 400];
         }
@@ -158,18 +177,35 @@ class AiController {
 
         $result = $this->aiKnowledgeModel->update($id, $data);
         if ($result) {
+            $this->auditLogModel->log(
+                'AI knowledge entry updated',
+                self::actorId($actor),
+                self::actorUsername($actor),
+                'AiKnowledge',
+                $id,
+                ['topic' => $data['topic']]
+            );
             return ['success' => true, 'message' => 'Knowledge entry updated'];
         }
         return ['error' => 'Failed to update knowledge entry', 'code' => 500];
     }
 
-    public function deleteKnowledge($id) {
+    public function deleteKnowledge($id, $actor = null) {
         if (empty($id)) {
             return ['error' => 'Knowledge ID is required', 'code' => 400];
         }
 
+        $existing = $this->aiKnowledgeModel->findById($id);
         $result = $this->aiKnowledgeModel->delete($id);
         if ($result) {
+            $this->auditLogModel->log(
+                'AI knowledge entry deleted',
+                self::actorId($actor),
+                self::actorUsername($actor),
+                'AiKnowledge',
+                $id,
+                ['topic' => $existing['topic'] ?? null]
+            );
             return ['success' => true, 'message' => 'Knowledge entry deleted'];
         }
         return ['error' => 'Failed to delete knowledge entry', 'code' => 500];
@@ -179,13 +215,26 @@ class AiController {
         return $this->aiParameterModel->findAll($module);
     }
 
-    public function updateParameter($id, $data) {
+    public function updateParameter($id, $data, $actor = null) {
         if (empty($id)) {
             return ['error' => 'Parameter ID is required', 'code' => 400];
         }
 
+        $existing = $this->aiParameterModel->findById($id);
         $result = $this->aiParameterModel->update($id, $data);
         if ($result) {
+            $this->auditLogModel->log(
+                'AI parameter updated',
+                self::actorId($actor),
+                self::actorUsername($actor),
+                'AiParameter',
+                $id,
+                [
+                    'param_name' => $existing['param_name'] ?? null,
+                    'from' => $existing['param_value'] ?? null,
+                    'to' => $data['param_value'] ?? null,
+                ]
+            );
             return ['success' => true, 'message' => 'Parameter updated'];
         }
 

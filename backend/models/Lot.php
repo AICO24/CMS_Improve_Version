@@ -153,7 +153,7 @@ class Lot {
             INSERT INTO lots (block_id, lot_number, lot_type_id, status, price, dimensions, location_notes)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
-        return $stmt->execute([
+        $success = $stmt->execute([
             $data['block_id'],
             $lotNumber,
             $data['lot_type_id'],
@@ -162,6 +162,7 @@ class Lot {
             $data['dimensions'] ?? null,
             $data['location_notes'] ?? null,
         ]);
+        return $success ? (int) $this->db->lastInsertId() : false;
     }
 
     public function update($id, $data) {

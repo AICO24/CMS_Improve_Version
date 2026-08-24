@@ -1,14 +1,17 @@
 <?php
 require_once __DIR__ . '/../models/DecedentRequest.php';
 require_once __DIR__ . '/../models/Decedent.php';
+require_once __DIR__ . '/../models/AuditLog.php';
 
 class DecedentRequestController {
     private $requestModel;
     private $decedentModel;
+    private $auditLogModel;
 
     public function __construct() {
         $this->requestModel = new DecedentRequest();
         $this->decedentModel = new Decedent();
+        $this->auditLogModel = new AuditLog();
     }
 
     public function index($status = null) {
@@ -56,8 +59,20 @@ class DecedentRequestController {
         }
 
         $reviewerId = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        $reviewerUsername = is_array($user) ? ($user['username'] ?? null) : null;
         $result = $this->requestModel->approve($id, $data['decedent_id'], $reviewerId);
-        return $result ? ['success' => true, 'message' => 'Request approved'] : ['error' => 'Failed to approve request', 'code' => 500];
+        if ($result) {
+            $this->auditLogModel->log(
+                'Decedent request approved',
+                $reviewerId,
+                $reviewerUsername,
+                'DecedentRequest',
+                $id,
+                ['full_name' => $request['full_name'] ?? null, 'linked_decedent_id' => (int) $data['decedent_id']]
+            );
+            return ['success' => true, 'message' => 'Request approved'];
+        }
+        return ['error' => 'Failed to approve request', 'code' => 500];
     }
 
     public function reject($id, $data, $user) {
@@ -73,8 +88,20 @@ class DecedentRequestController {
         }
 
         $reviewerId = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        $reviewerUsername = is_array($user) ? ($user['username'] ?? null) : null;
         $result = $this->requestModel->reject($id, $data['rejection_reason'], $reviewerId);
-        return $result ? ['success' => true, 'message' => 'Request rejected'] : ['error' => 'Failed to reject request', 'code' => 500];
+        if ($result) {
+            $this->auditLogModel->log(
+                'Decedent request rejected',
+                $reviewerId,
+                $reviewerUsername,
+                'DecedentRequest',
+                $id,
+                ['full_name' => $request['full_name'] ?? null, 'rejection_reason' => $data['rejection_reason']]
+            );
+            return ['success' => true, 'message' => 'Request rejected'];
+        }
+        return ['error' => 'Failed to reject request', 'code' => 500];
     }
 
     // Called by the chat assistant right after it shows a status line for
@@ -95,6 +122,17 @@ class DecedentRequestController {
         }
 
         $result = $this->requestModel->markNotified($id, $request['status']);
-        return $result ? ['success' => true] : ['error' => 'Failed to acknowledge request', 'code' => 500];
+        if ($result) {
+            $this->auditLogModel->log(
+                'Decedent request acknowledged',
+                $userId,
+                is_array($user) ? ($user['username'] ?? null) : null,
+                'DecedentRequest',
+                $id,
+                ['status' => $request['status']]
+            );
+            return ['success' => true];
+        }
+        return ['error' => 'Failed to acknowledge request', 'code' => 500];
     }
 }

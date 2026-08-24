@@ -1,11 +1,27 @@
 <?php
 require_once __DIR__ . '/../models/Decedent.php';
+require_once __DIR__ . '/../models/AuditLog.php';
 
 class DecedentController {
     private $decedentModel;
+    private $auditLogModel;
+
+    // Fields never written to audit_logs.details verbatim — the audit only
+    // needs to show a sensitive field changed, not its value. Matches
+    // redactDecedent()'s existing notion of what's sensitive on this model.
+    private const SENSITIVE_FIELDS = ['dob', 'dod', 'cause_of_death', 'contact_name', 'contact_number', 'is_cremated', 'ash_storage'];
 
     public function __construct() {
         $this->decedentModel = new Decedent();
+        $this->auditLogModel = new AuditLog();
+    }
+
+    private static function actorId($actor) {
+        return is_array($actor) ? ($actor['user_id'] ?? null) : $actor;
+    }
+
+    private static function actorUsername($actor) {
+        return is_array($actor) ? ($actor['username'] ?? null) : null;
     }
 
     // Batch M6: decedent_records has no owner/user column, so there is no
@@ -73,7 +89,7 @@ class DecedentController {
         return $this->isFullAccessRole($user) ? $decedent : $this->redactDecedent($decedent);
     }
 
-    public function store($data) {
+    public function store($data, $actor = null) {
         $required = ['lot_id', 'first_name', 'last_name', 'dob', 'dod'];
         foreach ($required as $field) {
             if (empty($data[$field])) {
@@ -84,10 +100,21 @@ class DecedentController {
         $data['is_cremated'] = isset($data['is_cremated']) && $data['is_cremated'] === 'yes' ? 'yes' : 'no';
 
         $result = $this->decedentModel->create($data);
-        return $result ? ['success' => true, 'message' => 'Decedent record created', 'decedent_id' => $result] : ['error' => 'Failed to create decedent record', 'code' => 500];
+        if ($result) {
+            $this->auditLogModel->log(
+                'Decedent record created',
+                self::actorId($actor),
+                self::actorUsername($actor),
+                'Decedent',
+                $result,
+                ['lot_id' => (int) $data['lot_id'], 'first_name' => $data['first_name'], 'last_name' => $data['last_name']]
+            );
+            return ['success' => true, 'message' => 'Decedent record created', 'decedent_id' => $result];
+        }
+        return ['error' => 'Failed to create decedent record', 'code' => 500];
     }
 
-    public function update($id, $data) {
+    public function update($id, $data, $actor = null) {
         $decedent = $this->decedentModel->findById($id);
         if (!$decedent) {
             return ['error' => 'Decedent record not found', 'code' => 404];
@@ -103,17 +130,48 @@ class DecedentController {
         $data['is_cremated'] = isset($data['is_cremated']) && $data['is_cremated'] === 'yes' ? 'yes' : 'no';
 
         $result = $this->decedentModel->update($id, $data);
-        return $result ? ['success' => true, 'message' => 'Decedent record updated'] : ['error' => 'Failed to update decedent record', 'code' => 500];
+        if ($result) {
+            $changed = [];
+            foreach (['lot_id', 'first_name', 'last_name', 'middle_name', 'suffix', 'dob', 'dod', 'cause_of_death', 'contact_name', 'contact_number', 'is_cremated', 'ash_storage'] as $field) {
+                if (!array_key_exists($field, $data)) {
+                    continue;
+                }
+                if ((string) $data[$field] !== (string) ($decedent[$field] ?? '')) {
+                    $changed[$field] = in_array($field, self::SENSITIVE_FIELDS, true) ? 'changed' : ['from' => $decedent[$field] ?? null, 'to' => $data[$field]];
+                }
+            }
+            $this->auditLogModel->log(
+                'Decedent record updated',
+                self::actorId($actor),
+                self::actorUsername($actor),
+                'Decedent',
+                $id,
+                $changed ?: ['note' => 'Updated decedent record']
+            );
+            return ['success' => true, 'message' => 'Decedent record updated'];
+        }
+        return ['error' => 'Failed to update decedent record', 'code' => 500];
     }
 
-    public function destroy($id) {
+    public function destroy($id, $actor = null) {
         $decedent = $this->decedentModel->findById($id);
         if (!$decedent) {
             return ['error' => 'Decedent record not found', 'code' => 404];
         }
 
         $result = $this->decedentModel->delete($id);
-        return $result ? ['success' => true, 'message' => 'Decedent record deleted'] : ['error' => 'Failed to delete decedent record', 'code' => 500];
+        if ($result) {
+            $this->auditLogModel->log(
+                'Decedent record deleted',
+                self::actorId($actor),
+                self::actorUsername($actor),
+                'Decedent',
+                $id,
+                ['lot_id' => $decedent['lot_id'] ?? null, 'first_name' => $decedent['first_name'] ?? null, 'last_name' => $decedent['last_name'] ?? null]
+            );
+            return ['success' => true, 'message' => 'Decedent record deleted'];
+        }
+        return ['error' => 'Failed to delete decedent record', 'code' => 500];
     }
 
     public function stats() {

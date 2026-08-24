@@ -21,7 +21,8 @@ class Section {
 
     public function create($data) {
         $stmt = $this->db->prepare("INSERT INTO sections (section_name, description) VALUES (?, ?)");
-        return $stmt->execute([$data['section_name'], $data['description'] ?? '']);
+        $success = $stmt->execute([$data['section_name'], $data['description'] ?? '']);
+        return $success ? (int) $this->db->lastInsertId() : false;
     }
 
     public function update($id, $data) {

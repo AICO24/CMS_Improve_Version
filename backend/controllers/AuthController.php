@@ -144,6 +144,16 @@ class AuthController {
         $result = $this->userModel->create($createData);
         if ($result) {
             $created = $this->userModel->findByEmail($data['email']);
+            if ($created) {
+                $this->auditLogModel->log(
+                    'Citizen self-registration',
+                    $created['user_id'],
+                    $created['username'],
+                    'User',
+                    $created['user_id'],
+                    ['registered_email' => $created['email']]
+                );
+            }
             return ['success' => true, 'message' => 'Registration successful', 'user' => $created];
         }
         return ['error' => 'Registration failed', 'code' => 500];

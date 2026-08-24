@@ -158,7 +158,7 @@ if (preg_match('/^sections\/(\d+)$/', $path, $matches) && $requestMethod === 'GE
 if ($path === 'sections' && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
-    $result = $lotController->createSection($input);
+    $result = $lotController->createSection($input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -167,7 +167,7 @@ if ($path === 'sections' && $requestMethod === 'POST') {
 if (preg_match('/^sections\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
-    $result = $lotController->updateSection($matches[1], $input);
+    $result = $lotController->updateSection($matches[1], $input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -175,7 +175,7 @@ if (preg_match('/^sections\/(\d+)$/', $path, $matches) && $requestMethod === 'PU
 }
 if (preg_match('/^sections\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
-    $result = $lotController->deleteSection($matches[1]);
+    $result = $lotController->deleteSection($matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -194,7 +194,7 @@ if (preg_match('/^blocks\/(\d+)$/', $path, $matches) && $requestMethod === 'GET'
 if ($path === 'blocks' && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
-    $result = $lotController->createBlock($input);
+    $result = $lotController->createBlock($input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -203,7 +203,7 @@ if ($path === 'blocks' && $requestMethod === 'POST') {
 if (preg_match('/^blocks\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
-    $result = $lotController->updateBlock($matches[1], $input);
+    $result = $lotController->updateBlock($matches[1], $input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -211,7 +211,7 @@ if (preg_match('/^blocks\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT'
 }
 if (preg_match('/^blocks\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
-    $result = $lotController->deleteBlock($matches[1]);
+    $result = $lotController->deleteBlock($matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -250,7 +250,7 @@ if (preg_match('/^lots\/(\d+)$/', $path, $matches) && $requestMethod === 'GET') 
 if ($path === 'lots' && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
-    $result = $lotController->createLot($input);
+    $result = $lotController->createLot($input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -259,7 +259,7 @@ if ($path === 'lots' && $requestMethod === 'POST') {
 if (preg_match('/^lots\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
-    $result = $lotController->updateLot($matches[1], $input);
+    $result = $lotController->updateLot($matches[1], $input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -267,7 +267,7 @@ if (preg_match('/^lots\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') 
 }
 if (preg_match('/^lots\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
-    $result = $lotController->deleteLot($matches[1]);
+    $result = $lotController->deleteLot($matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -478,7 +478,7 @@ if (preg_match('/^cremations\/(\d+)$/', $path, $matches) && $requestMethod === '
 
 if (preg_match('/^cremations\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
     $user = AuthMiddleware::requireRole(['admin']);
-    $result = $cremationController->destroy($matches[1]);
+    $result = $cremationController->destroy($matches[1], $user['user_id']);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -981,9 +981,9 @@ if ($path === 'ai/knowledge' && $requestMethod === 'GET') {
 }
 
 if ($path === 'ai/knowledge' && $requestMethod === 'POST') {
-    AuthMiddleware::requireRole(['admin']);
+    $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
-    $result = $aiController->createKnowledge($input);
+    $result = $aiController->createKnowledge($input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -991,9 +991,9 @@ if ($path === 'ai/knowledge' && $requestMethod === 'POST') {
 }
 
 if (preg_match('/^ai\/knowledge\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
-    AuthMiddleware::requireRole(['admin']);
+    $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
-    $result = $aiController->updateKnowledge($matches[1], $input);
+    $result = $aiController->updateKnowledge($matches[1], $input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -1001,8 +1001,8 @@ if (preg_match('/^ai\/knowledge\/(\d+)$/', $path, $matches) && $requestMethod ==
 }
 
 if (preg_match('/^ai\/knowledge\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
-    AuthMiddleware::requireRole(['admin']);
-    $result = $aiController->deleteKnowledge($matches[1]);
+    $user = AuthMiddleware::requireRole(['admin']);
+    $result = $aiController->deleteKnowledge($matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -1019,7 +1019,7 @@ if ($path === 'ai/parameters' && $requestMethod === 'GET') {
 if (preg_match('/^ai\/parameters\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
     $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
-    $result = $aiController->updateParameter($matches[1], $input);
+    $result = $aiController->updateParameter($matches[1], $input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -1114,7 +1114,7 @@ if (preg_match('/^decedents\/(\d+)$/', $path, $matches) && $requestMethod === 'G
 if ($path === 'decedents' && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
-    $result = $decedentController->store($input);
+    $result = $decedentController->store($input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -1123,7 +1123,7 @@ if ($path === 'decedents' && $requestMethod === 'POST') {
 if (preg_match('/^decedents\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
-    $result = $decedentController->update($matches[1], $input);
+    $result = $decedentController->update($matches[1], $input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -1131,7 +1131,7 @@ if (preg_match('/^decedents\/(\d+)$/', $path, $matches) && $requestMethod === 'P
 }
 if (preg_match('/^decedents\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
-    $result = $decedentController->destroy($matches[1]);
+    $result = $decedentController->destroy($matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);

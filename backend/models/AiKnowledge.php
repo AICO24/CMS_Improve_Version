@@ -22,10 +22,11 @@ class AiKnowledge {
 
     public function create($data) {
         $stmt = $this->db->prepare("INSERT INTO ai_knowledge (topic, content) VALUES (?, ?)");
-        return $stmt->execute([
+        $success = $stmt->execute([
             $data['topic'],
             $data['content'],
         ]);
+        return $success ? (int) $this->db->lastInsertId() : false;
     }
 
     public function update($id, $data) {
