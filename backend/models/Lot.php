@@ -194,6 +194,31 @@ class Lot {
         ]);
     }
 
+    // Batch C (Admin-Wide Automation Audit): the one authoritative write path
+    // for a lot's status when it changes as a SIDE EFFECT of another action
+    // (a booking getting confirmed/completed/cancelled, a payment verifying,
+    // a relocation being approved/completed) — as opposed to an admin
+    // directly editing a lot's fields via update() above, which intentionally
+    // stays unrestricted (Classification E in the audit: that's admin
+    // override, not automation, and update() is left untouched here).
+    // $allowedFromStatuses, when given, rejects (returns false, writes
+    // nothing) if the lot isn't currently in one of those statuses — callers
+    // wrap this in AutomationEngine::run() so a rejection raises a reviewable
+    // system_exceptions entry instead of silently doing nothing or
+    // overwriting a status some other process already moved past.
+    public function transitionStatus($lotId, $newStatus, $allowedFromStatuses = null) {
+        $existing = $this->findById($lotId);
+        if (!$existing) {
+            return false;
+        }
+        if ($allowedFromStatuses !== null && !in_array($existing['status'], $allowedFromStatuses, true)) {
+            return false;
+        }
+
+        $stmt = $this->db->prepare("UPDATE lots SET status = ? WHERE lot_id = ?");
+        return $stmt->execute([$newStatus, (int) $lotId]);
+    }
+
     public function delete($id) {
         $stmt = $this->db->prepare("DELETE FROM lots WHERE lot_id = ?");
         return $stmt->execute([$id]);

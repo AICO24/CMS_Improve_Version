@@ -5,6 +5,7 @@ require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/ExpirationRecord.php';
 require_once __DIR__ . '/../models/DecedentRequest.php';
+require_once __DIR__ . '/../services/AutomationEngine.php';
 
 class ScheduleController {
     private $scheduleModel;
@@ -207,7 +208,7 @@ class ScheduleController {
         $scheduleId = $this->scheduleModel->create($data);
         if ($scheduleId) {
             if (isset($data['status']) && $data['status'] === 'Confirmed') {
-                $this->lotModel->update($data['lot_id'], ['status' => 'Reserved']);
+                $this->transitionLotStatus($data['lot_id'], 'Reserved', ['Available', 'Reserved'], $user, 'schedule.confirmed');
             }
             $this->notifySchedule($data, $userId);
             return ['success' => true, 'message' => 'Schedule created', 'schedule_id' => $scheduleId];
@@ -385,10 +386,15 @@ class ScheduleController {
         if ($result) {
             $lotId = $data['lot_id'] ?? $existing['lot_id'];
             if (isset($data['status']) && $data['status'] === 'Confirmed' && $existing['status'] !== 'Confirmed') {
-                $this->lotModel->update($lotId, ['status' => 'Reserved']);
+                $this->transitionLotStatus($lotId, 'Reserved', ['Available', 'Reserved'], $user, 'schedule.confirmed');
                 $this->notifyScheduleStatusChange($existing, 'Confirmed', $existing['created_by']);
             } elseif (isset($data['status']) && $data['status'] === 'Completed' && $existing['status'] !== 'Completed') {
-                $this->lotModel->update($lotId, ['status' => 'Occupied']);
+                // Available is included alongside Reserved: an admin/staff PUT
+                // may mark a Pending schedule Completed directly (skipping the
+                // Confirmed step) — see the guard note on transitionLotStatus()
+                // below. That's pre-existing, allowed behavior; this transition
+                // must keep accepting it, not just the normal Reserved->Occupied path.
+                $this->transitionLotStatus($lotId, 'Occupied', ['Available', 'Reserved'], $user, 'schedule.completed');
                 $this->createLeaseRecordIfMissing($lotId, $existing['schedule_date']);
                 $this->notifyScheduleStatusChange($existing, 'Completed', $existing['created_by']);
             }
@@ -441,13 +447,44 @@ class ScheduleController {
         $result = $this->scheduleModel->delete($id);
         if ($result) {
             if (in_array($existing['status'], ['Confirmed', 'Pending'], true)) {
-                $this->lotModel->update($existing['lot_id'], ['status' => 'Available']);
+                $this->transitionLotStatus($existing['lot_id'], 'Available', ['Available', 'Reserved'], $user, 'schedule.cancelled');
             }
             $this->notifyScheduleStatusChange($existing, 'Cancelled', $existing['created_by']);
             return ['success' => true, 'message' => 'Schedule deleted'];
         }
 
         return ['error' => 'Failed to delete schedule', 'code' => 500];
+    }
+
+    // Batch C (Admin-Wide Automation Audit): the shared wrapper every
+    // schedule-triggered lot status change in this controller goes through —
+    // reuses Lot::transitionStatus() as the one authoritative write, and
+    // AutomationEngine for the same validate/apply/audit/exception envelope
+    // already proven by the payment-verified auto-confirm and decedent-request
+    // auto-link paths. A rejected transition (lot not in an expected status)
+    // raises a system_exceptions entry instead of silently doing nothing or
+    // overwriting a status some other process already moved past.
+    private function transitionLotStatus($lotId, $newStatus, $allowedFromStatuses, $actorUser, $event) {
+        $lotModel = $this->lotModel;
+        AutomationEngine::run(
+            $event,
+            'Lot',
+            $lotId,
+            $actorUser,
+            function () use ($lotModel, $lotId, $allowedFromStatuses) {
+                $lot = $lotModel->findById($lotId);
+                if (!$lot) {
+                    return ['Lot no longer exists'];
+                }
+                if ($allowedFromStatuses !== null && !in_array($lot['status'], $allowedFromStatuses, true)) {
+                    return ['Lot ' . ($lot['lot_number'] ?? $lot['lot_id']) . ' is not in an expected status for this transition (current: ' . $lot['status'] . ')'];
+                }
+                return true;
+            },
+            function () use ($lotModel, $lotId, $newStatus, $allowedFromStatuses) {
+                return $lotModel->transitionStatus($lotId, $newStatus, $allowedFromStatuses);
+            }
+        );
     }
 
     public function checkConflict($lotId, $date, $time = null) {

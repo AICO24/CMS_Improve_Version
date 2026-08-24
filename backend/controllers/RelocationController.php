@@ -3,6 +3,7 @@ require_once __DIR__ . '/../models/Relocation.php';
 require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/../models/Decedent.php';
 require_once __DIR__ . '/../models/AuditLog.php';
+require_once __DIR__ . '/../services/AutomationEngine.php';
 
 class RelocationController {
     private $relocationModel;
@@ -124,7 +125,7 @@ class RelocationController {
 
         $result = $this->relocationModel->updateStatus($id, 'Approved', $userId);
         if ($result) {
-            $this->lotModel->update($request['to_lot_id'], ['status' => 'Reserved']);
+            $this->transitionLotStatus($request['to_lot_id'], 'Reserved', ['Available'], $userId, 'relocation.approved');
             $this->auditLogModel->log(
                 'Relocation approved',
                 $userId,
@@ -148,8 +149,17 @@ class RelocationController {
             return ['error' => 'Request must be approved first', 'code' => 403];
         }
 
-        $this->lotModel->update($request['from_lot_id'], ['status' => 'Available']);
-        $this->lotModel->update($request['to_lot_id'], ['status' => 'Occupied']);
+        // from_lot's prior status isn't validated anywhere in this flow (not
+        // by store(), not here) — it's assumed Occupied (that's where the
+        // decedent currently rests) but nothing enforces it, so this release
+        // deliberately carries no guard, preserving exact pre-existing
+        // behavior (it always succeeded unconditionally before Batch C too).
+        $this->transitionLotStatus($request['from_lot_id'], 'Available', null, $userId, 'relocation.completed');
+        // to_lot, by contrast, was guarded into Reserved by approve() above,
+        // and nothing else should have touched it since — a guard here is
+        // safe and catches a real anomaly (e.g. it was reset via a direct
+        // lot edit while the relocation sat Approved).
+        $this->transitionLotStatus($request['to_lot_id'], 'Occupied', ['Reserved'], $userId, 'relocation.completed');
 
         $result = $this->relocationModel->updateStatus($id, 'Completed', $userId);
         if ($result) {
@@ -216,5 +226,34 @@ class RelocationController {
 
     public function stats() {
         return $this->relocationModel->getStats();
+    }
+
+    // Batch C (Admin-Wide Automation Audit): same shared wrapper as
+    // ScheduleController's — routes this controller's lot status changes
+    // through the one authoritative Lot::transitionStatus() write via
+    // AutomationEngine, so they're audited on success and raise a reviewable
+    // system_exceptions entry (instead of silently doing nothing) if the lot
+    // isn't in an expected status when $allowedFromStatuses is given.
+    private function transitionLotStatus($lotId, $newStatus, $allowedFromStatuses, $actorUser, $event) {
+        $lotModel = $this->lotModel;
+        AutomationEngine::run(
+            $event,
+            'Lot',
+            $lotId,
+            $actorUser,
+            function () use ($lotModel, $lotId, $allowedFromStatuses) {
+                $lot = $lotModel->findById($lotId);
+                if (!$lot) {
+                    return ['Lot no longer exists'];
+                }
+                if ($allowedFromStatuses !== null && !in_array($lot['status'], $allowedFromStatuses, true)) {
+                    return ['Lot ' . ($lot['lot_number'] ?? $lot['lot_id']) . ' is not in an expected status for this transition (current: ' . $lot['status'] . ')'];
+                }
+                return true;
+            },
+            function () use ($lotModel, $lotId, $newStatus, $allowedFromStatuses) {
+                return $lotModel->transitionStatus($lotId, $newStatus, $allowedFromStatuses);
+            }
+        );
     }
 }

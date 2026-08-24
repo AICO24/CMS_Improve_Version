@@ -511,7 +511,7 @@ class PaymentController {
             }
 
             if ($status === 'Verified' && $payment['transaction_type'] === 'Lot Purchase') {
-                $this->syncLotStatusForVerifiedPurchase($payment);
+                $this->syncLotStatusForVerifiedPurchase($payment, $adminId);
                 $this->autoConfirmScheduleForVerifiedPurchase($payment, $adminId);
             }
 
@@ -529,7 +529,7 @@ class PaymentController {
     // in practice either a schedule_id (normal reserve-then-pay flow) or a raw
     // lot_id (the Lot Management "Pay Now" shortcut). Never downgrades a lot
     // that's already past Available (Reserved/Occupied/Expired left untouched).
-    private function syncLotStatusForVerifiedPurchase($payment) {
+    private function syncLotStatusForVerifiedPurchase($payment, $adminId) {
         if (empty($payment['reference_id'])) {
             return;
         }
@@ -553,9 +553,44 @@ class PaymentController {
         }
 
         $lot = $lotModel->findById($lotId);
-        if ($lot && $lot['status'] === 'Available') {
-            $lotModel->update($lotId, ['status' => 'Reserved']);
+        if (!$lot || $lot['status'] !== 'Available') {
+            // Not an error — this is the pre-existing "never downgrade a lot
+            // that's already past Available" rule, not a failure needing
+            // admin review. Nothing to automate here, so AutomationEngine
+            // (below) is intentionally not invoked for this common case —
+            // mirrors autoConfirmScheduleForVerifiedPurchase()'s own early
+            // no-op returns for its terminal-state cases.
+            return;
         }
+
+        // Batch C (Admin-Wide Automation Audit): same AutomationEngine
+        // validate/apply/audit/exception envelope already used by
+        // autoConfirmScheduleForVerifiedPurchase() below, now applied to this
+        // method's own lot write too — previously a bare, unaudited
+        // $lotModel->update() call. validate() re-checks freshness right
+        // before writing (same convention as that method) so a lot that
+        // changed status in the moment between the check above and here
+        // raises a reviewable exception instead of silently overwriting it.
+        $adminActor = ['user_id' => $adminId, 'role' => 'admin'];
+        AutomationEngine::run(
+            'payment.verified',
+            'Lot',
+            $lotId,
+            $adminActor,
+            function () use ($lotModel, $lotId) {
+                $current = $lotModel->findById($lotId);
+                if (!$current) {
+                    return ['Linked lot no longer exists'];
+                }
+                if ($current['status'] !== 'Available') {
+                    return ['Lot ' . ($current['lot_number'] ?? $current['lot_id']) . ' changed status before it could be reserved (current: ' . $current['status'] . ')'];
+                }
+                return true;
+            },
+            function () use ($lotModel, $lotId) {
+                return $lotModel->transitionStatus($lotId, 'Reserved', ['Available']);
+            }
+        );
     }
 
     // Full Automation, Admin-First: folds the previously-separate manual
