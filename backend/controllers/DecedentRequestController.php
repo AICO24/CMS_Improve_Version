@@ -1,16 +1,21 @@
 <?php
 require_once __DIR__ . '/../models/DecedentRequest.php';
 require_once __DIR__ . '/../models/Decedent.php';
+require_once __DIR__ . '/../models/Schedule.php';
 require_once __DIR__ . '/../models/AuditLog.php';
+require_once __DIR__ . '/../services/AutomationEngine.php';
+require_once __DIR__ . '/ScheduleController.php';
 
 class DecedentRequestController {
     private $requestModel;
     private $decedentModel;
+    private $scheduleModel;
     private $auditLogModel;
 
     public function __construct() {
         $this->requestModel = new DecedentRequest();
         $this->decedentModel = new Decedent();
+        $this->scheduleModel = new Schedule();
         $this->auditLogModel = new AuditLog();
     }
 
@@ -70,9 +75,54 @@ class DecedentRequestController {
                 $id,
                 ['full_name' => $request['full_name'] ?? null, 'linked_decedent_id' => (int) $data['decedent_id']]
             );
+            $this->autoLinkSchedules($id, (int) $data['decedent_id'], $user);
             return ['success' => true, 'message' => 'Request approved'];
         }
         return ['error' => 'Failed to approve request', 'code' => 500];
+    }
+
+    // Batch B (Admin-Wide Automation Audit): a citizen's provisional booking
+    // (ScheduleController::store()'s decedent_request_id path) references
+    // this request but has no formal deceased_id yet. Approving the request
+    // now gives the system everything it needs to finish that link itself,
+    // instead of requiring staff to separately visit Manage Reservations and
+    // click "link decedent". Wrapped in AutomationEngine so a schedule that
+    // can't safely be linked (e.g. it got linked some other way between the
+    // lookup below and now) raises a reviewable exception instead of either
+    // silently doing nothing or overwriting an existing link. Schedules that
+    // are already linked are skipped here (not an exception) — that's the
+    // expected steady state, not a problem needing admin attention.
+    private function autoLinkSchedules($requestId, $decedentId, $user) {
+        $schedules = $this->scheduleModel->findByDecedentRequestId($requestId);
+        $scheduleModel = $this->scheduleModel;
+
+        foreach ($schedules as $schedule) {
+            if (!empty($schedule['deceased_id'])) {
+                continue;
+            }
+
+            $scheduleId = $schedule['schedule_id'];
+            AutomationEngine::run(
+                'decedent_request.approved',
+                'Schedule',
+                $scheduleId,
+                $user,
+                function () use ($scheduleModel, $scheduleId) {
+                    $current = $scheduleModel->findById($scheduleId);
+                    if (!$current) {
+                        return ['Linked schedule no longer exists'];
+                    }
+                    if (!empty($current['deceased_id'])) {
+                        return ['Schedule already has a formal decedent record linked'];
+                    }
+                    return true;
+                },
+                function () use ($scheduleId, $decedentId, $user) {
+                    $scheduleController = new ScheduleController();
+                    return $scheduleController->linkDecedent($scheduleId, $decedentId, $user);
+                }
+            );
+        }
     }
 
     public function reject($id, $data, $user) {

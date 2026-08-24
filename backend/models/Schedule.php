@@ -180,6 +180,16 @@ class Schedule {
         return $stmt->fetch();
     }
 
+    // Batch B: lets DecedentRequestController::approve() find the booking(s)
+    // (if any) that were created against this request's provisional
+    // decedent_request_id, so the formal decedent record can be auto-linked
+    // without a separate manual link-decedent click.
+    public function findByDecedentRequestId($requestId) {
+        $stmt = $this->db->prepare("SELECT * FROM burial_schedules WHERE decedent_request_id = ?");
+        $stmt->execute([(int) $requestId]);
+        return $stmt->fetchAll();
+    }
+
     public function checkConflict($lotId, $date, $time = null) {
         $sql = "SELECT COUNT(*) as count FROM burial_schedules 
                 WHERE lot_id = ? AND schedule_date = ? AND status != 'Cancelled'";
