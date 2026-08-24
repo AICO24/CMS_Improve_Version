@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -44,6 +44,7 @@
                 <a href="ai.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>AI Configuration</span></a>
                 <a href="user-management.html" class="nav-item"><i class="fas fa-users icon"></i> <span>User Management</span></a>
                 <a href="audit.html" class="nav-item"><i class="fas fa-clipboard-list icon"></i> <span>Audit Logs</span></a>
+                <a href="exceptions.html" class="nav-item"><i class="fas fa-triangle-exclamation icon"></i> <span>Exceptions</span></a>
             </div>
             <div class="sidebar-footer">
                 <div class="user-chip">
@@ -156,8 +157,11 @@
                             <div class="toolbar-actions-panel">
                                 <div class="toolbar-actions">
                                     <button class="btn-secondary btn-action-pill" id="toggleAwaitingConfirmation" type="button" aria-pressed="false">
-                                        Paid, Awaiting Confirmation <span class="count-badge" id="awaitingConfirmationCount">0</span>
+                                        Needs Review <span class="count-badge" id="awaitingConfirmationCount">0</span>
                                     </button>
+                                    <a class="btn-secondary btn-action-pill" href="exceptions.html">
+                                        <i class="fas fa-triangle-exclamation"></i> Exceptions
+                                    </a>
                                     <button class="btn-secondary btn-action-pill" id="clearFilters">Clear</button>
                                 </div>
                             </div>

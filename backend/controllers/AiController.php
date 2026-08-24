@@ -114,6 +114,22 @@ class AiController {
         ];
     }
 
+    // AI Intelligence Layer: explains a system_exceptions row for the admin
+    // resolving it (Exceptions page's "Ask AI to explain"). Never decides or
+    // acts — see AIService::explainException()'s header comment for the
+    // engine-vs-AI boundary this preserves.
+    public function explainException($payload) {
+        $payload = is_array($payload) ? $payload : [];
+        $result = $this->aiService->explainException($payload);
+        if (!empty($result['error']) || !is_array($result)) {
+            return ['explained' => false, 'message' => null];
+        }
+        return [
+            'explained' => (bool) ($result['explained'] ?? false),
+            'message' => is_string($result['message'] ?? null) ? $result['message'] : null,
+        ];
+    }
+
     public function getKnowledge() {
         return $this->aiKnowledgeModel->findAll();
     }

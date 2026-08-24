@@ -591,6 +591,82 @@ def chat_answer():
         return jsonify({'answered': False, 'message': None})
 
 
+# Full Automation, Admin-First: the AI Intelligence Layer's one addition for
+# this phase — explains a system_exceptions row in plain language for the
+# admin resolving it. Same safety contract as narrate/chat above: the AI
+# never decides or acts (that's backend/services/AutomationEngine.php's
+# job, entirely deterministic) — it only narrates a decision the engine
+# already made or is blocked on. Input here is exception metadata only
+# (event/entity_type/entity_id/reason/severity) — no decedent/user/payment
+# PII is ever included in a system_exceptions row (see
+# AutomationEngine::raiseException()), so this doesn't need the same
+# pending-slot/correction-signal guards the chat assistant's privacy
+# contract requires.
+EXPLAIN_EXCEPTION_SYSTEM_PROMPT = (
+    "You explain a single system exception to a cemetery-management-system "
+    "administrator, in plain language. You are given structured facts only "
+    "— event, entity type/id, the reason automation stopped, and severity. "
+    "Never invent details beyond them. Write 1-2 short sentences: first, "
+    "explain in plain language why the automatic step couldn't proceed; "
+    "second, suggest a concrete, general next step (e.g. 'pick a different "
+    "lot for this booking' or 'confirm it manually once you've verified "
+    "the situation') — never claim to have taken any action yourself. "
+    "Output only the message text: no preamble, no markdown, no quotes."
+)
+
+
+def _explain_exception(event: str, entity_type: str, entity_id: Any, reason: str, severity: Optional[str]) -> Optional[str]:
+    if _gemini_client is None:
+        return None
+
+    facts = {
+        'event': event,
+        'entity_type': entity_type,
+        'entity_id': entity_id,
+        'reason': reason,
+        'severity': severity or 'warning',
+    }
+
+    try:
+        response = _gemini_client.models.generate_content(
+            model=NARRATION_MODEL,
+            contents=json.dumps(facts),
+            config=genai_types.GenerateContentConfig(
+                system_instruction=EXPLAIN_EXCEPTION_SYSTEM_PROMPT,
+                max_output_tokens=512,
+                temperature=0.3,
+                thinking_config=_THINKING_CONFIG,
+                http_options=genai_types.HttpOptions(timeout=_LLM_TIMEOUT_MS),
+            ),
+        )
+        text = (response.text or '').strip()
+        return text or None
+    except Exception:
+        return None
+
+
+@app.post('/api/explain-exception')
+def explain_exception():
+    # Always returns 200; explained:false whenever unavailable, so the
+    # caller (Exceptions page) just hides the AI explanation and the admin
+    # still has the raw reason text to work from.
+    try:
+        payload = request.get_json(silent=True) or {}
+        event = (payload.get('event') or '').strip()
+        entity_type = (payload.get('entity_type') or '').strip()
+        entity_id = payload.get('entity_id')
+        reason = (payload.get('reason') or '').strip()
+        severity = payload.get('severity')
+
+        if not event or not entity_type or not reason:
+            return jsonify({'explained': False, 'message': None})
+
+        message = _explain_exception(event, entity_type, entity_id, reason, severity)
+        return jsonify({'explained': message is not None, 'message': message})
+    except Exception:
+        return jsonify({'explained': False, 'message': None})
+
+
 def _get_capacity_snapshot() -> Dict[str, int]:
     try:
         conn = get_connection()

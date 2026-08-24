@@ -8,11 +8,18 @@ class DecedentRequest {
         $this->db = Database::getInstance()->getConnection();
     }
 
+    // linked_schedule_id/linked_schedule_status: whether a citizen already
+    // booked (and possibly paid for) this request before staff formalized
+    // it — see ScheduleController::store()'s provisional-decedent path.
+    // Lets Decedent Records' Pending Requests card prioritize requests tied
+    // to an already-paid booking over a bare, unbooked request.
     public function findAll($status = null) {
         $sql = "
-            SELECT r.*, u.full_name AS requested_by_name
+            SELECT r.*, u.full_name AS requested_by_name,
+                   s.schedule_id AS linked_schedule_id, s.status AS linked_schedule_status
             FROM decedent_requests r
             LEFT JOIN users u ON r.requested_by = u.user_id
+            LEFT JOIN burial_schedules s ON s.decedent_request_id = r.request_id
             WHERE 1=1
         ";
         $params = [];

@@ -10,18 +10,20 @@ class Schedule {
 
     public function findAll($filters = [], $pagination = []) {
         $sql = "
-            SELECT s.*, 
-                   l.lot_number, 
+            SELECT s.*,
+                   l.lot_number,
                    t.type_name as lot_type_name,
-                   sec.section_name, 
+                   sec.section_name,
                    d.first_name, d.last_name,
+                   dr.full_name AS provisional_name, dr.status AS provisional_status,
                    u.full_name as created_by_name
             FROM burial_schedules s
             JOIN lots l ON s.lot_id = l.lot_id
             JOIN lot_types t ON l.lot_type_id = t.type_id
             JOIN blocks b ON l.block_id = b.block_id
             JOIN sections sec ON b.section_id = sec.section_id
-            JOIN decedent_records d ON s.deceased_id = d.decedent_id
+            LEFT JOIN decedent_records d ON s.deceased_id = d.decedent_id
+            LEFT JOIN decedent_requests dr ON s.decedent_request_id = dr.request_id
             LEFT JOIN users u ON s.created_by = u.user_id
             WHERE 1=1
         ";
@@ -44,8 +46,9 @@ class Schedule {
             $params[] = '%' . $filters['lot_number'] . '%';
         }
         if (!empty($filters['q'])) {
-            $sql .= " AND (l.lot_number LIKE ? OR sec.section_name LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ?)";
+            $sql .= " AND (l.lot_number LIKE ? OR sec.section_name LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ? OR dr.full_name LIKE ?)";
             $search = '%' . $filters['q'] . '%';
+            $params[] = $search;
             $params[] = $search;
             $params[] = $search;
             $params[] = $search;
@@ -99,7 +102,8 @@ class Schedule {
             JOIN lots l ON s.lot_id = l.lot_id
             JOIN blocks b ON l.block_id = b.block_id
             JOIN sections sec ON b.section_id = sec.section_id
-            JOIN decedent_records d ON s.deceased_id = d.decedent_id
+            LEFT JOIN decedent_records d ON s.deceased_id = d.decedent_id
+            LEFT JOIN decedent_requests dr ON s.decedent_request_id = dr.request_id
             WHERE 1=1
         ";
         $params = [];
@@ -121,8 +125,9 @@ class Schedule {
             $params[] = '%' . $filters['lot_number'] . '%';
         }
         if (!empty($filters['q'])) {
-            $sql .= " AND (l.lot_number LIKE ? OR sec.section_name LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ?)";
+            $sql .= " AND (l.lot_number LIKE ? OR sec.section_name LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ? OR dr.full_name LIKE ?)";
             $search = '%' . $filters['q'] . '%';
+            $params[] = $search;
             $params[] = $search;
             $params[] = $search;
             $params[] = $search;
@@ -155,17 +160,19 @@ class Schedule {
     }
 
     public function findById($id) {
-        $stmt = $this->db->prepare(" 
-            SELECT s.*, 
-                   l.lot_number, 
-                   sec.section_name, 
+        $stmt = $this->db->prepare("
+            SELECT s.*,
+                   l.lot_number,
+                   sec.section_name,
                    d.first_name, d.last_name,
+                   dr.full_name AS provisional_name, dr.status AS provisional_status,
                    u.full_name as created_by_name
             FROM burial_schedules s
             JOIN lots l ON s.lot_id = l.lot_id
             JOIN blocks b ON l.block_id = b.block_id
             JOIN sections sec ON b.section_id = sec.section_id
-            JOIN decedent_records d ON s.deceased_id = d.decedent_id
+            LEFT JOIN decedent_records d ON s.deceased_id = d.decedent_id
+            LEFT JOIN decedent_requests dr ON s.decedent_request_id = dr.request_id
             LEFT JOIN users u ON s.created_by = u.user_id
             WHERE s.schedule_id = ?
         ");
@@ -188,14 +195,19 @@ class Schedule {
     }
 
     public function create($data) {
+        // deceased_id/decedent_request_id are mutually exclusive (see
+        // ScheduleController::store()) — exactly one is set for a new
+        // schedule, so both are passed through null-aware rather than cast
+        // with (int), which would turn a genuinely absent value into 0.
         $stmt = $this->db->prepare("
             INSERT INTO burial_schedules
-            (lot_id, deceased_id, schedule_date, schedule_time, status, notes, created_by, confirmed_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (lot_id, deceased_id, decedent_request_id, schedule_date, schedule_time, status, notes, created_by, confirmed_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $success = $stmt->execute([
             (int) $data['lot_id'],
-            (int) $data['deceased_id'],
+            !empty($data['deceased_id']) ? (int) $data['deceased_id'] : null,
+            !empty($data['decedent_request_id']) ? (int) $data['decedent_request_id'] : null,
             $data['schedule_date'],
             $data['schedule_time'] ?? null,
             $data['status'] ?? 'Pending',
@@ -213,10 +225,16 @@ class Schedule {
             return false;
         }
 
+        // Formalizing a provisional booking (ScheduleController::linkDecedent())
+        // sets deceased_id while leaving decedent_request_id in place for audit
+        // traceability (see the plan's state-transition rules) — so
+        // decedent_request_id is only ever changed by an explicit key in $data,
+        // never implicitly cleared here.
         $stmt = $this->db->prepare("
             UPDATE burial_schedules SET
                 lot_id = ?,
                 deceased_id = ?,
+                decedent_request_id = ?,
                 schedule_date = ?,
                 schedule_time = ?,
                 status = ?,
@@ -226,7 +244,12 @@ class Schedule {
         ");
         return $stmt->execute([
             (int) ($data['lot_id'] ?? $existing['lot_id']),
-            (int) ($data['deceased_id'] ?? $existing['deceased_id']),
+            array_key_exists('deceased_id', $data)
+                ? (!empty($data['deceased_id']) ? (int) $data['deceased_id'] : null)
+                : (!empty($existing['deceased_id']) ? (int) $existing['deceased_id'] : null),
+            array_key_exists('decedent_request_id', $data)
+                ? (!empty($data['decedent_request_id']) ? (int) $data['decedent_request_id'] : null)
+                : (!empty($existing['decedent_request_id']) ? (int) $existing['decedent_request_id'] : null),
             $data['schedule_date'] ?? $existing['schedule_date'],
             array_key_exists('schedule_time', $data) ? $data['schedule_time'] : $existing['schedule_time'],
             $data['status'] ?? $existing['status'],

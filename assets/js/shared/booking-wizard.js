@@ -183,6 +183,11 @@ function resolveLotFromIntent(intent, recommendations) {
 
 function createBookingWizard(options) {
     const { allowedRoles, renderStatusBadge, onBookingSuccess } = options;
+    // Booking for someone not yet in decedent_records is citizen-only (see
+    // the automation plan) — derived from allowedRoles rather than a
+    // separate option since the two callers (reserve-burial-slot.js vs.
+    // burial-scheduling.js) already differ exactly this way.
+    const allowProvisionalDecedent = allowedRoles.length === 1 && allowedRoles[0] === 'user';
 
     async function init() {
         const user = await requireRole(allowedRoles);
@@ -244,7 +249,9 @@ function createBookingWizard(options) {
         function updateBlueprintHUD() {
             const state = chatAssistant ? chatAssistant.state : {};
             const decedent = decedents.find(d => d.decedent_id === state.decedent_id);
-            const decedentName = decedent ? `${decedent.first_name} ${decedent.last_name}` : null;
+            const decedentName = decedent
+                ? `${decedent.first_name} ${decedent.last_name}`
+                : (state.provisional_decedent ? `${state.provisional_decedent.full_name} (Unregistered)` : null);
 
             // 1. Decedent Step
             if (decedentName) {
@@ -313,7 +320,7 @@ function createBookingWizard(options) {
 
             const suggestions = [];
 
-            if (state.decedent_id === null && decedents.length > 0) {
+            if (state.decedent_id === null && state.provisional_decedent === null && decedents.length > 0) {
                 const sampleDecedents = decedents.slice(0, 3);
                 sampleDecedents.forEach(d => {
                     suggestions.push({
@@ -531,7 +538,7 @@ function createBookingWizard(options) {
         function renderConfirmationIfReady() {
             if (!selectedLot || confirmationShown) return;
             const state = chatAssistant.state;
-            const decedentMissing = state.decedent_id === null;
+            const decedentMissing = state.decedent_id === null && state.provisional_decedent === null;
             const dateMissing = state.date === null;
 
             if (decedentMissing && dateMissing) {
@@ -552,7 +559,9 @@ function createBookingWizard(options) {
 
             confirmationShown = true;
             const decedent = decedents.find(d => d.decedent_id === state.decedent_id);
-            const decedentName = decedent ? `${decedent.first_name} ${decedent.last_name}` : 'N/A';
+            const decedentName = decedent
+                ? `${decedent.first_name} ${decedent.last_name}`
+                : (state.provisional_decedent ? `${state.provisional_decedent.full_name} (pending registration)` : 'N/A');
             const priceFormatted = `₱${parseFloat(selectedLot.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             const dateFormatted = new Date(`${state.date}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
@@ -594,8 +603,12 @@ function createBookingWizard(options) {
                     </div>
 
                     <div class="voucher-notice">
-                        <i class="fas fa-info-circle"></i> This reservation request will be recorded and queued for administration review and lot allotment verification.
+                        <i class="fas fa-info-circle"></i> This reservation will be confirmed automatically as soon as your payment is verified — no separate approval step needed.
                     </div>
+                    ${state.provisional_decedent ? `
+                    <div class="voucher-notice">
+                        <i class="fas fa-user-clock"></i> ${decedentName.replace(' (pending registration)', '')} isn't in our records yet — your booking still goes through, and our staff will add their official record before the burial.
+                    </div>` : ''}
 
                     <button type="button" class="btn-confirm confirm-booking-btn">
                         <i class="fas fa-check-double"></i> Confirm & Submit Reservation
@@ -626,6 +639,12 @@ function createBookingWizard(options) {
                     const payload = {
                         lot_id: selectedLot.lot_id,
                         deceased_id: state.decedent_id,
+                        // Set only when decedent_id is null — the citizen booked for
+                        // someone not yet in decedent_records (see lot-chat-assistant.js's
+                        // appendDecedentRequestForm()). ScheduleController::store()
+                        // turns this into a decedent_requests row and links it to the
+                        // schedule; ignored server-side whenever deceased_id is set.
+                        provisional_decedent: state.provisional_decedent,
                         schedule_date: state.date,
                         schedule_time: state.time || null,
                         status: 'Pending',
@@ -637,7 +656,7 @@ function createBookingWizard(options) {
                         const scheduleId = result.schedule_id;
                         bubble.remove();
                         confirmationBubble = null;
-                        chatAssistant.appendMessage('assistant', `🎉 Success! Your reservation for Lot ${bookedLot.lot_number} is confirmed and queued for approval.`);
+                        chatAssistant.appendMessage('assistant', `🎉 Success! Your reservation for Lot ${bookedLot.lot_number} is recorded. Complete payment and it'll confirm automatically — no separate approval step.`);
                         updateBlueprintHUD();
                         onBookingSuccess({ scheduleId, bookedLot });
                     } else {
@@ -677,6 +696,7 @@ function createBookingWizard(options) {
             getDecedents: () => decedents,
             validateDate: validateBookingDate,
             interceptMessage: tryHandleLotSelectionText,
+            allowProvisionalDecedent,
             onLotPreferencesReady: () => {
                 fetchAndRenderRecommendations(chatAssistant.getPreferences());
                 updateBlueprintHUD();

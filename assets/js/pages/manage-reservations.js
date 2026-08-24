@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const chips = [
             { key: 'q', label: 'Search', value: currentQuery, clear: () => { searchQuery.value = ''; currentQuery = ''; } },
             { key: 'status', label: 'Status', value: currentStatus, clear: () => { statusFilter.value = ''; currentStatus = ''; } },
-            { key: 'awaiting', label: 'Filter', value: awaitingConfirmationOnly ? 'Paid, Awaiting Confirmation' : '', clear: () => {
+            { key: 'awaiting', label: 'Filter', value: awaitingConfirmationOnly ? 'Needs Review' : '', clear: () => {
                 awaitingConfirmationOnly = false;
                 toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
                 statusFilter.disabled = false;
@@ -99,13 +99,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         return `<span class="status-badge ${badgeClass}">${status || 'Pending'}</span>`;
     }
 
-    function buildActionButtons(schedule) {
+    // Full Automation, Admin-First: a normally-paid booking no longer needs
+    // a manual Confirm click — PaymentController::verify() confirms it
+    // automatically the moment staff verifies the payment (see
+    // AutomationEngine::run() / PaymentController::autoConfirmScheduleForVerifiedPurchase()).
+    // A Pending row only needs admin attention when that automatic step
+    // couldn't safely proceed and raised an open system_exceptions entry —
+    // this is that case, not a routine approval gate.
+    function buildActionButtons(schedule, openExceptionIds) {
         const buttons = [];
         const isAdmin = user.role === 'admin';
         const isOwnPending = schedule.status === 'Pending' && String(schedule.created_by) === String(user.user_id);
 
-        if (schedule.status === 'Pending') {
-            buttons.push(`<button class="btn-row-action btn-row-action--confirm" data-action="confirm" data-id="${schedule.schedule_id}">Confirm</button>`);
+        if (schedule.status === 'Pending' && openExceptionIds.has(schedule.schedule_id)) {
+            buttons.push(`<a class="btn-row-action btn-row-action--confirm" href="exceptions.html">Review Exception</a>`);
         }
         if (schedule.status === 'Confirmed') {
             buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete" data-id="${schedule.schedule_id}">Complete</button>`);
@@ -120,17 +127,24 @@ document.addEventListener('DOMContentLoaded', async function() {
         return buttons.length ? buttons.join('') : '<span class="muted">No actions</span>';
     }
 
-    function buildReservationRow(schedule) {
+    function buildReservationRow(schedule, openExceptionIds) {
+        // Batch: unregistered-decedent bookings (deceased_id null, see the
+        // automation plan) show the provisional name from decedent_requests
+        // instead of a blank — admin can see these immediately, view-only,
+        // no approval needed for the booking itself.
+        const nameCell = (schedule.first_name || schedule.last_name)
+            ? `${schedule.first_name || ''} ${schedule.last_name || ''}`
+            : (schedule.provisional_name ? `${schedule.provisional_name} <span class="muted">(unregistered)</span>` : 'N/A');
         return `
             <tr data-id="${schedule.schedule_id}">
                 <td><strong>Booking #${schedule.schedule_id}</strong></td>
-                <td>${schedule.first_name || ''} ${schedule.last_name || ''}</td>
+                <td>${nameCell}</td>
                 <td>${schedule.lot_number || 'N/A'}</td>
                 <td>${schedule.section_name || 'N/A'}</td>
                 <td>${schedule.schedule_date || 'N/A'} ${schedule.schedule_time ? schedule.schedule_time : ''}</td>
                 <td>${schedule.created_by_name || 'N/A'}</td>
                 <td>${buildStatusBadge(schedule.status)}</td>
-                <td class="action-buttons">${buildActionButtons(schedule)}</td>
+                <td class="action-buttons">${buildActionButtons(schedule, openExceptionIds)}</td>
             </tr>
         `;
     }
@@ -152,6 +166,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         return await api.request('schedules/stats', { method: 'GET' });
     }
 
+    // Set of schedule_ids with an OPEN system_exceptions entry — the only
+    // Pending rows that still need a human action (see buildActionButtons()).
+    async function loadOpenScheduleExceptionIds() {
+        try {
+            const exceptions = await api.request('exceptions?status=open&entity_type=Schedule', { method: 'GET' });
+            return new Set((Array.isArray(exceptions) ? exceptions : []).map((exception) => Number(exception.entity_id)));
+        } catch (error) {
+            console.error('Failed to load open exceptions', error);
+            return new Set();
+        }
+    }
+
     function renderStats(stats) {
         statsEls.pending.innerText = stats.pending || 0;
         statsEls.confirmed.innerText = stats.confirmed || 0;
@@ -160,21 +186,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function refreshAwaitingConfirmationCount() {
-        try {
-            const result = await api.request('schedules?awaiting_confirmation=1&page=1&per_page=1', { method: 'GET' });
-            awaitingCountBadge.textContent = (result.meta && result.meta.total) || 0;
-        } catch (error) {
-            console.error('Failed to load awaiting-confirmation count', error);
-        }
+        const openExceptionIds = await loadOpenScheduleExceptionIds();
+        awaitingCountBadge.textContent = openExceptionIds.size;
     }
 
     async function loadAndRenderReservations() {
         reservationsBody.innerHTML = '<tr><td colspan="8">Loading reservations...</td></tr>';
         try {
-            const result = await loadReservations();
+            const [result, openExceptionIds] = await Promise.all([loadReservations(), loadOpenScheduleExceptionIds()]);
             const data = Array.isArray(result.data) ? result.data : [];
             reservationsBody.innerHTML = data.length > 0
-                ? data.map(buildReservationRow).join('')
+                ? data.map((schedule) => buildReservationRow(schedule, openExceptionIds)).join('')
                 : `
                     <tr>
                         <td colspan="8">
@@ -204,22 +226,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         await refreshAwaitingConfirmationCount();
         await loadAndRenderReservations();
-    }
-
-    async function confirmReservation(id, button) {
-        if (!confirm('Confirm this reservation? The lot will be marked Reserved.')) return;
-        await withButtonLoading(button, async () => {
-            try {
-                const result = await api.request(`schedules/${id}`, { method: 'PUT', body: { status: 'Confirmed' } });
-                if (result.success) {
-                    await refreshAll();
-                } else {
-                    alert(result.error || 'Unable to confirm reservation.');
-                }
-            } catch (error) {
-                alert(error.message || 'Unable to confirm reservation.');
-            }
-        });
     }
 
     async function completeReservation(id, button) {
@@ -261,8 +267,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const action = button.getAttribute('data-action');
         if (!id || !action) return;
 
-        if (action === 'confirm') await confirmReservation(id, button);
-        else if (action === 'complete') await completeReservation(id, button);
+        if (action === 'complete') await completeReservation(id, button);
         else if (action === 'cancel') await cancelReservation(id, button);
     });
 

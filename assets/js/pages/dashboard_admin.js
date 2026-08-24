@@ -44,6 +44,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     updateNotificationBadge();
 
+    // Full Automation, Admin-First: surfaces the open-items queue the
+    // Automation Engine raises into (system_exceptions) — hidden entirely
+    // when empty, since the Control Center framing is "monitor when
+    // something needs it," not a permanent approvals-queue fixture.
+    async function updateAttentionCard() {
+        const attentionRow = document.getElementById('attentionRow');
+        const attentionSummary = document.getElementById('attentionSummary');
+        if (!attentionRow || !attentionSummary) return;
+        try {
+            const exceptions = await api.request('exceptions?status=open', { method: 'GET' });
+            const count = Array.isArray(exceptions) ? exceptions.length : 0;
+            if (count > 0) {
+                attentionSummary.textContent = `${count} item${count === 1 ? '' : 's'} couldn't be handled automatically and need${count === 1 ? 's' : ''} your review.`;
+                attentionRow.style.display = '';
+            } else {
+                attentionRow.style.display = 'none';
+            }
+        } catch (e) {
+            attentionRow.style.display = 'none';
+        }
+    }
+    updateAttentionCard();
+
     try {
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);

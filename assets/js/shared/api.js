@@ -254,11 +254,13 @@ const ROLE_SIDEBAR_LINKS = {
         ['ai.html', 'fa-robot', 'AI Configuration'],
         ['user-management.html', 'fa-users', 'User Management'],
         ['audit.html', 'fa-clipboard-list', 'Audit Logs'],
+        ['exceptions.html', 'fa-triangle-exclamation', 'Exceptions'],
     ],
     staff: [
         ['dashboard_staff.html', 'fa-gauge-high', 'Dashboard'],
         ['burial-scheduling.html', 'fa-monument', 'Burial Scheduling'],
         ['manage-reservations.html', 'fa-calendar-check', 'Manage Reservations'],
+        ['exceptions.html', 'fa-triangle-exclamation', 'Exceptions'],
         ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
         ['payments.html', 'fa-credit-card', 'Payments'],
         ['notifications.html', 'fa-bell', 'Notifications'],

@@ -233,6 +233,21 @@
     gap: 18px;
     margin-bottom: 18px;
 }
+/* Full Automation, Admin-First: the "needs attention" card (open
+   system_exceptions) — hidden by JS when there's nothing to review, so
+   this only needs a warning tint, not a whole layout of its own. */
+.attention-row {
+    margin-bottom: 18px;
+}
+.card.attention-card {
+    padding: var(--space-4);
+    border: 1px solid var(--color-warning-soft, #f5d38a);
+    background: color-mix(in srgb, var(--color-warning-soft, #fdf3d8) 40%, var(--color-surface, #fff));
+}
+.card.attention-card h4 {
+    color: #9d6114;
+    margin-bottom: 6px;
+}
 /* .card now comes from assets/css/components/cards.css (Batch 2) —
    this file's 12px/16px override conflicted with the shared version
    used everywhere else and has been removed so the canonical card

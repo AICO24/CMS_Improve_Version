@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         pendingRequestsBody.innerHTML = pendingRequests.map((request) => `
             <tr data-request-id="${request.request_id}">
-                <td>${escapeHtml(request.full_name)}</td>
+                <td>${escapeHtml(request.full_name)} ${request.linked_schedule_id ? '<span class="status-badge status-warning" title="A citizen already booked and may have paid for this — finish the record so their burial can be marked Completed.">Linked to booking #' + escapeHtml(request.linked_schedule_id) + '</span>' : ''}</td>
                 <td>${escapeHtml(request.approximate_dod || '—')}</td>
                 <td>${escapeHtml(request.relationship || '—')}</td>
                 <td>${escapeHtml(request.requested_by_name || 'Unknown')}</td>
@@ -471,6 +471,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 // as pending. A failure here is logged but doesn't block
                 // the record itself, which is already saved.
                 if (!id && approvingRequestId && result.decedent_id) {
+                    const approvedRequest = pendingRequests.find((item) => item.request_id === approvingRequestId);
                     try {
                         await api.request(`decedent-requests/${approvingRequestId}/approve`, {
                             method: 'PUT',
@@ -478,6 +479,21 @@ document.addEventListener('DOMContentLoaded', async function() {
                         });
                     } catch (linkError) {
                         console.error('Record was created but linking the pending request failed', linkError);
+                    }
+                    // Full Automation, Admin-First: if a citizen already booked
+                    // against this request (see ScheduleController::store()'s
+                    // provisional-decedent path), link the new formal record onto
+                    // that schedule too — this is what unblocks marking it
+                    // Completed (see ScheduleController::update()'s guard).
+                    if (approvedRequest && approvedRequest.linked_schedule_id) {
+                        try {
+                            await api.request(`schedules/${approvedRequest.linked_schedule_id}/link-decedent`, {
+                                method: 'PUT',
+                                body: { decedent_id: result.decedent_id },
+                            });
+                        } catch (linkError) {
+                            console.error('Record was created but linking it to the existing booking failed', linkError);
+                        }
                     }
                 }
                 approvingRequestId = null;

@@ -8,6 +8,8 @@ require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/../models/Cremation.php';
 require_once __DIR__ . '/../models/Relocation.php';
 require_once __DIR__ . '/../models/ExpirationRecord.php';
+require_once __DIR__ . '/../services/AutomationEngine.php';
+require_once __DIR__ . '/ScheduleController.php';
 
 class PaymentController {
     private $paymentModel;
@@ -460,6 +462,15 @@ class PaymentController {
             return ['error' => 'Invalid verification status', 'code' => 400];
         }
 
+        // Idempotency guard: verify() drives real side effects now (lot sync,
+        // notification/email, and — for Lot Purchase — auto-confirming the
+        // linked booking below). Without this, calling verify() twice on the
+        // same payment (e.g. a double-click, or a retried request) would
+        // silently re-run all of it.
+        if (($payment['verification_status'] ?? 'Pending') !== 'Pending') {
+            return ['error' => 'This payment has already been reviewed', 'code' => 409];
+        }
+
         $result = $this->paymentModel->update($id, [
             'transaction_type' => $payment['transaction_type'],
             'reference_id' => $payment['reference_id'],
@@ -501,6 +512,7 @@ class PaymentController {
 
             if ($status === 'Verified' && $payment['transaction_type'] === 'Lot Purchase') {
                 $this->syncLotStatusForVerifiedPurchase($payment);
+                $this->autoConfirmScheduleForVerifiedPurchase($payment, $adminId);
             }
 
             return ['success' => true, 'message' => 'Payment ' . strtolower($status) . ' successfully'];
@@ -544,6 +556,55 @@ class PaymentController {
         if ($lot && $lot['status'] === 'Available') {
             $lotModel->update($lotId, ['status' => 'Reserved']);
         }
+    }
+
+    // Full Automation, Admin-First: folds the previously-separate manual
+    // "Confirm" click (Manage Reservations) into payment verification — the
+    // one remaining human control point (see the automation plan's payment
+    // boundary). Routed through AutomationEngine::run() so a lot that went
+    // unavailable between payment and verification (or any other reason the
+    // booking can't safely auto-confirm) raises a system_exceptions entry
+    // for admin review instead of silently doing nothing or guessing.
+    //
+    // Deliberately a no-op (not an exception) when reference_id isn't a
+    // schedule at all (the Lot Management "Pay Now" shortcut) or the
+    // schedule already reached a terminal-ish state (Confirmed/Completed/
+    // Cancelled) — there's nothing to automate in either case.
+    private function autoConfirmScheduleForVerifiedPurchase($payment, $adminId) {
+        if (empty($payment['reference_id'])) {
+            return;
+        }
+
+        $scheduleModel = new Schedule();
+        $schedule = $scheduleModel->findById($payment['reference_id']);
+        if (!$schedule || in_array($schedule['status'], ['Confirmed', 'Completed', 'Cancelled'], true)) {
+            return;
+        }
+
+        $scheduleId = $schedule['schedule_id'];
+        $adminActor = ['user_id' => $adminId, 'role' => 'admin'];
+        $lotModel = new Lot();
+
+        AutomationEngine::run(
+            'payment.verified',
+            'Schedule',
+            $scheduleId,
+            $adminActor,
+            function () use ($schedule, $lotModel) {
+                $lot = $lotModel->findById($schedule['lot_id']);
+                if (!$lot) {
+                    return ['Linked lot no longer exists'];
+                }
+                if (!in_array($lot['status'], ['Available', 'Reserved'], true)) {
+                    return ['Lot ' . ($lot['lot_number'] ?? $lot['lot_id']) . ' is no longer available (status: ' . $lot['status'] . ')'];
+                }
+                return true;
+            },
+            function () use ($scheduleId, $adminActor) {
+                $scheduleController = new ScheduleController();
+                return $scheduleController->update($scheduleId, ['status' => 'Confirmed'], $adminActor);
+            }
+        );
     }
 
     // Bulk counterpart to verify() for the "Verify All Pending" / "Reject All

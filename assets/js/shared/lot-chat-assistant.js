@@ -143,6 +143,13 @@ function createLotChatAssistant(options) {
         onPreferencesCorrected,
         onBookingDetailsCorrected,
         onReset,
+        // Full Automation, Admin-First: booking for someone not yet in
+        // decedent_records is a citizen-only capability (see the automation
+        // plan) — admin/staff have the authority to just add the real record
+        // first instead. Defaults false so only the caller that explicitly
+        // opts in (reserve-burial-slot.js) gets appendDecedentRequestForm();
+        // burial-scheduling.js (admin/staff) is unaffected.
+        allowProvisionalDecedent = false,
     } = options;
 
     const CHAT_SKIP_PHRASES = ['any', 'anything', 'no preference', 'not sure', "doesn't matter", 'does not matter', 'skip', "i don't know", 'idk', 'n/a', 'none', 'whatever'];
@@ -157,7 +164,13 @@ function createLotChatAssistant(options) {
     const MONTH_ABBR = MONTH_NAMES.map(m => m.slice(0, 3));
     const ESCAPE_HATCH_THRESHOLD = 3;
 
-    const state = { lot_type: null, budget: null, section: null, decedent_id: null, date: null, time: null };
+    // provisional_decedent: set instead of decedent_id when the citizen is
+    // booking for someone not yet in decedent_records (see
+    // appendDecedentRequestForm() below) — {full_name, approximate_dod,
+    // relationship}. Sent to the backend as-is; staff formalizes the real
+    // decedent_records row later. Never set for the admin/staff wizard
+    // (getDecedents is only wired up there for a real, resolvable list).
+    const state = { lot_type: null, budget: null, section: null, decedent_id: null, provisional_decedent: null, date: null, time: null };
     let decedentLabel = null;
     let lotPreferencesReadyFired = false;
     let decedentAttempts = 0;
@@ -429,7 +442,7 @@ function createLotChatAssistant(options) {
     // whenever state.date is null, so an early "August 25" is still captured
     // if volunteered.
     function getNextMissingSlot() {
-        if (state.decedent_id === null && typeof getDecedents === 'function') return 'decedent_id';
+        if (state.decedent_id === null && state.provisional_decedent === null && typeof getDecedents === 'function') return 'decedent_id';
         if (state.lot_type === null) return 'lot_type';
         if (state.budget === null) return 'budget';
         return null;
@@ -476,6 +489,11 @@ function createLotChatAssistant(options) {
             if (!chip) return;
             const strong = chip.querySelector('strong');
             const value = state[field];
+            if (field === 'decedent_id' && value === null && state.provisional_decedent) {
+                strong.textContent = `${state.provisional_decedent.full_name} (unregistered)`;
+                chip.classList.add('filled');
+                return;
+            }
             if (value === null) {
                 strong.textContent = 'Not set';
                 chip.classList.remove('filled');
@@ -560,58 +578,55 @@ function createLotChatAssistant(options) {
         });
     }
 
-    // Citizen-initiated decedent registration requests: when a name truly
-    // isn't in decedent_records yet (not just a spelling mismatch), there's
-    // no picker to fall back on — the person doesn't exist in the system at
-    // all. Shown on the FIRST no-match (unlike the escape hatches above,
+    // Full Automation, Admin-First: when a name truly isn't in
+    // decedent_records yet (not just a spelling mismatch), the citizen can
+    // still book right now — this no longer dead-ends into "submit and
+    // wait." Shown on the FIRST no-match (unlike the escape hatches above,
     // which wait for repeated struggling), since there's nothing to wait
-    // for: this never resolves decedent_id itself, only queues a request
-    // for staff to review via the Decedent Records page's "Pending
-    // Requests" tab. Deliberately asks for only non-sensitive fields (name,
-    // approximate date of death, relationship) — staff still creates the
-    // real decedent_records row (lot assignment, cause of death, contact
-    // info) through the existing form, this is only an intake queue.
+    // for. Submitting sets state.provisional_decedent locally and lets the
+    // booking flow continue immediately (getNextMissingSlot() reads it the
+    // same as a resolved decedent_id); the backend creates the actual
+    // decedent_requests row when the booking itself is submitted
+    // (ScheduleController::store()) — no separate round trip needed here.
+    // Staff formalizes the real decedent_records row later, non-blocking
+    // until the burial is marked Completed. Deliberately asks for only
+    // non-sensitive fields (name, approximate date of death, relationship)
+    // — staff still creates the real record (lot assignment, cause of
+    // death, contact info) through the existing Decedent Records form.
     //
-    // Bugfix (found live): this used to pre-fill the name input with the
-    // raw chat message that triggered it (e.g. "I need burial for my friend
-    // John Doe.") on the assumption the user would edit it down to just a
-    // name — in practice they usually didn't, so that whole sentence became
-    // the submitted full_name. Left blank now, forcing a deliberate, clean
-    // name instead of a guess nobody double-checks.
+    // Bugfix carried over from the earlier request-then-wait version: don't
+    // pre-fill the name input with the raw chat message that triggered this
+    // (e.g. "I need burial for my friend John Doe.") — users didn't edit it
+    // down, so the whole sentence became the name. Left blank, forcing a
+    // deliberate, clean name instead of a guess nobody double-checks.
     function appendDecedentRequestForm() {
         const bubble = appendRichMessage(`
             <div class="chat-decedent-request">
-                <label>Request to add this person:</label>
+                <label>Not in our records yet — book anyway:</label>
                 <input type="text" class="chat-request-name" placeholder="Full name">
                 <input type="date" class="chat-request-dod" max="${new Date().toISOString().split('T')[0]}">
                 <input type="text" class="chat-request-relationship" placeholder="Relationship (optional)">
-                <button type="button" class="btn-secondary chat-request-btn">Send request</button>
+                <button type="button" class="btn-secondary chat-request-btn">Continue booking</button>
             </div>
         `);
         const nameInput = bubble.querySelector('.chat-request-name');
         const dodInput = bubble.querySelector('.chat-request-dod');
         const relationshipInput = bubble.querySelector('.chat-request-relationship');
         const btn = bubble.querySelector('.chat-request-btn');
-        btn.addEventListener('click', async () => {
+        btn.addEventListener('click', () => {
             const fullName = nameInput.value.trim();
             if (!fullName) return;
-            btn.disabled = true;
-            try {
-                await api.request('decedent-requests', {
-                    method: 'POST',
-                    body: {
-                        full_name: fullName,
-                        approximate_dod: dodInput.value || null,
-                        relationship: relationshipInput.value.trim() || null,
-                    },
-                });
-                bubble.remove();
-                appendMessage('assistant', "Thanks — I've sent this to our staff for review. I'll let you know here once it's added, or you can check back later.");
-            } catch (error) {
-                console.error('Decedent request submission failed', error);
-                btn.disabled = false;
-                appendMessage('assistant', "Sorry, I couldn't send that request right now. Please try again in a moment.");
-            }
+            state.provisional_decedent = {
+                full_name: fullName,
+                approximate_dod: dodInput.value || null,
+                relationship: relationshipInput.value.trim() || null,
+            };
+            updateChips();
+            bubble.remove();
+            appendMessage('assistant', `Got it — I'll book this for ${fullName}. Our staff will add their official record before the burial takes place.`);
+            if (typeof onStateChanged === 'function') onStateChanged();
+            const nextSlot = getNextMissingSlot();
+            if (nextSlot) appendMessage('assistant', questionForSlot(nextSlot));
         });
     }
 
@@ -803,6 +818,7 @@ function createLotChatAssistant(options) {
         state.budget = null;
         state.section = null;
         state.decedent_id = null;
+        state.provisional_decedent = null;
         state.date = null;
         state.time = null;
         decedentLabel = null;
@@ -881,7 +897,10 @@ function createLotChatAssistant(options) {
         let newDecedentLabel = null;
         let ambiguousDecedentCandidates = null;
         let decedentCorrected = false;
-        if (state.decedent_id === null) {
+        // A committed provisional_decedent (see appendDecedentRequestForm())
+        // means this slot is resolved — stop trying to match later, unrelated
+        // messages against the real decedent list.
+        if (state.decedent_id === null && state.provisional_decedent === null) {
             const decedentResult = extractDecedentFromText(text);
             if (decedentResult.match) {
                 updates.decedent_id = decedentResult.match.decedent_id;
@@ -1082,8 +1101,12 @@ function createLotChatAssistant(options) {
                 ? "I couldn't read a budget from that. Try formats like 8000, 8,000, ₱8,000, or 8k. You can also say \"no preference\"."
                 : 'Could you share a budget? For example: 8000 or ₱8,000. You can also say "no preference".');
         } else if (pendingSlot === 'decedent_id' && !(ambiguousDecedentCandidates && ambiguousDecedentCandidates.length)) {
-            appendMessage('assistant', "I couldn't find a decedent record matching that name. Could you check the spelling? If they're genuinely not in our system yet, you can request to add them below.");
-            appendDecedentRequestForm();
+            if (allowProvisionalDecedent) {
+                appendMessage('assistant', "I couldn't find a decedent record matching that name. Could you check the spelling? If they're genuinely not in our system yet, that's okay — you can still book below and our staff will register them.");
+                appendDecedentRequestForm();
+            } else {
+                appendMessage('assistant', "I couldn't find a decedent record matching that name. Could you check the spelling, or add the record first if they're genuinely not in the system yet?");
+            }
         }
 
         if (ambiguousDecedentCandidates && ambiguousDecedentCandidates.length) {
@@ -1124,7 +1147,7 @@ function createLotChatAssistant(options) {
         // sequence above (a user might struggle with the decedent name
         // before ever discussing lot preferences), so these tick on every
         // message regardless of what else happened in this turn.
-        if (state.decedent_id === null) {
+        if (state.decedent_id === null && state.provisional_decedent === null) {
             decedentAttempts++;
             if (decedentAttempts >= ESCAPE_HATCH_THRESHOLD && !decedentEscapeShown && typeof getDecedents === 'function') {
                 decedentEscapeShown = true;

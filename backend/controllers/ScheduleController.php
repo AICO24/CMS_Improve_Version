@@ -4,11 +4,13 @@ require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/ExpirationRecord.php';
+require_once __DIR__ . '/../models/DecedentRequest.php';
 
 class ScheduleController {
     private $scheduleModel;
     private $lotModel;
     private $expirationModel;
+    private $decedentRequestModel;
 
     // Default lease term applied to the expiration_records row auto-created
     // when a burial schedule is marked Completed (Batch LM-AUTOMATION, Phase C).
@@ -18,6 +20,7 @@ class ScheduleController {
         $this->scheduleModel = new Schedule();
         $this->lotModel = new Lot();
         $this->expirationModel = new ExpirationRecord();
+        $this->decedentRequestModel = new DecedentRequest();
     }
 
     // Batch N5: $user is optional (existing callers pass none) but, when
@@ -105,15 +108,55 @@ class ScheduleController {
     }
 
     public function store($data, $user) {
-        $required = ['lot_id', 'deceased_id', 'schedule_date'];
-        foreach ($required as $field) {
-            if (empty($data[$field])) {
-                return ['error' => "Field '$field' is required", 'code' => 400];
-            }
-        }
-
         if (empty($data['lot_id']) || empty($data['schedule_date'])) {
             return ['error' => 'Lot and schedule date are required', 'code' => 400];
+        }
+
+        $userId = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        $userRole = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
+
+        // Full Automation, Admin-First (Batch 2): a citizen may book without
+        // an existing decedent_records row — the person isn't registered yet.
+        // Staff formalizes the real record later via linkDecedent(); until
+        // then the booking carries a decedent_requests row instead (reused
+        // as-is from the earlier decedent-request-intake feature). Admin/
+        // staff bookings still require a real deceased_id — they have the
+        // authority to just add the record first rather than use this path.
+        if (empty($data['deceased_id'])) {
+            if ($userRole !== 'user') {
+                return ['error' => "Field 'deceased_id' is required", 'code' => 400];
+            }
+
+            $decedentRequestId = $data['decedent_request_id'] ?? null;
+            if (!empty($decedentRequestId)) {
+                $existingRequest = $this->decedentRequestModel->findById($decedentRequestId);
+                if (!$existingRequest) {
+                    return ['error' => 'Decedent request not found', 'code' => 404];
+                }
+                if ((int) $existingRequest['requested_by'] !== (int) $userId) {
+                    return ['error' => 'You may only book against your own decedent request', 'code' => 403];
+                }
+            } else {
+                $provisional = is_array($data['provisional_decedent'] ?? null) ? $data['provisional_decedent'] : [];
+                if (empty($provisional['full_name'])) {
+                    return ['error' => 'A decedent record, or a provisional decedent name, is required', 'code' => 400];
+                }
+                $decedentRequestId = $this->decedentRequestModel->create([
+                    'requested_by' => $userId,
+                    'full_name' => $provisional['full_name'],
+                    'approximate_dod' => $provisional['approximate_dod'] ?? null,
+                    'relationship' => $provisional['relationship'] ?? null,
+                    'notes' => $provisional['notes'] ?? null,
+                ]);
+                if (!$decedentRequestId) {
+                    return ['error' => 'Failed to record provisional decedent info', 'code' => 500];
+                }
+            }
+
+            $data['decedent_request_id'] = $decedentRequestId;
+            unset($data['deceased_id']);
+        } else {
+            unset($data['decedent_request_id'], $data['provisional_decedent']);
         }
 
         // A recommended/selected lot can go stale between when it was shown to the
@@ -152,9 +195,6 @@ class ScheduleController {
         if ($hasConflict) {
             return ['error' => 'This lot is already booked for the selected date/time', 'code' => 409];
         }
-
-        $userId = is_array($user) ? ($user['user_id'] ?? null) : $user;
-        $userRole = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
 
         // Only staff/admin may create a reservation that's already Confirmed;
         // everyone else's booking is forced to Pending regardless of what was submitted.
@@ -328,6 +368,18 @@ class ScheduleController {
             }
         }
 
+        // A provisional booking (no formal decedent_records row yet — see
+        // store()) can be Pending/Confirmed, but the burial can't be marked
+        // Completed until staff has finished registering the real decedent
+        // record via linkDecedent(). Non-blocking up to this point, required
+        // from here on, per the automation plan's state-transition rules.
+        if (isset($data['status']) && $data['status'] === 'Completed') {
+            $resolvedDeceasedId = array_key_exists('deceased_id', $data) ? $data['deceased_id'] : $existing['deceased_id'];
+            if (empty($resolvedDeceasedId)) {
+                return ['error' => 'This booking still needs a formal decedent record before it can be marked Completed. Finish it from Decedent Records first.', 'code' => 422];
+            }
+        }
+
         $data['confirmed_by'] = isset($data['confirmed_by']) ? $data['confirmed_by'] : $userId;
         $result = $this->scheduleModel->update($id, $data);
         if ($result) {
@@ -344,6 +396,30 @@ class ScheduleController {
         }
 
         return ['error' => 'Failed to update schedule', 'code' => 500];
+    }
+
+    // Called right after decedent-requests/{id}/approve succeeds (staff has
+    // just created the real decedent_records row for a provisional booking's
+    // decedent_request_id) to link that formal record onto the schedule —
+    // this is what satisfies update()'s Completed guard above.
+    // decedent_request_id is deliberately left untouched, not cleared: it
+    // stays as the audit trail of which request the formal record came from.
+    public function linkDecedent($id, $decedentId, $user) {
+        $existing = $this->scheduleModel->findById($id);
+        if (!$existing) {
+            return ['error' => 'Schedule not found', 'code' => 404];
+        }
+        if (empty($decedentId)) {
+            return ['error' => 'decedent_id is required', 'code' => 400];
+        }
+        if (!empty($existing['deceased_id'])) {
+            return ['error' => 'This schedule already has a formal decedent record linked', 'code' => 409];
+        }
+
+        $result = $this->scheduleModel->update($id, ['deceased_id' => $decedentId]);
+        return $result
+            ? ['success' => true, 'message' => 'Decedent record linked to schedule']
+            : ['error' => 'Failed to link decedent record', 'code' => 500];
     }
 
     public function destroy($id, $user = []) {

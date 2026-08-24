@@ -31,6 +31,7 @@
                 <a href="dashboard_staff.html" class="nav-item active"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
                 <a href="burial-scheduling.html" class="nav-item"><i class="fas fa-monument icon"></i> <span>Burial Scheduling</span></a>
                 <a href="manage-reservations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Reservations</span></a>
+                <a href="exceptions.html" class="nav-item"><i class="fas fa-triangle-exclamation icon"></i> <span>Exceptions</span></a>
                 <a href="lot-management.html" class="nav-item"><i class="fas fa-map-location-dot icon"></i> <span>Lot Management</span></a>
                 <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
                 <a href="notifications.html" class="nav-item"><i class="fas fa-bell icon"></i> <span>Notifications</span></a>
@@ -97,6 +98,13 @@
                     <div class="stat-card"><div class="stat-title">Available Lots</div><div class="stat-value" id="statAvailable">-</div><div class="stat-sub">Ready for assignment</div></div>
                     <div class="stat-card"><div class="stat-title">Monthly Revenue</div><div class="stat-value" id="statRevenue">-</div><div class="stat-sub">This month</div></div>
                     <div class="stat-card"><div class="stat-title">Available Capacity</div><div class="stat-value" id="statForecast">-</div><div class="stat-sub">Share of lots currently available</div></div>
+                </div>
+                <div class="attention-row" id="attentionRow" style="display:none;">
+                    <div class="card attention-card">
+                        <h4><i class="fas fa-triangle-exclamation"></i> Needs Attention</h4>
+                        <p class="muted" id="attentionSummary"></p>
+                        <a href="exceptions.html" class="btn-primary">Review Exceptions →</a>
+                    </div>
                 </div>
                 <div class="mid-row">
                     <div class="card availability"><h4>Real-time Availability Map</h4><div class="availability-map" id="availabilityMap"></div></div>

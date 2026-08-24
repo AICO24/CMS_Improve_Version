@@ -12,6 +12,7 @@ require_once __DIR__ . '/../controllers/AiController.php';
 require_once __DIR__ . '/../controllers/ReportController.php';
 require_once __DIR__ . '/../controllers/ExpirationController.php';
 require_once __DIR__ . '/../controllers/UserController.php';
+require_once __DIR__ . '/../controllers/SystemExceptionController.php';
 require_once __DIR__ . '/../middleware/Auth.php';
 
 $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -370,6 +371,17 @@ if ($path === 'schedules' && $requestMethod === 'POST') {
 if (preg_match('/^schedules\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
     $input = readRequestBody();
     $result = $scheduleController->update($matches[1], $input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^schedules\/(\d+)\/link-decedent$/', $path, $matches) && $requestMethod === 'PUT') {
+    // Chains from decedent-requests/{id}/approve — see ScheduleController::linkDecedent().
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $result = $scheduleController->linkDecedent($matches[1], $input['decedent_id'] ?? null, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -787,6 +799,37 @@ if ($path === 'audit-logs' && $requestMethod === 'GET') {
     exit;
 }
 
+// System exceptions: the open-items queue the Automation Engine
+// (backend/services/AutomationEngine.php) raises into when a normally-
+// automatic transition can't safely proceed — the admin Control Center's
+// "needs attention" list, distinct from audit-logs' immutable history.
+$systemExceptionController = new SystemExceptionController();
+
+if ($path === 'exceptions' && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $filters = [];
+    if (isset($_GET['status'])) $filters['status'] = $_GET['status'];
+    if (isset($_GET['entity_type'])) $filters['entity_type'] = $_GET['entity_type'];
+    echo json_encode($systemExceptionController->index($filters));
+    exit;
+}
+
+if ($path === 'exceptions/open-count' && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    echo json_encode($systemExceptionController->countOpen());
+    exit;
+}
+
+if (preg_match('/^exceptions\/(\d+)\/resolve$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $result = $systemExceptionController->resolve($matches[1], $input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 $userController = new UserController();
 $reportController = new ReportController();
 
@@ -917,6 +960,15 @@ if ($path === 'ai/chat' && $requestMethod === 'POST') {
     AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $input = readRequestBody();
     echo json_encode($aiController->chat($input));
+    exit;
+}
+
+if ($path === 'ai/explain-exception' && $requestMethod === 'POST') {
+    // Exceptions page only — admin/staff resolve exceptions, citizens never
+    // see them (same role gate as the 'exceptions' routes above).
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    echo json_encode($aiController->explainException($input));
     exit;
 }
 
