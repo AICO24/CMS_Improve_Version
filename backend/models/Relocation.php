@@ -136,18 +136,19 @@ class Relocation {
     }
 
     public function create($data) {
-        $stmt = $this->db->prepare(" 
-            INSERT INTO relocation_requests 
+        $stmt = $this->db->prepare("
+            INSERT INTO relocation_requests
             (from_lot_id, to_lot_id, deceased_id, reason, requested_by)
             VALUES (?, ?, ?, ?, ?)
         ");
-        return $stmt->execute([
+        $success = $stmt->execute([
             (int) $data['from_lot_id'],
             (int) $data['to_lot_id'],
             (int) $data['deceased_id'],
             $data['reason'],
             (int) $data['requested_by']
         ]);
+        return $success ? (int) $this->db->lastInsertId() : false;
     }
 
     public function update($id, $data) {

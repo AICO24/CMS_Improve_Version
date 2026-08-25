@@ -77,7 +77,30 @@ class RelocationController {
 
         $data['requested_by'] = $userId;
         $result = $this->relocationModel->create($data);
-        return $result ? ['success' => true, 'message' => 'Relocation request created'] : ['error' => 'Failed to create relocation request', 'code' => 500];
+        if ($result) {
+            // Sub-batch 4 (Batch G): the creation event itself was previously
+            // unaudited — closing that gap so "how did this relocation
+            // originate" doesn't require inferring it from the current row.
+            // Not routed through AutomationEngine: creation has no
+            // cascading side effect to guard (the lot check above already
+            // ran, synchronously, as part of this same request).
+            $this->auditLogModel->log(
+                'Relocation request created',
+                $userId,
+                null,
+                'Relocation',
+                $result,
+                [
+                    'deceased_id' => (int) $data['deceased_id'],
+                    'from_lot_id' => (int) $data['from_lot_id'],
+                    'to_lot_id' => (int) $data['to_lot_id'],
+                    'reason' => $data['reason'],
+                    'status' => 'Pending',
+                ]
+            );
+            return ['success' => true, 'message' => 'Relocation request created'];
+        }
+        return ['error' => 'Failed to create relocation request', 'code' => 500];
     }
 
     public function update($id, $data, $userId) {
@@ -108,7 +131,32 @@ class RelocationController {
         }
 
         $result = $this->relocationModel->update($id, $data);
-        return $result ? ['success' => true, 'message' => 'Relocation request updated'] : ['error' => 'Failed to update request', 'code' => 500];
+        if ($result) {
+            // Sub-batch 4 (Batch G): only the fields this endpoint's own
+            // model UPDATE actually writes — status/approved_by stay out of
+            // scope here, that's approve()/deny()/complete()'s territory,
+            // not this one's. Nothing is logged when nothing actually
+            // changed (e.g. a resubmit with identical values), per the
+            // explicit instruction to avoid meaningless audit noise.
+            $changed = [];
+            foreach (['from_lot_id', 'to_lot_id', 'deceased_id', 'reason'] as $field) {
+                if (array_key_exists($field, $data) && (string) $data[$field] !== (string) ($existing[$field] ?? '')) {
+                    $changed[$field] = ['from' => $existing[$field] ?? null, 'to' => $data[$field]];
+                }
+            }
+            if (!empty($changed)) {
+                $this->auditLogModel->log(
+                    'Relocation request updated',
+                    $userId,
+                    null,
+                    'Relocation',
+                    $id,
+                    $changed
+                );
+            }
+            return ['success' => true, 'message' => 'Relocation request updated'];
+        }
+        return ['error' => 'Failed to update request', 'code' => 500];
     }
 
     public function approve($id, $userId) {
