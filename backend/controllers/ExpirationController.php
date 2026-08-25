@@ -69,11 +69,29 @@ class ExpirationController {
     }
 
     public function destroy($id) {
-        if (!$this->expirationModel->findById($id)) {
+        $existing = $this->expirationModel->findById($id);
+        if (!$existing) {
             return ['error' => 'Expiration record not found', 'code' => 404];
         }
         $result = $this->expirationModel->delete($id);
-        return $result ? ['success' => true, 'message' => 'Expiration record deleted'] : ['error' => 'Failed to delete expiration record', 'code' => 500];
+        if ($result) {
+            $this->auditLogModel->log(
+                'Expiration record deleted',
+                null,
+                null,
+                'Expiration',
+                $id,
+                [
+                    'lot_id' => $existing['lot_id'] ?? null,
+                    'start_date' => $existing['start_date'] ?? null,
+                    'end_date' => $existing['end_date'] ?? null,
+                    'renewed' => $existing['renewed'] ?? null,
+                    'exhumation_status' => $existing['exhumation_status'] ?? null,
+                ]
+            );
+            return ['success' => true, 'message' => 'Expiration record deleted'];
+        }
+        return ['error' => 'Failed to delete expiration record', 'code' => 500];
     }
 
     public function stats() {

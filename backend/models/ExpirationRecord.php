@@ -225,6 +225,11 @@ class ExpirationRecord {
         ]);
     }
 
+    public function delete($id) {
+        $stmt = $this->db->prepare("DELETE FROM expiration_records WHERE expiration_id = ?");
+        return $stmt->execute([$id]);
+    }
+
     public function getStats($days = 30) {
         $stmt1 = $this->db->prepare("SELECT COUNT(*) AS total FROM expiration_records");
         $stmt1->execute();
