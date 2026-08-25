@@ -121,20 +121,30 @@ class CremationController {
                 $this->decedentModel->patchCremationStatus($existing['deceased_id'], $decedentData);
             }
 
-            $changed = [];
-            foreach (['status', 'niche_number', 'columbarium', 'level', 'ash_storage_location'] as $field) {
-                if (array_key_exists($field, $data) && (string) $data[$field] !== (string) ($existing[$field] ?? '')) {
-                    $changed[$field] = ['from' => $existing[$field] ?? null, 'to' => $data[$field]];
+            // Sub-batch 1 (Batch G): _auditedByAutomationEngine is set only by
+            // PaymentController::autoUpdateCremationForVerifiedPayment()'s
+            // apply() callback — that call is already wrapped in
+            // AutomationEngine::run('payment.verified', 'Cremation', ...),
+            // which logs its own audit entry. Logging again here would be
+            // exactly the duplicate-noise this project's audit batches have
+            // consistently avoided (see ScheduleController::update()'s
+            // identical convention from Batch F).
+            if (empty($data['_auditedByAutomationEngine'])) {
+                $changed = [];
+                foreach (['status', 'niche_number', 'columbarium', 'level', 'ash_storage_location'] as $field) {
+                    if (array_key_exists($field, $data) && (string) $data[$field] !== (string) ($existing[$field] ?? '')) {
+                        $changed[$field] = ['from' => $existing[$field] ?? null, 'to' => $data[$field]];
+                    }
                 }
+                $this->auditLogModel->log(
+                    'Cremation record updated',
+                    $userId,
+                    null,
+                    'Cremation',
+                    $id,
+                    $changed ?: ['note' => 'Updated cremation record']
+                );
             }
-            $this->auditLogModel->log(
-                'Cremation record updated',
-                $userId,
-                null,
-                'Cremation',
-                $id,
-                $changed ?: ['note' => 'Updated cremation record']
-            );
             return ['success' => true, 'message' => 'Cremation record updated'];
         }
 

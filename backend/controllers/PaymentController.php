@@ -10,6 +10,7 @@ require_once __DIR__ . '/../models/Relocation.php';
 require_once __DIR__ . '/../models/ExpirationRecord.php';
 require_once __DIR__ . '/../services/AutomationEngine.php';
 require_once __DIR__ . '/ScheduleController.php';
+require_once __DIR__ . '/CremationController.php';
 
 class PaymentController {
     private $paymentModel;
@@ -513,6 +514,8 @@ class PaymentController {
             if ($status === 'Verified' && $payment['transaction_type'] === 'Lot Purchase') {
                 $this->syncLotStatusForVerifiedPurchase($payment, $adminId);
                 $this->autoConfirmScheduleForVerifiedPurchase($payment, $adminId);
+            } elseif ($status === 'Verified' && $payment['transaction_type'] === 'Cremation') {
+                $this->autoUpdateCremationForVerifiedPayment($payment, $adminId);
             }
 
             return ['success' => true, 'message' => 'Payment ' . strtolower($status) . ' successfully'];
@@ -643,6 +646,104 @@ class PaymentController {
                 // exact fact as a 'payment.verified' entry against this same
                 // Schedule entity.
                 return $scheduleController->update($scheduleId, ['status' => 'Confirmed', '_auditedByAutomationEngine' => true], $adminActor);
+            }
+        );
+    }
+
+    // Sub-batch 1 (Batch G): the Cremation counterpart to
+    // autoConfirmScheduleForVerifiedPurchase() above, reusing the same
+    // AutomationEngine envelope. Deliberately narrower than the Schedule
+    // case: cremation_records.status has no "Confirmed"-equivalent middle
+    // state between Scheduled and Completed, and a payment verifying is not
+    // itself proof the physical cremation took place — that would be
+    // asserting a real-world fact the payment can't know. The one
+    // deterministic fact a verified payment CAN safely confirm is: if staff
+    // already recorded a niche (i.e. already treated the placement as done —
+    // see assignNiche()'s own existing precedent that niche-assigned implies
+    // Completed) and the record is still sitting at a non-terminal status
+    // only because nobody flipped it, verified payment is the missing piece
+    // to finalize it. If no niche is recorded yet, there's nothing safe to
+    // finalize — deliberately a no-op, not an exception, mirroring
+    // autoConfirmScheduleForVerifiedPurchase()'s own early-return convention
+    // for its terminal/no-op cases. Reuses CremationController::update() for
+    // the actual write rather than a second implementation, per the
+    // instruction to not duplicate business logic — Cremation::update()
+    // requires the full existing row's fields, not just the changed one
+    // (Batch A found this pre-existing gap; not fixed here, just worked
+    // around by fetching the current row first).
+    private function autoUpdateCremationForVerifiedPayment($payment, $adminId) {
+        if (empty($payment['reference_id'])) {
+            return;
+        }
+
+        $cremationModel = new Cremation();
+        $adminActor = ['user_id' => $adminId, 'role' => 'admin'];
+        $referenceId = (int) $payment['reference_id'];
+        $cremation = $cremationModel->findById($referenceId);
+
+        // Explicit requirement: an invalid/missing reference must raise a
+        // reviewable exception, not fail silently. In practice this should
+        // be rare — validatePaymentReference() already required a real,
+        // non-Cancelled cremation record at payment-creation time — so
+        // reaching this branch means the record was deleted in the interim,
+        // a genuine anomaly worth a human looking at.
+        if (!$cremation) {
+            AutomationEngine::run(
+                'payment.verified',
+                'Cremation',
+                $referenceId,
+                $adminActor,
+                function () {
+                    return ['Referenced cremation record no longer exists'];
+                },
+                function () {
+                    return null;
+                }
+            );
+            return;
+        }
+
+        if (empty($cremation['niche_number']) || in_array($cremation['status'], ['Completed', 'Cancelled'], true)) {
+            return;
+        }
+
+        $cremationId = $cremation['cremation_id'];
+
+        AutomationEngine::run(
+            'payment.verified',
+            'Cremation',
+            $cremationId,
+            $adminActor,
+            function () use ($cremationModel, $cremationId) {
+                $current = $cremationModel->findById($cremationId);
+                if (!$current) {
+                    return ['Cremation record no longer exists'];
+                }
+                if ($current['status'] === 'Cancelled') {
+                    return ['Cremation record was cancelled before payment could finalize it'];
+                }
+                if (empty($current['niche_number'])) {
+                    return ['No niche has been assigned yet — nothing to finalize'];
+                }
+                return true;
+            },
+            function () use ($cremationModel, $cremationId, $adminId) {
+                $current = $cremationModel->findById($cremationId);
+                $cremationController = new CremationController();
+                // _auditedByAutomationEngine: see the matching comment on
+                // CremationController::update() — the AutomationEngine::run()
+                // call wrapping this closure already logs this exact fact.
+                return $cremationController->update($cremationId, [
+                    'deceased_id' => $current['deceased_id'],
+                    'niche_number' => $current['niche_number'],
+                    'columbarium' => $current['columbarium'],
+                    'level' => $current['level'],
+                    'cremation_date' => $current['cremation_date'],
+                    'status' => 'Completed',
+                    'ash_storage_location' => $current['ash_storage_location'],
+                    'notes' => $current['notes'],
+                    '_auditedByAutomationEngine' => true,
+                ], $adminId);
             }
         );
     }
