@@ -148,6 +148,24 @@ class ExpirationRecord {
         return $stmt->fetchAll();
     }
 
+    // Batch D (Admin-Wide Automation Audit): the notification-generation
+    // counterpart to findExpiringSoon() above — only returns rows that
+    // haven't already triggered an "expiring soon" notification, so
+    // ExpirationController::generateNotifications() can be called repeatedly
+    // (e.g. every time an admin opens the Notifications page) without
+    // creating a duplicate notification each time.
+    public function findExpiringSoonUnnotified($days = 30) {
+        $sql = "SELECT e.*, l.lot_number, b.block_name, s.section_name FROM expiration_records e JOIN lots l ON e.lot_id = l.lot_id JOIN blocks b ON l.block_id = b.block_id JOIN sections s ON b.section_id = s.section_id WHERE e.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY) AND e.notified_at IS NULL ORDER BY e.end_date ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$days]);
+        return $stmt->fetchAll();
+    }
+
+    public function markNotified($id) {
+        $stmt = $this->db->prepare("UPDATE expiration_records SET notified_at = NOW() WHERE expiration_id = ?");
+        return $stmt->execute([(int) $id]);
+    }
+
     public function countExpiringSoon($days = 30) {
         $stmt = $this->db->prepare("SELECT COUNT(*) AS total FROM expiration_records e WHERE e.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)");
         $stmt->execute([$days]);

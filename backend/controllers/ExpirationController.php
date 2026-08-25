@@ -80,8 +80,14 @@ class ExpirationController {
         return $this->expirationModel->getStats();
     }
 
+    // Batch D (Admin-Wide Automation Audit): previously used findExpiringSoon()
+    // (every matching row, every call) with no record of what had already
+    // been notified — every visit to the Notifications page created a fresh
+    // duplicate notification for the same still-expiring lot. Now only
+    // considers rows that haven't triggered a notification yet, and marks
+    // each one immediately after so a repeat call is a safe no-op.
     public function generateNotifications($days = 30) {
-        $rows = $this->expirationModel->findExpiringSoon($days);
+        $rows = $this->expirationModel->findExpiringSoonUnnotified($days);
         $count = 0;
         foreach ($rows as $row) {
             $title = "Lot {$row['lot_number']} expiring in {$days} days";
@@ -92,12 +98,13 @@ class ExpirationController {
                 'notification_type' => 'Expiration',
                 'is_read' => 0
             ]);
+            $this->expirationModel->markNotified($row['expiration_id']);
             $this->auditLogModel->log(
                 'Expiration notification generated',
                 null,
                 null,
                 'Expiration',
-                $row['record_id'] ?? null,
+                $row['expiration_id'] ?? null,
                 ['lot_number' => $row['lot_number'], 'end_date' => $row['end_date'], 'alert_days' => $days]
             );
             $count++;

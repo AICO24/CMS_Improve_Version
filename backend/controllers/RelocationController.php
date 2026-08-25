@@ -2,6 +2,8 @@
 require_once __DIR__ . '/../models/Relocation.php';
 require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/../models/Decedent.php';
+require_once __DIR__ . '/../models/User.php';
+require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../services/AutomationEngine.php';
 
@@ -134,6 +136,7 @@ class RelocationController {
                 $id,
                 ['deceased_id' => $request['deceased_id'] ?? null, 'from_lot_id' => $request['from_lot_id'] ?? null, 'to_lot_id' => $request['to_lot_id'] ?? null]
             );
+            $this->notifyRelocationStatusChange($request, 'Approved');
             return ['success' => true, 'message' => 'Relocation request approved'];
         }
 
@@ -171,6 +174,7 @@ class RelocationController {
                 $id,
                 ['deceased_id' => $request['deceased_id'] ?? null, 'from_lot_id' => $request['from_lot_id'] ?? null, 'to_lot_id' => $request['to_lot_id'] ?? null]
             );
+            $this->notifyRelocationStatusChange($request, 'Completed');
             return ['success' => true, 'message' => 'Relocation completed'];
         }
         return ['error' => 'Failed to complete relocation', 'code' => 500];
@@ -195,6 +199,7 @@ class RelocationController {
                 $id,
                 ['deceased_id' => $request['deceased_id'] ?? null, 'from_lot_id' => $request['from_lot_id'] ?? null, 'to_lot_id' => $request['to_lot_id'] ?? null]
             );
+            $this->notifyRelocationStatusChange($request, 'Denied');
             return ['success' => true, 'message' => 'Relocation request denied'];
         }
         return ['error' => 'Failed to deny request', 'code' => 500];
@@ -226,6 +231,58 @@ class RelocationController {
 
     public function stats() {
         return $this->relocationModel->getStats();
+    }
+
+    // Batch D (Admin-Wide Automation Audit): relocation status changes
+    // previously notified nobody — the requester had no way to learn their
+    // request was approved/completed/denied except by checking back
+    // manually. Mirrors ScheduleController::notifyScheduleStatusChange()'s
+    // pattern exactly. $request is expected to already carry from_lot_number/
+    // to_lot_number (findById()'s existing join), so no extra lookup here.
+    private function notifyRelocationStatusChange($request, $status) {
+        $notificationModel = new Notification();
+        $userModel = new User();
+        $recipient = $userModel->findById($request['requested_by'] ?? null);
+
+        $titles = [
+            'Approved' => 'Relocation Request Approved',
+            'Completed' => 'Relocation Completed',
+            'Denied' => 'Relocation Request Denied',
+        ];
+        $verbs = [
+            'Approved' => 'has been approved',
+            'Completed' => 'has been completed',
+            'Denied' => 'has been denied',
+        ];
+        $title = $titles[$status] ?? ('Relocation ' . $status);
+        $message = sprintf(
+            'Your relocation request (lot %s to lot %s) %s.',
+            $request['from_lot_number'] ?? $request['from_lot_id'] ?? 'Unknown',
+            $request['to_lot_number'] ?? $request['to_lot_id'] ?? 'Unknown',
+            $verbs[$status] ?? 'was updated'
+        );
+
+        $notificationModel->create([
+            'title' => $title,
+            'message' => $message,
+            'notification_type' => 'Relocation',
+            'is_read' => 0,
+        ]);
+
+        if (!empty($recipient['email'])) {
+            $this->sendEmail($recipient['email'], $title, $message);
+        }
+    }
+
+    private function sendEmail($email, $subject, $message) {
+        if (empty($email)) {
+            return false;
+        }
+
+        $headers = "From: noreply@cemeterysystem.local\r\n";
+        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+
+        return @mail($email, $subject, $message, $headers);
     }
 
     // Batch C (Admin-Wide Automation Audit): same shared wrapper as

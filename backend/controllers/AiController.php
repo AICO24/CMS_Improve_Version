@@ -3,6 +3,8 @@ require_once __DIR__ . '/../models/AiParameter.php';
 require_once __DIR__ . '/../models/AiKnowledge.php';
 require_once __DIR__ . '/../services/AIService.php';
 require_once __DIR__ . '/../models/AuditLog.php';
+require_once __DIR__ . '/../models/Notification.php';
+require_once __DIR__ . '/../models/CapacityAlert.php';
 
 class AiController {
     private $aiParameterModel;
@@ -89,7 +91,55 @@ class AiController {
             ];
         }
 
+        $this->maybeAlertCapacity($result['capacity_alert'] ?? null);
+
         return $result;
+    }
+
+    // Batch D (Admin-Wide Automation Audit): capacity_alert (from the
+    // forecast's own warning/critical threshold check) previously only ever
+    // reached whoever happened to have the Forecast page open. Pushes a
+    // dashboard notification the first time a given month/severity is seen,
+    // deduped via CapacityAlert so repeated forecast calls (this runs on
+    // every page load, not just the "Generate" button) don't spam. Never
+    // lets a failure here affect the forecast response itself.
+    private function maybeAlertCapacity($capacityAlert) {
+        if (empty($capacityAlert) || empty($capacityAlert['month']) || empty($capacityAlert['status'])) {
+            return;
+        }
+
+        try {
+            $alertKey = $capacityAlert['month'] . ':' . $capacityAlert['status'];
+            $capacityAlertModel = new CapacityAlert();
+            if ($capacityAlertModel->lastAlertKey() === $alertKey) {
+                return;
+            }
+
+            $statusLabel = $capacityAlert['status'] === 'critical' ? 'Critical' : 'Warning';
+            $ratePercent = round(((float) ($capacityAlert['occupancy_rate'] ?? 0)) * 100);
+
+            $notificationModel = new Notification();
+            $notificationModel->create([
+                'title' => "Capacity {$statusLabel}: {$capacityAlert['month']}",
+                'message' => "Projected occupancy for {$capacityAlert['month']} reaches {$ratePercent}%. Review Capacity Forecasting for details.",
+                'notification_type' => 'System',
+                'is_read' => 0,
+            ]);
+
+            $this->auditLogModel->log(
+                'Capacity alert generated',
+                null,
+                null,
+                'CapacityForecast',
+                null,
+                ['alert_key' => $alertKey, 'month' => $capacityAlert['month'], 'status' => $capacityAlert['status'], 'occupancy_rate' => $capacityAlert['occupancy_rate'] ?? null]
+            );
+
+            $capacityAlertModel->record($alertKey, $capacityAlert['month'], $capacityAlert['status'], $capacityAlert['occupancy_rate'] ?? null);
+        } catch (Exception $e) {
+            // Deliberately swallowed — a forecast call must never fail because
+            // the alerting side-channel had a problem.
+        }
     }
 
     public function narrate($payload) {
