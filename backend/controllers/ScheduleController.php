@@ -410,7 +410,21 @@ class ScheduleController {
         if ($result) {
             $lotId = $data['lot_id'] ?? $existing['lot_id'];
             if (isset($data['status']) && $data['status'] === 'Confirmed' && $existing['status'] !== 'Confirmed') {
-                $this->transitionLotStatus($lotId, 'Reserved', ['Available', 'Reserved'], $user, 'schedule.confirmed');
+                // H2: payment.verified/Lot (from syncLotStatusForVerifiedPurchase())
+                // already reserved this lot moments earlier in the same request, so
+                // running transitionLotStatus() here too would just rewrite
+                // Reserved -> Reserved and log a redundant schedule.confirmed/Lot
+                // audit for the same logical reservation. Only skip it when both the
+                // automation flag is set AND the lot is confirmed already Reserved —
+                // if the lot isn't Reserved yet (e.g. syncLotStatusForVerifiedPurchase
+                // no-op'd for some reason) this still needs to run so the transition
+                // isn't lost. Manual confirmation (no flag) is completely unaffected.
+                $lotAlreadyReservedByPayment = !empty($data['_auditedByAutomationEngine'])
+                    && ($this->lotModel->findById($lotId)['status'] ?? null) === 'Reserved';
+
+                if (!$lotAlreadyReservedByPayment) {
+                    $this->transitionLotStatus($lotId, 'Reserved', ['Available', 'Reserved'], $user, 'schedule.confirmed');
+                }
                 // Batch F: _auditedByAutomationEngine is set only by
                 // PaymentController::autoConfirmScheduleForVerifiedPurchase()'s
                 // apply() callback — that call is already wrapped in
