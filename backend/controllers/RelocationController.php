@@ -262,17 +262,23 @@ class RelocationController {
             return ['error' => 'Cannot delete a processed request', 'code' => 403];
         }
 
-        $result = $this->relocationModel->delete($id);
+        // Sub-batch 5 (Batch G): soft-cancel — reuses the exact same model
+        // call deny() already makes (Relocation::updateStatus(), which also
+        // stamps approved_by/updated_at) instead of a hard DELETE, so
+        // cancellation history survives. No Lot side-effect existed here
+        // before and none is needed now: a Pending request never reserved
+        // to_lot (only approve() does that), so there's nothing to release.
+        $result = $this->relocationModel->updateStatus($id, 'Denied', $userId);
         if ($result) {
             $this->auditLogModel->log(
-                'Relocation deleted',
+                'Relocation request cancelled',
                 $userId,
                 null,
                 'Relocation',
                 $id,
                 ['deceased_id' => $request['deceased_id'] ?? null, 'from_lot_id' => $request['from_lot_id'] ?? null, 'to_lot_id' => $request['to_lot_id'] ?? null]
             );
-            return ['success' => true, 'message' => 'Relocation request deleted'];
+            return ['success' => true, 'message' => 'Relocation request cancelled'];
         }
         return ['error' => 'Failed to delete request', 'code' => 500];
     }
