@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../models/Cremation.php';
 require_once __DIR__ . '/../models/Decedent.php';
 require_once __DIR__ . '/../models/AuditLog.php';
+require_once __DIR__ . '/../services/AutomationEngine.php';
 
 class CremationController {
     private $cremationModel;
@@ -214,6 +215,15 @@ class CremationController {
         return array_merge(['available' => true], $suggestion);
     }
 
+    // Sub-batch 2 (Batch G): the availability check and the write are now
+    // protected by AutomationEngine so the authoritative re-check happens
+    // immediately before the write, narrowing (schema/no-unique-constraint
+    // means it can't fully close, see the Sub-batch 2 report) the race
+    // window between "checked available" and "wrote the row". The early
+    // isNicheAvailable() check below is kept as-is — it preserves the
+    // existing fast, ordinary 409 for the common case (niche already taken
+    // at request time) exactly as before; the engine-wrapped re-check is the
+    // new, narrower guard right before the actual write.
     public function assignNiche($data, $userId) {
         if (empty($data['deceased_id']) || empty($data['niche_number'])) {
             return ['error' => 'Decedent ID and niche number are required', 'code' => 400];
@@ -228,33 +238,67 @@ class CremationController {
             return ['error' => 'This niche is already occupied', 'code' => 409];
         }
 
+        $deceasedId = (int) $data['deceased_id'];
+        $nicheNumber = $data['niche_number'];
         $cremationData = [
-            'deceased_id' => $data['deceased_id'],
-            'niche_number' => $data['niche_number'],
+            'deceased_id' => $deceasedId,
+            'niche_number' => $nicheNumber,
             'columbarium' => $data['columbarium'] ?? null,
             'level' => isset($data['level']) ? (int) $data['level'] : null,
             'status' => 'Completed',
-            'ash_storage_location' => $data['niche_number'],
-            'created_by' => $userId
+            'ash_storage_location' => $nicheNumber,
+            'created_by' => $userId,
         ];
 
-        $result = $this->cremationModel->create($cremationData);
-        if ($result) {
-            $this->decedentModel->patchCremationStatus($data['deceased_id'], [
-                'is_cremated' => 'yes',
-                'ash_storage' => $data['niche_number']
-            ]);
-            $this->auditLogModel->log(
-                'Cremation niche assigned',
-                $userId,
-                null,
-                'Cremation',
-                $result,
-                ['deceased_id' => (int) $data['deceased_id'], 'niche_number' => $data['niche_number'], 'columbarium' => $data['columbarium'] ?? null]
-            );
-            return ['success' => true, 'message' => 'Decedent assigned to niche'];
+        $cremationModel = $this->cremationModel;
+        $decedentModel = $this->decedentModel;
+
+        // entity_type/id is Decedent, not Cremation: the cremation_records
+        // row doesn't exist yet at this point (nothing to reference until
+        // apply() creates it), and "this decedent now has a niche" is the
+        // fact that actually changes — same reasoning already used for
+        // decedent_request.approved in Batch B, which tags the entity that
+        // changed rather than the one that triggered the event. The
+        // resulting cremation_id is still fully traceable in the audit's
+        // own 'result' details.
+        $automationResult = AutomationEngine::run(
+            'cremation.niche_assigned',
+            'Decedent',
+            $deceasedId,
+            $userId,
+            function () use ($cremationModel, $nicheNumber) {
+                if (!$cremationModel->isNicheAvailable($nicheNumber)) {
+                    return ['Niche ' . $nicheNumber . ' was assigned to someone else before this could complete'];
+                }
+                return true;
+            },
+            function () use ($cremationModel, $decedentModel, $cremationData, $deceasedId, $nicheNumber) {
+                $newId = $cremationModel->create($cremationData);
+                if ($newId) {
+                    $decedentModel->patchCremationStatus($deceasedId, [
+                        'is_cremated' => 'yes',
+                        'ash_storage' => $nicheNumber,
+                    ]);
+                }
+                return ['cremation_id' => $newId, 'niche_number' => $nicheNumber];
+            }
+        );
+
+        if (empty($automationResult['success'])) {
+            // validate() failed -> AutomationEngine already raised a
+            // system_exceptions entry. Preserve the same 409 semantics the
+            // early check above already uses for "niche taken".
+            return ['error' => 'This niche was just taken by another assignment. Please choose a different niche.', 'code' => 409];
         }
 
-        return ['error' => 'Failed to assign decedent to niche', 'code' => 500];
+        // AutomationEngine::run() doesn't inspect apply()'s own return value
+        // for success/failure — it only reflects whether validate() passed.
+        // Checking cremation_id here preserves the original create()-failure
+        // handling (a genuine DB-level failure, distinct from a niche race).
+        if (empty($automationResult['result']['cremation_id'])) {
+            return ['error' => 'Failed to assign decedent to niche', 'code' => 500];
+        }
+
+        return ['success' => true, 'message' => 'Decedent assigned to niche'];
     }
 }
