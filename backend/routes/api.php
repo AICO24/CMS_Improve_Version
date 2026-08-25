@@ -488,11 +488,13 @@ if (preg_match('/^cremations\/(\d+)$/', $path, $matches) && $requestMethod === '
 $relocationController = new RelocationController();
 
 if ($path === 'relocations/stats' && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
     echo json_encode($relocationController->stats());
     exit;
 }
 
 if ($path === 'relocations' && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
     $filters = [];
     if (isset($_GET['status'])) $filters['status'] = $_GET['status'];
     if (isset($_GET['deceased_id'])) $filters['deceased_id'] = $_GET['deceased_id'];
@@ -507,6 +509,7 @@ if ($path === 'relocations' && $requestMethod === 'GET') {
 }
 
 if (preg_match('/^relocations\/(\d+)$/', $path, $matches) && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
     $result = $relocationController->show($matches[1]);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
