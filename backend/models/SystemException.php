@@ -25,6 +25,12 @@ class SystemException {
             $sql .= " AND e.entity_type = ?";
             $params[] = $filters['entity_type'];
         }
+        // AI-1: lets a caller scope to one specific entity's exceptions
+        // instead of every exception of that entity_type.
+        if (!empty($filters['entity_id'])) {
+            $sql .= " AND e.entity_id = ?";
+            $params[] = (int) $filters['entity_id'];
+        }
 
         $sql .= " ORDER BY e.created_at DESC";
         $stmt = $this->db->prepare($sql);

@@ -667,6 +667,87 @@ def explain_exception():
         return jsonify({'explained': False, 'message': None})
 
 
+# AI-1 (Audit Intelligence Layer): the lifecycle-explanation counterpart to
+# explain_exception() above, same safety contract exactly — the AI never
+# queries the database and never decides state, it only narrates facts the
+# PHP-side AuditIntelligenceService already assembled (subject/current
+# status/related records/timeline/exceptions — see backend/services/
+# AuditIntelligenceService.php::toFacts()). That method deliberately strips
+# decedent/requester/approver names before this payload is ever built, so
+# — like explain-exception — no PII-guarding is needed here beyond that.
+EXPLAIN_ENTITY_SYSTEM_PROMPT = (
+    "You explain the current status and history of a single cemetery-"
+    "management-system record to an administrator, in plain language. You "
+    "are given structured facts only: the record's type/id, its current "
+    "status, directly related records (type/id/status, never personal "
+    "names), a chronological timeline of audit events each tagged 'manual' "
+    "or 'automated', and any system exceptions raised against it. Never "
+    "invent details beyond them, and never invent or use any person's name "
+    "— none are given to you. "
+    "Each timeline entry has a state_change_known flag. When it is true, the "
+    "entry also carries an explicit state_change {field, from, to} — you may "
+    "state that exact transition. When state_change_known is false (this is "
+    "true for EVERY automated entry, always), the record's underlying audit "
+    "log does not capture what value, if any, changed at that moment — "
+    "describe that entry ONLY as an event that occurred (e.g. 'an automated "
+    "step ran for Lot 2 following payment verification'), and NEVER state or "
+    "imply what status the record was, or became, as a result of it. The "
+    "action name of such an entry (e.g. 'schedule.completed') identifies "
+    "which automated step ran, not a status value — never quote it as if it "
+    "were one. The only status values you may ever state for any record are: "
+    "its current_status, a related record's status field, or a timeline "
+    "entry's explicit state_change — never a value inferred from an action "
+    "name or from what 'probably' happened. "
+    "Write 2-4 short sentences: summarize what has happened and why the "
+    "record is in its current state, explicitly distinguishing manual "
+    "actions from automated ones when relevant, and mention any open "
+    "exception blocking further progress. Never claim to have taken any "
+    "action yourself, and never assert anything about the record beyond "
+    "what the given facts state. Output only the message text: no preamble, "
+    "no markdown, no quotes."
+)
+
+
+def _explain_entity(facts: Dict[str, Any]) -> Optional[str]:
+    if _gemini_client is None:
+        return None
+
+    try:
+        response = _gemini_client.models.generate_content(
+            model=NARRATION_MODEL,
+            contents=json.dumps(facts),
+            config=genai_types.GenerateContentConfig(
+                system_instruction=EXPLAIN_ENTITY_SYSTEM_PROMPT,
+                max_output_tokens=512,
+                temperature=0.3,
+                thinking_config=_THINKING_CONFIG,
+                http_options=genai_types.HttpOptions(timeout=_LLM_TIMEOUT_MS),
+            ),
+        )
+        text = (response.text or '').strip()
+        return text or None
+    except Exception:
+        return None
+
+
+@app.post('/api/explain-entity')
+def explain_entity():
+    # Always returns 200; explained:false whenever unavailable, so the
+    # caller just falls back to showing the raw structured context instead
+    # of an AI narration.
+    try:
+        payload = request.get_json(silent=True) or {}
+        subject = payload.get('subject')
+
+        if not isinstance(subject, dict) or not subject.get('type') or not subject.get('id'):
+            return jsonify({'explained': False, 'message': None})
+
+        message = _explain_entity(payload)
+        return jsonify({'explained': message is not None, 'message': message})
+    except Exception:
+        return jsonify({'explained': False, 'message': None})
+
+
 def _get_capacity_snapshot() -> Dict[str, int]:
     try:
         conn = get_connection()

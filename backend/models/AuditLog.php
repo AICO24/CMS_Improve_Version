@@ -65,6 +65,13 @@ class AuditLog {
             $sql .= " AND LOWER(a.entity_type) = ?";
             $params[] = strtolower($filters['entity_type']);
         }
+        // AI-1: lets a caller scope to one specific entity (e.g. Schedule
+        // #55) instead of every row of that entity_type — needed by
+        // AuditIntelligenceService to pull a single record's own timeline.
+        if (!empty($filters['entity_id'])) {
+            $sql .= " AND a.entity_id = ?";
+            $params[] = (int) $filters['entity_id'];
+        }
         if (!empty($filters['user_id'])) {
             $sql .= " AND a.user_id = ?";
             $params[] = (int)$filters['user_id'];

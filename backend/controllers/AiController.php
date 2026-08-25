@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../models/AiParameter.php';
 require_once __DIR__ . '/../models/AiKnowledge.php';
 require_once __DIR__ . '/../services/AIService.php';
+require_once __DIR__ . '/../services/AuditIntelligenceService.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../models/CapacityAlert.php';
@@ -11,12 +12,14 @@ class AiController {
     private $aiKnowledgeModel;
     private $aiService;
     private $auditLogModel;
+    private $auditIntelligenceService;
 
     public function __construct() {
         $this->aiParameterModel = new AiParameter();
         $this->aiKnowledgeModel = new AiKnowledge();
         $this->aiService = new AIService();
         $this->auditLogModel = new AuditLog();
+        $this->auditIntelligenceService = new AuditIntelligenceService();
     }
 
     private static function actorId($actor) {
@@ -198,6 +201,39 @@ class AiController {
         return [
             'explained' => (bool) ($result['explained'] ?? false),
             'message' => is_string($result['message'] ?? null) ? $result['message'] : null,
+        ];
+    }
+
+    // AI-1 (Audit Intelligence Layer): READ + EXPLAIN only. Retrieves and
+    // correlates a single entity's authoritative current state, related
+    // records, and audit/exception timeline via AuditIntelligenceService
+    // (existing models, read-only), then asks the existing AI service to
+    // narrate it in plain language for the admin/staff caller. AI never
+    // queries the database itself and never decides the record's state -
+    // it only summarizes the structured facts this method already
+    // assembled. Route-level RBAC (admin/staff only) happens before this
+    // method is ever called; see routes/api.php.
+    public function explainEntity($payload) {
+        $payload = is_array($payload) ? $payload : [];
+        $entityType = trim((string) ($payload['entity_type'] ?? ''));
+        $entityId = $payload['entity_id'] ?? null;
+
+        if ($entityType === '' || empty($entityId)) {
+            return ['error' => 'entity_type and entity_id are required', 'code' => 400];
+        }
+
+        $context = $this->auditIntelligenceService->buildContext($entityType, $entityId);
+        if (!empty($context['error'])) {
+            return $context;
+        }
+
+        $facts = $this->auditIntelligenceService->toFacts($context);
+        $result = $this->aiService->explainEntity($facts);
+
+        return [
+            'explained' => empty($result['error']) && !empty($result['message']),
+            'message' => (empty($result['error']) && is_string($result['message'] ?? null)) ? $result['message'] : null,
+            'context' => $context,
         ];
     }
 

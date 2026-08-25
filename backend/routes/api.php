@@ -993,6 +993,16 @@ if ($path === 'ai/explain-exception' && $requestMethod === 'POST') {
     exit;
 }
 
+if ($path === 'ai/explain-entity' && $requestMethod === 'POST') {
+    // AI-1 (Audit Intelligence Layer): READ + EXPLAIN only, admin/staff
+    // only — same role gate as ai/explain-exception above and every other
+    // audit/exception-adjacent route in this file. Citizens never reach this.
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    echo json_encode($aiController->explainEntity($input));
+    exit;
+}
+
 if ($path === 'ai/knowledge' && $requestMethod === 'GET') {
     // admin+staff: staff should be able to review/correct FAQ content too,
     // not just admins (unlike ai/parameters' tunable numeric weights below).

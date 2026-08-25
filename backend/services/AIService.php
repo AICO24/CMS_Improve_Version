@@ -40,6 +40,12 @@ class AIService {
         return $this->request('/api/explain-exception', 'POST', $payload);
     }
 
+    // AI-1: Audit Intelligence Layer. $payload is the name-free "facts"
+    // bundle AuditIntelligenceService::toFacts() builds, never raw records.
+    public function explainEntity($payload) {
+        return $this->request('/api/explain-entity', 'POST', $payload);
+    }
+
     private function request($path, $method = 'GET', $data = null) {
         if (!function_exists('curl_init')) {
             return ['error' => 'cURL extension is not available', 'code' => 500];
