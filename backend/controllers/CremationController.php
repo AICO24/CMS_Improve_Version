@@ -3,6 +3,8 @@ require_once __DIR__ . '/../models/Cremation.php';
 require_once __DIR__ . '/../models/Decedent.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../services/AutomationEngine.php';
+require_once __DIR__ . '/../models/Notification.php';
+require_once __DIR__ . '/../models/CapacityAlert.php';
 
 class CremationController {
     private $cremationModel;
@@ -183,7 +185,95 @@ class CremationController {
     }
 
     public function getStats($columbarium = null) {
-        return $this->cremationModel->getStats($columbarium);
+        $stats = $this->cremationModel->getStats($columbarium);
+        $this->maybeAlertColumbariumCapacity();
+        return $stats;
+    }
+
+    // Batch G Sub-batch 3: deterministic capacity alerting for columbarium
+    // occupancy, reusing Batch D's CapacityAlert dedup pattern exactly (see
+    // AiController::maybeAlertCapacity(), the burial-lot equivalent this
+    // mirrors). Evaluates every columbarium actually in use — not just
+    // whichever one this particular getStats() call happened to be scoped
+    // to — so a capacity issue in one columbarium isn't missed just because
+    // an admin is currently viewing a different one's tab.
+    //
+    // Thresholds (80% warning / 95% critical) intentionally match the same
+    // percentage bands used for burial-lot forecasting — not blindly
+    // inherited, but deliberately chosen because Cremation::getStats()'s
+    // occupancy_rate is computed the exact same way (occupied/capacity*100),
+    // making the same bands equally meaningful here. Reuses the existing
+    // capacity calculation untouched (Cremation::getStats()) — this method
+    // only reads its result, never recomputes occupancy itself.
+    //
+    // Never lets a failure here affect the stats response — matching the
+    // exact defensive pattern already established in Batch D.
+    private const CAPACITY_WARNING_THRESHOLD = 80;
+    private const CAPACITY_CRITICAL_THRESHOLD = 95;
+
+    private function maybeAlertColumbariumCapacity() {
+        try {
+            $columbariums = $this->cremationModel->getDistinctColumbariums();
+            if (empty($columbariums)) {
+                return;
+            }
+
+            $capacityAlertModel = new CapacityAlert();
+
+            foreach ($columbariums as $columbarium) {
+                $columbariumStats = $this->cremationModel->getStats($columbarium);
+                $rate = (float) ($columbariumStats['occupancy_rate'] ?? 0);
+
+                $status = null;
+                if ($rate >= self::CAPACITY_CRITICAL_THRESHOLD) {
+                    $status = 'critical';
+                } elseif ($rate >= self::CAPACITY_WARNING_THRESHOLD) {
+                    $status = 'warning';
+                }
+
+                if ($status === null) {
+                    continue;
+                }
+
+                // Prefix scopes dedup to THIS columbarium's own alert stream
+                // (see CapacityAlert::lastAlertKeyForPrefix()'s comment) —
+                // independent columbariums never suppress/interfere with
+                // each other's alerts.
+                $prefix = 'cremation:' . $columbarium . ':';
+                $alertKey = $prefix . $status;
+                if ($capacityAlertModel->lastAlertKeyForPrefix($prefix) === $alertKey) {
+                    continue;
+                }
+
+                $statusLabel = $status === 'critical' ? 'Critical' : 'Warning';
+                $notificationModel = new Notification();
+                $notificationModel->create([
+                    'title' => "Columbarium {$statusLabel}: {$columbarium}",
+                    'message' => "Columbarium {$columbarium} occupancy reaches {$rate}%. Review Cremation Management for details.",
+                    'notification_type' => 'System',
+                    'is_read' => 0,
+                ]);
+
+                $this->auditLogModel->log(
+                    'Capacity alert generated',
+                    null,
+                    null,
+                    'CremationCapacity',
+                    null,
+                    ['alert_key' => $alertKey, 'columbarium' => $columbarium, 'status' => $status, 'occupancy_rate' => $rate]
+                );
+
+                // occupancy_rate is stored as a 0-1 fraction (matching the
+                // burial-lot forecast's own convention and the column's
+                // DECIMAL(6,4) precision) even though Cremation computes it
+                // as a 0-100 percentage — converting here, not changing the
+                // column or Cremation::getStats() itself.
+                $capacityAlertModel->record($alertKey, date('Y-m'), $status, $rate / 100);
+            }
+        } catch (Exception $e) {
+            // Deliberately swallowed — cremation stats must never fail
+            // because the alerting side-channel had a problem.
+        }
     }
 
     public function columbariums() {

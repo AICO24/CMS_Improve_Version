@@ -40,6 +40,22 @@ class CapacityAlert {
         return $row['alert_key'] ?? null;
     }
 
+    // Batch G Sub-batch 3: lastAlertKey() above answers "what's the single
+    // most recent alert of any kind" — correct for its one existing caller
+    // (burial-lot forecast, a single stream). Now that a second, independent
+    // stream (per-columbarium cremation capacity) shares this same table,
+    // that global lookup would incorrectly compare across unrelated streams
+    // (e.g. a Lot-forecast alert becoming "most recent" would make an
+    // unrelated, already-alerted columbarium look like it needs re-alerting).
+    // Scoping by prefix keeps each stream's dedup independent without
+    // touching lastAlertKey() or its existing caller.
+    public function lastAlertKeyForPrefix($prefix) {
+        $stmt = $this->db->prepare("SELECT alert_key FROM capacity_alerts WHERE alert_key LIKE ? ORDER BY alert_id DESC LIMIT 1");
+        $stmt->execute([$prefix . '%']);
+        $row = $stmt->fetch();
+        return $row['alert_key'] ?? null;
+    }
+
     public function record($alertKey, $month, $status, $occupancyRate) {
         $stmt = $this->db->prepare("INSERT INTO capacity_alerts (alert_key, alert_month, capacity_status, occupancy_rate) VALUES (?, ?, ?, ?)");
         return $stmt->execute([$alertKey, $month, $status, $occupancyRate]);

@@ -109,9 +109,19 @@ class AiController {
         }
 
         try {
-            $alertKey = $capacityAlert['month'] . ':' . $capacityAlert['status'];
+            // Batch G Sub-batch 3: prefixed ('forecast:') so this stream's
+            // dedup stays scoped to itself now that a second, independent
+            // stream (per-columbarium cremation capacity — see
+            // CremationController::maybeAlertColumbariumCapacity()) shares
+            // this same capacity_alerts table. Without this, a cremation
+            // alert becoming the table's most recent row would make an
+            // unrelated, already-notified forecast month look "new" again.
+            // capacity_alerts was empty at the time of this change, so there
+            // was no cached state to migrate.
+            $prefix = 'forecast:';
+            $alertKey = $prefix . $capacityAlert['month'] . ':' . $capacityAlert['status'];
             $capacityAlertModel = new CapacityAlert();
-            if ($capacityAlertModel->lastAlertKey() === $alertKey) {
+            if ($capacityAlertModel->lastAlertKeyForPrefix($prefix) === $alertKey) {
                 return;
             }
 
