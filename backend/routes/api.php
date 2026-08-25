@@ -793,9 +793,27 @@ if ($path === 'audit-logs' && $requestMethod === 'GET') {
     if (isset($_GET['action'])) $filters['action'] = $_GET['action'];
     if (isset($_GET['entity_type'])) $filters['entity_type'] = $_GET['entity_type'];
     if (isset($_GET['user_id'])) $filters['user_id'] = $_GET['user_id'];
+    if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
+    if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
     $limit = $_GET['limit'] ?? 100;
     $offset = $_GET['offset'] ?? 0;
     echo json_encode($auditLogModel->findAll($filters, $limit, $offset));
+    exit;
+}
+
+// Batch F: a sibling endpoint rather than changing audit-logs' own response
+// shape (still a bare array) — the Audit Logs page previously had no way to
+// know the real total, only a limit+1 "peek ahead" trick.
+if ($path === 'audit-logs/count' && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin']);
+    $filters = [];
+    if (isset($_GET['q'])) $filters['q'] = $_GET['q'];
+    if (isset($_GET['action'])) $filters['action'] = $_GET['action'];
+    if (isset($_GET['entity_type'])) $filters['entity_type'] = $_GET['entity_type'];
+    if (isset($_GET['user_id'])) $filters['user_id'] = $_GET['user_id'];
+    if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
+    if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
+    echo json_encode(['total' => $auditLogModel->countAll($filters)]);
     exit;
 }
 

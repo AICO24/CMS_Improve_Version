@@ -152,9 +152,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         await withButtonLoading(resolveModalSubmit, async () => {
             try {
                 if (confirmAnywayCheckbox.checked && activeException.entity_type === 'Schedule') {
+                    // override_exception_id lets the backend record this PUT as
+                    // an explicit admin override of a flagged exception, not an
+                    // ordinary confirmation — see ScheduleController::update().
                     const confirmResult = await api.request(`schedules/${activeException.entity_id}`, {
                         method: 'PUT',
-                        body: { status: 'Confirmed' },
+                        body: { status: 'Confirmed', override_exception_id: activeException.exception_id },
                     });
                     if (!confirmResult.success) {
                         alert(confirmResult.error || 'Unable to confirm this booking — resolve without the override, or fix the underlying issue first.');

@@ -5,6 +5,7 @@ require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/ExpirationRecord.php';
 require_once __DIR__ . '/../models/DecedentRequest.php';
+require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../services/AutomationEngine.php';
 
 class ScheduleController {
@@ -12,6 +13,7 @@ class ScheduleController {
     private $lotModel;
     private $expirationModel;
     private $decedentRequestModel;
+    private $auditLogModel;
 
     // Default lease term applied to the expiration_records row auto-created
     // when a burial schedule is marked Completed (Batch LM-AUTOMATION, Phase C).
@@ -22,6 +24,15 @@ class ScheduleController {
         $this->lotModel = new Lot();
         $this->expirationModel = new ExpirationRecord();
         $this->decedentRequestModel = new DecedentRequest();
+        $this->auditLogModel = new AuditLog();
+    }
+
+    private static function actorId($actor) {
+        return is_array($actor) ? ($actor['user_id'] ?? null) : $actor;
+    }
+
+    private static function actorUsername($actor) {
+        return is_array($actor) ? ($actor['username'] ?? null) : null;
     }
 
     // Batch N5: $user is optional (existing callers pass none) but, when
@@ -207,6 +218,19 @@ class ScheduleController {
         $data['created_by'] = $userId;
         $scheduleId = $this->scheduleModel->create($data);
         if ($scheduleId) {
+            // Batch F (Post-Automation Admin Gap Audit): creation is its own
+            // distinct, always-original fact ("a booking exists and here's
+            // its starting state") — never produced by AutomationEngine, so
+            // no duplication risk here. This is what lets a future "what
+            // happened to booking #123" question find a starting point at all.
+            $this->auditLogModel->log(
+                'Schedule created',
+                self::actorId($user),
+                self::actorUsername($user),
+                'Schedule',
+                $scheduleId,
+                ['lot_id' => (int) $data['lot_id'], 'schedule_date' => $data['schedule_date'], 'initial_status' => $data['status'] ?? 'Pending']
+            );
             if (isset($data['status']) && $data['status'] === 'Confirmed') {
                 $this->transitionLotStatus($data['lot_id'], 'Reserved', ['Available', 'Reserved'], $user, 'schedule.confirmed');
             }
@@ -387,6 +411,38 @@ class ScheduleController {
             $lotId = $data['lot_id'] ?? $existing['lot_id'];
             if (isset($data['status']) && $data['status'] === 'Confirmed' && $existing['status'] !== 'Confirmed') {
                 $this->transitionLotStatus($lotId, 'Reserved', ['Available', 'Reserved'], $user, 'schedule.confirmed');
+                // Batch F: _auditedByAutomationEngine is set only by
+                // PaymentController::autoConfirmScheduleForVerifiedPurchase()'s
+                // apply() callback — that call is already wrapped in
+                // AutomationEngine::run('payment.verified', 'Schedule', ...),
+                // which logs its own audit entry. Logging again here would be
+                // exactly the duplicate-noise this batch was told to avoid.
+                // override_exception_id, by contrast, means this same PUT
+                // came from the Exceptions page's "confirm anyway" checkbox —
+                // that's a distinct, meaningful fact (an admin overrode a
+                // flagged exception) that deserves its own clearly-labeled
+                // entry, not to be logged as an ordinary confirmation.
+                if (empty($data['_auditedByAutomationEngine'])) {
+                    if (!empty($data['override_exception_id'])) {
+                        $this->auditLogModel->log(
+                            'Schedule confirmed (admin override of exception)',
+                            self::actorId($user),
+                            self::actorUsername($user),
+                            'Schedule',
+                            $id,
+                            ['exception_id' => (int) $data['override_exception_id'], 'previous_status' => $existing['status']]
+                        );
+                    } else {
+                        $this->auditLogModel->log(
+                            'Schedule confirmed',
+                            self::actorId($user),
+                            self::actorUsername($user),
+                            'Schedule',
+                            $id,
+                            ['previous_status' => $existing['status']]
+                        );
+                    }
+                }
                 $this->notifyScheduleStatusChange($existing, 'Confirmed', $existing['created_by']);
             } elseif (isset($data['status']) && $data['status'] === 'Completed' && $existing['status'] !== 'Completed') {
                 // Available is included alongside Reserved: an admin/staff PUT
@@ -396,6 +452,17 @@ class ScheduleController {
                 // must keep accepting it, not just the normal Reserved->Occupied path.
                 $this->transitionLotStatus($lotId, 'Occupied', ['Available', 'Reserved'], $user, 'schedule.completed');
                 $this->createLeaseRecordIfMissing($lotId, $existing['schedule_date']);
+                // No AutomationEngine path currently marks a schedule Completed
+                // (only a direct admin/staff action does), so no suppression
+                // check is needed here — unlike the Confirmed branch above.
+                $this->auditLogModel->log(
+                    'Schedule completed',
+                    self::actorId($user),
+                    self::actorUsername($user),
+                    'Schedule',
+                    $id,
+                    ['previous_status' => $existing['status']]
+                );
                 $this->notifyScheduleStatusChange($existing, 'Completed', $existing['created_by']);
             }
             return ['success' => true, 'message' => 'Schedule updated'];
@@ -410,7 +477,15 @@ class ScheduleController {
     // this is what satisfies update()'s Completed guard above.
     // decedent_request_id is deliberately left untouched, not cleared: it
     // stays as the audit trail of which request the formal record came from.
-    public function linkDecedent($id, $decedentId, $user) {
+    // Batch F: $isAutomaticLink defaults to false because the one external,
+    // human-facing caller of this method is the manual PUT
+    // schedules/{id}/link-decedent fallback route — that call should always
+    // get its own distinct audit entry. The single automatic caller
+    // (DecedentRequestController::autoLinkSchedules()'s AutomationEngine
+    // apply() callback) explicitly passes true, since AutomationEngine
+    // already logs a 'decedent_request.approved' entry for that same fact —
+    // logging here too would duplicate it.
+    public function linkDecedent($id, $decedentId, $user, $isAutomaticLink = false) {
         $existing = $this->scheduleModel->findById($id);
         if (!$existing) {
             return ['error' => 'Schedule not found', 'code' => 404];
@@ -423,6 +498,16 @@ class ScheduleController {
         }
 
         $result = $this->scheduleModel->update($id, ['deceased_id' => $decedentId]);
+        if ($result && !$isAutomaticLink) {
+            $this->auditLogModel->log(
+                'Decedent manually linked to schedule',
+                self::actorId($user),
+                self::actorUsername($user),
+                'Schedule',
+                $id,
+                ['decedent_id' => (int) $decedentId]
+            );
+        }
         return $result
             ? ['success' => true, 'message' => 'Decedent record linked to schedule']
             : ['error' => 'Failed to link decedent record', 'code' => 500];
@@ -469,6 +554,17 @@ class ScheduleController {
             if (in_array($existing['status'], ['Confirmed', 'Pending'], true)) {
                 $this->transitionLotStatus($existing['lot_id'], 'Available', ['Available', 'Reserved'], $user, 'schedule.cancelled');
             }
+            // Batch F: no AutomationEngine path ever cancels a schedule — this
+            // is always a direct citizen/admin/staff action, so no
+            // suppression check is needed (unlike the Confirmed branch above).
+            $this->auditLogModel->log(
+                'Schedule cancelled',
+                self::actorId($user),
+                self::actorUsername($user),
+                'Schedule',
+                $id,
+                ['previous_status' => $existing['status']]
+            );
             $this->notifyScheduleStatusChange($existing, 'Cancelled', $existing['created_by']);
             return ['success' => true, 'message' => 'Schedule cancelled'];
         }

@@ -29,3 +29,26 @@
     font-size: var(--fs-body-sm);
     color: var(--color-neutral-600);
 }
+
+/* Batch F: date range filter fields, matching .status-select-field's sizing
+   (user-management.css) so they sit level with the search field/button. */
+.date-range-field {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+.date-range-field label {
+    font-size: var(--fs-body-sm);
+    color: var(--color-text-muted);
+}
+
+.date-range-field input[type="date"] {
+    height: 46px;
+    padding: 0 12px;
+    border: 1px solid var(--color-neutral-300);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: var(--fs-body-sm);
+}

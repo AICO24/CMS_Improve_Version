@@ -637,7 +637,12 @@ class PaymentController {
             },
             function () use ($scheduleId, $adminActor) {
                 $scheduleController = new ScheduleController();
-                return $scheduleController->update($scheduleId, ['status' => 'Confirmed'], $adminActor);
+                // Batch F: _auditedByAutomationEngine tells ScheduleController::
+                // update() to skip its own 'Schedule confirmed' audit entry —
+                // the AutomationEngine::run() call above already logs this
+                // exact fact as a 'payment.verified' entry against this same
+                // Schedule entity.
+                return $scheduleController->update($scheduleId, ['status' => 'Confirmed', '_auditedByAutomationEngine' => true], $adminActor);
             }
         );
     }

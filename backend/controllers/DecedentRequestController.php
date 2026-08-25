@@ -119,7 +119,12 @@ class DecedentRequestController {
                 },
                 function () use ($scheduleId, $decedentId, $user) {
                     $scheduleController = new ScheduleController();
-                    return $scheduleController->linkDecedent($scheduleId, $decedentId, $user);
+                    // Batch F: true marks this as the automatic link, so
+                    // linkDecedent() doesn't also log its own 'Decedent
+                    // manually linked' entry — AutomationEngine::run() above
+                    // already records this fact as a 'decedent_request.approved'
+                    // audit entry.
+                    return $scheduleController->linkDecedent($scheduleId, $decedentId, $user, true);
                 }
             );
         }

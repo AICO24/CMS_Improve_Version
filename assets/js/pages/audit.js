@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     const tbody = document.getElementById('auditTableBody');
     const searchInput = document.getElementById('searchLogs');
+    const dateFromInput = document.getElementById('filterDateFrom');
+    const dateToInput = document.getElementById('filterDateTo');
     const refreshBtn = document.getElementById('refreshAuditBtn');
     const paginationInfo = document.getElementById('paginationInfo');
     const prevPageBtn = document.getElementById('prevPage');
@@ -55,26 +57,35 @@ document.addEventListener('DOMContentLoaded', async function() {
         `).join('');
     }
 
+    // Batch F: shared by loadAuditLogs()/loadAuditCount() so the two calls
+    // (list + count) are always built from the exact same filter state.
+    function buildFilterParams() {
+        const params = new URLSearchParams();
+        const query = searchInput.value.trim();
+        if (query) params.set('q', query);
+        if (dateFromInput.value) params.set('date_from', dateFromInput.value);
+        if (dateToInput.value) params.set('date_to', dateToInput.value);
+        return params;
+    }
+
     async function loadAuditLogs() {
         tbody.innerHTML = '<tr><td colspan="6">Loading audit logs...</td></tr>';
         try {
-            const params = new URLSearchParams();
-            // The audit-logs endpoint has no total-count support, so one
-            // extra row is requested to detect whether a further page
-            // exists — it's trimmed off before rendering.
-            params.set('limit', perPage + 1);
-            params.set('offset', (pagination.page - 1) * perPage);
-            const query = searchInput.value.trim();
-            if (query) params.set('q', query);
+            const listParams = buildFilterParams();
+            listParams.set('limit', perPage);
+            listParams.set('offset', (pagination.page - 1) * perPage);
 
-            const logs = await api.request(`audit-logs?${params.toString()}`, { method: 'GET' });
-            const hasMore = Array.isArray(logs) && logs.length > perPage;
-            const pageLogs = hasMore ? logs.slice(0, perPage) : logs;
+            const [logs, countResult] = await Promise.all([
+                api.request(`audit-logs?${listParams.toString()}`, { method: 'GET' }),
+                api.request(`audit-logs/count?${buildFilterParams().toString()}`, { method: 'GET' }),
+            ]);
 
-            renderLogs(pageLogs);
+            renderLogs(logs);
+            const total = countResult && Number.isFinite(countResult.total) ? countResult.total : 0;
             pagination.render({
                 page: pagination.page,
-                pages: hasMore ? pagination.page + 1 : pagination.page,
+                pages: Math.max(1, Math.ceil(total / perPage)),
+                total,
             });
         } catch (err) {
             tbody.innerHTML = `<tr><td colspan="6" class="audit-error">Failed to load logs: ${err.message}</td></tr>`;
@@ -96,6 +107,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     }, 300);
 
     searchInput.addEventListener('input', refreshFiltered);
+    dateFromInput.addEventListener('change', refreshFiltered);
+    dateToInput.addEventListener('change', refreshFiltered);
     refreshBtn.addEventListener('click', () => {
         pagination.reset();
         loadAuditLogs();
