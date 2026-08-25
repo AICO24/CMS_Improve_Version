@@ -444,16 +444,36 @@ class ScheduleController {
             return ['error' => 'Only pending reservations may be canceled', 'code' => 403];
         }
 
-        $result = $this->scheduleModel->delete($id);
+        // Batch E (Admin-Wide Automation Audit): idempotency guard for the
+        // one case the old hard-delete path got for free (a second delete on
+        // an already-gone row was just a 404 on re-fetch above). A soft
+        // cancel leaves the row in place, so without this an admin
+        // re-clicking Cancel on an already-cancelled reservation would
+        // re-notify the owner and re-attempt (harmlessly, but noisily) the
+        // lot release every time.
+        if ($existing['status'] === 'Cancelled') {
+            return ['error' => 'This reservation has already been cancelled', 'code' => 409];
+        }
+
+        // Soft-cancel (Batch E): previously a hard DELETE, which meant
+        // Schedule::getStats()'s cancellation_rate could never reflect
+        // reality (no Cancelled rows ever existed to count) and cancelling
+        // permanently erased the booking's history. Persisting the status
+        // instead keeps that history and lets it show up correctly in
+        // reports. Schedule::checkConflict() already excludes
+        // status != 'Cancelled', so the lot+date+time slot is immediately
+        // re-bookable — see migration_20260825_soft_cancel_schedules.sql for
+        // the DB-level constraint that had to change to allow that.
+        $result = $this->scheduleModel->update($id, ['status' => 'Cancelled']);
         if ($result) {
             if (in_array($existing['status'], ['Confirmed', 'Pending'], true)) {
                 $this->transitionLotStatus($existing['lot_id'], 'Available', ['Available', 'Reserved'], $user, 'schedule.cancelled');
             }
             $this->notifyScheduleStatusChange($existing, 'Cancelled', $existing['created_by']);
-            return ['success' => true, 'message' => 'Schedule deleted'];
+            return ['success' => true, 'message' => 'Schedule cancelled'];
         }
 
-        return ['error' => 'Failed to delete schedule', 'code' => 500];
+        return ['error' => 'Failed to cancel schedule', 'code' => 500];
     }
 
     // Batch C (Admin-Wide Automation Audit): the shared wrapper every
