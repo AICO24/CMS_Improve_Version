@@ -107,6 +107,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         const editBtn = document.getElementById('editFromView');
         const assignBtn = document.getElementById('assignFromView');
         const deleteBtn = document.getElementById('deleteFromView');
+        const aiExplanationEl = document.getElementById('aiExplanation');
+        const askAiExplainBtn = document.getElementById('askAiExplainBtn');
+        aiExplanationEl.style.display = 'none';
+        aiExplanationEl.textContent = '';
 
         if (niche.cremation_id) {
             editBtn.style.display = 'inline-block';
@@ -127,9 +131,31 @@ document.addEventListener('DOMContentLoaded', async function() {
                     alert(error.message || 'Failed to delete cremation record');
                 }
             };
+            // Explaining an empty/available niche makes no sense - there's no
+            // cremation record yet for the AI to explain.
+            askAiExplainBtn.style.display = 'inline-block';
+            askAiExplainBtn.onclick = async () => {
+                await withButtonLoading(askAiExplainBtn, async () => {
+                    try {
+                        const result = await apiRequest('ai/explain-entity', {
+                            method: 'POST',
+                            body: { entity_type: 'Cremation', entity_id: niche.cremation_id },
+                        });
+                        if (result && result.explained && result.message) {
+                            aiExplanationEl.textContent = result.message;
+                        } else {
+                            aiExplanationEl.textContent = 'AI explanation is unavailable right now.';
+                        }
+                    } catch (error) {
+                        aiExplanationEl.textContent = 'AI explanation is unavailable right now.';
+                    }
+                    aiExplanationEl.style.display = 'block';
+                });
+            };
         } else {
             editBtn.style.display = 'none';
             deleteBtn.style.display = 'none';
+            askAiExplainBtn.style.display = 'none';
         }
 
         if (niche.status === 'available') {

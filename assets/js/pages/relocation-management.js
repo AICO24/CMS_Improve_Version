@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     const tbody = document.getElementById('requestsTableBody');
     const requestModal = document.getElementById('requestModal');
     const viewModal = document.getElementById('viewModal');
+    const aiExplanationEl = document.getElementById('aiExplanation');
+    const askAiExplainBtn = document.getElementById('askAiExplainBtn');
 
     const perPage = 10;
     const paginationInfo = document.getElementById('paginationInfo');
@@ -244,6 +246,27 @@ document.addEventListener('DOMContentLoaded', async function() {
                 } catch (error) {
                     alert('Error: ' + error.message);
                 }
+            };
+
+            aiExplanationEl.style.display = 'none';
+            aiExplanationEl.textContent = '';
+            askAiExplainBtn.onclick = async () => {
+                await withButtonLoading(askAiExplainBtn, async () => {
+                    try {
+                        const result = await apiRequest('ai/explain-entity', {
+                            method: 'POST',
+                            body: { entity_type: 'Relocation', entity_id: id },
+                        });
+                        if (result && result.explained && result.message) {
+                            aiExplanationEl.textContent = result.message;
+                        } else {
+                            aiExplanationEl.textContent = 'AI explanation is unavailable right now.';
+                        }
+                    } catch (error) {
+                        aiExplanationEl.textContent = 'AI explanation is unavailable right now.';
+                    }
+                    aiExplanationEl.style.display = 'block';
+                });
             };
 
             viewModal.style.display = 'flex';

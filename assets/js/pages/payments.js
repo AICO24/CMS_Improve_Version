@@ -337,6 +337,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <div class="detail-row"><span>Receipt</span><strong>${payment.receipt_url ? `<a href="${payment.receipt_url}" target="_blank">Download</a>` : 'Not attached'}</strong></div>
                 <div class="detail-row"><span>Received By</span><strong>${payment.received_by_name || 'N/A'}</strong></div>
                 <div class="detail-row"><span>Notes</span><strong>${payment.notes || '—'}</strong></div>
+                ${currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff') ? `
+                    <div id="aiExplanation" class="muted" style="display:none; margin-top: 10px; padding: 10px; border-left: 3px solid var(--color-primary, #2563eb);"></div>
+                    <button type="button" class="btn-secondary" id="askAiExplainBtn" style="margin-top: 10px;"><i class="fas fa-robot"></i> Ask AI to explain</button>
+                ` : ''}
                 ${currentUser && currentUser.role === 'admin' && payment.verification_status === 'Pending' ? `
                     <div class="action-buttons admin-verification-actions">
                         <button id="verifyPaymentBtn" class="btn-verify"><i class="fas fa-check"></i> Verify</button>
@@ -346,6 +350,29 @@ document.addEventListener('DOMContentLoaded', async function() {
             `;
             document.getElementById('viewDetails').innerHTML = details;
             document.getElementById('viewModal').style.display = 'flex';
+
+            const aiExplanationEl = document.getElementById('aiExplanation');
+            const askAiExplainBtn = document.getElementById('askAiExplainBtn');
+            if (askAiExplainBtn && aiExplanationEl) {
+                askAiExplainBtn.addEventListener('click', async () => {
+                    await withButtonLoading(askAiExplainBtn, async () => {
+                        try {
+                            const result = await api.request('ai/explain-entity', {
+                                method: 'POST',
+                                body: { entity_type: 'Payment', entity_id: id },
+                            });
+                            if (result && result.explained && result.message) {
+                                aiExplanationEl.textContent = result.message;
+                            } else {
+                                aiExplanationEl.textContent = 'AI explanation is unavailable right now.';
+                            }
+                        } catch (error) {
+                            aiExplanationEl.textContent = 'AI explanation is unavailable right now.';
+                        }
+                        aiExplanationEl.style.display = 'block';
+                    });
+                });
+            }
 
             const verifyBtn = document.getElementById('verifyPaymentBtn');
             const rejectBtn = document.getElementById('rejectPaymentBtn');

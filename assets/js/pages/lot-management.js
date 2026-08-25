@@ -460,6 +460,29 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             document.getElementById('viewModal').style.display = 'flex';
 
+            const aiExplanationEl = document.getElementById('aiExplanation');
+            const askAiExplainBtn = document.getElementById('askAiExplainBtn');
+            aiExplanationEl.style.display = 'none';
+            aiExplanationEl.textContent = '';
+            askAiExplainBtn.onclick = async () => {
+                await withButtonLoading(askAiExplainBtn, async () => {
+                    try {
+                        const result = await apiRequest('ai/explain-entity', {
+                            method: 'POST',
+                            body: { entity_type: 'Lot', entity_id: lotId },
+                        });
+                        if (result && result.explained && result.message) {
+                            aiExplanationEl.textContent = result.message;
+                        } else {
+                            aiExplanationEl.textContent = 'AI explanation is unavailable right now.';
+                        }
+                    } catch (error) {
+                        aiExplanationEl.textContent = 'AI explanation is unavailable right now.';
+                    }
+                    aiExplanationEl.style.display = 'block';
+                });
+            };
+
             document.getElementById('editFromView').onclick = () => {
                 document.getElementById('viewModal').style.display = 'none';
                 openEditModal(lotId);
