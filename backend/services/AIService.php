@@ -53,6 +53,15 @@ class AIService {
         return $this->request('/api/dashboard-digest', 'POST', $payload);
     }
 
+    // System-Wide AI Assistant (Phase 1): free-form follow-up questions,
+    // grounded in whichever fact bundle AiController::askAssistant() built
+    // (single-entity, module-level, or system-wide - the assistant itself
+    // doesn't know or care which, it only ever sees facts already assembled
+    // by AuditIntelligenceService).
+    public function askAssistant($payload) {
+        return $this->request('/api/assistant-ask', 'POST', $payload);
+    }
+
     private function request($path, $method = 'GET', $data = null) {
         if (!function_exists('curl_init')) {
             return ['error' => 'cURL extension is not available', 'code' => 500];

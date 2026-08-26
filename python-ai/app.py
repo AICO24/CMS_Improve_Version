@@ -815,6 +815,107 @@ def dashboard_digest():
         return jsonify({'explained': False, 'message': None})
 
 
+# System-Wide AI Assistant (Phase 1): free-form follow-up questions, the
+# broader counterpart to explain-entity/explain-exception/dashboard-digest
+# above. Same safety contract (never queries anything itself, never invents
+# a fact beyond what's given, never claims to act) but two differences: (1)
+# it answers an arbitrary admin question instead of narrating one fixed
+# shape, and (2) it may propose ONE concrete suggested_action — still only
+# ever a suggestion, the admin or AutomationEngine is the one who acts.
+# `context` is whichever fact bundle AiController::askAssistant() built
+# (single-entity via toFacts(), one module via buildModuleContext(), or
+# system-wide via buildDashboardFacts()) - this endpoint doesn't need to
+# know which, it just narrates what it's given.
+ASSISTANT_MODEL = 'gemini-3.6-flash'
+
+ASSISTANT_SYSTEM_PROMPT = (
+    "You are an AI assistant helping a cemetery-management-system "
+    "administrator understand and troubleshoot the system. You are given "
+    "structured facts only — never invent a name, a number, or a fact "
+    "beyond what is provided. The facts may describe one specific record, "
+    "one module's recent activity, or the whole system's state, depending "
+    "on where the admin asked from. Answer the admin's question directly "
+    "and specifically using only those facts, and use conversation_history "
+    "(if given) to understand a follow-up question in context. When it is "
+    "clearly relevant, end with ONE concrete suggested next step (e.g. "
+    "'resolve the open exception on Schedule #12' or 'check whether Lot "
+    "A2-02 was reserved by another transaction'). Never claim to have taken "
+    "any action yourself — you can only explain and suggest; the admin, or "
+    "the system's own automation, is what actually acts. If the given facts "
+    "genuinely do not cover the question, say so plainly instead of "
+    "guessing.\n\n"
+    "Output ONLY a compact JSON object — no markdown, no code fences, no "
+    "prose outside the JSON.\n"
+    "Schema: {\"answered\": boolean, \"message\": string|null, "
+    "\"suggested_action\": string|null}\n"
+    "- answered=false (message=null, suggested_action=null) only when the "
+    "facts genuinely do not cover the question.\n"
+    "- suggested_action: a short, specific, actionable next step, or null "
+    "if there is not a clear one (e.g. the admin asked a purely "
+    "informational question with nothing to act on)."
+)
+
+
+def _ask_assistant(context: Dict[str, Any], question: str, conversation_history: Optional[List[Dict[str, Any]]]):
+    if _gemini_client is None:
+        return None, None
+
+    payload = {
+        'context': context,
+        'question': question,
+        'conversation_history': conversation_history or [],
+    }
+
+    try:
+        response = _gemini_client.models.generate_content(
+            model=ASSISTANT_MODEL,
+            contents=json.dumps(payload),
+            config=genai_types.GenerateContentConfig(
+                system_instruction=ASSISTANT_SYSTEM_PROMPT,
+                max_output_tokens=768,
+                temperature=0.3,
+                response_mime_type='application/json',
+                thinking_config=_THINKING_CONFIG,
+                http_options=genai_types.HttpOptions(timeout=_LLM_TIMEOUT_MS),
+            ),
+        )
+        text = (response.text or '').strip()
+        parsed = json.loads(_strip_json_fences(text))
+        if not isinstance(parsed, dict):
+            return None, None
+        if not parsed.get('answered') or not isinstance(parsed.get('message'), str) or not parsed['message'].strip():
+            return None, None
+        suggested = parsed.get('suggested_action')
+        suggested = suggested.strip() if isinstance(suggested, str) and suggested.strip() else None
+        return parsed['message'].strip(), suggested
+    except Exception:
+        return None, None
+
+
+@app.post('/api/assistant-ask')
+def assistant_ask():
+    # Always returns 200; answered:false whenever unavailable, so the
+    # widget just shows "AI is unavailable right now" and the admin can
+    # still work from the raw facts already shown in the page.
+    try:
+        payload = request.get_json(silent=True) or {}
+        context = payload.get('context')
+        question = (payload.get('question') or '').strip()
+        conversation_history = payload.get('conversation_history')
+
+        if not isinstance(context, dict) or not context or not question:
+            return jsonify({'answered': False, 'message': None, 'suggested_action': None})
+
+        message, suggested_action = _ask_assistant(context, question, conversation_history)
+        return jsonify({
+            'answered': message is not None,
+            'message': message,
+            'suggested_action': suggested_action,
+        })
+    except Exception:
+        return jsonify({'answered': False, 'message': None, 'suggested_action': None})
+
+
 def _get_capacity_snapshot() -> Dict[str, int]:
     try:
         conn = get_connection()

@@ -255,6 +255,66 @@ class AiController {
         ];
     }
 
+    // System-Wide AI Assistant (Phase 1): the free-form counterpart to
+    // explainEntity()/explainException()/dashboardDigest() above — same
+    // READ + EXPLAIN boundary (this method decides what data exists via
+    // AuditIntelligenceService, the AI only narrates/suggests, route-level
+    // RBAC happens before this is ever called), but answers an arbitrary
+    // admin question instead of one fixed narration shape. context.scope
+    // picks which of the three existing fact-builders to use — the caller
+    // (the shared frontend widget) always sends exactly one.
+    public function askAssistant($payload) {
+        $payload = is_array($payload) ? $payload : [];
+        $context = is_array($payload['context'] ?? null) ? $payload['context'] : [];
+        $question = trim((string) ($payload['question'] ?? ''));
+        $conversationHistory = is_array($payload['conversation_history'] ?? null) ? $payload['conversation_history'] : [];
+
+        if ($question === '') {
+            return ['error' => 'question is required', 'code' => 400];
+        }
+
+        $scope = $context['scope'] ?? null;
+        $facts = null;
+
+        if ($scope === 'entity') {
+            $entityType = trim((string) ($context['entity_type'] ?? ''));
+            $entityId = $context['entity_id'] ?? null;
+            if ($entityType === '' || empty($entityId)) {
+                return ['error' => 'entity_type and entity_id are required for scope=entity', 'code' => 400];
+            }
+            $built = $this->auditIntelligenceService->buildContext($entityType, $entityId);
+            if (!empty($built['error'])) {
+                return $built;
+            }
+            $facts = $this->auditIntelligenceService->toFacts($built);
+        } elseif ($scope === 'module') {
+            $module = trim((string) ($context['module'] ?? ''));
+            if ($module === '') {
+                return ['error' => 'module is required for scope=module', 'code' => 400];
+            }
+            $facts = $this->auditIntelligenceService->buildModuleContext($module);
+            if (!empty($facts['error'])) {
+                return $facts;
+            }
+        } elseif ($scope === 'system') {
+            $facts = $this->auditIntelligenceService->buildDashboardFacts();
+        } else {
+            return ['error' => "context.scope must be 'entity', 'module', or 'system'", 'code' => 400];
+        }
+
+        $result = $this->aiService->askAssistant([
+            'context' => $facts,
+            'question' => $question,
+            'conversation_history' => $conversationHistory,
+        ]);
+
+        return [
+            'answered' => empty($result['error']) && !empty($result['message']),
+            'message' => (empty($result['error']) && is_string($result['message'] ?? null)) ? $result['message'] : null,
+            'suggested_action' => (empty($result['error']) && is_string($result['suggested_action'] ?? null)) ? $result['suggested_action'] : null,
+        ];
+    }
+
     public function getKnowledge() {
         return $this->aiKnowledgeModel->findAll();
     }

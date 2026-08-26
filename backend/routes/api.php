@@ -1013,6 +1013,19 @@ if ($path === 'ai/dashboard-digest' && $requestMethod === 'GET') {
     exit;
 }
 
+if ($path === 'ai/assistant-ask' && $requestMethod === 'POST') {
+    // System-Wide AI Assistant (Phase 1): same admin/staff gate as every
+    // other audit/exception-adjacent AI route above. Citizens never reach
+    // this — it can surface real booking/payment/lot facts by design.
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $result = $aiController->askAssistant($input);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 if ($path === 'ai/knowledge' && $requestMethod === 'GET') {
     // admin+staff: staff should be able to review/correct FAQ content too,
     // not just admins (unlike ai/parameters' tunable numeric weights below).

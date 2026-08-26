@@ -8,6 +8,7 @@ require_once __DIR__ . '/../models/Cremation.php';
 require_once __DIR__ . '/../models/Relocation.php';
 require_once __DIR__ . '/../models/Decedent.php';
 require_once __DIR__ . '/../models/ExpirationRecord.php';
+require_once __DIR__ . '/../models/DecedentRequest.php';
 
 // AI-1: Audit Intelligence / Context Retrieval Layer.
 //
@@ -27,11 +28,13 @@ require_once __DIR__ . '/../models/ExpirationRecord.php';
 // already use (see PaymentController::resolveExpectedAmount() for the
 // schedule-then-lot fallback this class' resolvePaymentReference() copies).
 class AuditIntelligenceService {
-    // Deliberately narrower than every entity_type ever written to
-    // audit_logs (e.g. no DecedentRequest yet) - the AI-1 audit flagged
-    // decedent-request audit coverage as unconfirmed, so it's left out of
-    // this first cut rather than assumed complete.
-    private const SUPPORTED_TYPES = ['Schedule', 'Payment', 'Lot', 'Cremation', 'Relocation'];
+    // System-Wide AI Assistant (Phase 1): 'Expiration' and 'DecedentRequest'
+    // added here — the original AI-1 audit flagged decedent-request audit
+    // coverage as "unconfirmed" and left Expiration out entirely (no lease
+    // was explainable at all). Both now have real fetchCurrentState()/
+    // fetchRelatedRecords() cases below, so the gap is closed, not just
+    // widened.
+    private const SUPPORTED_TYPES = ['Schedule', 'Payment', 'Lot', 'Cremation', 'Relocation', 'Expiration', 'DecedentRequest'];
 
     private $auditLogModel;
     private $exceptionModel;
@@ -42,6 +45,7 @@ class AuditIntelligenceService {
     private $relocationModel;
     private $decedentModel;
     private $expirationModel;
+    private $decedentRequestModel;
 
     public function __construct() {
         $this->auditLogModel = new AuditLog();
@@ -53,6 +57,7 @@ class AuditIntelligenceService {
         $this->relocationModel = new Relocation();
         $this->decedentModel = new Decedent();
         $this->expirationModel = new ExpirationRecord();
+        $this->decedentRequestModel = new DecedentRequest();
     }
 
     public static function isSupportedType($entityType) {
@@ -172,6 +177,93 @@ class AuditIntelligenceService {
         ];
     }
 
+    // System-Wide AI Assistant (Phase 1): the middle ground between
+    // buildContext() (one record) and buildDashboardFacts() (the whole
+    // system) - recent records + open exceptions for ONE module, for when
+    // the assistant is opened from a module page (e.g. Expiration
+    // Monitoring) with no single record selected yet. Name-free by
+    // construction (id + status only, same rule toFacts() already applies)
+    // rather than needing a separate stripping step.
+    private const MODULE_EXCEPTION_TYPES = [
+        'Schedule' => ['Schedule'],
+        'Relocation' => ['Relocation'],
+        'Cremation' => ['Cremation', 'Decedent'],
+        'Expiration' => ['Expiration'],
+        'Decedent' => ['Decedent', 'Cremation'],
+        'DecedentRequest' => ['DecedentRequest'],
+        // null = every open exception, for the Audit Logs page's
+        // deliberately cross-cutting view - it has no single entity_type of
+        // its own to scope to.
+        'AuditLog' => null,
+    ];
+
+    public function buildModuleContext($module) {
+        if (!array_key_exists($module, self::MODULE_EXCEPTION_TYPES)) {
+            return ['error' => 'Unsupported module', 'code' => 400];
+        }
+
+        $modelByModule = [
+            'Schedule' => $this->scheduleModel,
+            'Relocation' => $this->relocationModel,
+            'Cremation' => $this->cremationModel,
+            'Expiration' => $this->expirationModel,
+            'Decedent' => $this->decedentModel,
+        ];
+
+        $records = [];
+        if ($module === 'DecedentRequest') {
+            $records = $this->decedentRequestModel->findAll();
+        } elseif (isset($modelByModule[$module])) {
+            $records = $modelByModule[$module]->findAll([]);
+        }
+
+        $statusCounts = [];
+        foreach ($records as $record) {
+            $status = $this->extractStatus($record) ?? 'unknown';
+            $statusCounts[$status] = ($statusCounts[$status] ?? 0) + 1;
+        }
+
+        // A couple of module-relevant, non-PII fields beyond id/status —
+        // without these, e.g. "which lease expires soonest" is unanswerable
+        // from id/status alone (both just say "Expiring"), and the assistant
+        // correctly refuses to guess rather than inventing a date.
+        $recentSummary = array_map(function ($record) use ($module) {
+            $summary = ['id' => $this->firstIdField($record), 'status' => $this->extractStatus($record)];
+            if ($module === 'Expiration' && isset($record['end_date'])) {
+                $summary['end_date'] = $record['end_date'];
+            }
+            if ($module === 'Schedule' && isset($record['schedule_date'])) {
+                $summary['schedule_date'] = $record['schedule_date'];
+            }
+            return $summary;
+        }, array_slice($records, 0, 8));
+
+        $exceptionTypes = self::MODULE_EXCEPTION_TYPES[$module];
+        $openExceptions = $exceptionTypes === null
+            ? $this->exceptionModel->findAll(['status' => 'open'])
+            : array_merge(...array_map(function ($type) {
+                return $this->exceptionModel->findAll(['status' => 'open', 'entity_type' => $type]);
+            }, $exceptionTypes));
+
+        return [
+            'module' => $module,
+            'total_records' => count($records),
+            'status_breakdown' => $statusCounts,
+            'recent_records' => $recentSummary,
+            'open_exceptions' => array_map([$this, 'summarizeException'], $openExceptions),
+            'generated_at' => date('c'),
+        ];
+    }
+
+    private function firstIdField($record) {
+        foreach (['schedule_id', 'request_id', 'cremation_id', 'expiration_id', 'decedent_id', 'lot_id'] as $key) {
+            if (array_key_exists($key, $record)) {
+                return (int) $record[$key];
+            }
+        }
+        return null;
+    }
+
     // Strips the context down to a name-free fact bundle for the LLM leg -
     // mirrors the existing AiController::explainException() precedent
     // exactly (facts only: ids/statuses/actions/timestamps/reasons, never
@@ -249,6 +341,10 @@ class AuditIntelligenceService {
                 return $this->cremationModel->findById($entityId) ?: null;
             case 'Relocation':
                 return $this->relocationModel->findById($entityId) ?: null;
+            case 'Expiration':
+                return $this->expirationModel->findById($entityId) ?: null;
+            case 'DecedentRequest':
+                return $this->decedentRequestModel->findById($entityId) ?: null;
         }
         return null;
     }
@@ -314,6 +410,25 @@ class AuditIntelligenceService {
                 $payment = $this->firstOrNull($this->paymentModel->findAll(['transaction_type' => 'Relocation', 'reference_id' => $entityId]));
                 if ($payment) {
                     $related['payment'] = $this->tagged('Payment', $payment['payment_id'], $payment);
+                }
+                break;
+
+            case 'Expiration':
+                if (!empty($currentState['lot_id'])) {
+                    $related['lot'] = $this->tagged('Lot', $currentState['lot_id'], $this->lotModel->findById($currentState['lot_id']));
+                }
+                break;
+
+            case 'DecedentRequest':
+                // Schedule::findByDecedentRequestId() already exists for
+                // exactly this lookup (auto-link-decedent-on-approval uses
+                // it) - reused as-is rather than a new query.
+                $linkedSchedule = $this->latestById($this->scheduleModel->findByDecedentRequestId($entityId), 'schedule_id');
+                if ($linkedSchedule) {
+                    $related['linked_schedule'] = $this->tagged('Schedule', $linkedSchedule['schedule_id'], $linkedSchedule);
+                }
+                if (!empty($currentState['decedent_id'])) {
+                    $related['decedent'] = $this->tagged('Decedent', $currentState['decedent_id'], $this->decedentModel->findById($currentState['decedent_id']));
                 }
                 break;
         }
