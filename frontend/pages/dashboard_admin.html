@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="../../assets/css/components/tables.css">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/dashboard_admin.css">
+    <link rel="stylesheet" href="../../assets/css/shared/ai-assistant-widget.css">
 </head>
 <body class="dashboard-body">
     <div class="dashboard-container">
@@ -119,9 +120,12 @@
                     <div class="card ai-briefing-card" id="aiBriefingCard">
                         <div class="ai-briefing-header">
                             <h4><i class="fas fa-robot"></i> AI Briefing</h4>
-                            <button type="button" class="btn-refresh-briefing" id="refreshBriefingBtn" title="Refresh briefing">
-                                <i class="fas fa-rotate"></i>
-                            </button>
+                            <div class="ai-briefing-header-actions">
+                                <div id="aiAssistantMount"></div>
+                                <button type="button" class="btn-refresh-briefing" id="refreshBriefingBtn" title="Refresh briefing">
+                                    <i class="fas fa-rotate"></i>
+                                </button>
+                            </div>
                         </div>
                         <p class="muted" id="aiBriefingText">Loading today's briefing…</p>
                     </div>
@@ -140,6 +144,7 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
+    <script src="../../assets/js/shared/ai-assistant-widget.js"></script>
     <script src="../../assets/js/pages/dashboard_admin.js"></script>
     
 </body>

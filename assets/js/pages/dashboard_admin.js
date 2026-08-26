@@ -67,6 +67,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     updateAttentionCard();
 
+    // System-Wide AI Assistant (Phase 5): system-scoped follow-up on the
+    // briefing below ("what's that one open exception about?") without
+    // leaving the dashboard.
+    initAiAssistant({ mountSelector: '#aiAssistantMount', context: { scope: 'system' }, label: 'Ask AI' });
+
     // AI-2 Round 2: proactive "second admin" briefing — unlike the
     // Exceptions-backed attention card above (which only appears when
     // there's something broken), this always renders something on load, so
