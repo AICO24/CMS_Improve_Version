@@ -2,6 +2,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     const user = await requireRole(['admin']);
     if (!user) return;
 
+    // System-Wide AI Assistant: page-level, always visible in the header —
+    // the per-request one below (mounted fresh in the view modal) is a
+    // separate instance for "explain this specific relocation request".
+    initAiAssistant({
+        mountSelector: '#aiAssistantMount',
+        context: { scope: 'module', module: 'Relocation' },
+        greeting: "Hello! I'm your AI assistant for Relocation & Exhumation. How can I help you today?",
+        suggestions: [
+            { icon: 'fa-truck-moving', label: 'Recent requests', question: 'What relocation requests have been made recently, and what is their status?' },
+            { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions related to relocation?' },
+            { icon: 'fa-circle-question', label: 'How does auto-approval work?', question: 'How does relocation auto-approval work?' },
+            { icon: 'fa-list-check', label: 'Pending vs completed', question: 'How many relocation requests are pending versus completed?' },
+        ],
+    });
+
     document.getElementById('logoutBtn').addEventListener('click', () => {
         api.logout();
     });
@@ -285,7 +300,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             // explanation still appears right away, now with real follow-up
             // support instead of a single static message.
             const assistant = initAiAssistant({
-                mountSelector: '#aiAssistantMount',
+                mountSelector: '#aiAssistantMountRecord',
                 context: { scope: 'entity', entity_type: 'Relocation', entity_id: id },
                 label: 'Ask AI',
             });

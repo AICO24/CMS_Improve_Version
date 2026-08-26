@@ -8,6 +8,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     const user = await requireRole(['admin', 'staff']);
     if (!user) return;
 
+    // System-Wide AI Assistant: page-level, always visible in the header —
+    // the per-exception one in the resolve modal below is a separate
+    // instance for "explain this specific exception". 'AuditLog' scope
+    // reuses the same cross-cutting "every open exception" reach the Audit
+    // Logs page uses, since this page is exactly that same concern.
+    initAiAssistant({
+        mountSelector: '#aiAssistantMount',
+        context: { scope: 'module', module: 'AuditLog' },
+        greeting: "Hello! I'm your AI assistant for exceptions. How can I help you today?",
+        suggestions: [
+            { icon: 'fa-triangle-exclamation', label: 'Open exceptions', question: 'How many exceptions are currently open, and what are they?' },
+            { icon: 'fa-clock', label: 'Oldest unresolved', question: 'Which open exception has been waiting the longest?' },
+            { icon: 'fa-robot', label: 'Automation activity', question: 'How much of the recent activity was handled automatically versus manually?' },
+            { icon: 'fa-list', label: 'Summary', question: 'Summarize what needs my attention right now.' },
+        ],
+    });
+
     document.getElementById('logoutBtn').addEventListener('click', () => {
         api.logout();
     });
@@ -112,7 +129,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // event/reason fields, since it includes the entity's full related
         // records and timeline (which already surfaces this exception too).
         const assistant = initAiAssistant({
-            mountSelector: '#aiAssistantMount',
+            mountSelector: '#aiAssistantMountRecord',
             context: { scope: 'entity', entity_type: exception.entity_type, entity_id: exception.entity_id },
             label: 'Ask AI',
             onAnswer: (message) => {

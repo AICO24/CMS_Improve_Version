@@ -2,6 +2,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     const user = await requireRole(['admin']);
     if (!user) return;
 
+    // System-Wide AI Assistant: page-level, always visible in the header —
+    // the per-niche one below (mounted fresh in the view modal) is a
+    // separate instance for "explain this specific cremation record".
+    initAiAssistant({
+        mountSelector: '#aiAssistantMount',
+        context: { scope: 'module', module: 'Cremation' },
+        greeting: "Hello! I'm your AI assistant for Cremation Management. How can I help you today?",
+        suggestions: [
+            { icon: 'fa-fire', label: 'Niche availability', question: 'How many niches are available versus occupied?' },
+            { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions related to cremation or niche assignment?' },
+            { icon: 'fa-chart-pie', label: 'Capacity status', question: 'What is the current columbarium capacity status?' },
+            { icon: 'fa-clock-rotate-left', label: 'Recent activity', question: 'What has happened recently in Cremation Management?' },
+        ],
+    });
+
     document.getElementById('logoutBtn').addEventListener('click', () => {
         api.logout();
     });
@@ -107,7 +122,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const editBtn = document.getElementById('editFromView');
         const assignBtn = document.getElementById('assignFromView');
         const deleteBtn = document.getElementById('deleteFromView');
-        const aiMount = document.getElementById('aiAssistantMount');
+        const aiMount = document.getElementById('aiAssistantMountRecord');
         if (aiMount) aiMount.innerHTML = '';
 
         if (niche.cremation_id) {
@@ -135,7 +150,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             // immediately so the explanation still appears right away.
             if (aiMount) {
                 const assistant = initAiAssistant({
-                    mountSelector: '#aiAssistantMount',
+                    mountSelector: '#aiAssistantMountRecord',
                     context: { scope: 'entity', entity_type: 'Cremation', entity_id: niche.cremation_id },
                     label: 'Ask AI',
                 });

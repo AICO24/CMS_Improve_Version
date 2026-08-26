@@ -191,6 +191,12 @@ class AuditIntelligenceService {
         'Expiration' => ['Expiration'],
         'Decedent' => ['Decedent', 'Cremation'],
         'DecedentRequest' => ['DecedentRequest'],
+        // 'Payment' and 'Lot' added so Payments/Lot Management can mount a
+        // page-level assistant too, not just the per-record one in their
+        // view modal — a module page with no exception-type scope of its
+        // own previously couldn't be given one at all.
+        'Payment' => ['Payment'],
+        'Lot' => ['Lot'],
         // null = every open exception, for the Audit Logs page's
         // deliberately cross-cutting view - it has no single entity_type of
         // its own to scope to.
@@ -208,6 +214,8 @@ class AuditIntelligenceService {
             'Cremation' => $this->cremationModel,
             'Expiration' => $this->expirationModel,
             'Decedent' => $this->decedentModel,
+            'Payment' => $this->paymentModel,
+            'Lot' => $this->lotModel,
         ];
 
         $records = [];
@@ -234,6 +242,12 @@ class AuditIntelligenceService {
             }
             if ($module === 'Schedule' && isset($record['schedule_date'])) {
                 $summary['schedule_date'] = $record['schedule_date'];
+            }
+            if ($module === 'Lot' && isset($record['lot_number'])) {
+                $summary['lot_number'] = $record['lot_number'];
+            }
+            if ($module === 'Payment' && isset($record['amount'])) {
+                $summary['amount'] = $record['amount'];
             }
             return $summary;
         }, array_slice($records, 0, 8));

@@ -2,6 +2,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     const session = await requireRole(['admin', 'staff']);
     if (!session) return;
 
+    // System-Wide AI Assistant: page-level, always visible in the header —
+    // the per-record one below (mounted fresh in the view modal) is a
+    // separate instance for "explain this specific lot", not a substitute
+    // for having the assistant visible on the module page itself.
+    initAiAssistant({
+        mountSelector: '#aiAssistantMount',
+        context: { scope: 'module', module: 'Lot' },
+        greeting: "Hello! I'm your AI assistant for Lot Management. How can I help you today?",
+        suggestions: [
+            { icon: 'fa-map-location-dot', label: 'Available lots', question: 'How many lots are currently available?' },
+            { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions related to lots?' },
+            { icon: 'fa-hourglass-half', label: 'Expiring soon', question: 'Which lot leases are expiring soon?' },
+            { icon: 'fa-clock-rotate-left', label: 'Recent activity', question: 'What has happened recently in Lot Management?' },
+        ],
+    });
+
     document.getElementById('logoutBtn').addEventListener('click', () => {
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('user_session');
@@ -460,12 +476,13 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             document.getElementById('viewModal').style.display = 'flex';
 
-            // System-Wide AI Assistant (Phase 4): replaces the old one-shot
-            // "Ask AI to explain" button — fired immediately so the
-            // explanation still appears right away, now with real follow-up
-            // support instead of a single static message.
+            // System-Wide AI Assistant: replaces the old one-shot "Ask AI to
+            // explain" button — fired immediately so the explanation still
+            // appears right away. Separate mount from the page-level header
+            // assistant above (#aiAssistantMountRecord vs #aiAssistantMount)
+            // so opening one doesn't clobber the other's conversation.
             const assistant = initAiAssistant({
-                mountSelector: '#aiAssistantMount',
+                mountSelector: '#aiAssistantMountRecord',
                 context: { scope: 'entity', entity_type: 'Lot', entity_id: lotId },
                 label: 'Ask AI',
             });

@@ -2,6 +2,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     const currentUser = await requireRole(['admin', 'staff', 'user']);
     if (!currentUser) return;
 
+    // System-Wide AI Assistant: page-level, always visible in the header —
+    // admin/staff only (this page is also reachable by citizens viewing
+    // their own payments, same guard the per-record assistant below uses).
+    // The per-payment one below (mounted fresh in the view modal) is a
+    // separate instance for "explain this specific payment".
+    if (currentUser.role === 'admin' || currentUser.role === 'staff') {
+        initAiAssistant({
+            mountSelector: '#aiAssistantMount',
+            context: { scope: 'module', module: 'Payment' },
+            greeting: "Hello! I'm your AI assistant for Payments. How can I help you today?",
+            suggestions: [
+                { icon: 'fa-money-bill-wave', label: 'Pending verification', question: 'How many payments are pending verification right now?' },
+                { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions related to payments?' },
+                { icon: 'fa-chart-line', label: 'Recent revenue', question: 'What has recent payment activity looked like?' },
+                { icon: 'fa-circle-question', label: 'How does auto-confirm work?', question: 'How does payment-triggered auto-confirmation work?' },
+            ],
+        });
+    }
+
     const tbody = document.getElementById('paymentsTableBody');
     const statsEl = {
         totalRevenue: document.getElementById('totalRevenue'),
@@ -338,7 +357,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <div class="detail-row"><span>Received By</span><strong>${payment.received_by_name || 'N/A'}</strong></div>
                 <div class="detail-row"><span>Notes</span><strong>${payment.notes || '—'}</strong></div>
                 ${currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff') ? `
-                    <div style="margin-top: 10px;"><div id="aiAssistantMount"></div></div>
+                    <div style="margin-top: 10px;"><div id="aiAssistantMountRecord"></div></div>
                 ` : ''}
                 ${currentUser && currentUser.role === 'admin' && payment.verification_status === 'Pending' ? `
                     <div class="action-buttons admin-verification-actions">
@@ -355,10 +374,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             // now a real chat that supports follow-up questions. Fired
             // immediately (not waiting for a click) so the explanation
             // still appears right away, matching the old button's purpose.
-            const aiMount = document.getElementById('aiAssistantMount');
+            const aiMount = document.getElementById('aiAssistantMountRecord');
             if (aiMount) {
                 const assistant = initAiAssistant({
-                    mountSelector: '#aiAssistantMount',
+                    mountSelector: '#aiAssistantMountRecord',
                     context: { scope: 'entity', entity_type: 'Payment', entity_id: id },
                     label: 'Ask AI',
                 });
