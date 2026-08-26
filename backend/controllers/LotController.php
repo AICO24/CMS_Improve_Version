@@ -5,6 +5,13 @@ require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 
 class LotController {
+    // Matches the `lots`.`status` ENUM in schema.sql exactly. MySQL silently
+    // stores an out-of-enum value as '' instead of erroring (confirmed live
+    // during Full Automation Round 2 QA — an invalid test status corrupted a
+    // real lot row this way), so this must be checked in PHP before the
+    // write, not left to the database to reject.
+    private const VALID_STATUSES = ['Available', 'Reserved', 'Occupied', 'Expired'];
+
     private $sectionModel;
     private $blockModel;
     private $lotModel;
@@ -205,6 +212,10 @@ class LotController {
         $data['lot_type_id'] = (int) $data['lot_type_id'];
         $data['price'] = (float) $data['price'];
 
+        if (!empty($data['status']) && !in_array($data['status'], self::VALID_STATUSES, true)) {
+            return ['error' => "Invalid status '{$data['status']}' — must be one of: " . implode(', ', self::VALID_STATUSES), 'code' => 400];
+        }
+
         $result = $this->lotModel->create($data);
         if ($result) {
             $block = $this->blockModel->findById($data['block_id']);
@@ -238,6 +249,10 @@ class LotController {
         $data['block_id'] = isset($data['block_id']) ? (int) $data['block_id'] : null;
         $data['lot_type_id'] = (int) $data['lot_type_id'];
         $data['price'] = (float) $data['price'];
+
+        if (!empty($data['status']) && !in_array($data['status'], self::VALID_STATUSES, true)) {
+            return ['error' => "Invalid status '{$data['status']}' — must be one of: " . implode(', ', self::VALID_STATUSES), 'code' => 400];
+        }
 
         $oldLot = $this->lotModel->findById($id);
         $result = $this->lotModel->update($id, $data);
