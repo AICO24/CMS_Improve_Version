@@ -66,6 +66,20 @@ class CremationController {
             return ['error' => 'This niche is already occupied', 'code' => 409];
         }
 
+        // Full Automation, Admin-First (Round 2): a Completed record (ashes
+        // ready for storage) used to always need a SEPARATE trip through the
+        // "Assign Niche" modal (assignNiche() below) when the general
+        // creation form was submitted without picking one first — the exact
+        // same gap assignNiche() already exists to close, just reached from
+        // a different entry point. Scoped to status === 'Completed' only: a
+        // merely Scheduled cremation (the physical cremation hasn't happened
+        // yet) has no ashes to store, so nothing should reserve a niche for
+        // it this early — that would just lock up capacity for cremations
+        // that may still be days away.
+        if (empty($data['niche_number']) && ($data['status'] ?? 'Scheduled') === 'Completed') {
+            return $this->createWithAutoNiche($data, $userId);
+        }
+
         $data['created_by'] = $userId;
         $result = $this->cremationModel->create($data);
         if ($result) {
@@ -91,6 +105,67 @@ class CremationController {
         }
 
         return ['error' => 'Failed to create cremation record', 'code' => 500];
+    }
+
+    // Full Automation, Admin-First (Round 2): mirrors assignNiche() below
+    // almost exactly (findNextAvailableNiche() suggestion, re-checked right
+    // before the write, both inside one AutomationEngine envelope so a
+    // no-niches-available failure raises a reviewable system_exceptions
+    // entry — tagged to Decedent, same convention as assignNiche() — instead
+    // of silently creating a Completed record with no ash location). The
+    // only difference is this path also creates the cremation_records row
+    // itself (assignNiche() assumes the caller already has deceased_id and
+    // nothing else); if creation fails outright that's a genuine 500, not an
+    // automation exception.
+    private function createWithAutoNiche($data, $userId) {
+        $deceasedId = (int) $data['deceased_id'];
+        $columbarium = $data['columbarium'] ?? null;
+        $cremationModel = $this->cremationModel;
+        $decedentModel = $this->decedentModel;
+        $createData = $data;
+        $createData['created_by'] = $userId;
+
+        $automationResult = AutomationEngine::run(
+            'cremation.niche_assigned',
+            'Decedent',
+            $deceasedId,
+            $userId,
+            function () use ($cremationModel, $columbarium, &$createData) {
+                $suggestion = $cremationModel->findNextAvailableNiche($columbarium);
+                if (!$suggestion) {
+                    return ['No available niches in columbarium ' . ($columbarium ?: 'Columbarium A') . ' — assign one manually once space opens up, or choose another columbarium'];
+                }
+                $createData['niche_number'] = $suggestion['niche_number'];
+                $createData['columbarium'] = $suggestion['columbarium'];
+                if (empty($createData['level'])) {
+                    $createData['level'] = $suggestion['level'];
+                }
+                return true;
+            },
+            function () use ($cremationModel, $decedentModel, &$createData) {
+                $newId = $cremationModel->create($createData);
+                if ($newId) {
+                    $decedentModel->patchCremationStatus($createData['deceased_id'], [
+                        'is_cremated' => 'yes',
+                        'ash_storage' => $createData['niche_number'],
+                    ]);
+                }
+                return ['cremation_id' => $newId, 'niche_number' => $createData['niche_number'] ?? null];
+            }
+        );
+
+        if (empty($automationResult['success'])) {
+            return ['error' => 'No niches are currently available for automatic assignment — flagged for review under Exceptions.', 'code' => 409];
+        }
+        if (empty($automationResult['result']['cremation_id'])) {
+            return ['error' => 'Failed to create cremation record', 'code' => 500];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Cremation record created and niche auto-assigned',
+            'niche_number' => $automationResult['result']['niche_number'],
+        ];
     }
 
     public function update($id, $data, $userId) {

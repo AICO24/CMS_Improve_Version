@@ -344,7 +344,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                     cremationModal.style.display = 'none';
                     cremationForm.reset();
                     await refreshAll();
-                    alert('Cremation record saved successfully.');
+                    // A Completed record submitted without a niche now gets
+                    // one auto-assigned (see CremationController::store()) —
+                    // reflect the real outcome instead of a generic message.
+                    alert(id ? 'Cremation record saved successfully.' : (result.message || 'Cremation record saved successfully.'));
                 } else {
                     alert(result.error || 'Failed to save cremation record');
                 }
