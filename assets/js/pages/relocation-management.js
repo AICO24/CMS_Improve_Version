@@ -109,6 +109,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
+    // Full Automation, Admin-First (Round 2): relocation requests now
+    // auto-approve at creation (RelocationController::store()) — a request
+    // only stays Pending when that auto-approval hit a system_exceptions
+    // entry (e.g. the destination lot went unavailable in the race window).
+    // Mirrors manage-reservations.js's loadOpenScheduleExceptionIds() exactly,
+    // scoped to entity_type=Relocation instead of Schedule.
+    let openRelocationExceptions = new Map();
+    async function loadOpenRelocationExceptions() {
+        try {
+            const exceptions = await apiRequest('exceptions?status=open&entity_type=Relocation');
+            const map = new Map();
+            (Array.isArray(exceptions) ? exceptions : []).forEach((exception) => {
+                map.set(Number(exception.entity_id), exception.reason);
+            });
+            return map;
+        } catch (error) {
+            console.error('Failed to load open relocation exceptions', error);
+            return new Map();
+        }
+    }
+
     async function refreshAll() {
         try {
             const stats = await loadStats();
@@ -116,6 +137,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch (error) {
             console.error('Failed to load relocation stats', error);
         }
+        openRelocationExceptions = await loadOpenRelocationExceptions();
         await loadAndRenderRequests();
     }
 
@@ -148,6 +170,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 return;
             }
 
+            // A Pending request now only exists because the automatic
+            // approval attempt raised an exception (see
+            // loadOpenRelocationExceptions()) — surface why, same "Control
+            // Center" framing as the burial-scheduling exceptions flow,
+            // instead of leaving an unexplained stuck status.
+            const openReason = openRelocationExceptions.get(Number(req.request_id));
             const details = `
                 <div class="detail-row"><span>Request ID</span><strong>REQ-${req.request_id}</strong></div>
                 <div class="detail-row"><span>Decedent</span><strong>${req.first_name} ${req.last_name}</strong></div>
@@ -158,6 +186,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <div class="detail-row"><span>Requested By</span><strong>${req.requested_by_name}</strong></div>
                 <div class="detail-row"><span>Created</span><strong>${req.created_at}</strong></div>
                 ${req.approved_by_name ? `<div class="detail-row"><span>Approved By</span><strong>${req.approved_by_name}</strong></div>` : ''}
+                ${openReason ? `<div class="detail-row"><span>Needs review</span><strong>${openReason} — <a href="exceptions.html">Review in Exceptions</a></strong></div>` : ''}
             `;
             document.getElementById('viewDetails').innerHTML = details;
 
@@ -168,12 +197,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             const deleteBtn = document.getElementById('deleteFromView');
 
             const isAdmin = user.role === 'admin';
+            // Approval now happens automatically at creation — a request is
+            // only ever still Pending here because that attempt hit an open
+            // exception, so Approve/Deny only make sense as that exception's
+            // resolution action, not a routine click on every new request.
             const isPending = req.status === 'Pending';
+            const needsReview = isPending && Boolean(openReason);
             const isApproved = req.status === 'Approved';
 
-            approveBtn.style.display = (isAdmin && isPending) ? 'inline-block' : 'none';
+            approveBtn.style.display = (isAdmin && needsReview) ? 'inline-block' : 'none';
             completeBtn.style.display = (isAdmin && isApproved) ? 'inline-block' : 'none';
-            denyBtn.style.display = (isAdmin && isPending) ? 'inline-block' : 'none';
+            denyBtn.style.display = (isAdmin && needsReview) ? 'inline-block' : 'none';
             editBtn.style.display = isPending ? 'inline-block' : 'none';
             deleteBtn.style.display = isPending ? 'inline-block' : 'none';
 
@@ -331,7 +365,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                     document.getElementById('requestForm').reset();
                     pagination.reset();
                     await refreshAll();
-                    alert('Relocation request saved successfully.');
+                    // New requests auto-approve immediately (see
+                    // RelocationController::store()) — reflect the real
+                    // outcome instead of a generic "saved" message.
+                    alert(id ? 'Relocation request saved successfully.' : (result.message || 'Relocation request saved successfully.'));
                 } else {
                     alert(result.error || 'Failed to save request');
                 }

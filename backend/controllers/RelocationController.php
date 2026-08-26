@@ -98,9 +98,85 @@ class RelocationController {
                     'status' => 'Pending',
                 ]
             );
-            return ['success' => true, 'message' => 'Relocation request created'];
+
+            // Full Automation, Admin-First (Round 2): store() itself already
+            // ran every check approve() used to re-check a second time (lots
+            // exist, destination Available) — requiring the same admin to
+            // then separately click Approve on their own just-created
+            // request was pure process friction, not a real decision point.
+            // Attempt the approval immediately as an automatic continuation;
+            // on the rare validation failure (a race between the check above
+            // and here) this raises a reviewable system_exceptions entry
+            // instead of silently approving, and the request simply stays
+            // Pending — see attemptAutoApproval().
+            $autoApproved = $this->attemptAutoApproval($result, (int) $data['to_lot_id'], $userId);
+
+            return [
+                'success' => true,
+                'message' => $autoApproved
+                    ? 'Relocation request created and approved'
+                    : 'Relocation request created; destination lot could not be auto-reserved, flagged for review',
+                'status' => $autoApproved ? 'Approved' : 'Pending',
+            ];
         }
         return ['error' => 'Failed to create relocation request', 'code' => 500];
+    }
+
+    // Full Automation, Admin-First (Round 2): the deterministic half of the
+    // approval decision, run automatically right after store() creates the
+    // request. Deliberately two independent AutomationEngine::run() calls,
+    // mirroring PaymentController::autoConfirmScheduleForVerifiedPurchase()'s
+    // split exactly — one tagged to the Lot being reserved (via the existing
+    // transitionLotStatus() helper, unchanged), one tagged to the Relocation
+    // itself, each re-checking state right before acting so this stays safe
+    // to call from a single request path. Tagging the top-level decision as
+    // entity_type 'Relocation' (not 'Lot') is what lets relocation-management.js
+    // find "my request needs review" by request_id, the same way
+    // manage-reservations.js already does for Schedule exceptions.
+    //
+    // approve()/deny() below are NOT touched by this — they remain the manual
+    // override path for a request that ends up stuck Pending here (surfaced
+    // via the Exceptions page), and stay direct/manual (own audit diff, actor
+    // is the real admin) rather than automation-engine-tagged, since a manual
+    // override should never look like an automated decision in the timeline.
+    private function attemptAutoApproval($requestId, $toLotId, $userId) {
+        $this->transitionLotStatus($toLotId, 'Reserved', ['Available'], $userId, 'relocation.approved');
+
+        $relocationModel = $this->relocationModel;
+        $lotModel = $this->lotModel;
+        $automation = AutomationEngine::run(
+            'relocation.approved',
+            'Relocation',
+            $requestId,
+            $userId,
+            function () use ($lotModel, $toLotId) {
+                $toLot = $lotModel->findById($toLotId);
+                if (!$toLot) {
+                    return ['Destination lot no longer exists'];
+                }
+                // Tolerates 'Reserved' too, same as the Lot-tagged call above
+                // and Schedule's own auto-confirm — the sibling call just
+                // reserved it in this same request, so seeing that isn't a
+                // failure, it's confirmation the reservation already landed.
+                if (!in_array($toLot['status'], ['Available', 'Reserved'], true)) {
+                    return ['Destination lot ' . ($toLot['lot_number'] ?? $toLot['lot_id']) . ' is no longer available (status: ' . $toLot['status'] . ')'];
+                }
+                return true;
+            },
+            function () use ($relocationModel, $requestId, $userId) {
+                return $relocationModel->updateStatus($requestId, 'Approved', $userId);
+            }
+        );
+
+        if (!empty($automation['success'])) {
+            $freshRequest = $relocationModel->findById($requestId);
+            if ($freshRequest) {
+                $this->notifyRelocationStatusChange($freshRequest, 'Approved');
+            }
+            return true;
+        }
+
+        return false;
     }
 
     public function update($id, $data, $userId) {

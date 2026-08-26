@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const resolutionNotes = document.getElementById('resolutionNotes');
     const confirmAnywayRow = document.getElementById('confirmAnywayRow');
     const confirmAnywayCheckbox = document.getElementById('confirmAnywayCheckbox');
+    const confirmAnywayLabel = document.getElementById('confirmAnywayLabel');
     const resolveModalSubmit = document.getElementById('resolveModalSubmit');
 
     let activeException = null;
@@ -96,11 +97,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         resolveModalAiExplanation.style.display = 'none';
         resolveModalAiExplanation.textContent = '';
         resolutionNotes.value = '';
-        // The "confirm anyway" override only makes sense for a booking
-        // (Schedule) exception that's still Pending — resolving a Payment or
-        // other entity type's exception has no matching schedule to confirm.
-        confirmAnywayRow.style.display = exception.entity_type === 'Schedule' ? '' : 'none';
+        // The "confirm anyway" override only makes sense for an entity type
+        // that has its own resolvable pending decision — a booking (Schedule)
+        // waiting on confirmation, or (Round 2) a relocation request whose
+        // auto-approval hit a lot-availability exception. Resolving a Payment
+        // or Lot-tagged exception has no such decision to force through here.
+        confirmAnywayRow.style.display = (exception.entity_type === 'Schedule' || exception.entity_type === 'Relocation') ? '' : 'none';
         confirmAnywayCheckbox.checked = false;
+        confirmAnywayLabel.textContent = exception.entity_type === 'Relocation'
+            ? 'Also approve this relocation now (admin override)'
+            : 'Also confirm this booking now (admin override)';
         resolveModal.style.display = 'flex';
     }
 
@@ -161,6 +167,19 @@ document.addEventListener('DOMContentLoaded', async function() {
                     });
                     if (!confirmResult.success) {
                         alert(confirmResult.error || 'Unable to confirm this booking — resolve without the override, or fix the underlying issue first.');
+                        return;
+                    }
+                }
+                if (confirmAnywayCheckbox.checked && activeException.entity_type === 'Relocation') {
+                    // Same manual-override path RelocationController::approve()
+                    // has always exposed — re-checks the destination lot itself,
+                    // so this still fails cleanly if it's genuinely unavailable
+                    // rather than forcing a bad state.
+                    const approveResult = await api.request(`relocations/${activeException.entity_id}/approve`, {
+                        method: 'PUT',
+                    });
+                    if (!approveResult.success) {
+                        alert(approveResult.error || 'Unable to approve this relocation — resolve without the override, or fix the underlying issue first.');
                         return;
                     }
                 }
