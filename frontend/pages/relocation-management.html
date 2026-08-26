@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="../../assets/css/components/tables.css">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/relocation-management.css">
+    <link rel="stylesheet" href="../../assets/css/shared/ai-assistant-widget.css">
 </head>
 <body class="dashboard-body">
     <div class="dashboard-container">
@@ -219,8 +220,7 @@
             <button type="button" class="close-view" aria-label="Close">&times;</button>
             <h3 id="viewModalTitle">Request Details</h3>
             <div id="viewDetails"></div>
-            <div id="aiExplanation" class="muted" style="display:none; margin-top: 10px; padding: 10px; border-left: 3px solid var(--color-primary, #2563eb);"></div>
-            <button type="button" class="btn-secondary" id="askAiExplainBtn" style="margin-top: 10px;"><i class="fas fa-robot"></i> Ask AI to explain</button>
+            <div style="margin-top: 10px;"><div id="aiAssistantMount"></div></div>
             <div class="modal-buttons">
                 <button class="btn-approve" id="approveBtn">Approve</button>
                 <button class="btn-complete" id="completeBtn">Mark Complete</button>
@@ -234,6 +234,7 @@
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/shared/button-loading.js"></script>
     <script src="../../assets/js/shared/pagination.js"></script>
+    <script src="../../assets/js/shared/ai-assistant-widget.js"></script>
     <script src="../../assets/js/pages/relocation-management.js"></script>
 </body>
 </html>

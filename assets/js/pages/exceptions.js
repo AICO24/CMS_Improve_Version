@@ -27,8 +27,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const resolveModal = document.getElementById('resolveModal');
     const resolveModalClose = document.getElementById('resolveModalClose');
     const resolveModalReason = document.getElementById('resolveModalReason');
-    const resolveModalAiExplanation = document.getElementById('resolveModalAiExplanation');
-    const askAiExplainBtn = document.getElementById('askAiExplainBtn');
+    const useAsNotesBtn = document.getElementById('useAsNotesBtn');
     const resolutionNotes = document.getElementById('resolutionNotes');
     const confirmAnywayRow = document.getElementById('confirmAnywayRow');
     const confirmAnywayCheckbox = document.getElementById('confirmAnywayCheckbox');
@@ -36,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const resolveModalSubmit = document.getElementById('resolveModalSubmit');
 
     let activeException = null;
+    let lastAiDiagnosis = null;
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -100,9 +100,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     function openResolveModal(exception) {
         activeException = exception;
         resolveModalReason.textContent = `${exception.event} — ${exception.entity_type} #${exception.entity_id}: ${exception.reason}`;
-        resolveModalAiExplanation.style.display = 'none';
-        resolveModalAiExplanation.textContent = '';
         resolutionNotes.value = '';
+        lastAiDiagnosis = null;
+        useAsNotesBtn.style.display = 'none';
+
+        // System-Wide AI Assistant (Phase 4): replaces the old one-shot
+        // "Ask AI to explain" button. An exception's own entity_type/
+        // entity_id already point at a supported AuditIntelligenceService
+        // entity (Schedule/Lot/Cremation/etc.) — explaining THAT gives a
+        // richer answer than the old explain-exception endpoint's bare
+        // event/reason fields, since it includes the entity's full related
+        // records and timeline (which already surfaces this exception too).
+        const assistant = initAiAssistant({
+            mountSelector: '#aiAssistantMount',
+            context: { scope: 'entity', entity_type: exception.entity_type, entity_id: exception.entity_id },
+            label: 'Ask AI',
+            onAnswer: (message) => {
+                lastAiDiagnosis = message;
+                useAsNotesBtn.style.display = 'inline-block';
+            },
+        });
+        if (assistant) {
+            assistant.askDirectly('Why did automation stop here, and what should I do to resolve it?');
+        }
         // The "confirm anyway" override only makes sense for an entity type
         // that has its own resolvable pending decision — a booking (Schedule)
         // waiting on confirmation, or (Round 2) a relocation request whose
@@ -126,32 +146,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (event.target === resolveModal) closeResolveModal();
     });
 
-    askAiExplainBtn.addEventListener('click', async () => {
-        if (!activeException) return;
-        await withButtonLoading(askAiExplainBtn, async () => {
-            try {
-                const result = await api.request('ai/explain-exception', {
-                    method: 'POST',
-                    body: {
-                        event: activeException.event,
-                        entity_type: activeException.entity_type,
-                        entity_id: activeException.entity_id,
-                        reason: activeException.reason,
-                        severity: activeException.severity,
-                    },
-                });
-                if (result && result.explained && result.message) {
-                    resolveModalAiExplanation.textContent = result.message;
-                    resolveModalAiExplanation.style.display = 'block';
-                } else {
-                    resolveModalAiExplanation.textContent = 'AI explanation is unavailable right now.';
-                    resolveModalAiExplanation.style.display = 'block';
-                }
-            } catch (error) {
-                resolveModalAiExplanation.textContent = 'AI explanation is unavailable right now.';
-                resolveModalAiExplanation.style.display = 'block';
-            }
-        });
+    // "Note down the cause" (System-Wide AI Assistant, Phase 4): the
+    // assistant only ever proposes the note text — the admin still reviews/
+    // edits it in the textarea and clicks Resolve themselves, same as
+    // typing it by hand. Never written directly to resolution_notes without
+    // that review step.
+    useAsNotesBtn.addEventListener('click', () => {
+        if (!lastAiDiagnosis) return;
+        resolutionNotes.value = lastAiDiagnosis;
+        resolutionNotes.focus();
     });
 
     resolveModalSubmit.addEventListener('click', async () => {

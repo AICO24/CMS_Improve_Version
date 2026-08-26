@@ -15,8 +15,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     const tbody = document.getElementById('requestsTableBody');
     const requestModal = document.getElementById('requestModal');
     const viewModal = document.getElementById('viewModal');
-    const aiExplanationEl = document.getElementById('aiExplanation');
-    const askAiExplainBtn = document.getElementById('askAiExplainBtn');
 
     const perPage = 10;
     const paginationInfo = document.getElementById('paginationInfo');
@@ -282,26 +280,18 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             };
 
-            aiExplanationEl.style.display = 'none';
-            aiExplanationEl.textContent = '';
-            askAiExplainBtn.onclick = async () => {
-                await withButtonLoading(askAiExplainBtn, async () => {
-                    try {
-                        const result = await apiRequest('ai/explain-entity', {
-                            method: 'POST',
-                            body: { entity_type: 'Relocation', entity_id: id },
-                        });
-                        if (result && result.explained && result.message) {
-                            aiExplanationEl.textContent = result.message;
-                        } else {
-                            aiExplanationEl.textContent = 'AI explanation is unavailable right now.';
-                        }
-                    } catch (error) {
-                        aiExplanationEl.textContent = 'AI explanation is unavailable right now.';
-                    }
-                    aiExplanationEl.style.display = 'block';
-                });
-            };
+            // System-Wide AI Assistant (Phase 4): replaces the old one-shot
+            // "Ask AI to explain" button — fired immediately so the
+            // explanation still appears right away, now with real follow-up
+            // support instead of a single static message.
+            const assistant = initAiAssistant({
+                mountSelector: '#aiAssistantMount',
+                context: { scope: 'entity', entity_type: 'Relocation', entity_id: id },
+                label: 'Ask AI',
+            });
+            if (assistant) {
+                assistant.askDirectly('Explain the current status and history of this record, and suggest what I should do next if anything needs attention.');
+            }
 
             viewModal.style.display = 'flex';
         } catch (error) {

@@ -107,10 +107,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         const editBtn = document.getElementById('editFromView');
         const assignBtn = document.getElementById('assignFromView');
         const deleteBtn = document.getElementById('deleteFromView');
-        const aiExplanationEl = document.getElementById('aiExplanation');
-        const askAiExplainBtn = document.getElementById('askAiExplainBtn');
-        aiExplanationEl.style.display = 'none';
-        aiExplanationEl.textContent = '';
+        const aiMount = document.getElementById('aiAssistantMount');
+        if (aiMount) aiMount.innerHTML = '';
 
         if (niche.cremation_id) {
             editBtn.style.display = 'inline-block';
@@ -132,30 +130,22 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             };
             // Explaining an empty/available niche makes no sense - there's no
-            // cremation record yet for the AI to explain.
-            askAiExplainBtn.style.display = 'inline-block';
-            askAiExplainBtn.onclick = async () => {
-                await withButtonLoading(askAiExplainBtn, async () => {
-                    try {
-                        const result = await apiRequest('ai/explain-entity', {
-                            method: 'POST',
-                            body: { entity_type: 'Cremation', entity_id: niche.cremation_id },
-                        });
-                        if (result && result.explained && result.message) {
-                            aiExplanationEl.textContent = result.message;
-                        } else {
-                            aiExplanationEl.textContent = 'AI explanation is unavailable right now.';
-                        }
-                    } catch (error) {
-                        aiExplanationEl.textContent = 'AI explanation is unavailable right now.';
-                    }
-                    aiExplanationEl.style.display = 'block';
+            // cremation record yet for the AI to explain. System-Wide AI
+            // Assistant (Phase 4): replaces the old one-shot button, fired
+            // immediately so the explanation still appears right away.
+            if (aiMount) {
+                const assistant = initAiAssistant({
+                    mountSelector: '#aiAssistantMount',
+                    context: { scope: 'entity', entity_type: 'Cremation', entity_id: niche.cremation_id },
+                    label: 'Ask AI',
                 });
-            };
+                if (assistant) {
+                    assistant.askDirectly('Explain the current status and history of this record, and suggest what I should do next if anything needs attention.');
+                }
+            }
         } else {
             editBtn.style.display = 'none';
             deleteBtn.style.display = 'none';
-            askAiExplainBtn.style.display = 'none';
         }
 
         if (niche.status === 'available') {

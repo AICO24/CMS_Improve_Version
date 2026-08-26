@@ -7,7 +7,7 @@
 //   { scope: 'system' }                          — the whole system
 // Load this after shared/api.js and before a page's own script, same
 // convention as button-loading.js/pagination.js.
-function initAiAssistant({ mountSelector, context, label = 'Ask AI' }) {
+function initAiAssistant({ mountSelector, context, label = 'Ask AI', onAnswer }) {
     const mount = document.querySelector(mountSelector);
     if (!mount) return null;
 
@@ -101,6 +101,12 @@ function initAiAssistant({ mountSelector, context, label = 'Ask AI' }) {
             if (result && result.answered && result.message) {
                 appendMessage('ai', result.message, result.suggested_action);
                 conversationHistory.push({ question: trimmed, message: result.message });
+                // Lets a page react to each new AI answer — e.g. Exceptions'
+                // "Use as resolution notes" action, which needs the latest
+                // message text without reaching into the widget's internals.
+                if (typeof onAnswer === 'function') {
+                    onAnswer(result.message, result.suggested_action);
+                }
             } else {
                 appendMessage('ai', "I couldn't find enough information to answer that.");
             }

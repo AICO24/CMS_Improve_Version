@@ -338,8 +338,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <div class="detail-row"><span>Received By</span><strong>${payment.received_by_name || 'N/A'}</strong></div>
                 <div class="detail-row"><span>Notes</span><strong>${payment.notes || '—'}</strong></div>
                 ${currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff') ? `
-                    <div id="aiExplanation" class="muted" style="display:none; margin-top: 10px; padding: 10px; border-left: 3px solid var(--color-primary, #2563eb);"></div>
-                    <button type="button" class="btn-secondary" id="askAiExplainBtn" style="margin-top: 10px;"><i class="fas fa-robot"></i> Ask AI to explain</button>
+                    <div style="margin-top: 10px;"><div id="aiAssistantMount"></div></div>
                 ` : ''}
                 ${currentUser && currentUser.role === 'admin' && payment.verification_status === 'Pending' ? `
                     <div class="action-buttons admin-verification-actions">
@@ -351,27 +350,21 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('viewDetails').innerHTML = details;
             document.getElementById('viewModal').style.display = 'flex';
 
-            const aiExplanationEl = document.getElementById('aiExplanation');
-            const askAiExplainBtn = document.getElementById('askAiExplainBtn');
-            if (askAiExplainBtn && aiExplanationEl) {
-                askAiExplainBtn.addEventListener('click', async () => {
-                    await withButtonLoading(askAiExplainBtn, async () => {
-                        try {
-                            const result = await api.request('ai/explain-entity', {
-                                method: 'POST',
-                                body: { entity_type: 'Payment', entity_id: id },
-                            });
-                            if (result && result.explained && result.message) {
-                                aiExplanationEl.textContent = result.message;
-                            } else {
-                                aiExplanationEl.textContent = 'AI explanation is unavailable right now.';
-                            }
-                        } catch (error) {
-                            aiExplanationEl.textContent = 'AI explanation is unavailable right now.';
-                        }
-                        aiExplanationEl.style.display = 'block';
-                    });
+            // System-Wide AI Assistant (Phase 4): replaces the old one-shot
+            // "Ask AI to explain" button — same entity-scoped context, but
+            // now a real chat that supports follow-up questions. Fired
+            // immediately (not waiting for a click) so the explanation
+            // still appears right away, matching the old button's purpose.
+            const aiMount = document.getElementById('aiAssistantMount');
+            if (aiMount) {
+                const assistant = initAiAssistant({
+                    mountSelector: '#aiAssistantMount',
+                    context: { scope: 'entity', entity_type: 'Payment', entity_id: id },
+                    label: 'Ask AI',
                 });
+                if (assistant) {
+                    assistant.askDirectly('Explain the current status and history of this record, and suggest what I should do next if anything needs attention.');
+                }
             }
 
             const verifyBtn = document.getElementById('verifyPaymentBtn');
