@@ -57,8 +57,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function buildRow(exception) {
+        // .btn-row-action--confirm reuses the same green "positive/completing
+        // action" semantic manage-reservations.js already uses it for — see
+        // assets/css/components/buttons.css (promoted here from
+        // manage-reservations.css during the Full Automation Round 2 button
+        // audit; this page was referencing the class without ever linking
+        // its defining stylesheet, so it rendered unstyled).
         const action = exception.status === 'open'
-            ? `<button type="button" class="btn-row-action" data-action="resolve" data-id="${exception.exception_id}">Resolve</button>`
+            ? `<button type="button" class="btn-row-action btn-row-action--confirm" data-action="resolve" data-id="${exception.exception_id}">Resolve</button>`
             : `<span class="muted">${escapeHtml(exception.resolved_by_name || 'Resolved')}</span>`;
         return `
             <tr data-id="${exception.exception_id}">

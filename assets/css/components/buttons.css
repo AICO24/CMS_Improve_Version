@@ -9,6 +9,16 @@
   individual page stylesheets (.btn-edit, .btn-save, .btn-approve,
   .btn-delete-row, etc.). Those still render from their own files.
   See the Batch 2 report for the full list.
+
+  Exception: .btn-row-action (below) WAS page-specific to
+  manage-reservations.css, but is promoted here (Full Automation Round 2
+  button audit) because it's a cross-cutting Automation-Engine/exception
+  pattern — used for "needs review" row actions on both Manage
+  Reservations and the Exceptions page, and likely more pages as
+  automation extends to other modules — not a page's own CRUD styling.
+  Centralizing it here means a page just needs to link this file (already
+  standard on every dashboard-shell page) instead of remembering to link
+  manage-reservations.css for one unrelated class.
 */
 
 .btn,
@@ -250,4 +260,80 @@
     width: 20px;
     height: 20px;
     margin: -10px 0 0 -10px;
+}
+
+/*
+  --- Row-action pill (.btn-row-action) ---
+  Originated in manage-reservations.css, promoted here — see the header
+  comment above. Bordered pill, fills solid on hover. Always pair the base
+  class with exactly one semantic modifier for color; the base class alone
+  renders an uncolored outline (still usable, just not semantically tied to
+  an action) — see the "Exceptions" .btn-row-action--confirm usage.
+*/
+.btn-row-action {
+    appearance: none;
+    border: 2px solid currentColor;
+    background-color: transparent;
+    border-radius: 20px;
+    box-sizing: border-box;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 6px 14px;
+    min-height: 32px;
+    transition: all 250ms cubic-bezier(.23, 1, 0.32, 1);
+    user-select: none;
+}
+
+.btn-row-action--confirm {
+    color: #2c5e47;
+}
+
+.btn-row-action--confirm:hover {
+    background-color: #2c5e47;
+    color: #fff;
+    box-shadow: rgba(44, 94, 71, .3) 0 6px 12px;
+    transform: translateY(-2px);
+}
+
+.btn-row-action--complete {
+    color: #3f7a57;
+}
+
+.btn-row-action--complete:hover {
+    background-color: #3f7a57;
+    color: #fff;
+    box-shadow: rgba(63, 122, 87, .3) 0 6px 12px;
+    transform: translateY(-2px);
+}
+
+.btn-row-action--cancel {
+    color: #dc2626;
+}
+
+.btn-row-action--cancel:hover {
+    background-color: #dc2626;
+    color: #fff;
+    box-shadow: rgba(220, 38, 38, .3) 0 6px 12px;
+    transform: translateY(-2px);
+}
+
+.btn-row-action:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.btn-row-action:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+.btn-row-action:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }

@@ -84,6 +84,53 @@
     white-space: nowrap;
 }
 
+/* .btn-delete-row — circular icon-button treatment matching the copy already
+   used in decedent-records.css/user-management.css/etc (UI-H batch). This
+   page previously referenced the class without ever defining it, so the
+   knowledge-base row's Delete button rendered as a bare unstyled button
+   (Full Automation Round 2 button audit). */
+.btn-delete-row {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 50%;
+    background: #fff5f5;
+    color: #dc2626;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    transition: .35s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
+}
+
+.btn-delete-row i {
+    font-size: 15px;
+    transition: .35s ease;
+}
+
+.btn-delete-row:hover {
+    background: #dc2626;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(220, 38, 38, .35);
+}
+
+.btn-delete-row:hover i {
+    transform: rotate(-25deg) scale(1.2);
+}
+
+.btn-delete-row:active {
+    transform: scale(.90);
+}
+
+.btn-delete-row:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
 .ai-message {
     margin-top: 1rem;
     min-height: 1.8rem;
