@@ -6,9 +6,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         api.logout();
     });
 
-    // System-Wide AI Assistant (Phase 3): module-scoped, since a page load
-    // here has no single reservation selected yet.
-    initAiAssistant({ mountSelector: '#aiAssistantMount', context: { scope: 'module', module: 'Schedule' } });
+    // System-Wide AI Assistant: module-scoped, since a page load here has
+    // no single reservation selected yet. Also has full system-wide reach
+    // (see AuditIntelligenceService::buildSystemWideReach()) — a question
+    // about another module still gets answered, this scope just anchors
+    // the conversation to Burial Scheduling by default.
+    initAiAssistant({
+        mountSelector: '#aiAssistantMount',
+        context: { scope: 'module', module: 'Schedule' },
+        greeting: "Hello! I'm your AI assistant for Burial Scheduling. How can I help you today?",
+        suggestions: [
+            { icon: 'fa-list-check', label: 'Pending reservations', question: 'How many reservations are pending right now, and why?' },
+            { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions I need to review?' },
+            { icon: 'fa-circle-question', label: 'How does auto-confirm work?', question: 'How does payment-triggered auto-confirmation work for bookings?' },
+            { icon: 'fa-clock-rotate-left', label: 'Recent activity', question: 'What has happened recently in Burial Scheduling?' },
+        ],
+    });
 
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.querySelector('.sidebar');

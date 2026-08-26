@@ -67,10 +67,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     updateAttentionCard();
 
-    // System-Wide AI Assistant (Phase 5): system-scoped follow-up on the
-    // briefing below ("what's that one open exception about?") without
-    // leaving the dashboard.
-    initAiAssistant({ mountSelector: '#aiAssistantMount', context: { scope: 'system' }, label: 'Ask AI' });
+    // System-Wide AI Assistant: system-scoped follow-up on the briefing
+    // below ("what's that one open exception about?") without leaving the
+    // dashboard — reaches every module, not just what's summarized there.
+    initAiAssistant({
+        mountSelector: '#aiAssistantMount',
+        context: { scope: 'system' },
+        greeting: "Hello! I'm your AI assistant for the whole system. How can I help you today?",
+        suggestions: [
+            { icon: 'fa-triangle-exclamation', label: 'What needs attention?', question: 'What currently needs my attention across the whole system?' },
+            { icon: 'fa-hourglass-half', label: "What's expiring soon?", question: 'What lot leases are expiring within the next week?' },
+            { icon: 'fa-robot', label: 'Automation activity', question: 'How much of the recent activity was handled automatically?' },
+            { icon: 'fa-list-check', label: 'Open exceptions', question: 'Are there any open exceptions I should review right now?' },
+        ],
+    });
 
     // AI-2 Round 2: proactive "second admin" briefing — unlike the
     // Exceptions-backed attention card above (which only appears when

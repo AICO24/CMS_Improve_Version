@@ -261,8 +261,18 @@ class AiController {
     // AuditIntelligenceService, the AI only narrates/suggests, route-level
     // RBAC happens before this is ever called), but answers an arbitrary
     // admin question instead of one fixed narration shape. context.scope
-    // picks which of the three existing fact-builders to use — the caller
-    // (the shared frontend widget) always sends exactly one.
+    // picks which of the three existing fact-builders becomes the
+    // conversational "focus" — the caller (the shared frontend widget)
+    // always sends exactly one.
+    //
+    // Follow-up fix: focus alone made the assistant unable to answer a
+    // question genuinely about a different module than the one it was
+    // mounted on (e.g. "what's expiring next week" asked from Relocation)
+    // — it correctly said it didn't know, but that's not "AI covers the
+    // whole system". system_wide (buildSystemWideReach()) is now attached
+    // to EVERY call regardless of scope, so any instance can answer any
+    // system question; focus just keeps the conversation anchored to
+    // whatever record/module the admin is actually looking at.
     public function askAssistant($payload) {
         $payload = is_array($payload) ? $payload : [];
         $context = is_array($payload['context'] ?? null) ? $payload['context'] : [];
@@ -274,7 +284,7 @@ class AiController {
         }
 
         $scope = $context['scope'] ?? null;
-        $facts = null;
+        $focus = null;
 
         if ($scope === 'entity') {
             $entityType = trim((string) ($context['entity_type'] ?? ''));
@@ -286,24 +296,27 @@ class AiController {
             if (!empty($built['error'])) {
                 return $built;
             }
-            $facts = $this->auditIntelligenceService->toFacts($built);
+            $focus = $this->auditIntelligenceService->toFacts($built);
         } elseif ($scope === 'module') {
             $module = trim((string) ($context['module'] ?? ''));
             if ($module === '') {
                 return ['error' => 'module is required for scope=module', 'code' => 400];
             }
-            $facts = $this->auditIntelligenceService->buildModuleContext($module);
-            if (!empty($facts['error'])) {
-                return $facts;
+            $focus = $this->auditIntelligenceService->buildModuleContext($module);
+            if (!empty($focus['error'])) {
+                return $focus;
             }
         } elseif ($scope === 'system') {
-            $facts = $this->auditIntelligenceService->buildDashboardFacts();
+            $focus = $this->auditIntelligenceService->buildDashboardFacts();
         } else {
             return ['error' => "context.scope must be 'entity', 'module', or 'system'", 'code' => 400];
         }
 
         $result = $this->aiService->askAssistant([
-            'context' => $facts,
+            'context' => [
+                'focus' => $focus,
+                'system_wide' => $this->auditIntelligenceService->buildSystemWideReach(),
+            ],
             'question' => $question,
             'conversation_history' => $conversationHistory,
         ]);

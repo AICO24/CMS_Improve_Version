@@ -815,41 +815,47 @@ def dashboard_digest():
         return jsonify({'explained': False, 'message': None})
 
 
-# System-Wide AI Assistant (Phase 1): free-form follow-up questions, the
-# broader counterpart to explain-entity/explain-exception/dashboard-digest
-# above. Same safety contract (never queries anything itself, never invents
-# a fact beyond what's given, never claims to act) but two differences: (1)
-# it answers an arbitrary admin question instead of narrating one fixed
-# shape, and (2) it may propose ONE concrete suggested_action — still only
-# ever a suggestion, the admin or AutomationEngine is the one who acts.
-# `context` is whichever fact bundle AiController::askAssistant() built
-# (single-entity via toFacts(), one module via buildModuleContext(), or
-# system-wide via buildDashboardFacts()) - this endpoint doesn't need to
-# know which, it just narrates what it's given.
+# System-Wide AI Assistant: free-form follow-up questions, the broader
+# counterpart to explain-entity/explain-exception/dashboard-digest above.
+# Same safety contract (never queries anything itself, never invents a fact
+# beyond what's given, never claims to act) but two differences: (1) it
+# answers an arbitrary admin question instead of narrating one fixed shape,
+# and (2) it may propose ONE concrete suggested_action — still only ever a
+# suggestion, the admin or AutomationEngine is the one who acts.
+# `context` is always {focus, system_wide} (AiController::askAssistant()):
+# focus is whichever record/module the admin is currently looking at,
+# system_wide (AuditIntelligenceService::buildSystemWideReach()) is every
+# module's recent state + open exceptions, attached to EVERY call regardless
+# of where the admin asked from — so "what's expiring next week" is
+# answerable even from the Relocation page, not just Expiration Monitoring.
 ASSISTANT_MODEL = 'gemini-3.6-flash'
 
 ASSISTANT_SYSTEM_PROMPT = (
     "You are an AI assistant helping a cemetery-management-system "
     "administrator understand and troubleshoot the system. You are given "
     "structured facts only — never invent a name, a number, or a fact "
-    "beyond what is provided. The facts may describe one specific record, "
-    "one module's recent activity, or the whole system's state, depending "
-    "on where the admin asked from. Answer the admin's question directly "
-    "and specifically using only those facts, and use conversation_history "
-    "(if given) to understand a follow-up question in context. When it is "
-    "clearly relevant, end with ONE concrete suggested next step (e.g. "
-    "'resolve the open exception on Schedule #12' or 'check whether Lot "
-    "A2-02 was reserved by another transaction'). Never claim to have taken "
-    "any action yourself — you can only explain and suggest; the admin, or "
-    "the system's own automation, is what actually acts. If the given facts "
-    "genuinely do not cover the question, say so plainly instead of "
-    "guessing.\n\n"
+    "beyond what is provided. The facts are given as {focus, system_wide}: "
+    "focus is whatever specific record or module the admin is currently "
+    "looking at; system_wide covers every module's recent records and open "
+    "exceptions across the ENTIRE system, always included. The admin's "
+    "question is not limited to focus — answer using whichever of the two "
+    "actually contains the answer (e.g. a question about expiring leases "
+    "asked while looking at a Relocation record should be answered from "
+    "system_wide.modules.Expiration, not refused just because it's not the "
+    "current focus). Use conversation_history (if given) to understand a "
+    "follow-up question in context. When it is clearly relevant, end with "
+    "ONE concrete suggested next step (e.g. 'resolve the open exception on "
+    "Schedule #12' or 'check whether Lot A2-02 was reserved by another "
+    "transaction'). Never claim to have taken any action yourself — you can "
+    "only explain and suggest; the admin, or the system's own automation, "
+    "is what actually acts. If neither focus nor system_wide genuinely "
+    "covers the question, say so plainly instead of guessing.\n\n"
     "Output ONLY a compact JSON object — no markdown, no code fences, no "
     "prose outside the JSON.\n"
     "Schema: {\"answered\": boolean, \"message\": string|null, "
     "\"suggested_action\": string|null}\n"
-    "- answered=false (message=null, suggested_action=null) only when the "
-    "facts genuinely do not cover the question.\n"
+    "- answered=false (message=null, suggested_action=null) only when "
+    "neither focus nor system_wide covers the question.\n"
     "- suggested_action: a short, specific, actionable next step, or null "
     "if there is not a clear one (e.g. the admin asked a purely "
     "informational question with nothing to act on)."

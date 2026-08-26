@@ -2,10 +2,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     const user = await requireRole(['admin']);
     if (!user) return;
 
-    // System-Wide AI Assistant (Phase 3): the Audit Logs page has no single
+    // System-Wide AI Assistant: the Audit Logs page has no single
     // entity_type of its own — 'AuditLog' scope pulls every open exception
     // and recent activity across the whole system instead of one module's.
-    initAiAssistant({ mountSelector: '#aiAssistantMount', context: { scope: 'module', module: 'AuditLog' } });
+    initAiAssistant({
+        mountSelector: '#aiAssistantMount',
+        context: { scope: 'module', module: 'AuditLog' },
+        greeting: "Hello! I'm your AI assistant for the audit trail. How can I help you today?",
+        suggestions: [
+            { icon: 'fa-triangle-exclamation', label: 'What needs attention?', question: 'What currently needs my attention across the whole system?' },
+            { icon: 'fa-robot', label: 'Automated vs manual', question: 'How much of the recent activity was automated versus manual?' },
+            { icon: 'fa-magnifying-glass', label: 'Any anomalies?', question: 'Is there anything unusual in recent system activity?' },
+            { icon: 'fa-list', label: "Summarize today's activity", question: 'Summarize what has happened in the system recently.' },
+        ],
+    });
 
     const tbody = document.getElementById('auditTableBody');
     const searchInput = document.getElementById('searchLogs');

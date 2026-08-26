@@ -264,6 +264,32 @@ class AuditIntelligenceService {
         return null;
     }
 
+    // System-Wide AI Assistant (follow-up): the assistant was answering
+    // strictly from whichever context the mounting page sent (one module,
+    // one entity), so a question genuinely about a different module (e.g.
+    // "what's expiring next week" asked from the Relocation page) had
+    // nothing to answer from - correctly said so, but that's not what "AI
+    // should cover the whole system" means. This bundles buildDashboardFacts()
+    // plus buildModuleContext() for every module into one always-attached
+    // companion object, so every widget instance has full system reach
+    // regardless of where it's mounted - the page's own scope becomes the
+    // conversational "focus", not a hard boundary on what can be asked.
+    public function buildSystemWideReach() {
+        $modules = array_keys(self::MODULE_EXCEPTION_TYPES);
+        $byModule = [];
+        foreach ($modules as $module) {
+            if ($module === 'AuditLog') {
+                continue; // that scope IS the system-wide view - no separate entry needed
+            }
+            $byModule[$module] = $this->buildModuleContext($module);
+        }
+
+        return [
+            'system' => $this->buildDashboardFacts(),
+            'modules' => $byModule,
+        ];
+    }
+
     // Strips the context down to a name-free fact bundle for the LLM leg -
     // mirrors the existing AiController::explainException() precedent
     // exactly (facts only: ids/statuses/actions/timestamps/reasons, never

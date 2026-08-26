@@ -2,11 +2,21 @@ document.addEventListener('DOMContentLoaded', async function () {
     const user = await requireRole(['admin']);
     if (!user) return;
 
-    // System-Wide AI Assistant (Phase 3): closes the exact gap the adviser
-    // named directly ("if something is about to expire, it should notify
-    // or inform the admin") — module-scoped since no single lease is
-    // selected on page load.
-    initAiAssistant({ mountSelector: '#aiAssistantMount', context: { scope: 'module', module: 'Expiration' } });
+    // System-Wide AI Assistant: closes the exact gap the adviser named
+    // directly ("if something is about to expire, it should notify or
+    // inform the admin") — module-scoped since no single lease is selected
+    // on page load.
+    initAiAssistant({
+        mountSelector: '#aiAssistantMount',
+        context: { scope: 'module', module: 'Expiration' },
+        greeting: "Hello! I'm your AI assistant for Expiration Monitoring. How can I help you today?",
+        suggestions: [
+            { icon: 'fa-calendar-week', label: "What's expiring next week?", question: 'Which lot leases are expiring next week, and on what exact dates?' },
+            { icon: 'fa-hourglass-half', label: 'Expiring this month', question: 'Which leases are expiring within the next 30 days?' },
+            { icon: 'fa-rotate', label: 'Renewal status', question: 'How many leases have been renewed versus not renewed?' },
+            { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions related to expiration or leases?' },
+        ],
+    });
 
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.querySelector('.sidebar');

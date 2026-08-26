@@ -2,10 +2,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     const session = await requireRole(['admin']);
     if (!session) return;
 
-    // System-Wide AI Assistant (Phase 3): module-scoped to Decedent (covers
-    // both plain records and Decedent/Cremation-tagged exceptions, e.g. a
-    // failed niche auto-assignment) — no single record selected on load.
-    initAiAssistant({ mountSelector: '#aiAssistantMount', context: { scope: 'module', module: 'Decedent' } });
+    // System-Wide AI Assistant: module-scoped to Decedent (covers both
+    // plain records and Decedent/Cremation-tagged exceptions, e.g. a failed
+    // niche auto-assignment) — no single record selected on load.
+    initAiAssistant({
+        mountSelector: '#aiAssistantMount',
+        context: { scope: 'module', module: 'Decedent' },
+        greeting: "Hello! I'm your AI assistant for Decedent Records. How can I help you today?",
+        suggestions: [
+            { icon: 'fa-address-book', label: 'Records on file', question: 'How many decedent records are on file right now?' },
+            { icon: 'fa-inbox', label: 'Pending requests', question: 'How many pending decedent registration requests are there?' },
+            { icon: 'fa-fire', label: 'Cremation issues', question: 'Are there any issues with cremation or niche assignment for any decedent?' },
+            { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions related to decedent records?' },
+        ],
+    });
 
     const lotSelect = document.getElementById('lotNumber');
     const sectionInput = document.getElementById('section');
