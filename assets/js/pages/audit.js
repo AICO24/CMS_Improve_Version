@@ -2,6 +2,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     const user = await requireRole(['admin']);
     if (!user) return;
 
+    // System-Wide AI Assistant (Phase 3): the Audit Logs page has no single
+    // entity_type of its own — 'AuditLog' scope pulls every open exception
+    // and recent activity across the whole system instead of one module's.
+    initAiAssistant({ mountSelector: '#aiAssistantMount', context: { scope: 'module', module: 'AuditLog' } });
+
     const tbody = document.getElementById('auditTableBody');
     const searchInput = document.getElementById('searchLogs');
     const dateFromInput = document.getElementById('filterDateFrom');

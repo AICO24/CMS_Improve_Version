@@ -2,6 +2,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     const session = await requireRole(['admin']);
     if (!session) return;
 
+    // System-Wide AI Assistant (Phase 3): module-scoped to Decedent (covers
+    // both plain records and Decedent/Cremation-tagged exceptions, e.g. a
+    // failed niche auto-assignment) — no single record selected on load.
+    initAiAssistant({ mountSelector: '#aiAssistantMount', context: { scope: 'module', module: 'Decedent' } });
+
     const lotSelect = document.getElementById('lotNumber');
     const sectionInput = document.getElementById('section');
     const searchInput = document.getElementById('searchInput');

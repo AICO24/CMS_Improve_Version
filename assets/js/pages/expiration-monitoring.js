@@ -2,6 +2,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     const user = await requireRole(['admin']);
     if (!user) return;
 
+    // System-Wide AI Assistant (Phase 3): closes the exact gap the adviser
+    // named directly ("if something is about to expire, it should notify
+    // or inform the admin") — module-scoped since no single lease is
+    // selected on page load.
+    initAiAssistant({ mountSelector: '#aiAssistantMount', context: { scope: 'module', module: 'Expiration' } });
+
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.querySelector('.sidebar');
     if (toggleBtn && sidebar) {

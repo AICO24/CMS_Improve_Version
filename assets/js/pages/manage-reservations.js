@@ -6,6 +6,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         api.logout();
     });
 
+    // System-Wide AI Assistant (Phase 3): module-scoped, since a page load
+    // here has no single reservation selected yet.
+    initAiAssistant({ mountSelector: '#aiAssistantMount', context: { scope: 'module', module: 'Schedule' } });
+
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.querySelector('.sidebar');
     if (toggleBtn && sidebar) {
