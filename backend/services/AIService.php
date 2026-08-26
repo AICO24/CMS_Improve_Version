@@ -46,6 +46,13 @@ class AIService {
         return $this->request('/api/explain-entity', 'POST', $payload);
     }
 
+    // AI-2 Round 2: the proactive "second admin" dashboard digest. $payload
+    // is AuditIntelligenceService::buildDashboardFacts()'s system-wide
+    // aggregate bundle (counts/reasons only, never a raw record or a name).
+    public function dashboardDigest($payload) {
+        return $this->request('/api/dashboard-digest', 'POST', $payload);
+    }
+
     private function request($path, $method = 'GET', $data = null) {
         if (!function_exists('curl_init')) {
             return ['error' => 'cURL extension is not available', 'code' => 500];

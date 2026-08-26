@@ -7,6 +7,7 @@ require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/../models/Cremation.php';
 require_once __DIR__ . '/../models/Relocation.php';
 require_once __DIR__ . '/../models/Decedent.php';
+require_once __DIR__ . '/../models/ExpirationRecord.php';
 
 // AI-1: Audit Intelligence / Context Retrieval Layer.
 //
@@ -40,6 +41,7 @@ class AuditIntelligenceService {
     private $cremationModel;
     private $relocationModel;
     private $decedentModel;
+    private $expirationModel;
 
     public function __construct() {
         $this->auditLogModel = new AuditLog();
@@ -50,6 +52,7 @@ class AuditIntelligenceService {
         $this->cremationModel = new Cremation();
         $this->relocationModel = new Relocation();
         $this->decedentModel = new Decedent();
+        $this->expirationModel = new ExpirationRecord();
     }
 
     public static function isSupportedType($entityType) {
@@ -106,6 +109,66 @@ class AuditIntelligenceService {
                 'audit_log_ids' => array_map('intval', array_column($allAuditEvents, 'log_id')),
                 'exception_ids' => array_map('intval', array_column($allExceptions, 'exception_id')),
             ],
+        ];
+    }
+
+    // AI-2 Round 2: the aggregate counterpart to buildContext() above. That
+    // method assembles everything about ONE entity for an admin who already
+    // picked a record to inspect; this assembles a system-wide snapshot so
+    // the dashboard can show a short written briefing on load, with nothing
+    // to click first — the concrete difference between an on-call narrator
+    // and a proactive "second admin". Same rules as buildContext(): existing
+    // models' read methods only, no new SQL, no write path, and the result
+    // is already fact-shaped (counts/reasons/enums only, never a name) so no
+    // separate toFacts() step is needed before handing it to the LLM leg.
+    public function buildDashboardFacts() {
+        $openExceptions = $this->exceptionModel->findAll(['status' => 'open']);
+        $exceptionsByType = [];
+        foreach ($openExceptions as $exception) {
+            $type = $exception['entity_type'] ?? 'Unknown';
+            $exceptionsByType[$type] = ($exceptionsByType[$type] ?? 0) + 1;
+        }
+        // findAll() orders newest-first, so the last element is the oldest
+        // still-open one - the most actionable to call out by itself, since
+        // it's been waiting the longest.
+        $oldestOpen = !empty($openExceptions) ? end($openExceptions) : null;
+
+        // Automated-vs-manual split over a recent window, using the same
+        // actor==='automation-engine' signal buildTimeline() already relies
+        // on - a quick "is the automation actually carrying its share of the
+        // load" signal, not a full per-entity timeline.
+        $sinceDate = date('Y-m-d', strtotime('-7 days'));
+        $recentLogs = $this->auditLogModel->findAll(['date_from' => $sinceDate], 500, 0);
+        $automatedCount = 0;
+        $manualCount = 0;
+        foreach ($recentLogs as $log) {
+            $details = !empty($log['details']) ? json_decode($log['details'], true) : null;
+            $isAutomated = is_array($details) && ($details['actor'] ?? null) === 'automation-engine';
+            if ($isAutomated) {
+                $automatedCount++;
+            } else {
+                $manualCount++;
+            }
+        }
+
+        return [
+            'open_exceptions' => [
+                'total' => count($openExceptions),
+                'by_entity_type' => $exceptionsByType,
+                'oldest_open' => $oldestOpen ? [
+                    'event' => $oldestOpen['event'] ?? null,
+                    'entity_type' => $oldestOpen['entity_type'] ?? null,
+                    'reason' => $oldestOpen['reason'] ?? null,
+                    'created_at' => $oldestOpen['created_at'] ?? null,
+                ] : null,
+            ],
+            'recent_activity' => [
+                'window_days' => 7,
+                'automated_actions' => $automatedCount,
+                'manual_actions' => $manualCount,
+            ],
+            'leases_expiring_within_30_days' => $this->expirationModel->countExpiringSoon(30),
+            'generated_at' => date('c'),
         ];
     }
 

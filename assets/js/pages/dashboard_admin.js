@@ -67,6 +67,39 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     updateAttentionCard();
 
+    // AI-2 Round 2: proactive "second admin" briefing — unlike the
+    // Exceptions-backed attention card above (which only appears when
+    // there's something broken), this always renders something on load, so
+    // "nothing needs attention" is itself a stated fact rather than an
+    // absence. Fetched once on load plus an explicit Refresh (no caching
+    // table, no cron — matches this app's existing no-background-jobs
+    // convention, see AutomationEngine.php's header comment).
+    async function loadAiBriefing() {
+        const briefingText = document.getElementById('aiBriefingText');
+        const refreshBtn = document.getElementById('refreshBriefingBtn');
+        if (!briefingText) return;
+        briefingText.textContent = 'Loading today\'s briefing…';
+        try {
+            const result = await api.request('ai/dashboard-digest', { method: 'GET' });
+            briefingText.textContent = (result && result.explained && result.message)
+                ? result.message
+                : 'AI briefing is unavailable right now — check the Needs Attention card and Exceptions page directly.';
+        } catch (e) {
+            briefingText.textContent = 'AI briefing is unavailable right now — check the Needs Attention card and Exceptions page directly.';
+        }
+        if (refreshBtn) {
+            refreshBtn.onclick = async () => {
+                refreshBtn.disabled = true;
+                try {
+                    await loadAiBriefing();
+                } finally {
+                    refreshBtn.disabled = false;
+                }
+            };
+        }
+    }
+    loadAiBriefing();
+
     try {
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);

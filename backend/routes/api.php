@@ -1003,6 +1003,16 @@ if ($path === 'ai/explain-entity' && $requestMethod === 'POST') {
     exit;
 }
 
+if ($path === 'ai/dashboard-digest' && $requestMethod === 'GET') {
+    // AI-2 Round 2 (proactive "second admin"): same admin/staff gate as
+    // every other audit/exception-adjacent AI route above. GET, not POST —
+    // unlike explain-entity/explain-exception there's no caller-supplied
+    // payload, it's always "the whole system, right now."
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    echo json_encode($aiController->dashboardDigest());
+    exit;
+}
+
 if ($path === 'ai/knowledge' && $requestMethod === 'GET') {
     // admin+staff: staff should be able to review/correct FAQ content too,
     // not just admins (unlike ai/parameters' tunable numeric weights below).

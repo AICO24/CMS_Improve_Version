@@ -748,6 +748,73 @@ def explain_entity():
         return jsonify({'explained': False, 'message': None})
 
 
+# AI-2 Round 2: the proactive "second admin" dashboard digest. Same safety
+# contract as explain_exception()/explain_entity() above — narrates a
+# system-wide fact bundle (backend/services/AuditIntelligenceService.php::
+# buildDashboardFacts(): open-exception counts by entity type, the oldest
+# still-open one, a recent automated-vs-manual activity split, and a lease-
+# expiration count), never queries anything itself, never invents a fact
+# beyond what it's given. The difference from explain-entity is WHEN it
+# runs: on dashboard load, before the admin has picked anything to inspect,
+# which is what makes this a proactive briefing rather than an on-demand
+# explanation.
+DASHBOARD_DIGEST_SYSTEM_PROMPT = (
+    "You are writing a short daily briefing for a cemetery-management-"
+    "system administrator, based only on structured facts: how many system "
+    "exceptions are currently open (broken down by the type of record "
+    "they're on), the single oldest one still waiting, how many actions "
+    "were completed automatically vs. manually in the last 7 days, and how "
+    "many lot leases expire within 30 days. Never invent a number, a name, "
+    "or a fact beyond what is given — you have no other information about "
+    "this system. Write 2-4 short sentences: lead with what needs the "
+    "admin's attention right now (if open_exceptions.total is 0, say "
+    "plainly that nothing needs attention instead of inventing a concern); "
+    "mention the automated-vs-manual split only if it's informative (e.g. "
+    "automation is clearly carrying most of the load, or manual actions "
+    "dominate); mention expiring leases only if the count is greater than "
+    "zero. Never claim to have taken any action yourself. Output only the "
+    "message text: no preamble, no markdown, no quotes."
+)
+
+
+def _dashboard_digest(facts: Dict[str, Any]) -> Optional[str]:
+    if _gemini_client is None:
+        return None
+
+    try:
+        response = _gemini_client.models.generate_content(
+            model=NARRATION_MODEL,
+            contents=json.dumps(facts),
+            config=genai_types.GenerateContentConfig(
+                system_instruction=DASHBOARD_DIGEST_SYSTEM_PROMPT,
+                max_output_tokens=512,
+                temperature=0.3,
+                thinking_config=_THINKING_CONFIG,
+                http_options=genai_types.HttpOptions(timeout=_LLM_TIMEOUT_MS),
+            ),
+        )
+        text = (response.text or '').strip()
+        return text or None
+    except Exception:
+        return None
+
+
+@app.post('/api/dashboard-digest')
+def dashboard_digest():
+    # Always returns 200; explained:false whenever unavailable, so the
+    # dashboard just hides the AI Briefing panel and falls back to the
+    # existing Needs Attention exceptions card alone.
+    try:
+        payload = request.get_json(silent=True) or {}
+        if not isinstance(payload, dict) or 'open_exceptions' not in payload:
+            return jsonify({'explained': False, 'message': None})
+
+        message = _dashboard_digest(payload)
+        return jsonify({'explained': message is not None, 'message': message})
+    except Exception:
+        return jsonify({'explained': False, 'message': None})
+
+
 def _get_capacity_snapshot() -> Dict[str, int]:
     try:
         conn = get_connection()

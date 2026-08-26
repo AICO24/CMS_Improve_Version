@@ -237,6 +237,24 @@ class AiController {
         ];
     }
 
+    // AI-2 Round 2: the proactive "second admin" dashboard digest. Same
+    // READ + EXPLAIN boundary as explainEntity() above — AuditIntelligence-
+    // Service assembles the system-wide facts (existing models, read-only),
+    // the AI only narrates them, route-level RBAC (admin/staff) happens
+    // before this is ever called. No payload from the caller: unlike
+    // explainEntity(), there's no entity to select, this is always "the
+    // whole system, right now."
+    public function dashboardDigest() {
+        $facts = $this->auditIntelligenceService->buildDashboardFacts();
+        $result = $this->aiService->dashboardDigest($facts);
+
+        return [
+            'explained' => empty($result['error']) && !empty($result['message']),
+            'message' => (empty($result['error']) && is_string($result['message'] ?? null)) ? $result['message'] : null,
+            'facts' => $facts,
+        ];
+    }
+
     public function getKnowledge() {
         return $this->aiKnowledgeModel->findAll();
     }
