@@ -82,6 +82,33 @@
     color: var(--color-text-faint);
 }
 
+/*
+   Shell boilerplate repeated near-verbatim across most page-specific CSS
+   files (.top-bar in 17 files, .notification-icon in 8, .profile-avatar
+   in 14, .filter-chip/.pagination-divider similarly common) — same
+   redundant-duplication situation as .nav-item.active, so one generic
+   rule here covers all of them at once rather than needing a per-page
+   override for each.
+*/
+.dashboard-body[data-theme="dark"] .notification-icon {
+    color: var(--color-text-muted);
+}
+
+.dashboard-body[data-theme="dark"] .profile-avatar {
+    background: var(--color-surface-soft);
+    color: var(--color-text);
+}
+
+.dashboard-body[data-theme="dark"] .filter-chip {
+    background: rgba(157, 196, 175, 0.14);
+    border-color: var(--color-border);
+    color: var(--color-text);
+}
+
+.dashboard-body[data-theme="dark"] .pagination-divider {
+    background: var(--color-border);
+}
+
 /* components/cards.css */
 .dashboard-body[data-theme="dark"] .card h4,
 .dashboard-body[data-theme="dark"] .card-block h4 {
@@ -287,4 +314,257 @@
     background: rgba(220, 38, 38, 0.14);
     border-color: var(--color-danger);
     color: #f5a3a3;
+}
+
+/*
+   ---------- Cross-module chrome (repeats across manage-reservations,
+   relocation-management, expiration-monitoring, decedent-records,
+   my-records, payments, payment-history, user-management, reports,
+   forecast, cremation-management) ----------
+   Same reasoning throughout: preserve each module's existing hue choice
+   (a status badge that's green stays green, not reassigned to "success"
+   by name-guessing what pending/approved/etc. semantically ought to be)
+   and only fix the lightness — soft pastel background + saturated text
+   becomes a translucent tint + lightened text, the same formula already
+   used for Lot Management's status badges. Per-module accent colors on
+   filter/date fields (purple, orange, teal) are deliberately left alone,
+   same reasoning as brand green — a mid-saturation accent hue already
+   reads fine against a dark surface without adjustment.
+*/
+.dashboard-body[data-theme="dark"] .pagination-jump input,
+.dashboard-body[data-theme="dark"] .status-select-field,
+.dashboard-body[data-theme="dark"] .date-filter-field {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    color: var(--color-text);
+}
+
+.dashboard-body[data-theme="dark"] .status-select-field span,
+.dashboard-body[data-theme="dark"] .date-filter-field span {
+    color: var(--color-text-muted);
+}
+
+.dashboard-body[data-theme="dark"] .btn-view {
+    background: rgba(37, 99, 235, 0.14);
+}
+
+.dashboard-body[data-theme="dark"] .btn-edit-row {
+    background: rgba(245, 158, 11, 0.14);
+}
+
+.dashboard-body[data-theme="dark"] .btn-delete-row,
+.dashboard-body[data-theme="dark"] .btn-view-request {
+    background: rgba(220, 38, 38, 0.14);
+}
+
+/* Status badges — grouped by which files declare them, values translated
+   from each file's own existing hue (see comment above), not reassigned. */
+.dashboard-body[data-theme="dark"] .status-badge.confirmed,
+.dashboard-body[data-theme="dark"] .status-approved,
+.dashboard-body[data-theme="dark"] .status-completed,
+.dashboard-body[data-theme="dark"] .status-success,
+.dashboard-body[data-theme="dark"] .status-occupied {
+    background: var(--color-success-soft);
+    color: #7fd9a4;
+}
+
+.dashboard-body[data-theme="dark"] .status-badge.cancelled,
+.dashboard-body[data-theme="dark"] .status-denied,
+.dashboard-body[data-theme="dark"] .status-danger {
+    background: var(--color-danger-soft);
+    color: #f5a3a3;
+}
+
+.dashboard-body[data-theme="dark"] .status-badge.pending {
+    background: rgba(155, 89, 182, 0.18);
+    color: #c9a8e8;
+}
+
+.dashboard-body[data-theme="dark"] .status-pending,
+.dashboard-body[data-theme="dark"] .status-warning {
+    background: var(--color-warning-soft);
+    color: #f0c674;
+}
+
+.dashboard-body[data-theme="dark"] .status-badge.completed {
+    background: var(--color-info-soft);
+    color: #8ab4f8;
+}
+
+.dashboard-body[data-theme="dark"] .status-available {
+    background: var(--color-surface-soft);
+    color: var(--color-text-muted);
+}
+
+.dashboard-body[data-theme="dark"] .status-message {
+    color: var(--color-text-muted);
+}
+
+/*
+   ---------- Bucket B: dashboard_admin.css / dashboard_staff.css ----------
+   (identical values in both files, per the audit)
+*/
+.dashboard-body[data-theme="dark"] .card.attention-card h4 {
+    color: #f0c674;
+}
+
+.dashboard-body[data-theme="dark"] .square.occupied {
+    background: #a5344f;
+}
+
+.dashboard-body[data-theme="dark"] .square.available {
+    background: #7a9a4a;
+}
+
+/* ---------- dashboard_user.css ---------- */
+.dashboard-body[data-theme="dark"] .user-welcome-card {
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+.dashboard-body[data-theme="dark"] .welcome-note,
+.dashboard-body[data-theme="dark"] .recent-list li .muted {
+    color: var(--color-text-muted);
+}
+
+.dashboard-body[data-theme="dark"] .recent-list li strong {
+    color: var(--color-text);
+}
+
+/* ---------- cremation-management.css ---------- */
+.dashboard-body[data-theme="dark"] .cremation-empty-state i {
+    background: rgba(194, 65, 12, 0.16);
+    color: #f0895f;
+}
+
+.dashboard-body[data-theme="dark"] .niche-number {
+    color: var(--color-text);
+}
+
+.dashboard-body[data-theme="dark"] .niche-location {
+    color: var(--color-text-muted);
+}
+
+/* ---------- reports.css ---------- */
+.dashboard-body[data-theme="dark"] .tab-btn {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    color: var(--color-text);
+}
+/* .tab-btn.active keeps its navy fill — already dark-friendly, no override needed */
+
+/* ---------- forecast.css ---------- */
+.dashboard-body[data-theme="dark"] #forecastDetails th {
+    background: var(--color-surface-soft);
+    color: var(--color-text-muted);
+}
+
+.dashboard-body[data-theme="dark"] .service-banner.danger {
+    background: var(--color-danger-soft);
+    color: #f5a3a3;
+}
+
+/* ---------- notifications.css ---------- */
+.dashboard-body[data-theme="dark"] .notification-item {
+    background: var(--color-surface);
+}
+
+/* ---------- ai.css (its filter/select chrome uses its own color set,
+   distinct from every other module's #d9e1e8/#243736 pairing) ---------- */
+.dashboard-body[data-theme="dark"] .ai-message.success {
+    color: #7fd9a4;
+}
+
+.dashboard-body[data-theme="dark"] .ai-message.error {
+    color: #f5a3a3;
+}
+
+/*
+   ---------- burial-scheduling.css / reserve-burial-slot.css ----------
+   The two files are byte-for-byte identical (confirmed) except a header
+   comment, so this one block covers both booking-chat pages. The chat
+   mechanics (pulseGlow/statusPulse/messageSlideIn keyframes, the wizard
+   JS) are untouched — only surface/text colors.
+*/
+.dashboard-body[data-theme="dark"] .chat-window {
+    background: var(--color-surface-soft);
+}
+
+.dashboard-body[data-theme="dark"] .chat-message.assistant,
+.dashboard-body[data-theme="dark"] .recommendation-card {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    color: var(--color-text);
+}
+
+.dashboard-body[data-theme="dark"] .meta-pill.section {
+    background: rgba(99, 102, 241, 0.16);
+    color: #a5adf5;
+}
+
+.dashboard-body[data-theme="dark"] .meta-pill.price {
+    background: var(--color-success-soft);
+    color: #7fd9a4;
+}
+
+.dashboard-body[data-theme="dark"] .voucher-status-pill {
+    background: var(--color-warning-soft);
+    color: #f0c674;
+}
+
+.dashboard-body[data-theme="dark"] .ai-status-pill {
+    background: var(--color-success-soft);
+    color: #7fd9a4;
+    border-color: rgba(22, 163, 74, 0.3);
+}
+
+.dashboard-body[data-theme="dark"] .blueprint-step .step-num {
+    background: var(--color-surface-soft);
+    color: var(--color-text-faint);
+}
+
+.dashboard-body[data-theme="dark"] .chat-pref-chip {
+    background: var(--color-surface-soft);
+    color: var(--color-text-muted);
+    border-color: var(--color-border);
+}
+
+.dashboard-body[data-theme="dark"] .chat-pref-chip strong {
+    color: var(--color-text-muted);
+}
+
+.dashboard-body[data-theme="dark"] .chat-pref-chip.filled {
+    background: var(--color-success-soft);
+    color: #7fd9a4;
+    border-color: rgba(22, 163, 74, 0.3);
+}
+
+.dashboard-body[data-theme="dark"] .chat-pref-chip.filled strong {
+    color: #7fd9a4;
+}
+
+.dashboard-body[data-theme="dark"] .prompt-chip {
+    background: var(--color-surface-soft);
+    color: var(--color-text-muted);
+    border-color: var(--color-border);
+}
+
+.dashboard-body[data-theme="dark"] .prompt-chip:hover {
+    background: rgba(157, 196, 175, 0.16);
+    border-color: rgba(157, 196, 175, 0.4);
+    color: #9dc4af;
+}
+
+.dashboard-body[data-theme="dark"] .btn-suggest-type {
+    background: rgba(157, 196, 175, 0.14);
+    border-color: rgba(157, 196, 175, 0.35);
+    color: #9dc4af;
+}
+
+.dashboard-body[data-theme="dark"] .btn-suggest-type:hover:not(:disabled) {
+    background: rgba(157, 196, 175, 0.22);
+}
+
+.dashboard-body[data-theme="dark"] .btn-suggest-type:disabled {
+    background: var(--color-surface-soft);
 }

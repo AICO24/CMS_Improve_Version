@@ -29,6 +29,17 @@
     color: #241a0c;
 }
 
+/* ---------- Display type on KPI numbers ----------
+   tokens.css defines --font-display (Fraunces) and the Google Fonts link
+   was already added to every page in the theme-toggle rollout, but
+   nothing actually consumed the token yet — .stat-value is redeclared in
+   9 page-specific files, none of which set font-family, so this is a
+   safe pure addition that reaches all of them via the same "loads last"
+   mechanism as the bronze accent above. */
+.stat-value {
+    font-family: var(--font-display);
+}
+
 /* ---------- Hover lift (additive — layers on top of any existing shadow) ---------- */
 .stat-card:hover,
 .card--interactive:hover,
