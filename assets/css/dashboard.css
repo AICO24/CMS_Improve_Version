@@ -3,6 +3,17 @@
     background: var(--color-bg);
     font-family: 'Inter', sans-serif;
     color: #243736;
+    /* Defensive: confirmed via real mobile screenshots that the closed
+       (off-screen, translateX(100%)) AI assistant panel can still widen
+       document.documentElement.scrollWidth on some pages — likely the
+       reskin.css entrance animation transiently giving an ancestor .card
+       a transform, which per spec makes it the containing block for a
+       position:fixed descendant instead of the viewport. Rather than
+       depend on that animation-timing edge case never recurring
+       elsewhere, clip horizontal scroll at the source: nothing in this
+       app is meant to scroll sideways regardless of what an off-screen
+       fixed element measures as. */
+    overflow-x: hidden;
 }
 
 .dashboard-container {
@@ -637,5 +648,40 @@
         background: var(--overlay-scrim);
         z-index: 90;
         pointer-events: none;
+    }
+
+    /*
+       Top bar overflow fix — confirmed via a real authenticated
+       screenshot (document.documentElement.scrollWidth was 563-760px in
+       a 375px viewport, traced to .top-bar). Four icon buttons
+       (hamburger's sibling row + theme toggle + notification + profile
+       name/role text + logout) never wrapped or shrank at narrow
+       widths — the theme toggle added in this redesign made an
+       already-tight row tighter.
+
+       The .profile-text hide (the actual space-saver) is NOT here — at
+       least 2 page-specific files (payments.css, manage-reservations.css)
+       have their own unconditional `.profile-text{display:flex}`, which,
+       loading after this file, wins the cascade tie regardless of this
+       rule being wrapped in a media query. Same bug shape as the mobile
+       sidebar fix earlier. See reskin.css for the version that actually
+       applies everywhere (it loads after all page-specific CSS).
+       min-width:0 guards against the classic flexbox trap where a flex
+       item's default min-width:auto refuses to shrink below its
+       content's intrinsic width, forcing the whole row to overflow
+       instead of wrapping even with flex-wrap set.
+    */
+    .top-bar {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px 14px;
+    }
+
+    .user-info {
+        gap: 8px;
+    }
+
+    .main-content {
+        min-width: 0;
     }
 }

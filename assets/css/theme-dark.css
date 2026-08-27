@@ -231,6 +231,7 @@
    warning/danger-soft token treatment in Section 1 above.
 */
 .dashboard-body[data-theme="dark"] .top-bar,
+.dashboard-body[data-theme="dark"] .filter-toolbar,
 .dashboard-body[data-theme="dark"] .category-group,
 .dashboard-body[data-theme="dark"] .section-group,
 .dashboard-body[data-theme="dark"] .section-header,
@@ -337,6 +338,19 @@
     background: var(--color-surface);
     border-color: var(--color-border);
     color: var(--color-text);
+}
+
+/* .toolbar-row: the search/filter toolbar wrapper itself (distinct from
+   the .status-select-field/.date-filter-field controls inside it) —
+   found via a real mobile screenshot showing a large light box the
+   class-name audit missed, since its background is a near-white
+   gradient rather than a plain hex. Repeats across 8+ files. The
+   left accent border already uses var(--color-primary-500) — left
+   alone, same brand-green reasoning as everywhere else. */
+.dashboard-body[data-theme="dark"] .toolbar-row,
+.dashboard-body[data-theme="dark"] .filter-toolbar {
+    background: var(--color-surface-soft);
+    border-color: var(--color-border);
 }
 
 .dashboard-body[data-theme="dark"] .status-select-field span,
@@ -567,4 +581,30 @@
 
 .dashboard-body[data-theme="dark"] .btn-suggest-type:disabled {
     background: var(--color-surface-soft);
+}
+
+/*
+   ---------- dashboard_admin.js / dashboard_staff.js: recent transactions
+   list ----------
+   These rows are built with inline styles (item.style.background =
+   '#ffffff', plus an inline color on the amount) rather than a CSS
+   class — inline styles always win over any stylesheet rule regardless
+   of specificity, which is why the "Recent Transactions" card stayed
+   white even after every other .card on the page went dark. !important
+   is the correct (only) way to override an inline style from CSS
+   without editing the JS that sets it — confirmed via a real logged-in
+   screenshot, not a guess. Covers both the populated rows and the
+   "No recent transactions available." empty state (item.className is
+   'recent-item' for both).
+*/
+.dashboard-body[data-theme="dark"] .recent-item {
+    background: var(--color-surface) !important;
+}
+
+.dashboard-body[data-theme="dark"] .recent-item > div:nth-child(2) {
+    color: var(--color-text-muted) !important;
+}
+
+.dashboard-body[data-theme="dark"] .recent-item > div:nth-child(3) {
+    color: var(--color-text) !important;
 }

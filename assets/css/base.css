@@ -4,6 +4,19 @@
     padding: 0;
     box-sizing: border-box;
 }
+
+html {
+    /* document.documentElement.scrollWidth (confirmed via real mobile
+       screenshots) can exceed the viewport because of an off-screen
+       position:fixed element (the closed AI assistant drawer) whose
+       containing block becomes a transformed ancestor instead of the
+       viewport during the reskin.css entrance animation — overflow-x:
+       hidden on .dashboard-body alone doesn't reach it since <html> is
+       what's actually measured. Nothing in this app scrolls sideways by
+       design, so clipping at the root is the correct fix regardless of
+       which element is technically responsible on a given page. */
+    overflow-x: hidden;
+}
 body {
     font-family: 'Inter', sans-serif;
     background: #f0f4f8;

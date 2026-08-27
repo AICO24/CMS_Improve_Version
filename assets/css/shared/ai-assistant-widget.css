@@ -42,6 +42,15 @@
     box-shadow: 0 8px 18px rgba(44, 94, 71, 0.45);
 }
 .ai-assistant-toggle.is-open {
+    /* Bug fix: the toggle has no `position` of its own, so its z-index
+       was never able to apply — the full-screen backdrop (z-index: 990)
+       sat on top of it once open, leaving the icon visually blurred and
+       effectively stuck underneath its own backdrop. Raising it above
+       the backdrop only while open keeps it crisp and clickable as a
+       close-trigger too, matching the click-to-toggle behavior the
+       toggle already implements in JS. */
+    position: relative;
+    z-index: 992;
     box-shadow: 0 0 0 3px var(--color-primary-100, #cfe4d8);
 }
 .ai-assistant-toggle:focus-visible {

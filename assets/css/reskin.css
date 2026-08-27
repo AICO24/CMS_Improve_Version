@@ -29,6 +29,19 @@
     color: #241a0c;
 }
 
+/* ---------- Mobile top-bar overflow fix (see dashboard.css for the full
+   explanation) — placed here specifically because this file loads after
+   every page-specific CSS, which is required for this exact property:
+   payments.css and manage-reservations.css (at least) each have their
+   own unconditional, unscoped .profile-text{display:flex} that would
+   otherwise win the cascade tie against a media-scoped rule in
+   dashboard.css regardless of source order within that file. ---------- */
+@media (max-width: 768px) {
+    .profile-text {
+        display: none;
+    }
+}
+
 /* ---------- Display type on KPI numbers ----------
    tokens.css defines --font-display (Fraunces) and the Google Fonts link
    was already added to every page in the theme-toggle rollout, but
