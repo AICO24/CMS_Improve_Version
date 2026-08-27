@@ -20,6 +20,50 @@
     display: inline-block;
 }
 
+/* ---------- Page-level instance: floating Messenger-style corner bubble ----------
+   Scoped to the #aiAssistantMount id specifically (the page-header instance every
+   module + the dashboard mounts), NOT #aiAssistantMountRecord (the per-record
+   assistant inside modals, which stays inline and auto-opens via askDirectly()).
+   Detaches the toggle from wherever its mount <div> sits in each page's header
+   markup so it reads as one persistent, app-wide chat entry point instead of
+   drifting with page layout — also what fixes the dashboard's "AI Briefing" card,
+   where this toggle used to sit right next to that card's own robot-icon label
+   and read as a doubled icon once the .is-open ring appeared. */
+#aiAssistantMount.ai-assistant-mount {
+    position: fixed;
+    right: 24px;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    z-index: 993;
+}
+#aiAssistantMount .ai-assistant-toggle {
+    width: 56px;
+    height: 56px;
+    font-size: 1.3rem;
+}
+/* Panel is open: the bubble and the panel's own send button both land in
+   the same bottom-right corner, so the (higher z-index) bubble was
+   covering the send button. Hide it while open — closing still works via
+   the panel's × button, the backdrop click, or Escape. */
+#aiAssistantMount .ai-assistant-toggle.is-open {
+    display: none;
+}
+
+/* Narrow phone: an open off-canvas sidebar drawer (dashboard.css,
+   .sidebar.collapsed at <=768px) can overlap this corner — the mount is nested
+   inside each page's header, not a DOM sibling of .sidebar, so the ~ sibling
+   trick the older ai-chat-widget.css used doesn't apply here; hide via :has()
+   instead. */
+body:has(.sidebar.collapsed) #aiAssistantMount.ai-assistant-mount {
+    display: none;
+}
+
+@media (max-width: 480px) {
+    #aiAssistantMount.ai-assistant-mount {
+        right: 16px;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
 /* ---------- Toggle (the visible "AI icon" on the page) ---------- */
 .ai-assistant-toggle {
     width: 40px;
