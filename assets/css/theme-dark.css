@@ -129,3 +129,162 @@
     background: var(--color-surface-soft);
     color: var(--color-text-faint);
 }
+
+/*
+   assets/css/shared/ai-assistant-widget.css — the header's green gradient
+   is already brand-consistent in both themes and left alone; everything
+   below is the panel's light-only chrome (it hardcoded var(--color-white)
+   as "panel background", same pattern as .dashboard-body originally did
+   in Section 2 above) getting the same treatment, purely cosmetic — the
+   slide-in/backdrop/message-rendering mechanics are untouched.
+*/
+.dashboard-body[data-theme="dark"] .ai-assistant-panel {
+    background: var(--color-surface);
+}
+
+.dashboard-body[data-theme="dark"] .ai-assistant-suggestions {
+    background: var(--color-surface-soft);
+    border-bottom-color: var(--color-border);
+}
+
+.dashboard-body[data-theme="dark"] .ai-assistant-suggestion-chip {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    color: var(--color-text-muted);
+}
+
+.dashboard-body[data-theme="dark"] .ai-assistant-messages {
+    background: var(--color-surface-soft);
+}
+
+.dashboard-body[data-theme="dark"] .ai-assistant-msg--ai {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border-color: var(--color-border);
+}
+
+.dashboard-body[data-theme="dark"] .ai-assistant-msg--loading {
+    color: var(--color-text-muted);
+}
+
+.dashboard-body[data-theme="dark"] .ai-assistant-msg-time {
+    color: var(--color-text-faint);
+}
+
+.dashboard-body[data-theme="dark"] .ai-assistant-input-row {
+    background: var(--color-surface);
+    border-top-color: var(--color-border);
+}
+
+.dashboard-body[data-theme="dark"] .ai-assistant-input {
+    background: var(--color-surface-soft);
+    border-color: var(--color-border);
+    color: var(--color-text);
+}
+
+.dashboard-body[data-theme="dark"] .ai-assistant-input:disabled {
+    background: var(--color-surface-soft);
+    color: var(--color-text-faint);
+}
+
+.dashboard-body[data-theme="dark"] .ai-assistant-disclaimer {
+    background: var(--color-surface);
+    color: var(--color-text-faint);
+}
+
+/*
+   ---------- Page-specific: Lot Management ----------
+   lot-management.css hardcodes ~40 literal colors with no shared
+   component to inherit theming from. Brand green (#2c5e47) and its
+   uses for buttons/active-tab/icons are left alone — that color already
+   works on both light and dark grounds, same reasoning as the sidebar
+   staying navy regardless of theme. Status badges (available/occupied/
+   reserved/expired) keep their hue but move to a translucent dark
+   background instead of a solid pale one, mirroring the success/
+   warning/danger-soft token treatment in Section 1 above.
+*/
+.dashboard-body[data-theme="dark"] .top-bar,
+.dashboard-body[data-theme="dark"] .category-group,
+.dashboard-body[data-theme="dark"] .section-group,
+.dashboard-body[data-theme="dark"] .section-header,
+.dashboard-body[data-theme="dark"] .hierarchy-error,
+.dashboard-body[data-theme="dark"] .filter-search input,
+.dashboard-body[data-theme="dark"] .btn-reset-filters {
+    background: var(--color-surface);
+}
+
+.dashboard-body[data-theme="dark"] .filter-search input:focus {
+    background: var(--color-surface);
+}
+
+.dashboard-body[data-theme="dark"] .filter-controls select,
+.dashboard-body[data-theme="dark"] .lot-hierarchy,
+.dashboard-body[data-theme="dark"] .section-header:hover {
+    background: var(--color-surface-soft);
+}
+
+.dashboard-body[data-theme="dark"] .filter-controls select {
+    color: var(--color-text);
+    border-color: var(--color-border);
+}
+
+.dashboard-body[data-theme="dark"] .filter-search input,
+.dashboard-body[data-theme="dark"] .lot-number,
+.dashboard-body[data-theme="dark"] .info-row strong,
+.dashboard-body[data-theme="dark"] .section-header,
+.dashboard-body[data-theme="dark"] .section-name {
+    color: var(--color-text);
+}
+
+.dashboard-body[data-theme="dark"] .user-role,
+.dashboard-body[data-theme="dark"] .info-row,
+.dashboard-body[data-theme="dark"] .filter-search i,
+.dashboard-body[data-theme="dark"] .btn-reset-filters,
+.dashboard-body[data-theme="dark"] .section-header .chevron,
+.dashboard-body[data-theme="dark"] .hierarchy-error,
+.dashboard-body[data-theme="dark"] .no-lots-icon {
+    color: var(--color-text-muted);
+}
+
+.dashboard-body[data-theme="dark"] .lot-type {
+    background: rgba(157, 196, 175, 0.14);
+    color: var(--color-text);
+}
+
+.dashboard-body[data-theme="dark"] .section-header .count-chip {
+    background: var(--color-surface-soft);
+    color: var(--color-text-muted);
+}
+
+.dashboard-body[data-theme="dark"] .status-Available,
+.dashboard-body[data-theme="dark"] .count-chip.available {
+    background: var(--color-success-soft);
+    color: #7fd9a4;
+}
+
+.dashboard-body[data-theme="dark"] .status-Occupied,
+.dashboard-body[data-theme="dark"] .count-chip.occupied {
+    background: var(--color-danger-soft);
+    color: #f5a3a3;
+}
+
+.dashboard-body[data-theme="dark"] .status-Reserved,
+.dashboard-body[data-theme="dark"] .count-chip.reserved {
+    background: var(--color-warning-soft);
+    color: #f0c674;
+}
+
+.dashboard-body[data-theme="dark"] .status-Expired {
+    background: var(--color-surface-soft);
+    color: var(--color-text-muted);
+}
+
+.dashboard-body[data-theme="dark"] .filter-controls select {
+    background: var(--color-surface-soft);
+}
+
+.dashboard-body[data-theme="dark"] .btn-reset-filters:hover {
+    background: rgba(220, 38, 38, 0.14);
+    border-color: var(--color-danger);
+    color: #f5a3a3;
+}
