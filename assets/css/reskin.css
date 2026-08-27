@@ -1,0 +1,99 @@
+/*
+  Design System — Reskin pass (Phase 5): hover lift, entrance motion,
+  bronze accent on active/selected state, modal entrance.
+
+  Loaded LAST among the light-mode stylesheets (after every page-specific
+  CSS file) on purpose: `.nav-item.active` alone is redeclared verbatim
+  in ~13 page-specific files (confirmed identical `#7aa77a`/`#06321a` in
+  every one — pure copy-paste redundancy, not intentional per-page
+  customization), so an edit to the shared dashboard.css definition alone
+  would be silently shadowed almost everywhere. Loading last lets this
+  file win that cascade tie the same way theme-dark.css already does.
+
+  Everything else here is deliberately additive-only (transform,
+  animation) rather than replacing values — several pages have their own
+  genuinely-tuned box-shadow (e.g. reports.css's cards), so this file
+  never touches box-shadow directly; it only adds a translateY lift and
+  entrance keyframes, which layer on top of whatever shadow a page
+  already has instead of overwriting it.
+
+  Nothing here touches the 9 preserved interactive elements (logout
+  button, hamburger, AI widget, reports export toggle, floating-label
+  search, button spinner, booking chat, nav-item hover, sidebar collapse)
+  — .nav-item:hover's translateX and .Btn/.logout-btn are untouched.
+*/
+
+/* ---------- Bronze accent: active/selected state ---------- */
+.nav-item.active {
+    background: var(--color-accent-500);
+    color: #241a0c;
+}
+
+/* ---------- Hover lift (additive — layers on top of any existing shadow) ---------- */
+.stat-card:hover,
+.card--interactive:hover,
+.card:hover {
+    transform: translateY(-3px);
+}
+
+/* ---------- Entrance animation on load ---------- */
+@keyframes reskinFadeRise {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.stat-card,
+.card,
+.recent-list li {
+    /* fill-mode: backwards (not "both"/"forwards") on purpose — an
+       animation that's still "holding" the transform property after it
+       finishes blocks the :hover translateY rule above from ever taking
+       effect (animated properties win over static rules for as long as
+       fill-mode keeps the effect active). backwards only holds the
+       *starting* keyframe during animation-delay, then hands transform
+       back to the normal cascade once the entrance finishes — so hover
+       works immediately after the ~320ms entrance settles. */
+    animation: reskinFadeRise var(--duration-slow) var(--easing-out) backwards;
+}
+
+.stats-row .stat-card:nth-child(1) { animation-delay: 0ms; }
+.stats-row .stat-card:nth-child(2) { animation-delay: 60ms; }
+.stats-row .stat-card:nth-child(3) { animation-delay: 120ms; }
+.stats-row .stat-card:nth-child(4) { animation-delay: 180ms; }
+
+/* ---------- Button hover lift (base .btn family only — distinct from
+   .Btn/.logout-btn, which keeps its own untouched hover mechanics) ---------- */
+.btn:hover,
+.btn-primary:hover,
+.btn-add:hover,
+.btn-filter:hover,
+.btn--primary:hover,
+.btn--secondary:hover,
+.btn-secondary:hover,
+.btn-ghost:hover {
+    transform: translateY(-1px);
+}
+
+/* ---------- Modal entrance ----------
+   The JS show/hide mechanism only ever toggles style.display between
+   "none" and "flex" (components/modals.css's own header comment
+   confirms this and that it's intentionally left alone) — a CSS
+   animation restarts automatically every time an element re-enters the
+   render tree, so this needs no JS change. */
+@keyframes reskinModalBackdropIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes reskinModalContentIn {
+    from { opacity: 0; transform: scale(0.96) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal {
+    animation: reskinModalBackdropIn var(--duration-base) var(--easing-out);
+}
+
+.modal-content {
+    animation: reskinModalContentIn var(--duration-base) var(--easing-out);
+}
