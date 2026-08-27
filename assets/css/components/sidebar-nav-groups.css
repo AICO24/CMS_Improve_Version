@@ -1,0 +1,170 @@
+/*
+  Sidebar nav groups + manual icon-rail (desktop only).
+
+  Every layout-affecting rule here is scoped to @media (min-width: 1025px)
+  on purpose: the existing responsive shell in dashboard.css (553-611)
+  already owns the auto icon-rail at 769-1024px and the off-canvas
+  drawer at <=768px via the hamburger's .collapsed class. Keeping this
+  file's rules mutually exclusive with that range (instead of relying on
+  cascade order) is what stops history repeating — the same "two rules,
+  equal specificity, one silently wins everywhere" pattern that broke
+  the sidebar on 6 pages in the first place (see Phase 1).
+
+  .rail-manual (this file) and .collapsed (dashboard.css, driven by the
+  hamburger) are deliberately different classes so the two toggles can
+  never contend for the same property.
+
+  IMPORTANT: base/unconditional rules for a selector must come BEFORE
+  any @media block that overrides them for a narrower range — equal
+  specificity means source order decides the tie, so a later
+  unconditional rule would silently beat an earlier media-scoped one
+  regardless of viewport (this bit us once already while writing this
+  file; keep new rules in that order).
+*/
+
+.nav-group-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: none;
+    border: none;
+    color: #a9b3c9;
+    cursor: pointer;
+    padding: 9px 12px;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    transition: color 0.16s ease;
+}
+
+.nav-group-header:hover {
+    color: #ffffff;
+}
+
+.nav-group-header .chev {
+    font-size: 0.65rem;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.nav-group-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+#railToggleBtn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd6cd;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+#railToggleBtn:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.sidebar.rail-manual #railToggleBtn {
+    transform: rotate(180deg);
+}
+
+/* Higher specificity (.sidebar .sidebar-header, not just .sidebar-header)
+   so this wins regardless of link order against any page-specific
+   .sidebar-header rule — same reasoning as the Phase 1 fix: don't rely
+   on cascade position to settle a tie. */
+.sidebar .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+/* ---------- Desktop-only overrides (>=1025px) ---------- */
+@media (min-width: 1025px) {
+    /* Collapse state (incl. chevron rotation) only does anything at
+       desktop width — below this, the header is either hidden (tablet
+       icon-rail) or shown as an inert section label (mobile drawer),
+       so there's nothing to visually "half-animate". */
+    .nav-group.open .nav-group-header .chev {
+        transform: rotate(180deg);
+    }
+
+    .nav-group-body {
+        overflow: hidden;
+        max-height: 0;
+        transition: max-height 0.28s ease;
+    }
+
+    .nav-group.open .nav-group-body {
+        max-height: 480px;
+    }
+
+    /* Manual icon-rail (desktop only) — a second, independent collapse
+       mode from the hamburger's .collapsed. */
+    .sidebar.rail-manual {
+        width: 70px;
+    }
+
+    .sidebar.rail-manual ~ .main-content {
+        margin-left: 70px;
+    }
+
+    .sidebar.rail-manual .nav-group-body {
+        max-height: none !important;
+    }
+
+    /* The auto icon-rail's label-hiding (dashboard.css 564-567) is scoped
+       to max-width:1024px, so it never fires for this manual desktop-only
+       toggle — needs its own copy of the same hiding, keyed off the class
+       instead of viewport width. Mirrors the auto-rail behavior exactly,
+       including leaving .sidebar-footer's name/role text alone (today's
+       tablet icon-rail doesn't hide that either). */
+    .sidebar.rail-manual .brand span,
+    .sidebar.rail-manual .nav-item span:not(.icon) {
+        display: none;
+    }
+
+    .sidebar.rail-manual .nav-group-header {
+        display: none;
+    }
+
+    .sidebar.rail-manual .nav-group-header .chev {
+        display: none;
+    }
+
+    #railToggleBtn {
+        display: flex;
+    }
+}
+
+/* ---------- Tablet icon-rail range (769-1024px) ---------- */
+@media (min-width: 769px) and (max-width: 1024px) {
+    /* Labels are hidden everywhere in this range (dashboard.css
+       564-567), so a text-only header row has nothing to show — hide
+       the whole row rather than leave an empty clickable bar. */
+    .nav-group-header {
+        display: none;
+    }
+}
+
+/* ---------- <=1024px (tablet + mobile) ---------- */
+@media (max-width: 1024px) {
+    /* .nav-group-body has no max-height rule outside >=1025px above, so
+       it's already visible by default here — this just documents that
+       explicitly rather than leaving it implicit. */
+    .nav-group-body {
+        max-height: none;
+    }
+}

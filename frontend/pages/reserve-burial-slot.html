@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reserve Burial Slot (AI) | Cemetery Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../../assets/css/tokens.css">
     <link rel="stylesheet" href="../../assets/css/typography.css">
@@ -18,25 +19,55 @@
     <link rel="stylesheet" href="../../assets/css/components/forms.css">
     <link rel="stylesheet" href="../../assets/css/components/tables.css">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
+    <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css">
     <link rel="stylesheet" href="../../assets/css/reserve-burial-slot.css">
+
+    <link rel="stylesheet" href="../../assets/css/theme-dark.css">
 </head>
 <body class="dashboard-body">
+<script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
     <div class="dashboard-container">
         <!-- STATIC SIDEBAR (same as admin dashboard) -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
+                <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
             </div>
             <div class="sidebar-nav">
-                <a href="dashboard_user.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
-                <a href="reserve-burial-slot.html" class="nav-item active"><i class="fas fa-monument icon"></i> <span>Reserve Burial Slot</span></a>
-                <a href="my-reservations.html" class="nav-item"><i class="fas fa-bookmark icon"></i> <span>My Reservations</span></a>
-                <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
-                <a href="payment-history.html" class="nav-item"><i class="fas fa-receipt icon"></i> <span>Payment History</span></a>
-                <a href="my-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>My Records</span></a>
-                <a href="notifications.html" class="nav-item"><i class="fas fa-bell icon"></i> <span>Notifications</span></a>
-                <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
-                <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
+                <div class="nav-group open">
+                    <button type="button" class="nav-group-header"><span>Overview</span><i class="fas fa-chevron-down chev"></i></button>
+                    <div class="nav-group-body">
+                    <a href="dashboard_user.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
+                    </div>
+                </div>
+                <div class="nav-group open">
+                    <button type="button" class="nav-group-header"><span>Scheduling &amp; Lots</span><i class="fas fa-chevron-down chev"></i></button>
+                    <div class="nav-group-body">
+                    <a href="reserve-burial-slot.html" class="nav-item active"><i class="fas fa-monument icon"></i> <span>Reserve Burial Slot</span></a>
+                    <a href="my-reservations.html" class="nav-item"><i class="fas fa-bookmark icon"></i> <span>My Reservations</span></a>
+                    </div>
+                </div>
+                <div class="nav-group open">
+                    <button type="button" class="nav-group-header"><span>Records &amp; Care</span><i class="fas fa-chevron-down chev"></i></button>
+                    <div class="nav-group-body">
+                    <a href="my-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>My Records</span></a>
+                    </div>
+                </div>
+                <div class="nav-group">
+                    <button type="button" class="nav-group-header"><span>Finance</span><i class="fas fa-chevron-down chev"></i></button>
+                    <div class="nav-group-body">
+                    <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
+                    <a href="payment-history.html" class="nav-item"><i class="fas fa-receipt icon"></i> <span>Payment History</span></a>
+                    </div>
+                </div>
+                <div class="nav-group">
+                    <button type="button" class="nav-group-header"><span>Account</span><i class="fas fa-chevron-down chev"></i></button>
+                    <div class="nav-group-body">
+                    <a href="notifications.html" class="nav-item"><i class="fas fa-bell icon"></i> <span>Notifications</span></a>
+                    <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
+                    <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
+                    </div>
+                </div>
             </div>
             <div class="sidebar-footer">
                 <div class="user-chip">
@@ -73,7 +104,8 @@
                 </div>
                 <div class="user-info">
                     <div class="profile">
-                        <div class="notification-icon" id="notificationIcon">
+                        <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
+                    <div class="notification-icon" id="notificationIcon">
                             <i class="fas fa-bell"></i>
                             <span class="notification-badge" id="notificationBadge">3</span>
                         </div>
@@ -109,5 +141,7 @@
     <script src="../../assets/js/shared/lot-chat-assistant.js"></script>
     <script src="../../assets/js/shared/booking-wizard.js"></script>
     <script src="../../assets/js/pages/reserve-burial-slot.js"></script>
+    <script src="../../assets/js/shared/theme-toggle.js"></script>
+    <script src="../../assets/js/shared/sidebar-nav.js"></script>
 </body>
 </html>
