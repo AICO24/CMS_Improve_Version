@@ -67,4 +67,14 @@
 
     /* Overlay (added in Batch 2 for the modal component) */
     --overlay-scrim: rgba(15, 23, 42, 0.5);
+
+    /* Accent — bronze (added for the dashboard reskin; unused by login/register,
+       additive only, no existing value above this line was changed) */
+    --color-accent-50:  #f5ece0;
+    --color-accent-300: #d9b884;
+    --color-accent-500: #b3813f;
+    --color-accent-700: #8a6230;
+
+    /* Display type pairing (added for the dashboard reskin) */
+    --font-display: 'Fraunces', ui-serif, Georgia, serif;
 }

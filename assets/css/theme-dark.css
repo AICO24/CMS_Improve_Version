@@ -1,0 +1,122 @@
+/*
+  Design System — Dark theme overrides.
+
+  Scoped ONLY to `.dashboard-body[data-theme="dark"]` — every in-scope
+  page's <body> already carries `dashboard-body`, and login/register
+  never load this file and never carry that class, so this file cannot
+  affect them under any circumstance (belt-and-suspenders: two
+  independent guarantees, not just the class scoping alone).
+
+  Section 1 redefines the semantic tokens from tokens.css that most of
+  dashboard.css / components/*.css already consume via var(--color-*) —
+  those get dark styling for free, no selector needed here.
+
+  Section 2 is the explicit, case-by-case list of shared-file rules that
+  either hardcode a literal hex color or reuse --color-white to mean
+  "card background" (which can't be redefined globally — --color-white
+  is also used as literal white text/icon color on the sidebar's fixed
+  dark navy, so retargeting it would break that). Page-specific unique
+  colors (e.g. burial-scheduling's chat bubbles, per-page stat grids)
+  are NOT assumed covered here — those are handled incrementally during
+  QA, same as the Phase 1 audit found them one file at a time.
+*/
+
+/* ---------- 1. Token overrides ---------- */
+.dashboard-body[data-theme="dark"] {
+    --color-bg:           #141a17;
+    --color-surface:      #1e2622;
+    --color-surface-soft: #26302b;
+    --color-border:       #33403a;
+
+    --color-text:       #e9ede9;
+    --color-text-muted: #a9b6ae;
+    --color-text-faint: #7c887f;
+
+    --color-success-soft:   rgba(22, 163, 74, 0.16);
+    --color-warning-soft:   rgba(245, 158, 11, 0.16);
+    --color-danger-soft:    rgba(220, 38, 38, 0.16);
+    --color-info-soft:      rgba(37, 99, 235, 0.16);
+
+    --overlay-scrim: rgba(0, 0, 0, 0.6);
+
+    /* Explicit, not just the token redefinition above: several
+       page-specific CSS files hardcode `.dashboard-body{background:#f4f7fa}`
+       as a literal hex (not var(--color-bg)) and load after dashboard.css,
+       so they'd otherwise shadow the token change. This selector's higher
+       specificity (attribute selector vs. plain class) wins regardless of
+       file order — same fix shape as the Phase 1 bug, applied pre-emptively. */
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+/* ---------- 2. Explicit companion overrides ---------- */
+
+/* dashboard.css: surfaces that use var(--color-white) to mean "card
+   background", not literal white text/icons on the (always-dark)
+   sidebar — those stay untouched. */
+.dashboard-body[data-theme="dark"] .top-bar,
+.dashboard-body[data-theme="dark"] .stat-card,
+.dashboard-body[data-theme="dark"] .recent-list li {
+    background: var(--color-surface);
+}
+
+.dashboard-body[data-theme="dark"] .stat-title,
+.dashboard-body[data-theme="dark"] .user-role {
+    color: var(--color-text-muted);
+}
+
+.dashboard-body[data-theme="dark"] .stat-value {
+    color: var(--color-text);
+}
+
+.dashboard-body[data-theme="dark"] .stat-sub {
+    color: var(--color-text-faint);
+}
+
+/* components/cards.css */
+.dashboard-body[data-theme="dark"] .card h4,
+.dashboard-body[data-theme="dark"] .card-block h4 {
+    color: var(--color-text);
+}
+
+/* components/tables.css */
+.dashboard-body[data-theme="dark"] .data-table th {
+    background: var(--color-surface-soft);
+    color: var(--color-text-muted);
+}
+
+.dashboard-body[data-theme="dark"] .data-table tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.dashboard-body[data-theme="dark"] .data-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.dashboard-body[data-theme="dark"] .table-search {
+    background: var(--color-surface);
+}
+
+.dashboard-body[data-theme="dark"] .pagination-info {
+    color: var(--color-text-muted);
+}
+
+/* components/modals.css */
+.dashboard-body[data-theme="dark"] .close,
+.dashboard-body[data-theme="dark"] .close-view {
+    color: var(--color-text-muted);
+}
+
+/* components/forms.css */
+.dashboard-body[data-theme="dark"] .form-group input,
+.dashboard-body[data-theme="dark"] .form-group select,
+.dashboard-body[data-theme="dark"] .form-group textarea {
+    background: var(--color-surface);
+}
+
+.dashboard-body[data-theme="dark"] .form-group input:disabled,
+.dashboard-body[data-theme="dark"] .form-group select:disabled,
+.dashboard-body[data-theme="dark"] .form-group textarea:disabled {
+    background: var(--color-surface-soft);
+    color: var(--color-text-faint);
+}
