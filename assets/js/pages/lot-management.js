@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             ...(options.headers || {}),
         };
 
-        const response = await fetch(`http://localhost/CMS/backend/api/${endpoint}`, {
+        const response = await fetch(`${API_BASE}/${endpoint}`, {
             ...options,
             headers,
             body: options.body ? JSON.stringify(options.body) : undefined,
