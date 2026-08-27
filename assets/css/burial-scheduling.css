@@ -15,7 +15,6 @@
 }
 
 .main-content {
-    margin-left: 260px;
     flex: 1;
     height: 100vh;
     min-height: 0;
