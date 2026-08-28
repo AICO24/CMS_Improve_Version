@@ -1,0 +1,39 @@
+/*
+  Settings — currently a placeholder (no preferences are wired up yet;
+  see AI Configuration and Profile for the app's other stub-content
+  pages). This file only styles that placeholder card — everything else
+  on the page (shell, .card, .muted) comes from the shared stylesheets
+  already linked here.
+*/
+
+.settings-placeholder {
+    text-align: center;
+    padding: var(--space-8) var(--space-6);
+}
+
+.settings-placeholder-icon {
+    /* --color-info-soft/-strong rather than the primary green scale —
+       those two are redefined for dark mode (theme-dark.css's token
+       layer), the raw --color-primary-* steps aren't, so a primary-50
+       swatch would've stayed light-mode-mint regardless of the theme
+       toggle. */
+    width: 56px;
+    height: 56px;
+    margin: 0 auto var(--space-4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-info-soft);
+    color: var(--color-info-strong);
+    font-size: 1.4rem;
+}
+
+.settings-placeholder h4 {
+    margin-bottom: var(--space-2);
+}
+
+.settings-placeholder p {
+    max-width: 46ch;
+    margin: 0 auto;
+}

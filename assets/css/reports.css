@@ -114,9 +114,9 @@
 }
 
 .tab-btn {
-    border: 1px solid #d6dbe6;
-    background: var(--color-white);
-    color: #243736;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
     border-radius: 14px;
     padding: 10px 16px;
     cursor: pointer;
@@ -167,19 +167,16 @@
 .filter-bar input {
     padding: 10px 14px;
     border-radius: 14px;
-    border: 1px solid #d6dbe6;
+    border: 1px solid var(--color-border);
 }
 
 /* .btn-filter now comes from assets/css/components/buttons.css (Batch 5) */
 
-.card {
-    background: #fff;
-    border-radius: 22px;
-    box-shadow: 0 16px 32px rgba(15,23,42,0.05);
-    padding: 22px;
-    margin-bottom: 24px;
-}
-
+/* .card's own background/radius/shadow/padding override is gone (Phase
+   5c) — it hardcoded #fff with no dark-mode coverage of its own, which
+   broke every chart card on this page (10+ instances across 5 tabs)
+   under the theme toggle. components/cards.css's canonical, token-driven
+   .card now applies directly instead. */
 .card h4 {
     margin-bottom: 18px;
 }
@@ -191,51 +188,28 @@
 
 /* .data-table th/td styling now comes from assets/css/components/tables.css (Batch 5) */
 
-/* .status-badge base (shape/padding/size) now comes from assets/css/dashboard.css so
-   this module's badges match the rest of the app; only state colors stay local. */
-
-.status-warning {
-    background: #fff4e5;
-    color: #9d6114;
-}
-
-.status-danger {
-    background: #fee2e2;
-    color: #b91c1c;
-}
-
-.status-success {
-    background: #dcfce7;
-    color: #166534;
-}
+/* .status-badge base (shape/padding/size) AND its state colors
+   (.status-warning/-danger/-success) now come entirely from
+   dashboard.css's canonical, token-driven version — this file's own
+   copy was a byte-for-byte value match in light mode, so removing it
+   changes nothing there, but it was also hardcoded with no dark-mode
+   coverage of its own (same bug shape as .card above), so the Expiring/
+   Expired badges on this page's Expiration tab were light-mode-only
+   regardless of the theme toggle. */
 
 /* .table-container / .table-scroll now come from assets/css/components/tables.css (Batch 5) */
 
-.muted {
-    color: #64748b;
-    font-size: 0.95rem;
-}
+/* .muted's own color override is gone — components/cards.css already
+   defines a token-driven .muted, this was a redundant duplicate (same
+   #64748b/var(--color-text-muted) value in light mode) blocking its
+   dark-mode coverage on this page specifically. */
 
-.activity-row {
-    display: grid;
-    gap: 18px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.activity-block {
-    background: #fff;
-    border-radius: 20px;
-    padding: 20px;
-    box-shadow: 0 16px 32px rgba(15,23,42,0.05);
-}
-
-.activity-block h4 {
-    margin-bottom: 10px;
-}
+/* .activity-row/.activity-block removed — confirmed via grep that
+   reports.html has no markup using either class; dead CSS, likely
+   copy-pasted from another module's stylesheet and never wired up here. */
 
 @media (max-width: 1080px) {
-    .stats-row,
-    .activity-row {
+    .stats-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
@@ -247,8 +221,7 @@
     .content-area {
         padding: 16px;
     }
-    .stats-row,
-    .activity-row {
+    .stats-row {
         grid-template-columns: 1fr;
     }
     .data-table {

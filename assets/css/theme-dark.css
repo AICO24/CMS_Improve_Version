@@ -456,12 +456,14 @@
 }
 
 /* ---------- reports.css ---------- */
-.dashboard-body[data-theme="dark"] .tab-btn {
-    background: var(--color-surface);
-    border-color: var(--color-border);
-    color: var(--color-text);
-}
-/* .tab-btn.active keeps its navy fill — already dark-friendly, no override needed */
+/* .tab-btn is now token-driven at the source (Phase 5c), so this override
+   is redundant — removed rather than left as a no-op duplicate. .card,
+   .status-warning/-danger/-success, and .muted on this page were also
+   hardcoded overrides shadowing the shared token-driven versions from
+   components/cards.css and dashboard.css with zero dark-mode coverage of
+   their own; deleted at the source instead of patched here, so the
+   canonical rules apply. .tab-btn.active keeps its navy fill — already
+   dark-friendly, no override needed. */
 
 /* ---------- forecast.css ---------- */
 .dashboard-body[data-theme="dark"] #forecastDetails th {
