@@ -1,21 +1,20 @@
-.user-welcome-card {
-    padding: 24px;
-    border-radius: 22px;
-    background: #fff;
-    box-shadow: 0 10px 30px rgba(15,23,42,0.06);
-    margin-bottom: 24px;
-}
+/* .user-welcome-card no longer overrides background/radius/shadow/padding
+   — this element already carries class="card" in the HTML, and those
+   hardcoded light-mode-only values (background:#fff etc.) were loading
+   after and beating components/cards.css's token-driven .card rule, so
+   this card stayed white regardless of the theme toggle. Letting .card
+   do the work fixes that; nothing here needs its own box model. */
 
 .welcome-label {
     margin: 0;
     font-size: 1.15rem;
     font-weight: 700;
-    color: #243736;
+    color: var(--color-text);
 }
 
 .welcome-note {
     margin: 12px 0 0;
-    color: #5f6e7a;
+    color: var(--color-text-muted);
     line-height: 1.7;
     max-width: 580px;
 }
@@ -37,22 +36,12 @@
     min-height: 150px;
 }
 
-.recent-list li {
-    padding: 18px;
-}
-
-.recent-list li strong {
-    font-size: 0.98rem;
-    color: #243736;
-}
-
-.recent-list li .muted {
-    margin-top: 6px;
-    display: block;
-    color: #64748b;
-    font-size: 0.9rem;
-    line-height: 1.5;
-}
+/* .recent-list li no longer has its own bespoke padding/text styling —
+   dashboard_user.js now builds each item with class="recent-item" (the
+   same shared component the Admin/Staff dashboards use for their
+   transaction list, defined once in dashboard.css), so all three
+   dashboards render list items identically instead of two different
+   visual languages. */
 
 .card-grid {
     display: grid;
@@ -78,7 +67,7 @@
     justify-content: space-between;
     gap: var(--space-4);
     padding: 10px 0;
-    border-bottom: 1px solid #edf2f7;
+    border-bottom: 1px solid var(--color-border);
     font-family: var(--font-sans);
     font-size: var(--fs-body-sm);
 }

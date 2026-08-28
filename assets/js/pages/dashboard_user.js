@@ -18,7 +18,8 @@ const formatDateTime = (dateValue, timeValue) => {
 
 const buildListItem = (title, subtitle) => {
     const li = document.createElement('li');
-    li.innerHTML = `<div><strong>${title}</strong><div class="muted">${subtitle}</div></div>`;
+    li.className = 'recent-item';
+    li.innerHTML = `<div class="recent-item-title">${title}</div><div class="recent-item-meta">${subtitle}</div>`;
     return li;
 };
 
