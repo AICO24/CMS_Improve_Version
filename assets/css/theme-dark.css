@@ -377,14 +377,15 @@
 .dashboard-body[data-theme="dark"] .status-approved,
 .dashboard-body[data-theme="dark"] .status-completed,
 .dashboard-body[data-theme="dark"] .status-success,
-.dashboard-body[data-theme="dark"] .status-occupied {
+.dashboard-body[data-theme="dark"] .status-available {
     background: var(--color-success-soft);
     color: #7fd9a4;
 }
 
 .dashboard-body[data-theme="dark"] .status-badge.cancelled,
 .dashboard-body[data-theme="dark"] .status-denied,
-.dashboard-body[data-theme="dark"] .status-danger {
+.dashboard-body[data-theme="dark"] .status-danger,
+.dashboard-body[data-theme="dark"] .status-occupied {
     background: var(--color-danger-soft);
     color: #f5a3a3;
 }
@@ -403,11 +404,6 @@
 .dashboard-body[data-theme="dark"] .status-badge.completed {
     background: var(--color-info-soft);
     color: #8ab4f8;
-}
-
-.dashboard-body[data-theme="dark"] .status-available {
-    background: var(--color-surface-soft);
-    color: var(--color-text-muted);
 }
 
 .dashboard-body[data-theme="dark"] .status-message {

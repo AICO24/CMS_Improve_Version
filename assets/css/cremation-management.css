@@ -497,14 +497,24 @@
     margin-top: 6px;
 }
 
+/* Corrected to match the rest of the app's semantics: "Occupied" is
+   danger-toned and "Available" is success-toned everywhere else
+   (Lot Management's .status-Occupied/.status-Available, the slot-matrix,
+   the legend badges) — this file previously had the two inverted, so
+   the same word rendered a contradictory color depending on which page
+   an admin was on. Token-driven now instead of hardcoded hex, so dark
+   mode inherits automatically via theme-dark.css's token redefinition
+   (its explicit .status-occupied/.status-available overrides below are
+   updated to match, for clarity rather than relying on inheritance
+   alone). */
 .status-occupied {
-    background: #dcfce7;
-    color: #166534;
+    background: var(--color-danger-soft);
+    color: var(--color-danger-strong);
 }
 
 .status-available {
-    background: #e2e8f0;
-    color: #475569;
+    background: var(--color-success-soft);
+    color: var(--color-success-strong);
 }
 
 .deceased-name {

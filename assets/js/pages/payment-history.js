@@ -100,6 +100,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         return `₱${parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
 
+    function statusBadgeClass(status) {
+        if (status === 'Verified') return 'status-success';
+        if (status === 'Rejected') return 'status-danger';
+        return 'status-warning';
+    }
+
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (char) => ({
             '&': '&amp;',
@@ -135,7 +141,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <td>${formatCurrency(p.amount)}</td>
                     <td>${date}</td>
                     <td>${p.payment_method || '—'}</td>
-                    <td>${p.verification_status || 'Pending'}</td>
+                    <td><span class="status-badge ${statusBadgeClass(p.verification_status || 'Pending')}">${p.verification_status || 'Pending'}</span></td>
                     <td>${p.received_by_name || 'N/A'}</td>
                     <td class="action-buttons">
                         <button class="btn-view" title="View"><i class="fas fa-eye"></i></button>
@@ -258,7 +264,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <div class="detail-row"><span>Amount</span><strong>${formatCurrency(payment.amount)}</strong></div>
                 <div class="detail-row"><span>Payment Date</span><strong>${payment.payment_date || '—'}</strong></div>
                 <div class="detail-row"><span>Payment Method</span><strong>${payment.payment_method || '—'}</strong></div>
-                <div class="detail-row"><span>Verification Status</span><strong>${payment.verification_status || 'Pending'}</strong></div>
+                <div class="detail-row"><span>Verification Status</span><span class="status-badge ${statusBadgeClass(payment.verification_status || 'Pending')}">${payment.verification_status || 'Pending'}</span></div>
                 <div class="detail-row"><span>Verified At</span><strong>${payment.verified_at || '—'}</strong></div>
                 <div class="detail-row"><span>Receipt</span><strong>${payment.receipt_url ? `<a href="${payment.receipt_url}" target="_blank">Download</a>` : 'Not attached'}</strong></div>
                 <div class="detail-row"><span>Notes</span><strong>${payment.notes || '—'}</strong></div>
