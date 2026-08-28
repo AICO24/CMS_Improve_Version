@@ -364,6 +364,20 @@
     font-size: 0.85rem;
 }
 
+.error {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    grid-column: 1 / -1;
+    padding: 16px 20px;
+    border-radius: var(--radius-md, 12px);
+    background: var(--color-danger-soft, #fbe7e6);
+    color: var(--color-danger-strong, #991b1b);
+    font-size: 0.9rem;
+}
+
 .toolbar-row {
     display: flex;
     flex-wrap: wrap;

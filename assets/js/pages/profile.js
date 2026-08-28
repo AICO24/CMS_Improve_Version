@@ -23,6 +23,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         setText('userRole', roleLabel);
         setText('sidebarUserName', fullName);
         setText('sidebarUserRole', roleLabel);
+        setText('profileFullName', fullName);
+        setText('profileUsername', user.username || '—');
+        setText('profileEmail', user.email || '—');
+        setText('profileRole', roleLabel);
         renderSidebarForRole(user.role);
     } catch (error) {
         console.error('Failed to load profile', error);
