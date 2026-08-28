@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!button) return;
         const scheduleId = button.getAttribute('data-id');
         if (!scheduleId) return;
-        await cancelReservation(scheduleId);
+        await withButtonLoading(button, () => cancelReservation(scheduleId));
     });
 
     function debounce(fn, delay = 300) {

@@ -1,0 +1,35 @@
+/*
+  My Reservations (citizen) — page-specific extras only. Layout (card,
+  toolbar-action-row/toolbar-main-row, status-select-field, table,
+  pagination) is inherited from user-management.css, already linked on
+  this page. .status-badge's shape (padding/radius/font) comes from the
+  canonical rule in dashboard.css — only the 4 status colors are
+  page-local here, deliberately matching Manage Reservations' exact
+  palette (manage-reservations.css) so a citizen and a staff member see
+  the same colors for the same status.
+
+  Moved out of an inline <style> block in my-reservations.html (Phase
+  5c) — this was the only page in the app defining its CSS inline
+  instead of as a linked file; pure extraction, same four rules,
+  unchanged values, so it's a zero-visual-difference change.
+*/
+
+.status-badge.pending {
+    background: #f7f0ff;
+    color: #6d3d9d;
+}
+
+.status-badge.confirmed {
+    background: #e6f8ef;
+    color: #147046;
+}
+
+.status-badge.cancelled {
+    background: #fff1f2;
+    color: #9e1a24;
+}
+
+.status-badge.completed {
+    background: #e8f5ff;
+    color: #1d4ed8;
+}
