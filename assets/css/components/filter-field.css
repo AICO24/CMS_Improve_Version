@@ -1,0 +1,98 @@
+/*
+  Design System — Component: Filter Field (Phase 2 foundation)
+
+  Canonical toolbar filter control. NOT yet linked into any page <head>
+  — additive-only, zero visual change until a later migration phase
+  links this file and moves a page's markup onto it.
+
+  Generalizes the "labeled filter" pattern the audit found independently
+  redefined (same shape, different hardcoded values) as `.status-select-
+  field` / `.date-filter-field` in manage-reservations.css, user-
+  management.css, expiration-monitoring.css, payments.css, and twice in
+  payment-history.css, plus the simpler unlabeled `.toolbar-filters
+  select` variant used elsewhere. `.filter-field` is the labeled
+  (caption + control) version; `.filter-select` is the plain, unlabeled
+  version — both share the same token-driven look so a toolbar can mix
+  them.
+*/
+
+.filter-field {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+    height: 46px;
+    min-width: 152px;
+    padding: 4px var(--space-3) 5px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-1);
+    transition: border-color var(--duration-base) var(--easing-standard),
+                box-shadow var(--duration-base) var(--easing-standard),
+                transform var(--duration-base) var(--easing-standard);
+}
+
+.filter-field__label {
+    color: var(--color-text-muted);
+    font-size: var(--fs-caption);
+    font-weight: var(--fw-bold);
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.filter-field select,
+.filter-field input {
+    height: 23px;
+    width: 100%;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body-sm);
+}
+
+.filter-field select {
+    padding-right: var(--space-4);
+}
+
+.filter-field select:focus,
+.filter-field input:focus {
+    outline: none;
+}
+
+.filter-field:focus-within {
+    border-color: var(--color-primary-300);
+    box-shadow: 0 0 0 3px rgba(44, 94, 71, 0.18);
+}
+
+.filter-field:hover {
+    transform: translateY(-1px);
+    border-color: var(--color-primary-300);
+}
+
+/* Plain, unlabeled select — for a toolbar slot that doesn't need the
+   uppercase caption (generalizes `.toolbar-filters select`). */
+.filter-select {
+    height: 46px;
+    min-width: 140px;
+    padding: 0 var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body-sm);
+    transition: border-color var(--duration-base) var(--easing-standard),
+                box-shadow var(--duration-base) var(--easing-standard);
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--color-primary-300);
+    box-shadow: 0 0 0 3px rgba(44, 94, 71, 0.18);
+}

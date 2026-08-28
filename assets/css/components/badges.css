@@ -1,0 +1,80 @@
+/*
+  Design System — Component: Badges (Phase 2 foundation)
+
+  Canonical, tone-based status-pill component. NOT yet linked into any
+  page <head> — this file is additive-only and introduces zero visual
+  change until a later phase both (a) links it and (b) migrates a page's
+  markup from one of the ad hoc classes below onto `.badge`.
+
+  Why a new `.badge` instead of editing the existing `.status-badge` in
+  dashboard.css: dashboard.css:523-556 already has a working canonical
+  system (`.status-badge` + `.status-success/-warning/-danger/-info/
+  -neutral`) that several pages already use correctly (reports.css,
+  expiration-monitoring.css, forecast.css). Redeclaring the same selector
+  in a second loaded file would only add a silent cascade-order risk for
+  zero benefit. `.badge` is a distinct class, so this file can exist
+  side-by-side with dashboard.css indefinitely with no collision, and a
+  migration phase can move pages onto it at its own pace.
+
+  This consolidates what the audit found as 5-6 separate, sometimes
+  contradictory status vocabularies: `.status-Available/-Occupied`
+  (lot-management.css), `.status-occupied/-available` (cremation-
+  management.css — inverted color semantics vs. lot-management.css for
+  the same words), `.status-pending/-approved/-completed/-denied`
+  (relocation-management.css), `.status-badge.pending/.confirmed`
+  (manage-reservations.css / my-reservations), and Payment History's
+  missing badge wrapper entirely. `.badge` replaces all of them with one
+  tone-driven system; the *tone* (success/warning/danger/info/neutral) is
+  a deliberate design decision made per-status-value when a page migrates
+  onto it, not baked into the component.
+
+  One token gap the audit flagged is fixed here (not in dashboard.css,
+  to avoid a visual change on the pages already using the old class):
+  dashboard.css's `.status-warning` hardcodes `color: #9d6114` instead of
+  `var(--color-warning-strong)` (`#b45309`). This component uses the
+  token.
+*/
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    height: 24px;
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-sans);
+    font-size: var(--fs-caption);
+    font-weight: var(--fw-caption);
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.badge--success {
+    background: var(--color-success-soft);
+    color: var(--color-success-strong);
+}
+
+.badge--warning {
+    background: var(--color-warning-soft);
+    color: var(--color-warning-strong);
+}
+
+.badge--danger {
+    background: var(--color-danger-soft);
+    color: var(--color-danger-strong);
+}
+
+.badge--info {
+    background: var(--color-info-soft);
+    color: var(--color-info-strong);
+}
+
+.badge--neutral {
+    background: var(--color-neutral-100);
+    color: var(--color-neutral-700);
+}
+
+/* Two-dimension rows (e.g. User Management's role + active-status pair)
+   can place two `.badge` elements side by side — no separate class
+   needed for that case, it's just two instances of this component. */
