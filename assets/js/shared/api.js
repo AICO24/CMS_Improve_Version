@@ -182,6 +182,7 @@ const PAGE_ROLE_ACCESS = {
     'user-management.html': ['admin'],
     'audit.html': ['admin'],
     'ai.html': ['admin'],
+    'exceptions.html': ['admin', 'staff'],
     'reserve-burial-slot.html': ['user'],
     'my-reservations.html': ['user'],
     'payment-history.html': ['user'],
@@ -209,8 +210,25 @@ function getPageFileName(href) {
 // page shared across roles (e.g. payments.html) never shows nav items (like
 // User Management or Audit Logs) that role can't actually access. This is
 // the default for every protected page.
+// Shared admin/staff pages ship a single hardcoded Dashboard link
+// (dashboard_admin.html). For a staff-verified role that would otherwise get
+// stripped by the removal loop below (PAGE_ROLE_ACCESS restricts it to
+// admin), silently dropping the Dashboard item entirely. Rewrite it to the
+// current server-verified role's own dashboard first, so it survives
+// filtering — navigation destination only, not a security check (F2 fix).
+const ROLE_DASHBOARD_HREFS = { admin: 'dashboard_admin.html', staff: 'dashboard_staff.html', user: 'dashboard_user.html' };
+
 function filterSidebarByRole(role) {
     const roleName = String(role || '').toLowerCase();
+    const roleDashboard = ROLE_DASHBOARD_HREFS[roleName];
+    if (roleDashboard) {
+        const dashboardLink = document.querySelector(
+            '.sidebar .nav-item[href="dashboard_admin.html"], .sidebar .nav-item[href="dashboard_staff.html"], .sidebar .nav-item[href="dashboard_user.html"]'
+        );
+        if (dashboardLink) {
+            dashboardLink.setAttribute('href', roleDashboard);
+        }
+    }
     document.querySelectorAll('.sidebar .nav-item[href]').forEach((link) => {
         const href = link.getAttribute('href');
         if (!href) return;
