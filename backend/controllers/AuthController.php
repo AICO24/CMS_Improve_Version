@@ -15,7 +15,6 @@ class AuthController {
     public function login($data) {
         $inputUser = trim((string) ($data['username'] ?? $data['email'] ?? ''));
         $password = (string) ($data['password'] ?? '');
-        $selectedRole = isset($data['role']) ? $this->normalizeRoleKey($data['role']) : null;
 
         if ($inputUser === '' || $password === '') {
             return ['error' => 'Email/Username and password are required', 'code' => 400];
@@ -39,9 +38,6 @@ class AuthController {
         }
 
         $role = $this->normalizeRoleKey($this->userModel->getRole($user['user_id']));
-        if ($selectedRole && $role && $selectedRole !== $role) {
-            return ['error' => 'Selected role does not match the account role', 'code' => 403];
-        }
 
         $this->userModel->updateLastLogin($user['user_id']);
         $this->auditLogModel->log(
