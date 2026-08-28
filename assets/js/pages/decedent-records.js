@@ -538,16 +538,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             alert(error.message || 'Could not delete record.');
         }
     }
-
-    function escapeHtml(value) {
-        if (value === null || value === undefined) {
-            return '';
-        }
-        return String(value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    }
+    // (escapeHtml is defined once, near the top of this file — this file
+    // used to have a second, functionally-identical copy down here.)
 });
