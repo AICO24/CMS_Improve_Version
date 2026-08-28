@@ -1,71 +1,20 @@
 /* Payments module styles */
-.dashboard-body {
-    background: #f4f7fa;
-    font-family: 'Inter', sans-serif;
-    color: #243736;
-}
 
-.dashboard-container {
-    display: flex;
-    min-height: 100vh;
-}
+/* Most of the app-shell chrome that used to be duplicated in full here
+   is removed (Phase 7), same cleanup as the rest of the module CSS
+   files earlier in this redesign — sidebar-header/nav/nav-item/footer,
+   .main-content, .profile/.profile-avatar/.profile-text/.user-name/
+   .user-role were all byte-for-byte (or near-identical) matches for
+   what dashboard.css already provides, confirmed the same way as every
+   other file this phase.
 
-.sidebar, .sidebar * {
-    text-decoration: none;
-}
-
-/* Sidebar sizing/position now comes solely from the shared responsive
-   shell in dashboard.css (Phase 8 audit fix) — this page's own copy was
-   unconditional and silently defeated dashboard.css's 1024px/768px
-   collapse breakpoints by winning the cascade at every width. */
-
-.sidebar-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-
-.sidebar-nav {
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
-}
-
-.nav-item {
-    padding: 12px 14px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    border-radius: 10px;
-    color: #d6def3;
-    transition: background 0.2s ease, transform 0.2s ease;
-}
-
-.nav-item:hover {
-    background: rgba(255,255,255,0.05);
-    transform: translateX(3px);
-}
-
-.nav-item.active {
-    background: #7aa77a;
-    color: #06321a;
-}
-
-.nav-item.admin-only {
-    display: none;
-}
-
-.sidebar-footer {
-    padding: 14px;
-    border-top: 1px solid rgba(255,255,255,0.08);
-}
-
-.main-content {
-    min-height: 100vh;
-    transition: margin-left 220ms ease;
-}
-
+   Kept, deliberately, unlike those: `.top-bar`'s backdrop-filter blur +
+   translucent border/shadow and `.top-left h3`'s color. Those aren't
+   duplicates of anything — no other page in the app has this treatment
+   — so removing them wouldn't have been deduplication, it would have
+   been deleting a page-specific design choice without being sure it
+   was unintentional. Left alone rather than guessing on a high-risk
+   page. */
 .top-bar {
     background: #fff;
     backdrop-filter: blur(14px);
@@ -81,61 +30,11 @@
     box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
 }
 
-.top-left {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-
 .top-left h3 {
     color: var(--color-primary-800);
     font-weight: 800;
     letter-spacing: 0;
 }
-
-/* .hamburger and its SVG icon states now come from assets/css/dashboard.css (Batch 6) -- the previous per-page copy had .hamburger input { display: none; }, which made the toggle unreachable by keyboard */
-
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.profile {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.profile-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #eef3f7;
-    color: #2b3658;
-}
-
-.profile-text {
-    display: flex;
-    flex-direction: column;
-}
-
-
-/* .logout-btn/.Btn (+ .sign/.text sliding animation) now come from assets/css/dashboard.css (Batch 10) */
-
-.user-name {
-    font-weight: 700;
-    font-size: 0.95rem;
-}
-
-.user-role {
-    font-size: 0.8rem;
-    color: #6b7a73;
-}
-
 
 .content-area {
     padding: 24px;
@@ -1172,7 +1071,7 @@
     margin: 20px 0 6px;
     font-size: 0.85rem;
     font-weight: 700;
-    color: #6b7a73;
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -1186,7 +1085,7 @@
     justify-content: space-between;
     gap: 12px;
     padding: 12px 0;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .payment-detail-summary {
@@ -1249,7 +1148,7 @@
     padding: 10px 12px;
     cursor: pointer;
     font-size: 0.9rem;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .reference-search-result:last-child {
@@ -1285,11 +1184,11 @@
 }
 
 .detail-row span {
-    color: #64748b;
+    color: var(--color-text-muted);
 }
 
 .detail-row strong {
-    color: #1f2937;
+    color: var(--color-text);
     text-align: right;
     overflow-wrap: anywhere;
 }

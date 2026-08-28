@@ -1,5 +1,14 @@
 /* ==========================================================================
-   CITIZEN BURIAL SLOT RESERVATION (AI) — MODERN INTELLIGENCE WORKSPACE STYLES
+   AI BOOKING CHAT — MODERN INTELLIGENCE WORKSPACE STYLES
+
+   Shared by Burial Scheduling (admin/staff) and Reserve Burial Slot
+   (citizen) — both pages run the exact same chat engine
+   (lot-chat-assistant.js + booking-wizard.js) and, until Phase 8,
+   loaded two files here that were byte-for-byte identical except one
+   comment line (confirmed via diff). Consolidated into this one file;
+   burial-scheduling.css and reserve-burial-slot.css no longer exist.
+   theme-dark.css's dark-mode coverage for this file already assumed
+   this consolidation (see its own header comment for this section).
    ========================================================================== */
 
 /* ---------- BASE LAYOUT CHAINS ---------- */

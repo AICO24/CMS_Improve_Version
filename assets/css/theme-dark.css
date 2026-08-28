@@ -442,10 +442,9 @@
 }
 
 /* ---------- cremation-management.css ---------- */
-.dashboard-body[data-theme="dark"] .cremation-empty-state i {
-    background: rgba(194, 65, 12, 0.16);
-    color: #f0895f;
-}
+/* .cremation-empty-state i is token-driven at the source now (Phase 7)
+   — this override was patching a hardcoded custom orange that no longer
+   exists, so it's redundant rather than wrong; removed. */
 
 .dashboard-body[data-theme="dark"] .niche-number {
     color: var(--color-text);
@@ -488,11 +487,13 @@
 }
 
 /*
-   ---------- burial-scheduling.css / reserve-burial-slot.css ----------
-   The two files are byte-for-byte identical (confirmed) except a header
-   comment, so this one block covers both booking-chat pages. The chat
-   mechanics (pulseGlow/statusPulse/messageSlideIn keyframes, the wizard
-   JS) are untouched — only surface/text colors.
+   ---------- booking-chat.css ----------
+   Was two byte-for-byte-identical files (burial-scheduling.css and
+   reserve-burial-slot.css); consolidated into one shared file in Phase
+   8, exactly as this comment anticipated — this one block still covers
+   both booking-chat pages, unchanged. The chat mechanics (pulseGlow/
+   statusPulse/messageSlideIn keyframes, the wizard JS) are untouched —
+   only surface/text colors.
 */
 .dashboard-body[data-theme="dark"] .chat-window {
     background: var(--color-surface-soft);

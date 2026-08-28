@@ -1,107 +1,12 @@
 /* Expiration monitoring module styles */
-.dashboard-body {
-    background: #f4f7fa;
-    font-family: 'Inter', sans-serif;
-    color: #243736;
-}
 
-.dashboard-container {
-    display: flex;
-    min-height: 100vh;
-}
-
-/* Sidebar sizing/position now comes solely from the shared responsive
-   shell in dashboard.css (Phase 8 audit fix). A comment further down
-   this file already claimed the shared shell governed this — it didn't,
-   because this unconditional copy was still winning the cascade at
-   every width and silently defeating dashboard.css's 1024px/768px
-   collapse breakpoints. */
-
-.sidebar-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    flex-shrink: 0;
-}
-
-.sidebar-nav {
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
-}
-
-.nav-item,
-.nav-item * {
-    text-decoration: none !important;
-}
-
-.nav-item {
-    padding: 12px 14px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    border-radius: 10px;
-    color: #d6def3;
-}
-
-.nav-item:hover {
-    background: rgba(255,255,255,0.05);
-    transform: translateX(3px);
-}
-
-.nav-item.active {
-    background: #7aa77a;
-    color: #06321a;
-}
-
-/* margin-left/transition now come from the shared dashboard.css (Phase 8) */
-.main-content {
-    min-height: 100vh;
-    flex: 1;
-}
-
-.top-bar {
-    background: #fff;
-    padding: 16px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    box-shadow: 0 1px 4px rgba(15,23,42,0.06);
-}
-
-.top-left {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-
-/* .hamburger and its SVG icon states now come from assets/css/dashboard.css (Batch 6) -- the previous per-page copy had .hamburger input { display: none; }, which made the toggle unreachable by keyboard */
-
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.profile-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #eef3f7;
-    color: #2b3658;
-}
-
+/* The app-shell chrome duplicated in full here is removed (Phase 7),
+   same cleanup as the rest of the module CSS files this redesign —
+   every rule was already provided by the shared dashboard.css. */
 
 .content-area {
     padding: 24px;
 }
-
-/* .sidebar.collapsed pin/unpin now comes from the shared dashboard.css (Batch 3) */
 
 /* .stats-row / .stat-card / .stat-title / .stat-value now come from
    assets/css/dashboard.css so this module's stat cards match every other module. */
@@ -216,14 +121,19 @@
     font-size: 0.8rem;
 }
 
+/* .control-row is this page's equivalent of the .toolbar-row wrapper
+   several other modules use — different class name, so it didn't
+   benefit from theme-dark.css's existing generic .toolbar-row/
+   .filter-toolbar dark-mode rule. Token-driven now instead of adding a
+   third name to that generic rule, so it's covered regardless. */
 .control-row {
     display: flex;
     flex-direction: column;
     gap: 14px;
     margin-bottom: 24px;
     padding: 20px;
-    background: #fff;
-    border: 1px solid #e2e8f0;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-left: 6px solid #c2410c;
     border-radius: 14px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
@@ -231,19 +141,23 @@
 
 .toolbar-action-row {
     padding-bottom: 14px;
-    border-bottom: 1px solid #eef1f4;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .toolbar-section-label {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    color: #243736;
+    color: var(--color-text);
     font-size: 0.85rem;
     font-weight: 700;
     white-space: nowrap;
 }
 
+/* --color-warning-soft/-strong rather than the module's original custom
+   burnt-orange (#fff1e8/#c2410c) — close in hue, but token-driven so it
+   actually inverts in dark mode; the raw custom pair had no dark
+   coverage at all. */
 .toolbar-section-label i {
     width: 28px;
     height: 28px;
@@ -251,8 +165,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #fff1e8;
-    color: #c2410c;
+    background: var(--color-warning-soft);
+    color: var(--color-warning-strong);
 }
 
 .toolbar-main-row {
@@ -417,6 +331,9 @@
     height: 40px;
 }
 
+/* Same hardcoded-near-black-text empty-state bug fixed on this pattern
+   in decedent-records.css/user-management.css/manage-reservations.css
+   earlier in this redesign. */
 .expmon-empty-state {
     min-height: 140px;
     display: flex;
@@ -424,7 +341,7 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    color: #64748b;
+    color: var(--color-text-muted);
 }
 
 .expmon-empty-state i {
@@ -434,13 +351,13 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #fff1e8;
-    color: #c2410c;
+    background: var(--color-warning-soft);
+    color: var(--color-warning-strong);
     font-size: 18px;
 }
 
 .expmon-empty-state strong {
-    color: #243736;
+    color: var(--color-text);
     font-size: 1rem;
 }
 
@@ -450,13 +367,9 @@
 
 /* .btn-primary now comes from assets/css/components/buttons.css (Batch 5) */
 
-.card {
-    background: #fff;
-    border-radius: 22px;
-    box-shadow: 0 16px 32px rgba(15,23,42,0.05);
-    padding: 22px;
-    margin-bottom: 24px;
-}
+/* .card's own background/radius/shadow/padding override is gone — same
+   dark-mode bug found in reports.css/forecast.css: hardcoded #fff with
+   no dark coverage, shadowing the token-driven canonical .card. */
 
 .card-grid {
     display: grid;
@@ -468,10 +381,11 @@
     margin-bottom: 10px;
 }
 
-.card-block p {
-    color: #64748b;
-    margin-bottom: 16px;
-}
+/* .card-block p's color override is gone too — components/cards.css
+   already defines a token-driven `.card-block p, .muted` rule with the
+   identical value (#64748b == var(--color-text-muted)); this was a
+   redundant duplicate blocking that inheritance, same shape of bug as
+   reports.css's .muted fix. */
 
 .table-scroll {
     overflow-x: auto;
@@ -513,7 +427,7 @@
 }
 
 .activity-block {
-    background: #fff;
+    background: var(--color-surface);
     border-radius: 20px;
     padding: 20px;
     box-shadow: 0 16px 32px rgba(15,23,42,0.05);
@@ -524,13 +438,11 @@
 }
 
 .activity-block p {
-    color: #64748b;
+    color: var(--color-text-muted);
 }
 
-.muted {
-    color: #64748b;
-    font-size: 0.95rem;
-}
+/* .muted's own color override is gone — same redundant-duplicate-of-
+   cards.css's-token-driven-version pattern as .card-block p above. */
 
 @media (max-width: 1080px) {
     .stats-row,
