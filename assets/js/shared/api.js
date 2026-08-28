@@ -260,59 +260,107 @@ function filterSidebarByRole(role) {
 // the existing filterSidebarByRole behavior untouched.
 const PAGES_NEEDING_SIDEBAR_REBUILD = ['payments.html', 'notifications.html', 'profile.html', 'settings.html'];
 
-// Canonical sidebar nav-item sets, one per role — copied verbatim from
-// each role's own dashboard (dashboard_admin.html, dashboard_staff.html,
-// dashboard_user.html), the authoritative source per role.
+// Canonical sidebar structure, one per role — matches the grouped
+// architecture established in Batches 1-4 (Dashboard as a bare top-level
+// item, then role-appropriate Operations/Records/Finance/AI & Automation/
+// Reports/System groups). Each entry is either `{ item: [href, icon, label] }`
+// for a bare top-level link (Dashboard) or `{ group: label, items: [...] }`
+// for an accordion group — no group is ever listed with an empty `items`
+// array, so renderSidebarForRole() never has to filter anything out.
 const ROLE_SIDEBAR_LINKS = {
     admin: [
-        ['dashboard_admin.html', 'fa-gauge-high', 'Dashboard'],
-        ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
-        ['burial-scheduling.html', 'fa-monument', 'Burial Scheduling'],
-        ['manage-reservations.html', 'fa-calendar-check', 'Manage Reservations'],
-        ['cremation-management.html', 'fa-fire', 'Cremation Management'],
-        ['relocation-management.html', 'fa-truck-moving', 'Relocation Management'],
-        ['expiration-monitoring.html', 'fa-hourglass-half', 'Expiration Monitoring'],
-        ['decedent-records.html', 'fa-folder-open', 'Decedent Records'],
-        ['payments.html', 'fa-credit-card', 'Payments'],
-        ['reports.html', 'fa-chart-column', 'Reports'],
-        ['forecast.html', 'fa-chart-line', 'Capacity Forecast'],
-        ['ai.html', 'fa-robot', 'AI Configuration'],
-        ['user-management.html', 'fa-users', 'User Management'],
-        ['audit.html', 'fa-clipboard-list', 'Audit Logs'],
-        ['exceptions.html', 'fa-triangle-exclamation', 'Exceptions'],
+        { item: ['dashboard_admin.html', 'fa-gauge-high', 'Dashboard'] },
+        { group: 'Operations', items: [
+            ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
+            ['burial-scheduling.html', 'fa-monument', 'Burial Scheduling'],
+            ['manage-reservations.html', 'fa-calendar-check', 'Manage Reservations'],
+        ] },
+        { group: 'Records', items: [
+            ['decedent-records.html', 'fa-folder-open', 'Decedent Records'],
+            ['cremation-management.html', 'fa-fire', 'Cremation Management'],
+            ['relocation-management.html', 'fa-truck-moving', 'Relocation Management'],
+            ['expiration-monitoring.html', 'fa-hourglass-half', 'Expiration Monitoring'],
+        ] },
+        { group: 'Finance', items: [
+            ['payments.html', 'fa-credit-card', 'Payments'],
+        ] },
+        { group: 'AI & Automation', items: [
+            ['ai.html', 'fa-robot', 'AI Configuration'],
+            ['forecast.html', 'fa-chart-line', 'Capacity Forecast'],
+            ['exceptions.html', 'fa-triangle-exclamation', 'Exceptions'],
+        ] },
+        { group: 'Reports', items: [
+            ['reports.html', 'fa-chart-column', 'Reports'],
+        ] },
+        { group: 'System', items: [
+            ['user-management.html', 'fa-users', 'User Management'],
+            ['settings.html', 'fa-gear', 'Settings'],
+            ['audit.html', 'fa-clipboard-list', 'Audit Logs'],
+            ['profile.html', 'fa-id-card', 'Profile'],
+        ] },
     ],
     staff: [
-        ['dashboard_staff.html', 'fa-gauge-high', 'Dashboard'],
-        ['burial-scheduling.html', 'fa-monument', 'Burial Scheduling'],
-        ['manage-reservations.html', 'fa-calendar-check', 'Manage Reservations'],
-        ['exceptions.html', 'fa-triangle-exclamation', 'Exceptions'],
-        ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
-        ['payments.html', 'fa-credit-card', 'Payments'],
-        ['notifications.html', 'fa-bell', 'Notifications'],
+        { item: ['dashboard_staff.html', 'fa-gauge-high', 'Dashboard'] },
+        { group: 'Operations', items: [
+            ['burial-scheduling.html', 'fa-monument', 'Burial Scheduling'],
+            ['manage-reservations.html', 'fa-calendar-check', 'Manage Reservations'],
+            ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
+        ] },
+        { group: 'Finance', items: [
+            ['payments.html', 'fa-credit-card', 'Payments'],
+        ] },
+        { group: 'AI & Automation', items: [
+            ['exceptions.html', 'fa-triangle-exclamation', 'Exceptions'],
+        ] },
+        { group: 'System', items: [
+            ['settings.html', 'fa-gear', 'Settings'],
+            ['profile.html', 'fa-id-card', 'Profile'],
+        ] },
     ],
     user: [
-        ['dashboard_user.html', 'fa-gauge-high', 'Dashboard'],
-        ['reserve-burial-slot.html', 'fa-monument', 'Reserve Burial Slot'],
-        ['my-reservations.html', 'fa-bookmark', 'My Reservations'],
-        ['payments.html', 'fa-credit-card', 'Payments'],
-        ['payment-history.html', 'fa-receipt', 'Payment History'],
-        ['my-records.html', 'fa-folder-open', 'My Records'],
-        ['notifications.html', 'fa-bell', 'Notifications'],
-        ['profile.html', 'fa-id-card', 'Profile'],
-        ['settings.html', 'fa-gear', 'Settings'],
+        { item: ['dashboard_user.html', 'fa-gauge-high', 'Dashboard'] },
+        { group: 'Operations', items: [
+            ['reserve-burial-slot.html', 'fa-monument', 'Reserve Burial Slot'],
+            ['my-reservations.html', 'fa-bookmark', 'My Reservations'],
+        ] },
+        { group: 'Records', items: [
+            ['my-records.html', 'fa-folder-open', 'My Records'],
+        ] },
+        { group: 'Finance', items: [
+            ['payments.html', 'fa-credit-card', 'Payments'],
+            ['payment-history.html', 'fa-receipt', 'Payment History'],
+        ] },
+        { group: 'System', items: [
+            ['settings.html', 'fa-gear', 'Settings'],
+            ['profile.html', 'fa-id-card', 'Profile'],
+        ] },
     ],
 };
 
 function renderSidebarForRole(role) {
     const nav = document.querySelector('.sidebar .sidebar-nav');
-    const links = ROLE_SIDEBAR_LINKS[String(role || '').toLowerCase()];
-    if (!nav || !links) return;
+    const entries = ROLE_SIDEBAR_LINKS[String(role || '').toLowerCase()];
+    if (!nav || !entries) return;
 
     const currentPage = window.location.pathname.split('/').pop();
-    nav.innerHTML = links.map(([href, icon, label]) => {
+    const renderItem = ([href, icon, label]) => {
         const isActive = href === currentPage;
         return `<a href="${href}" class="nav-item${isActive ? ' active' : ''}"><i class="fas ${icon} icon"></i> <span>${label}</span></a>`;
+    };
+
+    nav.innerHTML = entries.map((entry) => {
+        if (entry.item) {
+            return renderItem(entry.item);
+        }
+        return `<div class="nav-group"><button type="button" class="nav-group-header"><span>${entry.group}</span><i class="fas fa-chevron-down chev"></i></button><div class="nav-group-body">${entry.items.map(renderItem).join('')}</div></div>`;
     }).join('');
+
+    // The old .nav-group-header elements (and any listeners on them) were
+    // just destroyed along with the markup above — re-run the shared
+    // accordion/active-group init (Batch 5) against the fresh nodes.
+    if (typeof window.initSidebarNav === 'function') {
+        window.initSidebarNav();
+    }
 }
 
 function setUserDisplay(user) {

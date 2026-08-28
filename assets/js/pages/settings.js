@@ -24,6 +24,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         setText('sidebarUserName', fullName);
         setText('sidebarUserRole', roleLabel);
         renderSidebarForRole(user.role);
+        if (typeof window.initSidebarNav === 'function') {
+            window.initSidebarNav();
+        }
     } catch (error) {
         console.error('Failed to load session', error);
         window.location.href = `${getFrontendBasePath()}/auth/login.html`;

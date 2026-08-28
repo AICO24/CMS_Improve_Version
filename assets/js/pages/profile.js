@@ -28,6 +28,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         setText('profileEmail', user.email || '—');
         setText('profileRole', roleLabel);
         renderSidebarForRole(user.role);
+        if (typeof window.initSidebarNav === 'function') {
+            window.initSidebarNav();
+        }
     } catch (error) {
         console.error('Failed to load profile', error);
         window.location.href = `${getFrontendBasePath()}/auth/login.html`;

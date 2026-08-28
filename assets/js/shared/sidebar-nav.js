@@ -9,9 +9,20 @@
   never hardcoded in HTML — computed here from the URL, same source of
   truth api.js's active-link highlighter already uses) so the sidebar
   never shows more than one expanded group's worth of items at once.
+
+  Exposed as window.initSidebarNav (Batch 5) so pages whose sidebar is
+  rebuilt at runtime (renderSidebarForRole() in api.js, for
+  payments/notifications/profile/settings.html) can re-run
+  initialization after replacing .sidebar-nav's innerHTML — the old
+  .nav-group-header elements (and any listeners on them) are destroyed
+  along with the old markup, so re-attaching to the fresh elements each
+  call is safe by construction. #railToggleBtn lives in .sidebar-header,
+  outside .sidebar-nav, so it's never replaced by a rebuild — its
+  listener is guarded by a data-attribute flag so repeated init calls
+  never attach a second one to the same persistent button.
 */
 (function () {
-    document.addEventListener('DOMContentLoaded', function () {
+    function initSidebarNav() {
         var sidebar = document.querySelector('.sidebar');
         if (!sidebar) return;
 
@@ -23,10 +34,14 @@
             });
         }
 
-        // Group expand/collapse — single-open accordion
+        // Group expand/collapse — single-open accordion. Guarded per-header
+        // so calling initSidebarNav() again on unchanged markup (rather than
+        // markup replaced via innerHTML, which already yields fresh nodes)
+        // never attaches a second listener to the same header.
         groups.forEach(function (group) {
             var header = group.querySelector('.nav-group-header');
-            if (!header) return;
+            if (!header || header.dataset.sidebarNavBound === '1') return;
+            header.dataset.sidebarNavBound = '1';
             header.addEventListener('click', function () {
                 var willOpen = !group.classList.contains('open');
                 closeOthers(group);
@@ -47,9 +62,12 @@
             activeGroup.classList.add('open');
         }
 
-        // Manual icon-rail (desktop only — CSS hides the button below 1025px)
+        // Manual icon-rail (desktop only — CSS hides the button below
+        // 1025px). Persists across sidebar rebuilds, so guard it the same
+        // way as the group headers above.
         var railBtn = document.getElementById('railToggleBtn');
-        if (!railBtn) return;
+        if (!railBtn || railBtn.dataset.sidebarNavBound === '1') return;
+        railBtn.dataset.sidebarNavBound = '1';
 
         var stored = null;
         try {
@@ -69,5 +87,8 @@
                 /* storage unavailable — toggle still applies for this page view */
             }
         });
-    });
+    }
+
+    window.initSidebarNav = initSidebarNav;
+    document.addEventListener('DOMContentLoaded', initSidebarNav);
 })();
