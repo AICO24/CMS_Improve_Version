@@ -219,6 +219,13 @@ function filterSidebarByRole(role) {
             link.remove();
         }
     });
+    // A group whose every item just got removed above would otherwise leave
+    // a header with an empty body — strip those too (sidebar audit, Batch 1).
+    document.querySelectorAll('.sidebar .nav-group').forEach((group) => {
+        if (!group.querySelector('.nav-item[href]')) {
+            group.remove();
+        }
+    });
 }
 
 // A handful of pages are opened by every role but ship only ONE hardcoded

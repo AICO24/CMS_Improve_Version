@@ -42,9 +42,14 @@
    currently winning app-wide over every page's own lower-specificity
    plain `.nav-item{}`, so matching it (rather than a plain selector) is
    what makes this override reliable rather than silently losing the
-   specificity check on pages where it happens to still apply. */
+   specificity check on pages where it happens to still apply.
+
+   Group-to-group spacing previously came from BOTH this gap AND
+   `.nav-group + .nav-group{margin-top}` below — two independent box
+   model mechanisms stacking to ~20px per boundary (sidebar audit,
+   Batch 1). Now a single 10px gap is the only mechanism. */
 .sidebar-nav {
-    gap: 6px;
+    gap: 10px;
     overflow-y: auto;
     min-height: 0;
 }
@@ -62,10 +67,6 @@
     padding: 10px 12px;
     font-size: 0.72rem;
     color: #c7d0e2;
-}
-
-.nav-group + .nav-group {
-    margin-top: 14px;
 }
 
 /* ---------- Bronze accent: active/selected state ---------- */

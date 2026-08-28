@@ -6,6 +6,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         api.logout();
     });
 
+    const toggleSidebarBtn = document.getElementById('toggleSidebar');
+    const sidebarEl = document.querySelector('.sidebar');
+    if (toggleSidebarBtn && sidebarEl) {
+        toggleSidebarBtn.addEventListener('change', () => sidebarEl.classList.toggle('collapsed'));
+    }
+
     const usersTableBody = document.getElementById('usersTableBody');
     const totalUsers = document.getElementById('totalUsers');
     const adminCount = document.getElementById('adminCount');
