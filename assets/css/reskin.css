@@ -23,6 +23,51 @@
   — .nav-item:hover's translateX and .Btn/.logout-btn are untouched.
 */
 
+/* ---------- Sidebar density/contrast redesign (Phase 3) ----------
+   The audit measured exactly why the sidebar reads as cramped: 42px nav
+   rows, a uniform 2px gap between every item AND between every group
+   (no distinction between "next item in this group" and "start of a new
+   group"), a low-contrast 0.68rem group label, and no internal scroll
+   on a fixed 100vh column. Fixed here, not in dashboard.css/sidebar-nav-
+   groups.css directly, for the same reason as the rest of this file:
+   `.sidebar-nav`/`.nav-item`/`.sidebar` turned out to be independently
+   redeclared (with already-drifting values) in 12 page-specific
+   stylesheets in addition to dashboard.css, dashboard_admin.css and
+   dashboard_staff.css — editing the shared source files alone would
+   only have changed 3 of the 24 pages. Loading last, as this file
+   already does, reaches all of them with one edit instead of fifteen.
+
+   `.sidebar .nav-item` (not plain `.nav-item`) is used deliberately to
+   match dashboard.css:79's specificity (0,2,0) — that's the rule
+   currently winning app-wide over every page's own lower-specificity
+   plain `.nav-item{}`, so matching it (rather than a plain selector) is
+   what makes this override reliable rather than silently losing the
+   specificity check on pages where it happens to still apply. */
+.sidebar-nav {
+    gap: 6px;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.sidebar .nav-item {
+    min-height: 48px;
+    padding: 12px 14px;
+}
+
+.nav-group-body {
+    gap: 6px;
+}
+
+.nav-group-header {
+    padding: 10px 12px;
+    font-size: 0.72rem;
+    color: #c7d0e2;
+}
+
+.nav-group + .nav-group {
+    margin-top: 14px;
+}
+
 /* ---------- Bronze accent: active/selected state ---------- */
 .nav-item.active {
     background: var(--color-accent-500);
