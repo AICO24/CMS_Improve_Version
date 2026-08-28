@@ -103,14 +103,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const sectionOccupied = Number(section.occupied) || 0;
                     const fillPercent = sectionTotal > 0 ? Math.round((sectionOccupied / sectionTotal) * 100) : 0;
                     const sectionItem = document.createElement('div');
-                    sectionItem.style.marginBottom = '8px';
+                    sectionItem.className = 'availability-item';
                     sectionItem.innerHTML = `
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:0.85rem;">
+                        <div class="availability-item-header">
                             <strong>${section.section_name || 'Section'}</strong>
                             <span>${sectionOccupied}/${sectionTotal} occupied</span>
                         </div>
-                        <div style="height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden;">
-                            <div style="width:${fillPercent}%;height:100%;background:linear-gradient(90deg, #4f46e5, #38bdf8);"></div>
+                        <div class="availability-track">
+                            <div class="availability-fill" style="width:${fillPercent}%;"></div>
                         </div>
                     `;
                     mapContainer.appendChild(sectionItem);
@@ -138,15 +138,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 payments.slice(0, 5).forEach(payment => {
                     const item = document.createElement('li');
                     item.className = 'recent-item';
-                    item.style.padding = '12px 16px';
-                    item.style.borderRadius = '12px';
-                    item.style.background = '#ffffff';
-                    item.style.marginBottom = '10px';
-                    item.style.boxShadow = '0 1px 4px rgba(0, 0, 0, 0.05)';
                     item.innerHTML = `
-                        <div style="font-weight:600;">${formatTransactionLabel(payment)}</div>
-                        <div style="font-size:0.95rem;color:#6b7280;margin:6px 0;">${payment.receipt_number || 'No receipt'} · ${payment.payment_date || 'Unknown date'}</div>
-                        <div style="font-weight:700;color:#111827;">${formatCurrency(payment.amount)}</div>
+                        <div class="recent-item-title">${formatTransactionLabel(payment)}</div>
+                        <div class="recent-item-meta">${payment.receipt_number || 'No receipt'} · ${payment.payment_date || 'Unknown date'}</div>
+                        <div class="recent-item-amount">${formatCurrency(payment.amount)}</div>
                     `;
                     recentList.appendChild(item);
                 });
@@ -154,9 +149,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const emptyItem = document.createElement('li');
                 emptyItem.className = 'recent-item empty';
                 emptyItem.textContent = 'No recent transactions available.';
-                emptyItem.style.padding = '12px 16px';
-                emptyItem.style.borderRadius = '12px';
-                emptyItem.style.background = '#ffffff';
                 recentList.appendChild(emptyItem);
             }
         }
@@ -173,8 +165,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                     datasets: [{
                         label: 'Monthly Revenue',
                         data: dataPoints,
-                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(44, 94, 71, 0.55)',
+                        borderColor: 'rgba(44, 94, 71, 1)',
                         borderWidth: 1,
                     }],
                 },

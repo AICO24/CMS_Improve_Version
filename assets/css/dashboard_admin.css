@@ -137,16 +137,15 @@
 .main-content {
     flex: 1;
     min-height: 100vh;
-    animation: fadeIn 0.35s ease;
     background: #f4f7fa;
 }
 
 /* margin-left/transition and .sidebar.collapsed pin/unpin now come from the shared dashboard.css (Batch 3 / Phase 8) */
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: none; }
-}
+/* Phase 5a: the page-level fadeIn this file used to add on top of
+   reskin.css's per-card reskinFadeRise stagger was a second, overlapping
+   entrance animation that only existed on this one page (not staff/user)
+   for no stated reason — removed so the stat cards animate in once,
+   consistently, the same way on every dashboard. */
 
 /* Top bar (unchanged, but keep consistent) */
 .top-bar {
@@ -325,30 +324,6 @@
     max-height: 180px;
     overflow-y: auto;
 }
-.section-col {
-    min-width: 140px;
-}
-.section-title {
-    font-weight: 700;
-    font-size: 0.85rem;
-}
-.section-grid {
-    display: grid;
-    grid-template-columns: repeat(10, 10px);
-    gap: 4px;
-}
-.square {
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    background: #e6eef0;
-}
-.square.occupied {
-    background: #d63447;
-}
-.square.available {
-    background: #9dbf5a;
-}
 .card.ai-suggest p.muted {
     margin-bottom: var(--space-4);
 }
@@ -360,17 +335,12 @@
     grid-template-columns: 1fr 360px;
     gap: 18px;
 }
-.recent-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-.recent-list li {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid #f1f4f5;
-}
+/* .recent-list / .recent-item (+ .availability-item/-track/-fill) now
+   come from the shared dashboard.css (Phase 5a) — this file's own
+   border-separated list style is superseded by the card-per-item look,
+   and .section-grid/.section-col/.section-title/.square below were dead
+   CSS (confirmed unreferenced by dashboard_admin.js) from an even
+   earlier availability-map implementation. */
 /* Sidebar/rail responsive behavior now comes from the shared dashboard.css (Batch 3) */
 @media (max-width: 1024px) {
     .stats-row { grid-template-columns: repeat(2,1fr); }

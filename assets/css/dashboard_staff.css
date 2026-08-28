@@ -223,30 +223,6 @@
     max-height: 180px;
     overflow-y: auto;
 }
-.section-col {
-    min-width: 140px;
-}
-.section-title {
-    font-weight: 700;
-    font-size: 0.85rem;
-}
-.section-grid {
-    display: grid;
-    grid-template-columns: repeat(10, 10px);
-    gap: 4px;
-}
-.square {
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    background: #e6eef0;
-}
-.square.occupied {
-    background: #d63447;
-}
-.square.available {
-    background: #9dbf5a;
-}
 .card.ai-suggest p.muted {
     margin-bottom: var(--space-4);
 }
@@ -258,16 +234,10 @@
     grid-template-columns: 1fr 360px;
     gap: 18px;
 }
-.recent-list {
-    list-style: none;
-    padding: 0;
-}
-.recent-list li {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid #f1f4f5;
-}
+/* .recent-list / .recent-item (+ .availability-item/-track/-fill) now
+   come from the shared dashboard.css (Phase 5a) — see dashboard_admin.css
+   for the fuller comment; this file had the identical dead/superseded
+   rules. */
 /* Sidebar/rail responsive behavior now comes from the shared dashboard.css (Batch 3) */
 @media (max-width: 1024px) {
     .stats-row { grid-template-columns: repeat(2,1fr); }
