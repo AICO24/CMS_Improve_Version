@@ -12,6 +12,83 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
+    // System-Wide AI Assistant (Phase 9): this was the one page in the
+    // app that never mounted it, despite being the page named for AI —
+    // an admin looking for "talk to the AI" here found nothing.
+    initAiAssistant({
+        mountSelector: '#aiAssistantMount',
+        context: { scope: 'system' },
+        greeting: "Hello! I'm your AI assistant for the whole system. How can I help you today?",
+        suggestions: [
+            { icon: 'fa-robot', label: 'Automation activity', question: 'How much of the recent activity was handled automatically?' },
+            { icon: 'fa-triangle-exclamation', label: 'What needs attention?', question: 'What currently needs my attention across the whole system?' },
+            { icon: 'fa-book', label: 'Explain the knowledge base', question: 'What is the assistant knowledge base used for?' },
+            { icon: 'fa-list-check', label: 'Open exceptions', question: 'Are there any open exceptions I should review right now?' },
+        ],
+    });
+
+    // Today's Briefing (Phase 9): same ai/dashboard-digest endpoint the
+    // Dashboard's AI Briefing card already uses — reused here, not
+    // duplicated server-side, so this page finally shows *something*
+    // the AI/automation engine has actually been doing today instead of
+    // leading with a settings table that (per the notice below it)
+    // doesn't affect runtime behavior at all.
+    async function loadDigest() {
+        const digestText = document.getElementById('aiDigestText');
+        const refreshBtn = document.getElementById('refreshDigestBtn');
+        if (!digestText) return;
+        digestText.textContent = 'Loading today\'s briefing…';
+        try {
+            const result = await api.request('ai/dashboard-digest', { method: 'GET' });
+            digestText.textContent = (result && result.explained && result.message)
+                ? result.message
+                : 'AI briefing is unavailable right now — check the Needs Attention card and Exceptions page directly.';
+        } catch (error) {
+            digestText.textContent = 'AI briefing is unavailable right now — check the Needs Attention card and Exceptions page directly.';
+        }
+        if (refreshBtn) {
+            refreshBtn.onclick = async () => {
+                refreshBtn.disabled = true;
+                try {
+                    await loadDigest();
+                } finally {
+                    refreshBtn.disabled = false;
+                }
+            };
+        }
+    }
+
+    // Needs Attention (Phase 9): same exceptions?status=open endpoint
+    // the Dashboard's attention card uses, but unlike that card (which
+    // hides itself entirely when there's nothing open), this one always
+    // shows a state — "all clear" is itself useful information on the
+    // one page meant to answer "what is AI/automation doing right now".
+    async function loadAttention() {
+        const card = document.getElementById('aiAttentionCard');
+        const text = document.getElementById('aiAttentionText');
+        const link = document.getElementById('aiAttentionLink');
+        if (!card || !text || !link) return;
+        try {
+            const exceptions = await api.request('exceptions?status=open', { method: 'GET' });
+            const count = Array.isArray(exceptions) ? exceptions.length : 0;
+            if (count > 0) {
+                text.textContent = `${count} item${count === 1 ? '' : 's'} couldn't be handled automatically and need${count === 1 ? 's' : ''} your review.`;
+                link.style.display = '';
+                card.classList.add('has-open');
+            } else {
+                text.textContent = 'Nothing needs attention — normal transactions are confirming automatically.';
+                link.style.display = 'none';
+                card.classList.remove('has-open');
+            }
+        } catch (error) {
+            text.textContent = 'Unable to check open exceptions right now.';
+            link.style.display = 'none';
+        }
+    }
+
+    loadDigest();
+    loadAttention();
+
     async function fetchAIParameters(module = '') {
         const params = module ? `?module=${encodeURIComponent(module)}` : '';
         return await api.request(`ai/parameters${params}`, { method: 'GET' });

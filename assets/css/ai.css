@@ -1,4 +1,120 @@
 /* AI configuration page-specific styles */
+
+/* ---------- AI Operations activity row (Phase 9) ----------
+   New — this page previously led with an inert parameter table and
+   never surfaced what the AI/automation engine is actually doing,
+   despite that capability already existing and being used elsewhere
+   (Dashboard's AI Briefing card, Exceptions' attention count). Reuses
+   those exact same endpoints (ai/dashboard-digest, exceptions?status=
+   open) rather than adding anything new server-side — see ai.js. */
+.ai-ops-intro {
+    margin-bottom: var(--space-5);
+}
+
+.ai-ops-intro h3 {
+    margin-bottom: var(--space-1);
+}
+
+.ai-activity-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.ai-digest-card,
+.ai-attention-card {
+    margin-bottom: 0;
+}
+
+.ai-digest-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-2);
+}
+
+.ai-digest-header h4,
+.ai-attention-card h4 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: 0;
+}
+
+.ai-attention-card {
+    border-left: 4px solid var(--color-warning-soft);
+}
+
+.ai-attention-card.has-open {
+    border-left-color: var(--color-warning-strong);
+}
+
+.ai-attention-link {
+    display: inline-flex;
+    margin-top: var(--space-3);
+}
+
+.btn-refresh-briefing {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background var(--duration-base) var(--easing-standard),
+                color var(--duration-base) var(--easing-standard),
+                transform var(--duration-fast) var(--easing-standard);
+}
+
+.btn-refresh-briefing:hover {
+    background: var(--color-primary-500);
+    color: var(--color-white);
+}
+
+.btn-refresh-briefing:active {
+    transform: scale(0.9);
+}
+
+.btn-refresh-briefing:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+.btn-refresh-briefing:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-refresh-briefing:disabled i {
+    animation: spin 0.8s linear infinite;
+}
+
+/* "These values don't do anything yet" — was a single line of small
+   muted text easy to skim past; promoted to a proper warning-toned
+   banner directly above the table it applies to. */
+.ai-params-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--color-warning-soft);
+    color: var(--color-warning-strong);
+    font-size: var(--fs-body-sm);
+}
+
+.ai-params-notice i {
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
 .ai-stats-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -23,8 +139,8 @@
     min-width: 260px;
     padding: 1rem;
     border-radius: 12px;
-    background: #f1f5f9;
-    color: #1f2937;
+    background: var(--color-surface-soft);
+    color: var(--color-text);
     box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
     transition: background var(--duration-base) var(--easing-standard),
                 color var(--duration-base) var(--easing-standard);
@@ -45,10 +161,10 @@
 .ai-params-table input[type="text"] {
     width: 100%;
     padding: 0.45rem 0.6rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    background: #ffffff;
-    color: #111827;
+    background: var(--color-surface);
+    color: var(--color-text);
 }
 
 .ai-params-table .btn-small {
@@ -60,10 +176,10 @@
 .ai-knowledge-table textarea {
     width: 100%;
     padding: 0.45rem 0.6rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    background: #ffffff;
-    color: #111827;
+    background: var(--color-surface);
+    color: var(--color-text);
     font-family: inherit;
     resize: vertical;
 }
@@ -138,11 +254,11 @@
 }
 
 .ai-message.success {
-    color: #065f46;
+    color: var(--color-success-strong);
 }
 
 .ai-message.error {
-    color: #991b1b;
+    color: var(--color-danger-strong);
 }
 
 /* Base layout (display/justify/gap/margin) now comes from the shared
@@ -161,89 +277,16 @@
 
 .table-toolbar select {
     padding: 0.55rem 0.9rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    background: #ffffff;
-    color: #111827;
+    background: var(--color-surface);
+    color: var(--color-text);
 }
 
-/* Logout button styles */
-.logout-btn,
-.Btn {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 45px;
-    height: 45px;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.199);
-    background-color: white;
-    padding: 0;
-}
-
-.sign {
-    width: 100%;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.sign svg,
-.sign i {
-    width: 17px;
-}
-
-.sign svg path,
-.sign i {
-    color: black;
-}
-
-.text {
-    position: absolute;
-    right: 0%;
-    width: 0%;
-    opacity: 0;
-    color: white;
-    font-size: 1.2em;
-    font-weight: 600;
-    white-space: nowrap;
-    transition: all 0.3s ease;
-}
-
-.Btn:hover,
-.logout-btn:hover {
-    background-color: black;
-    width: 125px;
-    border-radius: 40px;
-}
-
-.Btn:hover .sign,
-.logout-btn:hover .sign {
-    width: 30%;
-    padding-left: 20px;
-}
-
-.Btn:hover .sign svg path,
-.logout-btn:hover .sign svg path,
-.Btn:hover .sign i,
-.logout-btn:hover .sign i {
-    color: white;
-}
-
-.Btn:hover .text,
-.logout-btn:hover .text {
-    opacity: 1;
-    width: 70%;
-    padding-right: 10px;
-}
-
-.Btn:active,
-.logout-btn:active {
-    transform: translate(2px, 2px);
-}
+/* .logout-btn/.Btn (+ .sign/.text sliding animation) come from the
+   shared dashboard.css — this file had a full duplicate of the same
+   selectors/mechanics, same debt shape found and removed from
+   user-management.css and cremation-management.css earlier in this
+   redesign. Verified dashboard.css has the authoritative version
+   (including a :focus-visible state this duplicate lacked) before
+   deleting the local copy. */

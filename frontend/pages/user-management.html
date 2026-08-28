@@ -84,7 +84,7 @@
             <div class="sidebar-footer">
                 <div class="user-chip">
                     <i class="fas fa-user"></i>
-                    <div><span id="sidebarUserName">User</span><small id="sidebarUserRole">Administrator</small></div>
+                    <div><span id="sidebarUserName">Admin User</span><small id="sidebarUserRole">Administrator</small></div>
                 </div>
             </div>
         </aside>
@@ -99,7 +99,7 @@
                             <path class="line" d="M7 16H27"></path>
                         </svg>
                     </label>
-                    <h3>User Management</h3>
+                    <h3 id="pageTitle">User Management</h3>
                 </div>
                 <div class="user-info">
                     <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
@@ -108,9 +108,9 @@
                         <span class="notification-badge" id="notificationBadge">0</span>
                     </div>
                     <div class="profile">
-                        <div class="profile-avatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="profile-avatar" id="userAvatar"><i class="fas fa-user-tie"></i></div>
                         <div class="profile-text">
-                            <div class="user-name" id="userName">User</div>
+                            <div class="user-name" id="userName">Admin User</div>
                             <div class="user-role" id="userRole">Administrator</div>
                         </div>
                     </div>
@@ -120,8 +120,7 @@
                     </button>
                 </div>
             </div>
-
-            <div class="content-area">
+                <div class="content-area">
                 <div class="stats-row user-stats-row">
                     <div class="stat-card"><div class="stat-title">Total Users</div><div class="stat-value" id="totalUsers">0</div><div class="stat-sub">All accounts</div></div>
                     <div class="stat-card"><div class="stat-title">Administrators</div><div class="stat-value" id="adminCount">0</div><div class="stat-sub">Active admins</div></div>

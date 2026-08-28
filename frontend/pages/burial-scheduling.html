@@ -94,33 +94,20 @@
                 <div class="top-left">
                     <label class="hamburger">
                         <input type="checkbox" id="toggleSidebar">
-
                         <svg viewBox="0 0 32 32">
-                            <path
-                                class="line line-top-bottom"
-                                d="M27 10H13c-2.209 0-4-1.791-4-4
-                                0-2.209 1.791-4 4-4
-                                2.209 0 4 1.791 4 4v20
-                                c0 2.209-1.791 4-4 4
-                                -2.209 0-4-1.791-4-4
-                                0-2.209 1.791-4 4-4h14">
-                            </path>
-
-                            <path
-                                class="line"
-                                d="M7 16H27">
-                            </path>
+                            <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
+                            <path class="line" d="M7 16H27"></path>
                         </svg>
                     </label>
                     <h3 id="pageTitle">Burial Scheduling (AI)</h3>
                 </div>
                 <div class="user-info">
-                    <div class="profile">
-                        <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
+                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
                     <div class="notification-icon" id="notificationIcon">
-                            <i class="fas fa-bell"></i>
-                            <span class="notification-badge" id="notificationBadge">3</span>
-                        </div>
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="notificationBadge">0</span>
+                    </div>
+                    <div class="profile">
                         <div class="profile-avatar" id="userAvatar"><i class="fas fa-user-tie"></i></div>
                         <div class="profile-text">
                             <div class="user-name" id="userName">Admin User</div>
@@ -128,23 +115,12 @@
                         </div>
                     </div>
                     <button class="Btn logout-btn" id="logoutBtn">
-                        <div class="sign">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </div>
-
-                        <div class="text">
-                            Logout
-                        </div>
+                        <div class="sign"><i class="fas fa-sign-out-alt"></i></div>
+                        <div class="text">Logout</div>
                     </button>
                 </div>
             </div>
-
-            <!-- Batch N (adviser feedback: "fully chat-based, like ChatGPT"):
-                 the entire booking interface is now a single chat thread,
-                 built by assets/js/shared/booking-wizard.js's
-                 renderChatPageMarkup() into this one mount point — no more
-                 stepper/wizard divs or a separate floating widget. -->
-            <div class="content-area" id="wizardContainerMount"></div>
+                <div class="content-area" id="wizardContainerMount"></div>
         </main>
     </div>
 

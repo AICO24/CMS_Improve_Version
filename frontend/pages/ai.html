@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
     <link rel="stylesheet" href="../../assets/css/ai.css">
+    <link rel="stylesheet" href="../../assets/css/shared/ai-assistant-widget.css">
 
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
@@ -51,40 +52,39 @@
                 <div class="nav-group open">
                     <button type="button" class="nav-group-header"><span>Records &amp; Care</span><i class="fas fa-chevron-down chev"></i></button>
                     <div class="nav-group-body">
-                    <a href="decedent-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>Decedent Records</span></a>
                     <a href="cremation-management.html" class="nav-item"><i class="fas fa-fire icon"></i> <span>Cremation Management</span></a>
                     <a href="relocation-management.html" class="nav-item"><i class="fas fa-truck-moving icon"></i> <span>Relocation Management</span></a>
                     <a href="expiration-monitoring.html" class="nav-item"><i class="fas fa-hourglass-half icon"></i> <span>Expiration Monitoring</span></a>
+                    <a href="decedent-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>Decedent Records</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
                     <button type="button" class="nav-group-header"><span>Finance</span><i class="fas fa-chevron-down chev"></i></button>
                     <div class="nav-group-body">
-                    <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payment Recording</span></a>
+                    <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
                     <button type="button" class="nav-group-header"><span>Insights</span><i class="fas fa-chevron-down chev"></i></button>
                     <div class="nav-group-body">
                     <a href="reports.html" class="nav-item"><i class="fas fa-chart-column icon"></i> <span>Reports</span></a>
-                    <a href="forecast.html" class="nav-item"><i class="fas fa-chart-line icon"></i> <span>Capacity Forecasting</span></a>
+                    <a href="forecast.html" class="nav-item"><i class="fas fa-chart-line icon"></i> <span>Capacity Forecast</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
                     <button type="button" class="nav-group-header"><span>Administration</span><i class="fas fa-chevron-down chev"></i></button>
                     <div class="nav-group-body">
-                    <a href="notifications.html" class="nav-item"><i class="fas fa-bell icon"></i> <span>Notifications</span></a>
-                    <a href="ai.html" class="nav-item active admin-only"><i class="fas fa-robot icon"></i> <span>AI Configuration</span></a>
-                    <a href="user-management.html" class="nav-item admin-only"><i class="fas fa-users icon"></i> <span>User Management</span></a>
-                    <a href="audit.html" class="nav-item admin-only"><i class="fas fa-clipboard-list icon"></i> <span>Audit Logs</span></a>
-                    <a href="exceptions.html" class="nav-item admin-only"><i class="fas fa-triangle-exclamation icon"></i> <span>Exceptions</span></a>
+                    <a href="ai.html" class="nav-item active"><i class="fas fa-robot icon"></i> <span>AI Configuration</span></a>
+                    <a href="user-management.html" class="nav-item"><i class="fas fa-users icon"></i> <span>User Management</span></a>
+                    <a href="audit.html" class="nav-item"><i class="fas fa-clipboard-list icon"></i> <span>Audit Logs</span></a>
+                    <a href="exceptions.html" class="nav-item"><i class="fas fa-triangle-exclamation icon"></i> <span>Exceptions</span></a>
                     </div>
                 </div>
             </div>
             <div class="sidebar-footer">
                 <div class="user-chip">
                     <i class="fas fa-user"></i>
-                    <div><span id="sidebarUserName">User</span><small id="sidebarUserRole">Staff</small></div>
+                    <div><span id="sidebarUserName">Admin User</span><small id="sidebarUserRole">Administrator</small></div>
                 </div>
             </div>
         </aside>
@@ -99,7 +99,8 @@
                             <path class="line" d="M7 16H27"></path>
                         </svg>
                     </label>
-                    <h3>AI Configuration</h3>
+                    <h3 id="pageTitle">AI Configuration</h3>
+                    <div id="aiAssistantMount"></div>
                 </div>
                 <div class="user-info">
                     <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
@@ -108,10 +109,10 @@
                         <span class="notification-badge" id="notificationBadge">0</span>
                     </div>
                     <div class="profile">
-                        <div class="profile-avatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="profile-avatar" id="userAvatar"><i class="fas fa-user-tie"></i></div>
                         <div class="profile-text">
-                            <div class="user-name" id="userName">User</div>
-                            <div class="user-role" id="userRole">Staff</div>
+                            <div class="user-name" id="userName">Admin User</div>
+                            <div class="user-role" id="userRole">Administrator</div>
                         </div>
                     </div>
                     <button class="Btn logout-btn" id="logoutBtn">
@@ -120,13 +121,31 @@
                     </button>
                 </div>
             </div>
+                <div class="content-area">
+                <div class="ai-ops-intro">
+                    <h3>AI Operations</h3>
+                    <p class="muted">What the system's automation and AI assistant have been doing today, plus the AI service's reference configuration below.</p>
+                </div>
 
-            <div class="content-area">
+                <div class="ai-activity-row">
+                    <div class="card ai-digest-card">
+                        <div class="ai-digest-header">
+                            <h4><i class="fas fa-robot"></i> Today's Briefing</h4>
+                            <button type="button" class="btn-refresh-briefing" id="refreshDigestBtn" title="Refresh briefing"><i class="fas fa-rotate"></i></button>
+                        </div>
+                        <p class="muted" id="aiDigestText">Loading today's briefing…</p>
+                    </div>
+                    <div class="card ai-attention-card" id="aiAttentionCard">
+                        <h4><i class="fas fa-triangle-exclamation"></i> Needs Attention</h4>
+                        <p class="muted" id="aiAttentionText">Checking for open exceptions…</p>
+                        <a href="exceptions.html" class="btn-secondary ai-attention-link" id="aiAttentionLink" style="display:none;">Review Exceptions →</a>
+                    </div>
+                </div>
+
                 <div class="config-actions">
                     <div>
                         <h3>AI Service Settings</h3>
                         <p>Verify AI service availability for forecasting and recommendation workflows.</p>
-                        <p class="muted small">Parameter values below are stored for reference and are not currently read by the recommendation or forecasting engines at runtime — updating a value here will not change AI behavior.</p>
                     </div>
                     <div class="config-status" id="serviceHealth">Loading service health...</div>
                 </div>
@@ -138,6 +157,10 @@
                 </div>
 
                 <div class="card">
+                    <div class="ai-params-notice">
+                        <i class="fas fa-circle-info"></i>
+                        <span>Reference only — these values are not currently read by the recommendation or forecasting engines at runtime. Updating one here will not change AI behavior.</span>
+                    </div>
                     <div class="table-toolbar">
                         <label>Module:
                             <select id="moduleFilter"><option value="">All Modules</option></select>
@@ -193,6 +216,7 @@
     </div>
 
     <script src="../../assets/js/shared/api.js"></script>
+    <script src="../../assets/js/shared/ai-assistant-widget.js"></script>
     <script src="../../assets/js/pages/ai.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>

@@ -31,7 +31,7 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management</span></div>
+                <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
                 <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
             </div>
             <div class="sidebar-nav">
@@ -77,28 +77,18 @@
                 </div>
             </div>
         </aside>
+
         <main class="main-content">
             <div class="top-bar">
                 <div class="top-left">
                     <label class="hamburger">
                         <input type="checkbox" id="toggleSidebar">
                         <svg viewBox="0 0 32 32">
-                            <path
-                                class="line line-top-bottom"
-                                d="M27 10H13c-2.209 0-4-1.791-4-4
-                                0-2.209 1.791-4 4-4
-                                2.209 0 4 1.791 4 4v20
-                                c0 2.209-1.791 4-4 4
-                                -2.209 0-4-1.791-4-4
-                                0-2.209 1.791-4 4-4h14">
-                            </path>
-                            <path
-                                class="line"
-                                d="M7 16H27">
-                            </path>
+                            <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
+                            <path class="line" d="M7 16H27"></path>
                         </svg>
                     </label>
-                    <h3>Settings</h3>
+                    <h3 id="pageTitle">Settings</h3>
                 </div>
                 <div class="user-info">
                     <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
@@ -107,23 +97,19 @@
                         <span class="notification-badge" id="notificationBadge">0</span>
                     </div>
                     <div class="profile">
-                        <div class="profile-avatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="profile-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
                         <div class="profile-text">
                             <div class="user-name" id="userName">Client</div>
                             <div class="user-role" id="userRole">Client</div>
                         </div>
                     </div>
                     <button class="Btn logout-btn" id="logoutBtn">
-                        <div class="sign">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </div>
-                        <div class="text">
-                            Logout
-                        </div>
+                        <div class="sign"><i class="fas fa-sign-out-alt"></i></div>
+                        <div class="text">Logout</div>
                     </button>
                 </div>
             </div>
-            <div class="content-area">
+                <div class="content-area">
                 <div class="card settings-placeholder">
                     <div class="settings-placeholder-icon"><i class="fas fa-sliders"></i></div>
                     <h4>Account settings are on the way</h4>

@@ -72,8 +72,8 @@
             </div>
             <div class="sidebar-footer">
                 <div class="user-chip">
-                    <i class="fas fa-user"></i>
-                    <div><span id="sidebarUserName">User</span><small id="sidebarUserRole">Staff</small></div>
+                    <i class="fas fa-user-circle"></i>
+                    <div><span id="sidebarUserName">Client</span><small id="sidebarUserRole">Client</small></div>
                 </div>
             </div>
         </aside>
@@ -83,25 +83,12 @@
                 <div class="top-left">
                     <label class="hamburger">
                         <input type="checkbox" id="toggleSidebar">
-
                         <svg viewBox="0 0 32 32">
-                            <path
-                                class="line line-top-bottom"
-                                d="M27 10H13c-2.209 0-4-1.791-4-4
-                                0-2.209 1.791-4 4-4
-                                2.209 0 4 1.791 4 4v20
-                                c0 2.209-1.791 4-4 4
-                                -2.209 0-4-1.791-4-4
-                                0-2.209 1.791-4 4-4h14">
-                            </path>
-
-                            <path
-                                class="line"
-                                d="M7 16H27">
-                            </path>
+                            <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
+                            <path class="line" d="M7 16H27"></path>
                         </svg>
                     </label>
-                    <h3>Payment Recording</h3>
+                    <h3 id="pageTitle">Payment History</h3>
                 </div>
                 <div class="user-info">
                     <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
@@ -110,25 +97,19 @@
                         <span class="notification-badge" id="notificationBadge">0</span>
                     </div>
                     <div class="profile">
-                        <div class="profile-avatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="profile-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
                         <div class="profile-text">
-                            <div class="user-name" id="userName">User</div>
-                            <div class="user-role" id="userRole">Staff</div>
+                            <div class="user-name" id="userName">Client</div>
+                            <div class="user-role" id="userRole">Client</div>
                         </div>
                     </div>
                     <button class="Btn logout-btn" id="logoutBtn">
-                        <div class="sign">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </div>
-
-                        <div class="text">
-                            Logout
-                        </div>
+                        <div class="sign"><i class="fas fa-sign-out-alt"></i></div>
+                        <div class="text">Logout</div>
                     </button>
                 </div>
             </div>
-
-            <div class="content-area">
+                <div class="content-area">
                 <div class="stats-row payhist-stats">
                     <div class="stat-card"><div class="stat-title">Total Paid</div><div class="stat-value" id="totalRevenue">₱0</div><div class="stat-sub">All time</div></div>
                     <div class="stat-card"><div class="stat-title">This Month</div><div class="stat-value" id="monthRevenue">₱0</div><div class="stat-sub">Current month</div></div>

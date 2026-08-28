@@ -85,7 +85,7 @@
             <div class="sidebar-footer">
                 <div class="user-chip">
                     <i class="fas fa-user"></i>
-                    <div><span id="sidebarUserName">User</span><small id="sidebarUserRole">Staff</small></div>
+                    <div><span id="sidebarUserName">Admin User</span><small id="sidebarUserRole">Administrator</small></div>
                 </div>
             </div>
         </aside>
@@ -95,25 +95,12 @@
                 <div class="top-left">
                     <label class="hamburger">
                         <input type="checkbox" id="toggleSidebar">
-
                         <svg viewBox="0 0 32 32">
-                            <path
-                                class="line line-top-bottom"
-                                d="M27 10H13c-2.209 0-4-1.791-4-4
-                                0-2.209 1.791-4 4-4
-                                2.209 0 4 1.791 4 4v20
-                                c0 2.209-1.791 4-4 4
-                                -2.209 0-4-1.791-4-4
-                                0-2.209 1.791-4 4-4h14">
-                            </path>
-
-                            <path
-                                class="line"
-                                d="M7 16H27">
-                            </path>
+                            <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
+                            <path class="line" d="M7 16H27"></path>
                         </svg>
                     </label>
-                    <h3>Expiration Monitoring</h3>
+                    <h3 id="pageTitle">Expiration Monitoring</h3>
                     <div id="aiAssistantMount"></div>
                 </div>
                 <div class="user-info">
@@ -123,26 +110,19 @@
                         <span class="notification-badge" id="notificationBadge">0</span>
                     </div>
                     <div class="profile">
-                        <div class="profile-avatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="profile-avatar" id="userAvatar"><i class="fas fa-user-tie"></i></div>
                         <div class="profile-text">
-                            <div class="user-name" id="userName">User</div>
-                            <div class="user-role" id="userRole">Staff</div>
+                            <div class="user-name" id="userName">Admin User</div>
+                            <div class="user-role" id="userRole">Administrator</div>
                         </div>
                     </div>
                     <button class="Btn logout-btn" id="logoutBtn">
-                        <div class="sign">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                                <polyline points="16 17 21 12 16 7"></polyline>
-                                <line x1="21" y1="12" x2="9" y2="12"></line>
-                            </svg>
-                        </div>
+                        <div class="sign"><i class="fas fa-sign-out-alt"></i></div>
                         <div class="text">Logout</div>
                     </button>
                 </div>
             </div>
-
-            <div class="content-area">
+                <div class="content-area">
                 <div class="stats-row expmon-stats">
                     <div class="stat-card"><div class="stat-title">Expiring Soon</div><div class="stat-value" id="expiringSoonCount">0</div><div class="stat-sub">Next 30 days</div></div>
                     <div class="stat-card"><div class="stat-title">Expired Lots</div><div class="stat-value" id="expiredCount">0</div><div class="stat-sub">Past due</div></div>

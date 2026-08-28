@@ -516,66 +516,180 @@
     color: #7fd9a4;
 }
 
-.dashboard-body[data-theme="dark"] .voucher-status-pill {
-    background: var(--color-warning-soft);
-    color: #f0c674;
+/* Phase 8b: the four rules above were the only booking-chat.css dark
+   coverage that existed — this page is almost entirely white cards on
+   a white/near-white background (a deliberate, coherent "Intelligence
+   Workspace" palette, not stray hardcoding), so nearly none of it had
+   been given a dark equivalent yet. Added here rather than editing
+   booking-chat.css's own light-mode values, which stay byte-for-byte
+   what they were — this page hosts 3 of the app's 9 explicitly-
+   preserved animations and a deliberately-matched palette, so the
+   light-mode source wasn't touched at all, only patched for dark mode
+   the same way every other file's gaps were closed this phase.
+
+   Grouped by role, not by original selector order, so this stays
+   scannable rather than a flat 40-rule list. */
+
+/* -- Card/panel surfaces (was #ffffff or a white-based gradient) -- */
+.dashboard-body[data-theme="dark"] .ai-chat-main,
+.dashboard-body[data-theme="dark"] .ai-action-btn,
+.dashboard-body[data-theme="dark"] .chat-message--rich,
+.dashboard-body[data-theme="dark"] .confirmation-box,
+.dashboard-body[data-theme="dark"] .reservation-voucher,
+.dashboard-body[data-theme="dark"] .chat-prompt-suggestions,
+.dashboard-body[data-theme="dark"] .chat-pref-status,
+.dashboard-body[data-theme="dark"] .chat-input-row,
+.dashboard-body[data-theme="dark"] .chat-actions,
+.dashboard-body[data-theme="dark"] .ai-booking-blueprint {
+    background: var(--color-surface);
+    border-color: var(--color-border);
 }
 
-.dashboard-body[data-theme="dark"] .ai-status-pill {
-    background: var(--color-success-soft);
-    color: #7fd9a4;
-    border-color: rgba(22, 163, 74, 0.3);
+.dashboard-body[data-theme="dark"] .ai-assistant-header,
+.dashboard-body[data-theme="dark"] .blueprint-header {
+    background: var(--color-surface);
+    border-bottom-color: var(--color-border);
 }
 
-.dashboard-body[data-theme="dark"] .blueprint-step .step-num {
+.dashboard-body[data-theme="dark"] .ai-action-btn:hover {
     background: var(--color-surface-soft);
-    color: var(--color-text-faint);
+    border-color: var(--color-border);
+    color: var(--color-text);
 }
 
-.dashboard-body[data-theme="dark"] .chat-pref-chip {
+/* -- Secondary/soft surfaces (was #f8fafc or #f1f5f9) -- */
+.dashboard-body[data-theme="dark"] .recommendation-reasons-box,
+.dashboard-body[data-theme="dark"] .voucher-notice,
+.dashboard-body[data-theme="dark"] .chat-escape-hatch,
+.dashboard-body[data-theme="dark"] .chat-decedent-request,
+.dashboard-body[data-theme="dark"] .blueprint-lot-card,
+.dashboard-body[data-theme="dark"] .blueprint-footer,
+.dashboard-body[data-theme="dark"] .chat-message--rich.recommendations-stale::after {
+    background: var(--color-surface-soft);
+    border-color: var(--color-border);
+}
+
+.dashboard-body[data-theme="dark"] .meta-pill,
+.dashboard-body[data-theme="dark"] .chat-pref-chip,
+.dashboard-body[data-theme="dark"] .prompt-chip,
+.dashboard-body[data-theme="dark"] .blueprint-badge,
+.dashboard-body[data-theme="dark"] .blueprint-step .step-num {
     background: var(--color-surface-soft);
     color: var(--color-text-muted);
     border-color: var(--color-border);
 }
 
-.dashboard-body[data-theme="dark"] .chat-pref-chip strong {
+.dashboard-body[data-theme="dark"] .chat-input-wrapper input[type="text"] {
+    background: var(--color-surface-soft);
+    border-color: var(--color-border);
+    color: var(--color-text);
+}
+
+.dashboard-body[data-theme="dark"] .chat-input-wrapper input[type="text"]:focus {
+    background: var(--color-surface);
+}
+
+/* -- Near-black headline text (was #0f172a/#1e293b) -- */
+.dashboard-body[data-theme="dark"] .ai-assistant-name,
+.dashboard-body[data-theme="dark"] .recommendation-card .lot-num-title,
+.dashboard-body[data-theme="dark"] .voucher-title,
+.dashboard-body[data-theme="dark"] .voucher-item-val,
+.dashboard-body[data-theme="dark"] .blueprint-title,
+.dashboard-body[data-theme="dark"] .blueprint-step .step-value,
+.dashboard-body[data-theme="dark"] .hud-lot-num,
+.dashboard-body[data-theme="dark"] .hud-detail-row strong {
+    color: var(--color-text);
+}
+
+/* -- Muted grey text (was #64748b/#475569/#334155) -- */
+.dashboard-body[data-theme="dark"] .ai-assistant-desc,
+.dashboard-body[data-theme="dark"] .chat-message.chat-typing-indicator,
+.dashboard-body[data-theme="dark"] .chat-message--rich.recommendations-stale::after,
+.dashboard-body[data-theme="dark"] .recommendation-reasons-label,
+.dashboard-body[data-theme="dark"] .recommendation-reasons,
+.dashboard-body[data-theme="dark"] .recommendation-reasons-empty,
+.dashboard-body[data-theme="dark"] .chat-escape-hatch label,
+.dashboard-body[data-theme="dark"] .chat-decedent-request label,
+.dashboard-body[data-theme="dark"] .voucher-item-label,
+.dashboard-body[data-theme="dark"] .chat-pref-chip strong,
+.dashboard-body[data-theme="dark"] .blueprint-step .step-label,
+.dashboard-body[data-theme="dark"] .hud-detail-row,
+.dashboard-body[data-theme="dark"] .total-label {
     color: var(--color-text-muted);
 }
 
+/* -- Tinted badges/boxes (pale green/amber/indigo — need a dark-safe
+   version of the same tone, not a plain surface swap) -- */
+.dashboard-body[data-theme="dark"] .ai-status-pill,
+.dashboard-body[data-theme="dark"] .recommendation-card .score-badge,
 .dashboard-body[data-theme="dark"] .chat-pref-chip.filled {
     background: var(--color-success-soft);
     color: #7fd9a4;
-    border-color: rgba(22, 163, 74, 0.3);
+    border-color: transparent;
 }
 
 .dashboard-body[data-theme="dark"] .chat-pref-chip.filled strong {
     color: #7fd9a4;
 }
 
-.dashboard-body[data-theme="dark"] .prompt-chip {
-    background: var(--color-surface-soft);
-    color: var(--color-text-muted);
-    border-color: var(--color-border);
+.dashboard-body[data-theme="dark"] .voucher-status-pill {
+    background: var(--color-warning-soft);
+    color: #f0c674;
 }
 
+/* rgba(157, 196, 175, ...) rather than an arbitrary tint — matches the
+   sage-tinted-chip convention this file already uses for .filter-chip
+   elsewhere, so this page's green accents stay in the same family. */
+.dashboard-body[data-theme="dark"] .btn-suggest-type,
+.dashboard-body[data-theme="dark"] .hud-lot-type,
 .dashboard-body[data-theme="dark"] .prompt-chip:hover {
     background: rgba(157, 196, 175, 0.16);
+    color: #9dc4af;
     border-color: rgba(157, 196, 175, 0.4);
-    color: #9dc4af;
-}
-
-.dashboard-body[data-theme="dark"] .btn-suggest-type {
-    background: rgba(157, 196, 175, 0.14);
-    border-color: rgba(157, 196, 175, 0.35);
-    color: #9dc4af;
 }
 
 .dashboard-body[data-theme="dark"] .btn-suggest-type:hover:not(:disabled) {
-    background: rgba(157, 196, 175, 0.22);
+    background: rgba(157, 196, 175, 0.26);
 }
 
 .dashboard-body[data-theme="dark"] .btn-suggest-type:disabled {
     background: var(--color-surface-soft);
+    border-color: var(--color-border);
+    color: var(--color-text-faint);
+}
+
+.dashboard-body[data-theme="dark"] .blueprint-ai-tips {
+    background: var(--color-success-soft);
+    border-color: transparent;
+}
+
+.dashboard-body[data-theme="dark"] .tip-header,
+.dashboard-body[data-theme="dark"] .tip-text,
+.dashboard-body[data-theme="dark"] .hud-price {
+    color: #7fd9a4;
+}
+
+.dashboard-body[data-theme="dark"] .total-amount {
+    /* Brand green (#2c5e47) reads fine on white but is too dark against
+       a dark surface — same low-contrast trap as .hud-price above.
+       Lightened rather than swapped to a token, since this is a brand
+       accent, not a semantic surface/text color. */
+    color: #7fd9a4;
+}
+
+.dashboard-body[data-theme="dark"] .blueprint-step::before {
+    background: var(--color-border);
+}
+
+/* .step-num's hardcoded 2px solid #ffffff ring — meant to punch a gap
+   between the connector line and the circle against a white card —
+   would render as a bright halo against this card's dark background
+   otherwise; matched to the card surface instead so the gap still
+   reads, just without the stray white ring. Only the base (inactive)
+   state needs this — .active/.completed already set their own
+   high-contrast background+white text regardless of theme. */
+.dashboard-body[data-theme="dark"] .blueprint-step .step-num {
+    border-color: var(--color-surface);
 }
 
 /*
