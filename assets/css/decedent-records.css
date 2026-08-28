@@ -132,7 +132,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    color: #6b7a73;
+    color: var(--color-text-muted);
 }
 
 .decrec-empty-state i,
@@ -143,14 +143,19 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #eef6f0;
-    color: #2c5e47;
+    /* --color-success-soft/-strong rather than the primary green scale —
+       the former is redefined for dark mode, the latter isn't (same
+       reasoning as Settings' placeholder icon in Phase 5c-iv). */
+    background: var(--color-success-soft);
+    color: var(--color-success-strong);
     font-size: 22px;
 }
 
+/* .strong was hardcoded near-black with no dark-mode coverage — see
+   user-management.css's identical fix earlier in this phase. */
 .decrec-empty-state strong,
 .pending-requests-empty-state strong {
-    color: #243736;
+    color: var(--color-text);
     font-size: 1.05rem;
 }
 

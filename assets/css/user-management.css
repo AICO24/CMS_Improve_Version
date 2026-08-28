@@ -1,106 +1,17 @@
 /* User management page styles */
-.dashboard-body {
-    background: #f4f7fa;
-    font-family: 'Inter', sans-serif;
-    color: #243736;
-}
 
-.dashboard-container {
-    display: flex;
-    min-height: 100vh;
-}
+/* The app-shell chrome duplicated in full here — sidebar-nav/nav-item/
+   sidebar-footer/main-content/top-bar/user-info/profile/profile-avatar/
+   user-chip/.content-area — is removed (Phase 6), same cleanup applied
+   to decedent-records.css and my-records.css earlier in this phase.
+   Every rule was already provided by the shared dashboard.css; a few
+   values here (e.g. .sidebar-nav padding 10px 12px vs dashboard.css's
+   8px 12px, .profile-avatar 44px vs 40px) differed slightly, but none
+   were a deliberate page-specific design choice — removing them
+   normalizes this page to the same shell every other page already
+   renders, consistent with the sidebar redesign in Phase 3a. */
 
-.sidebar, .sidebar * {
-    text-decoration: none;
-}
-
-/* Sidebar sizing/position now comes solely from the shared responsive
-   shell in dashboard.css (Phase 8 audit fix) — this page's own copy was
-   unconditional and silently defeated dashboard.css's 1024px/768px
-   collapse breakpoints by winning the cascade at every width. */
-
-.sidebar-nav {
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
-}
-
-.nav-item {
-    padding: 12px 14px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    border-radius: 10px;
-    color: #d6def3;
-    transition: background 0.2s ease, transform 0.2s ease;
-}
-
-.nav-item:hover {
-    background: rgba(255,255,255,0.05);
-    transform: translateX(3px);
-}
-
-.nav-item.active {
-    background: #7aa77a;
-    color: #06321a;
-}
-
-.sidebar-footer {
-    padding: 14px;
-    border-top: 1px solid rgba(255,255,255,0.08);
-}
-
-/* margin-left/transition now come from the shared dashboard.css (Phase 8) */
-.main-content {
-    min-height: 100vh;
-}
-
-.top-bar {
-    background: #fff;
-    padding: 16px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-}
-
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.profile {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.profile-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #eef3f7;
-    color: #2b3658;
-}
-
-.user-chip {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.content-area {
-    padding: 24px;
-}
-
-/* .logout-btn/.Btn (+ .sign/.text sliding animation) now come from assets/css/dashboard.css (Batch 10; previously duplicated here in Batch 8) */
+/* .logout-btn/.Btn (+ .sign/.text sliding animation) now come from assets/css/dashboard.css (Batch 10) */
 
 /* .stats-row / .stat-card / .stat-title / .stat-value / .stat-sub now come from
    assets/css/dashboard.css so this module's stat cards match every other module. */
@@ -441,7 +352,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    color: #6b7a73;
+    color: var(--color-text-muted);
 }
 
 .usermgmt-empty-state i {
@@ -451,13 +362,16 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #eef3f7;
-    color: #2b3658;
+    background: var(--color-surface-soft);
+    color: var(--color-text);
     font-size: 22px;
 }
 
+/* .strong was hardcoded near-black (#243736) with no dark-mode coverage
+   — legible on a light card, nearly invisible on a dark one. Token-
+   driven now, same as the icon swatch above. */
 .usermgmt-empty-state strong {
-    color: #243736;
+    color: var(--color-text);
     font-size: 1.05rem;
 }
 
@@ -782,83 +696,8 @@
     }
 }
 
-/* Logout button styles */
-.logout-btn,
-.Btn {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 45px;
-    height: 45px;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.199);
-    background-color: white;
-    padding: 0;
-}
-
-.sign {
-    width: 100%;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.sign svg,
-.sign i {
-    width: 17px;
-}
-
-.sign svg path,
-.sign i {
-    color: black;
-}
-
-.text {
-    position: absolute;
-    right: 0%;
-    width: 0%;
-    opacity: 0;
-    color: white;
-    font-size: 1.2em;
-    font-weight: 600;
-    white-space: nowrap;
-    transition: all 0.3s ease;
-}
-
-.Btn:hover,
-.logout-btn:hover {
-    background-color: black;
-    width: 125px;
-    border-radius: 40px;
-}
-
-.Btn:hover .sign,
-.logout-btn:hover .sign {
-    width: 30%;
-    padding-left: 20px;
-}
-
-.Btn:hover .sign svg path,
-.logout-btn:hover .sign svg path,
-.Btn:hover .sign i,
-.logout-btn:hover .sign i {
-    color: white;
-}
-
-.Btn:hover .text,
-.logout-btn:hover .text {
-    opacity: 1;
-    width: 70%;
-    padding-right: 10px;
-}
-
-.Btn:active,
-.logout-btn:active {
-    transform: translate(2px, 2px);
-}
+/* Logout button (.logout-btn/.Btn + .sign/.text sliding animation) —
+   removed a full duplicate of dashboard.css's version that had been
+   sitting here despite this file's own comment (above, near the top)
+   already claiming it came from the shared file. Confirmed dashboard.css
+   has the identical selectors/mechanics before deleting. */
