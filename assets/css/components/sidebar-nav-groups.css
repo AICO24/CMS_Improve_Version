@@ -125,14 +125,17 @@
         max-height: none !important;
     }
 
-    /* The auto icon-rail's label-hiding (dashboard.css 564-567) is scoped
+    /* The auto icon-rail's label-hiding (dashboard.css 687-690) is scoped
        to max-width:1024px, so it never fires for this manual desktop-only
        toggle — needs its own copy of the same hiding, keyed off the class
-       instead of viewport width. Mirrors the auto-rail behavior exactly,
-       including leaving .sidebar-footer's name/role text alone (today's
-       tablet icon-rail doesn't hide that either). */
+       instead of viewport width. Mirrors the auto-rail behavior exactly.
+       .user-chip div (name + role) is hidden here too — left visible
+       previously, a long full name would wrap into several cramped lines
+       inside the 70px rail instead of collapsing to just the icon like
+       every other label does. */
     .sidebar.rail-manual .brand span,
-    .sidebar.rail-manual .nav-item span:not(.icon) {
+    .sidebar.rail-manual .nav-item span:not(.icon),
+    .sidebar.rail-manual .user-chip div {
         display: none;
     }
 
@@ -147,6 +150,22 @@
     #railToggleBtn {
         display: flex;
     }
+
+    /* Collapsing to icons hides every .nav-group-header (the only thing
+       that let a user expand/collapse a group), so every item across
+       every group has to render flat and simultaneously instead — that's
+       taller than any viewport, hence .sidebar-nav's own overflow-y:auto
+       (reskin.css) legitimately needs to scroll here. The scrollbar
+       itself still looked broken/heavy against the narrow 70px rail, so
+       it's hidden visually (scrolling — wheel/touch — still works). */
+    .sidebar.rail-manual .sidebar-nav {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .sidebar.rail-manual .sidebar-nav::-webkit-scrollbar {
+        display: none;
+    }
 }
 
 /* ---------- Tablet icon-rail range (769-1024px) ---------- */
@@ -155,6 +174,18 @@
        564-567), so a text-only header row has nothing to show — hide
        the whole row rather than leave an empty clickable bar. */
     .nav-group-header {
+        display: none;
+    }
+
+    /* Same flat/overflowing-list reasoning as the manual rail above —
+       the auto icon-rail hits it too, since it hides headers the same
+       way. */
+    .sidebar-nav {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .sidebar-nav::-webkit-scrollbar {
         display: none;
     }
 }

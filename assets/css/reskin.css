@@ -88,6 +88,22 @@
     }
 }
 
+/* ---------- Tablet icon-rail: hide sidebar-footer name/role text ----------
+   Same cascade-tie problem as .profile-text above: dashboard_admin.css,
+   dashboard_staff.css, and lot-management.css each carry their own
+   unconditional, unscoped .user-chip div{display:flex}, which would
+   otherwise win against dashboard.css's media-scoped hiding rule
+   regardless of source order within dashboard.css. Placed here (loads
+   last) and scoped to .sidebar for extra specificity so it wins
+   reliably on every page. Without this, a long full name wraps into
+   several cramped lines inside the 70px tablet rail instead of
+   collapsing to just the icon like every other label already does. */
+@media (max-width: 1024px) {
+    .sidebar .user-chip div {
+        display: none;
+    }
+}
+
 /* ---------- Display type on KPI numbers ----------
    tokens.css defines --font-display (Fraunces) and the Google Fonts link
    was already added to every page in the theme-toggle rollout, but

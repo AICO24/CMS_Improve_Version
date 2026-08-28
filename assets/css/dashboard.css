@@ -685,7 +685,8 @@
     }
 
     .brand span,
-    .nav-item span:not(.icon) {
+    .nav-item span:not(.icon),
+    .user-chip div {
         display: none;
     }
 
