@@ -1,106 +1,8 @@
 /* Forecast module styles */
-.dashboard-body {
-    background: #f4f7fa;
-    font-family: 'Inter', sans-serif;
-    color: #243736;
-}
 
-.dashboard-container {
-    display: flex;
-    min-height: 100vh;
-}
-
-/* Sidebar sizing/position now comes solely from the shared responsive
-   shell in dashboard.css (Phase 8 audit fix) — this page's own copy was
-   unconditional and was partially defeating dashboard.css's 1024px
-   tablet breakpoint (this page's own 760px mobile rescue rule already
-   covered the phone-width case). */
-
-.sidebar-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-
-.sidebar-nav {
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
-}
-
-.nav-item,
-.nav-item * {
-    text-decoration: none !important;
-}
-
-.nav-item {
-    padding: 12px 14px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    border-radius: 10px;
-    color: #d6def3;
-}
-
-.nav-item:hover {
-    background: rgba(255,255,255,0.05);
-    transform: translateX(3px);
-}
-
-.nav-item.active {
-    background: #7aa77a;
-    color: #06321a;
-}
-
-.nav-item.admin-only {
-    display: none;
-}
-
-/* margin-left/transition now come from the shared dashboard.css (Phase 8) */
-.main-content {
-    min-height: 100vh;
-}
-
-.top-bar {
-    background: #fff;
-    padding: 16px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    box-shadow: 0 1px 4px rgba(15,23,42,0.06);
-}
-
-.top-left {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-
-/* .hamburger and its SVG icon states now come from assets/css/dashboard.css (Batch 6) -- the previous per-page copy had .hamburger input { display: none; }, which made the toggle unreachable by keyboard */
-
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.profile-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #eef3f7;
-    color: #2b3658;
-}
-
-
-.content-area {
-    padding: 24px;
-}
+/* The app-shell chrome duplicated in full here is removed (Phase 6),
+   same cleanup as the other module CSS files earlier in this phase —
+   every rule was already provided by the shared dashboard.css. */
 
 .forecast-controls {
     display: flex;
@@ -120,9 +22,9 @@
 .forecast-controls select {
     padding: 12px 14px;
     border-radius: 14px;
-    border: 1px solid #d6dbe6;
-    background: #fff;
-    color: #243736;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
 }
 
 /*
@@ -140,17 +42,12 @@
 /* .stats-row / .stat-card / .stat-title / .stat-value now come from
    assets/css/dashboard.css so this module's stat cards match every other module. */
 
-.card {
-    background: #fff;
-    border-radius: 22px;
-    box-shadow: 0 16px 32px rgba(15,23,42,0.05);
-    padding: 20px;
-    margin-bottom: 24px;
-}
-
+/* .card's own background/radius/shadow/padding override is gone (Phase
+   6) — same dark-mode bug as reports.css had: hardcoded #fff with no
+   dark-mode coverage of its own, shadowing the token-driven canonical
+   .card from components/cards.css. That now applies directly instead. */
 .card h4 {
     margin-bottom: 18px;
-    color: #243736;
 }
 
 #forecastDetails {
@@ -165,24 +62,22 @@
 #forecastDetails th,
 #forecastDetails td {
     padding: 14px 16px;
-    border-bottom: 1px solid #eef2f7;
+    border-bottom: 1px solid var(--color-border);
     text-align: left;
 }
 
 #forecastDetails th {
-    background: #f8fafc;
+    background: var(--color-surface-soft);
     font-size: 0.9rem;
     font-weight: 700;
-    color: #3b4a55;
+    color: var(--color-text-muted);
 }
 
-/* .status-badge base (shape/padding/size) now comes from assets/css/dashboard.css so
-   this module's badges match the rest of the app; only state colors stay local. */
-
-.status-warning {
-    background: #fff4e5;
-    color: #9d6114;
-}
+/* .status-badge base (shape/padding/size) AND .status-warning's state
+   color now come entirely from dashboard.css's canonical, token-driven
+   version — this file's own copy was a byte-for-byte value match in
+   light mode (so removing it changes nothing there) but had no
+   dark-mode coverage of its own. */
 
 .service-banner {
     display: none;
@@ -198,15 +93,15 @@
 }
 
 .service-banner.warning {
-    background: #fff4e5;
-    color: #9d6114;
-    border: 1px solid #f5cf8a;
+    background: var(--color-warning-soft);
+    color: var(--color-warning-strong);
+    border: 1px solid var(--color-warning-soft);
 }
 
 .service-banner.danger {
-    background: #fdecec;
-    color: #9c2b2b;
-    border: 1px solid #f3b7b7;
+    background: var(--color-danger-soft);
+    color: var(--color-danger-strong);
+    border: 1px solid var(--color-danger-soft);
 }
 
 @media (max-width: 1080px) {

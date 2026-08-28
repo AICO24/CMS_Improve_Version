@@ -466,15 +466,10 @@
    dark-friendly, no override needed. */
 
 /* ---------- forecast.css ---------- */
-.dashboard-body[data-theme="dark"] #forecastDetails th {
-    background: var(--color-surface-soft);
-    color: var(--color-text-muted);
-}
-
-.dashboard-body[data-theme="dark"] .service-banner.danger {
-    background: var(--color-danger-soft);
-    color: #f5a3a3;
-}
+/* #forecastDetails th/td, .card, .status-warning, .service-banner, and
+   .forecast-controls input/select are all token-driven at the source
+   now (Phase 6) — these overrides were patching hardcoded colors that
+   no longer exist, so they're redundant rather than wrong; removed. */
 
 /* ---------- notifications.css ---------- */
 /* .notification-item's own background is now var(--color-surface)
