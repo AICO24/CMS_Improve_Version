@@ -475,9 +475,10 @@
 }
 
 /* ---------- notifications.css ---------- */
-.dashboard-body[data-theme="dark"] .notification-item {
-    background: var(--color-surface);
-}
+/* .notification-item's own background is now var(--color-surface)
+   directly (Phase 5c) — this override was patching a hardcoded #fff
+   that no longer exists, so it's redundant rather than wrong; removed
+   rather than left as a no-op duplicate. */
 
 /* ---------- ai.css (its filter/select chrome uses its own color set,
    distinct from every other module's #d9e1e8/#243736 pairing) ---------- */

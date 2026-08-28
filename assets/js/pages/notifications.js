@@ -26,6 +26,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    // Type -> {icon, tone} for the per-notification icon swatch and pill.
+    // Tone maps onto the same success/warning/info/neutral vocabulary as
+    // components/badges.css. Values match the notification_type strings
+    // actually written server-side (grepped across backend/controllers/).
+    const TYPE_META = {
+        Schedule: { icon: 'fa-calendar-check', tone: 'info' },
+        Payment: { icon: 'fa-credit-card', tone: 'success' },
+        Expiration: { icon: 'fa-hourglass-half', tone: 'warning' },
+        Relocation: { icon: 'fa-truck-moving', tone: 'info' },
+        System: { icon: 'fa-gear', tone: 'neutral' },
+    };
+    function typeMeta(type) {
+        return TYPE_META[type] || TYPE_META.System;
+    }
+
     async function loadNotifications() {
         try {
             const notifications = await api.request('notifications', { method: 'GET' });
@@ -34,20 +49,33 @@ document.addEventListener('DOMContentLoaded', async function() {
                 return;
             }
             if (!Array.isArray(notifications) || notifications.length === 0) {
-                list.innerHTML = '<div class="notification-item"><div><div class="notification-title">No notifications yet</div><div class="notification-meta">System updates will appear here.</div></div></div>';
+                const meta = typeMeta('System');
+                list.innerHTML = `
+                    <div class="notification-item">
+                        <div class="notification-icon-badge tone-${meta.tone}"><i class="fas ${meta.icon}"></i></div>
+                        <div class="notification-body">
+                            <div class="notification-title">No notifications yet</div>
+                            <div class="notification-meta">System updates will appear here.</div>
+                        </div>
+                    </div>`;
                 return;
             }
 
-            list.innerHTML = notifications.map(notification => `
+            list.innerHTML = notifications.map(notification => {
+                const type = notification.notification_type || 'System';
+                const meta = typeMeta(type);
+                return `
                 <div class="notification-item ${notification.is_read ? '' : 'unread'}" data-id="${notification.notification_id}">
-                    <div>
+                    <div class="notification-icon-badge tone-${meta.tone}"><i class="fas ${meta.icon}"></i></div>
+                    <div class="notification-body">
                         <div class="notification-title">${notification.title}</div>
                         <div class="notification-meta">${notification.message}</div>
                         <div class="notification-meta">${new Date(notification.created_at).toLocaleString()}</div>
                     </div>
-                    <div class="notification-pill">${notification.notification_type || 'System'}</div>
+                    <div class="notification-pill badge badge--${meta.tone}">${type}</div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         } catch (error) {
             console.error('Failed to load notifications', error);
         }

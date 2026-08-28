@@ -108,12 +108,11 @@
 }
 
 .notification-item {
-    background: #fff;
+    background: var(--color-surface);
     border-radius: 16px;
     padding: 16px 18px;
     box-shadow: 0 10px 24px rgba(15,23,42,0.06);
     display: flex;
-    justify-content: space-between;
     gap: 16px;
     align-items: flex-start;
     transition: box-shadow var(--duration-base) var(--easing-standard);
@@ -124,8 +123,51 @@
 }
 
 .notification-item.unread {
-    border-left: 4px solid #2b3658;
+    border-left: 4px solid var(--color-primary-500);
     cursor: pointer;
+}
+
+/* Per-type icon swatch (Phase 5c) — every notification used to render
+   the same generic pill regardless of type, so "a payment reminder and
+   a system alert render identically" per the audit. Same soft/strong
+   token pairs as components/badges.css, just sized for a circular icon
+   instead of a text pill (badges.css's own .badge padding/shape doesn't
+   fit an icon-only swatch). Tone is picked in notifications.js per
+   notification_type. */
+.notification-icon-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.05rem;
+}
+
+.notification-icon-badge.tone-info {
+    background: var(--color-info-soft);
+    color: var(--color-info-strong);
+}
+
+.notification-icon-badge.tone-warning {
+    background: var(--color-warning-soft);
+    color: var(--color-warning-strong);
+}
+
+.notification-icon-badge.tone-success {
+    background: var(--color-success-soft);
+    color: var(--color-success-strong);
+}
+
+.notification-icon-badge.tone-neutral {
+    background: var(--color-neutral-100);
+    color: var(--color-neutral-700);
+}
+
+.notification-body {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .notification-title {
@@ -134,19 +176,20 @@
 }
 
 .notification-meta {
-    color: #64748b;
+    color: var(--color-text-muted);
     font-size: 0.85rem;
     margin-top: 4px;
 }
 
+/* .notification-pill's own background/color are gone — notifications.js
+   now applies the shared .badge/.badge--{tone} component (Phase 2)
+   directly, the same type→tone mapping as the icon swatch above, so the
+   pill and the icon always agree and both get real dark-mode coverage
+   (badges.css is fully token-driven; this hardcoded indigo pill had no
+   dark-mode override at all before). */
 .notification-pill {
-    padding: 6px 10px;
-    border-radius: 999px;
-    background: #eef2ff;
-    color: #4338ca;
-    font-size: 0.75rem;
-    font-weight: 700;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
