@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/Payment.php';
 require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../models/User.php';
@@ -463,31 +464,30 @@ class PaymentController {
             return ['error' => 'Invalid verification status', 'code' => 400];
         }
 
-        // Idempotency guard: verify() drives real side effects now (lot sync,
-        // notification/email, and — for Lot Purchase — auto-confirming the
-        // linked booking below). Without this, calling verify() twice on the
-        // same payment (e.g. a double-click, or a retried request) would
-        // silently re-run all of it.
-        if (($payment['verification_status'] ?? 'Pending') !== 'Pending') {
-            return ['error' => 'This payment has already been reviewed', 'code' => 409];
-        }
+        // Batch L2.4: everything that must land atomically (the claim itself,
+        // the audit log, the notification DB row, and — for a verified Lot
+        // Purchase/Cremation payment — the downstream lot/schedule/cremation
+        // automation) runs inside one transaction. $pendingEmail is filled in
+        // here but the actual mail() call happens only after a successful
+        // commit (below), so a rollback can never be followed by an email
+        // describing something that didn't actually happen.
+        $pendingEmail = null;
 
-        $result = $this->paymentModel->update($id, [
-            'transaction_type' => $payment['transaction_type'],
-            'reference_id' => $payment['reference_id'],
-            'amount' => $payment['amount'],
-            'payment_date' => $payment['payment_date'],
-            'payment_method' => $payment['payment_method'],
-            'receipt_number' => $payment['receipt_number'],
-            'notes' => $payment['notes'],
-            'received_by' => $payment['received_by'],
-            'receipt_url' => $payment['receipt_url'],
-            'verification_status' => $status,
-            'verified_by' => $adminId,
-            'verified_at' => date('Y-m-d H:i:s'),
-        ]);
+        $claimed = Database::getInstance()->transaction(function () use ($id, $status, $adminId, $payment, &$pendingEmail) {
+            // Atomic idempotency guard: this conditional UPDATE (WHERE
+            // verification_status = 'Pending') is what actually decides
+            // "am I the request that gets to process this payment?" — a
+            // plain read-then-branch here (the old approach) is not safe
+            // under two truly simultaneous verify() calls, since both could
+            // read 'Pending' before either writes. A rowCount() of 0 means
+            // someone else (or an earlier retry of this same request)
+            // already claimed it; nothing below this point may run.
+            $verifiedAt = date('Y-m-d H:i:s');
+            $claimed = $this->paymentModel->verifyIfPending($id, $status, $adminId, $verifiedAt);
+            if (!$claimed) {
+                return false;
+            }
 
-        if ($result) {
             $this->auditLogModel->log(
                 'Payment ' . ($status === 'Verified' ? 'verified' : 'rejected'),
                 $adminId,
@@ -508,7 +508,11 @@ class PaymentController {
             $userModel = new User();
             $user = $userModel->findById($payment['received_by']);
             if (!empty($user['email'])) {
-                $this->sendEmail($user['email'], 'Payment ' . $status, 'Your payment has been ' . strtolower($status) . '.');
+                $pendingEmail = [
+                    'to' => $user['email'],
+                    'subject' => 'Payment ' . $status,
+                    'message' => 'Your payment has been ' . strtolower($status) . '.',
+                ];
             }
 
             if ($status === 'Verified' && $payment['transaction_type'] === 'Lot Purchase') {
@@ -518,10 +522,18 @@ class PaymentController {
                 $this->autoUpdateCremationForVerifiedPayment($payment, $adminId);
             }
 
-            return ['success' => true, 'message' => 'Payment ' . strtolower($status) . ' successfully'];
+            return true;
+        });
+
+        if (!$claimed) {
+            return ['error' => 'This payment has already been reviewed', 'code' => 409];
         }
 
-        return ['error' => 'Failed to update payment verification status', 'code' => 500];
+        if ($pendingEmail !== null) {
+            $this->sendEmail($pendingEmail['to'], $pendingEmail['subject'], $pendingEmail['message']);
+        }
+
+        return ['success' => true, 'message' => 'Payment ' . strtolower($status) . ' successfully'];
     }
 
     // A verified Lot Purchase payment means the lot has been bought, so it should

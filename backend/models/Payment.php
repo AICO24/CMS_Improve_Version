@@ -159,6 +159,25 @@ class Payment {
         ]);
     }
 
+    // Atomic idempotency guard for PaymentController::verify() (Batch L2.4):
+    // only writes verification_status/verified_by/verified_at, and only when
+    // the row is still Pending — the WHERE clause makes "is this still
+    // Pending?" and "claim it" a single database-level operation instead of
+    // the old read-then-branch-then-write pattern, which two simultaneous
+    // verify() calls could both pass before either wrote. Callers must check
+    // the return value: true means this call is the one that actually
+    // claimed the payment (rowCount() === 1); false means it was already
+    // reviewed (rowCount() === 0) and no column was touched.
+    public function verifyIfPending($id, $status, $verifiedBy, $verifiedAt) {
+        $stmt = $this->db->prepare("
+            UPDATE payments
+            SET verification_status = ?, verified_by = ?, verified_at = ?
+            WHERE payment_id = ? AND verification_status = 'Pending'
+        ");
+        $stmt->execute([$status, $verifiedBy, $verifiedAt, (int) $id]);
+        return $stmt->rowCount() === 1;
+    }
+
     public function delete($id) {
         $stmt = $this->db->prepare("DELETE FROM payments WHERE payment_id = ?");
         return $stmt->execute([$id]);
