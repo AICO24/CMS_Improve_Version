@@ -150,7 +150,27 @@ class AuthController {
                     ['registered_email' => $created['email']]
                 );
             }
-            return ['success' => true, 'message' => 'Registration successful', 'user' => $created];
+            // Batch 14 (found during the Batch 13/14 audit of this file's
+            // User-model consumers, same class of issue as GET /users):
+            // $created is User::findByEmail()'s raw row — includes
+            // password_hash — and was being returned to the client as-is.
+            // The frontend (assets/js/auth/register.js) never reads this
+            // `user` field at all, so this only ever mattered for API
+            // consistency; kept present but reduced to the same safe
+            // subset login()/me() below already use, rather than dropped,
+            // to preserve the existing response shape for any other
+            // consumer.
+            return [
+                'success' => true,
+                'message' => 'Registration successful',
+                'user' => $created ? [
+                    'user_id' => $created['user_id'],
+                    'username' => $created['username'],
+                    'full_name' => $created['full_name'],
+                    'email' => $created['email'],
+                    'is_active' => (bool) ($created['is_active'] ?? 1),
+                ] : null,
+            ];
         }
         return ['error' => 'Registration failed', 'code' => 500];
     }

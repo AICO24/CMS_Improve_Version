@@ -16,7 +16,7 @@ class UserController {
         $perPage = !empty($pagination['per_page']) ? (int) $pagination['per_page'] : null;
 
         if ($page === null && $perPage === null) {
-            return $this->userModel->findAll($filters);
+            return array_map([$this, 'normalize'], $this->userModel->findAll($filters));
         }
 
         $page = max(1, $page ?: 1);
@@ -25,7 +25,7 @@ class UserController {
         $data = $this->userModel->findAll($filters, ['page' => $page, 'per_page' => $perPage]);
 
         return [
-            'data' => $data,
+            'data' => array_map([$this, 'normalize'], $data),
             'meta' => [
                 'page' => $page,
                 'per_page' => $perPage,
@@ -177,8 +177,28 @@ class UserController {
         return count($remaining);
     }
 
+    // Batch 14 (Batch 13 audit finding): the single source of truth for
+    // which User fields are safe to return to a client — strips
+    // password_hash/reset_token_hash/reset_token_expires_at/etc. by only
+    // ever naming the fields that belong in a response. Originally used
+    // only by show(); now also used by index() (see below), which is why
+    // this accepts an already-joined role_title when present (findAll()'s
+    // query already JOINs roles and returns it) instead of always issuing
+    // getRole()'s own extra per-row query — applying the old
+    // single-user-only version as-is to a bulk list would have queried
+    // the database once per returned user for no reason, since the
+    // answer was already in the row. show()'s own row (from
+    // User::findById(), no join) never has a role_title key, so it always
+    // takes the getRole() branch exactly as before — this preserves its
+    // existing behavior unchanged.
     private function normalize($user) {
-        $role = $this->userModel->getRole($user['user_id']);
+        if (array_key_exists('role_title', $user)) {
+            $roleTitle = $user['role_title'];
+            $role = $roleTitle ? strtolower($roleTitle) : null;
+        } else {
+            $role = $this->userModel->getRole($user['user_id']);
+            $roleTitle = $role ? ucwords($role) : null;
+        }
         return [
             'user_id' => $user['user_id'],
             'username' => $user['username'],
@@ -186,7 +206,7 @@ class UserController {
             'email' => $user['email'],
             'role_id' => (int) $user['role_id'],
             'role' => $role,
-            'role_title' => $role ? ucwords($role) : null,
+            'role_title' => $roleTitle,
             'is_active' => (bool) $user['is_active'],
             'created_at' => $user['created_at'] ?? null,
             'last_login' => $user['last_login'] ?? null,
