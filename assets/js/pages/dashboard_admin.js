@@ -82,31 +82,88 @@ document.addEventListener('DOMContentLoaded', async function() {
         ],
     });
 
+    // Quota-reduction batch: ai/dashboard-digest shows near-identical
+    // content on this page and on ai.html, and each fresh load costs a
+    // Gemini call with a full facts rebuild. Cached in sessionStorage (not
+    // localStorage) so it's scoped to the current tab/session and expires
+    // naturally when the browser tab closes, keyed by the same name both
+    // pages read/write so navigating between them within the TTL reuses one
+    // result instead of fetching twice. Read-through only — an explicit
+    // Refresh click always bypasses the cache and re-fetches.
+    const AI_DIGEST_CACHE_KEY = 'ai_dashboard_digest_cache';
+    const AI_DIGEST_CACHE_TTL_MS = 5 * 60 * 1000;
+
+    function readAiDigestCache() {
+        try {
+            const raw = sessionStorage.getItem(AI_DIGEST_CACHE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed.timestamp !== 'number' || !parsed.data) return null;
+            if (Date.now() - parsed.timestamp > AI_DIGEST_CACHE_TTL_MS) return null;
+            return parsed.data;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function writeAiDigestCache(data) {
+        try {
+            sessionStorage.setItem(AI_DIGEST_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
+        } catch (e) {
+            // sessionStorage unavailable/full — caching is best-effort only.
+        }
+    }
+
     // AI-2 Round 2: proactive "second admin" briefing — unlike the
     // Exceptions-backed attention card above (which only appears when
     // there's something broken), this always renders something on load, so
     // "nothing needs attention" is itself a stated fact rather than an
-    // absence. Fetched once on load plus an explicit Refresh (no caching
-    // table, no cron — matches this app's existing no-background-jobs
-    // convention, see AutomationEngine.php's header comment).
-    async function loadAiBriefing() {
+    // absence. Fetched once on load (cache permitting) plus an explicit
+    // Refresh (no caching table, no cron — matches this app's existing
+    // no-background-jobs convention, see AutomationEngine.php's header
+    // comment).
+    async function loadAiBriefing(forceRefresh = false) {
         const briefingText = document.getElementById('aiBriefingText');
         const refreshBtn = document.getElementById('refreshBriefingBtn');
         if (!briefingText) return;
-        briefingText.textContent = 'Loading today\'s briefing…';
-        try {
-            const result = await api.request('ai/dashboard-digest', { method: 'GET' });
+
+        function render(result) {
             briefingText.textContent = (result && result.explained && result.message)
                 ? result.message
                 : 'AI briefing is unavailable right now — check the Needs Attention card and Exceptions page directly.';
+        }
+
+        if (!forceRefresh) {
+            const cached = readAiDigestCache();
+            if (cached) {
+                render(cached);
+                if (refreshBtn) {
+                    refreshBtn.onclick = async () => {
+                        refreshBtn.disabled = true;
+                        try {
+                            await loadAiBriefing(true);
+                        } finally {
+                            refreshBtn.disabled = false;
+                        }
+                    };
+                }
+                return;
+            }
+        }
+
+        briefingText.textContent = 'Loading today\'s briefing…';
+        try {
+            const result = await api.request('ai/dashboard-digest', { method: 'GET' });
+            writeAiDigestCache(result);
+            render(result);
         } catch (e) {
-            briefingText.textContent = 'AI briefing is unavailable right now — check the Needs Attention card and Exceptions page directly.';
+            render(null);
         }
         if (refreshBtn) {
             refreshBtn.onclick = async () => {
                 refreshBtn.disabled = true;
                 try {
-                    await loadAiBriefing();
+                    await loadAiBriefing(true);
                 } finally {
                     refreshBtn.disabled = false;
                 }

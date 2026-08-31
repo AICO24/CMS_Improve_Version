@@ -121,14 +121,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         lastAiDiagnosis = null;
         useAsNotesBtn.style.display = 'none';
 
-        // System-Wide AI Assistant (Phase 4): replaces the old one-shot
-        // "Ask AI to explain" button. An exception's own entity_type/
+        // System-Wide AI Assistant (Phase 4): mounts with this exception's
+        // entity context pre-wired — an exception's own entity_type/
         // entity_id already point at a supported AuditIntelligenceService
-        // entity (Schedule/Lot/Cremation/etc.) — explaining THAT gives a
-        // richer answer than the old explain-exception endpoint's bare
-        // event/reason fields, since it includes the entity's full related
-        // records and timeline (which already surfaces this exception too).
-        const assistant = initAiAssistant({
+        // entity (Schedule/Lot/Cremation/etc.), which gives a richer answer
+        // than the old explain-exception endpoint's bare event/reason
+        // fields. No longer auto-asks on modal open (quota-reduction batch
+        // — opening the resolve modal must never cost an LLM call by
+        // itself). onAnswer still wires up "Use as resolution notes" once
+        // the admin explicitly asks.
+        initAiAssistant({
             mountSelector: '#aiAssistantMountRecord',
             context: { scope: 'entity', entity_type: exception.entity_type, entity_id: exception.entity_id },
             label: 'Ask AI',
@@ -137,9 +139,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                 useAsNotesBtn.style.display = 'inline-block';
             },
         });
-        if (assistant) {
-            assistant.askDirectly('Why did automation stop here, and what should I do to resolve it?');
-        }
         // The "confirm anyway" override only makes sense for an entity type
         // that has its own resolvable pending decision — a booking (Schedule)
         // waiting on confirmation, or (Round 2) a relocation request whose

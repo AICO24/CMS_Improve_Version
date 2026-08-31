@@ -369,21 +369,19 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('viewDetails').innerHTML = details;
             document.getElementById('viewModal').style.display = 'flex';
 
-            // System-Wide AI Assistant (Phase 4): replaces the old one-shot
-            // "Ask AI to explain" button — same entity-scoped context, but
-            // now a real chat that supports follow-up questions. Fired
-            // immediately (not waiting for a click) so the explanation
-            // still appears right away, matching the old button's purpose.
+            // System-Wide AI Assistant (Phase 4): mounts with this record's
+            // context pre-wired, but no longer auto-asks on open (quota-
+            // reduction batch — viewing a payment must never cost an LLM
+            // call by itself). The admin can still open the panel and ask a
+            // question, and the assistant answers using this same
+            // entity-scoped context.
             const aiMount = document.getElementById('aiAssistantMountRecord');
             if (aiMount) {
-                const assistant = initAiAssistant({
+                initAiAssistant({
                     mountSelector: '#aiAssistantMountRecord',
                     context: { scope: 'entity', entity_type: 'Payment', entity_id: id },
                     label: 'Ask AI',
                 });
-                if (assistant) {
-                    assistant.askDirectly('Explain the current status and history of this record, and suggest what I should do next if anything needs attention.');
-                }
             }
 
             const verifyBtn = document.getElementById('verifyPaymentBtn');

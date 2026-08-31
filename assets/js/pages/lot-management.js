@@ -476,19 +476,20 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             document.getElementById('viewModal').style.display = 'flex';
 
-            // System-Wide AI Assistant: replaces the old one-shot "Ask AI to
-            // explain" button — fired immediately so the explanation still
-            // appears right away. Separate mount from the page-level header
-            // assistant above (#aiAssistantMountRecord vs #aiAssistantMount)
-            // so opening one doesn't clobber the other's conversation.
-            const assistant = initAiAssistant({
+            // System-Wide AI Assistant: mounts with this record's context
+            // pre-wired, but no longer auto-asks on open (quota-reduction
+            // batch — opening a record must never cost an LLM call by
+            // itself). The admin can still open the panel and ask a
+            // question, and the assistant answers using this same
+            // entity-scoped context. Separate mount from the page-level
+            // header assistant above (#aiAssistantMountRecord vs
+            // #aiAssistantMount) so opening one doesn't clobber the other's
+            // conversation.
+            initAiAssistant({
                 mountSelector: '#aiAssistantMountRecord',
                 context: { scope: 'entity', entity_type: 'Lot', entity_id: lotId },
                 label: 'Ask AI',
             });
-            if (assistant) {
-                assistant.askDirectly('Explain the current status and history of this record, and suggest what I should do next if anything needs attention.');
-            }
 
             document.getElementById('editFromView').onclick = () => {
                 document.getElementById('viewModal').style.display = 'none';

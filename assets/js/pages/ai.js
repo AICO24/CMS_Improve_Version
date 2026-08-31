@@ -27,30 +27,83 @@ document.addEventListener('DOMContentLoaded', async function() {
         ],
     });
 
+    // Quota-reduction batch: same cache dashboard_admin.js writes/reads
+    // (same key, same 5-minute TTL) — visiting this page shortly after the
+    // Dashboard reuses that result instead of costing a second Gemini call
+    // for near-identical content. Read-through only — an explicit Refresh
+    // click always bypasses the cache and re-fetches.
+    const AI_DIGEST_CACHE_KEY = 'ai_dashboard_digest_cache';
+    const AI_DIGEST_CACHE_TTL_MS = 5 * 60 * 1000;
+
+    function readAiDigestCache() {
+        try {
+            const raw = sessionStorage.getItem(AI_DIGEST_CACHE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed.timestamp !== 'number' || !parsed.data) return null;
+            if (Date.now() - parsed.timestamp > AI_DIGEST_CACHE_TTL_MS) return null;
+            return parsed.data;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function writeAiDigestCache(data) {
+        try {
+            sessionStorage.setItem(AI_DIGEST_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
+        } catch (e) {
+            // sessionStorage unavailable/full — caching is best-effort only.
+        }
+    }
+
     // Today's Briefing (Phase 9): same ai/dashboard-digest endpoint the
     // Dashboard's AI Briefing card already uses — reused here, not
     // duplicated server-side, so this page finally shows *something*
     // the AI/automation engine has actually been doing today instead of
     // leading with a settings table that (per the notice below it)
     // doesn't affect runtime behavior at all.
-    async function loadDigest() {
+    async function loadDigest(forceRefresh = false) {
         const digestText = document.getElementById('aiDigestText');
         const refreshBtn = document.getElementById('refreshDigestBtn');
         if (!digestText) return;
-        digestText.textContent = 'Loading today\'s briefing…';
-        try {
-            const result = await api.request('ai/dashboard-digest', { method: 'GET' });
+
+        function render(result) {
             digestText.textContent = (result && result.explained && result.message)
                 ? result.message
                 : 'AI briefing is unavailable right now — check the Needs Attention card and Exceptions page directly.';
+        }
+
+        if (!forceRefresh) {
+            const cached = readAiDigestCache();
+            if (cached) {
+                render(cached);
+                if (refreshBtn) {
+                    refreshBtn.onclick = async () => {
+                        refreshBtn.disabled = true;
+                        try {
+                            await loadDigest(true);
+                        } finally {
+                            refreshBtn.disabled = false;
+                        }
+                    };
+                }
+                return;
+            }
+        }
+
+        digestText.textContent = 'Loading today\'s briefing…';
+        try {
+            const result = await api.request('ai/dashboard-digest', { method: 'GET' });
+            writeAiDigestCache(result);
+            render(result);
         } catch (error) {
-            digestText.textContent = 'AI briefing is unavailable right now — check the Needs Attention card and Exceptions page directly.';
+            render(null);
         }
         if (refreshBtn) {
             refreshBtn.onclick = async () => {
                 refreshBtn.disabled = true;
                 try {
-                    await loadDigest();
+                    await loadDigest(true);
                 } finally {
                     refreshBtn.disabled = false;
                 }

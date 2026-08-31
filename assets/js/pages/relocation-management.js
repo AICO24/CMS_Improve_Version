@@ -295,18 +295,17 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             };
 
-            // System-Wide AI Assistant (Phase 4): replaces the old one-shot
-            // "Ask AI to explain" button — fired immediately so the
-            // explanation still appears right away, now with real follow-up
-            // support instead of a single static message.
-            const assistant = initAiAssistant({
+            // System-Wide AI Assistant (Phase 4): mounts with this record's
+            // context pre-wired, but no longer auto-asks on open (quota-
+            // reduction batch — viewing a relocation request must never
+            // cost an LLM call by itself). The admin can still open the
+            // panel and ask a question, using this same entity-scoped
+            // context.
+            initAiAssistant({
                 mountSelector: '#aiAssistantMountRecord',
                 context: { scope: 'entity', entity_type: 'Relocation', entity_id: id },
                 label: 'Ask AI',
             });
-            if (assistant) {
-                assistant.askDirectly('Explain the current status and history of this record, and suggest what I should do next if anything needs attention.');
-            }
 
             viewModal.style.display = 'flex';
         } catch (error) {
