@@ -10,6 +10,7 @@ __pycache__/
 # Local runtime artifacts
 backend/storage/logs/
 backend/storage/uploads/
+backend/storage/rate_limits/
 
 # OS files
 .DS_Store

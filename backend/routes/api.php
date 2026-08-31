@@ -14,6 +14,7 @@ require_once __DIR__ . '/../controllers/ExpirationController.php';
 require_once __DIR__ . '/../controllers/UserController.php';
 require_once __DIR__ . '/../controllers/SystemExceptionController.php';
 require_once __DIR__ . '/../middleware/Auth.php';
+require_once __DIR__ . '/../services/RateLimiter.php';
 
 $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $requestUri = $_SERVER['REQUEST_URI'] ?? '';
@@ -1017,7 +1018,23 @@ if ($path === 'ai/assistant-ask' && $requestMethod === 'POST') {
     // System-Wide AI Assistant (Phase 1): same admin/staff gate as every
     // other audit/exception-adjacent AI route above. Citizens never reach
     // this — it can surface real booking/payment/lot facts by design.
-    AuthMiddleware::requireRole(['admin', 'staff']);
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+
+    // Batch 10 (Batch 9 audit finding): no server-side protection existed
+    // against rapid repeated calls to this specific endpoint, each one a
+    // real Gemini/Groq request. 10/minute per authenticated user is
+    // generous for genuine interactive use — a real exchange takes
+    // several seconds of visible "Thinking…" time, so a human can't
+    // realistically send more than a handful of messages per minute —
+    // while bounding worst-case quota burn from a runaway script or
+    // accidental rapid-fire clicking. Scoped to this one route only; no
+    // other endpoint is affected.
+    if (!RateLimiter::allow('assistant_ask_' . $user['user_id'], 10, 60)) {
+        http_response_code(429);
+        echo json_encode(['error' => 'Too many requests — please wait a moment before asking again.']);
+        exit;
+    }
+
     $input = readRequestBody();
     $result = $aiController->askAssistant($input);
     http_response_code($result['code'] ?? 200);

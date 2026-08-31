@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import math
 import warnings
@@ -15,6 +16,23 @@ from sklearn.metrics.pairwise import cosine_similarity
 from statsmodels.tsa.arima.model import ARIMA
 
 import llm_provider
+
+# Batch 10 (Batch 9 audit finding): llm_provider._log_attempt()'s
+# provider-attempt metadata logging existed structurally since Batch 6 but
+# had no handler attached anywhere in the real service — logging.info()
+# calls were silently dropped by Python's default "handler of last
+# resort" (WARNING+ only), confirmed empirically in the Batch 9 audit.
+# basicConfig() is a documented no-op if the root logger already has a
+# handler, so this is safe against duplicate handlers on its own; the
+# `if not logging.getLogger().handlers` guard below makes that intent
+# explicit rather than relying on it silently. Root stays at WARNING so
+# third-party libraries (httpx, google_genai) don't flood output with
+# their own INFO-level chatter — only the 'llm_provider' logger itself is
+# raised to INFO, which is the only logger this project's own code writes
+# through, keeping the change surgical.
+if not logging.getLogger().handlers:
+    logging.basicConfig(level=logging.WARNING, format='%(asctime)s %(name)s %(levelname)s: %(message)s')
+logging.getLogger('llm_provider').setLevel(logging.INFO)
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 

@@ -149,46 +149,73 @@ function initAiAssistant({ mountSelector, context, greeting, suggestions = [], o
         const trimmed = (question || '').trim();
         if (busy || !trimmed) return;
         busy = true;
-        collapseIntro();
-        appendMessage('user', trimmed);
-        input.value = '';
-        input.disabled = true;
-
-        const loadingRow = document.createElement('div');
-        loadingRow.className = 'ai-assistant-msg-row ai-assistant-msg-row--ai';
-        loadingRow.innerHTML = `
-            <div class="ai-assistant-avatar-sm"><i class="fas fa-robot"></i></div>
-            <div class="ai-assistant-msg-col">
-                <div class="ai-assistant-msg ai-assistant-msg--ai ai-assistant-msg--loading">Thinking…</div>
-            </div>
-        `;
-        messagesEl.appendChild(loadingRow);
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-
+        // Batch 10 (Batch 9 audit finding): busy/input-disabled used to be
+        // reset only in a finally attached to the network try block below
+        // — a thrown error in the synchronous setup between busy=true and
+        // that try (DOM lookups/mutations) would have left the widget
+        // permanently disabled with no way to send another message short
+        // of a page reload. Wrapping the whole body in this outer
+        // try/finally instead means busy/input state always recovers no
+        // matter where a failure happens.
         try {
-            const result = await api.request('ai/assistant-ask', {
-                method: 'POST',
-                body: {
-                    context,
-                    question: trimmed,
-                    // Last 5 exchanges only — enough for a real follow-up
-                    // without growing the payload unbounded.
-                    conversation_history: conversationHistory.slice(-5),
-                },
-            });
-            loadingRow.remove();
-            if (result && result.answered && result.message) {
-                appendMessage('ai', result.message, result.suggested_action);
-                conversationHistory.push({ question: trimmed, message: result.message });
-                if (typeof onAnswer === 'function') {
-                    onAnswer(result.message, result.suggested_action);
+            collapseIntro();
+            appendMessage('user', trimmed);
+            input.value = '';
+            input.disabled = true;
+
+            const loadingRow = document.createElement('div');
+            loadingRow.className = 'ai-assistant-msg-row ai-assistant-msg-row--ai';
+            loadingRow.innerHTML = `
+                <div class="ai-assistant-avatar-sm"><i class="fas fa-robot"></i></div>
+                <div class="ai-assistant-msg-col">
+                    <div class="ai-assistant-msg ai-assistant-msg--ai ai-assistant-msg--loading">Thinking…</div>
+                </div>
+            `;
+            messagesEl.appendChild(loadingRow);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+
+            // Batch 10 (Batch 9 audit finding): no request timeout existed
+            // on this fetch — a genuinely hung connection could leave
+            // "Thinking…" showing indefinitely. The backend's own
+            // worst-case sequential Gemini+Groq chain is bounded by PHP's
+            // own ~30s curl timeout to the Python service; 35s here gives
+            // that a small margin so this abort never races ahead of a
+            // legitimately-still-processing backend response — it only
+            // fires for a request the backend's own safety nets never got
+            // a chance to resolve. api.js's request() already spreads
+            // arbitrary fetch options through (including `signal`), so no
+            // change to api.js or the request payload shape is needed.
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 35000);
+
+            try {
+                const result = await api.request('ai/assistant-ask', {
+                    method: 'POST',
+                    body: {
+                        context,
+                        question: trimmed,
+                        // Last 5 exchanges only — enough for a real follow-up
+                        // without growing the payload unbounded.
+                        conversation_history: conversationHistory.slice(-5),
+                    },
+                    signal: controller.signal,
+                });
+                loadingRow.remove();
+                if (result && result.answered && result.message) {
+                    appendMessage('ai', result.message, result.suggested_action);
+                    conversationHistory.push({ question: trimmed, message: result.message });
+                    if (typeof onAnswer === 'function') {
+                        onAnswer(result.message, result.suggested_action);
+                    }
+                } else {
+                    appendMessage('ai', "I couldn't find enough information to answer that.");
                 }
-            } else {
-                appendMessage('ai', "I couldn't find enough information to answer that.");
+            } catch (error) {
+                loadingRow.remove();
+                appendMessage('ai', 'AI is unavailable right now — please try again in a moment.');
+            } finally {
+                clearTimeout(timeoutId);
             }
-        } catch (error) {
-            loadingRow.remove();
-            appendMessage('ai', 'AI is unavailable right now — please try again in a moment.');
         } finally {
             input.disabled = false;
             input.focus();

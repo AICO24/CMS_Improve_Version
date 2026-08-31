@@ -223,7 +223,17 @@ class AiController {
             return ['error' => 'entity_type and entity_id are required', 'code' => 400];
         }
 
-        $context = $this->auditIntelligenceService->buildContext($entityType, $entityId);
+        // Batch 10 (Batch 9 audit finding): AuditIntelligenceService's
+        // DB-touching methods can throw (PDO is configured with
+        // ERRMODE_EXCEPTION — see config/database.php) and nothing above
+        // this call chain ever caught that, so a database outage here
+        // used to propagate as an uncaught exception instead of this
+        // endpoint's own existing safe-failure shape.
+        try {
+            $context = $this->auditIntelligenceService->buildContext($entityType, $entityId);
+        } catch (Exception $e) {
+            return ['error' => 'AI context is temporarily unavailable', 'code' => 503];
+        }
         if (!empty($context['error'])) {
             return $context;
         }
@@ -246,7 +256,16 @@ class AiController {
     // explainEntity(), there's no entity to select, this is always "the
     // whole system, right now."
     public function dashboardDigest() {
-        $facts = $this->auditIntelligenceService->buildDashboardFacts();
+        // Batch 10 (Batch 9 audit finding): same uncaught-DB-exception gap
+        // as explainEntity()/askAssistant() below — a database outage here
+        // now degrades to this endpoint's own existing "explained:false"
+        // shape (the exact shape every other failure path here already
+        // uses) instead of an uncaught exception.
+        try {
+            $facts = $this->auditIntelligenceService->buildDashboardFacts();
+        } catch (Exception $e) {
+            return ['explained' => false, 'message' => null];
+        }
         $result = $this->aiService->dashboardDigest($facts);
 
         return [
@@ -298,31 +317,43 @@ class AiController {
         // the minimum relevant, authorized, read-only facts" requirement.
         $systemWide = null;
 
-        if ($scope === 'entity') {
-            $entityType = trim((string) ($context['entity_type'] ?? ''));
-            $entityId = $context['entity_id'] ?? null;
-            if ($entityType === '' || empty($entityId)) {
-                return ['error' => 'entity_type and entity_id are required for scope=entity', 'code' => 400];
+        // Batch 10 (Batch 9 audit finding): every branch below touches the
+        // database through AuditIntelligenceService, which can throw
+        // (PDO is configured with ERRMODE_EXCEPTION — see
+        // config/database.php) — nothing in this call chain previously
+        // caught that, so a database outage propagated as an uncaught
+        // exception instead of this endpoint's own existing
+        // {error, code} failure shape (the same shape the validation
+        // returns just above already use).
+        try {
+            if ($scope === 'entity') {
+                $entityType = trim((string) ($context['entity_type'] ?? ''));
+                $entityId = $context['entity_id'] ?? null;
+                if ($entityType === '' || empty($entityId)) {
+                    return ['error' => 'entity_type and entity_id are required for scope=entity', 'code' => 400];
+                }
+                $built = $this->auditIntelligenceService->buildContext($entityType, $entityId);
+                if (!empty($built['error'])) {
+                    return $built;
+                }
+                $focus = $this->auditIntelligenceService->toFacts($built);
+            } elseif ($scope === 'module') {
+                $module = trim((string) ($context['module'] ?? ''));
+                if ($module === '') {
+                    return ['error' => 'module is required for scope=module', 'code' => 400];
+                }
+                $focus = $this->auditIntelligenceService->buildModuleContext($module);
+                if (!empty($focus['error'])) {
+                    return $focus;
+                }
+            } elseif ($scope === 'system') {
+                $focus = $this->auditIntelligenceService->buildDashboardFacts();
+                $systemWide = $this->auditIntelligenceService->buildSystemWideReach();
+            } else {
+                return ['error' => "context.scope must be 'entity', 'module', or 'system'", 'code' => 400];
             }
-            $built = $this->auditIntelligenceService->buildContext($entityType, $entityId);
-            if (!empty($built['error'])) {
-                return $built;
-            }
-            $focus = $this->auditIntelligenceService->toFacts($built);
-        } elseif ($scope === 'module') {
-            $module = trim((string) ($context['module'] ?? ''));
-            if ($module === '') {
-                return ['error' => 'module is required for scope=module', 'code' => 400];
-            }
-            $focus = $this->auditIntelligenceService->buildModuleContext($module);
-            if (!empty($focus['error'])) {
-                return $focus;
-            }
-        } elseif ($scope === 'system') {
-            $focus = $this->auditIntelligenceService->buildDashboardFacts();
-            $systemWide = $this->auditIntelligenceService->buildSystemWideReach();
-        } else {
-            return ['error' => "context.scope must be 'entity', 'module', or 'system'", 'code' => 400];
+        } catch (Exception $e) {
+            return ['error' => 'AI context is temporarily unavailable', 'code' => 503];
         }
 
         $assistantContext = [
