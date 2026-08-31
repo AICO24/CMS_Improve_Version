@@ -37,6 +37,7 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
+import httpx
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types as genai_types
@@ -114,33 +115,57 @@ def _classify_gemini_exception(exc: Exception) -> str:
     Best-effort classification of a google-genai SDK exception into one of
     the failure categories generate() understands.
 
-    Caveat: the exact google-genai exception surface could not be verified
-    against a live install in this environment. This reads common
-    attribute names (`code`/`status_code`) defensively and falls back to a
-    message substring match, defaulting to 'temporary' (fallback-eligible)
-    for anything unrecognized — an unclassified infrastructure error should
-    not be permanently hidden from the chain, but 'config'/'invalid_model'
-    are only ever returned on a positively-identified signal, never as a
-    default guess, since those two categories carry real consequences
-    (config: eligible for fallback; invalid_model: NOT eligible, and
-    intentionally surfaces rather than hides a deployment bug).
+    Verified against a live install in Batch 7:
+    - A real invalid/malformed API key raised a google.genai APIError with
+      `.code == 400` and a message containing "API key not valid" — Gemini
+      does NOT use 401/403 for this, so the status-code shortcut alone
+      would miss it; the message-substring branch below is what actually
+      catches it, confirmed live.
+    - A real client-side timeout (HttpOptions(timeout=...) breached) raised
+      httpx.ConnectTimeout — an httpx exception, not a google.genai one,
+      with no `.code`/`.status_code` attribute at all, and a message
+      ("...handshake operation timed out") that does NOT contain the
+      substring "timeout" (only "timed out") — confirmed live, and fixed
+      here via an explicit isinstance(exc, httpx.TimeoutException) check
+      (httpx is already a hard transitive dependency of google-genai, so
+      this adds no new dependency) plus a broadened message check as a
+      defense-in-depth fallback.
+    - A real invalid model name raised a google.genai APIError with
+      `.code == 404` — the status-code shortcut correctly catches this one.
+
+    Anything not positively matched by one of these signals defaults to
+    'temporary' (fallback-eligible) — an unclassified infrastructure error
+    should not be permanently hidden from the chain, but 'config'/
+    'invalid_model' are only ever returned on a positively-identified
+    signal, never as a default guess, since those two categories carry
+    real consequences (config: eligible for fallback; invalid_model: NOT
+    eligible, and intentionally surfaces rather than hides a deployment
+    bug).
     """
+    if isinstance(exc, httpx.TimeoutException):
+        return 'timeout'
+
     status_code = getattr(exc, 'code', None)
     if not isinstance(status_code, int):
         status_code = getattr(exc, 'status_code', None)
     message = str(exc).lower()
 
     if isinstance(status_code, int):
-        if status_code in (401, 403):
-            return 'config'
         if status_code == 429:
             return 'rate_limit'
         if status_code == 404:
             return 'invalid_model'
         if status_code >= 500:
             return 'temporary'
+        # Confirmed live: Gemini returns 400 (not 401/403) for an invalid
+        # API key — status_code alone can't distinguish that 400 from any
+        # other bad-request response, so 401/403 are still checked here
+        # for providers/SDKs that do use them, and the message-substring
+        # checks below are what actually catch Gemini's real 400 case.
+        if status_code in (401, 403):
+            return 'config'
 
-    if 'timeout' in message or 'deadline' in message or isinstance(exc, TimeoutError):
+    if 'timeout' in message or 'timed out' in message or 'deadline' in message:
         return 'timeout'
     if 'quota' in message or 'rate limit' in message or 'resource_exhausted' in message:
         return 'rate_limit'
@@ -148,7 +173,7 @@ def _classify_gemini_exception(exc: Exception) -> str:
         'not found' in message or 'does not exist' in message or 'unsupported' in message or 'not supported' in message
     ):
         return 'invalid_model'
-    if ('api key' in message or 'api_key' in message or 'unauthenticated' in message or 'permission denied' in message):
+    if 'api key' in message or 'api_key' in message or 'unauthenticated' in message or 'permission denied' in message:
         return 'config'
 
     return 'temporary'
