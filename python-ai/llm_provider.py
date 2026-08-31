@@ -77,7 +77,16 @@ PROVIDER_CONFIG: Dict[str, Dict[str, Any]] = {
         # rather than trying to reinterpret the caller's `model` argument
         # — callers never need to know this; `model=` continues to mean
         # "which Gemini model" exactly as before.
-        'default_model': 'llama-3.1-8b-instant',
+        #
+        # 'llama-3.1-8b-instant' (the original Batch 6 choice) was
+        # confirmed live-removed from Groq's catalog during Batch 8
+        # verification (404 model_not_found) — GET /openai/v1/models was
+        # queried live against the real account to pick a current,
+        # available, general-purpose chat model rather than guessing.
+        # openai/gpt-oss-20b matches the same "small/fast" role
+        # llama-3.1-8b-instant played, and was verified live to correctly
+        # honor system_instruction + JSON mode (see Batch 8 report).
+        'default_model': 'openai/gpt-oss-20b',
     },
 }
 
@@ -276,6 +285,15 @@ def _generate_with_backup(
         headers={
             'Authorization': f'Bearer {_backup_api_key}',
             'Content-Type': 'application/json',
+            # Confirmed live (Batch 8): urllib's default User-Agent
+            # ("Python-urllib/3.x") gets blocked at Cloudflare's edge in
+            # front of api.groq.com with a bot-protection 403 (body
+            # "error code: 1010") before the request ever reaches Groq's
+            # own auth/API logic — a real key looked like an invalid one
+            # until this was set. Accept is set for the same
+            # look-like-a-normal-client reason.
+            'User-Agent': 'cemetery-cms-python-ai/1.0',
+            'Accept': 'application/json',
         },
         method='POST',
     )
