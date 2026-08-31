@@ -1,0 +1,48 @@
+# Batch 16 (Batch 15 audit — confirmed CRITICAL/HIGH findings): Apache's
+# DocumentRoot for this project is the entire repository root (see
+# C:/laragon/etc/apache2/sites-enabled/auto.CMS.test.conf), not a
+# dedicated public/ subdirectory, so every file under here — including
+# .env files, .git, *.sql backups, and one-off maintenance scripts — was
+# directly web-servable. This file closes that off at the smallest
+# possible scope: no vhost/DocumentRoot change (which would need an
+# Apache restart and touch how every relative frontend/API path
+# resolves), no file moves, no deletions — just deny rules layered on
+# top of the existing, already-working routing in backend/.htaccess and
+# backend/api/.htaccess, which this file does not touch or need to.
+# AllowOverride All is already set at the vhost level, so this file is
+# read on every request with no server restart required.
+
+# Deny any dotfile (.env, .env.example, .gitignore, .htaccess itself,
+# etc.) anywhere under the document root — FilesMatch applies
+# recursively to subdirectories, so this covers python-ai/.env with the
+# exact same rule as the root .env, per the audit's explicit requirement
+# not to leave nested secrets protected differently from the root one.
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Deny the .git directory and everything inside it (e.g. /.git/config).
+# FilesMatch above only matches a request's own filename (e.g. "config"
+# for /.git/config does NOT start with a dot), so a separate rule
+# matching the path itself is required to actually block files nested
+# inside a dot-prefixed directory.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule (^|/)\.git - [F,L]
+</IfModule>
+
+# Deny direct download of any .sql file anywhere under the document
+# root (schema dumps, migrations, and especially backend/database/*
+# backups, which can contain real user data).
+<FilesMatch "\.sql$">
+    Require all denied
+</FilesMatch>
+
+# Deny direct execution of the standalone, unauthenticated seed script.
+# Confirmed unused by the running application (nothing under backend/
+# requires/includes it) — not deleted, only blocked, since Batch 15's
+# instructions were explicit not to remove it without further
+# confirmation it's truly safe to delete.
+<Files "seedData.php">
+    Require all denied
+</Files>
