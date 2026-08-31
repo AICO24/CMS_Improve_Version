@@ -6,6 +6,7 @@ require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/ExpirationRecord.php';
 require_once __DIR__ . '/../models/DecedentRequest.php';
 require_once __DIR__ . '/../models/AuditLog.php';
+require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../services/AutomationEngine.php';
 
 class ScheduleController {
@@ -171,74 +172,117 @@ class ScheduleController {
             unset($data['decedent_request_id'], $data['provisional_decedent']);
         }
 
-        // A recommended/selected lot can go stale between when it was shown to the
-        // user and when they submit the booking (another reservation gets confirmed,
-        // an admin edits the lot directly, etc.). The date/time conflict check below
-        // only catches double-booking the same lot/date/time — it says nothing about
-        // whether the lot itself is still bookable at all, so re-check status here
-        // against the authoritative lots table rather than trusting the lot_id alone.
-        $lot = $this->lotModel->findById($data['lot_id']);
-        if (!$lot) {
-            return ['error' => 'Lot not found', 'code' => 404];
-        }
-        if ($lot['status'] !== 'Available') {
-            return ['error' => 'This lot is no longer available for booking', 'code' => 409];
-        }
+        // Batch L2.3: the lot lookup, conflict check, and schedule creation
+        // all move inside one transaction so a concurrent request against
+        // the same lot can't interleave with this one — findByIdForUpdate()
+        // and lockScheduleRangeForLot() both take real InnoDB locks that a
+        // second simultaneous store() call for the same lot_id will block
+        // behind until this transaction commits or rolls back. The
+        // uq_active_schedule_slot unique index (see
+        // migration_20260831_add_active_schedule_slot_constraint.sql) is
+        // the isolation-level-independent backstop if a race still reaches
+        // the INSERT — caught below as a PDOException and translated back
+        // into the same 409 checkConflict() already returns for the normal
+        // case. Validation order (lot exists/Available -> date format ->
+        // Monday -> past-date -> conflict) is unchanged from before this
+        // batch; only the locking and transaction boundary are new.
+        try {
+            $outcome = Database::getInstance()->transaction(function () use (&$data, $user, $userId, $userRole) {
+                // A recommended/selected lot can go stale between when it was shown to the
+                // user and when they submit the booking (another reservation gets confirmed,
+                // an admin edits the lot directly, etc.). The date/time conflict check below
+                // only catches double-booking the same lot/date/time — it says nothing about
+                // whether the lot itself is still bookable at all, so re-check status here
+                // against the authoritative lots table rather than trusting the lot_id alone.
+                $lot = $this->lotModel->findByIdForUpdate($data['lot_id']);
+                if (!$lot) {
+                    return ['ok' => false, 'error' => 'Lot not found', 'code' => 404];
+                }
+                if ($lot['status'] !== 'Available') {
+                    return ['ok' => false, 'error' => 'This lot is no longer available for booking', 'code' => 409];
+                }
 
-        $scheduleDate = strtotime($data['schedule_date']);
-        if ($scheduleDate === false) {
-            return ['error' => 'Invalid schedule date format', 'code' => 400];
-        }
+                $scheduleDate = strtotime($data['schedule_date']);
+                if ($scheduleDate === false) {
+                    return ['ok' => false, 'error' => 'Invalid schedule date format', 'code' => 400];
+                }
 
-        if (date('N', $scheduleDate) === 1) {
-            return ['error' => 'Monday booking is not allowed; please select another day', 'code' => 400];
-        }
+                if (date('N', $scheduleDate) === 1) {
+                    return ['ok' => false, 'error' => 'Monday booking is not allowed; please select another day', 'code' => 400];
+                }
 
-        if ($scheduleDate < strtotime(date('Y-m-d'))) {
-            return ['error' => 'Schedule date cannot be in the past', 'code' => 400];
-        }
+                if ($scheduleDate < strtotime(date('Y-m-d'))) {
+                    return ['ok' => false, 'error' => 'Schedule date cannot be in the past', 'code' => 400];
+                }
 
-        $hasConflict = $this->scheduleModel->checkConflict(
-            $data['lot_id'],
-            $data['schedule_date'],
-            $data['schedule_time'] ?? null
-        );
+                $this->scheduleModel->lockScheduleRangeForLot($data['lot_id']);
 
-        if ($hasConflict) {
-            return ['error' => 'This lot is already booked for the selected date/time', 'code' => 409];
-        }
+                $hasConflict = $this->scheduleModel->checkConflict(
+                    $data['lot_id'],
+                    $data['schedule_date'],
+                    $data['schedule_time'] ?? null
+                );
 
-        // Only staff/admin may create a reservation that's already Confirmed;
-        // everyone else's booking is forced to Pending regardless of what was submitted.
-        if (!in_array($userRole, ['admin', 'staff'], true)) {
-            $data['status'] = 'Pending';
-            unset($data['confirmed_by']);
-        }
+                if ($hasConflict) {
+                    return ['ok' => false, 'error' => 'This lot is already booked for the selected date/time', 'code' => 409];
+                }
 
-        $data['created_by'] = $userId;
-        $scheduleId = $this->scheduleModel->create($data);
-        if ($scheduleId) {
-            // Batch F (Post-Automation Admin Gap Audit): creation is its own
-            // distinct, always-original fact ("a booking exists and here's
-            // its starting state") — never produced by AutomationEngine, so
-            // no duplication risk here. This is what lets a future "what
-            // happened to booking #123" question find a starting point at all.
-            $this->auditLogModel->log(
-                'Schedule created',
-                self::actorId($user),
-                self::actorUsername($user),
-                'Schedule',
-                $scheduleId,
-                ['lot_id' => (int) $data['lot_id'], 'schedule_date' => $data['schedule_date'], 'initial_status' => $data['status'] ?? 'Pending']
-            );
-            if (isset($data['status']) && $data['status'] === 'Confirmed') {
-                $this->transitionLotStatus($data['lot_id'], 'Reserved', ['Available', 'Reserved'], $user, 'schedule.confirmed');
+                // Only staff/admin may create a reservation that's already Confirmed;
+                // everyone else's booking is forced to Pending regardless of what was submitted.
+                if (!in_array($userRole, ['admin', 'staff'], true)) {
+                    $data['status'] = 'Pending';
+                    unset($data['confirmed_by']);
+                }
+
+                $data['created_by'] = $userId;
+                $scheduleId = $this->scheduleModel->create($data);
+                if (!$scheduleId) {
+                    return ['ok' => false, 'error' => 'Failed to create schedule', 'code' => 500];
+                }
+
+                // Batch F (Post-Automation Admin Gap Audit): creation is its own
+                // distinct, always-original fact ("a booking exists and here's
+                // its starting state") — never produced by AutomationEngine, so
+                // no duplication risk here. This is what lets a future "what
+                // happened to booking #123" question find a starting point at all.
+                $this->auditLogModel->log(
+                    'Schedule created',
+                    self::actorId($user),
+                    self::actorUsername($user),
+                    'Schedule',
+                    $scheduleId,
+                    ['lot_id' => (int) $data['lot_id'], 'schedule_date' => $data['schedule_date'], 'initial_status' => $data['status'] ?? 'Pending']
+                );
+                if (isset($data['status']) && $data['status'] === 'Confirmed') {
+                    $this->transitionLotStatus($data['lot_id'], 'Reserved', ['Available', 'Reserved'], $user, 'schedule.confirmed');
+                }
+
+                return ['ok' => true, 'schedule_id' => $scheduleId];
+            });
+        } catch (PDOException $e) {
+            if (self::isDuplicateActiveSlotViolation($e)) {
+                return ['error' => 'This lot is already booked for the selected date/time', 'code' => 409];
             }
-            $this->notifySchedule($data, $userId);
-            return ['success' => true, 'message' => 'Schedule created', 'schedule_id' => $scheduleId];
+            throw $e;
         }
 
-        return ['error' => 'Failed to create schedule', 'code' => 500];
+        if (!$outcome['ok']) {
+            return ['error' => $outcome['error'], 'code' => $outcome['code']];
+        }
+
+        $this->notifySchedule($data, $userId);
+        return ['success' => true, 'message' => 'Schedule created', 'schedule_id' => $outcome['schedule_id']];
+    }
+
+    // Batch L2.3: the uq_active_schedule_slot unique index
+    // (migration_20260831_add_active_schedule_slot_constraint.sql) is the
+    // backstop if two simultaneous store() calls both pass checkConflict()
+    // before either INSERTs — the loser's INSERT throws this exact
+    // constraint violation. Checked by SQLSTATE (23000 = integrity
+    // constraint violation) AND the specific index name, so an unrelated
+    // duplicate-key error is never misclassified as a booking conflict.
+    private static function isDuplicateActiveSlotViolation(PDOException $e) {
+        return $e->getCode() === '23000' && strpos($e->getMessage(), 'uq_active_schedule_slot') !== false;
     }
 
     private function notifySchedule($data, $userId) {

@@ -204,6 +204,25 @@ class Schedule {
         return (int) ($result['count'] ?? 0) > 0;
     }
 
+    // Locking read for the transactional booking flow (Batch L2.3) — takes
+    // an InnoDB next-key lock on the lot_id range in idx_lot_id (added by
+    // migration_20260825_soft_cancel_schedules.sql), which under the
+    // server's default REPEATABLE READ isolation blocks a concurrent
+    // transaction from inserting another active schedule for the same lot
+    // until this one commits or rolls back — even when this lot currently
+    // has zero schedule rows, since a next-key lock still covers the gap a
+    // new row would occupy. This narrows the race window under normal
+    // operation; the isolation-level-independent guarantee is the
+    // uq_active_schedule_slot unique index added by
+    // migration_20260831_add_active_schedule_slot_constraint.sql, which
+    // this locking read is paired with, not a replacement for. Only call
+    // from inside an active Database::transaction().
+    public function lockScheduleRangeForLot($lotId) {
+        $stmt = $this->db->prepare("SELECT schedule_id FROM burial_schedules WHERE lot_id = ? FOR UPDATE");
+        $stmt->execute([(int) $lotId]);
+        return $stmt->fetchAll();
+    }
+
     public function create($data) {
         // deceased_id/decedent_request_id are mutually exclusive (see
         // ScheduleController::store()) — exactly one is set for a new

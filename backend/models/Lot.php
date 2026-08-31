@@ -138,6 +138,31 @@ class Lot {
         return $stmt->fetch();
     }
 
+    // Locking read for the transactional booking flow (Batch L2.3) — takes
+    // an InnoDB record lock on this exact lot row for the life of the
+    // caller's transaction, so a second concurrent booking attempt against
+    // the same lot blocks here until the first transaction commits or
+    // rolls back, instead of both readers independently seeing the same
+    // pre-transition status. Only ever call this from inside an active
+    // Database::transaction() — outside of one, PDO auto-commits right
+    // after the SELECT and the lock is released immediately, providing no
+    // protection. Deliberately does not run syncExpiredLots() (that stays
+    // findById()'s lazy-sweep behavior, out of this batch's scope) and is
+    // not a replacement for findById() elsewhere.
+    public function findByIdForUpdate($id) {
+        $stmt = $this->db->prepare("
+            SELECT l.*, b.block_name, s.section_name, t.type_name as lot_type_name
+            FROM lots l
+            JOIN blocks b ON l.block_id = b.block_id
+            JOIN sections s ON b.section_id = s.section_id
+            JOIN lot_types t ON l.lot_type_id = t.type_id
+            WHERE l.lot_id = ?
+            FOR UPDATE
+        ");
+        $stmt->execute([$id]);
+        return $stmt->fetch();
+    }
+
     public function create($data) {
         $lotNumber = trim((string) ($data['lot_number'] ?? ''));
         if ($lotNumber === '') {
