@@ -827,11 +827,14 @@ def dashboard_digest():
 # and (2) it may propose ONE concrete suggested_action — still only ever a
 # suggestion, the admin or AutomationEngine is the one who acts.
 # `context` is always {focus, system_wide} (AiController::askAssistant()):
-# focus is whichever record/module the admin is currently looking at,
-# system_wide (AuditIntelligenceService::buildSystemWideReach()) is every
-# module's recent state + open exceptions, attached to EVERY call regardless
-# of where the admin asked from — so "what's expiring next week" is
-# answerable even from the Relocation page, not just Expiration Monitoring.
+# focus is whichever record/module the admin is currently looking at, and
+# is always present. Quota-reduction batch (Batch 3): system_wide
+# (AuditIntelligenceService::buildSystemWideReach(), now a compact
+# counts/statuses summary per module rather than each module's full recent
+# records) is only built for scope=system requests — entity/module requests
+# send null here, on purpose, so a record view never drags in unrelated
+# modules. See ASSISTANT_SYSTEM_PROMPT below for how the model is told
+# this.
 ASSISTANT_MODEL = 'gemini-3.6-flash'
 
 ASSISTANT_SYSTEM_PROMPT = (
@@ -840,14 +843,19 @@ ASSISTANT_SYSTEM_PROMPT = (
     "structured facts only — never invent a name, a number, or a fact "
     "beyond what is provided. The facts are given as {focus, system_wide}: "
     "focus is whatever specific record or module the admin is currently "
-    "looking at; system_wide covers every module's recent records and open "
-    "exceptions across the ENTIRE system, always included. The admin's "
-    "question is not limited to focus — answer using whichever of the two "
-    "actually contains the answer (e.g. a question about expiring leases "
-    "asked while looking at a Relocation record should be answered from "
-    "system_wide.modules.Expiration, not refused just because it's not the "
-    "current focus). Use conversation_history (if given) to understand a "
-    "follow-up question in context. When it is clearly relevant, end with "
+    "looking at, and is always present. system_wide, when present, is a "
+    "compact summary (counts and statuses per module, plus dashboard-level "
+    "totals) — never full records — covering the rest of the system beyond "
+    "focus; it is only included for genuinely system-wide questions, so for "
+    "a question about one specific record or module, system_wide will be "
+    "null and focus is the only information you have. Never claim "
+    "knowledge of a module, record, or number that is not present in focus "
+    "or system_wide for THIS call — if system_wide is null and the "
+    "question is really about a different record or module than focus, say "
+    "so plainly (e.g. 'I don't have visibility into that from here') "
+    "instead of guessing or inventing an answer. Use conversation_history "
+    "(if given) to understand a follow-up question in context. When it is "
+    "clearly relevant, end with "
     "ONE concrete suggested next step (e.g. 'resolve the open exception on "
     "Schedule #12' or 'check whether Lot A2-02 was reserved by another "
     "transaction'). Never claim to have taken any action yourself — you can "

@@ -269,6 +269,58 @@ class AuditIntelligenceService {
         ];
     }
 
+    // Quota-reduction batch (Batch 3): lighter-weight counterpart to
+    // buildModuleContext() above, used only by buildSystemWideReach() below.
+    // A genuinely system-wide question needs to know WHICH module has an
+    // issue (counts/statuses), not every module's individual recent records
+    // and full per-exception detail stacked on top of whichever module is
+    // already the actual focus. Same data source/queries as
+    // buildModuleContext() (existing models' read methods only, no new
+    // SQL), just without recent_records and with open_exceptions collapsed
+    // to a count instead of the full record list.
+    public function buildModuleSummary($module) {
+        if (!array_key_exists($module, self::MODULE_EXCEPTION_TYPES)) {
+            return ['error' => 'Unsupported module', 'code' => 400];
+        }
+
+        $modelByModule = [
+            'Schedule' => $this->scheduleModel,
+            'Relocation' => $this->relocationModel,
+            'Cremation' => $this->cremationModel,
+            'Expiration' => $this->expirationModel,
+            'Decedent' => $this->decedentModel,
+            'Payment' => $this->paymentModel,
+            'Lot' => $this->lotModel,
+        ];
+
+        $records = [];
+        if ($module === 'DecedentRequest') {
+            $records = $this->decedentRequestModel->findAll();
+        } elseif (isset($modelByModule[$module])) {
+            $records = $modelByModule[$module]->findAll([]);
+        }
+
+        $statusCounts = [];
+        foreach ($records as $record) {
+            $status = $this->extractStatus($record) ?? 'unknown';
+            $statusCounts[$status] = ($statusCounts[$status] ?? 0) + 1;
+        }
+
+        $exceptionTypes = self::MODULE_EXCEPTION_TYPES[$module];
+        $openExceptionCount = $exceptionTypes === null
+            ? count($this->exceptionModel->findAll(['status' => 'open']))
+            : array_sum(array_map(function ($type) {
+                return count($this->exceptionModel->findAll(['status' => 'open', 'entity_type' => $type]));
+            }, $exceptionTypes));
+
+        return [
+            'module' => $module,
+            'total_records' => count($records),
+            'status_breakdown' => $statusCounts,
+            'open_exception_count' => $openExceptionCount,
+        ];
+    }
+
     private function firstIdField($record) {
         foreach (['schedule_id', 'request_id', 'cremation_id', 'expiration_id', 'decedent_id', 'lot_id'] as $key) {
             if (array_key_exists($key, $record)) {
@@ -278,16 +330,20 @@ class AuditIntelligenceService {
         return null;
     }
 
-    // System-Wide AI Assistant (follow-up): the assistant was answering
-    // strictly from whichever context the mounting page sent (one module,
-    // one entity), so a question genuinely about a different module (e.g.
+    // System-Wide AI Assistant (follow-up): originally built so a question
+    // genuinely about a different module than the current focus (e.g.
     // "what's expiring next week" asked from the Relocation page) had
-    // nothing to answer from - correctly said so, but that's not what "AI
-    // should cover the whole system" means. This bundles buildDashboardFacts()
-    // plus buildModuleContext() for every module into one always-attached
-    // companion object, so every widget instance has full system reach
-    // regardless of where it's mounted - the page's own scope becomes the
-    // conversational "focus", not a hard boundary on what can be asked.
+    // something to answer from, instead of "AI should cover the whole
+    // system" meaning nothing outside the mounting page was ever reachable.
+    //
+    // Quota-reduction batch (Batch 3): this is now ONLY called for
+    // scope=system requests (see AiController::askAssistant()) — entity and
+    // module scope answer strictly from their own focus, no system-wide
+    // bundle attached, per the audit's data-minimization finding. Uses
+    // buildModuleSummary() (counts/statuses only) rather than the full
+    // buildModuleContext() (recent records + full exception list) per
+    // module, since a system-wide question needs to know WHICH module has
+    // an issue, not every module's record-level detail at once.
     public function buildSystemWideReach() {
         $modules = array_keys(self::MODULE_EXCEPTION_TYPES);
         $byModule = [];
@@ -295,7 +351,7 @@ class AuditIntelligenceService {
             if ($module === 'AuditLog') {
                 continue; // that scope IS the system-wide view - no separate entry needed
             }
-            $byModule[$module] = $this->buildModuleContext($module);
+            $byModule[$module] = $this->buildModuleSummary($module);
         }
 
         return [

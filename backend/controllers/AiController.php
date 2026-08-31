@@ -6,6 +6,7 @@ require_once __DIR__ . '/../services/AuditIntelligenceService.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../models/CapacityAlert.php';
+require_once __DIR__ . '/../services/EnvironmentService.php';
 
 class AiController {
     private $aiParameterModel;
@@ -285,6 +286,17 @@ class AiController {
 
         $scope = $context['scope'] ?? null;
         $focus = null;
+        // Quota-reduction batch (Batch 3): buildSystemWideReach() (dashboard
+        // facts + every module's summary) used to be attached to every
+        // call regardless of scope — the audit's largest single source of
+        // oversized assistant-ask prompts. Deterministic scope selection
+        // below (unchanged — entity/module/system was already resolved
+        // from caller-supplied context.scope, never from the LLM) now also
+        // decides whether system_wide is built at all: only genuinely
+        // system-wide questions get it. Entity/module questions answer
+        // strictly from their own focus, matching the audit's "send only
+        // the minimum relevant, authorized, read-only facts" requirement.
+        $systemWide = null;
 
         if ($scope === 'entity') {
             $entityType = trim((string) ($context['entity_type'] ?? ''));
@@ -308,15 +320,19 @@ class AiController {
             }
         } elseif ($scope === 'system') {
             $focus = $this->auditIntelligenceService->buildDashboardFacts();
+            $systemWide = $this->auditIntelligenceService->buildSystemWideReach();
         } else {
             return ['error' => "context.scope must be 'entity', 'module', or 'system'", 'code' => 400];
         }
 
+        $assistantContext = [
+            'focus' => $focus,
+            'system_wide' => $systemWide,
+        ];
+        $this->logAiContextSize($scope, $assistantContext);
+
         $result = $this->aiService->askAssistant([
-            'context' => [
-                'focus' => $focus,
-                'system_wide' => $this->auditIntelligenceService->buildSystemWideReach(),
-            ],
+            'context' => $assistantContext,
             'question' => $question,
             'conversation_history' => $conversationHistory,
         ]);
@@ -326,6 +342,31 @@ class AiController {
             'message' => (empty($result['error']) && is_string($result['message'] ?? null)) ? $result['message'] : null,
             'suggested_action' => (empty($result['error']) && is_string($result['suggested_action'] ?? null)) ? $result['suggested_action'] : null,
         ];
+    }
+
+    // Batch 3 observability: dev-only, opt-in diagnostic confirming the
+    // scope-based minimization in askAssistant() above is actually
+    // shrinking what gets sent to Gemini. Logs only the resolved scope, a
+    // rough count of module-level units included, and an approximate
+    // serialized character count — never the facts themselves (no PII, no
+    // record contents, no prompt text) — to PHP's own error log, never to
+    // the HTTP response. Off by default; set AI_CONTEXT_DEBUG=true in .env
+    // to enable. No new logging table or infrastructure introduced.
+    private function logAiContextSize($scope, $assistantContext) {
+        if (strtolower((string) EnvironmentService::get('AI_CONTEXT_DEBUG', 'false')) !== 'true') {
+            return;
+        }
+
+        $moduleCount = 0;
+        if ($scope === 'entity' || $scope === 'module') {
+            $moduleCount = 1;
+        } elseif ($scope === 'system') {
+            $modules = $assistantContext['system_wide']['modules'] ?? null;
+            $moduleCount = is_array($modules) ? count($modules) : 0;
+        }
+
+        $contextChars = strlen((string) json_encode($assistantContext));
+        error_log("AI context: scope={$scope} modules={$moduleCount} context_chars={$contextChars}");
     }
 
     public function getKnowledge() {
