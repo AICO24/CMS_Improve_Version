@@ -845,6 +845,12 @@ def _ask_assistant(context: Dict[str, Any], question: str, conversation_history:
         'conversation_history': conversation_history or [],
     }
 
+    # Batch 6: the one call site configured with a real two-provider chain
+    # (Gemini primary, Groq backup) — see llm_provider.py's module
+    # docstring and the Batch 5 audit for why assistant-ask specifically
+    # (highest traffic, fully user-initiated since Batch 1, no
+    # deterministic fallback narrative of its own). Every other call site
+    # in this file omits provider_chain entirely and stays Gemini-only.
     text = llm_provider.generate(
         system_prompt=ASSISTANT_SYSTEM_PROMPT,
         user_content=json.dumps(payload),
@@ -852,6 +858,7 @@ def _ask_assistant(context: Dict[str, Any], question: str, conversation_history:
         json_mode=True,
         temperature=0.3,
         max_output_tokens=768,
+        provider_chain=['gemini', 'backup'],
     )
     if text is None:
         return None, None
