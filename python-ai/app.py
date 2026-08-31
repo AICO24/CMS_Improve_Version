@@ -42,9 +42,13 @@ CAPACITY_CRITICAL_THRESHOLD = 0.95
 # deterministic text) whenever no key is configured or the call fails for any
 # reason, so this feature is fully optional and never blocks a search.
 # Uses the Gemini API (free tier available at aistudio.google.com) rather
-# than a paid provider — all three LLM features below (narrate/extract/chat)
-# share one client/timeout convention so they can't drift onto different
-# providers independently.
+# than a paid provider — the remaining LLM features below (extract/chat/
+# explain-exception/explain-entity/assistant-ask) share one client/timeout
+# convention so they can't drift onto different providers independently.
+# Quota-reduction batch: narrate and dashboard-digest below no longer call
+# Gemini at all (deterministic generation instead) — NARRATION_MODEL is
+# kept as a plain constant only because explain_exception()/explain_entity()
+# further down still reference it.
 NARRATION_MODEL = 'gemini-3.6-flash'
 # The Gemini API rejects any HttpOptions.timeout below 10s outright (400
 # INVALID_ARGUMENT) — unlike the old Anthropic client's 8.0s, which was just
@@ -60,54 +64,45 @@ _THINKING_CONFIG = genai_types.ThinkingConfig(thinking_level='low')
 _gemini_api_key = (os.getenv('GEMINI_API_KEY') or '').strip()
 _gemini_client = genai.Client(api_key=_gemini_api_key) if _gemini_api_key else None
 
-NARRATION_SYSTEM_PROMPT = (
-    "You write a single short, warm status line for a cemetery burial-lot "
-    "search assistant chat. You are given structured facts only — never "
-    "invent details beyond them. Never mention lot numbers, prices, scores, "
-    "burial dates, burial times, decedents, or capacity/forecasting; none of "
-    "that data is available to you.\n\n"
-    "Rules by status:\n"
-    "- success: report that the given count of lots was found, briefly and "
-    "warmly, in one sentence.\n"
-    "- empty: report that no lots matched. Only suggest adjusting whichever "
-    "of lot_type, budget, or section appear in preferences_set — never "
-    "suggest adjusting one that isn't listed there.\n"
-    "- error: report that the recommendation service is temporarily "
-    "unavailable and that available lots are shown below to browse "
-    "manually. Do not say no lots were found.\n\n"
-    "Output only the message text: no preamble, no markdown, no quotes."
-)
+def _plural(count: int, word: str) -> str:
+    return word if count == 1 else f'{word}s'
 
 
-def _narrate_outcome(status: str, count: Optional[int], preferences: Dict[str, Any]) -> Optional[str]:
-    if _gemini_client is None:
-        return None
-
-    facts: Dict[str, Any] = {'status': status}
+# Quota-reduction batch: deterministic replacement for the former Gemini
+# rephrasing call (the removed NARRATION_SYSTEM_PROMPT). Mirrors the exact
+# same per-status rules that prompt enforced — grounded only in the given
+# facts, never inventing lot numbers/prices/dates/decedent data — and the
+# same preferences_set-driven suggestion logic already used by the
+# frontend's own deterministic fallback (buildDeterministicOutcomeMessage()
+# in assets/js/shared/lot-chat-assistant.js), so both paths read alike.
+# Always returns a message now (never None) since there's no external call
+# left that can fail; narrate_outcome() below only ever calls this for the
+# three statuses it already validates.
+def _narrate_outcome(status: str, count: Optional[int], preferences: Dict[str, Any]) -> str:
     if status == 'success':
-        facts['count'] = count
-    if status in ('success', 'empty'):
-        facts['preferences_set'] = {
+        count = count or 0
+        verb = 'matches' if count == 1 else 'match'
+        return f'I found {count} available {_plural(count, "lot")} that {verb} your preferences. Take a look below.'
+
+    if status == 'empty':
+        preferences_set = {
             key: value for key, value in (preferences or {}).items()
             if value not in (None, '')
         }
+        suggestions: List[str] = []
+        if preferences_set.get('lot_type'):
+            suggestions.append('choosing a different lot type')
+        if preferences_set.get('budget'):
+            suggestions.append('increasing your budget')
+        if preferences_set.get('section'):
+            suggestions.append('selecting another section')
+        message = "I couldn't find an available lot matching your current preferences."
+        if suggestions:
+            message += f" You could try {' or '.join(suggestions)}."
+        return message
 
-    try:
-        response = _gemini_client.models.generate_content(
-            model=NARRATION_MODEL,
-            contents=json.dumps(facts),
-            config=genai_types.GenerateContentConfig(
-                system_instruction=NARRATION_SYSTEM_PROMPT,
-                max_output_tokens=512,
-                temperature=0.3,
-                thinking_config=_THINKING_CONFIG,
-                http_options=genai_types.HttpOptions(timeout=_LLM_TIMEOUT_MS),
-            ),
-        )
-        text = (response.text or '').strip()
-        return text or None
-    except Exception:
-        return None
+    # status == 'error' — the only value narrate_outcome() still passes through.
+    return "The recommendation service is temporarily unavailable. Available lots are shown below so you can browse manually."
 
 
 # Batch M3: LLM-assisted preference extraction — an optional fallback the chat
@@ -510,8 +505,10 @@ def recommend_lot_type():
 @app.post('/api/narrate')
 def narrate_outcome():
     # Cosmetic phrasing only — never ranks, scores, or touches the database.
-    # Always returns 200; 'message' is null when narration isn't available,
-    # so callers fall back to their own deterministic text.
+    # Deterministic since the quota-reduction batch (see _narrate_outcome);
+    # 'message' is null only when status isn't one of the three recognized
+    # values, so callers still have their own deterministic text to fall
+    # back on in that case.
     try:
         payload = request.get_json(silent=True) or {}
         status = (payload.get('status') or '').strip()
@@ -758,52 +755,59 @@ def explain_entity():
 # runs: on dashboard load, before the admin has picked anything to inspect,
 # which is what makes this a proactive briefing rather than an on-demand
 # explanation.
-DASHBOARD_DIGEST_SYSTEM_PROMPT = (
-    "You are writing a short daily briefing for a cemetery-management-"
-    "system administrator, based only on structured facts: how many system "
-    "exceptions are currently open (broken down by the type of record "
-    "they're on), the single oldest one still waiting, how many actions "
-    "were completed automatically vs. manually in the last 7 days, and how "
-    "many lot leases expire within 30 days. Never invent a number, a name, "
-    "or a fact beyond what is given — you have no other information about "
-    "this system. Write 2-4 short sentences: lead with what needs the "
-    "admin's attention right now (if open_exceptions.total is 0, say "
-    "plainly that nothing needs attention instead of inventing a concern); "
-    "mention the automated-vs-manual split only if it's informative (e.g. "
-    "automation is clearly carrying most of the load, or manual actions "
-    "dominate); mention expiring leases only if the count is greater than "
-    "zero. Never claim to have taken any action yourself. Output only the "
-    "message text: no preamble, no markdown, no quotes."
-)
+# Quota-reduction batch: deterministic replacement for the former Gemini
+# rephrasing call (the removed DASHBOARD_DIGEST_SYSTEM_PROMPT). Mirrors the
+# exact same per-field rules that prompt enforced — lead with open
+# exceptions (or state plainly that nothing needs attention when there are
+# none), mention the automated/manual split only when one side is clearly
+# carrying the load, and mention expiring leases only when there are any.
+# Never invents a number/name/fact beyond what `facts` already contains.
+# Always returns a message now (never None) since there's no external call
+# left that can fail; dashboard_digest() below only ever calls this once
+# the payload shape is already validated.
+def _dashboard_digest(facts: Dict[str, Any]) -> str:
+    open_exceptions = facts.get('open_exceptions') or {}
+    total_open = int(open_exceptions.get('total') or 0)
+    oldest_open = open_exceptions.get('oldest_open')
 
+    sentences: List[str] = []
 
-def _dashboard_digest(facts: Dict[str, Any]) -> Optional[str]:
-    if _gemini_client is None:
-        return None
+    if total_open == 0:
+        sentences.append('Nothing needs your attention right now — no exceptions are currently open.')
+    else:
+        verb = 'needs' if total_open == 1 else 'need'
+        sentence = f'{total_open} open {_plural(total_open, "exception")} {verb} your attention.'
+        if isinstance(oldest_open, dict) and oldest_open.get('entity_type'):
+            reason = oldest_open.get('reason')
+            sentence += f' The oldest is on a {oldest_open["entity_type"]} record' + (f': {reason}.' if reason else '.')
+        sentences.append(sentence)
 
-    try:
-        response = _gemini_client.models.generate_content(
-            model=NARRATION_MODEL,
-            contents=json.dumps(facts),
-            config=genai_types.GenerateContentConfig(
-                system_instruction=DASHBOARD_DIGEST_SYSTEM_PROMPT,
-                max_output_tokens=512,
-                temperature=0.3,
-                thinking_config=_THINKING_CONFIG,
-                http_options=genai_types.HttpOptions(timeout=_LLM_TIMEOUT_MS),
-            ),
-        )
-        text = (response.text or '').strip()
-        return text or None
-    except Exception:
-        return None
+    recent_activity = facts.get('recent_activity') or {}
+    automated = int(recent_activity.get('automated_actions') or 0)
+    manual = int(recent_activity.get('manual_actions') or 0)
+    window_days = recent_activity.get('window_days') or 7
+    total_actions = automated + manual
+    if total_actions > 0:
+        automated_share = automated / total_actions
+        if automated_share >= 0.75:
+            sentences.append(f'Automation handled most recent activity: {automated} of {total_actions} actions in the last {window_days} days.')
+        elif automated_share <= 0.25:
+            sentences.append(f'Most recent activity was handled manually: {manual} of {total_actions} actions in the last {window_days} days.')
+
+    leases_expiring = int(facts.get('leases_expiring_within_30_days') or 0)
+    if leases_expiring > 0:
+        expire_verb = 'expires' if leases_expiring == 1 else 'expire'
+        sentences.append(f'{leases_expiring} lot {_plural(leases_expiring, "lease")} {expire_verb} within 30 days.')
+
+    return ' '.join(sentences)
 
 
 @app.post('/api/dashboard-digest')
 def dashboard_digest():
-    # Always returns 200; explained:false whenever unavailable, so the
-    # dashboard just hides the AI Briefing panel and falls back to the
-    # existing Needs Attention exceptions card alone.
+    # Deterministic since the quota-reduction batch (see _dashboard_digest);
+    # explained:false only when the payload is missing/malformed, in which
+    # case the dashboard still hides the AI Briefing panel and falls back
+    # to the existing Needs Attention exceptions card alone.
     try:
         payload = request.get_json(silent=True) or {}
         if not isinstance(payload, dict) or 'open_exceptions' not in payload:
