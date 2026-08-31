@@ -11,10 +11,10 @@ import pandas as pd
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from google import genai
-from google.genai import types as genai_types
 from sklearn.metrics.pairwise import cosine_similarity
 from statsmodels.tsa.arima.model import ARIMA
+
+import llm_provider
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
@@ -43,26 +43,18 @@ CAPACITY_CRITICAL_THRESHOLD = 0.95
 # reason, so this feature is fully optional and never blocks a search.
 # Uses the Gemini API (free tier available at aistudio.google.com) rather
 # than a paid provider — the remaining LLM features below (extract/chat/
-# explain-exception/explain-entity/assistant-ask) share one client/timeout
-# convention so they can't drift onto different providers independently.
+# explain-exception/explain-entity/assistant-ask) share one provider/timeout
+# convention (see llm_provider.py) so they can't drift onto different
+# providers independently.
 # Quota-reduction batch: narrate and dashboard-digest below no longer call
 # Gemini at all (deterministic generation instead) — NARRATION_MODEL is
 # kept as a plain constant only because explain_exception()/explain_entity()
 # further down still reference it.
+# Batch 4: all Gemini-SDK specifics (client init, API key, ThinkingConfig,
+# GenerateContentConfig, HttpOptions, response text extraction) now live
+# behind llm_provider.generate() — this file only ever passes plain model
+# name strings/prompts/timeouts into that call, never a Gemini SDK object.
 NARRATION_MODEL = 'gemini-3.6-flash'
-# The Gemini API rejects any HttpOptions.timeout below 10s outright (400
-# INVALID_ARGUMENT) — unlike the old Anthropic client's 8.0s, which was just
-# a client-side cutoff. 12s leaves a small margin above that hard floor.
-_LLM_TIMEOUT_MS = 12000
-# gemini-3.6-flash spends part of max_output_tokens on internal "thinking"
-# before the visible answer — thinking_budget=0 is rejected outright for
-# this model (400 INVALID_ARGUMENT), so 'low' plus a generous token budget
-# per call site is the fix; without it, short structured-JSON responses were
-# silently getting cut off mid-object (verified while debugging the extract
-# endpoint returning null for every request).
-_THINKING_CONFIG = genai_types.ThinkingConfig(thinking_level='low')
-_gemini_api_key = (os.getenv('GEMINI_API_KEY') or '').strip()
-_gemini_client = genai.Client(api_key=_gemini_api_key) if _gemini_api_key else None
 
 def _plural(count: int, word: str) -> str:
     return word if count == 1 else f'{word}s'
@@ -169,7 +161,7 @@ def _strip_json_fences(text: str) -> str:
 
 
 def _extract_preferences(message: str, lot_types: List[str], sections: List[str], pending_slot: Optional[str]) -> Optional[Dict[str, Any]]:
-    if _gemini_client is None or not message:
+    if not message:
         return None
 
     payload = {
@@ -179,20 +171,18 @@ def _extract_preferences(message: str, lot_types: List[str], sections: List[str]
         'pending_slot': pending_slot,
     }
 
+    text = llm_provider.generate(
+        system_prompt=EXTRACTION_SYSTEM_PROMPT,
+        user_content=json.dumps(payload),
+        model=EXTRACTION_MODEL,
+        json_mode=True,
+        temperature=0,
+        max_output_tokens=1024,
+    )
+    if text is None:
+        return None
+
     try:
-        response = _gemini_client.models.generate_content(
-            model=EXTRACTION_MODEL,
-            contents=json.dumps(payload),
-            config=genai_types.GenerateContentConfig(
-                system_instruction=EXTRACTION_SYSTEM_PROMPT,
-                max_output_tokens=1024,
-                temperature=0,
-                response_mime_type='application/json',
-                thinking_config=_THINKING_CONFIG,
-                http_options=genai_types.HttpOptions(timeout=_LLM_TIMEOUT_MS),
-            ),
-        )
-        text = (response.text or '').strip()
         parsed = json.loads(_strip_json_fences(text))
         return parsed if isinstance(parsed, dict) else None
     except Exception:
@@ -254,7 +244,7 @@ def _fetch_knowledge_base() -> List[Dict[str, str]]:
 
 def _answer_question(message: str, knowledge_entries: List[Dict[str, str]], pending_slot: Optional[str]) -> Dict[str, Any]:
     empty = {'answered': False, 'message': None}
-    if _gemini_client is None or not message or not knowledge_entries:
+    if not message or not knowledge_entries:
         return empty
 
     payload = {
@@ -263,20 +253,18 @@ def _answer_question(message: str, knowledge_entries: List[Dict[str, str]], pend
         'knowledge_entries': knowledge_entries,
     }
 
+    text = llm_provider.generate(
+        system_prompt=CHAT_SYSTEM_PROMPT,
+        user_content=json.dumps(payload),
+        model=CHAT_MODEL,
+        json_mode=True,
+        temperature=0,
+        max_output_tokens=1024,
+    )
+    if text is None:
+        return empty
+
     try:
-        response = _gemini_client.models.generate_content(
-            model=CHAT_MODEL,
-            contents=json.dumps(payload),
-            config=genai_types.GenerateContentConfig(
-                system_instruction=CHAT_SYSTEM_PROMPT,
-                max_output_tokens=1024,
-                temperature=0,
-                response_mime_type='application/json',
-                thinking_config=_THINKING_CONFIG,
-                http_options=genai_types.HttpOptions(timeout=_LLM_TIMEOUT_MS),
-            ),
-        )
-        text = (response.text or '').strip()
         parsed = json.loads(_strip_json_fences(text))
         if not isinstance(parsed, dict):
             return empty
@@ -613,9 +601,6 @@ EXPLAIN_EXCEPTION_SYSTEM_PROMPT = (
 
 
 def _explain_exception(event: str, entity_type: str, entity_id: Any, reason: str, severity: Optional[str]) -> Optional[str]:
-    if _gemini_client is None:
-        return None
-
     facts = {
         'event': event,
         'entity_type': entity_type,
@@ -624,22 +609,13 @@ def _explain_exception(event: str, entity_type: str, entity_id: Any, reason: str
         'severity': severity or 'warning',
     }
 
-    try:
-        response = _gemini_client.models.generate_content(
-            model=NARRATION_MODEL,
-            contents=json.dumps(facts),
-            config=genai_types.GenerateContentConfig(
-                system_instruction=EXPLAIN_EXCEPTION_SYSTEM_PROMPT,
-                max_output_tokens=512,
-                temperature=0.3,
-                thinking_config=_THINKING_CONFIG,
-                http_options=genai_types.HttpOptions(timeout=_LLM_TIMEOUT_MS),
-            ),
-        )
-        text = (response.text or '').strip()
-        return text or None
-    except Exception:
-        return None
+    return llm_provider.generate(
+        system_prompt=EXPLAIN_EXCEPTION_SYSTEM_PROMPT,
+        user_content=json.dumps(facts),
+        model=NARRATION_MODEL,
+        temperature=0.3,
+        max_output_tokens=512,
+    )
 
 
 @app.post('/api/explain-exception')
@@ -706,25 +682,13 @@ EXPLAIN_ENTITY_SYSTEM_PROMPT = (
 
 
 def _explain_entity(facts: Dict[str, Any]) -> Optional[str]:
-    if _gemini_client is None:
-        return None
-
-    try:
-        response = _gemini_client.models.generate_content(
-            model=NARRATION_MODEL,
-            contents=json.dumps(facts),
-            config=genai_types.GenerateContentConfig(
-                system_instruction=EXPLAIN_ENTITY_SYSTEM_PROMPT,
-                max_output_tokens=512,
-                temperature=0.3,
-                thinking_config=_THINKING_CONFIG,
-                http_options=genai_types.HttpOptions(timeout=_LLM_TIMEOUT_MS),
-            ),
-        )
-        text = (response.text or '').strip()
-        return text or None
-    except Exception:
-        return None
+    return llm_provider.generate(
+        system_prompt=EXPLAIN_ENTITY_SYSTEM_PROMPT,
+        user_content=json.dumps(facts),
+        model=NARRATION_MODEL,
+        temperature=0.3,
+        max_output_tokens=512,
+    )
 
 
 @app.post('/api/explain-entity')
@@ -875,29 +839,24 @@ ASSISTANT_SYSTEM_PROMPT = (
 
 
 def _ask_assistant(context: Dict[str, Any], question: str, conversation_history: Optional[List[Dict[str, Any]]]):
-    if _gemini_client is None:
-        return None, None
-
     payload = {
         'context': context,
         'question': question,
         'conversation_history': conversation_history or [],
     }
 
+    text = llm_provider.generate(
+        system_prompt=ASSISTANT_SYSTEM_PROMPT,
+        user_content=json.dumps(payload),
+        model=ASSISTANT_MODEL,
+        json_mode=True,
+        temperature=0.3,
+        max_output_tokens=768,
+    )
+    if text is None:
+        return None, None
+
     try:
-        response = _gemini_client.models.generate_content(
-            model=ASSISTANT_MODEL,
-            contents=json.dumps(payload),
-            config=genai_types.GenerateContentConfig(
-                system_instruction=ASSISTANT_SYSTEM_PROMPT,
-                max_output_tokens=768,
-                temperature=0.3,
-                response_mime_type='application/json',
-                thinking_config=_THINKING_CONFIG,
-                http_options=genai_types.HttpOptions(timeout=_LLM_TIMEOUT_MS),
-            ),
-        )
-        text = (response.text or '').strip()
         parsed = json.loads(_strip_json_fences(text))
         if not isinstance(parsed, dict):
             return None, None
