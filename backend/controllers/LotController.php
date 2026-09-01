@@ -3,6 +3,7 @@ require_once __DIR__ . '/../models/Section.php';
 require_once __DIR__ . '/../models/Block.php';
 require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/../models/AuditLog.php';
+require_once __DIR__ . '/../services/AutomationEngine.php';
 
 class LotController {
     // Matches the `lots`.`status` ENUM in schema.sql exactly. MySQL silently
@@ -262,23 +263,64 @@ class LotController {
                 $this->sectionModel->updateCounts($data['block_id']);
             }
 
-            // Important lot status changes flow through this generic update
-            // (no dedicated status-transition endpoint exists for lots), so
-            // the diff below always captures a status change when present.
+            // Batch L2.2: status is intentionally excluded from this diff —
+            // Lot::update() (called above) is no longer capable of writing
+            // it at all. A status change, if present, is handled separately
+            // below through the same AutomationEngine lifecycle audit every
+            // automated transition uses, so it's never logged twice (once
+            // here as a generic diff, once there as a transition).
             $changed = [];
-            foreach (['status', 'lot_number', 'lot_type_id', 'price', 'block_id'] as $field) {
+            foreach (['lot_number', 'lot_type_id', 'price', 'block_id'] as $field) {
                 if (array_key_exists($field, $data) && (string) $data[$field] !== (string) ($oldLot[$field] ?? '')) {
                     $changed[$field] = ['from' => $oldLot[$field] ?? null, 'to' => $data[$field]];
                 }
             }
-            $this->auditLogModel->log(
-                'Lot updated',
-                self::actorId($actor),
-                self::actorUsername($actor),
-                'Lot',
-                $id,
-                $changed ?: ['note' => 'Updated lot details']
-            );
+            if (!empty($changed)) {
+                $this->auditLogModel->log(
+                    'Lot updated',
+                    self::actorId($actor),
+                    self::actorUsername($actor),
+                    'Lot',
+                    $id,
+                    $changed
+                );
+            }
+
+            // Batch L2.2: the one remaining path for an admin/staff status
+            // override, now routed through the same
+            // AutomationEngine::run() -> Lot::transitionStatus() envelope
+            // every automated transition already uses, instead of the old
+            // direct Lot::update()-driven UPDATE lots SET status = ? bypass.
+            // $allowedFromStatuses is deliberately null: this remains the
+            // one intentionally unrestricted path (Classification E from
+            // the L1/L2 audits) — an admin can still move a lot to any
+            // status from any status, e.g. Expired -> Available, exactly as
+            // before this batch. Only the write path and audit shape
+            // changed, not what transitions are allowed. A no-op request
+            // (status missing, or unchanged from the current value) does
+            // not invoke AutomationEngine at all, avoiding a spurious audit
+            // entry for nothing having actually changed.
+            if (!empty($data['status']) && $data['status'] !== $oldLot['status']) {
+                $newStatus = $data['status'];
+                $lotModel = $this->lotModel;
+                AutomationEngine::run(
+                    'lot.admin_override',
+                    'Lot',
+                    $id,
+                    $actor,
+                    function () use ($lotModel, $id) {
+                        $current = $lotModel->findById($id);
+                        if (!$current) {
+                            return ['Lot no longer exists'];
+                        }
+                        return true;
+                    },
+                    function () use ($lotModel, $id, $newStatus) {
+                        return $lotModel->transitionStatus($id, $newStatus, null);
+                    }
+                );
+            }
+
             return ['success' => true, 'message' => 'Lot updated'];
         }
         return ['error' => 'Failed to update lot', 'code' => 500];

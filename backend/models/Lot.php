@@ -190,6 +190,16 @@ class Lot {
         return $success ? (int) $this->db->lastInsertId() : false;
     }
 
+    // Batch L2.2: status removed from this method's write capability
+    // entirely (not just conditionally skipped) — this is metadata-only
+    // now. lots.status has exactly one application-level write path left:
+    // transitionStatus() below, always reached through
+    // AutomationEngine::run() (see LotController::updateLot() for the
+    // admin-override case, and ScheduleController/PaymentController/
+    // RelocationController for automated transitions). A caller that still
+    // passes a 'status' key in $data is silently ignored here by design —
+    // Lot::update($id, ['status' => 'Occupied']) cannot write lots.status,
+    // structurally, because the column is no longer in this SQL statement.
     public function update($id, $data) {
         $existing = $this->findById($id);
         if (!$existing) {
@@ -201,7 +211,6 @@ class Lot {
                 block_id = ?,
                 lot_number = ?,
                 lot_type_id = ?,
-                status = ?,
                 price = ?,
                 dimensions = ?,
                 location_notes = ?
@@ -211,7 +220,6 @@ class Lot {
             $data['block_id'] ?? $existing['block_id'],
             $data['lot_number'] ?? $existing['lot_number'],
             $data['lot_type_id'] ?? $existing['lot_type_id'],
-            $data['status'] ?? $existing['status'],
             $data['price'] ?? $existing['price'],
             array_key_exists('dimensions', $data) ? $data['dimensions'] : $existing['dimensions'],
             array_key_exists('location_notes', $data) ? $data['location_notes'] : $existing['location_notes'],
@@ -219,14 +227,17 @@ class Lot {
         ]);
     }
 
-    // Batch C (Admin-Wide Automation Audit): the one authoritative write path
-    // for a lot's status when it changes as a SIDE EFFECT of another action
-    // (a booking getting confirmed/completed/cancelled, a payment verifying,
-    // a relocation being approved/completed) — as opposed to an admin
-    // directly editing a lot's fields via update() above, which intentionally
-    // stays unrestricted (Classification E in the audit: that's admin
-    // override, not automation, and update() is left untouched here).
-    // $allowedFromStatuses, when given, rejects (returns false, writes
+    // The sole application-level write path for lots.status (Batch L2.2 —
+    // update() above no longer touches this column at all, structurally,
+    // not just by convention). Used both for automated transitions (a
+    // booking getting confirmed/completed/cancelled, a payment verifying, a
+    // relocation being approved/completed) and for an admin's direct status
+    // override via LotController::updateLot() — the latter calls this with
+    // $allowedFromStatuses = null (Classification E from the L1/L2 audits:
+    // that's an intentionally unrestricted admin override, not a lifecycle
+    // rule), routed through AutomationEngine::run() the same as every other
+    // caller so it gets the same lifecycle audit trail instead of a bespoke
+    // one. $allowedFromStatuses, when given, rejects (returns false, writes
     // nothing) if the lot isn't currently in one of those statuses — callers
     // wrap this in AutomationEngine::run() so a rejection raises a reviewable
     // system_exceptions entry instead of silently doing nothing or
