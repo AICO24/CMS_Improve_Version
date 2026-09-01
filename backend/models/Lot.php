@@ -1,8 +1,17 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../services/AutomationEngine.php';
 
 class Lot {
     private $db;
+
+    // Reentrancy guard for syncExpiredLots() (Batch L2.5) — see that
+    // method's comment for why this is needed: it now calls
+    // AutomationEngine::run(), whose apply/validate closures call
+    // $this->findById()/$this->transitionStatus(), both of which call
+    // $this->syncExpiredLots() again at their own top. Without this flag,
+    // that would recurse forever on the very first candidate lot.
+    private $syncingExpiredLots = false;
 
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
@@ -21,23 +30,68 @@ class Lot {
     // createLeaseRecordIfMissing() keys its own dedupe on (lot_id, start_date)
     // for the same reason, so a genuinely new occupancy always gets its own
     // fresh record once it completes.
+    //
+    // Batch L2.5: the actual status write moved off a raw, unaudited
+    // UPDATE ... JOIN and onto the same AutomationEngine::run() ->
+    // Lot::transitionStatus() envelope every other lifecycle transition in
+    // this app already uses — this SELECT only identifies candidates, exact
+    // same join/conditions as the old raw UPDATE's WHERE clause, nothing
+    // about eligibility changed. Idempotent by construction: once a
+    // candidate's transitionStatus() call succeeds, its status is no
+    // longer 'Occupied', so it can never match this SELECT again on a
+    // later call — no separate dedupe mechanism needed. The actor is
+    // deliberately null (system-triggered, not a logged-in user) — the
+    // exact same pattern AutomationEngine::run() already supports (its
+    // actorId resolution is null-safe for a non-array actor).
     private function syncExpiredLots() {
-        $this->db->exec("
-            UPDATE lots l
-            JOIN (
-                SELECT er.lot_id, er.end_date, er.renewed
-                FROM expiration_records er
-                INNER JOIN (
-                    SELECT lot_id, MAX(expiration_id) AS max_id
-                    FROM expiration_records
-                    GROUP BY lot_id
-                ) latest ON latest.lot_id = er.lot_id AND latest.max_id = er.expiration_id
-            ) e ON e.lot_id = l.lot_id
-            SET l.status = 'Expired'
-            WHERE e.renewed = 'no'
-              AND e.end_date < CURDATE()
-              AND l.status = 'Occupied'
-        ");
+        if ($this->syncingExpiredLots) {
+            return;
+        }
+        $this->syncingExpiredLots = true;
+        try {
+            $stmt = $this->db->query("
+                SELECT l.lot_id
+                FROM lots l
+                JOIN (
+                    SELECT er.lot_id, er.end_date, er.renewed
+                    FROM expiration_records er
+                    INNER JOIN (
+                        SELECT lot_id, MAX(expiration_id) AS max_id
+                        FROM expiration_records
+                        GROUP BY lot_id
+                    ) latest ON latest.lot_id = er.lot_id AND latest.max_id = er.expiration_id
+                ) e ON e.lot_id = l.lot_id
+                WHERE e.renewed = 'no'
+                  AND e.end_date < CURDATE()
+                  AND l.status = 'Occupied'
+            ");
+            $candidateLotIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            foreach ($candidateLotIds as $lotId) {
+                $lotId = (int) $lotId;
+                AutomationEngine::run(
+                    'lot.expired',
+                    'Lot',
+                    $lotId,
+                    null,
+                    function () use ($lotId) {
+                        $current = $this->findById($lotId);
+                        if (!$current) {
+                            return ['Lot no longer exists'];
+                        }
+                        if ($current['status'] !== 'Occupied') {
+                            return ['Lot ' . ($current['lot_number'] ?? $lotId) . ' is no longer Occupied (current: ' . $current['status'] . ') — expiration no longer applies'];
+                        }
+                        return true;
+                    },
+                    function () use ($lotId) {
+                        return $this->transitionStatus($lotId, 'Expired', ['Occupied']);
+                    }
+                );
+            }
+        } finally {
+            $this->syncingExpiredLots = false;
+        }
     }
 
     private function applyFilters(&$sql, &$params, $filters) {
