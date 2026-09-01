@@ -66,8 +66,13 @@
 .dashboard-body[data-theme="dark"] .top-bar,
 .dashboard-body[data-theme="dark"] .stat-card,
 .dashboard-body[data-theme="dark"] .recent-list li,
-.dashboard-body[data-theme="dark"] #gridLegend {
+.dashboard-body[data-theme="dark"] #gridLegend,
+.dashboard-body[data-theme="dark"] .lot-card {
     background: var(--color-surface);
+}
+
+.dashboard-body[data-theme="dark"] .lot-card {
+    border-color: var(--color-border);
 }
 
 .dashboard-body[data-theme="dark"] .stat-title,
@@ -259,14 +264,12 @@
 
 .dashboard-body[data-theme="dark"] .filter-search input,
 .dashboard-body[data-theme="dark"] .lot-number,
-.dashboard-body[data-theme="dark"] .info-row strong,
 .dashboard-body[data-theme="dark"] .section-header,
 .dashboard-body[data-theme="dark"] .section-name {
     color: var(--color-text);
 }
 
 .dashboard-body[data-theme="dark"] .user-role,
-.dashboard-body[data-theme="dark"] .info-row,
 .dashboard-body[data-theme="dark"] .filter-search i,
 .dashboard-body[data-theme="dark"] .btn-reset-filters,
 .dashboard-body[data-theme="dark"] .section-header .chevron,
@@ -278,6 +281,34 @@
 .dashboard-body[data-theme="dark"] .lot-type {
     background: rgba(157, 196, 175, 0.14);
     color: var(--color-text);
+}
+
+/* Redesigned lot card (pill/chip meta row + footer link) — same lighter
+   accent-on-dark-surface treatment used elsewhere in this file (e.g. the
+   Reserved badge above) since the light-mode brand green/indigo/green
+   values are too dark to read against the dark surface. */
+.dashboard-body[data-theme="dark"] .lot-card .lot-number i,
+.dashboard-body[data-theme="dark"] .lot-card-footer {
+    color: var(--color-primary-300);
+}
+
+.dashboard-body[data-theme="dark"] .lot-card-footer {
+    border-top-color: var(--color-border);
+}
+
+.dashboard-body[data-theme="dark"] .lot-pill {
+    background: var(--color-surface-soft);
+    color: var(--color-text-muted);
+}
+
+.dashboard-body[data-theme="dark"] .lot-pill.section {
+    background: rgba(129, 140, 248, 0.16);
+    color: #a5b4fc;
+}
+
+.dashboard-body[data-theme="dark"] .lot-pill.price {
+    background: rgba(74, 222, 128, 0.14);
+    color: #86efac;
 }
 
 .dashboard-body[data-theme="dark"] .section-header .count-chip {

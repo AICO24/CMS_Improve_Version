@@ -189,29 +189,34 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     let activeViewMode = 'card';
 
+    // Redesigned to match the compact "tag pill" language already used by
+    // the Burial Scheduling lot-recommendation card (assets/js/shared/
+    // booking-wizard.js's buildLotCard() + booking-chat.css's .meta-pill) —
+    // requested for visual consistency across the two lot-facing pages.
+    // Block/Size stay as their own pills (booking-wizard doesn't need them,
+    // Lot Management does); Size is only rendered when the lot actually has
+    // a recorded dimension, since an empty "--" pill reads as broken rather
+    // than "no value" the way a text row would.
     function renderLotCardHtml(lot) {
+        const sizePill = lot.dimensions
+            ? `<span class="lot-pill"><i class="fas fa-ruler-combined"></i> ${escapeHtml(lot.dimensions)}</span>`
+            : '';
         return `
             <div class="lot-card" data-id="${lot.lot_id}">
-                <div class="card-border">
-                    <div class="card-content">
-                        <div class="lot-header">
-                            <div>
-                                <div class="lot-number">${escapeHtml(lot.lot_number)}</div>
-                                <div class="lot-type">${escapeHtml(lot.lot_type_name || 'N/A')}</div>
-                            </div>
-                            <span class="lot-status status-${lot.status}">${escapeHtml(lot.status)}</span>
-                        </div>
-                        <div class="lot-info">
-                            <div class="info-row"><i class="fas fa-dollar-sign"></i><span>Price</span><strong>₱${formatPrice(lot.price)}</strong></div>
-                            <div class="info-row"><i class="fas fa-map-marker-alt"></i><span>Section</span><strong>${escapeHtml(lot.section_name)}</strong></div>
-                            <div class="info-row"><i class="fas fa-th-large"></i><span>Block</span><strong>${escapeHtml(lot.block_name || 'N/A')}</strong></div>
-                            <div class="info-row"><i class="fas fa-ruler-combined"></i><span>Size</span><strong>${escapeHtml(lot.dimensions || '--')}</strong></div>
-                        </div>
-                        <div class="card-footer">
-                            <span>View Details</span>
-                            <i class="fas fa-arrow-right"></i>
-                        </div>
-                    </div>
+                <div class="lot-card-header">
+                    <div class="lot-number"><i class="fas fa-monument"></i> ${escapeHtml(lot.lot_number)}</div>
+                    <span class="lot-status status-${lot.status}">${escapeHtml(lot.status)}</span>
+                </div>
+                <div class="lot-meta-pills">
+                    <span class="lot-type">${escapeHtml(lot.lot_type_name || 'N/A')}</span>
+                    <span class="lot-pill section"><i class="fas fa-map-pin"></i> ${escapeHtml(lot.section_name)}</span>
+                    <span class="lot-pill"><i class="fas fa-th-large"></i> ${escapeHtml(lot.block_name || 'N/A')}</span>
+                    ${sizePill}
+                    <span class="lot-pill price">₱${formatPrice(lot.price)}</span>
+                </div>
+                <div class="lot-card-footer">
+                    <span>View Details</span>
+                    <i class="fas fa-arrow-right"></i>
                 </div>
             </div>
         `;
