@@ -734,72 +734,80 @@
     transform: scale(.95);
 }
 
-.btn-edit {
-    position: relative;
+/* View-modal action buttons (Edit/Delete, Proceed to Reservation/Record
+   Payment) — unified into one animated family instead of three unrelated
+   styles (a fixed-width hard-shadow button, a shared flat .btn--danger,
+   and two completely static buttons with no hover/active state at all).
+   Same tactile lift-on-hover/press-on-click language the fixed-width
+   .btn-edit used to have alone, now shared + equal-width across all four
+   via flex:1 on .modal-action-row's children. */
+.modal-action-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+}
 
+.modal-action-btn {
+    flex: 1;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-
-    width: 130px;
-    height: 42px;
-
-    margin-top: 12px;
-
-    padding: 0 18px;
-
+    justify-content: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 16px;
     border: none;
     border-radius: 10px;
-
-    background: #2c5e47;
     color: white;
-
     font-weight: 700;
-    font-size: .9rem;
-
+    font-size: .88rem;
     cursor: pointer;
-
-    box-shadow: 4px 4px 0 #1f3f30;
-
-    transition: all .3s ease;
+    transition: transform .2s ease, box-shadow .2s ease;
 }
 
-/* Text */
-
-.edit-text {
-    transition: .3s ease;
+.modal-action-btn:hover {
+    transform: translate(-2px, -2px);
 }
 
-/* Icon */
-
-.edit-icon {
-    position: absolute;
-
-    right: 18px;
-
-    font-size: 14px;
-
-    color: white;
-
-    transition: .3s ease;
+.modal-action-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--modal-action-shadow) !important;
 }
 
-/* Hover */
-
-.btn-edit:hover {
-    color: transparent;
+.modal-action-btn--edit,
+.modal-action-btn--reserve {
+    --modal-action-shadow: #1f3f30;
+    background: #2c5e47;
+    box-shadow: 4px 4px 0 var(--modal-action-shadow);
 }
 
-.btn-edit:hover .edit-icon {
-    right: 50%;
-    transform: translateX(50%);
+.modal-action-btn--edit:hover,
+.modal-action-btn--reserve:hover {
+    box-shadow: 6px 6px 0 var(--modal-action-shadow);
 }
 
-/* Click */
+.modal-action-btn--delete {
+    --modal-action-shadow: #7f1d1d;
+    background: #dc2626;
+    box-shadow: 4px 4px 0 var(--modal-action-shadow);
+}
 
-.btn-edit:active {
-    transform: translate(3px,3px);
-    box-shadow: 2px 2px 0 #1f3f30;
+.modal-action-btn--delete:hover {
+    box-shadow: 6px 6px 0 var(--modal-action-shadow);
+}
+
+.modal-action-btn--payment {
+    --modal-action-shadow: #1e3a8a;
+    background: #2563eb;
+    box-shadow: 4px 4px 0 var(--modal-action-shadow);
+}
+
+.modal-action-btn--payment:hover {
+    box-shadow: 6px 6px 0 var(--modal-action-shadow);
+}
+
+.modal-action-btn:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
 }
 
 .detail-row {
@@ -1381,38 +1389,4 @@
     width: 100%;
 }
 
-.slot-action-btn-group {
-    display: flex;
-    gap: 12px;
-    margin-top: 18px;
-}
-
-.btn-reserve-action {
-    flex: 1;
-    background: #2c5e47;
-    color: white;
-    padding: 10px 16px;
-    border-radius: 10px;
-    border: none;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-.btn-payment-action {
-    flex: 1;
-    background: #2563eb;
-    color: white;
-    padding: 10px 16px;
-    border-radius: 10px;
-    border: none;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
+/* Replaced by .modal-action-row / .modal-action-btn above. */
