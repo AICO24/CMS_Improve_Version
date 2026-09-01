@@ -450,7 +450,21 @@ class ScheduleController {
         }
 
         $data['confirmed_by'] = isset($data['confirmed_by']) ? $data['confirmed_by'] : $userId;
-        $result = $this->scheduleModel->update($id, $data);
+        // Batch L2.6: the checkConflict()-based check above narrows the race but
+        // isn't itself atomic with this UPDATE, so a concurrent request can still
+        // reach the uq_active_schedule_slot unique index first — the same
+        // isolation-level-independent backstop store() already relies on (see
+        // isDuplicateActiveSlotViolation() above). Translate that one specific
+        // violation into the same friendly 409 checkConflict() returns; anything
+        // else propagates unchanged.
+        try {
+            $result = $this->scheduleModel->update($id, $data);
+        } catch (PDOException $e) {
+            if (self::isDuplicateActiveSlotViolation($e)) {
+                return ['error' => 'This lot is already booked for the selected date/time', 'code' => 409];
+            }
+            throw $e;
+        }
         if ($result) {
             $lotId = $data['lot_id'] ?? $existing['lot_id'];
             if (isset($data['status']) && $data['status'] === 'Confirmed' && $existing['status'] !== 'Confirmed') {
