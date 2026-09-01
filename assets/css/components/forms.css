@@ -81,6 +81,24 @@
     color: var(--color-danger-strong);
 }
 
+/* L3.7 (Lot Management): a field representing a consequential override
+   rather than routine metadata — e.g. a direct status change that bypasses
+   the normal reservation/payment/expiration lifecycle — set apart with a
+   warning accent instead of looking like any other field in the form. */
+.form-group.form-group-warning {
+    padding: var(--space-3);
+    border-left: 3px solid var(--color-warning);
+    background: var(--color-warning-soft);
+    border-radius: var(--radius-sm);
+}
+
+.form-group.form-group-warning .help {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    color: var(--color-warning-strong);
+}
+
 /* --- Checkbox / radio (additive) --- */
 .form-group input[type="checkbox"],
 .form-group input[type="radio"] {

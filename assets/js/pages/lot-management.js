@@ -29,6 +29,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     let allSections = [];
     let lotTypes = [];
     let hierarchyInitialized = false;
+    // L3.7: the status the Edit modal was opened with, so the submit
+    // handler can tell a genuine admin-override status change (needs a
+    // confirmation) apart from a metadata-only edit where Status just
+    // happens to still show its current value.
+    let editingOriginalStatus = null;
 
     const filters = { search: '', category: '', section: '', status: '' };
     const expandedCategories = new Set();
@@ -578,6 +583,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('modalTitle').innerText = 'Add New Lot';
         document.getElementById('lotForm').reset();
         document.getElementById('lotId').value = '';
+        editingOriginalStatus = null;
         await populateFormDropdowns();
         document.getElementById('lotModal').style.display = 'flex';
     }
@@ -594,6 +600,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('lotStatus').value = lot.status;
             document.getElementById('lotDimensions').value = lot.dimensions || '';
             document.getElementById('lotNotes').value = lot.location_notes || '';
+            editingOriginalStatus = lot.status;
             await populateFormDropdowns(lot.section_name, lot.block_id);
             document.getElementById('lotModal').style.display = 'flex';
         } catch (error) {
@@ -664,6 +671,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!data.block_id || !data.lot_type_id || !data.price) {
             alert('Please fill in all required fields.');
             return;
+        }
+
+        // L3.7: only prompts when Status is actually being changed during an
+        // edit (not on a routine metadata save where Status just happens to
+        // still show the lot's current value, and not on Add — a new lot's
+        // initial status isn't an override of anything). Backend enforcement
+        // is unchanged; this is purely a "did you mean to do that" UX gate.
+        if (id && editingOriginalStatus && data.status !== editingOriginalStatus) {
+            const confirmed = confirm(
+                `Change this lot's status from ${editingOriginalStatus} to ${data.status}?\n\n` +
+                'This directly overrides the lot\'s lifecycle status and bypasses the normal reservation/payment/expiration flow.'
+            );
+            if (!confirmed) {
+                return;
+            }
         }
 
         const saveBtn = e.target.querySelector('button[type="submit"]');

@@ -303,6 +303,13 @@
     color: #f0c674;
 }
 
+/* L3.7 (Lot Management): --color-warning-strong (#b45309) is too dark to
+   read on the (always-dark) surface behind it here — same fix as the
+   Reserved badge above, reusing the same lighter amber. */
+.dashboard-body[data-theme="dark"] .form-group-warning .help {
+    color: #f0c674;
+}
+
 .dashboard-body[data-theme="dark"] .status-Expired {
     background: var(--color-surface-soft);
     color: var(--color-text-muted);
