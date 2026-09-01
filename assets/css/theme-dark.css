@@ -346,6 +346,51 @@
     color: var(--color-text-muted);
 }
 
+/* Found via a real dark-mode screenshot showing several surfaces still
+   light: .category-body (the panel a category's sections sit inside),
+   .btn-toggle-view (Card View / Interactive Slot Grid toggle — the .active
+   state is already brand-green and needs no fix), .matrix-grid-container
+   (Interactive Slot Grid's wrapper), and .no-lots-icon's circle background
+   (empty-state icon). Also extends the same Available/Occupied/Reserved/
+   Expired token pairing already used for .status-* and .count-chip.* above
+   to .legend-badge.* (grid-view legend) and .slot-box.status-* (the
+   grid-view slot tiles themselves), which hadn't been covered at all. */
+.dashboard-body[data-theme="dark"] .category-body,
+.dashboard-body[data-theme="dark"] .matrix-grid-container,
+.dashboard-body[data-theme="dark"] .no-lots-icon,
+.dashboard-body[data-theme="dark"] .btn-toggle-view {
+    background: var(--color-surface-soft);
+}
+
+.dashboard-body[data-theme="dark"] .btn-toggle-view {
+    color: var(--color-text);
+    border-color: var(--color-border);
+}
+
+.dashboard-body[data-theme="dark"] .legend-badge.available,
+.dashboard-body[data-theme="dark"] .slot-box.status-Available {
+    background: var(--color-success-soft);
+    color: #7fd9a4;
+}
+
+.dashboard-body[data-theme="dark"] .legend-badge.occupied,
+.dashboard-body[data-theme="dark"] .slot-box.status-Occupied {
+    background: var(--color-danger-soft);
+    color: #f5a3a3;
+}
+
+.dashboard-body[data-theme="dark"] .legend-badge.reserved,
+.dashboard-body[data-theme="dark"] .slot-box.status-Reserved {
+    background: var(--color-warning-soft);
+    color: #f0c674;
+}
+
+.dashboard-body[data-theme="dark"] .legend-badge.expired,
+.dashboard-body[data-theme="dark"] .slot-box.status-Expired {
+    background: var(--color-surface-soft);
+    color: var(--color-text-muted);
+}
+
 .dashboard-body[data-theme="dark"] .filter-controls select {
     background: var(--color-surface-soft);
 }
