@@ -532,11 +532,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    function openAddModal() {
+    // L3.4: now awaits populateFormDropdowns() before showing the modal
+    // (previously fired-and-forgot it). That was harmless while the Section/
+    // Lot Type <select>s carried hardcoded placeholder <option>s in the HTML
+    // (removed in L3.4 — they duplicated live API data and could drift), but
+    // without them the modal would otherwise flash empty dropdowns for the
+    // moment it takes populateFormDropdowns()'s block fetch to resolve.
+    async function openAddModal() {
         document.getElementById('modalTitle').innerText = 'Add New Lot';
         document.getElementById('lotForm').reset();
         document.getElementById('lotId').value = '';
-        populateFormDropdowns();
+        await populateFormDropdowns();
         document.getElementById('lotModal').style.display = 'flex';
     }
 

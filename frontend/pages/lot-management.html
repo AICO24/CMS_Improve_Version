@@ -215,19 +215,9 @@
             <form id="lotForm">
                 <input type="hidden" id="lotId">
                 <div class="form-group"><label>Lot Number (optional)</label><input type="text" id="lotNumber" placeholder="Leave blank to auto-generate"></div>
-                <div class="form-group"><label>Section</label><select id="lotSection" required>
-                        <option value="Section A">Section A</option>
-                        <option value="Section B">Section B</option>
-                        <option value="Section C">Section C</option>
-                        <option value="Section D">Section D</option>
-                    </select></div>
+                <div class="form-group"><label>Section</label><select id="lotSection" required></select></div>
                 <div class="form-group"><label>Block</label><select id="lotBlock" required></select></div>
-                <div class="form-group"><label>Lot Type</label><select id="lotType" required>
-                        <option value="Lawn Lot">Lawn Lot</option>
-                        <option value="Family Lot">Family Lot</option>
-                        <option value="Mausoleum">Mausoleum</option>
-                        <option value="Cremation Niche">Cremation Niche</option>
-                    </select></div>
+                <div class="form-group"><label>Lot Type</label><select id="lotType" required></select></div>
                 <div class="form-group"><label>Price (₱)</label><input type="number" id="lotPrice" required></div>
                 <div class="form-group"><label>Dimensions (e.g., 8x10 ft)</label><input type="text" id="lotDimensions">
                 </div>
@@ -270,6 +260,9 @@
                 <button class="btn-edit" id="editFromView">
                     <span class="edit-text">Edit Lot</span>
                     <i class="fas fa-pen edit-icon"></i>
+                </button>
+                <button class="btn btn--danger" id="deleteFromView" type="button">
+                    <i class="fas fa-trash"></i> Delete Lot
                 </button>
             </div>
         </div>
