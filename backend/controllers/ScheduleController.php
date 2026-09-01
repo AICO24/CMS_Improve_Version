@@ -388,15 +388,32 @@ class ScheduleController {
         ]);
     }
 
+    // Batch L2.7: notifySchedule()/notifyScheduleStatusChange() (and destroy()'s
+    // cancellation notice) all funnel through this one method, so deferring here
+    // protects every schedule email at once rather than duplicating the same
+    // check at each call site. When this runs standalone (a normal, non-nested
+    // API call) Database::afterCommit() fires $callback immediately — identical
+    // to the previous synchronous mail() call. When it runs nested inside an
+    // outer Database::transaction() (e.g. PaymentController::verify() ->
+    // autoConfirmScheduleForVerifiedPurchase() -> this controller's update()),
+    // dispatch is queued until that outer transaction actually commits, and is
+    // discarded entirely if it rolls back instead — so a user is never emailed
+    // about a status change that got rolled back. The in-app Notification row
+    // created just before this call needs no equivalent handling: it's a plain
+    // INSERT on the same shared connection, so it's already rolled back for
+    // free by the outer transaction if that happens.
     private function sendEmail($email, $subject, $message) {
         if (empty($email)) {
             return false;
         }
 
-        $headers = "From: noreply@cemeterysystem.local\r\n";
-        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        Database::getInstance()->afterCommit(function () use ($email, $subject, $message) {
+            $headers = "From: noreply@cemeterysystem.local\r\n";
+            $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+            @mail($email, $subject, $message, $headers);
+        });
 
-        return @mail($email, $subject, $message, $headers);
+        return true;
     }
 
     public function update($id, $data, $user) {

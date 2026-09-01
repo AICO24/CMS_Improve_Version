@@ -9,6 +9,7 @@ class Database {
     private $dbname;
     private $username;
     private $password;
+    private $afterCommitCallbacks = [];
 
     private function __construct() {
         EnvironmentService::loadEnvironment(dirname(__DIR__) . '/.env');
@@ -72,12 +73,46 @@ class Database {
         try {
             $result = $callback();
             $this->conn->commit();
-            return $result;
         } catch (Throwable $e) {
             if ($this->conn->inTransaction()) {
                 $this->conn->rollBack();
             }
+            // Batch L2.7: anything queued during this failed transaction describes
+            // a state that never actually took effect — discard it rather than
+            // running it against the rolled-back result.
+            $this->afterCommitCallbacks = [];
             throw $e;
         }
+
+        // Only reached after a successful commit. Drained here (not inside the
+        // try above) so a callback's own failure can never be mistaken for a
+        // reason to roll back work that is already durably committed.
+        $callbacks = $this->afterCommitCallbacks;
+        $this->afterCommitCallbacks = [];
+        foreach ($callbacks as $queuedCallback) {
+            $queuedCallback();
+        }
+
+        return $result;
+    }
+
+    // Batch L2.7: lets a nested call (e.g. ScheduleController::sendEmail(), which
+    // may run standalone or nested inside PaymentController::verify()'s
+    // transaction via its AutomationEngine auto-confirm path) defer a non-DB side
+    // effect — an email — until the transaction it happens to be running inside
+    // actually commits, without that call needing to know which case it's in.
+    // Mirrors the $pendingEmail pattern PaymentController::verify() already uses
+    // for its own email, generalized into the one place every such caller can
+    // share instead of each reimplementing the same check.
+    //
+    // Outside of any transaction, $callback just runs immediately — identical to
+    // the pre-L2.7 behavior for a standalone caller.
+    public function afterCommit(callable $callback) {
+        if ($this->conn->inTransaction()) {
+            $this->afterCommitCallbacks[] = $callback;
+            return;
+        }
+
+        $callback();
     }
 }
