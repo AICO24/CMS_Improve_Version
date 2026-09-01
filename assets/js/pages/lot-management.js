@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         available: document.getElementById('availableCount'),
         occupied: document.getElementById('occupiedCount'),
         reserved: document.getElementById('reservedCount'),
+        expired: document.getElementById('expiredCount'),
         total: document.getElementById('totalCount')
     };
     const hierarchyEl = document.getElementById('lotHierarchy');
@@ -130,6 +131,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         statsEl.available.innerText = stats.available || 0;
         statsEl.occupied.innerText = stats.occupied || 0;
         statsEl.reserved.innerText = stats.reserved || 0;
+        statsEl.expired.innerText = stats.expired || 0;
         statsEl.total.innerText = stats.total || 0;
     }
 

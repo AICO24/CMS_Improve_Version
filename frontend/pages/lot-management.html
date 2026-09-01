@@ -145,6 +145,11 @@
                         <div class="stat-sub">Pending burial</div>
                     </div>
                     <div class="stat-card">
+                        <div class="stat-title"><i class="fas fa-hourglass-half"></i> Expired</div>
+                        <div class="stat-value" id="expiredCount">0</div>
+                        <div class="stat-sub">Lease lapsed</div>
+                    </div>
+                    <div class="stat-card">
                         <div class="stat-title"><i class="fas fa-chart-simple"></i> Total Lots</div>
                         <div class="stat-value" id="totalCount">0</div>
                         <div class="stat-sub">All lots</div>
@@ -193,12 +198,12 @@
                     </div>
                 </div>
 
-                <div class="grid-legend" id="gridLegend"
-                    style="display: none; margin-bottom: 16px; background: #fff; padding: 10px 18px; border-radius: 12px;">
-                    <span style="color: #475569;">Slot Legend:</span>
+                <div class="grid-legend" id="gridLegend" style="display: none;">
+                    <span class="grid-legend-title">Slot Legend:</span>
                     <div class="legend-item"><span class="legend-badge available">O</span> Available</div>
                     <div class="legend-item"><span class="legend-badge occupied">X</span> Occupied</div>
                     <div class="legend-item"><span class="legend-badge reserved">R</span> Reserved</div>
+                    <div class="legend-item"><span class="legend-badge expired">E</span> Expired</div>
                 </div>
 
                 <!-- Category -> Section -> Lot hierarchy -->

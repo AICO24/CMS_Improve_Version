@@ -65,7 +65,8 @@
    sidebar — those stay untouched. */
 .dashboard-body[data-theme="dark"] .top-bar,
 .dashboard-body[data-theme="dark"] .stat-card,
-.dashboard-body[data-theme="dark"] .recent-list li {
+.dashboard-body[data-theme="dark"] .recent-list li,
+.dashboard-body[data-theme="dark"] #gridLegend {
     background: var(--color-surface);
 }
 
