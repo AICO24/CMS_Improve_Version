@@ -1174,6 +1174,19 @@
 
 /* ---------- RESPONSIVE ---------- */
 /* Sidebar/rail responsive behavior now comes from the shared dashboard.css (Batch 3) */
+
+/* L3.8: .lotmgmt-stats' unconditional 5-column grid (added in L3.5 for the
+   new Expired card) has the same specificity as dashboard.css's shared
+   .stats-row tablet rule and loads after it, so without this it silently
+   wins at tablet width too — squeezing all 5 cards into one cramped row
+   instead of the shared 2-column tablet layout documented in dashboard.css
+   (Tablet 769-1024px). Matches that same breakpoint. */
+@media (max-width: 1024px) {
+    .lotmgmt-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 768px) {
     .lotmgmt-stats {
         grid-template-columns: 1fr;
