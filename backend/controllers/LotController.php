@@ -33,6 +33,18 @@ class LotController {
         return is_array($actor) ? ($actor['username'] ?? null) : null;
     }
 
+    // L3.2: sections/blocks/lots cascade-delete onto each other, but the
+    // records that reference a lot beyond this module — burial_schedules,
+    // decedent_records, relocation_requests — have no ON DELETE CASCADE
+    // (MySQL default RESTRICT). Deleting a section/block/lot that a
+    // referenced lot belongs to previously threw an uncaught PDOException
+    // (errno 1451) all the way to a raw 500. Callers below catch that
+    // specific error and turn it into a normal {error, code:409} response;
+    // any other PDOException still propagates unchanged.
+    private static function isForeignKeyViolation(PDOException $e) {
+        return ($e->errorInfo[1] ?? null) === 1451;
+    }
+
     public function getSections() {
         return $this->sectionModel->findAll();
     }
@@ -83,7 +95,14 @@ class LotController {
 
     public function deleteSection($id, $actor = null) {
         $existing = $this->sectionModel->findById($id);
-        $result = $this->sectionModel->delete($id);
+        try {
+            $result = $this->sectionModel->delete($id);
+        } catch (PDOException $e) {
+            if (self::isForeignKeyViolation($e)) {
+                return ['error' => 'Cannot delete this section: it still has blocks or lots with related burial, decedent, or relocation records', 'code' => 409];
+            }
+            throw $e;
+        }
         if ($result) {
             $this->auditLogModel->log(
                 'Section deleted',
@@ -153,7 +172,14 @@ class LotController {
 
     public function deleteBlock($id, $actor = null) {
         $block = $this->blockModel->findById($id);
-        $result = $this->blockModel->delete($id);
+        try {
+            $result = $this->blockModel->delete($id);
+        } catch (PDOException $e) {
+            if (self::isForeignKeyViolation($e)) {
+                return ['error' => 'Cannot delete this block: it still has lots with related burial, decedent, or relocation records', 'code' => 409];
+            }
+            throw $e;
+        }
         if ($result && $block) {
             $this->sectionModel->updateCounts($block['section_id']);
             $this->auditLogModel->log(
@@ -269,10 +295,24 @@ class LotController {
             // below through the same AutomationEngine lifecycle audit every
             // automated transition uses, so it's never logged twice (once
             // here as a generic diff, once there as a transition).
+            // L3.2: price is compared numerically, not via raw string cast —
+            // (string)(float)1501 is "1501" while the DECIMAL(12,2) column
+            // always returns "1501.00" from PDO, so a bare string compare
+            // flagged every edit as a price change even when price was
+            // untouched. Both sides are normalized to the column's 2-decimal
+            // scale before comparing.
             $changed = [];
             foreach (['lot_number', 'lot_type_id', 'price', 'block_id'] as $field) {
-                if (array_key_exists($field, $data) && (string) $data[$field] !== (string) ($oldLot[$field] ?? '')) {
-                    $changed[$field] = ['from' => $oldLot[$field] ?? null, 'to' => $data[$field]];
+                if (!array_key_exists($field, $data)) {
+                    continue;
+                }
+                $oldValue = $oldLot[$field] ?? null;
+                $newValue = $data[$field];
+                $isUnchanged = $field === 'price'
+                    ? number_format((float) $oldValue, 2, '.', '') === number_format((float) $newValue, 2, '.', '')
+                    : (string) $newValue === (string) ($oldValue ?? '');
+                if (!$isUnchanged) {
+                    $changed[$field] = ['from' => $oldValue, 'to' => $newValue];
                 }
             }
             if (!empty($changed)) {
@@ -328,7 +368,14 @@ class LotController {
 
     public function deleteLot($id, $actor = null) {
         $lot = $this->lotModel->findById($id);
-        $result = $this->lotModel->delete($id);
+        try {
+            $result = $this->lotModel->delete($id);
+        } catch (PDOException $e) {
+            if (self::isForeignKeyViolation($e)) {
+                return ['error' => 'Cannot delete this lot: it still has related burial, decedent, or relocation records', 'code' => 409];
+            }
+            throw $e;
+        }
         if ($result && $lot) {
             $block = $this->blockModel->findById($lot['block_id']);
             if ($block) {
