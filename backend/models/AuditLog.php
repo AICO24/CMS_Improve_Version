@@ -6,25 +6,19 @@ class AuditLog {
 
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
-        $this->ensureTableExists();
     }
 
-    private function ensureTableExists() {
-        $sql = "
-            CREATE TABLE IF NOT EXISTS audit_logs (
-                log_id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NULL,
-                username VARCHAR(100) NULL,
-                action VARCHAR(100) NOT NULL,
-                entity_type VARCHAR(50) NULL,
-                entity_id INT NULL,
-                details TEXT NULL,
-                ip_address VARCHAR(45) NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-        ";
-        $this->db->exec($sql);
-    }
+    // Batch L2.8: this used to run "CREATE TABLE IF NOT EXISTS audit_logs" on
+    // every single construction (removed here). audit_logs has been part of
+    // the canonical schema.sql baseline since 2026-08-07 (see docs/database.md)
+    // and every environment provisioned from it already has the table, so the
+    // runtime check was redundant. It was also actively harmful: MySQL
+    // implicitly commits the active transaction on any DDL statement,
+    // including a no-op CREATE TABLE IF NOT EXISTS, so constructing a fresh
+    // AuditLog() while a Database::transaction() was open (as
+    // AutomationEngine::run() does on every call) silently ended that
+    // transaction early — see PaymentController::verify()'s Lot Purchase
+    // auto-confirm path, which this defect broke.
 
     public function log($action, $userId = null, $username = null, $entityType = null, $entityId = null, $details = null) {
         $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';

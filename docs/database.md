@@ -34,7 +34,7 @@ Once a migration has been running in a real environment for a while, fold it int
 | `relocation_requests` | Lot-to-lot relocation workflow |
 | `payments` | Revenue, incl. receipt verification workflow |
 | `notifications` | In-app notifications |
-| `audit_logs` | Mutating-action audit trail (self-created at runtime by the `AuditLog` model if missing) |
+| `audit_logs` | Mutating-action audit trail (part of `schema.sql` since 2026-08-07; the `AuditLog` model no longer creates it at runtime — see Batch L2.8, that DDL was causing implicit-commit of open transactions) |
 | `ai_parameters` | Key/value config surfaced in the admin AI Configuration page; not currently read by the forecasting code itself |
 | `schema_migrations` | Which `migration_*.sql` files have been applied to this database |
 | `occupancy_snapshots` | Per-section, per-day occupancy history for trend charting. Populated automatically by `ReportController::occupancy()` on every request (upsert — no duplicate rows per day), not by a cron job. |
