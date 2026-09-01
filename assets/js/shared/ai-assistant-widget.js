@@ -15,6 +15,19 @@
 // sidebar/dashboard layout), just the assistant panel itself.
 // Load this after shared/api.js and before a page's own script, same
 // convention as button-loading.js/pagination.js.
+//
+// Module-scope (not per-instance) counter: a page can have two independent
+// instances open at once — the page-level #aiAssistantMount (always a
+// fixed bottom-right bubble, see ai-assistant-widget.css) and a per-record
+// #aiAssistantMountRecord mounted inline inside a modal. Opening the
+// record instance used to leave the page-level bubble sitting on top of
+// it (both fixed to the same corner), covering the record panel's own
+// send button. A plain boolean would misbehave if one instance closes
+// while the other is still open, so this counts actually-open panels
+// instead, and the CSS hides the page-level bubble whenever the count is
+// nonzero (see body.ai-assistant-any-panel-open in ai-assistant-widget.css).
+let openAiAssistantPanelCount = 0;
+
 function initAiAssistant({ mountSelector, context, greeting, suggestions = [], onAnswer }) {
     const mount = document.querySelector(mountSelector);
     if (!mount) return null;
@@ -38,7 +51,16 @@ function initAiAssistant({ mountSelector, context, greeting, suggestions = [], o
 
     // One shared backdrop+panel per mount, injected fresh each call (a page
     // like Cremation Management re-inits this per record viewed) — any
-    // previous panel for this mount is simply replaced.
+    // previous panel for this mount is simply replaced. If that previous
+    // panel was left open, its own setOpen(false) will never run (its DOM
+    // is being discarded right here), which would otherwise leak
+    // openAiAssistantPanelCount upward forever across repeated
+    // view-a-different-record cycles — account for it before replacing.
+    if (mount.querySelector('.ai-assistant-toggle.is-open')) {
+        openAiAssistantPanelCount = Math.max(0, openAiAssistantPanelCount - 1);
+        document.body.classList.toggle('ai-assistant-any-panel-open', openAiAssistantPanelCount > 0);
+    }
+
     mount.classList.add('ai-assistant-mount');
     mount.innerHTML = `
         <button type="button" class="ai-assistant-toggle" aria-label="Ask AI">
@@ -85,11 +107,15 @@ function initAiAssistant({ mountSelector, context, greeting, suggestions = [], o
     const input = mount.querySelector('.ai-assistant-input');
 
     function setOpen(next) {
+        if (next === open) return;
         open = next;
         panel.classList.toggle('is-open', open);
         backdrop.classList.toggle('is-open', open);
         toggleBtn.classList.toggle('is-open', open);
         if (open) input.focus();
+
+        openAiAssistantPanelCount += open ? 1 : -1;
+        document.body.classList.toggle('ai-assistant-any-panel-open', openAiAssistantPanelCount > 0);
     }
 
     toggleBtn.addEventListener('click', () => setOpen(!open));

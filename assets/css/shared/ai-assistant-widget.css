@@ -48,6 +48,18 @@
     display: none;
 }
 
+/* Same collision, but for the OTHER instance: a page's per-record
+   assistant (#aiAssistantMountRecord, e.g. inside a Lot Management/
+   Cremation Management/Payments view modal) opens its own panel — also
+   fixed to the bottom-right corner — while this page-level bubble had no
+   idea that happened and stayed put on top of it. body.ai-assistant-
+   any-panel-open is toggled by ai-assistant-widget.js's shared
+   open-panel counter whenever ANY instance on the page opens or closes,
+   so the page-level bubble now hides for that case too, not just its own. */
+body.ai-assistant-any-panel-open #aiAssistantMount .ai-assistant-toggle {
+    display: none;
+}
+
 /* Narrow phone: an open off-canvas sidebar drawer (dashboard.css,
    .sidebar.collapsed at <=768px) can overlap this corner — the mount is nested
    inside each page's header, not a DOM sibling of .sidebar, so the ~ sibling
