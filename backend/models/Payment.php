@@ -6,29 +6,19 @@ class Payment {
 
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
-        $this->ensureSchema();
     }
 
-    private function ensureSchema() {
-        $requiredColumns = [
-            'receipt_url' => "ALTER TABLE payments ADD COLUMN receipt_url varchar(255) DEFAULT NULL",
-            'verification_status' => "ALTER TABLE payments ADD COLUMN verification_status enum('Pending','Verified','Rejected') NOT NULL DEFAULT 'Pending'",
-            'verified_by' => "ALTER TABLE payments ADD COLUMN verified_by int(11) DEFAULT NULL",
-            'verified_at' => "ALTER TABLE payments ADD COLUMN verified_at datetime DEFAULT NULL",
-        ];
-
-        try {
-            $stmt = $this->db->query("SHOW COLUMNS FROM payments");
-            $columns = array_column($stmt->fetchAll(), 'Field');
-            foreach ($requiredColumns as $column => $alterSql) {
-                if (!in_array($column, $columns, true)) {
-                    $this->db->exec($alterSql);
-                }
-            }
-        } catch (Throwable $e) {
-            // Ignore schema repair errors in environments where migrations are managed separately.
-        }
-    }
+    // Batch L2.10: this used to run ensureSchema(), which conditionally issued
+    // "ALTER TABLE payments ADD COLUMN ..." for receipt_url/verification_status/
+    // verified_by/verified_at on every construction (removed here). All four
+    // columns have been part of the canonical schema.sql baseline since
+    // 2026-08-07 (migration_20260729_add_payment_receipt_verification.sql,
+    // folded in — see schema.sql's own header note), so the runtime check was
+    // redundant on any environment provisioned from it. It was also the same
+    // class of risk fixed in AuditLog (Batch L2.8): MySQL implicitly commits
+    // the active transaction on any DDL statement, so constructing a fresh
+    // Payment() while a Database::transaction() was open would have silently
+    // ended it, exactly like the AuditLog defect did.
 
     private function applyFilters(&$sql, &$params, $filters) {
         if (!empty($filters['transaction_type'])) {
