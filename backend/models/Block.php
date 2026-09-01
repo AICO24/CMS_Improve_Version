@@ -35,4 +35,16 @@ class Block {
         $stmt = $this->db->prepare("DELETE FROM blocks WHERE block_id = ?");
         return $stmt->execute([$id]);
     }
+
+    // L3.3: total_lots existed in schema.sql but no code path ever wrote it
+    // (a dead column). Mirrors Section::updateCounts()'s pattern, scoped to
+    // one block — called by LotController wherever a lot is created, moved
+    // between blocks, or deleted.
+    public function updateLotCount($blockId) {
+        $stmt = $this->db->prepare("
+            UPDATE blocks SET total_lots = (SELECT COUNT(*) FROM lots WHERE block_id = ?)
+            WHERE block_id = ?
+        ");
+        return $stmt->execute([$blockId, $blockId]);
+    }
 }

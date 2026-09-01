@@ -234,6 +234,7 @@ if ($path === 'lots' && $requestMethod === 'GET') {
     if (isset($_GET['max_price'])) $filters['max_price'] = $_GET['max_price'];
     if (isset($_GET['status'])) $filters['status'] = $_GET['status'];
     if (isset($_GET['block_id'])) $filters['block_id'] = $_GET['block_id'];
+    if (isset($_GET['search'])) $filters['search'] = $_GET['search'];
     $pagination = [];
     if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
     if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];

@@ -249,6 +249,7 @@ class LotController {
             if ($block) {
                 $this->sectionModel->updateCounts($block['section_id']);
             }
+            $this->blockModel->updateLotCount($data['block_id']);
             $newLot = $this->lotModel->findById($result);
             $this->auditLogModel->log(
                 'Lot created',
@@ -284,9 +285,24 @@ class LotController {
         $oldLot = $this->lotModel->findById($id);
         $result = $this->lotModel->update($id, $data);
         if ($result && $oldLot) {
+            // L3.3: this branch previously called
+            // $this->sectionModel->updateCounts($oldLot['block_id']) — passing
+            // a block_id where updateCounts() expects a section_id (its SQL
+            // filters on s.section_id). Fixed to resolve each block's actual
+            // section_id first, and to also refresh each block's own
+            // total_lots (previously a dead column, see Block::updateLotCount()).
             if (isset($data['block_id']) && $data['block_id'] != $oldLot['block_id']) {
-                $this->sectionModel->updateCounts($oldLot['block_id']);
-                $this->sectionModel->updateCounts($data['block_id']);
+                $oldBlock = $this->blockModel->findById($oldLot['block_id']);
+                if ($oldBlock) {
+                    $this->sectionModel->updateCounts($oldBlock['section_id']);
+                }
+                $this->blockModel->updateLotCount($oldLot['block_id']);
+
+                $newBlock = $this->blockModel->findById($data['block_id']);
+                if ($newBlock) {
+                    $this->sectionModel->updateCounts($newBlock['section_id']);
+                }
+                $this->blockModel->updateLotCount($data['block_id']);
             }
 
             // Batch L2.2: status is intentionally excluded from this diff —
@@ -381,6 +397,7 @@ class LotController {
             if ($block) {
                 $this->sectionModel->updateCounts($block['section_id']);
             }
+            $this->blockModel->updateLotCount($lot['block_id']);
             $this->auditLogModel->log(
                 'Lot deleted',
                 self::actorId($actor),

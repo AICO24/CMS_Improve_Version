@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     let allLots = [];
+    let visibleLots = [];
     let allSections = [];
     let lotTypes = [];
     let hierarchyInitialized = false;
@@ -102,8 +103,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         return await apiRequest('lot-types');
     }
 
-    async function loadLots() {
-        return await apiRequest('lots');
+    // L3.3: filtering/search now happens server-side — called with no active
+    // filters this is identical to the old bare `apiRequest('lots')` (whole
+    // table, no query string). Called with active filters it appends only
+    // the ones actually set, so the browser no longer has to fetch and
+    // filter the entire lot table on every keystroke.
+    async function loadLots(activeFilters = {}) {
+        const params = new URLSearchParams();
+        if (activeFilters.search) params.set('search', activeFilters.search);
+        if (activeFilters.category) params.set('lot_type', activeFilters.category);
+        if (activeFilters.section) params.set('section', activeFilters.section);
+        if (activeFilters.status) params.set('status', activeFilters.status);
+        const query = params.toString();
+        return await apiRequest(query ? `lots?${query}` : 'lots');
+    }
+
+    function hasActiveFilters() {
+        return Boolean(filters.search || filters.category || filters.section || filters.status);
     }
 
     async function loadStats() {
@@ -118,21 +134,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // ---------- Filtering + grouping ----------
-
-    function applyFilters(lots) {
-        const term = filters.search.trim().toLowerCase();
-        return lots.filter(lot => {
-            if (filters.category && lot.lot_type_name !== filters.category) return false;
-            if (filters.section && lot.section_name !== filters.section) return false;
-            if (filters.status && lot.status !== filters.status) return false;
-            if (term) {
-                const haystack = [lot.lot_number, lot.lot_type_name, lot.section_name, lot.block_name]
-                    .filter(Boolean).join(' ').toLowerCase();
-                if (!haystack.includes(term)) return false;
-            }
-            return true;
-        });
-    }
 
     function computeCounts(lots) {
         return lots.reduce((acc, lot) => {
@@ -292,12 +293,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        const filtered = applyFilters(allLots);
-        const groups = groupLotsByCategory(filtered);
+        const groups = groupLotsByCategory(visibleLots);
 
         if (!groups.length) {
-            const hasActiveFilter = filters.search || filters.category || filters.section || filters.status;
-            hierarchyEl.innerHTML = hasActiveFilter
+            hierarchyEl.innerHTML = hasActiveFilters()
                 ? emptyStateHtml('fa-filter-circle-xmark', 'No Matches', filters.search ? 'No lots match your search.' : 'No lots match the selected filters.')
                 : emptyStateHtml('fa-tree', 'No Lots Found', 'No lots have been added yet.');
             return;
@@ -368,24 +367,42 @@ document.addEventListener('DOMContentLoaded', async function() {
     const sectionFilterSelect = document.getElementById('filterSection');
     const statusFilterSelect = document.getElementById('filterStatus');
 
+    // L3.3: re-fetches from the server whenever a filter is active, instead
+    // of re-filtering the already-fully-loaded allLots array in the browser.
+    // With no filters active it just reuses allLots — no extra round trip
+    // for the common "no filter" case or right after Reset Filters.
+    async function refreshVisibleLots() {
+        if (!hasActiveFilters()) {
+            visibleLots = allLots;
+            renderHierarchyRoot();
+            return;
+        }
+        try {
+            visibleLots = await loadLots({ ...filters });
+            renderHierarchyRoot();
+        } catch (error) {
+            showErrorState(error.message);
+        }
+    }
+
     searchInput.addEventListener('input', debounce(() => {
         filters.search = searchInput.value;
-        renderHierarchyRoot();
+        refreshVisibleLots();
     }, 200));
 
     categoryFilterSelect.addEventListener('change', () => {
         filters.category = categoryFilterSelect.value;
-        renderHierarchyRoot();
+        refreshVisibleLots();
     });
 
     sectionFilterSelect.addEventListener('change', () => {
         filters.section = sectionFilterSelect.value;
-        renderHierarchyRoot();
+        refreshVisibleLots();
     });
 
     statusFilterSelect.addEventListener('change', () => {
         filters.status = statusFilterSelect.value;
-        renderHierarchyRoot();
+        refreshVisibleLots();
     });
 
     document.getElementById('btnResetFilters').addEventListener('click', () => {
@@ -397,7 +414,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         categoryFilterSelect.value = '';
         sectionFilterSelect.value = '';
         statusFilterSelect.value = '';
-        renderHierarchyRoot();
+        refreshVisibleLots();
     });
 
     function populateFilterDropdowns() {
@@ -649,7 +666,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 hierarchyInitialized = true;
             }
 
-            renderHierarchyRoot();
+            // L3.3: re-applies whatever filters are currently active (e.g.
+            // right after saving a lot while a status filter is set) instead
+            // of always showing the unfiltered full list.
+            await refreshVisibleLots();
         } catch (error) {
             console.error('Failed to load lot data:', error);
             showErrorState(error.message);

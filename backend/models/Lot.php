@@ -123,6 +123,14 @@ class Lot {
             $sql .= " AND l.block_id = ?";
             $params[] = $filters['block_id'];
         }
+        // L3.3: backs the Lot Management page's free-text search box, moved
+        // server-side — matches the same lot_number/type/section/block OR
+        // logic the frontend used to run in-browser over the full dataset.
+        if (!empty($filters['search'])) {
+            $sql .= " AND (l.lot_number LIKE ? OR t.type_name LIKE ? OR s.section_name LIKE ? OR b.block_name LIKE ?)";
+            $term = '%' . $filters['search'] . '%';
+            array_push($params, $term, $term, $term, $term);
+        }
     }
 
     public function findAll($filters = [], $pagination = []) {
