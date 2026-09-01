@@ -387,6 +387,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    // L3.6: highlights whichever stat card matches the currently active
+    // status filter (or none, if status filtering isn't in play) — kept in
+    // sync whether the filter was set by clicking a card, by the Status
+    // dropdown, or cleared via Reset Filters.
+    function updateActiveStatCard() {
+        document.querySelectorAll('.stat-card-filterable').forEach((card) => {
+            card.classList.toggle('is-active-filter', card.dataset.statusFilter === filters.status);
+        });
+    }
+
     searchInput.addEventListener('input', debounce(() => {
         filters.search = searchInput.value;
         refreshVisibleLots();
@@ -404,6 +414,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     statusFilterSelect.addEventListener('change', () => {
         filters.status = statusFilterSelect.value;
+        updateActiveStatCard();
         refreshVisibleLots();
     });
 
@@ -416,8 +427,31 @@ document.addEventListener('DOMContentLoaded', async function() {
         categoryFilterSelect.value = '';
         sectionFilterSelect.value = '';
         statusFilterSelect.value = '';
+        updateActiveStatCard();
         refreshVisibleLots();
     });
+
+    // L3.6: clicking (or Enter/Space-activating) a stat card applies that
+    // status as a quick filter, mirroring what picking it from the Status
+    // dropdown would do — including keeping the dropdown itself in sync, so
+    // the two entry points never disagree about what's currently applied.
+    function applyStatusQuickFilter(status) {
+        filters.status = status;
+        statusFilterSelect.value = status;
+        updateActiveStatCard();
+        refreshVisibleLots();
+    }
+
+    document.querySelectorAll('.stat-card-filterable').forEach((card) => {
+        card.addEventListener('click', () => applyStatusQuickFilter(card.dataset.statusFilter));
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                applyStatusQuickFilter(card.dataset.statusFilter);
+            }
+        });
+    });
+    updateActiveStatCard();
 
     function populateFilterDropdowns() {
         categoryFilterSelect.innerHTML = '<option value="">All Categories</option>' +

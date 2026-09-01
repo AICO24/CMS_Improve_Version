@@ -321,6 +321,23 @@
     font-size: 0.8rem;
 }
 
+/* L3.6: stat cards double as one-click status filters (see
+   lot-management.js's applyStatusQuickFilter()) — cursor/focus ring signal
+   that, and the active one gets a visible ring so it's clear which filter,
+   if any, is currently applied. */
+.lotmgmt-stats > .stat-card-filterable {
+    cursor: pointer;
+}
+
+.lotmgmt-stats > .stat-card-filterable:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.85);
+    outline-offset: 2px;
+}
+
+.lotmgmt-stats > .stat-card-filterable.is-active-filter {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9), 0 14px 30px rgba(15, 23, 42, 0.13);
+}
+
 .toolbar-row {
     display: flex;
     flex-wrap: wrap;
