@@ -872,6 +872,17 @@ if (preg_match('/^exceptions\/(\d+)\/resolve$/', $path, $matches) && $requestMet
     exit;
 }
 
+// Automation opportunity G.7: see SystemExceptionController::retry()'s
+// comment for exactly which exception types this can and can't handle.
+if (preg_match('/^exceptions\/(\d+)\/retry$/', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $result = $systemExceptionController->retry($matches[1], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 $userController = new UserController();
 $reportController = new ReportController();
 

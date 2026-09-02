@@ -80,8 +80,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         // manage-reservations.css during the Full Automation Round 2 button
         // audit; this page was referencing the class without ever linking
         // its defining stylesheet, so it rendered unstyled).
+        // Retry (G.7): shown for every open row, not just ones known to
+        // support it — the backend has the authoritative, exact list of
+        // retryable (event, entity_type) combinations (see
+        // SystemExceptionController::retry()) and returns a clear error for
+        // anything else, so duplicating that list here would just be a
+        // second copy that can drift out of sync.
         const action = exception.status === 'open'
-            ? `<button type="button" class="btn-row-action btn-row-action--confirm" data-action="resolve" data-id="${exception.exception_id}">Resolve</button>`
+            ? `<button type="button" class="btn-row-action btn-row-action--confirm" data-action="resolve" data-id="${exception.exception_id}">Resolve</button>
+               <button type="button" class="btn-row-action" data-action="retry" data-id="${exception.exception_id}">Retry</button>`
             : `<span class="muted">${escapeHtml(exception.resolved_by_name || 'Resolved')}</span>`;
         return `
             <tr data-id="${exception.exception_id}">
@@ -224,12 +231,33 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     });
 
+    async function handleRetry(id, button) {
+        await withButtonLoading(button, async () => {
+            try {
+                const result = await api.request(`exceptions/${id}/retry`, { method: 'PUT' });
+                if (result.success) {
+                    await loadAndRenderExceptions();
+                } else {
+                    alert(result.error || 'Retry failed.');
+                }
+            } catch (error) {
+                alert(error.message || 'Retry failed.');
+            }
+        });
+    }
+
     tableBody.addEventListener('click', (event) => {
-        const button = event.target.closest('button[data-action="resolve"]');
-        if (!button) return;
-        const id = Number(button.getAttribute('data-id'));
-        const exception = currentExceptions.find((item) => item.exception_id === id);
-        if (exception) openResolveModal(exception);
+        const resolveButton = event.target.closest('button[data-action="resolve"]');
+        if (resolveButton) {
+            const id = Number(resolveButton.getAttribute('data-id'));
+            const exception = currentExceptions.find((item) => item.exception_id === id);
+            if (exception) openResolveModal(exception);
+            return;
+        }
+        const retryButton = event.target.closest('button[data-action="retry"]');
+        if (retryButton) {
+            handleRetry(Number(retryButton.getAttribute('data-id')), retryButton);
+        }
     });
 
     statusFilter.addEventListener('change', loadAndRenderExceptions);

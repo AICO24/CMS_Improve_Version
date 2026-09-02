@@ -154,9 +154,25 @@ class DecedentRequestController {
     // silently doing nothing or overwriting an existing link. Schedules that
     // are already linked are skipped here (not an exception) — that's the
     // expected steady state, not a problem needing admin attention.
+    // Shared by autoLinkSchedules() below (the unattended path, wrapped in
+    // AutomationEngine::run() — a validation failure there raises a
+    // reviewable system_exceptions entry) and retryLinkSchedule() further
+    // down (the interactive retry path from the Exceptions page — the admin
+    // is watching it happen, so a failure is reported straight back to them
+    // instead of queuing a second exception for the same thing).
+    private function validateScheduleLink($scheduleId) {
+        $current = $this->scheduleModel->findById($scheduleId);
+        if (!$current) {
+            return ['Linked schedule no longer exists'];
+        }
+        if (!empty($current['deceased_id'])) {
+            return ['Schedule already has a formal decedent record linked'];
+        }
+        return true;
+    }
+
     private function autoLinkSchedules($requestId, $decedentId, $user) {
         $schedules = $this->scheduleModel->findByDecedentRequestId($requestId);
-        $scheduleModel = $this->scheduleModel;
 
         foreach ($schedules as $schedule) {
             if (!empty($schedule['deceased_id'])) {
@@ -169,15 +185,8 @@ class DecedentRequestController {
                 'Schedule',
                 $scheduleId,
                 $user,
-                function () use ($scheduleModel, $scheduleId) {
-                    $current = $scheduleModel->findById($scheduleId);
-                    if (!$current) {
-                        return ['Linked schedule no longer exists'];
-                    }
-                    if (!empty($current['deceased_id'])) {
-                        return ['Schedule already has a formal decedent record linked'];
-                    }
-                    return true;
+                function () use ($scheduleId) {
+                    return $this->validateScheduleLink($scheduleId);
                 },
                 function () use ($scheduleId, $decedentId, $user) {
                     $scheduleController = new ScheduleController();
@@ -190,6 +199,37 @@ class DecedentRequestController {
                 }
             );
         }
+    }
+
+    // Automation opportunity G.7: called only by
+    // SystemExceptionController::retry() for a 'decedent_request.approved' /
+    // Schedule exception. Re-runs the exact same validation and link logic
+    // as autoLinkSchedules() above (via validateScheduleLink()), deliberately
+    // WITHOUT AutomationEngine's wrapper — a failed retry reports its reason
+    // straight back to the admin who clicked Retry, rather than raising a
+    // second queued exception for the same underlying problem.
+    public function retryLinkSchedule($scheduleId, $decedentId, $user) {
+        $validation = $this->validateScheduleLink($scheduleId);
+        if ($validation !== true) {
+            return ['error' => implode('; ', $validation), 'code' => 409];
+        }
+
+        $scheduleController = new ScheduleController();
+        $result = $scheduleController->linkDecedent($scheduleId, $decedentId, $user, true);
+        if (empty($result['success'])) {
+            return $result;
+        }
+
+        $this->auditLogModel->log(
+            'Decedent link retried from exception',
+            is_array($user) ? ($user['user_id'] ?? null) : $user,
+            is_array($user) ? ($user['username'] ?? null) : null,
+            'Schedule',
+            $scheduleId,
+            ['decedent_id' => (int) $decedentId]
+        );
+
+        return $result;
     }
 
     public function reject($id, $data, $user) {
