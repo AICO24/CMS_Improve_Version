@@ -303,7 +303,12 @@ class AiController {
     // script timeout for that case; AIService::askAssistant()'s escalated
     // call passes a tighter per-call budget than the primary call so a slow
     // best-effort second attempt can't double the worst-case wait.
-    public function askAssistant($payload) {
+    // BATCH AI-4 (AI Architecture Audit, 2026-09-02): optional $user (the
+    // authenticated caller, same shape AuthMiddleware::requireRole()
+    // returns) — only used to grant a citizen ('user' role) a deliberately
+    // narrower path than admin/staff, below. Every existing admin/staff
+    // caller can keep omitting it; behavior for them is unchanged.
+    public function askAssistant($payload, $user = null) {
         // BATCH AI-2: PHP's default max_execution_time (commonly 30s) was
         // sized for this method's original single Python call. Two
         // sequential calls (primary, up to its 30s curl timeout, plus an
@@ -327,6 +332,55 @@ class AiController {
         }
 
         $scope = $context['scope'] ?? null;
+
+        // BATCH AI-4: a citizen gets a strictly narrower path than
+        // admin/staff, kept entirely separate from the branch below rather
+        // than threaded through it, so the existing admin/staff behavior
+        // (unchanged since Batch 3/AI-2) can't accidentally regress. Only
+        // scope='module', only from AuditIntelligenceService's citizen
+        // module allowlist (Schedule/Payment/DecedentRequest — see that
+        // class for why 'Decedent' itself is excluded), always filtered to
+        // the caller's own user_id. Deliberately no scope='entity' (
+        // buildContext() has no ownership check at all — a citizen supplying
+        // another citizen's record id would see it in full) and no
+        // scope='system' or AI-2 escalation retry (that's every citizen's
+        // data, not just the caller's).
+        if (is_array($user) && ($user['role'] ?? null) === 'user') {
+            if ($scope !== 'module') {
+                return ['error' => "citizens may only use context.scope = 'module'", 'code' => 403];
+            }
+            $module = trim((string) ($context['module'] ?? ''));
+            $userId = $user['user_id'] ?? null;
+            if (empty($userId)) {
+                return ['error' => 'A valid user is required', 'code' => 401];
+            }
+
+            try {
+                $citizenFocus = $this->auditIntelligenceService->buildCitizenModuleContext($module, $userId);
+            } catch (Exception $e) {
+                return ['error' => 'AI context is temporarily unavailable', 'code' => 503];
+            }
+            if (!empty($citizenFocus['error'])) {
+                return $citizenFocus;
+            }
+
+            $citizenContext = ['focus' => $citizenFocus, 'system_wide' => null];
+            $this->logAiContextSize('citizen:' . $module, $citizenContext);
+
+            $citizenResult = $this->aiService->askAssistant([
+                'context' => $citizenContext,
+                'question' => $question,
+                'conversation_history' => $conversationHistory,
+            ]);
+
+            return [
+                'answered' => empty($citizenResult['error']) && !empty($citizenResult['message']),
+                'message' => (empty($citizenResult['error']) && is_string($citizenResult['message'] ?? null)) ? $citizenResult['message'] : null,
+                'suggested_action' => (empty($citizenResult['error']) && is_string($citizenResult['suggested_action'] ?? null)) ? $citizenResult['suggested_action'] : null,
+                'escalated' => false,
+            ];
+        }
+
         $focus = null;
         // Quota-reduction batch (Batch 3): buildSystemWideReach() (dashboard
         // facts + every module's summary) used to be attached to every

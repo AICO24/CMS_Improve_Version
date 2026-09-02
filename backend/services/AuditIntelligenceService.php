@@ -330,6 +330,84 @@ class AuditIntelligenceService {
         return null;
     }
 
+    // BATCH AI-4 (AI Architecture Audit, 2026-09-02): citizen-visible
+    // modules for the System-Wide AI Assistant, always filtered to the
+    // requesting citizen's own records. Deliberately reuses the EXACT same
+    // ownership filter keys ScheduleController::mine()/PaymentController::
+    // mine()/DecedentRequestController::mine() already use in production for
+    // their own "my reservations" / "my payments" / "my requests" pages,
+    // rather than re-deriving ownership logic here — any future change to
+    // what "mine" means for these records only has to happen in one place.
+    //
+    // 'Decedent' is deliberately NOT included, even though the citizen-
+    // facing page that lists decedent records is literally named "My
+    // Records" — DecedentController::index() does not scope that list by
+    // owner at all; every citizen sees the same cemetery-wide list, just
+    // with DecedentController::redactDecedent() applied. Wiring that module
+    // in here without also replicating that exact redaction would leak full
+    // decedent names to a citizen who has no ownership relationship to
+    // them, so it's left out of this batch rather than done unsafely; see
+    // the AI Architecture Audit roadmap for the follow-up.
+    private const CITIZEN_MODULE_OWNER_FIELD = [
+        'Schedule' => 'created_by',
+        'Payment' => 'received_by',
+    ];
+
+    public static function isCitizenModule($module) {
+        return $module === 'DecedentRequest' || array_key_exists($module, self::CITIZEN_MODULE_OWNER_FIELD);
+    }
+
+    public function buildCitizenModuleContext($module, $userId) {
+        if (!self::isCitizenModule($module)) {
+            return ['error' => 'Unsupported module for this account', 'code' => 400];
+        }
+
+        $userId = (int) $userId;
+        if ($userId <= 0) {
+            return ['error' => 'A valid user is required', 'code' => 401];
+        }
+
+        if ($module === 'DecedentRequest') {
+            $records = $this->decedentRequestModel->findByUser($userId);
+        } else {
+            $ownerField = self::CITIZEN_MODULE_OWNER_FIELD[$module];
+            $model = $module === 'Schedule' ? $this->scheduleModel : $this->paymentModel;
+            $records = $model->findAll([$ownerField => $userId]);
+        }
+
+        $statusCounts = [];
+        foreach ($records as $record) {
+            $status = $this->extractStatus($record) ?? 'unknown';
+            $statusCounts[$status] = ($statusCounts[$status] ?? 0) + 1;
+        }
+
+        // Same name-free-by-construction rule as buildModuleContext() below
+        // — these are the citizen's own records, so a leaked name isn't a
+        // cross-user privacy issue the way it would be for the admin-facing
+        // builder, but the fields stay minimal regardless: id/status plus
+        // one or two module-relevant fields, nothing beyond what's needed
+        // to answer "what's the status of my X".
+        $recentSummary = array_map(function ($record) use ($module) {
+            $summary = ['id' => $this->firstIdField($record), 'status' => $this->extractStatus($record)];
+            if ($module === 'Schedule' && isset($record['schedule_date'])) {
+                $summary['schedule_date'] = $record['schedule_date'];
+            }
+            if ($module === 'Payment' && isset($record['amount'])) {
+                $summary['amount'] = $record['amount'];
+            }
+            return $summary;
+        }, array_slice($records, 0, 8));
+
+        return [
+            'module' => $module,
+            'scope' => 'citizen_own_records',
+            'total_records' => count($records),
+            'status_breakdown' => $statusCounts,
+            'recent_records' => $recentSummary,
+            'generated_at' => date('c'),
+        ];
+    }
+
     // System-Wide AI Assistant (follow-up): originally built so a question
     // genuinely about a different module than the current focus (e.g.
     // "what's expiring next week" asked from the Relocation page) had

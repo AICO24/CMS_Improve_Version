@@ -1107,10 +1107,16 @@ if ($path === 'ai/dashboard-digest' && $requestMethod === 'GET') {
 }
 
 if ($path === 'ai/assistant-ask' && $requestMethod === 'POST') {
-    // System-Wide AI Assistant (Phase 1): same admin/staff gate as every
-    // other audit/exception-adjacent AI route above. Citizens never reach
-    // this — it can surface real booking/payment/lot facts by design.
-    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    // System-Wide AI Assistant (Phase 1): admin/staff get the full
+    // module/entity/system scope range (see AiController::askAssistant()).
+    // BATCH AI-4 (AI Architecture Audit, 2026-09-02): 'user' (citizen) added
+    // — this was deliberately held back in BATCH AI-7 until
+    // AuditIntelligenceService::buildCitizenModuleContext() existed to
+    // scope it to just the caller's own records. AiController::askAssistant()
+    // enforces the citizen restriction itself (module-scope only, fixed
+    // allowlist, own user_id) based on $user['role'] below — this route
+    // only needs to widen the role gate and pass $user through.
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
 
     // Batch 10 (Batch 9 audit finding): no server-side protection existed
     // against rapid repeated calls to this specific endpoint, each one a
@@ -1120,7 +1126,8 @@ if ($path === 'ai/assistant-ask' && $requestMethod === 'POST') {
     // realistically send more than a handful of messages per minute —
     // while bounding worst-case quota burn from a runaway script or
     // accidental rapid-fire clicking. Scoped to this one route only; no
-    // other endpoint is affected.
+    // other endpoint is affected. Applies equally to the newly-added
+    // citizen role — same budget, no separate carve-out needed.
     if (!RateLimiter::allow('assistant_ask_' . $user['user_id'], 10, 60)) {
         http_response_code(429);
         echo json_encode(['error' => 'Too many requests — please wait a moment before asking again.']);
@@ -1128,7 +1135,7 @@ if ($path === 'ai/assistant-ask' && $requestMethod === 'POST') {
     }
 
     $input = readRequestBody();
-    $result = $aiController->askAssistant($input);
+    $result = $aiController->askAssistant($input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);

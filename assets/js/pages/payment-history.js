@@ -2,6 +2,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     const currentUser = await requireRole(['user']);
     if (!currentUser) return;
 
+    // BATCH AI-4 (AI Architecture Audit, 2026-09-02): same citizen-scoped
+    // pattern as my-reservations.js — scope='module' only, always filtered
+    // server-side to this citizen's own payments (see
+    // AuditIntelligenceService::buildCitizenModuleContext() and
+    // AiController::askAssistant()'s citizen branch), never another
+    // citizen's, never system-wide.
+    initAiAssistant({
+        mountSelector: '#aiAssistantMount',
+        context: { scope: 'module', module: 'Payment' },
+        greeting: "Hello! I'm your AI assistant for your payments. How can I help you today?",
+        suggestions: [
+            { icon: 'fa-money-bill-wave', label: 'My payment status', question: 'What is the status of my payments right now?' },
+            { icon: 'fa-clock-rotate-left', label: 'Recent payments', question: 'What have my most recent payments been?' },
+        ],
+    });
+
     const tbody = document.getElementById('paymentsTableBody');
     const statsEl = {
         totalRevenue: document.getElementById('totalRevenue'),

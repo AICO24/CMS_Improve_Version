@@ -11,6 +11,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         api.logout();
     });
 
+    // BATCH AI-4 (AI Architecture Audit, 2026-09-02): the System-Wide AI
+    // Assistant's first citizen-facing mount. Deliberately narrower than
+    // every admin/staff mount of this same widget — scope='module' only,
+    // always filtered server-side to this citizen's own reservations (see
+    // AuditIntelligenceService::buildCitizenModuleContext() and
+    // AiController::askAssistant()'s citizen branch) — never another
+    // citizen's, and never a system-wide or escalated fetch.
+    initAiAssistant({
+        mountSelector: '#aiAssistantMount',
+        context: { scope: 'module', module: 'Schedule' },
+        greeting: "Hello! I'm your AI assistant for your reservations. How can I help you today?",
+        suggestions: [
+            { icon: 'fa-list-check', label: 'My reservations', question: 'What is the status of my reservations right now?' },
+            { icon: 'fa-clock-rotate-left', label: 'Anything pending?', question: 'Do I have any pending reservations, and what do they need?' },
+        ],
+    });
+
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.querySelector('.sidebar');
     if (toggleBtn && sidebar) {
