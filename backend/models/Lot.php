@@ -85,7 +85,7 @@ class Lot {
                         return true;
                     },
                     function () use ($lotId) {
-                        return $this->transitionStatus($lotId, 'Expired', ['Occupied']);
+                        return $this->transitionStatus($lotId, 'Expired', self::allowedFromStatusesFor('lot.expired', 'Expired'));
                     }
                 );
             }
@@ -289,21 +289,64 @@ class Lot {
         ]);
     }
 
+    // Batch B (reservation module audit): every lot-status transition's
+    // legal "from" statuses used to be a literal array re-typed at each call
+    // site across ScheduleController, RelocationController, PaymentController
+    // and Lot itself — the same ['Available', 'Reserved'] copied five times
+    // in ScheduleController alone. Centralizing them here means two call
+    // sites can no longer silently disagree about what states a given
+    // transition is legal from. Keyed by "event::newStatus" rather than just
+    // "event" because relocation.completed legitimately drives two different
+    // target statuses for two different lots (the released from_lot and the
+    // occupied to_lot) in the same call. The two transitions that really are
+    // intentionally unrestricted (an admin's direct override, and the
+    // from_lot release half of relocation.completed) are declared as such
+    // explicitly via FROM_STATUSES_UNRESTRICTED, so that deliberate choice
+    // stays distinguishable from a rule nobody got around to adding yet.
+    private const FROM_STATUSES_UNRESTRICTED = '__unrestricted__';
+
+    private const LOT_TRANSITION_RULES = [
+        'schedule.confirmed::Reserved' => ['Available', 'Reserved'],
+        'schedule.completed::Occupied' => ['Available', 'Reserved'],
+        'schedule.cancelled::Available' => ['Available', 'Reserved'],
+        'schedule.auto_cancelled_unpaid::Available' => ['Available', 'Reserved'],
+        'lot.expired::Expired' => ['Occupied'],
+        'relocation.approved::Reserved' => ['Available'],
+        'relocation.completed::Available' => self::FROM_STATUSES_UNRESTRICTED,
+        'relocation.completed::Occupied' => ['Reserved'],
+        'payment.verified::Reserved' => ['Available'],
+    ];
+
+    // lot.admin_override's newStatus is whatever the admin picked, so it
+    // can't be a fixed part of the table key above — Classification E from
+    // the L1/L2 audits established this as the one intentionally
+    // unrestricted admin override, not a lifecycle rule, and that stays true
+    // for any target status.
+    public static function allowedFromStatusesFor($event, $newStatus) {
+        if ($event === 'lot.admin_override') {
+            return null;
+        }
+        $key = $event . '::' . $newStatus;
+        if (!array_key_exists($key, self::LOT_TRANSITION_RULES)) {
+            throw new RuntimeException("No lot transition rule declared for '{$key}' — add one to Lot::LOT_TRANSITION_RULES rather than passing an ad hoc allowed-from-statuses array at the call site.");
+        }
+        $rule = self::LOT_TRANSITION_RULES[$key];
+        return $rule === self::FROM_STATUSES_UNRESTRICTED ? null : $rule;
+    }
+
     // The sole application-level write path for lots.status (Batch L2.2 —
     // update() above no longer touches this column at all, structurally,
     // not just by convention). Used both for automated transitions (a
     // booking getting confirmed/completed/cancelled, a payment verifying, a
     // relocation being approved/completed) and for an admin's direct status
-    // override via LotController::updateLot() — the latter calls this with
-    // $allowedFromStatuses = null (Classification E from the L1/L2 audits:
-    // that's an intentionally unrestricted admin override, not a lifecycle
-    // rule), routed through AutomationEngine::run() the same as every other
-    // caller so it gets the same lifecycle audit trail instead of a bespoke
-    // one. $allowedFromStatuses, when given, rejects (returns false, writes
-    // nothing) if the lot isn't currently in one of those statuses — callers
-    // wrap this in AutomationEngine::run() so a rejection raises a reviewable
+    // override via LotController::updateLot(). $allowedFromStatuses, when
+    // given, rejects (returns false, writes nothing) if the lot isn't
+    // currently in one of those statuses — callers wrap this in
+    // AutomationEngine::run() so a rejection raises a reviewable
     // system_exceptions entry instead of silently doing nothing or
-    // overwriting a status some other process already moved past.
+    // overwriting a status some other process already moved past. Callers
+    // should obtain this value from allowedFromStatusesFor() above rather
+    // than a literal array, so every transition's rule lives in one place.
     public function transitionStatus($lotId, $newStatus, $allowedFromStatuses = null) {
         $existing = $this->findById($lotId);
         if (!$existing) {

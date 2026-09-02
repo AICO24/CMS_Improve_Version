@@ -372,7 +372,7 @@ class LotController {
                         return true;
                     },
                     function () use ($lotModel, $id, $newStatus) {
-                        return $lotModel->transitionStatus($id, $newStatus, null);
+                        return $lotModel->transitionStatus($id, $newStatus, Lot::allowedFromStatusesFor('lot.admin_override', $newStatus));
                     }
                 );
             }

@@ -140,7 +140,7 @@ class RelocationController {
     // is the real admin) rather than automation-engine-tagged, since a manual
     // override should never look like an automated decision in the timeline.
     private function attemptAutoApproval($requestId, $toLotId, $userId) {
-        $this->transitionLotStatus($toLotId, 'Reserved', ['Available'], $userId, 'relocation.approved');
+        $this->transitionLotStatus($toLotId, 'Reserved', $userId, 'relocation.approved');
 
         $relocationModel = $this->relocationModel;
         $lotModel = $this->lotModel;
@@ -251,7 +251,7 @@ class RelocationController {
 
         $result = $this->relocationModel->updateStatus($id, 'Approved', $userId);
         if ($result) {
-            $this->transitionLotStatus($request['to_lot_id'], 'Reserved', ['Available'], $userId, 'relocation.approved');
+            $this->transitionLotStatus($request['to_lot_id'], 'Reserved', $userId, 'relocation.approved');
             $this->auditLogModel->log(
                 'Relocation approved',
                 $userId,
@@ -281,12 +281,12 @@ class RelocationController {
         // decedent currently rests) but nothing enforces it, so this release
         // deliberately carries no guard, preserving exact pre-existing
         // behavior (it always succeeded unconditionally before Batch C too).
-        $this->transitionLotStatus($request['from_lot_id'], 'Available', null, $userId, 'relocation.completed');
+        $this->transitionLotStatus($request['from_lot_id'], 'Available', $userId, 'relocation.completed');
         // to_lot, by contrast, was guarded into Reserved by approve() above,
         // and nothing else should have touched it since — a guard here is
         // safe and catches a real anomaly (e.g. it was reset via a direct
         // lot edit while the relocation sat Approved).
-        $this->transitionLotStatus($request['to_lot_id'], 'Occupied', ['Reserved'], $userId, 'relocation.completed');
+        $this->transitionLotStatus($request['to_lot_id'], 'Occupied', $userId, 'relocation.completed');
 
         $result = $this->relocationModel->updateStatus($id, 'Completed', $userId);
         if ($result) {
@@ -421,8 +421,14 @@ class RelocationController {
     // AutomationEngine, so they're audited on success and raise a reviewable
     // system_exceptions entry (instead of silently doing nothing) if the lot
     // isn't in an expected status when $allowedFromStatuses is given.
-    private function transitionLotStatus($lotId, $newStatus, $allowedFromStatuses, $actorUser, $event) {
+    // Batch B (reservation module audit): $allowedFromStatuses is looked up
+    // from Lot::LOT_TRANSITION_RULES by $event/$newStatus rather than passed
+    // in literal, the same change made to ScheduleController's copy of this
+    // wrapper — one declared rule per transition instead of two controllers
+    // each hand-typing their own.
+    private function transitionLotStatus($lotId, $newStatus, $actorUser, $event) {
         $lotModel = $this->lotModel;
+        $allowedFromStatuses = Lot::allowedFromStatusesFor($event, $newStatus);
         AutomationEngine::run(
             $event,
             'Lot',

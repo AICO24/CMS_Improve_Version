@@ -260,7 +260,7 @@ class ScheduleController {
                     ['lot_id' => (int) $data['lot_id'], 'schedule_date' => $data['schedule_date'], 'initial_status' => $data['status'] ?? 'Pending']
                 );
                 if (isset($data['status']) && $data['status'] === 'Confirmed') {
-                    $this->transitionLotStatus($data['lot_id'], 'Reserved', ['Available', 'Reserved'], $user, 'schedule.confirmed');
+                    $this->transitionLotStatus($data['lot_id'], 'Reserved', $user, 'schedule.confirmed');
                 }
 
                 return ['ok' => true, 'schedule_id' => $scheduleId];
@@ -527,7 +527,7 @@ class ScheduleController {
                     && ($this->lotModel->findById($lotId)['status'] ?? null) === 'Reserved';
 
                 if (!$lotAlreadyReservedByPayment) {
-                    $this->transitionLotStatus($lotId, 'Reserved', ['Available', 'Reserved'], $user, 'schedule.confirmed');
+                    $this->transitionLotStatus($lotId, 'Reserved', $user, 'schedule.confirmed');
                 }
                 // Batch F: _auditedByAutomationEngine is set only by
                 // PaymentController::autoConfirmScheduleForVerifiedPurchase()'s
@@ -588,7 +588,7 @@ class ScheduleController {
                 // Confirmed step) — see the guard note on transitionLotStatus()
                 // below. That's pre-existing, allowed behavior; this transition
                 // must keep accepting it, not just the normal Reserved->Occupied path.
-                $this->transitionLotStatus($lotId, 'Occupied', ['Available', 'Reserved'], $user, 'schedule.completed');
+                $this->transitionLotStatus($lotId, 'Occupied', $user, 'schedule.completed');
                 $this->createLeaseRecordIfMissing($lotId, $existing['schedule_date']);
                 // Automation opportunity G.6: previously the ONLY place that ever
                 // called ExpirationController::generateNotifications() was an
@@ -759,7 +759,7 @@ class ScheduleController {
         $result = $this->scheduleModel->update($id, ['status' => 'Cancelled']);
         if ($result) {
             if (in_array($existing['status'], ['Confirmed', 'Pending'], true)) {
-                $this->transitionLotStatus($existing['lot_id'], 'Available', ['Available', 'Reserved'], $user, 'schedule.cancelled');
+                $this->transitionLotStatus($existing['lot_id'], 'Available', $user, 'schedule.cancelled');
             }
             // Batch F: no AutomationEngine path ever cancels a schedule — this
             // is always a direct citizen/admin/staff action, so no
@@ -787,8 +787,14 @@ class ScheduleController {
     // auto-link paths. A rejected transition (lot not in an expected status)
     // raises a system_exceptions entry instead of silently doing nothing or
     // overwriting a status some other process already moved past.
-    private function transitionLotStatus($lotId, $newStatus, $allowedFromStatuses, $actorUser, $event) {
+    // Batch B (reservation module audit): $allowedFromStatuses is no longer
+    // passed in by the caller — it's looked up from Lot::LOT_TRANSITION_RULES
+    // by $event/$newStatus, so this controller can't drift out of sync with
+    // what RelocationController/PaymentController declare for the same lot
+    // states.
+    private function transitionLotStatus($lotId, $newStatus, $actorUser, $event) {
         $lotModel = $this->lotModel;
+        $allowedFromStatuses = Lot::allowedFromStatusesFor($event, $newStatus);
         AutomationEngine::run(
             $event,
             'Lot',
@@ -973,7 +979,7 @@ class ScheduleController {
                 continue;
             }
 
-            $this->transitionLotStatus($schedule['lot_id'], 'Available', ['Available', 'Reserved'], null, 'schedule.auto_cancelled_unpaid');
+            $this->transitionLotStatus($schedule['lot_id'], 'Available', null, 'schedule.auto_cancelled_unpaid');
             $this->auditLogModel->log(
                 'Schedule automatically cancelled (no payment within policy window)',
                 null,

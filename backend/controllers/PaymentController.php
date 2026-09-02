@@ -717,7 +717,7 @@ class PaymentController {
                 return true;
             },
             function () use ($lotModel, $lotId) {
-                return $lotModel->transitionStatus($lotId, 'Reserved', ['Available']);
+                return $lotModel->transitionStatus($lotId, 'Reserved', Lot::allowedFromStatusesFor('payment.verified', 'Reserved'));
             }
         );
     }
