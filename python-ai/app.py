@@ -243,7 +243,12 @@ CHAT_SYSTEM_PROMPT = (
     "caller has its own clarification message for that slot.\n"
     "- Never mention decedent names, specific lot numbers, prices, or any "
     "booking-specific data; none of that is available to you, only the "
-    "generic knowledge_entries content."
+    "generic knowledge_entries content.\n"
+    "- BATCH AI-5: you may also be given conversation_history — prior "
+    "question/message pairs from this same FAQ exchange only (never booking-"
+    "slot data). Use it only to understand a follow-up question in context "
+    "(e.g. 'what about after that?'); it does not change what counts as "
+    "'covered by knowledge_entries' above."
 )
 
 
@@ -260,7 +265,12 @@ def _fetch_knowledge_base() -> List[Dict[str, str]]:
         return []
 
 
-def _answer_question(message: str, knowledge_entries: List[Dict[str, str]], pending_slot: Optional[str]) -> Dict[str, Any]:
+def _answer_question(
+    message: str,
+    knowledge_entries: List[Dict[str, str]],
+    pending_slot: Optional[str],
+    conversation_history: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
     empty = {'answered': False, 'message': None}
     if not message or not knowledge_entries:
         return empty
@@ -269,6 +279,7 @@ def _answer_question(message: str, knowledge_entries: List[Dict[str, str]], pend
         'message': message,
         'pending_slot': pending_slot,
         'knowledge_entries': knowledge_entries,
+        'conversation_history': conversation_history or [],
     }
 
     text = llm_provider.generate(
@@ -583,12 +594,13 @@ def chat_answer():
         payload = request.get_json(silent=True) or {}
         message = (payload.get('message') or '').strip()
         pending_slot = payload.get('pending_slot')
+        conversation_history = payload.get('conversation_history')
 
         if not message:
             return jsonify({'answered': False, 'message': None})
 
         knowledge_entries = _fetch_knowledge_base()
-        result = _answer_question(message, knowledge_entries, pending_slot)
+        result = _answer_question(message, knowledge_entries, pending_slot, conversation_history)
         return jsonify(result)
     except Exception:
         return jsonify({'answered': False, 'message': None})

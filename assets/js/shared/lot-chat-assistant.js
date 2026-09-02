@@ -200,6 +200,15 @@ function createLotChatAssistant(options) {
     // decedent_records row later. Never set for the admin/staff wizard
     // (getDecedents is only wired up there for a real, resolvable list).
     const state = { lot_type: null, budget: null, section: null, decedent_id: null, provisional_decedent: null, date: null, time: null };
+    // BATCH AI-5 (AI Architecture Audit, 2026-09-02): a separate history for
+    // the general-Q&A detour only (see tryAnswerGeneralQuestion() below) —
+    // deliberately NOT merged into `state` above, which is booking-slot
+    // data. This confirms/formalizes what was already true of `state` by
+    // construction (it's a plain closure variable the Q&A branch never
+    // touches): a detour into Q&A can never perturb booking progress,
+    // whether or not the Q&A side has its own memory. Cleared on reset,
+    // same as `state`.
+    let qaHistory = [];
     let decedentLabel = null;
     let lotPreferencesReadyFired = false;
     let decedentAttempts = 0;
@@ -775,6 +784,24 @@ function createLotChatAssistant(options) {
     // resolved — never decedent_id/date/lot_type/budget values themselves.
     // Returns null on any failure/no-answer, same never-block contract as
     // tryLlmExtraction above.
+    // BATCH AI-5 (AI Architecture Audit, 2026-09-02): still calls ai/chat,
+    // not ai/assistant-ask (the System-Wide Assistant AI-4 gave citizen
+    // access to) — a deliberate choice, not an oversight. ai/chat answers
+    // FAQ/policy questions ("what documents do I need?") from the
+    // admin-curated ai_knowledge table; ai/assistant-ask answers live-data
+    // questions ("what's the status of my reservation?") from
+    // AuditIntelligenceService, and has no access to ai_knowledge at all.
+    // Routing this detour through ai/assistant-ask instead would have
+    // TRADED AWAY FAQ coverage, not added to it — the two answer genuinely
+    // different question types from genuinely different sources. A citizen
+    // who wants their own live reservation/payment status now has that
+    // System-Wide Assistant mounted directly on My Reservations/Payment
+    // History (see those pages' own initAiAssistant() calls) instead of
+    // being folded into this implicit, harder-to-scope mid-booking detour.
+    // What DOES change here: conversation_history, so a follow-up FAQ
+    // question ("what about after that?") has the same continuity
+    // ai/assistant-ask's widget already gives admin/staff — this was
+    // previously fully stateless per message.
     async function tryAnswerGeneralQuestion(text, pendingSlot) {
         try {
             const response = await api.request('ai/chat', {
@@ -788,9 +815,17 @@ function createLotChatAssistant(options) {
                         decedent_set: state.decedent_id !== null,
                         date_set: state.date !== null,
                     },
+                    // Last 5 exchanges only, same bound ai-assistant-widget.js
+                    // uses — this is Q&A-only history (question + answer
+                    // text), never booking-slot data.
+                    conversation_history: qaHistory.slice(-5),
                 },
             });
-            return response && response.answered && typeof response.message === 'string' ? response.message : null;
+            const answer = response && response.answered && typeof response.message === 'string' ? response.message : null;
+            if (answer) {
+                qaHistory.push({ question: text, message: answer });
+            }
+            return answer;
         } catch (error) {
             console.error('General Q&A request failed', error);
             return null;
@@ -871,6 +906,7 @@ function createLotChatAssistant(options) {
         dateAttempts = 0;
         decedentEscapeShown = false;
         dateEscapeShown = false;
+        qaHistory = [];
         if (typeof onReset === 'function') onReset();
         chatWindow.innerHTML = '';
         init();
