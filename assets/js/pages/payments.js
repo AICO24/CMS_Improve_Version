@@ -180,6 +180,15 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         tbody.innerHTML = payments.map(p => {
             const date = p.payment_date || p.created_at || '—';
+            // Triage aid only, not an approval — see Payment::findAll()'s
+            // comment. Only meaningful while still Pending; a self-reported
+            // amount match plus an uploaded file is not proof, just a signal
+            // for staff to look at this one first. PDO/MySQL can return this
+            // as the string "0" (truthy in JS), so compare numerically.
+            const isHighConfidence = Number(p.is_high_confidence) === 1 && (p.verification_status || 'Pending') === 'Pending';
+            const highConfidenceBadge = isHighConfidence
+                ? ' <span class="status-badge status-info" title="Amount matches the lot price and a receipt was uploaded — not verified, just worth checking first">Likely valid</span>'
+                : '';
             return `
                 <tr data-id="${p.payment_id}" data-status="${p.verification_status || 'Pending'}">
                     <td><span class="receipt-chip">${p.receipt_number || '—'}</span></td>
@@ -187,7 +196,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <td class="amount-cell">${formatCurrency(p.amount)}</td>
                     <td class="date-cell">${date}</td>
                     <td><span class="method-chip">${p.payment_method || '—'}</span></td>
-                    <td><span class="status-badge ${statusBadgeClass(p.verification_status || 'Pending')}">${p.verification_status || 'Pending'}</span></td>
+                    <td><span class="status-badge ${statusBadgeClass(p.verification_status || 'Pending')}">${p.verification_status || 'Pending'}</span>${highConfidenceBadge}</td>
                     <td class="received-by-cell">${p.received_by_name || 'N/A'}</td>
                     <td class="action-buttons">
                         <button class="btn-view" title="View"><i class="fas fa-eye"></i></button>

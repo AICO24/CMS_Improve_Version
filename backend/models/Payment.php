@@ -47,12 +47,48 @@ class Payment {
         }
     }
 
+    // is_high_confidence: NOT an auto-approval signal (see the discussion
+    // that led here — an uploaded file plus a matching amount is still just
+    // a self-reported claim, easily faked since lot prices are public) —
+    // purely a triage aid so staff spend their one required verification
+    // click on the genuinely uncertain payments first, not a substitute for
+    // that click. True only when ALL of: transaction_type is 'Lot Purchase'
+    // (the only type with a resolvable expected price — mirrors
+    // PaymentController::resolveExpectedAmount()'s own rule), a receipt was
+    // actually uploaded, and the submitted amount matches the real lot price
+    // within a cent. Resolves that price via reference_kind (see
+    // migration_20260902_add_payment_reference_kind.sql) exactly like
+    // resolveExpectedAmount() does — a legacy row with reference_kind still
+    // NULL simply can't be scored (LEFT JOINs resolve to NULL, so the
+    // ABS(...) comparison is never true), same as that method's own
+    // guess-fallback limitation.
     public function findAll($filters = [], $pagination = []) {
-        $sql = "SELECT p.*, u.full_name AS received_by_name, v.full_name AS verified_by_name FROM payments p LEFT JOIN users u ON p.received_by = u.user_id LEFT JOIN users v ON p.verified_by = v.user_id WHERE 1=1";
+        $sql = "
+            SELECT p.*, u.full_name AS received_by_name, v.full_name AS verified_by_name,
+                   (
+                       p.transaction_type = 'Lot Purchase'
+                       AND p.receipt_url IS NOT NULL AND p.receipt_url <> ''
+                       AND lot_price.price IS NOT NULL
+                       AND ABS(p.amount - lot_price.price) <= 0.01
+                   ) AS is_high_confidence
+            FROM payments p
+            LEFT JOIN users u ON p.received_by = u.user_id
+            LEFT JOIN users v ON p.verified_by = v.user_id
+            LEFT JOIN burial_schedules ref_schedule
+                   ON p.reference_kind = 'schedule' AND p.reference_id = ref_schedule.schedule_id
+            LEFT JOIN lots lot_price
+                   ON (p.reference_kind = 'schedule' AND lot_price.lot_id = ref_schedule.lot_id)
+                   OR (p.reference_kind = 'lot' AND lot_price.lot_id = p.reference_id)
+            WHERE 1=1
+        ";
         $params = [];
         $this->applyFilters($sql, $params, $filters);
 
-        $sql .= " ORDER BY p.payment_date DESC, p.created_at DESC";
+        // High-confidence Pending payments float to the top of whatever view
+        // is being looked at; everything else keeps the original recency
+        // order. Harmless no-op reordering for a Verified/Rejected-filtered
+        // view, where nobody's triaging anymore.
+        $sql .= " ORDER BY (p.verification_status = 'Pending' AND is_high_confidence) DESC, p.payment_date DESC, p.created_at DESC";
 
         $page = null;
         $perPage = null;
