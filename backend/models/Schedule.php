@@ -8,6 +8,23 @@ class Schedule {
         $this->db = Database::getInstance()->getConnection();
     }
 
+    // Batch E (reservation module audit): surfaces the most recent payment
+    // tied to this schedule directly in the list/detail queries, reusing
+    // Batch D's now-reliable reference_kind column instead of the
+    // guess-by-existence fallback (that fallback is still fine for the rare
+    // pre-Batch-D-vintage row, but this SELECT is read-only and doesn't need
+    // PaymentController::resolveExpectedAmount()'s full amount-checking
+    // logic — just the latest payment row, if any). A schedule with no
+    // payment at all (a fresh Pending booking, or Confirmed-by-staff-
+    // directly) simply gets NULLs here, which the frontend renders as "No
+    // payment on file" rather than an error.
+    private const LATEST_PAYMENT_SELECT = "
+        (SELECT p.verification_status FROM payments p WHERE p.reference_kind = 'schedule' AND p.reference_id = s.schedule_id ORDER BY p.created_at DESC LIMIT 1) AS payment_status,
+        (SELECT p.amount FROM payments p WHERE p.reference_kind = 'schedule' AND p.reference_id = s.schedule_id ORDER BY p.created_at DESC LIMIT 1) AS payment_amount,
+        (SELECT p.payment_date FROM payments p WHERE p.reference_kind = 'schedule' AND p.reference_id = s.schedule_id ORDER BY p.created_at DESC LIMIT 1) AS payment_date,
+        (SELECT p.receipt_number FROM payments p WHERE p.reference_kind = 'schedule' AND p.reference_id = s.schedule_id ORDER BY p.created_at DESC LIMIT 1) AS payment_receipt_number
+    ";
+
     public function findAll($filters = [], $pagination = []) {
         $sql = "
             SELECT s.*,
@@ -16,7 +33,8 @@ class Schedule {
                    sec.section_name,
                    d.first_name, d.last_name,
                    dr.full_name AS provisional_name, dr.status AS provisional_status,
-                   u.full_name as created_by_name
+                   u.full_name as created_by_name,
+                   " . self::LATEST_PAYMENT_SELECT . "
             FROM burial_schedules s
             JOIN lots l ON s.lot_id = l.lot_id
             JOIN lot_types t ON l.lot_type_id = t.type_id
@@ -166,7 +184,8 @@ class Schedule {
                    sec.section_name,
                    d.first_name, d.last_name,
                    dr.full_name AS provisional_name, dr.status AS provisional_status,
-                   u.full_name as created_by_name
+                   u.full_name as created_by_name,
+                   " . self::LATEST_PAYMENT_SELECT . "
             FROM burial_schedules s
             JOIN lots l ON s.lot_id = l.lot_id
             JOIN blocks b ON l.block_id = b.block_id

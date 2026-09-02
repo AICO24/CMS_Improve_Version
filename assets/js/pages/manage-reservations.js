@@ -57,6 +57,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     const toggleAwaitingBtn = document.getElementById('toggleAwaitingConfirmation');
     const awaitingCountBadge = document.getElementById('awaitingConfirmationCount');
 
+    // Batch E: modal elements (markup lives in manage-reservations.html,
+    // reusing the shared assets/css/components/modals.css show/hide-via-
+    // style.display pattern already used elsewhere in the app, e.g.
+    // decedent-records.js).
+    const detailModal = document.getElementById('reservationDetailModal');
+    const detailModalBody = document.getElementById('reservationDetailBody');
+    const cashModal = document.getElementById('cashPaymentModal');
+    const cashPaymentForm = document.getElementById('cashPaymentForm');
+    const cashPaymentScheduleId = document.getElementById('cashPaymentScheduleId');
+    const cashPaymentAmount = document.getElementById('cashPaymentAmount');
+    const cashPaymentMethod = document.getElementById('cashPaymentMethod');
+    const cashPaymentReceipt = document.getElementById('cashPaymentReceipt');
+
     const perPage = 10;
     let currentQuery = '';
     let currentStatus = '';
@@ -121,6 +134,38 @@ document.addEventListener('DOMContentLoaded', async function() {
         return `<span class="status-badge ${badgeClass}">${status || 'Pending'}</span>`;
     }
 
+    // Batch E (reservation module audit): payment_status/payment_amount/
+    // payment_date/payment_receipt_number are now returned directly by
+    // GET schedules (backend/models/Schedule.php's LATEST_PAYMENT_SELECT) —
+    // this just renders what was already available but not shown.
+    function buildPaymentBadge(schedule) {
+        const status = schedule.payment_status;
+        if (!status) {
+            return '<span class="payment-badge none">No payment</span>';
+        }
+        const normalized = String(status).toLowerCase();
+        const known = ['verified', 'pending', 'rejected'];
+        const badgeClass = known.includes(normalized) ? normalized : 'none';
+        return `<span class="payment-badge ${badgeClass}">${status}</span>`;
+    }
+
+    // Batch E: stale_notified_at/final_warning_notified_at were already
+    // returned by GET schedules (they back the auto-cancel sweep's own
+    // dedup checks server-side) but never surfaced here — a Pending row
+    // that's already had a reminder or final warning sent looked identical
+    // to a brand-new one. This gives the admin the same at-risk visibility
+    // the automated sweep already has, without any new backend query.
+    function buildUrgencyTag(schedule) {
+        if (schedule.status !== 'Pending') return '';
+        if (schedule.final_warning_notified_at) {
+            return '<span class="urgency-tag urgency-tag--critical" title="Will be auto-cancelled soon if unpaid">Final warning sent</span>';
+        }
+        if (schedule.stale_notified_at) {
+            return '<span class="urgency-tag urgency-tag--warning" title="Reminder sent for lack of payment">Reminder sent</span>';
+        }
+        return '';
+    }
+
     // Full Automation, Admin-First: a normally-paid booking no longer needs
     // a manual Confirm click — PaymentController::verify() confirms it
     // automatically the moment staff verifies the payment (see
@@ -132,6 +177,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         const buttons = [];
         const isAdmin = user.role === 'admin';
         const isOwnPending = schedule.status === 'Pending' && String(schedule.created_by) === String(user.user_id);
+
+        // Batch E: available regardless of status — previously the only way
+        // to see anything about a reservation beyond this row's own columns
+        // was to leave the page entirely (or query the DB directly).
+        buttons.push(`<button class="btn-row-action" data-action="view" data-id="${schedule.schedule_id}">View</button>`);
 
         if (schedule.status === 'Pending' && openExceptionIds.has(schedule.schedule_id)) {
             buttons.push(`<a class="btn-row-action btn-row-action--confirm" href="exceptions.html">Review Exception</a>`);
@@ -176,7 +226,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <td>${schedule.section_name || 'N/A'}</td>
                 <td>${schedule.schedule_date || 'N/A'} ${schedule.schedule_time ? schedule.schedule_time : ''}</td>
                 <td>${schedule.created_by_name || 'N/A'}</td>
-                <td>${buildStatusBadge(schedule.status)}</td>
+                <td>${buildStatusBadge(schedule.status)}${buildUrgencyTag(schedule)}</td>
+                <td>${buildPaymentBadge(schedule)}</td>
                 <td class="action-buttons">${buildActionButtons(schedule, openExceptionIds)}</td>
             </tr>
         `;
@@ -224,7 +275,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function loadAndRenderReservations() {
-        reservationsBody.innerHTML = '<tr><td colspan="8">Loading reservations...</td></tr>';
+        reservationsBody.innerHTML = '<tr><td colspan="9">Loading reservations...</td></tr>';
         try {
             const [result, openExceptionIds] = await Promise.all([loadReservations(), loadOpenScheduleExceptionIds()]);
             const data = Array.isArray(result.data) ? result.data : [];
@@ -232,7 +283,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 ? data.map((schedule) => buildReservationRow(schedule, openExceptionIds)).join('')
                 : `
                     <tr>
-                        <td colspan="8">
+                        <td colspan="9">
                             <div class="mgmtres-empty-state">
                                 <i class="fas fa-calendar-xmark"></i>
                                 <strong>No reservations found</strong>
@@ -245,20 +296,24 @@ document.addEventListener('DOMContentLoaded', async function() {
             pagination.render(result.meta || { page: 1, pages: 1, total: data.length });
         } catch (error) {
             console.error('Failed to load reservations', error);
-            reservationsBody.innerHTML = '<tr><td colspan="8">Unable to load reservations right now.</td></tr>';
+            reservationsBody.innerHTML = '<tr><td colspan="9">Unable to load reservations right now.</td></tr>';
             pagination.render({ page: 1, pages: 1, total: 0 });
         }
     }
 
+    // Batch E: the three stages below are mutually independent reads (stats,
+    // the open-exceptions count, and the reservation list itself each hit
+    // their own endpoint) — previously sequential awaits, now run
+    // concurrently so a refresh after any action isn't gated on three
+    // round-trips back to back. Each already has its own internal
+    // try/catch, so Promise.all here doesn't change failure behavior — one
+    // stage failing still can't block the others from rendering.
     async function refreshAll() {
-        try {
-            const stats = await loadStats();
-            renderStats(stats);
-        } catch (error) {
-            console.error('Failed to load reservation stats', error);
-        }
-        await refreshAwaitingConfirmationCount();
-        await loadAndRenderReservations();
+        await Promise.all([
+            loadStats().then(renderStats).catch((error) => console.error('Failed to load reservation stats', error)),
+            refreshAwaitingConfirmationCount(),
+            loadAndRenderReservations(),
+        ]);
     }
 
     async function completeReservation(id, button) {
@@ -277,47 +332,51 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    // F.1: prompts for the same payment details an online payment would
-    // have captured — server-side (ensurePaymentForDirectCompletion())
-    // creates a real, Verified Payment record from these so the sale still
-    // shows up in Revenue Reports, then completes the booking exactly like
-    // completeReservation() above. Uses plain prompt()/confirm() rather than
-    // a new modal component, matching this page's existing simple dialog
-    // style (see cancelReservation()/completeReservation() above) instead of
-    // introducing a new UI pattern for a staff-only, occasional action.
-    async function completeCashReservation(id, button) {
-        const amountInput = prompt('Enter the cash/offline payment amount received (₱):');
-        if (amountInput === null) return;
-        const amount = parseFloat(amountInput);
+    // F.1: creates a real, Verified Payment record server-side
+    // (ensurePaymentForDirectCompletion()) so the sale still shows up in
+    // Revenue Reports, then completes the booking exactly like
+    // completeReservation() above.
+    // Batch E (reservation module audit): replaces three chained
+    // prompt()/confirm() dialogs with the shared modal markup — same
+    // request body/shape as before, only the input UI changed.
+    function openCashPaymentModal(id) {
+        cashPaymentScheduleId.value = id;
+        cashPaymentAmount.value = '';
+        cashPaymentMethod.value = 'Cash';
+        cashPaymentReceipt.value = '';
+        cashModal.style.display = 'flex';
+        cashPaymentAmount.focus();
+    }
+
+    function closeCashPaymentModal() {
+        cashModal.style.display = 'none';
+    }
+
+    cashPaymentForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const id = cashPaymentScheduleId.value;
+        const amount = parseFloat(cashPaymentAmount.value);
         if (isNaN(amount) || amount <= 0) {
             alert('Please enter a valid payment amount.');
             return;
         }
+        const method = cashPaymentMethod.value;
+        const receiptNumber = cashPaymentReceipt.value.trim();
 
-        const method = prompt('Payment method used:', 'Cash');
-        if (method === null) return;
-        if (!method.trim()) {
-            alert('Payment method is required.');
-            return;
-        }
-
-        const receiptNumber = prompt('Receipt number (optional — leave blank to auto-generate):', '');
-        if (receiptNumber === null) return;
-
-        if (!confirm(`Mark this reservation as completed with a ${method.trim()} payment of ₱${amount.toFixed(2)}? The lot will be marked Occupied and a Verified payment record will be created.`)) return;
-
-        await withButtonLoading(button, async () => {
+        const submitBtn = document.getElementById('submitCashPayment');
+        await withButtonLoading(submitBtn, async () => {
             try {
                 const result = await api.request(`schedules/${id}`, {
                     method: 'PUT',
                     body: {
                         status: 'Completed',
                         payment_amount: amount,
-                        payment_method: method.trim(),
-                        receipt_number: receiptNumber.trim(),
+                        payment_method: method,
+                        receipt_number: receiptNumber,
                     },
                 });
                 if (result.success) {
+                    closeCashPaymentModal();
                     await refreshAll();
                 } else {
                     alert(result.error || 'Unable to complete reservation.');
@@ -326,7 +385,57 @@ document.addEventListener('DOMContentLoaded', async function() {
                 alert(error.message || 'Unable to complete reservation.');
             }
         });
+    });
+
+    document.getElementById('closeCashModal').addEventListener('click', closeCashPaymentModal);
+    document.getElementById('cancelCashModal').addEventListener('click', closeCashPaymentModal);
+    cashModal.addEventListener('click', (event) => {
+        if (event.target === cashModal) closeCashPaymentModal();
+    });
+
+    // Batch E: wires up GET schedules/{id} — previously never called from
+    // this page (the audit found no detail-view consumer of it at all).
+    // Fetches fresh rather than reusing the row's already-loaded data so
+    // the modal always reflects the latest state, including notes and
+    // exact timestamps not otherwise rendered in the table.
+    async function viewReservation(id) {
+        detailModalBody.innerHTML = '<p>Loading...</p>';
+        detailModal.style.display = 'flex';
+        try {
+            const schedule = await api.request(`schedules/${id}`, { method: 'GET' });
+            if (schedule.error) {
+                detailModalBody.innerHTML = `<p>${escapeHtml(schedule.error)}</p>`;
+                return;
+            }
+            const nameCell = (schedule.first_name || schedule.last_name)
+                ? `${schedule.first_name || ''} ${schedule.last_name || ''}`
+                : (schedule.provisional_name ? `${schedule.provisional_name} (unregistered)` : 'N/A');
+            const paymentLine = schedule.payment_status
+                ? `${escapeHtml(schedule.payment_status)} &mdash; &#8369;${escapeHtml(schedule.payment_amount || 'N/A')} on ${escapeHtml(schedule.payment_date || 'N/A')} (receipt ${escapeHtml(schedule.payment_receipt_number || 'N/A')})`
+                : 'No payment on file';
+            detailModalBody.innerHTML = `
+                <div class="form-group"><label>Booking</label>#${escapeHtml(schedule.schedule_id)} &mdash; ${buildStatusBadge(schedule.status)}${buildUrgencyTag(schedule)}</div>
+                <div class="form-group"><label>Decedent</label>${escapeHtml(nameCell)}</div>
+                <div class="form-group"><label>Lot</label>${escapeHtml(schedule.lot_number || 'N/A')} &mdash; ${escapeHtml(schedule.section_name || 'N/A')}</div>
+                <div class="form-group"><label>Burial date</label>${escapeHtml(schedule.schedule_date || 'N/A')} ${escapeHtml(schedule.schedule_time || '')}</div>
+                <div class="form-group"><label>Requested by</label>${escapeHtml(schedule.created_by_name || 'N/A')}</div>
+                <div class="form-group"><label>Payment</label>${paymentLine}</div>
+                <div class="form-group"><label>Notes</label>${escapeHtml(schedule.notes || 'None')}</div>
+            `;
+        } catch (error) {
+            detailModalBody.innerHTML = '<p>Unable to load reservation details right now.</p>';
+        }
     }
+
+    function closeDetailModal() {
+        detailModal.style.display = 'none';
+    }
+
+    document.getElementById('closeDetailModal').addEventListener('click', closeDetailModal);
+    document.getElementById('closeDetailModalBtn').addEventListener('click', closeDetailModal);
+    detailModal.addEventListener('click', (event) => {
+        if (event.target === detailModal) closeDetailModal();
+    });
 
     async function cancelReservation(id, button) {
         if (!confirm('Cancel this reservation?')) return;
@@ -351,8 +460,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         const action = button.getAttribute('data-action');
         if (!id || !action) return;
 
-        if (action === 'complete') await completeReservation(id, button);
-        else if (action === 'complete-cash') await completeCashReservation(id, button);
+        if (action === 'view') await viewReservation(id);
+        else if (action === 'complete') await completeReservation(id, button);
+        else if (action === 'complete-cash') openCashPaymentModal(id);
         else if (action === 'cancel') await cancelReservation(id, button);
     });
 

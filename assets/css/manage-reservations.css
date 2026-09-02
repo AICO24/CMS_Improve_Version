@@ -439,6 +439,67 @@
     color: #1d4ed8;
 }
 
+/* Batch E (reservation module audit): payment_status/payment_amount/etc.
+   are now returned by GET schedules but were previously not shown anywhere
+   on this page — admins had to open Payments separately to know whether a
+   Pending row was paid at all. Uses the design-token warning/success/danger
+   trio (not the raw hex .status-badge above uses) since this is new markup,
+   not a match-the-citizen-page constraint like .status-badge has. */
+.payment-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-pill);
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.payment-badge.verified {
+    background: var(--color-success-soft);
+    color: var(--color-success-strong);
+}
+
+.payment-badge.pending {
+    background: var(--color-warning-soft);
+    color: var(--color-warning-strong);
+}
+
+.payment-badge.rejected {
+    background: var(--color-danger-soft);
+    color: var(--color-danger-strong);
+}
+
+.payment-badge.none {
+    background: var(--color-surface-soft);
+    color: var(--color-text-muted);
+}
+
+/* Small inline tag next to a Pending row's status badge, surfacing the
+   same stale_notified_at/final_warning_notified_at state the auto-cancel
+   sweep (backend/scripts/run-automation-sweeps.php) already tracks —
+   giving row-level urgency visibility the audit found missing entirely. */
+.urgency-tag {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    font-size: 0.68rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.urgency-tag--warning {
+    background: var(--color-warning-soft);
+    color: var(--color-warning-strong);
+}
+
+.urgency-tag--critical {
+    background: var(--color-danger-soft);
+    color: var(--color-danger-strong);
+}
+
 /* Row action buttons — small pill buttons, colored to match the same
    semantic palette used by Relocation Management's Approve/Complete/Deny
    (green=confirm, teal=complete, red=cancel). */

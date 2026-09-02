@@ -206,11 +206,12 @@
                                     <th>Burial Date</th>
                                     <th>Requested By</th>
                                     <th>Status</th>
+                                    <th>Payment</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="reservationsBody">
-                                <tr><td colspan="8">Loading reservations...</td></tr>
+                                <tr><td colspan="9">Loading reservations...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -231,6 +232,56 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Batch E (reservation module audit): reuses the shared .modal/
+         .modal-content markup from assets/css/components/modals.css, which
+         was already loaded on this page but never actually used by it. -->
+    <div class="modal" id="reservationDetailModal">
+        <div class="modal-content modal--md">
+            <button type="button" class="close-view" id="closeDetailModal" aria-label="Close">&times;</button>
+            <div class="modal-header">Reservation Details</div>
+            <div class="modal-body" id="reservationDetailBody">
+                <p>Loading...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="closeDetailModalBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="cashPaymentModal">
+        <div class="modal-content modal--sm">
+            <button type="button" class="close-view" id="closeCashModal" aria-label="Close">&times;</button>
+            <div class="modal-header">Record Cash / Offline Payment</div>
+            <form id="cashPaymentForm">
+                <div class="modal-body">
+                    <input type="hidden" id="cashPaymentScheduleId">
+                    <div class="form-group">
+                        <label for="cashPaymentAmount">Amount received (&#8369;)</label>
+                        <input type="number" id="cashPaymentAmount" min="0.01" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cashPaymentMethod">Payment method</label>
+                        <select id="cashPaymentMethod">
+                            <option value="Cash">Cash</option>
+                            <option value="Check">Check</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cashPaymentReceipt">Receipt number <span class="muted">(optional — leave blank to auto-generate)</span></label>
+                        <input type="text" id="cashPaymentReceipt" placeholder="Leave blank to auto-generate">
+                    </div>
+                    <p class="help">Marks the reservation Completed, the lot Occupied, and creates a Verified payment record so it appears in Revenue Reports.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancelCashModal">Cancel</button>
+                    <button type="submit" class="btn-primary" id="submitCashPayment">Confirm Payment &amp; Complete</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script src="../../assets/js/shared/api.js"></script>
