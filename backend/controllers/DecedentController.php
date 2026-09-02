@@ -16,6 +16,18 @@ class DecedentController {
         $this->auditLogModel = new AuditLog();
     }
 
+    // Batch D (reservation module audit): decedent_records.decedent_id is
+    // FK-referenced (RESTRICT, no ON DELETE clause) by burial_schedules,
+    // cremation_records and relocation_requests — deleting a decedent still
+    // tied to any of those previously threw a raw, uncaught PDOException
+    // (surfacing as a generic 500 via backend/index.php's catch-all) instead
+    // of a friendly, actionable error. Mirrors LotController's own
+    // isForeignKeyViolation()/try-catch convention for the exact same MySQL
+    // 1451 "foreign key constraint fails" error.
+    private static function isForeignKeyViolation(PDOException $e) {
+        return ($e->errorInfo[1] ?? null) === 1451;
+    }
+
     private static function actorId($actor) {
         return is_array($actor) ? ($actor['user_id'] ?? null) : $actor;
     }
@@ -159,7 +171,14 @@ class DecedentController {
             return ['error' => 'Decedent record not found', 'code' => 404];
         }
 
-        $result = $this->decedentModel->delete($id);
+        try {
+            $result = $this->decedentModel->delete($id);
+        } catch (PDOException $e) {
+            if (self::isForeignKeyViolation($e)) {
+                return ['error' => 'Cannot delete this decedent record: it still has related burial, cremation, or relocation records', 'code' => 409];
+            }
+            throw $e;
+        }
         if ($result) {
             $this->auditLogModel->log(
                 'Decedent record deleted',
