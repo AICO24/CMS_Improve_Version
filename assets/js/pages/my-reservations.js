@@ -63,49 +63,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         onChange: loadReservations,
     });
 
-    function escapeHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;',
-        }[char]));
-    }
+    // Batch F (reservation module audit): escapeHtml/buildStatusBadge/
+    // debounce/the filter-chip renderer used to be defined locally here,
+    // byte-for-byte (or near-identical) duplicates of the same functions in
+    // manage-reservations.js — now shared via reservation-ui.js.
+    const { buildStatusBadge, debounce, renderFilterChips } = window.reservationUI;
 
     function renderActiveFilterChips() {
-        const chips = [
+        renderFilterChips(activeFilterChips, [
             { key: 'q', label: 'Search', value: currentQuery, clear: () => { searchQuery.value = ''; currentQuery = ''; } },
             { key: 'status', label: 'Status', value: currentStatus, clear: () => { statusFilter.value = ''; currentStatus = ''; } },
-        ].filter((chip) => chip.value);
-
-        if (!activeFilterChips) return;
-        activeFilterChips.innerHTML = chips.map((chip) => `
-            <span class="filter-chip" data-filter-key="${chip.key}">
-                ${escapeHtml(chip.label)}: ${escapeHtml(chip.value)}
-                <button type="button" aria-label="Remove ${escapeHtml(chip.label)} filter">&times;</button>
-            </span>
-        `).join('');
-
-        activeFilterChips.querySelectorAll('.filter-chip').forEach((chipEl) => {
-            const chip = chips.find((item) => item.key === chipEl.dataset.filterKey);
-            const button = chipEl.querySelector('button');
-            if (!chip || !button) return;
-            button.addEventListener('click', async () => {
-                chip.clear();
-                pagination.reset();
-                await loadReservations();
-            });
+        ], async () => {
+            pagination.reset();
+            await loadReservations();
         });
-    }
-
-    function buildStatusBadge(status) {
-        const normalized = String(status || '').toLowerCase();
-        let badgeClass = 'pending';
-        if (normalized === 'confirmed') badgeClass = 'confirmed';
-        else if (normalized === 'cancelled') badgeClass = 'cancelled';
-        else if (normalized === 'completed') badgeClass = 'completed';
-        return `<span class="status-badge ${badgeClass}">${status || 'Pending'}</span>`;
     }
 
     function buildReservationRow(schedule) {
@@ -162,19 +133,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function cancelReservation(id) {
-        if (!confirm('Cancel this pending reservation?')) {
-            return;
-        }
+        const confirmed = await confirmDialog({
+            title: 'Cancel reservation?',
+            message: 'This will cancel your pending reservation and release the lot. This cannot be undone.',
+            confirmLabel: 'Cancel reservation',
+            cancelLabel: 'Keep reservation',
+            danger: true,
+        });
+        if (!confirmed) return;
+
         try {
             const result = await api.request(`schedules/${id}`, { method: 'DELETE' });
             if (result.success) {
-                alert('Reservation canceled successfully.');
+                showToast('Reservation cancelled successfully.', { type: 'success' });
                 await loadReservations();
             } else {
-                alert(result.error || 'Unable to cancel reservation.');
+                showToast(result.error || 'Unable to cancel reservation.', { type: 'error' });
             }
         } catch (error) {
-            alert(error.message || 'Unable to cancel reservation.');
+            showToast(error.message || 'Unable to cancel reservation.', { type: 'error' });
         }
     }
 
@@ -185,14 +162,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!scheduleId) return;
         await withButtonLoading(button, () => cancelReservation(scheduleId));
     });
-
-    function debounce(fn, delay = 300) {
-        let timeout;
-        return (...args) => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => fn(...args), delay);
-        };
-    }
 
     const refreshReservations = debounce(async () => {
         pagination.reset();

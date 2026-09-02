@@ -86,18 +86,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         onChange: loadAndRenderReservations,
     });
 
-    function escapeHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;',
-        }[char]));
-    }
+    // Batch F (reservation module audit): escapeHtml/buildStatusBadge/
+    // debounce/the filter-chip renderer used to be defined locally here,
+    // byte-for-byte (or near-identical) duplicates of the same functions in
+    // my-reservations.js — now shared via reservation-ui.js.
+    const { escapeHtml, buildStatusBadge, debounce, renderFilterChips } = window.reservationUI;
 
     function renderActiveFilterChips() {
-        const chips = [
+        renderFilterChips(activeFilterChips, [
             { key: 'q', label: 'Search', value: currentQuery, clear: () => { searchQuery.value = ''; currentQuery = ''; } },
             { key: 'status', label: 'Status', value: currentStatus, clear: () => { statusFilter.value = ''; currentStatus = ''; } },
             { key: 'awaiting', label: 'Filter', value: awaitingConfirmationOnly ? 'Needs Review' : '', clear: () => {
@@ -105,33 +101,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
                 statusFilter.disabled = false;
             } },
-        ].filter((chip) => chip.value);
-
-        if (!activeFilterChips) return;
-        activeFilterChips.innerHTML = chips.map((chip) => `
-            <span class="filter-chip" data-filter-key="${chip.key}">
-                ${escapeHtml(chip.label)}: ${escapeHtml(chip.value)}
-                <button type="button" aria-label="Remove ${escapeHtml(chip.label)} filter">&times;</button>
-            </span>
-        `).join('');
-
-        activeFilterChips.querySelectorAll('.filter-chip').forEach((chipEl) => {
-            const chip = chips.find((item) => item.key === chipEl.dataset.filterKey);
-            const button = chipEl.querySelector('button');
-            if (!chip || !button) return;
-            button.addEventListener('click', async () => {
-                chip.clear();
-                pagination.reset();
-                await loadAndRenderReservations();
-            });
+        ], async () => {
+            pagination.reset();
+            await loadAndRenderReservations();
         });
-    }
-
-    function buildStatusBadge(status) {
-        const normalized = String(status || '').toLowerCase();
-        const known = ['pending', 'confirmed', 'completed', 'cancelled'];
-        const badgeClass = known.includes(normalized) ? normalized : 'pending';
-        return `<span class="status-badge ${badgeClass}">${status || 'Pending'}</span>`;
     }
 
     // Batch E (reservation module audit): payment_status/payment_amount/
@@ -317,17 +290,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function completeReservation(id, button) {
-        if (!confirm('Mark this reservation as completed? The lot will be marked Occupied.')) return;
+        const confirmed = await confirmDialog({
+            title: 'Complete reservation?',
+            message: 'Mark this reservation as completed? The lot will be marked Occupied.',
+            confirmLabel: 'Mark completed',
+        });
+        if (!confirmed) return;
         await withButtonLoading(button, async () => {
             try {
                 const result = await api.request(`schedules/${id}`, { method: 'PUT', body: { status: 'Completed' } });
                 if (result.success) {
+                    showToast('Reservation marked completed.', { type: 'success' });
                     await refreshAll();
                 } else {
-                    alert(result.error || 'Unable to complete reservation.');
+                    showToast(result.error || 'Unable to complete reservation.', { type: 'error' });
                 }
             } catch (error) {
-                alert(error.message || 'Unable to complete reservation.');
+                showToast(error.message || 'Unable to complete reservation.', { type: 'error' });
             }
         });
     }
@@ -357,7 +336,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const id = cashPaymentScheduleId.value;
         const amount = parseFloat(cashPaymentAmount.value);
         if (isNaN(amount) || amount <= 0) {
-            alert('Please enter a valid payment amount.');
+            showToast('Please enter a valid payment amount.', { type: 'error' });
             return;
         }
         const method = cashPaymentMethod.value;
@@ -377,12 +356,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 });
                 if (result.success) {
                     closeCashPaymentModal();
+                    showToast('Payment recorded and reservation completed.', { type: 'success' });
                     await refreshAll();
                 } else {
-                    alert(result.error || 'Unable to complete reservation.');
+                    showToast(result.error || 'Unable to complete reservation.', { type: 'error' });
                 }
             } catch (error) {
-                alert(error.message || 'Unable to complete reservation.');
+                showToast(error.message || 'Unable to complete reservation.', { type: 'error' });
             }
         });
     });
@@ -438,17 +418,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     async function cancelReservation(id, button) {
-        if (!confirm('Cancel this reservation?')) return;
+        const confirmed = await confirmDialog({
+            title: 'Cancel reservation?',
+            message: 'This will cancel the reservation and release the lot. This cannot be undone.',
+            confirmLabel: 'Cancel reservation',
+            cancelLabel: 'Keep reservation',
+            danger: true,
+        });
+        if (!confirmed) return;
         await withButtonLoading(button, async () => {
             try {
                 const result = await api.request(`schedules/${id}`, { method: 'DELETE' });
                 if (result.success) {
+                    showToast('Reservation cancelled.', { type: 'success' });
                     await refreshAll();
                 } else {
-                    alert(result.error || 'Unable to cancel reservation.');
+                    showToast(result.error || 'Unable to cancel reservation.', { type: 'error' });
                 }
             } catch (error) {
-                alert(error.message || 'Unable to cancel reservation.');
+                showToast(error.message || 'Unable to cancel reservation.', { type: 'error' });
             }
         });
     }
@@ -465,14 +453,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         else if (action === 'complete-cash') openCashPaymentModal(id);
         else if (action === 'cancel') await cancelReservation(id, button);
     });
-
-    function debounce(fn, delay = 300) {
-        let timeout;
-        return (...args) => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => fn(...args), delay);
-        };
-    }
 
     const refreshFiltered = debounce(async () => {
         pagination.reset();
