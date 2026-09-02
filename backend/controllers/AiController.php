@@ -367,13 +367,49 @@ class AiController {
             'conversation_history' => $conversationHistory,
         ]);
 
+        // BATCH AI-2 (AI Architecture Audit, 2026-09-02): the fix for the
+        // audit's central finding — a module/entity-scoped question the
+        // model itself says it can't answer from focus alone (answered:false
+        // on a call that otherwise completed successfully — NOT a
+        // network/provider error, retrying that would just waste quota) gets
+        // exactly ONE escalated retry with system_wide attached, instead of
+        // "I don't have visibility into that" being the final answer.
+        // scope='system' is excluded — it already sends system_wide on the
+        // first call, so there's nothing broader left to escalate to. This
+        // keeps the common case (a question genuinely local to the current
+        // module) exactly as cheap as before Batch 3's quota-reduction
+        // change; only the minority that need it pay for a second call.
+        $escalated = false;
+        $firstAnswered = empty($result['error']) && !empty($result['message']);
+        if (!$firstAnswered && empty($result['error']) && in_array($scope, ['entity', 'module'], true)) {
+            $escalatedContext = [
+                'focus' => $focus,
+                'system_wide' => $this->auditIntelligenceService->buildSystemWideReach(),
+            ];
+            $this->logAiContextSize($scope . ':escalated', $escalatedContext);
+
+            $escalatedResult = $this->aiService->askAssistant([
+                'context' => $escalatedContext,
+                'question' => $question,
+                'conversation_history' => $conversationHistory,
+            ]);
+
+            if (empty($escalatedResult['error']) && !empty($escalatedResult['message'])) {
+                $result = $escalatedResult;
+                $escalated = true;
+            }
+        }
+
         return [
             'answered' => empty($result['error']) && !empty($result['message']),
             'message' => (empty($result['error']) && is_string($result['message'] ?? null)) ? $result['message'] : null,
             'suggested_action' => (empty($result['error']) && is_string($result['suggested_action'] ?? null)) ? $result['suggested_action'] : null,
+            // BATCH AI-8 (not yet implemented) will surface this in the
+            // widget UI so a user can tell an answer reached beyond the
+            // current page's focus; exposed now so that batch is additive.
+            'escalated' => $escalated,
         ];
     }
-
     // Batch 3 observability, promoted to always-on by BATCH AI-1 (AI
     // Architecture Audit, 2026-09-02): confirms the scope-based minimization
     // in askAssistant() above is actually shrinking what gets sent to
