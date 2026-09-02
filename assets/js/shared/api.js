@@ -79,7 +79,15 @@ class ApiClient {
                 localStorage.removeItem('cemetery_session');
                 window.location.href = getLoginRedirectUrl();
             }
-            throw new Error(data.error || 'Request failed');
+            // AI Architecture Audit (2026-09-02), manual-test follow-up:
+            // callers previously had no reliable way to tell a 429
+            // (rate-limited) failure apart from any other error short of
+            // string-matching the message text — status lets a caller like
+            // lot-chat-assistant.js's isRateLimitError() check this
+            // directly instead.
+            const requestError = new Error(data.error || 'Request failed');
+            requestError.status = response.status;
+            throw requestError;
         }
 
         return data;

@@ -220,6 +220,29 @@ function createLotChatAssistant(options) {
         return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
+    // Manual-test follow-up (AI Architecture Audit, 2026-09-02): BATCH AI-7
+    // added RateLimiter to ai/extract and ai/chat, but their catch blocks
+    // below just logged and swallowed the failure — a citizen sending
+    // messages quickly saw the chat go quiet with no explanation instead of
+    // being told to slow down. api.js now attaches the real HTTP status to
+    // a failed request's Error, so this can be told apart from any other
+    // failure reliably instead of string-matching an error message.
+    function isRateLimitError(error) {
+        return Boolean(error) && error.status === 429;
+    }
+
+    // Shown at most once per short window even though a single message can
+    // trigger both an ai/extract AND an ai/chat call — without this guard, a
+    // burst of rapid messages could stack two near-identical "please wait"
+    // notices back to back.
+    let rateLimitNoticeShownAt = 0;
+    function noticeRateLimited() {
+        const now = Date.now();
+        if (now - rateLimitNoticeShownAt < 4000) return;
+        rateLimitNoticeShownAt = now;
+        appendMessage('assistant', "You're sending messages a bit too fast — please wait a moment before trying again.");
+    }
+
     function isChatSkipMessage(text) {
         const normalized = text.trim().toLowerCase().replace(/[.!?]+$/, '');
         return CHAT_SKIP_PHRASES.includes(normalized);
@@ -767,6 +790,7 @@ function createLotChatAssistant(options) {
 
             return { updates, recommendTypeRequested };
         } catch (error) {
+            if (isRateLimitError(error)) throw error;
             console.error('LLM-assisted extraction failed', error);
             return empty;
         }
@@ -802,7 +826,18 @@ function createLotChatAssistant(options) {
     // question ("what about after that?") has the same continuity
     // ai/assistant-ask's widget already gives admin/staff — this was
     // previously fully stateless per message.
-    async function tryAnswerGeneralQuestion(text, pendingSlot) {
+    // alreadyResolvedSomething (manual-test follow-up, found live: a
+    // combined message like "Premium Lot, and what happens after I book?"
+    // was answering only the lot-type part and silently dropping the
+    // question) — true whenever the caller's own extraction ABOVE this call
+    // already resolved a slot value from this exact message (i.e. this is
+    // the mightBeQuestion path, not the pure nothingRecognizedThisMessage
+    // path). Told to the server so CHAT_SYSTEM_PROMPT's "looks like a
+    // pending-slot answer, prefer answered=false" guard — correct for the
+    // nothingRecognizedThisMessage case, where nothing was resolved and an
+    // ambiguous message might just be a bad slot attempt — doesn't also
+    // suppress a genuine question riding alongside an already-resolved value.
+    async function tryAnswerGeneralQuestion(text, pendingSlot, alreadyResolvedSomething) {
         try {
             const response = await api.request('ai/chat', {
                 method: 'POST',
@@ -819,6 +854,7 @@ function createLotChatAssistant(options) {
                     // uses — this is Q&A-only history (question + answer
                     // text), never booking-slot data.
                     conversation_history: qaHistory.slice(-5),
+                    already_resolved_something: Boolean(alreadyResolvedSomething),
                 },
             });
             const answer = response && response.answered && typeof response.message === 'string' ? response.message : null;
@@ -827,6 +863,7 @@ function createLotChatAssistant(options) {
             }
             return answer;
         } catch (error) {
+            if (isRateLimitError(error)) throw error;
             console.error('General Q&A request failed', error);
             return null;
         }
@@ -1112,7 +1149,19 @@ function createLotChatAssistant(options) {
         if (pendingSlot !== 'decedent_id' && !hasCorrectionSignal && (nothingRecognizedThisMessage || mightBeQuestion)) {
             setInputEnabled(false);
             const typingBubble = appendTypingIndicator();
-            const answer = await tryAnswerGeneralQuestion(text, pendingSlot);
+            let answer;
+            try {
+                answer = await tryAnswerGeneralQuestion(text, pendingSlot, mightBeQuestion);
+            } catch (error) {
+                typingBubble.remove();
+                setInputEnabled(true);
+                chatInput.focus();
+                if (isRateLimitError(error)) {
+                    noticeRateLimited();
+                    return;
+                }
+                throw error;
+            }
             typingBubble.remove();
             setInputEnabled(true);
             chatInput.focus();
@@ -1143,7 +1192,19 @@ function createLotChatAssistant(options) {
         if (pendingSlot && pendingSlot !== 'decedent_id' && corePrefUpdateCount === 0 && updates[pendingSlot] === undefined) {
             setInputEnabled(false);
             const typingBubble = appendTypingIndicator();
-            const llmResult = await tryLlmExtraction(text, pendingSlot);
+            let llmResult;
+            try {
+                llmResult = await tryLlmExtraction(text, pendingSlot);
+            } catch (error) {
+                typingBubble.remove();
+                setInputEnabled(true);
+                chatInput.focus();
+                if (isRateLimitError(error)) {
+                    noticeRateLimited();
+                    return;
+                }
+                throw error;
+            }
             typingBubble.remove();
             Object.keys(llmResult.updates).forEach(field => { updates[field] = llmResult.updates[field]; });
             recommendTypeRequested = llmResult.recommendTypeRequested;

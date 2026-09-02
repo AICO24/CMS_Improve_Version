@@ -281,7 +281,20 @@ CHAT_SYSTEM_PROMPT = (
     "question/message pairs from this same FAQ exchange only (never booking-"
     "slot data). Use it only to understand a follow-up question in context "
     "(e.g. 'what about after that?'); it does not change what counts as "
-    "'covered by knowledge_entries' above."
+    "'covered by knowledge_entries' above.\n"
+    "- BATCH AI-3 follow-up (found during manual testing): you may also be "
+    "given already_resolved_something=true. This means the caller ALREADY "
+    "successfully parsed a slot value (or another booking detail) out of "
+    "this exact message, separately from this call — e.g. the message was "
+    "'Premium Lot, and what happens after I book?' and 'Premium Lot' was "
+    "already resolved before you ever saw it. In that case, do NOT apply "
+    "the 'looks like a pending-slot answer, prefer answered=false' rule "
+    "above — that rule exists for the OPPOSITE case (already_resolved_"
+    "something=false), where nothing was resolved and an ambiguous message "
+    "might just be a bad attempt at the slot. When already_resolved_"
+    "something=true, judge only whether the message ALSO contains a "
+    "distinct, genuine question in addition to the value already resolved, "
+    "and answer it normally if knowledge_entries covers it."
 )
 
 
@@ -303,6 +316,7 @@ def _answer_question(
     knowledge_entries: List[Dict[str, str]],
     pending_slot: Optional[str],
     conversation_history: Optional[List[Dict[str, Any]]] = None,
+    already_resolved_something: bool = False,
 ) -> Dict[str, Any]:
     empty = {'answered': False, 'message': None}
     if not message or not knowledge_entries:
@@ -313,6 +327,7 @@ def _answer_question(
         'pending_slot': pending_slot,
         'knowledge_entries': knowledge_entries,
         'conversation_history': conversation_history or [],
+        'already_resolved_something': bool(already_resolved_something),
     }
 
     text = llm_provider.generate(
@@ -628,12 +643,13 @@ def chat_answer():
         message = (payload.get('message') or '').strip()
         pending_slot = payload.get('pending_slot')
         conversation_history = payload.get('conversation_history')
+        already_resolved_something = bool(payload.get('already_resolved_something'))
 
         if not message:
             return jsonify({'answered': False, 'message': None})
 
         knowledge_entries = _fetch_knowledge_base()
-        result = _answer_question(message, knowledge_entries, pending_slot, conversation_history)
+        result = _answer_question(message, knowledge_entries, pending_slot, conversation_history, already_resolved_something)
         return jsonify(result)
     except Exception:
         return jsonify({'answered': False, 'message': None})
