@@ -288,11 +288,35 @@ class AiController {
     // question genuinely about a different module than the one it was
     // mounted on (e.g. "what's expiring next week" asked from Relocation)
     // — it correctly said it didn't know, but that's not "AI covers the
-    // whole system". system_wide (buildSystemWideReach()) is now attached
-    // to EVERY call regardless of scope, so any instance can answer any
-    // system question; focus just keeps the conversation anchored to
-    // whatever record/module the admin is actually looking at.
+    // whole system". system_wide (buildSystemWideReach()) was briefly
+    // attached to EVERY call regardless of scope to fix that, then Batch 3
+    // (quota reduction) restricted it back to scope='system' only, for
+    // cost — this comment previously still described the pre-Batch-3
+    // behavior. BATCH AI-2 (AI Architecture Audit, 2026-09-02) is the
+    // current fix: system_wide is built for scope='system' as before, and
+    // for scope='entity'/'module' it's fetched on a bounded one-shot
+    // escalated retry only when the first, cheaper call comes back unable
+    // to answer — see the escalation block further down in this method.
+    //
+    // BATCH AI-2 timeout note: a single call here can now become two
+    // sequential Python requests. set_time_limit() below guards PHP's own
+    // script timeout for that case; AIService::askAssistant()'s escalated
+    // call passes a tighter per-call budget than the primary call so a slow
+    // best-effort second attempt can't double the worst-case wait.
     public function askAssistant($payload) {
+        // BATCH AI-2: PHP's default max_execution_time (commonly 30s) was
+        // sized for this method's original single Python call. Two
+        // sequential calls (primary, up to its 30s curl timeout, plus an
+        // escalated retry with its own 20s budget — see below) can together
+        // reach ~50s worst case — extend generously (75s) rather than risk
+        // this specific request being killed mid-escalation. Scoped to this
+        // one request only; function_exists guarded since some hosts
+        // disable set_time_limit() and silently ignore a call to it — this
+        // must never be the reason the endpoint 500s.
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(75);
+        }
+
         $payload = is_array($payload) ? $payload : [];
         $context = is_array($payload['context'] ?? null) ? $payload['context'] : [];
         $question = trim((string) ($payload['question'] ?? ''));
@@ -388,11 +412,22 @@ class AiController {
             ];
             $this->logAiContextSize($scope . ':escalated', $escalatedContext);
 
+            // 20s, not the primary call's default 30s: /api/assistant-ask
+            // internally tries Gemini then falls back to Groq (see
+            // llm_provider.py's generate(), timeout_ms=12000 per provider
+            // attempt — up to ~24s worst case if Gemini fails and Groq is
+            // also slow). 20s covers the common single-provider case with
+            // room to spare while still bounding this retry's worst-case
+            // contribution below the primary call's own budget; the rare
+            // full-fallback-chain case may occasionally get cut off here,
+            // which is an acceptable tradeoff for a best-effort second
+            // attempt — the primary call's original (unhelpful) answer is
+            // still returned below rather than surfacing a fresh error.
             $escalatedResult = $this->aiService->askAssistant([
                 'context' => $escalatedContext,
                 'question' => $question,
                 'conversation_history' => $conversationHistory,
-            ]);
+            ], 20);
 
             if (empty($escalatedResult['error']) && !empty($escalatedResult['message'])) {
                 $result = $escalatedResult;

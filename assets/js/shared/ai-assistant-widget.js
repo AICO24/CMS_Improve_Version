@@ -219,17 +219,24 @@ function initAiAssistant({ mountSelector, context, greeting, suggestions = [], o
 
             // Batch 10 (Batch 9 audit finding): no request timeout existed
             // on this fetch — a genuinely hung connection could leave
-            // "Thinking…" showing indefinitely. The backend's own
-            // worst-case sequential Gemini+Groq chain is bounded by PHP's
-            // own ~30s curl timeout to the Python service; 35s here gives
-            // that a small margin so this abort never races ahead of a
-            // legitimately-still-processing backend response — it only
-            // fires for a request the backend's own safety nets never got
-            // a chance to resolve. api.js's request() already spreads
-            // arbitrary fetch options through (including `signal`), so no
-            // change to api.js or the request payload shape is needed.
+            // "Thinking…" showing indefinitely. api.js's request() already
+            // spreads arbitrary fetch options through (including `signal`),
+            // so no change to api.js or the request payload shape is
+            // needed.
+            // BATCH AI-2 (AI Architecture Audit): a module/entity-scoped
+            // question that the model can't answer from focus alone now
+            // triggers one escalated backend retry (see
+            // AiController::askAssistant()) — worst case, this single
+            // request becomes two sequential Python calls: the primary
+            // (bounded by PHP's own ~30s curl timeout) plus an escalated
+            // retry (bounded to 20s). 55s here covers that ~50s backend
+            // ceiling with a small margin, same intent as the original 35s
+            // for the single-call case — this only fires for a request the
+            // backend's own timeouts never got a chance to resolve. The
+            // common case (a question answered on the first, cheaper call)
+            // is unaffected and just as fast as before.
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 35000);
+            const timeoutId = setTimeout(() => controller.abort(), 55000);
 
             try {
                 const result = await api.request('ai/assistant-ask', {

@@ -58,11 +58,17 @@ class AIService {
     // (single-entity, module-level, or system-wide - the assistant itself
     // doesn't know or care which, it only ever sees facts already assembled
     // by AuditIntelligenceService).
-    public function askAssistant($payload) {
-        return $this->request('/api/assistant-ask', 'POST', $payload);
+    // BATCH AI-2 (AI Architecture Audit): optional $timeoutSeconds override,
+    // used only by AiController's escalated-retry call — a tighter budget
+    // than the default $this->timeout so a slow best-effort second attempt
+    // can't double the worst-case wait a module/entity-scoped question was
+    // already taking. Every other call site (and the first, primary
+    // askAssistant() call) omits it and keeps the existing default.
+    public function askAssistant($payload, $timeoutSeconds = null) {
+        return $this->request('/api/assistant-ask', 'POST', $payload, $timeoutSeconds);
     }
 
-    private function request($path, $method = 'GET', $data = null) {
+    private function request($path, $method = 'GET', $data = null, $timeoutSeconds = null) {
         if (!function_exists('curl_init')) {
             return ['error' => 'cURL extension is not available', 'code' => 500];
         }
@@ -71,7 +77,7 @@ class AIService {
         $ch = curl_init($url);
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeoutSeconds !== null ? (int) $timeoutSeconds : $this->timeout);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
         curl_setopt($ch, CURLOPT_FAILONERROR, false);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json']);
