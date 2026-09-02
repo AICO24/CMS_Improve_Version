@@ -998,7 +998,19 @@ if ($path === 'ai/health' && $requestMethod === 'GET') {
 if ($path === 'ai/forecast' && $requestMethod === 'GET') {
     // Phase 6: the citizen wizard's capacity advisory (Phase 5) also calls
     // this, in addition to the admin/staff Capacity Forecast page.
-    AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    // BATCH AI-7 (AI Architecture Audit, 2026-09-02): this one isn't an LLM
+    // call (Python does ARIMA/moving-average projection over lots/
+    // schedules, no Gemini/Groq involved) so it carries no quota-burn risk
+    // — but it's still an unbounded, citizen-reachable DB/compute query
+    // that had zero throttling, unlike every other route in this block.
+    // 20/minute/user is generous for the date-picker-driven advisory calls
+    // this is actually used for.
+    if (!RateLimiter::allow('ai_forecast_' . $user['user_id'], 20, 60)) {
+        http_response_code(429);
+        echo json_encode(['error' => 'Too many requests — please wait a moment before trying again.']);
+        exit;
+    }
     $months = isset($_GET['months']) ? $_GET['months'] : 6;
     echo json_encode($aiController->forecast($months));
     exit;
@@ -1006,7 +1018,17 @@ if ($path === 'ai/forecast' && $requestMethod === 'GET') {
 
 if ($path === 'ai/narrate' && $requestMethod === 'POST') {
     // Phase 6: the citizen wizard's outcome narration (Phase 4) also calls this.
-    AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    // BATCH AI-7: a real Gemini call, same as ai/assistant-ask below, but
+    // previously had no rate limit at all despite being reachable by every
+    // citizen. 10/minute/user matches ai/assistant-ask's own limit — this
+    // fires at most once per recommendation search, not per keystroke, so
+    // genuine use never approaches it.
+    if (!RateLimiter::allow('ai_narrate_' . $user['user_id'], 10, 60)) {
+        http_response_code(429);
+        echo json_encode(['error' => 'Too many requests — please wait a moment before trying again.']);
+        exit;
+    }
     $input = readRequestBody();
     echo json_encode($aiController->narrate($input));
     exit;
@@ -1016,7 +1038,17 @@ if ($path === 'ai/extract' && $requestMethod === 'POST') {
     // Batch M3: LLM-assisted preference extraction, called by the shared chat
     // assistant (both wizards) only when its deterministic extractor found
     // nothing in a message. Same role gate as ai/narrate/ai/forecast above.
-    AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    // BATCH AI-7: a real Gemini call with no prior rate limit, reachable by
+    // every citizen mid-booking. 15/minute/user — higher than
+    // ai/assistant-ask's 10 since this can legitimately fire once per chat
+    // message during a fast-moving conversation, not just once per
+    // exchange.
+    if (!RateLimiter::allow('ai_extract_' . $user['user_id'], 15, 60)) {
+        http_response_code(429);
+        echo json_encode(['error' => 'Too many requests — please wait a moment before trying again.']);
+        exit;
+    }
     $input = readRequestBody();
     echo json_encode($aiController->extract($input));
     exit;
@@ -1028,7 +1060,18 @@ if ($path === 'ai/chat' && $requestMethod === 'POST') {
     // the shared chat assistant only when the deterministic extractor AND
     // ai/extract both found nothing usable in a message. Same role gate as
     // ai/narrate/ai/extract/ai/forecast above — reachable by both wizards.
-    AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    // BATCH AI-7 (AI Architecture Audit): a real Gemini call with no prior
+    // rate limit, reachable by every citizen — and BATCH AI-3 just widened
+    // when this fires (a question riding alongside a resolved slot value
+    // now also triggers it, not only a message that matched nothing else),
+    // so this gap mattered slightly more than when the audit first found
+    // it. Same 15/minute/user budget as ai/extract, for the same reason.
+    if (!RateLimiter::allow('ai_chat_' . $user['user_id'], 15, 60)) {
+        http_response_code(429);
+        echo json_encode(['error' => 'Too many requests — please wait a moment before trying again.']);
+        exit;
+    }
     $input = readRequestBody();
     echo json_encode($aiController->chat($input));
     exit;
