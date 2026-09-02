@@ -5,6 +5,22 @@
 // instead of maintaining two forks. Load this after shared/api.js and
 // before a page's own script.
 //
+// AI ARCHITECTURE NOTE (AI Architecture Audit, 2026-09-02): this module is
+// one of two independent AI systems in the app, not a mode of the other.
+// The System-Wide AI Assistant (shared/ai-assistant-widget.js, ai/assistant-
+// ask) is read-only explain-and-suggest over live records via
+// AuditIntelligenceService, admin/staff only. This module is a deterministic
+// booking state machine with an LLM-assisted fallback for genuine questions
+// (ai/chat, see tryAnswerGeneralQuestion() below) — grounded ONLY in the
+// admin-curated ai_knowledge FAQ table, with zero access to live
+// records/AuditIntelligenceService and no conversation_history. They share
+// the same Flask/Gemini process underneath but no context or state. The
+// "answer a question, then resume the pending slot" behavior below is this
+// audit's real-world example of Option B (intent-routed single assistant),
+// implemented as a "nothing else matched" exclusion heuristic rather than a
+// true intent classifier — see nothingRecognizedThisMessage further down,
+// and BATCH AI-3 for the planned explicit intent-tag replacement.
+//
 // Phase 2: deterministic slot-filling only (no LLM, no free-form NLP).
 // Extracted values are always validated against the live lotTypes/sections
 // lists the caller supplies, never accepted as raw user text.

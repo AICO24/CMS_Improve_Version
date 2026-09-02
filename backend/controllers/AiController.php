@@ -6,7 +6,6 @@ require_once __DIR__ . '/../services/AuditIntelligenceService.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../models/CapacityAlert.php';
-require_once __DIR__ . '/../services/EnvironmentService.php';
 
 class AiController {
     private $aiParameterModel;
@@ -375,19 +374,20 @@ class AiController {
         ];
     }
 
-    // Batch 3 observability: dev-only, opt-in diagnostic confirming the
-    // scope-based minimization in askAssistant() above is actually
-    // shrinking what gets sent to Gemini. Logs only the resolved scope, a
-    // rough count of module-level units included, and an approximate
-    // serialized character count — never the facts themselves (no PII, no
-    // record contents, no prompt text) — to PHP's own error log, never to
-    // the HTTP response. Off by default; set AI_CONTEXT_DEBUG=true in .env
-    // to enable. No new logging table or infrastructure introduced.
+    // Batch 3 observability, promoted to always-on by BATCH AI-1 (AI
+    // Architecture Audit, 2026-09-02): confirms the scope-based minimization
+    // in askAssistant() above is actually shrinking what gets sent to
+    // Gemini. Logs only the resolved scope, a rough count of module-level
+    // units included, and an approximate serialized character count — never
+    // the facts themselves (no PII, no record contents, no prompt text) —
+    // to PHP's own error log, never to the HTTP response. Previously gated
+    // behind AI_CONTEXT_DEBUG=true (opt-in, dev-only); that gate made it
+    // impossible to see real context-size/cost data in normal operation,
+    // which BATCH AI-2's planned tiered-fetch change needs visibility into
+    // to avoid re-introducing the cost problem Batch 3 was built to solve.
+    // No new logging table or infrastructure introduced — same error_log()
+    // sink as before, just unconditional now.
     private function logAiContextSize($scope, $assistantContext) {
-        if (strtolower((string) EnvironmentService::get('AI_CONTEXT_DEBUG', 'false')) !== 'true') {
-            return;
-        }
-
         $moduleCount = 0;
         if ($scope === 'entity' || $scope === 'module') {
             $moduleCount = 1;

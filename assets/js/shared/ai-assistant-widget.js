@@ -1,13 +1,30 @@
 // System-Wide AI Assistant — shared, reusable chat widget.
 // One backend brain (ai/assistant-ask), dropped into any admin page via
 // initAiAssistant({ mountSelector, context, greeting, suggestions }).
-// context picks which fact bundle the backend narrates from — but every
-// call also always carries the full system-wide reach (see
-// AuditIntelligenceService::buildSystemWideReach()), so any instance can
-// answer a question about any module, not just the one it's mounted on:
+// context picks which fact bundle the backend narrates from:
 //   { scope: 'entity', entity_type, entity_id } — focus: one record
 //   { scope: 'module', module }                 — focus: one module's recent state
 //   { scope: 'system' }                          — focus: the whole system
+// AI Architecture Audit (2026-09-02) finding, corrected here: only
+// scope==='system' calls also carry the full system-wide reach (see
+// AuditIntelligenceService::buildSystemWideReach() and
+// AiController::askAssistant()) — a quota-reduction change (Batch 3)
+// restricted this from "every call" to "system scope only" without every
+// mounting page's own comment being updated to match. A module/entity-scoped
+// instance answers strictly from its own focus today; a cross-module
+// question gets "I don't have visibility into that" until BATCH AI-2 (a
+// tiered focus-then-escalate fetch) ships. See that audit's "Root Cause
+// Analysis" section for the full trace.
+//
+// AI ARCHITECTURE NOTE — two independent systems, not one: this widget
+// (ai/assistant-ask, admin/staff only, read-only explain-and-suggest over
+// AuditIntelligenceService facts) is structurally separate from the Burial
+// Scheduling booking agent in shared/lot-chat-assistant.js (deterministic
+// slot-filling + ai/chat's admin-curated-FAQ-only Q&A, admin/staff/user).
+// They share the same Flask/Gemini process underneath but no context, no
+// conversation state, and no code path between them. Do not assume mounting
+// this widget on a Burial Scheduling page gives it any awareness of an
+// in-progress booking, or vice versa.
 // Renders as a fixed slide-in drawer with a blurred backdrop, matching the
 // reference chat-assistant design the user provided (header + avatar +
 // greeting, quick-suggestion chips, timestamped bubbles, input bar with a

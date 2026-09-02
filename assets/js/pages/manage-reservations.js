@@ -7,10 +7,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     // System-Wide AI Assistant: module-scoped, since a page load here has
-    // no single reservation selected yet. Also has full system-wide reach
-    // (see AuditIntelligenceService::buildSystemWideReach()) — a question
-    // about another module still gets answered, this scope just anchors
-    // the conversation to Burial Scheduling by default.
+    // no single reservation selected yet. AI Architecture Audit (2026-09-02)
+    // finding: this does NOT currently have system-wide reach — per Batch 3's
+    // quota-reduction change, AiController::askAssistant() only attaches
+    // AuditIntelligenceService::buildSystemWideReach() when scope==='system'
+    // (see ai-assistant-widget.js's own header comment). A question about a
+    // different module, asked from here, gets "I don't have visibility into
+    // that" rather than a real answer until BATCH AI-2 (tiered focus-then-
+    // escalate fetch) ships. This comment previously claimed the opposite —
+    // corrected as part of that audit's foundation-cleanup batch (AI-1).
     initAiAssistant({
         mountSelector: '#aiAssistantMount',
         context: { scope: 'module', module: 'Schedule' },
