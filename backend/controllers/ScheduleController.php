@@ -305,6 +305,7 @@ class ScheduleController {
             'title' => $title,
             'message' => $message,
             'notification_type' => 'Schedule',
+            'user_id' => $userId,
             'is_read' => 0,
         ]);
 
@@ -346,6 +347,7 @@ class ScheduleController {
             'title' => $title,
             'message' => $message,
             'notification_type' => 'Schedule',
+            'user_id' => $recipientUserId,
             'is_read' => 0,
         ]);
 

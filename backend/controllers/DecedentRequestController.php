@@ -117,6 +117,7 @@ class DecedentRequestController {
             'title' => $title,
             'message' => $message,
             'notification_type' => 'System',
+            'user_id' => $request['requested_by'] ?? null,
             'is_read' => 0,
         ]);
 

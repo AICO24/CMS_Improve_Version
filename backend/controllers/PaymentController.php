@@ -598,6 +598,7 @@ class PaymentController {
                 'title' => 'Payment ' . ($status === 'Verified' ? 'Approved' : 'Rejected'),
                 'message' => sprintf('Payment %s for receipt %s has been %s.', $payment['receipt_number'], $payment['receipt_number'], strtolower($status)),
                 'notification_type' => 'Payment',
+                'user_id' => $payment['received_by'] ?? null,
                 'is_read' => 0,
             ]);
 
@@ -984,6 +985,7 @@ class PaymentController {
             'title' => $notificationTitle,
             'message' => $notificationMessage,
             'notification_type' => 'Payment',
+            'user_id' => $userId,
             'is_read' => 0,
         ]);
 

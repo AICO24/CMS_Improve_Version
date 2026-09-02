@@ -734,7 +734,7 @@ if ($path === 'notifications' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $filters = [];
     if (isset($_GET['type'])) $filters['notification_type'] = $_GET['type'];
-    echo json_encode($notificationController->index($filters));
+    echo json_encode($notificationController->index($filters, $user));
     exit;
 }
 
@@ -750,12 +750,19 @@ if ($path === 'notifications' && $requestMethod === 'POST') {
 
 if ($path === 'notifications/unread-count' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
-    echo json_encode($notificationController->unreadCount());
+    echo json_encode($notificationController->unreadCount($user));
     exit;
 }
 
 if (preg_match('/^notifications\/(\d+)$/', $path, $matches) && $requestMethod === 'GET') {
-    $result = $notificationController->show($matches[1]);
+    // Batch (notification scoping, finding E.1): this route previously had no
+    // role gate of its own at all — relied only on the top-level authenticate()
+    // above, with no ownership check in the controller either, so any
+    // authenticated user could view any notification by guessing its id.
+    // Explicit gate added here to match every sibling notifications/* route's
+    // pattern; ownership is now enforced in NotificationController::show().
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $notificationController->show($matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -764,7 +771,7 @@ if (preg_match('/^notifications\/(\d+)$/', $path, $matches) && $requestMethod ==
 
 if (preg_match('/^notifications\/(\d+)\/read$/', $path, $matches) && $requestMethod === 'PUT') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
-    $result = $notificationController->markRead($matches[1]);
+    $result = $notificationController->markRead($matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -773,7 +780,7 @@ if (preg_match('/^notifications\/(\d+)\/read$/', $path, $matches) && $requestMet
 
 if ($path === 'notifications/mark-all-read' && $requestMethod === 'PUT') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
-    $result = $notificationController->markAllRead();
+    $result = $notificationController->markAllRead($user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
