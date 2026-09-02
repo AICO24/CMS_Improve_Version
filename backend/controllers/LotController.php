@@ -3,6 +3,9 @@ require_once __DIR__ . '/../models/Section.php';
 require_once __DIR__ . '/../models/Block.php';
 require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/../models/AuditLog.php';
+require_once __DIR__ . '/../models/Schedule.php';
+require_once __DIR__ . '/../models/Notification.php';
+require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../services/AutomationEngine.php';
 
 class LotController {
@@ -17,12 +20,14 @@ class LotController {
     private $blockModel;
     private $lotModel;
     private $auditLogModel;
+    private $scheduleModel;
 
     public function __construct() {
         $this->sectionModel = new Section();
         $this->blockModel = new Block();
         $this->lotModel = new Lot();
         $this->auditLogModel = new AuditLog();
+        $this->scheduleModel = new Schedule();
     }
 
     private static function actorId($actor) {
@@ -43,6 +48,35 @@ class LotController {
     // any other PDOException still propagates unchanged.
     private static function isForeignKeyViolation(PDOException $e) {
         return ($e->errorInfo[1] ?? null) === 1451;
+    }
+
+    // Batch G (reservation module audit): notifies whoever holds a Pending
+    // or Confirmed schedule against this lot that an admin override changed
+    // its status out from under them. Best-effort — there can legitimately
+    // be zero matching schedules (e.g. the lot was Reserved by a Lot
+    // Purchase payment with no schedule involved at all), in which case
+    // this silently does nothing rather than treating that as an error.
+    private function notifyLotOverrideAffectsSchedule($lotId, $newStatus) {
+        $lot = $this->lotModel->findById($lotId);
+        $schedules = $this->scheduleModel->findAll(['lot_id' => $lotId]);
+        $notificationModel = new Notification();
+
+        foreach ($schedules as $schedule) {
+            if (!in_array($schedule['status'], ['Pending', 'Confirmed'], true)) {
+                continue;
+            }
+            $notificationModel->create([
+                'title' => 'Lot Status Changed by Administrator',
+                'message' => sprintf(
+                    'The status of lot %s, tied to your reservation, was changed to "%s" by an administrator. Please contact staff if you have questions about your reservation.',
+                    $lot['lot_number'] ?? 'Unknown',
+                    $newStatus
+                ),
+                'notification_type' => 'Schedule',
+                'user_id' => $schedule['created_by'],
+                'is_read' => 0,
+            ]);
+        }
     }
 
     public function getSections() {
@@ -359,7 +393,7 @@ class LotController {
             if (!empty($data['status']) && $data['status'] !== $oldLot['status']) {
                 $newStatus = $data['status'];
                 $lotModel = $this->lotModel;
-                AutomationEngine::run(
+                $automationResult = AutomationEngine::run(
                     'lot.admin_override',
                     'Lot',
                     $id,
@@ -375,6 +409,19 @@ class LotController {
                         return $lotModel->transitionStatus($id, $newStatus, Lot::allowedFromStatusesFor('lot.admin_override', $newStatus));
                     }
                 );
+
+                // Batch G (reservation module audit): an override away from
+                // Reserved/Occupied can invalidate whatever citizen's booking
+                // put the lot in that state, and this previously never told
+                // them — they'd only discover it later, e.g. when a payment
+                // or burial-day check unexpectedly failed. Only Pending/
+                // Confirmed schedules are "active" here; a Completed
+                // schedule's lot going Occupied->Expired via override is a
+                // separate, already-notified lease-expiration concern (see
+                // ExpirationController), not this one.
+                if (!empty($automationResult['success']) && in_array($oldLot['status'], ['Reserved', 'Occupied'], true)) {
+                    $this->notifyLotOverrideAffectsSchedule($id, $newStatus);
+                }
             }
 
             return ['success' => true, 'message' => 'Lot updated'];

@@ -8,6 +8,7 @@ require_once __DIR__ . '/../models/DecedentRequest.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../models/Payment.php';
 require_once __DIR__ . '/../models/SystemException.php';
+require_once __DIR__ . '/../models/Decedent.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../services/AutomationEngine.php';
 require_once __DIR__ . '/ExpirationController.php';
@@ -450,6 +451,23 @@ class ScheduleController {
         $date = isset($data['schedule_date']) ? $data['schedule_date'] : $existing['schedule_date'];
         $time = array_key_exists('schedule_time', $data) ? $data['schedule_time'] : $existing['schedule_time'];
 
+        // Batch G (reservation module audit): a plain field edit (reschedule
+        // a still-Pending booking's date/lot/time, or edit its notes) with
+        // no accompanying status change previously wrote no audit entry at
+        // all — only the two status-transition branches near the bottom of
+        // this method logged anything. Computed here, before $data gets
+        // mutated (confirmed_by is set below), and consumed after the write
+        // succeeds; only logged if neither status branch already covered
+        // this same update (see $statusTransitionLogged below), to keep the
+        // established one-audit-entry-per-fact convention this file already
+        // follows elsewhere (see the Batch F comments).
+        $changedFields = [];
+        foreach (['lot_id', 'schedule_date', 'schedule_time', 'notes'] as $field) {
+            if (array_key_exists($field, $data) && (string) $data[$field] !== (string) ($existing[$field] ?? '')) {
+                $changedFields[$field] = ['from' => $existing[$field] ?? null, 'to' => $data[$field]];
+            }
+        }
+
         if ($lotId != $existing['lot_id'] || $date !== $existing['schedule_date'] || $time !== $existing['schedule_time']) {
             $conflictExists = $this->scheduleModel->checkConflict($lotId, $date, $time);
             if ($conflictExists) {
@@ -513,7 +531,9 @@ class ScheduleController {
         }
         if ($result) {
             $lotId = $data['lot_id'] ?? $existing['lot_id'];
+            $statusTransitionLogged = false;
             if (isset($data['status']) && $data['status'] === 'Confirmed' && $existing['status'] !== 'Confirmed') {
+                $statusTransitionLogged = true;
                 // H2: payment.verified/Lot (from syncLotStatusForVerifiedPurchase())
                 // already reserved this lot moments earlier in the same request, so
                 // running transitionLotStatus() here too would just rewrite
@@ -583,6 +603,7 @@ class ScheduleController {
                 }
                 $this->notifyScheduleStatusChange($existing, 'Confirmed', $existing['created_by']);
             } elseif (isset($data['status']) && $data['status'] === 'Completed' && $existing['status'] !== 'Completed') {
+                $statusTransitionLogged = true;
                 // Available is included alongside Reserved: an admin/staff PUT
                 // may mark a Pending schedule Completed directly (skipping the
                 // Confirmed step) — see the guard note on transitionLotStatus()
@@ -616,6 +637,18 @@ class ScheduleController {
                 );
                 $this->notifyScheduleStatusChange($existing, 'Completed', $existing['created_by']);
             }
+
+            if (!$statusTransitionLogged && !empty($changedFields)) {
+                $this->auditLogModel->log(
+                    'Schedule updated',
+                    self::actorId($user),
+                    self::actorUsername($user),
+                    'Schedule',
+                    $id,
+                    $changedFields
+                );
+            }
+
             return ['success' => true, 'message' => 'Schedule updated'];
         }
 
@@ -715,9 +748,49 @@ class ScheduleController {
                 ['decedent_id' => (int) $decedentId]
             );
         }
+        // Batch G (reservation module audit): this used to be silent either
+        // way — the citizen never learned their provisional booking now has
+        // a formal decedent record attached (a real, user-visible fact:
+        // it's what unblocks their booking from ever reaching Completed).
+        // Notified regardless of $isAutomaticLink — both paths represent
+        // the same fact from the citizen's point of view, unlike the audit
+        // log split above which exists only to avoid a duplicate *staff-
+        // facing* entry when AutomationEngine already logged it.
+        if ($result) {
+            $this->notifyDecedentLinked($existing, $decedentId);
+        }
         return $result
             ? ['success' => true, 'message' => 'Decedent record linked to schedule']
             : ['error' => 'Failed to link decedent record', 'code' => 500];
+    }
+
+    private function notifyDecedentLinked($schedule, $decedentId) {
+        $notificationModel = new Notification();
+        $userModel = new User();
+        $decedentModel = new Decedent();
+        $lot = $this->lotModel->findById($schedule['lot_id']);
+        $decedent = $decedentModel->findById($decedentId) ?: [];
+        $recipient = $userModel->findById($schedule['created_by']);
+
+        $decedentName = trim(($decedent['first_name'] ?? '') . ' ' . ($decedent['last_name'] ?? ''));
+        $title = 'Decedent Record Linked to Your Reservation';
+        $message = sprintf(
+            'The decedent record for %s has been linked to your reservation for lot %s. Your booking can now be completed once payment and scheduling are finalized.',
+            $decedentName !== '' ? $decedentName : 'the deceased',
+            $lot['lot_number'] ?? 'Unknown'
+        );
+
+        $notificationModel->create([
+            'title' => $title,
+            'message' => $message,
+            'notification_type' => 'Schedule',
+            'user_id' => $schedule['created_by'],
+            'is_read' => 0,
+        ]);
+
+        if (!empty($recipient['email'])) {
+            $this->sendEmail($recipient['email'], $title, $message);
+        }
     }
 
     public function destroy($id, $user = []) {
