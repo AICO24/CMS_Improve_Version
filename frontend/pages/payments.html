@@ -257,7 +257,12 @@
                     <div class="help" id="amountMismatchWarning" style="display:none; color: var(--color-warning-strong);"></div>
                 </div>
                 <div class="form-group"><label>Payment Date</label><input type="date" id="paymentDate" required></div>
-                <div class="form-group"><label>Payment Method</label><select id="paymentMethod" required><option value="Cash">Cash</option><option value="Card">Card</option><option value="Bank Transfer">Bank Transfer</option><option value="GCash">GCash</option><option value="PayMaya">PayMaya</option><option value="Other">Other</option></select></div>
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <select id="paymentMethod" required><option value="Cash">Cash</option><option value="Card">Card</option><option value="Bank Transfer">Bank Transfer</option><option value="GCash">GCash</option><option value="PayMaya">PayMaya</option><option value="Other">Other</option></select>
+                    <!-- PLACEHOLDER: replace with the cemetery's real GCash/PayMaya number and bank account details before going live. There is no payment gateway integration — the system cannot receive or confirm a payment on its own, so a citizen paying via GCash/Bank Transfer/PayMaya must be told exactly where to send it before uploading proof below. -->
+                    <div class="help">Cash: pay directly at the cemetery office. GCash: send to 0917-000-0000 (PLACEHOLDER NAME). PayMaya: 0917-000-0000 (PLACEHOLDER NAME). Bank Transfer: BDO 0000-0000-0000 (PLACEHOLDER ACCOUNT NAME). After sending payment, upload your receipt/screenshot below and staff will verify it.</div>
+                </div>
                 <div class="form-group"><label>Receipt Number</label><input type="text" id="receiptNumber" placeholder="Leave blank to auto-generate"></div>
                 <div class="form-group"><label>Receipt Upload</label><input type="file" id="receiptFile" accept="image/*,.pdf"></div>
                 <div class="form-group payment-notes-group"><label>Notes</label><textarea id="paymentNotes" rows="2"></textarea></div>
