@@ -339,12 +339,30 @@ if ($path === 'schedules/stats' && $requestMethod === 'GET') {
 
 // Automation opportunity G.1: mirrors expiration-records/generate-notifications
 // above — a dedup'd sweep triggered on demand (see notifications.js), not on a
-// scheduler (this app has none by design). Reminds a citizen once per stale
-// reservation; never auto-cancels.
+// scheduler (this app has none by design). Stage 1 of 3 (reminder) — see
+// sendFinalWarnings/autoCancelStalePending below for stages 2 and 3.
 if ($path === 'schedules/notify-stale-pending' && $requestMethod === 'POST') {
     AuthMiddleware::requireRole(['admin', 'staff']);
     $days = $_GET['days'] ?? null;
     echo json_encode($scheduleController->notifyStalePending($days));
+    exit;
+}
+
+// Auto-cancel policy stage 2 of 3: final warning before cancellation.
+if ($path === 'schedules/send-final-warnings' && $requestMethod === 'POST') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $days = $_GET['days'] ?? null;
+    echo json_encode($scheduleController->sendFinalWarnings($days));
+    exit;
+}
+
+// Auto-cancel policy stage 3 of 3: the actual cancellation. Only ever acts
+// on a reservation that already received the stage-2 final warning — see
+// Schedule::findStalePendingForCancellation()'s comment.
+if ($path === 'schedules/auto-cancel-stale-pending' && $requestMethod === 'POST') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $days = $_GET['days'] ?? null;
+    echo json_encode($scheduleController->autoCancelStalePending($days));
     exit;
 }
 

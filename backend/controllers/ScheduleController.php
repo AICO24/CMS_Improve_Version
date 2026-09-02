@@ -806,15 +806,25 @@ class ScheduleController {
         return $this->scheduleModel->getCalendar($month, $year);
     }
 
-    // Default threshold approved for automation opportunity G.1: a
-    // still-Pending reservation with zero payment attempts after this many
-    // days gets a one-time reminder — never an auto-cancel (no such policy
-    // exists; explicitly deferred). Mirrors
+    // Auto-cancel policy (G.1, confirmed 2026-09-02, extending the
+    // reminder-only version from the original automation audit): a
+    // still-Pending reservation with zero payment attempts gets a reminder
+    // 7 days after booking, a final warning 4 days after THAT reminder
+    // actually fired, and is automatically cancelled 3 days after THAT
+    // warning actually fired — 7 + 4 + 3 = 14 days total in the normal case
+    // where this sweep runs promptly. The two "gap" constants are
+    // deliberately measured from the previous stage's own timestamp, not
+    // from the original booking date — see Schedule::findStalePendingForFinalWarning()'s
+    // comment for the real bug this fixes (a reservation nobody swept in a
+    // while would otherwise get all three stages seconds apart in one
+    // request, defeating the grace period entirely). Mirrors
     // ExpirationController::generateNotifications()'s own
     // dedup'd-sweep-triggered-on-Notifications-page-load pattern (see
     // notifications.js) rather than inventing a new trigger mechanism, since
     // this app has no scheduler by design.
     private const STALE_PENDING_DAYS = 7;
+    private const STALE_PENDING_FINAL_WARNING_GAP_DAYS = 4;
+    private const STALE_PENDING_CANCEL_GAP_DAYS = 3;
 
     public function notifyStalePending($days = null) {
         $days = $days !== null ? (int) $days : self::STALE_PENDING_DAYS;
@@ -859,5 +869,124 @@ class ScheduleController {
         }
 
         return ['success' => true, 'notified' => $count, 'message' => "$count stale-reservation reminder(s) sent"];
+    }
+
+    // Auto-cancel policy, stage 2 of 3: the final warning, sent
+    // STALE_PENDING_FINAL_WARNING_GAP_DAYS after the day-7 reminder actually
+    // fired (not a fixed day-11) — a distinct, more urgent message from the
+    // reminder above, not a repeat of it. See
+    // Schedule::findStalePendingForFinalWarning()'s comment for why it's
+    // gap-based.
+    public function sendFinalWarnings($days = null) {
+        $days = $days !== null ? (int) $days : self::STALE_PENDING_FINAL_WARNING_GAP_DAYS;
+        $rows = $this->scheduleModel->findStalePendingForFinalWarning($days);
+
+        $notificationModel = new Notification();
+        $userModel = new User();
+        $count = 0;
+
+        foreach ($rows as $schedule) {
+            $title = "Final notice: Reservation #{$schedule['schedule_id']} will be cancelled soon";
+            $message = sprintf(
+                'Your reservation for lot %s (%s) will be automatically cancelled in a few days if payment is not received. Please complete payment as soon as possible to keep your reservation.',
+                $schedule['lot_number'] ?? 'N/A',
+                $schedule['section_name'] ?? 'N/A'
+            );
+
+            $notificationModel->create([
+                'title' => $title,
+                'message' => $message,
+                'notification_type' => 'Schedule',
+                'user_id' => $schedule['created_by'],
+                'is_read' => 0,
+            ]);
+
+            $recipient = $userModel->findById($schedule['created_by']);
+            if (!empty($recipient['email'])) {
+                $this->sendEmail($recipient['email'], $title, $message);
+            }
+
+            $this->scheduleModel->markFinalWarningNotified($schedule['schedule_id']);
+            $this->auditLogModel->log(
+                'Final stale-reservation warning sent',
+                null,
+                null,
+                'Schedule',
+                $schedule['schedule_id'],
+                ['days_pending_threshold' => $days]
+            );
+            $count++;
+        }
+
+        return ['success' => true, 'notified' => $count, 'message' => "$count final warning(s) sent"];
+    }
+
+    // Auto-cancel policy, stage 3 of 3: the actual cancellation,
+    // STALE_PENDING_CANCEL_GAP_DAYS after the final warning actually fired
+    // (not a fixed day-14). Every candidate is re-checked fresh
+    // (isStillEligibleForAutoCancel()) right before writing — the bulk
+    // candidate list was read moments earlier in this same request, and a
+    // payment could have been submitted in between. Reuses
+    // transitionLotStatus() (already AutomationEngine-wrapped) for the lot
+    // release, exactly like destroy()'s own cancellation path above — not
+    // wrapping the schedule-status write itself in a second AutomationEngine
+    // envelope, matching that same existing precedent.
+    public function autoCancelStalePending($days = null) {
+        $days = $days !== null ? (int) $days : self::STALE_PENDING_CANCEL_GAP_DAYS;
+        $candidates = $this->scheduleModel->findStalePendingForCancellation($days);
+
+        $notificationModel = new Notification();
+        $userModel = new User();
+        $cancelledCount = 0;
+
+        foreach ($candidates as $schedule) {
+            $scheduleId = $schedule['schedule_id'];
+            if (!$this->scheduleModel->isStillEligibleForAutoCancel($scheduleId)) {
+                continue;
+            }
+
+            $result = $this->scheduleModel->update($scheduleId, ['status' => 'Cancelled']);
+            if (!$result) {
+                continue;
+            }
+
+            $this->transitionLotStatus($schedule['lot_id'], 'Available', ['Available', 'Reserved'], null, 'schedule.auto_cancelled_unpaid');
+            $this->auditLogModel->log(
+                'Schedule automatically cancelled (no payment within policy window)',
+                null,
+                null,
+                'Schedule',
+                $scheduleId,
+                ['previous_status' => 'Pending', 'cancel_gap_days_since_final_warning' => $days]
+            );
+
+            // $days is the gap since the final warning (see this method's
+            // header comment), not the citizen's total elapsed wait — stating
+            // it as "within N days" here would understate how long they
+            // actually had (a full reminder + final-warning cycle before
+            // this), so the message intentionally doesn't cite a specific
+            // number.
+            $title = 'Reservation Automatically Cancelled';
+            $message = sprintf(
+                'Your reservation for lot %s (%s) has been automatically cancelled because payment was not received after multiple reminders. If you still wish to proceed, please submit a new booking.',
+                $schedule['lot_number'] ?? 'N/A',
+                $schedule['section_name'] ?? 'N/A'
+            );
+            $notificationModel->create([
+                'title' => $title,
+                'message' => $message,
+                'notification_type' => 'Schedule',
+                'user_id' => $schedule['created_by'],
+                'is_read' => 0,
+            ]);
+            $recipient = $userModel->findById($schedule['created_by']);
+            if (!empty($recipient['email'])) {
+                $this->sendEmail($recipient['email'], $title, $message);
+            }
+
+            $cancelledCount++;
+        }
+
+        return ['success' => true, 'cancelled' => $cancelledCount, 'message' => "$cancelledCount stale reservation(s) automatically cancelled"];
     }
 }

@@ -224,6 +224,90 @@ class Schedule {
         return $stmt->execute([(int) $id]);
     }
 
+    // Auto-cancel policy, stage 2 of 3 (confirmed 2026-09-02): the final
+    // warning, sent $days after the FIRST reminder actually fired —
+    // stale_notified_at, not created_at. This was a real bug caught during
+    // testing (browser-verified via a deliberately backdated row, then
+    // restored): gating on created_at alone meant a reservation nobody had
+    // swept in weeks would get its reminder AND final warning AND
+    // cancellation in the same request, seconds apart — the whole point of
+    // a "final warning" is a real few days' grace period, not a rubber
+    // stamp between three back-to-back calls in one page load (see
+    // notifications.js — all three run unconditionally on every visit,
+    // stage 1 then 2 then 3). Anchoring each stage to when the PREVIOUS
+    // stage actually happened, rather than to the original booking date,
+    // keeps the real gap intact even when the whole pipeline runs "late"
+    // because nobody opened Notifications for a while.
+    public function findStalePendingForFinalWarning($days) {
+        $stmt = $this->db->prepare("
+            SELECT s.*, l.lot_number, sec.section_name
+            FROM burial_schedules s
+            JOIN lots l ON s.lot_id = l.lot_id
+            JOIN blocks b ON l.block_id = b.block_id
+            JOIN sections sec ON b.section_id = sec.section_id
+            WHERE s.status = 'Pending'
+              AND s.stale_notified_at IS NOT NULL
+              AND s.final_warning_notified_at IS NULL
+              AND s.stale_notified_at <= (NOW() - INTERVAL ? DAY)
+              AND NOT EXISTS (
+                  SELECT 1 FROM payments p
+                  WHERE p.transaction_type = 'Lot Purchase' AND p.reference_id = s.schedule_id
+              )
+            ORDER BY s.created_at ASC
+        ");
+        $stmt->execute([(int) $days]);
+        return $stmt->fetchAll();
+    }
+
+    public function markFinalWarningNotified($id) {
+        $stmt = $this->db->prepare("UPDATE burial_schedules SET final_warning_notified_at = NOW() WHERE schedule_id = ?");
+        return $stmt->execute([(int) $id]);
+    }
+
+    // Auto-cancel policy, stage 3 of 3: candidates for actual cancellation,
+    // $days after the final warning actually fired — final_warning_notified_at,
+    // not created_at. Same fix as findStalePendingForFinalWarning() above,
+    // for the same reason: this is what actually guarantees a real grace
+    // period between the warning and the cancellation, not just "a warning
+    // was sent at some point."
+    public function findStalePendingForCancellation($days) {
+        $stmt = $this->db->prepare("
+            SELECT s.*, l.lot_number, sec.section_name
+            FROM burial_schedules s
+            JOIN lots l ON s.lot_id = l.lot_id
+            JOIN blocks b ON l.block_id = b.block_id
+            JOIN sections sec ON b.section_id = sec.section_id
+            WHERE s.status = 'Pending'
+              AND s.final_warning_notified_at IS NOT NULL
+              AND s.final_warning_notified_at <= (NOW() - INTERVAL ? DAY)
+              AND NOT EXISTS (
+                  SELECT 1 FROM payments p
+                  WHERE p.transaction_type = 'Lot Purchase' AND p.reference_id = s.schedule_id
+              )
+            ORDER BY s.created_at ASC
+        ");
+        $stmt->execute([(int) $days]);
+        return $stmt->fetchAll();
+    }
+
+    // Fresh, single-row re-check called right before the actual cancel write
+    // in ScheduleController::autoCancelStalePending() — the bulk candidate
+    // list above was read moments earlier in the same request; a payment
+    // could have been submitted in the interim.
+    public function isStillEligibleForAutoCancel($scheduleId) {
+        $stmt = $this->db->prepare("
+            SELECT 1 FROM burial_schedules s
+            WHERE s.schedule_id = ?
+              AND s.status = 'Pending'
+              AND NOT EXISTS (
+                  SELECT 1 FROM payments p
+                  WHERE p.transaction_type = 'Lot Purchase' AND p.reference_id = s.schedule_id
+              )
+        ");
+        $stmt->execute([(int) $scheduleId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
     public function checkConflict($lotId, $date, $time = null) {
         $sql = "SELECT COUNT(*) as count FROM burial_schedules 
                 WHERE lot_id = ? AND schedule_date = ? AND status != 'Cancelled'";
