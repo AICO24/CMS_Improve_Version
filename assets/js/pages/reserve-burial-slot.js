@@ -17,6 +17,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 if (scheduleId) {
                     params.set('reservation_id', scheduleId);
+                    // States explicitly that reservation_id is a schedule_id, not a
+                    // lot_id — see the matching note on lot-management.js's Pay Now
+                    // redirect and PaymentController::validatePaymentReference().
+                    params.set('reference_kind', 'schedule');
                 }
                 window.location.href = `payments.html?${params.toString()}`;
             }

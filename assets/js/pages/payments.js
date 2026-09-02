@@ -465,6 +465,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         try {
             const params = new URLSearchParams({ transaction_type: transactionType, reference_id: referenceId });
+            if (currentReferenceKind) params.set('reference_kind', currentReferenceKind);
             const result = await api.request(`payments/expected-amount?${params.toString()}`, { method: 'GET' });
             if (result && result.expected_amount !== null && result.expected_amount !== undefined) {
                 expectedAmountForCurrentReference = parseFloat(result.expected_amount);
@@ -530,9 +531,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         },
     };
 
-    function setReferenceValue(id, label) {
+    // currentReferenceKind ('schedule'|'lot'|null): burial audit finding E.2 —
+    // for 'Lot Purchase', reference_id alone is ambiguous between a
+    // schedule_id and a raw lot_id (see PaymentController::
+    // validatePaymentReference()'s comment). Tracked here so the actual
+    // submission states its intent explicitly instead of letting the backend
+    // guess by existence-check order. Stays null for Cremation/Relocation/
+    // Renewal/Other, which have no such ambiguity, and for the manual
+    // reference-entry fallback (staff typing a raw id themselves) — both
+    // fall back to the backend's original guess, unchanged.
+    let currentReferenceKind = null;
+
+    function setReferenceValue(id, label, kind = null) {
         referenceIdInput.value = id;
         referenceIdInput.dispatchEvent(new Event('input', { bubbles: true }));
+        currentReferenceKind = kind;
         if (label) {
             referenceSelectedLabel.textContent = `Selected: ${label}`;
             referenceSelectedLabel.style.display = 'block';
@@ -547,6 +560,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         referenceSearchResults.innerHTML = '';
         referenceSelectedLabel.style.display = 'none';
         referenceIdInput.value = '';
+        currentReferenceKind = null;
     }
 
     function renderReferenceResults(items) {
@@ -562,7 +576,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         referenceSearchResults.querySelectorAll('.reference-search-result[data-idx]').forEach((el) => {
             const item = items[Number(el.dataset.idx)];
             const select = () => {
-                setReferenceValue(item.id, item.label);
+                // REFERENCE_SEARCH_CONFIG['Lot Purchase'].endpoint is always
+                // 'schedules' — a result picked here is always a schedule_id,
+                // never a raw lot_id, so this can state that with certainty.
+                const kind = transactionTypeSelect.value === 'Lot Purchase' ? 'schedule' : null;
+                setReferenceValue(item.id, item.label, kind);
                 referenceSearchInput.value = item.label;
                 referenceSearchResults.hidden = true;
                 referenceSearchResults.innerHTML = '';
@@ -599,6 +617,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Typing again after picking a result means the user is searching
         // anew — the previous selection is no longer necessarily correct.
         referenceIdInput.value = '';
+        currentReferenceKind = null;
         referenceSelectedLabel.style.display = 'none';
         runReferenceSearch();
     });
@@ -646,6 +665,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const formData = new FormData();
         formData.append('transaction_type', document.getElementById('transactionType').value);
         formData.append('reference_id', document.getElementById('referenceId').value || '');
+        if (currentReferenceKind) formData.append('reference_kind', currentReferenceKind);
         formData.append('amount', document.getElementById('amount').value);
         formData.append('payment_date', document.getElementById('paymentDate').value);
         formData.append('payment_method', document.getElementById('paymentMethod').value);
@@ -774,6 +794,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     const urlLotNum = urlParams.get('lot_number');
     const urlPrice = urlParams.get('price');
     const urlTransactionType = urlParams.get('transaction_type');
+    // Explicit query param wins; otherwise infer from which id param is
+    // present as a safe default (reservation_id -> schedule, lot_id -> lot) —
+    // see PaymentController::validatePaymentReference()'s comment for why
+    // this can't be left to guess server-side.
+    const urlReferenceKind = urlParams.get('reference_kind')
+        || (urlReservationId ? 'schedule' : (urlLotId ? 'lot' : null));
     if (urlReservationId || urlLotId || urlLotNum) {
         openAddModal();
         if (urlTransactionType) {
@@ -785,7 +811,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         updateReferenceModeForType();
         const refId = urlReservationId || urlLotId;
         if (refId) {
-            setReferenceValue(refId, urlLotNum ? `Lot ${urlLotNum}` : null);
+            setReferenceValue(refId, urlLotNum ? `Lot ${urlLotNum}` : null, urlReferenceKind);
             if (urlLotNum) referenceSearchInput.value = `Lot ${urlLotNum}`;
         }
         if (urlLotNum) {

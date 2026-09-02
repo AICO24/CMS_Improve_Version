@@ -614,7 +614,8 @@ if ($path === 'payments/expected-amount' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $transactionType = $_GET['transaction_type'] ?? null;
     $referenceId = $_GET['reference_id'] ?? null;
-    echo json_encode($paymentController->resolveExpectedAmount($transactionType, $referenceId));
+    $referenceKind = $_GET['reference_kind'] ?? null;
+    echo json_encode($paymentController->resolveExpectedAmount($transactionType, $referenceId, $referenceKind));
     exit;
 }
 

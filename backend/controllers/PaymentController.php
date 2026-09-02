@@ -63,9 +63,13 @@ class PaymentController {
     // Only 'Lot Purchase' has a resolvable price today — Cremation/Relocation/
     // Renewal/Other have no linked price column anywhere in the schema, so those
     // simply resolve to null (handled as "not available" by callers).
-    public function resolveExpectedAmount($transactionType, $referenceId) {
+    // $referenceKind: same explicit-intent signal validatePaymentReference()
+    // takes (see that method's comment) — when supplied, resolves the exact
+    // same way instead of re-guessing by existence-check order.
+    public function resolveExpectedAmount($transactionType, $referenceId, $referenceKind = null) {
         $transactionType = $this->normalizeTransactionType($transactionType);
         $referenceId = $this->normalizeReferenceId($referenceId);
+        $referenceKind = in_array($referenceKind, ['schedule', 'lot'], true) ? $referenceKind : null;
 
         if ($transactionType !== 'Lot Purchase' || $referenceId === null) {
             return ['expected_amount' => null];
@@ -74,10 +78,30 @@ class PaymentController {
         $scheduleModel = new Schedule();
         $lotModel = new Lot();
 
-        // reference_id for 'Lot Purchase' is, in practice, either a schedule_id
-        // (the normal "reserve then pay" flow) or a raw lot_id (the Lot
-        // Management "Pay Now" shortcut used before any schedule exists) — try
-        // schedule first since that's the more common path, then fall back.
+        if ($referenceKind === 'lot') {
+            $lot = $lotModel->findById($referenceId);
+            return ($lot && isset($lot['price']))
+                ? ['expected_amount' => (float) $lot['price'], 'lot_number' => $lot['lot_number'] ?? null, 'source' => 'lot']
+                : ['expected_amount' => null];
+        }
+
+        if ($referenceKind === 'schedule') {
+            $schedule = $scheduleModel->findById($referenceId);
+            if (!$schedule || empty($schedule['lot_id'])) {
+                return ['expected_amount' => null];
+            }
+            $lot = $lotModel->findById($schedule['lot_id']);
+            return ($lot && isset($lot['price']))
+                ? ['expected_amount' => (float) $lot['price'], 'lot_number' => $lot['lot_number'] ?? null, 'source' => 'schedule']
+                : ['expected_amount' => null];
+        }
+
+        // No explicit kind — original guess-by-existence fallback, unchanged
+        // from before this batch. reference_id for 'Lot Purchase' is, in
+        // practice, either a schedule_id (the normal "reserve then pay" flow)
+        // or a raw lot_id (the Lot Management "Pay Now" shortcut used before
+        // any schedule exists) — try schedule first since that's the more
+        // common path, then fall back.
         $schedule = $scheduleModel->findById($referenceId);
         if ($schedule && !empty($schedule['lot_id'])) {
             $lot = $lotModel->findById($schedule['lot_id']);
@@ -131,7 +155,18 @@ class PaymentController {
     // payment is accepted for it — mirrors resolveExpectedAmount()'s own
     // schedule-then-lot fallback for Lot Purchase, and adds the same kind of
     // existence/state check for the transaction types that had none before.
-    private function validatePaymentReference($transactionType, $referenceId, $userId, $userRole) {
+    //
+    // $referenceKind ('schedule'|'lot'|null, Lot Purchase only): burial audit
+    // finding E.2 — schedule_id and lot_id are independent AUTO_INCREMENT
+    // counters, so guessing which one reference_id means by existence-check
+    // order (the old behavior, still the fallback below) misattributes a
+    // payment whenever a "Pay Now" lot_id happens to numerically collide with
+    // an unrelated schedule_id. When the caller states its intent explicitly
+    // (frontend now does, see payments.js/lot-management.js/booking-wizard.js)
+    // it's trusted outright instead of re-guessed. Left null by legacy
+    // callers and the payments modal's manual reference-entry fallback, which
+    // still need the original guess — see migration_20260902_add_payment_reference_kind.sql.
+    private function validatePaymentReference($transactionType, $referenceId, $userId, $userRole, $referenceKind = null) {
         $transactionType = $this->normalizeTransactionType($transactionType);
         if ($transactionType === null) {
             return ['error' => 'Invalid transaction type', 'code' => 400];
@@ -139,6 +174,7 @@ class PaymentController {
 
         $referenceId = $this->normalizeReferenceId($referenceId);
         $roleName = strtolower(trim((string) $userRole));
+        $referenceKind = in_array($referenceKind, ['schedule', 'lot'], true) ? $referenceKind : null;
 
         switch ($transactionType) {
             case 'Lot Purchase':
@@ -148,6 +184,43 @@ class PaymentController {
 
                 $scheduleModel = new Schedule();
                 $lotModel = new Lot();
+
+                if ($referenceKind === 'lot') {
+                    $lot = $lotModel->findById($referenceId);
+                    if (!$lot) {
+                        return ['error' => 'Lot reference not found', 'code' => 404];
+                    }
+                    return [
+                        'reference_id' => $referenceId,
+                        'reference_kind' => 'lot',
+                        'reference_label' => 'Lot ' . ($lot['lot_number'] ?? $referenceId),
+                    ];
+                }
+
+                if ($referenceKind === 'schedule') {
+                    $schedule = $scheduleModel->findById($referenceId);
+                    if (!$schedule) {
+                        return ['error' => 'Reservation reference not found', 'code' => 404];
+                    }
+                    if ($roleName === 'user' && (int) ($schedule['created_by'] ?? 0) !== (int) $userId) {
+                        return ['error' => 'You may only pay for your own reservation', 'code' => 403];
+                    }
+                    if (($schedule['status'] ?? '') === 'Cancelled') {
+                        return ['error' => 'Cancelled reservations cannot be paid', 'code' => 409];
+                    }
+                    $lot = $lotModel->findById($schedule['lot_id']);
+                    if (!$lot) {
+                        return ['error' => 'Reservation lot not found', 'code' => 404];
+                    }
+                    return [
+                        'reference_id' => $referenceId,
+                        'reference_kind' => 'schedule',
+                        'reference_label' => 'Reservation #' . $schedule['schedule_id'] . ' - Lot ' . ($schedule['lot_number'] ?? 'N/A'),
+                    ];
+                }
+
+                // No explicit kind — original guess-by-existence fallback,
+                // unchanged from before this batch.
                 $schedule = $scheduleModel->findById($referenceId);
                 if ($schedule) {
                     if ($roleName === 'user' && (int) ($schedule['created_by'] ?? 0) !== (int) $userId) {
@@ -164,6 +237,7 @@ class PaymentController {
 
                     return [
                         'reference_id' => $referenceId,
+                        'reference_kind' => 'schedule',
                         'reference_label' => 'Reservation #' . $schedule['schedule_id'] . ' - Lot ' . ($schedule['lot_number'] ?? 'N/A'),
                     ];
                 }
@@ -179,6 +253,7 @@ class PaymentController {
 
                 return [
                     'reference_id' => $referenceId,
+                    'reference_kind' => 'lot',
                     'reference_label' => 'Lot ' . ($lot['lot_number'] ?? $referenceId),
                 ];
 
@@ -198,6 +273,7 @@ class PaymentController {
 
                 return [
                     'reference_id' => $referenceId,
+                    'reference_kind' => null,
                     'reference_label' => 'Cremation #' . $cremation['cremation_id'],
                 ];
 
@@ -217,6 +293,7 @@ class PaymentController {
 
                 return [
                     'reference_id' => $referenceId,
+                    'reference_kind' => null,
                     'reference_label' => 'Relocation #' . $relocation['request_id'],
                 ];
 
@@ -236,12 +313,14 @@ class PaymentController {
 
                 return [
                     'reference_id' => $referenceId,
+                    'reference_kind' => null,
                     'reference_label' => 'Expiration #' . $expiration['expiration_id'] . ' - Lot ' . ($expiration['lot_number'] ?? 'N/A'),
                 ];
 
             case 'Other':
                 return [
                     'reference_id' => $referenceId,
+                    'reference_kind' => null,
                     'reference_label' => $referenceId === null ? null : ('Reference #' . $referenceId),
                 ];
         }
@@ -291,7 +370,7 @@ class PaymentController {
 
         $userModel = new User();
         $userRole = strtolower((string) $userModel->getRole($userId));
-        $referenceCheck = $this->validatePaymentReference($transactionType, $data['reference_id'] ?? null, $userId, $userRole);
+        $referenceCheck = $this->validatePaymentReference($transactionType, $data['reference_id'] ?? null, $userId, $userRole, $data['reference_kind'] ?? null);
         if (isset($referenceCheck['error'])) {
             return $referenceCheck;
         }
@@ -310,6 +389,12 @@ class PaymentController {
 
         $data['transaction_type'] = $transactionType;
         $data['reference_id'] = $referenceCheck['reference_id'];
+        // Persists whatever validatePaymentReference() actually resolved
+        // (explicit caller intent when given, otherwise its own
+        // guess-by-existence fallback) so verify()'s downstream automation
+        // never has to re-guess either — see syncLotStatusForVerifiedPurchase()/
+        // autoConfirmScheduleForVerifiedPurchase() below.
+        $data['reference_kind'] = $referenceCheck['reference_kind'] ?? null;
         $data['received_by'] = $userId;
         $data['verification_status'] = 'Pending';
         $paymentId = $this->paymentModel->create($data);
@@ -319,7 +404,7 @@ class PaymentController {
             // Non-blocking, informational only — the amount was already accepted
             // above; this just lets the frontend/caller know if it diverged from
             // the trusted server-side price so staff can double-check it later.
-            $expected = $this->resolveExpectedAmount($data['transaction_type'], $data['reference_id'] ?? null);
+            $expected = $this->resolveExpectedAmount($data['transaction_type'], $data['reference_id'] ?? null, $data['reference_kind']);
             $saved = $this->paymentModel->findById($paymentId);
 
             return [
@@ -368,11 +453,21 @@ class PaymentController {
             return ['error' => 'Invalid transaction type', 'code' => 400];
         }
 
+        // Only trust an explicit reference_kind (or reuse the already-resolved
+        // one) when reference_id itself isn't changing — a caller that
+        // resubmits a different reference_id without stating its kind falls
+        // through to validatePaymentReference()'s own guess fallback rather
+        // than incorrectly inheriting the OLD reference's kind.
+        $referenceKindInput = array_key_exists('reference_id', $data)
+            ? ($data['reference_kind'] ?? null)
+            : ($existing['reference_kind'] ?? null);
+
         $referenceCheck = $this->validatePaymentReference(
             $transactionType,
             $data['reference_id'] ?? $existing['reference_id'],
             $userId,
-            $userRole
+            $userRole,
+            $referenceKindInput
         );
         if (isset($referenceCheck['error'])) {
             return $referenceCheck;
@@ -407,6 +502,7 @@ class PaymentController {
         $updatePayload = [
             'transaction_type' => $transactionType,
             'reference_id' => $referenceCheck['reference_id'],
+            'reference_kind' => $referenceCheck['reference_kind'] ?? null,
             'amount' => $data['amount'] ?? $existing['amount'],
             'payment_date' => $data['payment_date'] ?? $existing['payment_date'],
             'payment_method' => $data['payment_method'] ?? $existing['payment_method'],
@@ -441,7 +537,7 @@ class PaymentController {
             ['receipt_number' => $existing['receipt_number'] ?? null, 'changed' => $changedFields]
         );
 
-        $expected = $this->resolveExpectedAmount($updatePayload['transaction_type'], $updatePayload['reference_id']);
+        $expected = $this->resolveExpectedAmount($updatePayload['transaction_type'], $updatePayload['reference_id'], $updatePayload['reference_kind']);
         $submittedAmount = (float) $updatePayload['amount'];
 
         return [
@@ -540,10 +636,14 @@ class PaymentController {
     // no longer read as Available — mirrors ScheduleController's own
     // Confirmed -> Reserved transition rather than jumping straight to Occupied,
     // since a payment alone doesn't mean the burial itself has taken place yet.
-    // Resolves the lot the same way resolveExpectedAmount() does: reference_id is
-    // in practice either a schedule_id (normal reserve-then-pay flow) or a raw
-    // lot_id (the Lot Management "Pay Now" shortcut). Never downgrades a lot
-    // that's already past Available (Reserved/Occupied/Expired left untouched).
+    // Never downgrades a lot that's already past Available (Reserved/Occupied/
+    // Expired left untouched).
+    //
+    // Resolves the lot via payment['reference_kind'] when it's set (see
+    // migration_20260902_add_payment_reference_kind.sql / finding E.2) —
+    // trusts it outright instead of re-deriving. Only a legacy row with
+    // reference_kind still NULL (created before this migration) falls back
+    // to the original schedule-then-lot existence-check guess.
     private function syncLotStatusForVerifiedPurchase($payment, $adminId) {
         if (empty($payment['reference_id'])) {
             return;
@@ -551,15 +651,28 @@ class PaymentController {
 
         $scheduleModel = new Schedule();
         $lotModel = new Lot();
+        $referenceKind = $payment['reference_kind'] ?? null;
 
         $lotId = null;
-        $schedule = $scheduleModel->findById($payment['reference_id']);
-        if ($schedule && !empty($schedule['lot_id'])) {
-            $lotId = $schedule['lot_id'];
-        } else {
+        if ($referenceKind === 'lot') {
             $lot = $lotModel->findById($payment['reference_id']);
             if ($lot) {
                 $lotId = $lot['lot_id'];
+            }
+        } elseif ($referenceKind === 'schedule') {
+            $schedule = $scheduleModel->findById($payment['reference_id']);
+            if ($schedule && !empty($schedule['lot_id'])) {
+                $lotId = $schedule['lot_id'];
+            }
+        } else {
+            $schedule = $scheduleModel->findById($payment['reference_id']);
+            if ($schedule && !empty($schedule['lot_id'])) {
+                $lotId = $schedule['lot_id'];
+            } else {
+                $lot = $lotModel->findById($payment['reference_id']);
+                if ($lot) {
+                    $lotId = $lot['lot_id'];
+                }
             }
         }
 
@@ -620,8 +733,18 @@ class PaymentController {
     // schedule at all (the Lot Management "Pay Now" shortcut) or the
     // schedule already reached a terminal-ish state (Confirmed/Completed/
     // Cancelled) — there's nothing to automate in either case.
+    //
+    // Finding E.2: previously called findById($payment['reference_id'])
+    // unconditionally, with no way to tell "this is genuinely not a
+    // schedule" apart from "this schedule_id doesn't exist" — a Pay Now
+    // lot_id that happened to numerically collide with an unrelated real
+    // schedule_id would silently auto-confirm THAT schedule. Now an
+    // explicit reference_kind === 'lot' short-circuits to the no-op before
+    // any schedule lookup runs at all. A legacy row with reference_kind
+    // still NULL keeps the original lookup (unavoidable — there's nothing
+    // to trust for rows created before this migration).
     private function autoConfirmScheduleForVerifiedPurchase($payment, $adminId) {
-        if (empty($payment['reference_id'])) {
+        if (empty($payment['reference_id']) || ($payment['reference_kind'] ?? null) === 'lot') {
             return;
         }
 

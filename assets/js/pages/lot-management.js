@@ -529,7 +529,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                     if (btnPayment) {
                         btnPayment.onclick = () => {
-                            window.location.href = `payments.html?lot_id=${lot.lot_id}&lot_number=${encodeURIComponent(lot.lot_number)}&price=${lot.price}`;
+                            // reference_kind=lot: states explicitly that lot_id (not a
+                            // schedule_id) is what's being referenced — see
+                            // PaymentController::validatePaymentReference()'s comment
+                            // and migration_20260902_add_payment_reference_kind.sql.
+                            // Without this, a raw lot_id could numerically collide with
+                            // an unrelated schedule_id and get misattributed on verify.
+                            window.location.href = `payments.html?lot_id=${lot.lot_id}&lot_number=${encodeURIComponent(lot.lot_number)}&price=${lot.price}&reference_kind=lot`;
                         };
                     }
                 } else {

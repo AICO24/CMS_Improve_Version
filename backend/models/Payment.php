@@ -98,10 +98,11 @@ class Payment {
     public function create($data) {
         $providedReceiptNumber = isset($data['receipt_number']) ? trim($data['receipt_number']) : '';
 
-        $stmt = $this->db->prepare("INSERT INTO payments (transaction_type, reference_id, amount, payment_date, payment_method, receipt_number, notes, received_by, receipt_url, verification_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $this->db->prepare("INSERT INTO payments (transaction_type, reference_id, reference_kind, amount, payment_date, payment_method, receipt_number, notes, received_by, receipt_url, verification_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $success = $stmt->execute([
             $data['transaction_type'],
             $data['reference_id'] ?? null,
+            $data['reference_kind'] ?? null,
             $data['amount'],
             $data['payment_date'],
             $data['payment_method'],
@@ -131,10 +132,11 @@ class Payment {
     }
 
     public function update($id, $data) {
-        $stmt = $this->db->prepare("UPDATE payments SET transaction_type = ?, reference_id = ?, amount = ?, payment_date = ?, payment_method = ?, receipt_number = ?, notes = ?, received_by = ?, receipt_url = ?, verification_status = ?, verified_by = ?, verified_at = ? WHERE payment_id = ?");
+        $stmt = $this->db->prepare("UPDATE payments SET transaction_type = ?, reference_id = ?, reference_kind = ?, amount = ?, payment_date = ?, payment_method = ?, receipt_number = ?, notes = ?, received_by = ?, receipt_url = ?, verification_status = ?, verified_by = ?, verified_at = ? WHERE payment_id = ?");
         return $stmt->execute([
             $data['transaction_type'],
             $data['reference_id'] ?? null,
+            $data['reference_kind'] ?? null,
             $data['amount'],
             $data['payment_date'],
             $data['payment_method'],
