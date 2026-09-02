@@ -394,28 +394,39 @@ function createLotChatAssistant(options) {
     // Only resolves on an unambiguous match — a name shared by two decedent
     // records (or too common to isolate) is deliberately left unset rather
     // than guessing which family member the booker meant.
+    // Bugfix: a bare first-name-only or last-name-only hit used to be treated
+    // as an "unambiguous" match whenever exactly one existing decedent
+    // shared it — silently attaching the booking to that unrelated existing
+    // person instead of ever recognizing "this is someone new." Since
+    // getDecedents() is the full cemetery-wide list (not scoped to this
+    // citizen), any common name collided with it constantly. Now only a
+    // full "first last" hit auto-matches; a partial hit (however many
+    // candidates) is always surfaced for confirmation instead of assumed —
+    // see the ambiguousDecedentCandidates handling below, which now also
+    // fires for a single partial match, not just 2+.
     function extractDecedentFromText(text) {
         const decedents = typeof getDecedents === 'function' ? (getDecedents() || []) : [];
         if (!decedents.length) return { match: null, ambiguous: false };
         const lower = text.toLowerCase();
 
-        const matches = decedents.filter(d => {
+        const fullNameMatches = decedents.filter(d => {
             const first = (d.first_name || '').toLowerCase().trim();
             const last = (d.last_name || '').toLowerCase().trim();
             const full = `${first} ${last}`.trim();
-            if (full && lower.includes(full)) return true;
+            return full && lower.includes(full);
+        });
+        if (fullNameMatches.length === 1) return { match: fullNameMatches[0], ambiguous: false };
+        if (fullNameMatches.length > 1) return { match: null, ambiguous: true, candidates: fullNameMatches };
+
+        const partialMatches = decedents.filter(d => {
+            const first = (d.first_name || '').toLowerCase().trim();
+            const last = (d.last_name || '').toLowerCase().trim();
             if (last && new RegExp(`\\b${escapeRegExp(last)}\\b`, 'i').test(lower)) return true;
             if (first && first.length > 2 && new RegExp(`\\b${escapeRegExp(first)}\\b`, 'i').test(lower)) return true;
             return false;
         });
+        if (partialMatches.length) return { match: null, ambiguous: true, candidates: partialMatches };
 
-        // A full "first last" match is unambiguous even if other decedents
-        // separately share just the first or last name — prefer it.
-        const fullNameMatches = matches.filter(d => lower.includes(`${(d.first_name || '').toLowerCase().trim()} ${(d.last_name || '').toLowerCase().trim()}`.trim()));
-        if (fullNameMatches.length === 1) return { match: fullNameMatches[0], ambiguous: false };
-
-        if (matches.length === 1) return { match: matches[0], ambiguous: false };
-        if (matches.length > 1) return { match: null, ambiguous: true, candidates: matches };
         return { match: null, ambiguous: false };
     }
 
@@ -1111,7 +1122,26 @@ function createLotChatAssistant(options) {
 
         if (ambiguousDecedentCandidates && ambiguousDecedentCandidates.length) {
             const names = ambiguousDecedentCandidates.slice(0, 5).map(d => `${d.first_name} ${d.last_name}`).join(', ');
-            appendMessage('assistant', `I found more than one matching record: ${names}. Could you be more specific, or use the picker below?`);
+            // Bugfix: this used to only fire for 2+ candidates (a true "more
+            // than one" collision) because a single partial (first- or
+            // last-name-only) hit was previously auto-matched without ever
+            // reaching here — see extractDecedentFromText()'s comment. Now
+            // any partial hit, including exactly one, lands here instead of
+            // being silently assumed, so the wording has to cover both the
+            // singular "found a similar record" and plural "found several" case.
+            appendMessage('assistant', ambiguousDecedentCandidates.length === 1
+                ? `I found an existing record with a similar name: ${names}. Is this booking for them, or is this a different person?`
+                : `I found more than one existing record with a similar name: ${names}. Could you be more specific, or use the picker below?`);
+            // Bugfix: previously a citizen whose intended person merely shared
+            // a name with someone already in decedent_records had no way out
+            // of this loop — the provisional-booking form only ever appeared
+            // on a hard zero-match. Now offered here too, so "it's actually a
+            // different person" always has a path forward, same as a true
+            // not-found.
+            if (allowProvisionalDecedent) {
+                appendMessage('assistant', "If none of these are who you mean, they might not be in our system yet — that's okay, you can still book below and our staff will register them.");
+                appendDecedentRequestForm();
+            }
         }
         if (dateValidationError) {
             appendMessage('assistant', dateValidationError);

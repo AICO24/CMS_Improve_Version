@@ -3,6 +3,8 @@ require_once __DIR__ . '/../models/DecedentRequest.php';
 require_once __DIR__ . '/../models/Decedent.php';
 require_once __DIR__ . '/../models/Schedule.php';
 require_once __DIR__ . '/../models/AuditLog.php';
+require_once __DIR__ . '/../models/Notification.php';
+require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../services/AutomationEngine.php';
 require_once __DIR__ . '/ScheduleController.php';
 
@@ -76,9 +78,68 @@ class DecedentRequestController {
                 ['full_name' => $request['full_name'] ?? null, 'linked_decedent_id' => (int) $data['decedent_id']]
             );
             $this->autoLinkSchedules($id, (int) $data['decedent_id'], $user);
+            $this->notifyRequestStatus($request, 'approved');
             return ['success' => true, 'message' => 'Request approved'];
         }
         return ['error' => 'Failed to approve request', 'code' => 500];
+    }
+
+    // Previously only DecedentRequest::markNotified() (chat-assistant status
+    // line, pull-based — see acknowledge() below) told a citizen their
+    // request was decided, and only if/when they reopened the booking chat.
+    // This adds the same push notification (in-app + best-effort email)
+    // every other decision point in this module already gives its owner —
+    // mirrors ScheduleController::notifyScheduleStatusChange()'s pattern
+    // exactly, including deferring the email via afterCommit() when this
+    // runs nested inside a wider transaction so a rolled-back approve/reject
+    // never sends an email describing something that didn't happen.
+    private function notifyRequestStatus($request, $status, $rejectionReason = null) {
+        $notificationModel = new Notification();
+        $userModel = new User();
+        $requester = $userModel->findById($request['requested_by']);
+
+        if ($status === 'approved') {
+            $title = 'Decedent Record Request Approved';
+            $message = sprintf(
+                'Your request to register "%s" has been approved and linked to your booking.',
+                $request['full_name']
+            );
+        } else {
+            $title = 'Decedent Record Request Rejected';
+            $message = sprintf(
+                'Your request to register "%s" was not approved.%s',
+                $request['full_name'],
+                $rejectionReason ? ' Reason: ' . $rejectionReason : ''
+            );
+        }
+
+        $notificationModel->create([
+            'title' => $title,
+            'message' => $message,
+            'notification_type' => 'System',
+            'is_read' => 0,
+        ]);
+
+        if (!empty($requester['email'])) {
+            $this->sendEmail($requester['email'], $title, $message);
+        }
+    }
+
+    // Same deferred-until-commit pattern as ScheduleController::sendEmail() —
+    // see that method's comment for why this can't just be a synchronous
+    // mail() call here.
+    private function sendEmail($email, $subject, $message) {
+        if (empty($email)) {
+            return false;
+        }
+
+        Database::getInstance()->afterCommit(function () use ($email, $subject, $message) {
+            $headers = "From: noreply@cemeterysystem.local\r\n";
+            $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+            @mail($email, $subject, $message, $headers);
+        });
+
+        return true;
     }
 
     // Batch B (Admin-Wide Automation Audit): a citizen's provisional booking
@@ -154,6 +215,7 @@ class DecedentRequestController {
                 $id,
                 ['full_name' => $request['full_name'] ?? null, 'rejection_reason' => $data['rejection_reason']]
             );
+            $this->notifyRequestStatus($request, 'rejected', $data['rejection_reason']);
             return ['success' => true, 'message' => 'Request rejected'];
         }
         return ['error' => 'Failed to reject request', 'code' => 500];
