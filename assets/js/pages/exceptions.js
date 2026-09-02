@@ -264,4 +264,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     refreshBtn.addEventListener('click', loadAndRenderExceptions);
 
     await loadAndRenderExceptions();
+
+    // Batch H (reservation module audit): Manage Reservations' "Review
+    // Exception" link previously just navigated here with no context,
+    // dumping the admin into the full open-exceptions list to find the one
+    // they came for. It now links with ?entity_type=&entity_id=, so this
+    // page can jump straight to the resolve modal for that specific
+    // exception instead. Silently does nothing if not found (e.g. it was
+    // already resolved by someone else in the meantime, or a stale
+    // bookmark) — the admin still lands on a normal, working exceptions
+    // list either way, just without the auto-open.
+    const deepLinkParams = new URLSearchParams(window.location.search);
+    const deepLinkEntityType = deepLinkParams.get('entity_type');
+    const deepLinkEntityId = deepLinkParams.get('entity_id');
+    if (deepLinkEntityType && deepLinkEntityId) {
+        const target = currentExceptions.find((item) =>
+            item.entity_type === deepLinkEntityType && String(item.entity_id) === String(deepLinkEntityId));
+        if (target) openResolveModal(target);
+    }
 });

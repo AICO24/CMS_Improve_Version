@@ -242,6 +242,19 @@ class AuditIntelligenceService {
             }
             if ($module === 'Schedule' && isset($record['schedule_date'])) {
                 $summary['schedule_date'] = $record['schedule_date'];
+                // Batch H (reservation module audit): without these, a
+                // question like "which reservations are at risk of being
+                // auto-cancelled" was unanswerable from this context alone —
+                // the assistant would have to guess rather than ground its
+                // answer in the same stale/final-warning facts the sweep
+                // itself (ScheduleController::notifyStalePending() etc.)
+                // already tracks per schedule.
+                if (!empty($record['stale_notified_at'])) {
+                    $summary['stale_reminder_sent_at'] = $record['stale_notified_at'];
+                }
+                if (!empty($record['final_warning_notified_at'])) {
+                    $summary['final_warning_sent_at'] = $record['final_warning_notified_at'];
+                }
             }
             if ($module === 'Lot' && isset($record['lot_number'])) {
                 $summary['lot_number'] = $record['lot_number'];
@@ -259,7 +272,7 @@ class AuditIntelligenceService {
                 return $this->exceptionModel->findAll(['status' => 'open', 'entity_type' => $type]);
             }, $exceptionTypes));
 
-        return [
+        $context = [
             'module' => $module,
             'total_records' => count($records),
             'status_breakdown' => $statusCounts,
@@ -267,6 +280,36 @@ class AuditIntelligenceService {
             'open_exceptions' => array_map([$this, 'summarizeException'], $openExceptions),
             'generated_at' => date('c'),
         ];
+
+        // Batch H (reservation module audit): $recentSummary above is capped
+        // at 8 records ordered by schedule_date (Schedule::findAll()'s own
+        // default order, not recency or risk), so it can easily miss the
+        // handful of Pending reservations actually at risk of auto-
+        // cancellation if the module has more than a few records. This is a
+        // separate, explicitly risk-scoped list so a "which reservations
+        // need outreach" question is answered from real per-schedule facts
+        // (the same stale_notified_at/final_warning_notified_at the
+        // deterministic sweep itself uses — see
+        // ScheduleController::notifyStalePending()/sendFinalWarnings()) —
+        // never a guess, and never a second, competing notion of "at risk"
+        // invented by the AI layer itself.
+        if ($module === 'Schedule') {
+            $atRisk = array_values(array_filter($records, function ($record) {
+                return ($record['status'] ?? null) === 'Pending'
+                    && (!empty($record['stale_notified_at']) || !empty($record['final_warning_notified_at']));
+            }));
+            $context['at_risk_pending_schedules'] = array_map(function ($record) {
+                return [
+                    'schedule_id' => $record['schedule_id'],
+                    'lot_number' => $record['lot_number'] ?? null,
+                    'schedule_date' => $record['schedule_date'] ?? null,
+                    'stale_reminder_sent_at' => $record['stale_notified_at'] ?? null,
+                    'final_warning_sent_at' => $record['final_warning_notified_at'] ?? null,
+                ];
+            }, $atRisk);
+        }
+
+        return $context;
     }
 
     // Quota-reduction batch (Batch 3): lighter-weight counterpart to
@@ -391,6 +434,17 @@ class AuditIntelligenceService {
             $summary = ['id' => $this->firstIdField($record), 'status' => $this->extractStatus($record)];
             if ($module === 'Schedule' && isset($record['schedule_date'])) {
                 $summary['schedule_date'] = $record['schedule_date'];
+                // Batch H: lets the citizen assistant answer "is my
+                // reservation at risk of being cancelled" grounded in the
+                // same facts the deterministic sweep uses, rather than
+                // declining or guessing — mirrors buildModuleContext()'s
+                // identical addition above.
+                if (!empty($record['stale_notified_at'])) {
+                    $summary['stale_reminder_sent_at'] = $record['stale_notified_at'];
+                }
+                if (!empty($record['final_warning_notified_at'])) {
+                    $summary['final_warning_sent_at'] = $record['final_warning_notified_at'];
+                }
             }
             if ($module === 'Payment' && isset($record['amount'])) {
                 $summary['amount'] = $record['amount'];

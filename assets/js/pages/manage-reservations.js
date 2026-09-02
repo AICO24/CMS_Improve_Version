@@ -23,6 +23,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         suggestions: [
             { icon: 'fa-list-check', label: 'Pending reservations', question: 'How many reservations are pending right now, and why?' },
             { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions I need to review?' },
+            // Batch H (reservation module audit): grounded in the same
+            // stale_notified_at/final_warning_notified_at facts the
+            // deterministic auto-cancel sweep uses (see
+            // AuditIntelligenceService::buildModuleContext()'s
+            // at_risk_pending_schedules addition) — a probabilistic/
+            // prioritization judgment call, which is what makes this a
+            // legitimate use of the assistant rather than something the
+            // deterministic sweep itself should decide.
+            { icon: 'fa-hourglass-half', label: 'At-risk reservations', question: 'Which pending reservations are at risk of being auto-cancelled, and what should I do about them?' },
             { icon: 'fa-circle-question', label: 'How does auto-confirm work?', question: 'How does payment-triggered auto-confirmation work for bookings?' },
             { icon: 'fa-clock-rotate-left', label: 'Recent activity', question: 'What has happened recently in Burial Scheduling?' },
         ],
@@ -157,7 +166,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         buttons.push(`<button class="btn-row-action" data-action="view" data-id="${schedule.schedule_id}">View</button>`);
 
         if (schedule.status === 'Pending' && openExceptionIds.has(schedule.schedule_id)) {
-            buttons.push(`<a class="btn-row-action btn-row-action--confirm" href="exceptions.html">Review Exception</a>`);
+            // Batch H (reservation module audit): deep-links straight to
+            // this schedule's exception in the resolve modal (see
+            // exceptions.js's matching addition) instead of dumping the
+            // admin into the full open-exceptions list to find it themselves.
+            buttons.push(`<a class="btn-row-action btn-row-action--confirm" href="exceptions.html?entity_type=Schedule&entity_id=${schedule.schedule_id}">Review Exception</a>`);
         }
         if (schedule.status === 'Confirmed') {
             buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete" data-id="${schedule.schedule_id}">Complete</button>`);
