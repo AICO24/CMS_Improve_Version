@@ -6,9 +6,11 @@ require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/ExpirationRecord.php';
 require_once __DIR__ . '/../models/DecedentRequest.php';
 require_once __DIR__ . '/../models/AuditLog.php';
+require_once __DIR__ . '/../models/Payment.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../services/AutomationEngine.php';
 require_once __DIR__ . '/ExpirationController.php';
+require_once __DIR__ . '/PaymentController.php';
 
 class ScheduleController {
     private $scheduleModel;
@@ -469,6 +471,27 @@ class ScheduleController {
             }
         }
 
+        // F.1 (confirmed 2026-09-02): staff genuinely need to mark a Pending
+        // booking Completed directly when it was paid in cash/offline — the
+        // online Payment module is never involved for those, by design, not
+        // by oversight. Left alone, that path silently skipped BOTH
+        // accountability (no record of why/how it was "paid") and revenue
+        // reporting (no Payment row => invisible to Reports/Revenue).
+        // Rather than blocking the legitimate cash workflow, direct
+        // completion now requires the same payment details an online
+        // payment would have captured, and creates a real, already-Verified
+        // Payment row for it — which flows through the exact same
+        // PaymentController::verify() -> autoConfirmScheduleForVerifiedPurchase()
+        // automation a normal online payment would, rather than a separate
+        // bypass code path. See ensurePaymentForDirectCompletion() below.
+        if (isset($data['status']) && $data['status'] === 'Completed'
+            && $existing['status'] !== 'Confirmed' && $existing['status'] !== 'Completed') {
+            $paymentCheck = $this->ensurePaymentForDirectCompletion($id, $data, $user);
+            if (isset($paymentCheck['error'])) {
+                return $paymentCheck;
+            }
+        }
+
         $data['confirmed_by'] = isset($data['confirmed_by']) ? $data['confirmed_by'] : $userId;
         // Batch L2.6: the checkConflict()-based check above narrows the race but
         // isn't itself atomic with this UPDATE, so a concurrent request can still
@@ -574,6 +597,62 @@ class ScheduleController {
         }
 
         return ['error' => 'Failed to update schedule', 'code' => 500];
+    }
+
+    // F.1: guards the direct Pending->Completed path (see the call site in
+    // update() above). Skipped entirely (returns ok without creating
+    // anything) when a Verified Lot Purchase payment already exists for this
+    // schedule — that citizen already paid online, most likely recovering
+    // from a payment.verified exception that blocked auto-confirm; requiring
+    // a second payment entry here would double-count revenue. Otherwise
+    // requires payment_amount + payment_method in $data and creates a real
+    // Payment row through PaymentController's own store()/verify() — reusing
+    // its existing validation, receipt-number generation, and (critically)
+    // the same autoConfirmScheduleForVerifiedPurchase() automation a normal
+    // online payment triggers, rather than a second, parallel bypass path.
+    private function ensurePaymentForDirectCompletion($id, $data, $user) {
+        $paymentModel = new Payment();
+        $existingVerifiedPayments = $paymentModel->findAll([
+            'reference_id' => $id,
+            'transaction_type' => 'Lot Purchase',
+            'verification_status' => 'Verified',
+        ]);
+        if (!empty($existingVerifiedPayments)) {
+            return ['ok' => true];
+        }
+
+        $amount = $data['payment_amount'] ?? null;
+        $method = trim((string) ($data['payment_method'] ?? ''));
+        if ($amount === null || $amount === '' || !is_numeric($amount) || (float) $amount <= 0) {
+            return ['error' => 'This booking has no payment on file. To complete it directly, provide the cash/offline payment amount received (payment_amount).', 'code' => 422];
+        }
+        if ($method === '') {
+            return ['error' => 'This booking has no payment on file. To complete it directly, provide the payment method used (payment_method), e.g. Cash.', 'code' => 422];
+        }
+
+        $userId = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        $paymentController = new PaymentController();
+        $paymentData = [
+            'transaction_type' => 'Lot Purchase',
+            'reference_id' => $id,
+            'reference_kind' => 'schedule',
+            'amount' => $amount,
+            'payment_date' => $data['payment_date'] ?? date('Y-m-d'),
+            'payment_method' => $method,
+            'receipt_number' => $data['receipt_number'] ?? '',
+            'notes' => 'Recorded automatically: offline/cash payment for direct completion of a Pending booking.',
+        ];
+        $storeResult = $paymentController->store($paymentData, $userId);
+        if (empty($storeResult['success'])) {
+            return ['error' => $storeResult['error'] ?? 'Failed to record the payment for this booking.', 'code' => $storeResult['code'] ?? 500];
+        }
+
+        $verifyResult = $paymentController->verify($storeResult['payment_id'], 'Verified', $userId);
+        if (empty($verifyResult['success'])) {
+            return ['error' => $verifyResult['error'] ?? 'Payment recorded but could not be verified.', 'code' => $verifyResult['code'] ?? 500];
+        }
+
+        return ['ok' => true];
     }
 
     // Called right after decedent-requests/{id}/approve succeeds (staff has

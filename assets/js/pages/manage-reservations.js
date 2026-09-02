@@ -134,6 +134,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (schedule.status === 'Confirmed') {
             buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete" data-id="${schedule.schedule_id}">Complete</button>`);
         }
+        // F.1: a Pending booking paid in cash/offline never goes through
+        // Payment verification, so it never auto-confirms — this is the
+        // only way to record it. Hidden when an exception is already
+        // flagged above to avoid two competing actions on the same row;
+        // resolve that first. See ScheduleController::
+        // ensurePaymentForDirectCompletion() for what this actually does
+        // server-side (creates a real, Verified Payment record too, so it
+        // still shows up in Revenue Reports).
+        if (schedule.status === 'Pending' && !openExceptionIds.has(schedule.schedule_id)) {
+            buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete-cash" data-id="${schedule.schedule_id}">Complete (Cash)</button>`);
+        }
         // Cancel mirrors ScheduleController::destroy()'s server-side rule: admin
         // may cancel any Pending/Confirmed reservation; staff only their own
         // still-Pending one. Hiding it otherwise avoids a confusing 403.
@@ -261,6 +272,57 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
+    // F.1: prompts for the same payment details an online payment would
+    // have captured — server-side (ensurePaymentForDirectCompletion())
+    // creates a real, Verified Payment record from these so the sale still
+    // shows up in Revenue Reports, then completes the booking exactly like
+    // completeReservation() above. Uses plain prompt()/confirm() rather than
+    // a new modal component, matching this page's existing simple dialog
+    // style (see cancelReservation()/completeReservation() above) instead of
+    // introducing a new UI pattern for a staff-only, occasional action.
+    async function completeCashReservation(id, button) {
+        const amountInput = prompt('Enter the cash/offline payment amount received (₱):');
+        if (amountInput === null) return;
+        const amount = parseFloat(amountInput);
+        if (isNaN(amount) || amount <= 0) {
+            alert('Please enter a valid payment amount.');
+            return;
+        }
+
+        const method = prompt('Payment method used:', 'Cash');
+        if (method === null) return;
+        if (!method.trim()) {
+            alert('Payment method is required.');
+            return;
+        }
+
+        const receiptNumber = prompt('Receipt number (optional — leave blank to auto-generate):', '');
+        if (receiptNumber === null) return;
+
+        if (!confirm(`Mark this reservation as completed with a ${method.trim()} payment of ₱${amount.toFixed(2)}? The lot will be marked Occupied and a Verified payment record will be created.`)) return;
+
+        await withButtonLoading(button, async () => {
+            try {
+                const result = await api.request(`schedules/${id}`, {
+                    method: 'PUT',
+                    body: {
+                        status: 'Completed',
+                        payment_amount: amount,
+                        payment_method: method.trim(),
+                        receipt_number: receiptNumber.trim(),
+                    },
+                });
+                if (result.success) {
+                    await refreshAll();
+                } else {
+                    alert(result.error || 'Unable to complete reservation.');
+                }
+            } catch (error) {
+                alert(error.message || 'Unable to complete reservation.');
+            }
+        });
+    }
+
     async function cancelReservation(id, button) {
         if (!confirm('Cancel this reservation?')) return;
         await withButtonLoading(button, async () => {
@@ -285,6 +347,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!id || !action) return;
 
         if (action === 'complete') await completeReservation(id, button);
+        else if (action === 'complete-cash') await completeCashReservation(id, button);
         else if (action === 'cancel') await cancelReservation(id, button);
     });
 
