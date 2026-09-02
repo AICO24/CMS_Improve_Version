@@ -7,6 +7,7 @@ require_once __DIR__ . '/../models/ExpirationRecord.php';
 require_once __DIR__ . '/../models/DecedentRequest.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../models/Payment.php';
+require_once __DIR__ . '/../models/SystemException.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../services/AutomationEngine.php';
 require_once __DIR__ . '/ExpirationController.php';
@@ -18,6 +19,7 @@ class ScheduleController {
     private $expirationModel;
     private $decedentRequestModel;
     private $auditLogModel;
+    private $systemExceptionModel;
 
     // Default lease term applied to the expiration_records row auto-created
     // when a burial schedule is marked Completed (Batch LM-AUTOMATION, Phase C).
@@ -29,6 +31,7 @@ class ScheduleController {
         $this->expirationModel = new ExpirationRecord();
         $this->decedentRequestModel = new DecedentRequest();
         $this->auditLogModel = new AuditLog();
+        $this->systemExceptionModel = new SystemException();
     }
 
     private static function actorId($actor) {
@@ -537,15 +540,35 @@ class ScheduleController {
                 // that's a distinct, meaningful fact (an admin overrode a
                 // flagged exception) that deserves its own clearly-labeled
                 // entry, not to be logged as an ordinary confirmation.
+                //
+                // Batch A (reservation module audit): the id is client-
+                // supplied, so before trusting the "override" claim into the
+                // audit log, confirm it actually names an open exception
+                // raised against this Schedule — otherwise a caller could
+                // fabricate an override that never happened. An invalid id
+                // just falls through to an ordinary "Schedule confirmed"
+                // entry rather than failing the request; the confirmation
+                // itself is legitimate either way.
+                $overrideException = null;
+                if (!empty($data['override_exception_id'])) {
+                    $candidate = $this->systemExceptionModel->findById((int) $data['override_exception_id']);
+                    if ($candidate
+                        && $candidate['status'] === 'open'
+                        && $candidate['entity_type'] === 'Schedule'
+                        && (int) $candidate['entity_id'] === (int) $id) {
+                        $overrideException = $candidate;
+                    }
+                }
+
                 if (empty($data['_auditedByAutomationEngine'])) {
-                    if (!empty($data['override_exception_id'])) {
+                    if ($overrideException !== null) {
                         $this->auditLogModel->log(
                             'Schedule confirmed (admin override of exception)',
                             self::actorId($user),
                             self::actorUsername($user),
                             'Schedule',
                             $id,
-                            ['exception_id' => (int) $data['override_exception_id'], 'previous_status' => $existing['status']]
+                            ['exception_id' => $overrideException['exception_id'], 'previous_status' => $existing['status']]
                         );
                     } else {
                         $this->auditLogModel->log(

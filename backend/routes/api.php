@@ -72,6 +72,21 @@ function readRequestBody() {
         $result['files'] = $_FILES;
     }
 
+    // Batch A (reservation module audit): keys prefixed with '_' are an
+    // internal-only convention (e.g. _auditedByAutomationEngine, set only by
+    // PaymentController's own internal calls into ScheduleController::update()/
+    // CremationController::update() to avoid duplicate audit-log entries — see
+    // the Batch F comments in those files). Nothing legitimate ever sends one
+    // over HTTP, so strip them here at the single shared request-parsing
+    // boundary rather than trusting the controller to reject a client-forged
+    // one — a request body claiming '_auditedByAutomationEngine' could
+    // otherwise suppress its own audit trail.
+    foreach (array_keys($result) as $key) {
+        if (is_string($key) && $key !== '' && $key[0] === '_') {
+            unset($result[$key]);
+        }
+    }
+
     return $result;
 }
 
