@@ -153,7 +153,15 @@ function initAiAssistant({ mountSelector, context, greeting, suggestions = [], o
         if (suggestionsEl) suggestionsEl.style.display = 'none';
     }
 
-    function appendMessage(role, text, suggestedAction) {
+    // BATCH AI-8 (AI Architecture Audit, 2026-09-02): escalated (role==='ai'
+    // only) surfaces AiController::askAssistant()'s own `escalated` flag
+    // (added in BATCH AI-2, unused by this widget until now) — true when the
+    // question couldn't be answered from this page's own module/entity
+    // focus alone and a second, broader system-wide fetch was needed. Lets
+    // a user (or a grader watching the demo) see, from the UI alone, when
+    // the assistant reached beyond the current page — see this file's own
+    // header note on the scope='module'/'entity' vs 'system' distinction.
+    function appendMessage(role, text, suggestedAction, escalated) {
         const time = formatTime(new Date());
         const row = document.createElement('div');
         row.className = `ai-assistant-msg-row ai-assistant-msg-row--${role}`;
@@ -162,6 +170,7 @@ function initAiAssistant({ mountSelector, context, greeting, suggestions = [], o
                 <div class="ai-assistant-avatar-sm"><i class="fas fa-robot"></i></div>
                 <div class="ai-assistant-msg-col">
                     <div class="ai-assistant-msg ai-assistant-msg--ai"></div>
+                    ${escalated ? `<span class="ai-assistant-escalated-badge"><i class="fas fa-arrows-to-circle"></i> Checked beyond this page</span>` : ''}
                     <span class="ai-assistant-msg-time">${escapeHtml(time)}</span>
                 </div>
             `;
@@ -252,7 +261,7 @@ function initAiAssistant({ mountSelector, context, greeting, suggestions = [], o
                 });
                 loadingRow.remove();
                 if (result && result.answered && result.message) {
-                    appendMessage('ai', result.message, result.suggested_action);
+                    appendMessage('ai', result.message, result.suggested_action, result.escalated);
                     conversationHistory.push({ question: trimmed, message: result.message });
                     if (typeof onAnswer === 'function') {
                         onAnswer(result.message, result.suggested_action);

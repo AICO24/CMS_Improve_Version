@@ -12,6 +12,14 @@ class AIService {
         return $this->request('/api/health');
     }
 
+    // BATCH AI-6 (AI Architecture Audit, 2026-09-02): unlike every other
+    // method in this class, the Flask side of these three calls queries
+    // MySQL directly (its own DB_CONFIG/get_connection() in python-ai/
+    // app.py) instead of narrating a fact bundle PHP already assembled —
+    // documented as a deliberate exception, not an oversight, in that
+    // file's own DB_CONFIG comment (search "BATCH AI-6" there for the full
+    // reasoning: compute-heavy dataset-wide ranking/forecasting, fixed
+    // parameterized queries only, no LLM-generated SQL either way).
     public function getRecommendations($preferences) {
         return $this->request('/api/recommend', 'POST', $preferences);
     }

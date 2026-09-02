@@ -325,6 +325,29 @@ body:has(.sidebar.collapsed) #aiAssistantMount.ai-assistant-mount {
 }
 .ai-assistant-msg-time i { margin-left: 2px; }
 
+/* BATCH AI-8 (AI Architecture Audit): shown on an AI answer that needed
+   AiController::askAssistant()'s escalated retry (BATCH AI-2) — a second,
+   broader fetch beyond this page's own module/entity focus. Informational,
+   not a warning, so it deliberately does NOT reuse
+   .ai-assistant-suggestion-callout's amber/dashed styling below — same
+   soft-pill language as the suggestion chips, in the assistant's own
+   primary color. */
+.ai-assistant-escalated-badge {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    background: var(--color-primary-50, #eaf3ee);
+    color: var(--color-primary-700, #1f4538);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+}
+.ai-assistant-escalated-badge i { font-size: 0.65rem; }
+
 .ai-assistant-suggestion-callout {
     align-self: flex-start;
     max-width: 92%;

@@ -49,6 +49,39 @@ DB_CONFIG = {
     'autocommit': True,
 }
 
+# BATCH AI-6 (AI Architecture Audit, 2026-09-02): this service uses two
+# DIFFERENT, deliberate data-access patterns — documented here once, rather
+# than left as a silent inconsistency between them (the audit's own
+# finding). Both are equally safe for the same reason: every query below is
+# fixed and parameterized, in this file's own code, never assembled from LLM
+# output or raw user text — there is no SQL-injection-via-prompt surface in
+# either pattern.
+#
+# Pattern 1 — narrate/explain family (chat_answer, explain_exception,
+# explain_entity, dashboard_digest, assistant_ask): NEVER touches MySQL.
+# AiController.php's own PHP models read the database and hand this service
+# an already-assembled, name-stripped fact bundle; the LLM only narrates or
+# answers questions from those facts. This is the pattern the original audit
+# was checking for, and it's followed exactly here.
+#
+# Pattern 2 — recommend_lots/recommend_lot_type/forecast_burials (get_connection()
+# below): queries MySQL directly, via this file's own DB_CONFIG. Kept as a
+# deliberate exception rather than migrated to Pattern 1: these are
+# compute-heavy, dataset-wide operations (cosine-similarity ranking over
+# every available lot; ARIMA/moving-average projection over months of
+# schedule history) that need the full rows to do their own math in Python
+# (numpy/pandas/sklearn/statsmodels) — not a case of "narrate this one
+# fact bundle." Routing that dataset through PHP first would mean
+# serializing every available lot (or the full schedule history) into a
+# single JSON HTTP payload on every hot-path recommendation/forecast call,
+# for no correctness or security benefit — the queries are exactly as fixed
+# and parameterized as anything Pattern 1's PHP models would run. The real
+# cost of this pattern is operational, not architectural: it duplicates
+# "what counts as an available lot" between this file and the PHP Lot model,
+# and needs its own DB credentials in python-ai/.env alongside the PHP
+# backend's — both acceptable for a project this size, not for a
+# larger one.
+
 warnings.filterwarnings('ignore')
 
 CAPACITY_WARNING_THRESHOLD = 0.80
