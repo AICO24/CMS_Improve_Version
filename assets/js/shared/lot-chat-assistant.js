@@ -171,6 +171,19 @@ function createLotChatAssistant(options) {
     const CHAT_SKIP_PHRASES = ['any', 'anything', 'no preference', 'not sure', "doesn't matter", 'does not matter', 'skip', "i don't know", 'idk', 'n/a', 'none', 'whatever'];
     const RESET_PHRASES = ['start over', 'start again', 'restart', 'reset', 'reset conversation', 'reset the conversation', 'clear everything', 'clear all', 'begin again'];
     const CORRECTION_SIGNAL_RE = /\b(actually|instead|change|update|switch|correct|different|rather|make it)\b/i;
+    // BATCH AI-3 (AI Architecture Audit): cheap, deterministic "does this
+    // message also contain a real question" pre-check — no LLM cost, used
+    // only to decide whether the general-Q&A fallback (ai/chat) is worth
+    // trying on a message that already resolved a slot value (see
+    // mightBeQuestion in processMessage() below). A literal '?' is a
+    // near-certain signal; the leading-word check catches a question
+    // phrased without one ("What happens after I book"). An ordinary slot
+    // answer ("Premium Lot", "50000", "August 25", "no preference")
+    // essentially never matches either form, so this doesn't add cost to
+    // the common case — it only ever triggers one extra ai/chat call, which
+    // already safely resolves to answered:false on anything that isn't
+    // really a question (see CHAT_SYSTEM_PROMPT server-side).
+    const QUESTION_START_RE = /^\s*(what|how|when|why|where|who|which|whose|can|could|do|does|did|is|are|will|would|should|may)\b/i;
     const FIELD_KEYWORD_RE = {
         lot_type: /\b(lot\s*type|type of lot)\b/i,
         section: /\bsection\b/i,
@@ -206,6 +219,10 @@ function createLotChatAssistant(options) {
     function isResetPhrase(text) {
         const normalized = text.trim().toLowerCase().replace(/[.!?]+$/, '');
         return RESET_PHRASES.includes(normalized);
+    }
+
+    function looksLikeQuestion(text) {
+        return text.includes('?') || QUESTION_START_RE.test(text);
     }
 
     function isUnset(value) {
@@ -1038,20 +1055,42 @@ function createLotChatAssistant(options) {
             && !ambiguousDecedentCandidates
             && (pendingSlot === null || updates[pendingSlot] === undefined);
 
-        if (pendingSlot !== 'decedent_id' && !hasCorrectionSignal && nothingRecognizedThisMessage) {
+        // BATCH AI-3 (AI Architecture Audit, 2026-09-02): fixes a case the
+        // audit flagged — a message that ALSO resolves a slot value (e.g.
+        // "Premium Lot, and what happens after I book?") never reached the
+        // Q&A fallback at all, since nothingRecognizedThisMessage requires
+        // nothing else to have matched. The question was silently dropped
+        // with no sign it was even seen. mightBeQuestion is independent of
+        // what the extraction above found — same privacy exclusions as
+        // nothingRecognizedThisMessage (decedent_id pending, a decedent
+        // actually resolved/ambiguous this message, or a correction signal
+        // all skip it, since the raw text might name a person and this
+        // module's contract is to never forward that to any LLM endpoint).
+        const mightBeQuestion = !nothingRecognizedThisMessage
+            && pendingSlot !== 'decedent_id'
+            && updates.decedent_id === undefined
+            && !ambiguousDecedentCandidates
+            && !hasCorrectionSignal
+            && looksLikeQuestion(text);
+
+        if (pendingSlot !== 'decedent_id' && !hasCorrectionSignal && (nothingRecognizedThisMessage || mightBeQuestion)) {
             setInputEnabled(false);
             const typingBubble = appendTypingIndicator();
             const answer = await tryAnswerGeneralQuestion(text, pendingSlot);
             typingBubble.remove();
-            if (answer) {
-                appendMessage('assistant', answer);
-                if (pendingSlot) appendMessage('assistant', questionForSlot(pendingSlot));
-                setInputEnabled(true);
-                chatInput.focus();
-                return;
-            }
             setInputEnabled(true);
             chatInput.focus();
+            if (answer) {
+                appendMessage('assistant', answer);
+                if (nothingRecognizedThisMessage) {
+                    if (pendingSlot) appendMessage('assistant', questionForSlot(pendingSlot));
+                    return;
+                }
+                // mightBeQuestion alongside a recognized slot value: fall
+                // through to the normal acknowledgement / next-question
+                // flow below instead of returning, so both the answer and
+                // the slot update land in the same turn.
+            }
         }
 
         // Batch M3: deterministic parsing found nothing usable at all — try
