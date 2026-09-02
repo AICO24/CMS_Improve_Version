@@ -8,6 +8,7 @@ require_once __DIR__ . '/../models/DecedentRequest.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../services/AutomationEngine.php';
+require_once __DIR__ . '/ExpirationController.php';
 
 class ScheduleController {
     private $scheduleModel;
@@ -543,6 +544,19 @@ class ScheduleController {
                 // must keep accepting it, not just the normal Reserved->Occupied path.
                 $this->transitionLotStatus($lotId, 'Occupied', ['Available', 'Reserved'], $user, 'schedule.completed');
                 $this->createLeaseRecordIfMissing($lotId, $existing['schedule_date']);
+                // Automation opportunity G.6: previously the ONLY place that ever
+                // called ExpirationController::generateNotifications() was an
+                // unconditional call on every load of notifications.html — if no
+                // admin/staff ever opened that page, an expiring lease could go
+                // unflagged indefinitely. Calling the same dedup'd sweep here too
+                // (findExpiringSoonUnnotified() + markNotified(), see that method)
+                // ties it to the real domain event that creates/renews lease
+                // records, as defense-in-depth alongside the page-load trigger —
+                // not a replacement for it, since a lease created today won't
+                // itself be "expiring soon" for years; this guards against a
+                // record from an EARLIER completion/renewal that's now due
+                // getting missed because nobody happened to open Notifications.
+                (new ExpirationController())->generateNotifications();
                 // No AutomationEngine path currently marks a schedule Completed
                 // (only a direct admin/staff action does), so no suppression
                 // check is needed here — unlike the Confirmed branch above.
