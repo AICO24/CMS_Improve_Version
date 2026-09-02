@@ -726,4 +726,59 @@ class ScheduleController {
         }
         return $this->scheduleModel->getCalendar($month, $year);
     }
+
+    // Default threshold approved for automation opportunity G.1: a
+    // still-Pending reservation with zero payment attempts after this many
+    // days gets a one-time reminder — never an auto-cancel (no such policy
+    // exists; explicitly deferred). Mirrors
+    // ExpirationController::generateNotifications()'s own
+    // dedup'd-sweep-triggered-on-Notifications-page-load pattern (see
+    // notifications.js) rather than inventing a new trigger mechanism, since
+    // this app has no scheduler by design.
+    private const STALE_PENDING_DAYS = 7;
+
+    public function notifyStalePending($days = null) {
+        $days = $days !== null ? (int) $days : self::STALE_PENDING_DAYS;
+        $rows = $this->scheduleModel->findStalePendingUnnotified($days);
+
+        $notificationModel = new Notification();
+        $userModel = new User();
+        $count = 0;
+
+        foreach ($rows as $schedule) {
+            $title = "Reservation #{$schedule['schedule_id']} still awaiting payment";
+            $message = sprintf(
+                'Your reservation for lot %s (%s) has been pending for %d+ days with no payment on file. Please complete payment soon to keep your reservation.',
+                $schedule['lot_number'] ?? 'N/A',
+                $schedule['section_name'] ?? 'N/A',
+                $days
+            );
+
+            $notificationModel->create([
+                'title' => $title,
+                'message' => $message,
+                'notification_type' => 'Schedule',
+                'user_id' => $schedule['created_by'],
+                'is_read' => 0,
+            ]);
+
+            $recipient = $userModel->findById($schedule['created_by']);
+            if (!empty($recipient['email'])) {
+                $this->sendEmail($recipient['email'], $title, $message);
+            }
+
+            $this->scheduleModel->markStaleNotified($schedule['schedule_id']);
+            $this->auditLogModel->log(
+                'Stale reservation reminder sent',
+                null,
+                null,
+                'Schedule',
+                $schedule['schedule_id'],
+                ['days_pending_threshold' => $days]
+            );
+            $count++;
+        }
+
+        return ['success' => true, 'notified' => $count, 'message' => "$count stale-reservation reminder(s) sent"];
+    }
 }

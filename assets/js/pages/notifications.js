@@ -101,11 +101,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
+    // Both endpoints below are admin/staff-only (dedup'd sweeps — see their
+    // own route comments in api.php) — gated here so a citizen visiting this
+    // page doesn't fire two guaranteed-403 calls on every load. Previously
+    // only the expiration call existed and had no such gate at all.
     async function generateStarterNotifications() {
+        if (user.role !== 'admin' && user.role !== 'staff') return;
         try {
             await api.request('expiration-records/generate-notifications', { method: 'POST' });
         } catch (error) {
             console.error('Failed to generate expiration notifications:', error);
+        }
+        try {
+            await api.request('schedules/notify-stale-pending', { method: 'POST' });
+        } catch (error) {
+            console.error('Failed to generate stale-reservation reminders:', error);
         }
     }
 

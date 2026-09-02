@@ -337,6 +337,17 @@ if ($path === 'schedules/stats' && $requestMethod === 'GET') {
     exit;
 }
 
+// Automation opportunity G.1: mirrors expiration-records/generate-notifications
+// above — a dedup'd sweep triggered on demand (see notifications.js), not on a
+// scheduler (this app has none by design). Reminds a citizen once per stale
+// reservation; never auto-cancels.
+if ($path === 'schedules/notify-stale-pending' && $requestMethod === 'POST') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $days = $_GET['days'] ?? null;
+    echo json_encode($scheduleController->notifyStalePending($days));
+    exit;
+}
+
 if ($path === 'schedules' && $requestMethod === 'GET') {
     $filters = [];
     if (isset($_GET['lot_id'])) $filters['lot_id'] = $_GET['lot_id'];

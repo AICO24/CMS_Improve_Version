@@ -190,6 +190,40 @@ class Schedule {
         return $stmt->fetchAll();
     }
 
+    // Automation opportunity G.1: a Pending reservation the citizen never
+    // followed up on with a payment attempt — "no payment" means literally
+    // zero payments rows reference this schedule, not "no VERIFIED payment
+    // yet". A submitted-but-not-yet-verified payment means the ball is in
+    // staff's court, not the citizen's, so that schedule is correctly
+    // excluded here rather than nagged. Mirrors
+    // ExpirationRecord::findExpiringSoonUnnotified()'s dedupe convention —
+    // stale_notified_at IS NULL is what makes a repeat sweep safe to call
+    // often (see migration_20260902_add_schedule_stale_notified.sql).
+    public function findStalePendingUnnotified($days) {
+        $stmt = $this->db->prepare("
+            SELECT s.*, l.lot_number, sec.section_name
+            FROM burial_schedules s
+            JOIN lots l ON s.lot_id = l.lot_id
+            JOIN blocks b ON l.block_id = b.block_id
+            JOIN sections sec ON b.section_id = sec.section_id
+            WHERE s.status = 'Pending'
+              AND s.stale_notified_at IS NULL
+              AND s.created_at <= (NOW() - INTERVAL ? DAY)
+              AND NOT EXISTS (
+                  SELECT 1 FROM payments p
+                  WHERE p.transaction_type = 'Lot Purchase' AND p.reference_id = s.schedule_id
+              )
+            ORDER BY s.created_at ASC
+        ");
+        $stmt->execute([(int) $days]);
+        return $stmt->fetchAll();
+    }
+
+    public function markStaleNotified($id) {
+        $stmt = $this->db->prepare("UPDATE burial_schedules SET stale_notified_at = NOW() WHERE schedule_id = ?");
+        return $stmt->execute([(int) $id]);
+    }
+
     public function checkConflict($lotId, $date, $time = null) {
         $sql = "SELECT COUNT(*) as count FROM burial_schedules 
                 WHERE lot_id = ? AND schedule_date = ? AND status != 'Cancelled'";
