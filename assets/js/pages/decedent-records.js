@@ -250,11 +250,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Approve doesn't create the decedent_records row itself — it opens the
-    // SAME Add Decedent form staff already uses (pre-filled with just the
-    // name/dod the citizen supplied), so staff still fills in and verifies
-    // every sensitive/required field (lot, dob, cause of death, contact
-    // info) by hand. saveRecord() links the request to whatever decedent_id
-    // that form creates.
+    // SAME Add Decedent form staff already uses (pre-filled with the name/
+    // dod the citizen supplied, plus — Batch G — the requester's own name/
+    // phone number as a starting point for the family contact fields, since
+    // the person submitting this request usually IS that contact), so staff
+    // still fills in and verifies every sensitive/required field (lot, dob,
+    // cause of death, contact info) by hand before saving. saveRecord()
+    // links the request to whatever decedent_id that form creates.
     function approveRequest(requestId) {
         const request = pendingRequests.find((item) => item.request_id === requestId);
         if (!request) return;
@@ -267,6 +269,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('lastName').value = nameParts.slice(1).join(' ') || '';
         if (request.approximate_dod) {
             document.getElementById('dod').value = request.approximate_dod;
+        }
+        if (request.requested_by_name) {
+            document.getElementById('contactName').value = request.requested_by_name;
+        }
+        if (request.requested_by_contact_number) {
+            document.getElementById('contactNumber').value = request.requested_by_contact_number;
         }
     }
 

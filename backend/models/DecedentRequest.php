@@ -13,9 +13,17 @@ class DecedentRequest {
     // it — see ScheduleController::store()'s provisional-decedent path.
     // Lets Decedent Records' Pending Requests card prioritize requests tied
     // to an already-paid booking over a bare, unbooked request.
+    //
+    // requested_by_contact_number (Batch G, auto-fill from citizen account):
+    // the requester is the family's own point of contact for the deceased
+    // they're registering — decedent-records.js's approveRequest() pre-fills
+    // the Add Decedent form's contact_name from requested_by_name (already
+    // selected above) and contact_number from this, so staff doesn't retype
+    // information already on file for that account. Still just a pre-fill —
+    // both fields stay fully editable before save.
     public function findAll($status = null) {
         $sql = "
-            SELECT r.*, u.full_name AS requested_by_name,
+            SELECT r.*, u.full_name AS requested_by_name, u.contact_number AS requested_by_contact_number,
                    s.schedule_id AS linked_schedule_id, s.status AS linked_schedule_status
             FROM decedent_requests r
             LEFT JOIN users u ON r.requested_by = u.user_id
