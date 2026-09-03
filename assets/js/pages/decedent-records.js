@@ -630,6 +630,39 @@ document.addEventListener('DOMContentLoaded', async function() {
                         }
                     }
                 }
+
+                // Batch F (suggested schedule linking): only reachable when
+                // this create wasn't via "Approve" (that path's own schedule,
+                // if any, was just handled above) — the backend only returns
+                // this for a lot that has an existing schedule with no
+                // decedent_request_id of its own. Tier 2: offered, never
+                // applied automatically.
+                if (!id && result.suggested_schedules && result.suggested_schedules.length === 1) {
+                    const schedule = result.suggested_schedules[0];
+                    const when = schedule.schedule_time ? `${schedule.schedule_date} ${schedule.schedule_time}` : schedule.schedule_date;
+                    const link = await confirmDialog({
+                        title: 'Link to an existing schedule?',
+                        message: `This lot already has an unlinked burial schedule (${when}, ${schedule.status}). Link this new record to it?`,
+                        confirmLabel: 'Link schedule',
+                    });
+                    if (link) {
+                        try {
+                            await api.request(`schedules/${schedule.schedule_id}/link-decedent`, {
+                                method: 'PUT',
+                                body: { decedent_id: result.decedent_id },
+                            });
+                            showToast('Linked to the existing schedule.', { type: 'success' });
+                        } catch (linkError) {
+                            showToast(linkError.message || 'Could not link the schedule.', { type: 'error' });
+                        }
+                    }
+                } else if (!id && result.suggested_schedules && result.suggested_schedules.length > 1) {
+                    // More than one candidate — guessing which one would risk
+                    // linking the wrong booking, so this only points staff at
+                    // where to resolve it by hand instead of picking for them.
+                    showToast(`This lot has ${result.suggested_schedules.length} unlinked schedules. Link the correct one from Manage Reservations.`, { type: 'info' });
+                }
+
                 approvingRequestId = null;
                 recordModal.style.display = 'none';
                 showToast(id ? 'Decedent record updated.' : 'Decedent record created.', { type: 'success' });

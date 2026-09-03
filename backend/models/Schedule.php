@@ -209,6 +209,29 @@ class Schedule {
         return $stmt->fetchAll();
     }
 
+    // Batch F (Decedent Records audit, suggested schedule linking): a
+    // decedent created outside the request-approval flow (plain "Add New
+    // Record") has no automatic way to pick up an existing, unlinked
+    // schedule for the same lot — findByDecedentRequestId() above only
+    // covers the citizen-booked-first path. Scoped tightly: same lot, no
+    // deceased_id yet, and no decedent_request_id (that case is already
+    // handled by DecedentRequestController::autoLinkSchedules() when ITS
+    // request is approved, so surfacing it here too would be redundant/
+    // confusing). Only active statuses — a Cancelled slot is never worth
+    // suggesting.
+    public function findUnlinkedByLot($lotId) {
+        $stmt = $this->db->prepare("
+            SELECT schedule_id, schedule_date, schedule_time, status
+            FROM burial_schedules
+            WHERE lot_id = ?
+              AND deceased_id IS NULL
+              AND decedent_request_id IS NULL
+              AND status IN ('Pending', 'Confirmed')
+        ");
+        $stmt->execute([(int) $lotId]);
+        return $stmt->fetchAll();
+    }
+
     // Automation opportunity G.1: a Pending reservation the citizen never
     // followed up on with a payment attempt — "no payment" means literally
     // zero payments rows reference this schedule, not "no VERIFIED payment

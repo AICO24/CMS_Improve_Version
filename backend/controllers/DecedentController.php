@@ -1,10 +1,12 @@
 <?php
 require_once __DIR__ . '/../models/Decedent.php';
 require_once __DIR__ . '/../models/AuditLog.php';
+require_once __DIR__ . '/../models/Schedule.php';
 
 class DecedentController {
     private $decedentModel;
     private $auditLogModel;
+    private $scheduleModel;
 
     // Fields never written to audit_logs.details verbatim — the audit only
     // needs to show a sensitive field changed, not its value. Matches
@@ -14,6 +16,7 @@ class DecedentController {
     public function __construct() {
         $this->decedentModel = new Decedent();
         $this->auditLogModel = new AuditLog();
+        $this->scheduleModel = new Schedule();
     }
 
     private static function actorId($actor) {
@@ -176,7 +179,21 @@ class DecedentController {
                 $result,
                 $auditDetails
             );
-            return ['success' => true, 'message' => 'Decedent record created', 'decedent_id' => $result];
+
+            $response = ['success' => true, 'message' => 'Decedent record created', 'decedent_id' => $result];
+
+            // Batch F (suggested schedule linking): Tier 2 automation — the
+            // system notices, staff decides. Only surfaces schedules the
+            // request-approval flow wouldn't already auto-link on its own
+            // (see Schedule::findUnlinkedByLot()'s own comment). Never links
+            // automatically; the frontend must send an explicit follow-up
+            // PUT schedules/{id}/link-decedent to act on this.
+            $unlinkedSchedules = $this->scheduleModel->findUnlinkedByLot($data['lot_id']);
+            if ($unlinkedSchedules) {
+                $response['suggested_schedules'] = $unlinkedSchedules;
+            }
+
+            return $response;
         }
         return ['error' => 'Failed to create decedent record', 'code' => 500];
     }
