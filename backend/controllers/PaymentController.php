@@ -616,6 +616,17 @@ class PaymentController {
                 $this->syncLotStatusForVerifiedPurchase($payment, $adminId);
                 $this->autoConfirmScheduleForVerifiedPurchase($payment, $adminId);
             } elseif ($status === 'Verified' && $payment['transaction_type'] === 'Cremation') {
+                // Cremation Phase B: the citizen-intake counterpart to
+                // autoUpdateCremationForVerifiedPayment() below — that method
+                // only ever acts on an ALREADY-niche-assigned record (the
+                // admin-direct workflow: niche assigned first, payment
+                // verified after). This one only ever acts on a Pending,
+                // niche-less record (the citizen-booking workflow) — the two
+                // preconditions are mutually exclusive by construction, so
+                // calling both unconditionally is always safe, mirroring
+                // burial's own dual syncLotStatusForVerifiedPurchase()/
+                // autoConfirmScheduleForVerifiedPurchase() calls above.
+                $this->autoConfirmCremationForVerifiedPayment($payment, $adminId);
                 $this->autoUpdateCremationForVerifiedPayment($payment, $adminId);
             }
 
@@ -786,6 +797,59 @@ class PaymentController {
         );
     }
 
+    // Cremation Phase B: the citizen-intake counterpart to
+    // autoUpdateCremationForVerifiedPayment() below — that method predates
+    // Pending existing as a real status (see its own comment) and only ever
+    // acts on an already-niche-assigned record. This one is the Cremation
+    // equivalent of autoConfirmScheduleForVerifiedPurchase() above: a
+    // Pending, niche-less cremation booked by a citizen moves to Scheduled
+    // the moment its payment is verified — no niche touched, mirrors
+    // burial's Confirmed step exactly (a reservation confirmed; the physical
+    // event and resource placement are still ahead). Deliberately a no-op
+    // (not an exception) when reference_id isn't a Pending, niche-less
+    // cremation at all — nothing to automate, mirrors
+    // autoConfirmScheduleForVerifiedPurchase()'s own early-return convention.
+    private function autoConfirmCremationForVerifiedPayment($payment, $adminId) {
+        if (empty($payment['reference_id'])) {
+            return;
+        }
+
+        $cremationModel = new Cremation();
+        $cremation = $cremationModel->findById((int) $payment['reference_id']);
+        if (!$cremation || $cremation['status'] !== 'Pending' || !empty($cremation['niche_number'])) {
+            return;
+        }
+
+        $cremationId = $cremation['cremation_id'];
+        $adminActor = ['user_id' => $adminId, 'role' => 'admin'];
+
+        AutomationEngine::run(
+            'payment.verified',
+            'Cremation',
+            $cremationId,
+            $adminActor,
+            function () use ($cremationModel, $cremationId) {
+                $current = $cremationModel->findById($cremationId);
+                if (!$current) {
+                    return ['Cremation record no longer exists'];
+                }
+                if ($current['status'] !== 'Pending') {
+                    return ['Cremation record is no longer Pending (current: ' . $current['status'] . ')'];
+                }
+                return true;
+            },
+            function () use ($cremationId, $adminActor) {
+                $cremationController = new CremationController();
+                // Batch F convention: _auditedByAutomationEngine tells
+                // CremationController::update() to skip its own 'Cremation
+                // record updated' audit entry — the AutomationEngine::run()
+                // call above already logs this exact fact as a
+                // 'payment.verified' entry against this same Cremation entity.
+                return $cremationController->update($cremationId, ['status' => 'Scheduled', '_auditedByAutomationEngine' => true], $adminActor);
+            }
+        );
+    }
+
     // Sub-batch 1 (Batch G): the Cremation counterpart to
     // autoConfirmScheduleForVerifiedPurchase() above, reusing the same
     // AutomationEngine envelope. Deliberately narrower than the Schedule
@@ -863,12 +927,24 @@ class PaymentController {
                 }
                 return true;
             },
-            function () use ($cremationModel, $cremationId, $adminId) {
+            function () use ($cremationModel, $cremationId, $adminActor) {
                 $current = $cremationModel->findById($cremationId);
                 $cremationController = new CremationController();
                 // _auditedByAutomationEngine: see the matching comment on
                 // CremationController::update() — the AutomationEngine::run()
                 // call wrapping this closure already logs this exact fact.
+                //
+                // Cremation Phase B: CremationController::update()'s
+                // signature changed from a bare $userId to the full actor
+                // array (role is now needed to distinguish a citizen's
+                // self-service edit from staff/admin) — this call site was
+                // still passing $adminId alone, which update() would then
+                // read as an unrecognized role and incorrectly apply the
+                // citizen-only "must still be Pending" restriction, silently
+                // failing to finalize an already-Scheduled record. Caught by
+                // live-testing the Phase B regression case, not by
+                // inspection — fixed by passing the $adminActor array this
+                // method already builds above, same as every other caller.
                 return $cremationController->update($cremationId, [
                     'deceased_id' => $current['deceased_id'],
                     'niche_number' => $current['niche_number'],
@@ -879,7 +955,7 @@ class PaymentController {
                     'ash_storage_location' => $current['ash_storage_location'],
                     'notes' => $current['notes'],
                     '_auditedByAutomationEngine' => true,
-                ], $adminId);
+                ], $adminActor);
             }
         );
     }

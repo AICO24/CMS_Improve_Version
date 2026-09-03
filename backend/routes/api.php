@@ -495,7 +495,25 @@ if ($path === 'cremations/assign' && $requestMethod === 'POST') {
     exit;
 }
 
+// Cremation Phase B: citizen's own cremation requests — mirrors
+// schedules/mine exactly. Placed before 'cremations' (GET) so its own
+// filters (page/per_page only) aren't shadowed by that route's broader
+// filter set.
+if ($path === 'cremations/mine' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $filters = [];
+    if (isset($_GET['page'])) $filters['page'] = $_GET['page'];
+    if (isset($_GET['per_page'])) $filters['per_page'] = $_GET['per_page'];
+    echo json_encode($cremationController->mine($user['user_id'], $filters));
+    exit;
+}
+
+// Cremation Phase B: previously no role gate at all beyond top-level
+// authenticate() — any authenticated user could enumerate every cremation
+// record. Now gated + $user threaded through for per-citizen scoping (see
+// CremationController::index()).
 if ($path === 'cremations' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $filters = [];
     if (isset($_GET['status'])) $filters['status'] = $_GET['status'];
     if (isset($_GET['columbarium'])) $filters['columbarium'] = $_GET['columbarium'];
@@ -504,22 +522,39 @@ if ($path === 'cremations' && $requestMethod === 'GET') {
     $pagination = [];
     if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
     if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
-    echo json_encode($cremationController->index($filters, $pagination));
+    echo json_encode($cremationController->index($filters, $pagination, $user));
     exit;
 }
 
 if (preg_match('/^cremations\/(\d+)$/', $path, $matches) && $requestMethod === 'GET') {
-    $result = $cremationController->show($matches[1]);
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $cremationController->show($matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
     exit;
 }
 
+// Cremation Phase B: widened from admin-only so a citizen can book — role
+// branching (provisional decedent, forced Pending, stripped niche input)
+// happens inside CremationController::store() itself, mirroring how
+// 'schedules' (POST) is wide open with the same internal branching.
 if ($path === 'cremations' && $requestMethod === 'POST') {
-    $user = AuthMiddleware::requireRole(['admin']);
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $input = readRequestBody();
-    $result = $cremationController->store($input, $user['user_id']);
+    $result = $cremationController->store($input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^cremations\/(\d+)\/link-decedent$/', $path, $matches) && $requestMethod === 'PUT') {
+    // Chains from decedent-requests/{id}/approve — see
+    // CremationController::linkDecedent(). Mirrors schedules/{id}/link-decedent.
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $result = $cremationController->linkDecedent($matches[1], $input['decedent_id'] ?? null, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -527,9 +562,9 @@ if ($path === 'cremations' && $requestMethod === 'POST') {
 }
 
 if (preg_match('/^cremations\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
-    $user = AuthMiddleware::requireRole(['admin']);
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $input = readRequestBody();
-    $result = $cremationController->update($matches[1], $input, $user['user_id']);
+    $result = $cremationController->update($matches[1], $input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -537,8 +572,8 @@ if (preg_match('/^cremations\/(\d+)$/', $path, $matches) && $requestMethod === '
 }
 
 if (preg_match('/^cremations\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
-    $user = AuthMiddleware::requireRole(['admin']);
-    $result = $cremationController->destroy($matches[1], $user['user_id']);
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $cremationController->destroy($matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);

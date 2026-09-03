@@ -26,6 +26,10 @@ class Cremation {
             $sql .= " AND c.deceased_id = ?";
             $params[] = (int) $filters['deceased_id'];
         }
+        if (!empty($filters['created_by'])) {
+            $sql .= " AND c.created_by = ?";
+            $params[] = (int) $filters['created_by'];
+        }
         if (!empty($filters['q'])) {
             $sql .= " AND (c.niche_number LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ? OR dr.full_name LIKE ?)";
             $search = '%' . $filters['q'] . '%';
