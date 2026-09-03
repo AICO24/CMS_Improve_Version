@@ -8,6 +8,19 @@ class Decedent {
         $this->db = Database::getInstance()->getConnection();
     }
 
+    // Batch C (completeness/attention): a record is "needs attention" when
+    // it's missing information a fully-usable record should have, beyond
+    // the bare fields required to create it at all (name/dob/dod/lot).
+    // Shared by applyFilters()'s `incomplete` filter and getStats()'s count
+    // so the two can never define "incomplete" differently. Table-qualified
+    // (`dr.`) so it drops into either query unchanged.
+    private const INCOMPLETE_CONDITION = "(
+        dr.contact_name IS NULL OR dr.contact_name = '' OR
+        dr.contact_number IS NULL OR dr.contact_number = '' OR
+        dr.cause_of_death IS NULL OR dr.cause_of_death = '' OR
+        (dr.is_cremated = 'yes' AND (dr.ash_storage IS NULL OR dr.ash_storage = ''))
+    )";
+
     private function applyFilters(&$sql, &$params, $filters) {
         if (!empty($filters['q'])) {
             $term = '%' . $filters['q'] . '%';
@@ -35,6 +48,10 @@ class Decedent {
         if (!empty($filters['section'])) {
             $sql .= " AND s.section_name = ?";
             $params[] = $filters['section'];
+        }
+
+        if (!empty($filters['incomplete'])) {
+            $sql .= " AND " . self::INCOMPLETE_CONDITION;
         }
     }
 
@@ -273,12 +290,14 @@ class Decedent {
     }
 
     public function getStats() {
+        $condition = str_replace('dr.', '', self::INCOMPLETE_CONDITION);
         $stmt = $this->db->query("
             SELECT
                 COUNT(*) AS total,
                 SUM(CASE WHEN is_cremated = 'no' THEN 1 ELSE 0 END) AS burials,
                 SUM(CASE WHEN is_cremated = 'yes' THEN 1 ELSE 0 END) AS cremations,
-                ROUND(AVG(TIMESTAMPDIFF(YEAR, dob, dod))) AS avg_age
+                ROUND(AVG(TIMESTAMPDIFF(YEAR, dob, dod))) AS avg_age,
+                SUM(CASE WHEN $condition THEN 1 ELSE 0 END) AS needs_attention
             FROM decedent_records
             WHERE deleted_at IS NULL
         ");

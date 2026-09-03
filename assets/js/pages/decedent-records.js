@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const sectionInput = document.getElementById('section');
     const searchInput = document.getElementById('searchInput');
     const typeFilter = document.getElementById('typeFilter');
+    const attentionFilter = document.getElementById('attentionFilter');
     const tableBody = document.getElementById('tableBody');
     const recordModal = document.getElementById('recordModal');
     const viewModal = document.getElementById('viewModal');
@@ -34,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     let currentEditId = null;
     let currentQuery = '';
     let currentTypeFilter = 'all';
+    let currentAttentionFilter = false;
     let pendingRequests = [];
     // Set only when "Approve" was clicked on a pending request — saveRecord()
     // checks this after a successful CREATE (never on edit) and links the new
@@ -72,10 +74,23 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     const TYPE_FILTER_LABELS = { no: 'Burial', yes: 'Cremation' };
 
+    // Batch C (completeness/attention): mirrors DecedentController's
+    // INCOMPLETE_CONDITION exactly, so a record's badge here always agrees
+    // with whether "Needs attention only" would include it.
+    function getMissingFields(record) {
+        const missing = [];
+        if (!record.contact_name) missing.push('Family contact name');
+        if (!record.contact_number) missing.push('Family contact number');
+        if (!record.cause_of_death) missing.push('Cause of death');
+        if (record.is_cremated === 'yes' && !record.ash_storage) missing.push('Ash storage location');
+        return missing;
+    }
+
     function renderActiveFilterChips() {
         const chips = [
             { key: 'q', label: 'Search', value: currentQuery, clear: () => { searchInput.value = ''; currentQuery = ''; } },
             { key: 'type', label: 'Type', value: currentTypeFilter !== 'all' ? (TYPE_FILTER_LABELS[currentTypeFilter] || currentTypeFilter) : '', clear: () => { typeFilter.value = 'all'; currentTypeFilter = 'all'; } },
+            { key: 'attention', label: 'Attention', value: currentAttentionFilter ? 'Needs attention only' : '', clear: () => { attentionFilter.checked = false; currentAttentionFilter = false; } },
         ].filter((chip) => chip.value);
 
         if (!activeFilterChips) return;
@@ -145,6 +160,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     searchInput.addEventListener('input', refreshFiltered);
     typeFilter.addEventListener('change', () => {
         currentTypeFilter = typeFilter.value;
+        pagination.reset();
+        loadRecords();
+    });
+    attentionFilter.addEventListener('change', () => {
+        currentAttentionFilter = attentionFilter.checked;
         pagination.reset();
         loadRecords();
     });
@@ -289,6 +309,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const params = new URLSearchParams();
         if (currentQuery) params.set('q', currentQuery);
         if (currentTypeFilter !== 'all') params.set('is_cremated', currentTypeFilter);
+        if (currentAttentionFilter) params.set('incomplete', '1');
         params.set('page', pagination.page);
         params.set('per_page', perPage);
         try {
@@ -310,6 +331,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('burialCount').innerText = stats.burials || 0;
         document.getElementById('cremationCount').innerText = stats.cremations || 0;
         document.getElementById('avgAge').innerText = stats.avg_age || 0;
+        document.getElementById('attentionCount').innerText = stats.needs_attention || 0;
     }
 
     function renderTable(items) {
@@ -328,10 +350,15 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        tableBody.innerHTML = items.map((item) => `
+        tableBody.innerHTML = items.map((item) => {
+            const missing = getMissingFields(item);
+            const attentionBadge = missing.length
+                ? `<i class="fas fa-triangle-exclamation attention-icon" title="Needs attention — missing: ${escapeHtml(missing.join(', '))}"></i>`
+                : '';
+            return `
             <tr data-id="${item.decedent_id}">
                 <td>D-${item.decedent_id}</td>
-                <td>${escapeHtml(`${item.first_name} ${item.last_name}${item.suffix ? ' ' + item.suffix : ''}`)}</td>
+                <td>${escapeHtml(`${item.first_name} ${item.last_name}${item.suffix ? ' ' + item.suffix : ''}`)}${attentionBadge}</td>
                 <td>${escapeHtml(item.dob)}</td>
                 <td>${escapeHtml(item.dod)}</td>
                 <td>${escapeHtml(item.lot_number)}</td>
@@ -347,7 +374,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                     </button>
                 </td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
 
         attachTableButtons();
     }
@@ -428,7 +456,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
+        const missing = getMissingFields(record);
+        const attentionNotice = missing.length
+            ? `<div class="detail-row"><span>Status</span><strong><span class="status-badge status-warning">Needs Attention</span> — missing: ${escapeHtml(missing.join(', '))}</strong></div>`
+            : '';
+
         const details = `
+            ${attentionNotice}
             <div class="detail-row"><span>Full Name</span><strong>${escapeHtml(record.first_name)} ${escapeHtml(record.last_name)}${record.suffix ? ' ' + escapeHtml(record.suffix) : ''}</strong></div>
             <div class="detail-row"><span>Date of Birth</span><strong>${escapeHtml(record.dob)}</strong></div>
             <div class="detail-row"><span>Date of Death</span><strong>${escapeHtml(record.dod)}</strong></div>

@@ -200,6 +200,43 @@
     box-shadow: 0 0 0 4px rgba(44,94,71,.15);
 }
 
+.attention-filter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 50px;
+    padding: 0 16px;
+    border-radius: 40px;
+    border: 2px solid #d8e5dd;
+    background: #ffffff;
+    color: #243736;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: .35s ease;
+}
+
+.attention-filter-toggle:hover {
+    border-color: #b45309;
+}
+
+.attention-filter-toggle input {
+    cursor: pointer;
+    accent-color: #b45309;
+}
+
+/* Inline warning glyph next to a record's name in the table (Batch C) —
+   deliberately not a whole extra column, to keep the table from getting
+   crowded; hover/focus reveals which fields are missing via the title
+   attribute. */
+.attention-icon {
+    margin-left: 6px;
+    color: #b45309;
+    cursor: help;
+}
+
 
 .btn-add{
     position: relative;
@@ -274,7 +311,7 @@
 .decrec-stats {
     align-items: stretch;
     gap: 14px;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .decrec-stats > .stat-card {
@@ -365,6 +402,15 @@
 
 .decrec-stats > .stat-card:nth-child(4) .stat-title::before {
     content: "\f1fd";
+}
+
+.decrec-stats > .stat-card:nth-child(5) {
+    border-left-color: #92400e;
+    background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+}
+
+.decrec-stats > .stat-card:nth-child(5) .stat-title::before {
+    content: "\f071";
 }
 
 .decrec-stats > .stat-card .stat-value {

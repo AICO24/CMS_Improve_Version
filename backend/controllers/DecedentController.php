@@ -261,13 +261,14 @@ class DecedentController {
     public function stats() {
         $stats = $this->decedentModel->getStats();
         if (!$stats) {
-            return ['total' => 0, 'burials' => 0, 'cremations' => 0, 'avg_age' => 0];
+            return ['total' => 0, 'burials' => 0, 'cremations' => 0, 'avg_age' => 0, 'needs_attention' => 0];
         }
 
         $stats['burials'] = (int) ($stats['burials'] ?? 0);
         $stats['cremations'] = (int) ($stats['cremations'] ?? 0);
         $stats['total'] = (int) ($stats['total'] ?? 0);
         $stats['avg_age'] = isset($stats['avg_age']) ? (int) $stats['avg_age'] : 0;
+        $stats['needs_attention'] = (int) ($stats['needs_attention'] ?? 0);
 
         return $stats;
     }

@@ -1282,6 +1282,7 @@ if ($path === 'decedents' && $requestMethod === 'GET') {
     if (isset($_GET['lot_id'])) $filters['lot_id'] = $_GET['lot_id'];
     if (isset($_GET['section'])) $filters['section'] = $_GET['section'];
     if (isset($_GET['is_cremated'])) $filters['is_cremated'] = $_GET['is_cremated'];
+    if (isset($_GET['incomplete'])) $filters['incomplete'] = $_GET['incomplete'];
     $pagination = [];
     if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
     if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
