@@ -183,7 +183,7 @@ const PAGE_ROLE_ACCESS = {
     'cremation-management.html': ['admin'],
     'relocation-management.html': ['admin'],
     'expiration-monitoring.html': ['admin'],
-    'decedent-records.html': ['admin'],
+    'decedent-records.html': ['admin', 'staff'],
     'payments.html': ['admin', 'staff', 'user'],
     'reports.html': ['admin'],
     'forecast.html': ['admin'],
@@ -313,6 +313,15 @@ const ROLE_SIDEBAR_LINKS = {
             ['burial-scheduling.html', 'fa-monument', 'Burial Scheduling'],
             ['manage-reservations.html', 'fa-calendar-check', 'Manage Reservations'],
             ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
+        ] },
+        // Batch E (Decedent Records audit): staff now has API + page access
+        // to Decedent Records (previously admin-only despite the backend
+        // already allowing staff writes — see DecedentController's
+        // requireRole(['admin', 'staff'])). Only this one Records-group page
+        // is added here; Cremation/Relocation/Expiration Monitoring stay
+        // admin-only and out of this module's scope.
+        { group: 'Records', items: [
+            ['decedent-records.html', 'fa-folder-open', 'Decedent Records'],
         ] },
         { group: 'Finance', items: [
             ['payments.html', 'fa-credit-card', 'Payments'],

@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    const session = await requireRole(['admin']);
+    const session = await requireRole(['admin', 'staff']);
     if (!session) return;
 
     // System-Wide AI Assistant: module-scoped to Decedent (covers both
@@ -279,12 +279,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 body: { rejection_reason: reason.trim() },
             });
             if (result.success) {
+                showToast('Request rejected.', { type: 'success' });
                 await loadPendingRequests();
             } else {
-                alert(result.error || 'Could not reject request.');
+                showToast(result.error || 'Could not reject request.', { type: 'error' });
             }
         } catch (error) {
-            alert(error.message || 'Could not reject request.');
+            showToast(error.message || 'Could not reject request.', { type: 'error' });
         }
     }
 
@@ -552,7 +553,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const id = document.getElementById('recordId').value;
         const lotId = parseInt(lotSelect.value, 10);
         if (!lotId) {
-            alert('Please select a lot.');
+            showToast('Please select a lot.', { type: 'error' });
             return;
         }
 
@@ -584,8 +585,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             // validation failure). Staff sees who it might match and
             // explicitly decides whether to proceed.
             if (result.duplicate_warning) {
-                const list = result.candidates.map((c) => `- D-${c.decedent_id}: ${c.name} (${c.dob} to ${c.dod})`).join('\n');
-                const proceed = confirm(`${result.message}\n\n${list}\n\nSave this record anyway?`);
+                const list = result.candidates.map((c) => `D-${c.decedent_id}: ${c.name} (${c.dob} to ${c.dod})`).join('; ');
+                const proceed = await confirmDialog({
+                    title: 'Possible duplicate record',
+                    message: `${result.message} Matches: ${list}`,
+                    confirmLabel: 'Save anyway',
+                });
                 if (!proceed) {
                     return;
                 }
@@ -627,29 +632,37 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
                 approvingRequestId = null;
                 recordModal.style.display = 'none';
+                showToast(id ? 'Decedent record updated.' : 'Decedent record created.', { type: 'success' });
                 pagination.reset();
                 await refreshPage();
             } else {
-                alert(result.error || 'Could not save record.');
+                showToast(result.error || 'Could not save record.', { type: 'error' });
             }
         } catch (error) {
-            alert(error.message || 'Could not save record.');
+            showToast(error.message || 'Could not save record.', { type: 'error' });
         }
     }
 
     async function deleteRecord(id) {
-        if (!confirm('Delete this record? This action cannot be undone.')) {
+        const proceed = await confirmDialog({
+            title: 'Delete this record?',
+            message: 'This action cannot be undone.',
+            confirmLabel: 'Delete',
+            danger: true,
+        });
+        if (!proceed) {
             return;
         }
         try {
             const result = await api.request(`decedents/${id}`, { method: 'DELETE' });
             if (result.success) {
+                showToast('Decedent record deleted.', { type: 'success' });
                 await refreshPage();
             } else {
-                alert(result.error || 'Could not delete record.');
+                showToast(result.error || 'Could not delete record.', { type: 'error' });
             }
         } catch (error) {
-            alert(error.message || 'Could not delete record.');
+            showToast(error.message || 'Could not delete record.', { type: 'error' });
         }
     }
     // (escapeHtml is defined once, near the top of this file — this file
