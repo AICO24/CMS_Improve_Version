@@ -142,6 +142,24 @@ CREATE TABLE `cremation_records` (
   CONSTRAINT `cremation_records_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `decedent_documents`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `decedent_documents` (
+  `document_id` int NOT NULL AUTO_INCREMENT,
+  `decedent_id` int NOT NULL,
+  `document_type` enum('death_certificate','burial_permit','other') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'other',
+  `original_filename` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `file_path` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `uploaded_by` int DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`document_id`),
+  KEY `idx_decedent_id` (`decedent_id`),
+  KEY `uploaded_by` (`uploaded_by`),
+  CONSTRAINT `fk_decedent_document_decedent` FOREIGN KEY (`decedent_id`) REFERENCES `decedent_records` (`decedent_id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_decedent_document_user` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `decedent_records`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;

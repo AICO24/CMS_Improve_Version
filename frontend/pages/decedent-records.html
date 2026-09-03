@@ -281,6 +281,22 @@
             <h3 id="viewModalTitle">Decedent Record Details</h3>
             <div id="viewDetails"></div>
 
+            <!-- Batch K1 (document upload): death certificate/burial permit
+                 attachments for this record. Upload only — no AI extraction. -->
+            <div class="documents-section">
+                <h4>Documents</h4>
+                <div id="viewDocumentsList" class="documents-list"></div>
+                <div class="documents-upload-row">
+                    <select id="documentTypeSelect" aria-label="Document type">
+                        <option value="death_certificate">Death Certificate</option>
+                        <option value="burial_permit">Burial Permit</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <input type="file" id="documentFileInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
+                    <button type="button" class="btn-secondary" id="uploadDocumentBtn">Upload</button>
+                </div>
+            </div>
+
             <!-- Batch D (activity history): this record's own audit_logs
                  entries (entity_type=Decedent&entity_id={id}) — the same
                  data the global Audit Logs page shows, scoped to just this

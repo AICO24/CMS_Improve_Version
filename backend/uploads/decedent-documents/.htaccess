@@ -1,0 +1,10 @@
+# Decedent Records module audit, Batch K1: this folder only ever holds
+# staff-uploaded death certificates/burial permits (jpg/png/pdf, enforced by
+# DecedentDocumentController's real-bytes MIME check) — never anything that
+# should execute. Defense in depth in case that check is ever bypassed.
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<FilesMatch "\.(php|php\d|phtml|pl|py|cgi|sh)$">
+    Require all denied
+</FilesMatch>

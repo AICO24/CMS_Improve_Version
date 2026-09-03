@@ -4,6 +4,7 @@ require_once __DIR__ . '/../controllers/LotController.php';
 require_once __DIR__ . '/../controllers/DecedentController.php';
 require_once __DIR__ . '/../controllers/DecedentRequestController.php';
 require_once __DIR__ . '/../controllers/DecedentImportController.php';
+require_once __DIR__ . '/../controllers/DecedentDocumentController.php';
 require_once __DIR__ . '/../controllers/ScheduleController.php';
 require_once __DIR__ . '/../controllers/CremationController.php';
 require_once __DIR__ . '/../controllers/RelocationController.php';
@@ -162,6 +163,7 @@ $lotController = new LotController();
 $decedentController = new DecedentController();
 $decedentRequestController = new DecedentRequestController();
 $decedentImportController = new DecedentImportController();
+$decedentDocumentController = new DecedentDocumentController();
 $scheduleController = new ScheduleController();
 $aiController = new AiController();
 
@@ -1351,6 +1353,43 @@ if (preg_match('/^decedents\/(\d+)$/', $path, $matches) && $requestMethod === 'P
 if (preg_match('/^decedents\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $result = $decedentController->destroy($matches[1], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+// Decedent Records module audit, Batch K1: document/certificate upload
+// (death certificate, burial permit, etc.) — upload only, no AI extraction.
+// admin/staff only, same as every other write in this module — these can
+// carry sensitive personal detail (cause of death, ID numbers) so citizens
+// never get read or write access here, unlike the redacted decedents list.
+if (preg_match('/^decedents\/(\d+)\/documents$/', $path, $matches) && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $result = $decedentDocumentController->index($matches[1]);
+    if (isset($result['code'])) {
+        http_response_code($result['code']);
+        unset($result['code']);
+    }
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^decedents\/(\d+)\/documents$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $file = $input['files']['document_file'] ?? null;
+    $documentType = $input['document_type'] ?? 'other';
+    $result = $decedentDocumentController->store($matches[1], $file, $documentType, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^decedents\/(\d+)\/documents\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $result = $decedentDocumentController->destroy($matches[2], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);

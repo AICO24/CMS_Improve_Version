@@ -517,11 +517,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         }).join('');
     }
 
+    // Batch K1 (document upload): which decedent the View modal is
+    // currently open for — the upload/delete handlers below are wired once
+    // (outside openViewModal) and read this to know their target, since the
+    // modal's own markup is fixed and only its content changes per record.
+    let currentViewDecedentId = null;
+
     async function openViewModal(id) {
         const record = records.find((item) => item.decedent_id === id);
         if (!record) {
             return;
         }
+        currentViewDecedentId = id;
 
         const missing = getMissingFields(record);
         const attentionNotice = missing.length
@@ -559,7 +566,105 @@ document.addEventListener('DOMContentLoaded', async function() {
                 timelineEl.innerHTML = '<p class="activity-empty">Could not load activity history.</p>';
             }
         }
+
+        await loadDocumentsList(id);
     }
+
+    // ---------- Batch K1: document/certificate upload ----------
+    const DOCUMENT_TYPE_LABELS = {
+        death_certificate: 'Death Certificate',
+        burial_permit: 'Burial Permit',
+        other: 'Other',
+    };
+
+    async function loadDocumentsList(decedentId) {
+        const listEl = document.getElementById('viewDocumentsList');
+        if (!listEl) return;
+        listEl.innerHTML = '<p class="activity-loading">Loading documents...</p>';
+        try {
+            const documents = await api.request(`decedents/${decedentId}/documents`, { method: 'GET' });
+            renderDocumentsList(Array.isArray(documents) ? documents : []);
+        } catch (error) {
+            console.error('Failed to load documents', error);
+            listEl.innerHTML = '<p class="activity-empty">Could not load documents.</p>';
+        }
+    }
+
+    function renderDocumentsList(documents) {
+        const listEl = document.getElementById('viewDocumentsList');
+        if (!listEl) return;
+
+        if (documents.length === 0) {
+            listEl.innerHTML = '<p class="activity-empty">No documents uploaded yet.</p>';
+            return;
+        }
+
+        listEl.innerHTML = documents.map((doc) => `
+            <div class="document-entry" data-document-id="${doc.document_id}">
+                <span class="status-badge status-info">${escapeHtml(DOCUMENT_TYPE_LABELS[doc.document_type] || 'Other')}</span>
+                <a href="${escapeHtml(doc.file_path)}" target="_blank" rel="noopener" class="document-filename">${escapeHtml(doc.original_filename)}</a>
+                <span class="document-meta">${escapeHtml(doc.uploaded_by_name || 'Unknown')} · ${escapeHtml(doc.created_at)}</span>
+                <button type="button" class="document-delete-btn" title="Delete document" data-document-id="${doc.document_id}"><i class="fas fa-trash"></i></button>
+            </div>
+        `).join('');
+
+        listEl.querySelectorAll('.document-delete-btn').forEach((btn) => {
+            btn.addEventListener('click', () => deleteDocument(btn.dataset.documentId));
+        });
+    }
+
+    async function deleteDocument(documentId) {
+        const proceed = await confirmDialog({
+            title: 'Delete this document?',
+            message: 'This action cannot be undone.',
+            confirmLabel: 'Delete',
+            danger: true,
+        });
+        if (!proceed || !currentViewDecedentId) return;
+
+        try {
+            const result = await api.request(`decedents/${currentViewDecedentId}/documents/${documentId}`, { method: 'DELETE' });
+            if (result.success) {
+                showToast('Document deleted.', { type: 'success' });
+                await loadDocumentsList(currentViewDecedentId);
+            } else {
+                showToast(result.error || 'Could not delete document.', { type: 'error' });
+            }
+        } catch (error) {
+            showToast(error.message || 'Could not delete document.', { type: 'error' });
+        }
+    }
+
+    document.getElementById('uploadDocumentBtn').addEventListener('click', async () => {
+        const fileInput = document.getElementById('documentFileInput');
+        const typeSelect = document.getElementById('documentTypeSelect');
+        const file = fileInput.files[0];
+        if (!file) {
+            showToast('Please choose a file first.', { type: 'error' });
+            return;
+        }
+        if (!currentViewDecedentId) return;
+
+        const formData = new FormData();
+        formData.append('document_file', file);
+        formData.append('document_type', typeSelect.value);
+
+        const uploadBtn = document.getElementById('uploadDocumentBtn');
+        await withButtonLoading(uploadBtn, async () => {
+            try {
+                const result = await api.request(`decedents/${currentViewDecedentId}/documents`, { method: 'POST', body: formData });
+                if (result.success) {
+                    showToast('Document uploaded.', { type: 'success' });
+                    fileInput.value = '';
+                    await loadDocumentsList(currentViewDecedentId);
+                } else {
+                    showToast(result.error || 'Could not upload document.', { type: 'error' });
+                }
+            } catch (error) {
+                showToast(error.message || 'Could not upload document.', { type: 'error' });
+            }
+        });
+    });
 
     async function saveRecord() {
         const id = document.getElementById('recordId').value;
