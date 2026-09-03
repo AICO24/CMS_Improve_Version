@@ -25,7 +25,69 @@ class DecedentRequestController {
     }
 
     public function index($status = null) {
-        return $this->requestModel->findAll($status);
+        $requests = $this->requestModel->findAll($status);
+        $this->flagPossibleDuplicates($requests);
+        return $requests;
+    }
+
+    // Decedent Records module audit, Batch L3: the reverse of Batch B's
+    // decedent_records duplicate check, one level earlier — two DIFFERENT
+    // families can independently submit a request for the same person
+    // (e.g. two grandchildren, unaware of each other) before either becomes
+    // a real decedent_records row, so Batch B's own check (which only looks
+    // at decedent_records) would never catch this. Computed here, in PHP,
+    // over whatever pending() already returned — the realistic list size
+    // for a cemetery's pending queue makes an O(n^2) comparison a non-issue,
+    // and it keeps this out of DecedentRequest::findAll()'s SQL, which
+    // several other callers (approve()/reject()/autoLinkSchedules()) use
+    // for single-row lookups where this flag is irrelevant. Flags only,
+    // never blocks — a shared common surname is expected in this dataset,
+    // not proof of an actual duplicate.
+    private function flagPossibleDuplicates(&$requests) {
+        foreach ($requests as &$request) {
+            $request['possible_duplicate_of'] = null;
+            $request['possible_duplicate_name'] = null;
+        }
+        unset($request);
+
+        foreach ($requests as $i => &$request) {
+            if (($request['status'] ?? null) !== 'pending') {
+                continue;
+            }
+            foreach ($requests as $j => $other) {
+                if ($i === $j || ($other['status'] ?? null) !== 'pending') {
+                    continue;
+                }
+                if ($this->requestsLookSimilar($request, $other)) {
+                    $request['possible_duplicate_of'] = $other['request_id'];
+                    $request['possible_duplicate_name'] = $other['full_name'];
+                    break;
+                }
+            }
+        }
+        unset($request);
+    }
+
+    private function requestsLookSimilar($a, $b) {
+        $nameA = strtolower(trim((string) ($a['full_name'] ?? '')));
+        $nameB = strtolower(trim((string) ($b['full_name'] ?? '')));
+        if ($nameA === '' || $nameB === '') {
+            return false;
+        }
+        if ($nameA === $nameB) {
+            return true;
+        }
+
+        // A phonetic match alone is too weak for a common surname with no
+        // other supporting signal — only counted when both sides also gave
+        // a date that's close (within a few days), same tolerance as
+        // Decedent::findNearDuplicates()'s own dob/dod check.
+        if (soundex($nameA) === soundex($nameB) && !empty($a['approximate_dod']) && !empty($b['approximate_dod'])) {
+            $diffDays = abs(strtotime($a['approximate_dod']) - strtotime($b['approximate_dod'])) / 86400;
+            return $diffDays <= 3;
+        }
+
+        return false;
     }
 
     public function mine($userId) {
@@ -139,6 +201,36 @@ class DecedentRequestController {
                 ['full_name' => $request['full_name'] ?? null, 'linked_decedent_id' => (int) $data['decedent_id']]
             );
             $this->autoLinkSchedules($id, (int) $data['decedent_id'], $user);
+
+            // Decedent Records module audit, Batch L3: finalize a citizen's
+            // booking-time attachment (Batch L1/L2) onto the real decedent
+            // now that it exists — moves it into decedent_documents exactly
+            // like a staff-uploaded one (DecedentDocumentController::
+            // attachExistingFile(), the same method Batch K's own store()
+            // uses), then clears it off the request so it isn't shown as
+            // still "attached to the request" once it has a permanent home.
+            // 'death_certificate' rather than 'other': the citizen flow this
+            // came from (registering someone not yet on file) is
+            // specifically about proving death, so that's the more accurate
+            // default than a generic bucket — staff can review the document
+            // itself either way. Best-effort: a failure here doesn't undo
+            // the approval that already succeeded, it just leaves the file
+            // sitting unclaimed on the request (visible to staff, who can
+            // still open it from there).
+            if (!empty($request['attachment_path'])) {
+                $attachResult = $this->documentController->attachExistingFile(
+                    (int) $data['decedent_id'],
+                    $request['attachment_path'],
+                    $request['attachment_original_filename'],
+                    'death_certificate',
+                    $user,
+                    'Decedent document finalized from citizen request'
+                );
+                if (!empty($attachResult['success'])) {
+                    $this->requestModel->clearAttachment($id);
+                }
+            }
+
             $this->notifyRequestStatus($request, 'approved');
             return ['success' => true, 'message' => 'Request approved'];
         }
@@ -317,6 +409,15 @@ class DecedentRequestController {
                 $id,
                 ['full_name' => $request['full_name'] ?? null, 'rejection_reason' => $data['rejection_reason']]
             );
+            // Decedent Records module audit, Batch L3: a rejected request
+            // never becomes a decedent — its Batch L1/L2 attachment (if any)
+            // has nowhere to go and is never needed again, so it's deleted
+            // now rather than left as a permanent orphan on disk.
+            if (!empty($request['attachment_path'])) {
+                DecedentDocumentController::deleteUploadedFile($request['attachment_path']);
+                $this->requestModel->clearAttachment($id);
+            }
+
             $this->notifyRequestStatus($request, 'rejected', $data['rejection_reason']);
             return ['success' => true, 'message' => 'Request rejected'];
         }

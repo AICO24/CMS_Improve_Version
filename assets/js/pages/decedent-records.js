@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         pendingRequestsBody.innerHTML = pendingRequests.map((request) => `
             <tr data-request-id="${request.request_id}">
-                <td>${escapeHtml(request.full_name)} ${request.linked_schedule_id ? '<span class="status-badge status-warning" title="A citizen already booked and may have paid for this — finish the record so their burial can be marked Completed.">Linked to booking #' + escapeHtml(request.linked_schedule_id) + '</span>' : ''}</td>
+                <td>${escapeHtml(request.full_name)} ${request.linked_schedule_id ? '<span class="status-badge status-warning" title="A citizen already booked and may have paid for this — finish the record so their burial can be marked Completed.">Linked to booking #' + escapeHtml(request.linked_schedule_id) + '</span>' : ''} ${request.possible_duplicate_of ? '<span class="status-badge status-danger" title="Another pending request (#' + escapeHtml(request.possible_duplicate_of) + ': ' + escapeHtml(request.possible_duplicate_name) + ') looks similar — check before approving both.">Possible duplicate of #' + escapeHtml(request.possible_duplicate_of) + '</span>' : ''}</td>
                 <td>${escapeHtml(request.approximate_dod || '—')}</td>
                 <td>${escapeHtml(request.relationship || '—')}</td>
                 <td>${escapeHtml(request.requested_by_name || 'Unknown')}</td>
