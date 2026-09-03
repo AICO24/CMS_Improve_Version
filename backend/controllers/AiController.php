@@ -169,6 +169,18 @@ class AiController {
         return ['result' => is_array($data) ? $data : null];
     }
 
+    // Decedent Records module audit, Batch I: same thin pass-through shape
+    // as extract() above, for the chat assistant's decedent-request form
+    // (appendDecedentRequestForm() in lot-chat-assistant.js) — extraction
+    // only pre-fills that form's own fields, it never creates or submits a
+    // decedent_requests row by itself.
+    public function extractDecedentRequest($payload) {
+        $payload = is_array($payload) ? $payload : [];
+        $result = $this->aiService->getDecedentRequestExtraction($payload);
+        $data = (!empty($result['error']) || !is_array($result)) ? null : ($result['result'] ?? null);
+        return ['result' => is_array($data) ? $data : null];
+    }
+
     // General Q&A layer (see docs/plans burial-scheduling AI Q&A): answers
     // real questions ("what documents do I need?") grounded only in the
     // ai_knowledge content an admin/staff member has reviewed — never

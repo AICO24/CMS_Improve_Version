@@ -1084,6 +1084,22 @@ if ($path === 'ai/extract' && $requestMethod === 'POST') {
     exit;
 }
 
+if ($path === 'ai/extract-decedent-request' && $requestMethod === 'POST') {
+    // Decedent Records audit, Batch I: same role gate and per-user rate
+    // limit as ai/extract above — a real Gemini call reachable by every
+    // citizen mid-chat, called by appendDecedentRequestForm()'s free-text
+    // option.
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    if (!RateLimiter::allow('ai_extract_decedent_' . $user['user_id'], 15, 60)) {
+        http_response_code(429);
+        echo json_encode(['error' => 'Too many requests — please wait a moment before trying again.']);
+        exit;
+    }
+    $input = readRequestBody();
+    echo json_encode($aiController->extractDecedentRequest($input));
+    exit;
+}
+
 if ($path === 'ai/chat' && $requestMethod === 'POST') {
     // General Q&A layer: answers real questions ("what documents do I
     // need?") grounded in the admin-editable ai_knowledge content, called by

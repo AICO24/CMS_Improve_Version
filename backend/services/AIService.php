@@ -40,6 +40,16 @@ class AIService {
         return $this->request('/api/extract', 'POST', $payload);
     }
 
+    // Decedent Records module audit, Batch I: separate endpoint/method from
+    // getExtraction() above rather than a shared one with a "mode" flag —
+    // same reasoning as getRecommendations() vs getTypeRecommendations()
+    // being distinct methods despite a similar shape. $payload is just
+    // {message: string}, the citizen's free-text description of a deceased
+    // person not yet in decedent_records.
+    public function getDecedentRequestExtraction($payload) {
+        return $this->request('/api/extract-decedent-request', 'POST', $payload);
+    }
+
     public function getChatAnswer($payload) {
         return $this->request('/api/chat', 'POST', $payload);
     }

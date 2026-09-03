@@ -634,6 +634,113 @@ def extract_preferences():
         return jsonify({'result': None})
 
 
+# Decedent Records module audit, Batch I: same shape as _extract_preferences
+# above (fixed schema, temperature 0, JSON-mode, "never invent a fact the
+# message doesn't state"), for a different domain — a citizen describing, in
+# free text, a deceased person not yet in the cemetery's records, called by
+# the chat assistant's decedent-request form (lot-chat-assistant.js's
+# appendDecedentRequestForm()) as an alternative to typing into the three
+# separate fields directly. The extracted fields only PRE-FILL those same
+# fields — the citizen still sees and can edit them, and still clicks
+# Continue booking themselves; this never submits anything on its own.
+DECEDENT_REQUEST_EXTRACTION_MODEL = 'gemini-3.6-flash'
+
+DECEDENT_REQUEST_EXTRACTION_SYSTEM_PROMPT = (
+    "You extract information about a deceased person from one short piece "
+    "of free text, for a cemetery's citizen-facing intake form. The citizen "
+    "is describing someone not yet in the cemetery's records so staff can "
+    "review and register them. Output ONLY a compact JSON object — no "
+    "markdown, no code fences, no prose, no explanation.\n\n"
+    "Schema: {\"full_name\": string|null, \"approximate_dod\": string|null, "
+    "\"relationship\": string|null, \"notes\": string|null}\n\n"
+    "Rules:\n"
+    "- full_name is the deceased person's name as stated. Never invent a "
+    "name, and never mistake the speaker's own name for the deceased's.\n"
+    "- approximate_dod is a date in strict YYYY-MM-DD format, only when the "
+    "message states or clearly implies one specific date (e.g. \"last "
+    "March 3\", \"March 3, 2020\", \"2020-03-03\"). If only a vague "
+    "timeframe is given (e.g. \"a few years ago\", \"last year\") or no "
+    "date at all, leave this null — never guess a specific day.\n"
+    "- relationship is how the speaker is related to the deceased (e.g. "
+    "\"son\", \"daughter\", \"spouse\", \"friend\"), only when clearly "
+    "stated. Otherwise null.\n"
+    "- notes is any other relevant detail mentioned that doesn't fit the "
+    "other fields (e.g. approximate age, cause of death, prior burial "
+    "location) as a short plain-text summary, or null if nothing else was "
+    "said.\n"
+    "- Only extract what this message actually states. Never invent facts "
+    "beyond the message text. If the message doesn't clearly name a "
+    "deceased person at all, return full_name as null."
+)
+
+
+def _extract_decedent_request(message: str) -> Optional[Dict[str, Any]]:
+    if not message:
+        return None
+
+    text = llm_provider.generate(
+        system_prompt=DECEDENT_REQUEST_EXTRACTION_SYSTEM_PROMPT,
+        user_content=json.dumps({'message': message}),
+        model=DECEDENT_REQUEST_EXTRACTION_MODEL,
+        json_mode=True,
+        temperature=0,
+        max_output_tokens=512,
+    )
+    if text is None:
+        return None
+
+    try:
+        parsed = json.loads(_strip_json_fences(text))
+        return parsed if isinstance(parsed, dict) else None
+    except Exception:
+        return None
+
+
+@app.post('/api/extract-decedent-request')
+def extract_decedent_request():
+    # Always returns 200; 'result' is null whenever extraction isn't
+    # available/didn't parse, so the caller falls back to the plain
+    # structured fields it already shows (full_name/approximate_dod/
+    # relationship inputs in appendDecedentRequestForm()).
+    try:
+        payload = request.get_json(silent=True) or {}
+        message = (payload.get('message') or '').strip()
+
+        if not message:
+            return jsonify({'result': None})
+
+        result = _extract_decedent_request(message)
+        if not result:
+            return jsonify({'result': None})
+
+        # Never trust the model's strings verbatim, same discipline as
+        # extract_preferences() above.
+        full_name = result.get('full_name')
+        full_name = full_name.strip() if isinstance(full_name, str) else ''
+        result['full_name'] = full_name or None
+
+        dod = result.get('approximate_dod')
+        parsed_dod = None
+        if isinstance(dod, str):
+            try:
+                candidate = datetime.strptime(dod.strip(), '%Y-%m-%d').date()
+                # Never a future date — mirrors appendDecedentRequestForm()'s
+                # own <input type="date" max="today"> constraint on this field.
+                if candidate <= datetime.now().date():
+                    parsed_dod = candidate.isoformat()
+            except ValueError:
+                parsed_dod = None
+        result['approximate_dod'] = parsed_dod
+
+        for field in ('relationship', 'notes'):
+            value = result.get(field)
+            result[field] = value.strip()[:255] if isinstance(value, str) and value.strip() else None
+
+        return jsonify({'result': result})
+    except Exception:
+        return jsonify({'result': None})
+
+
 @app.post('/api/chat')
 def chat_answer():
     # Always returns 200; answered:false whenever an answer isn't available,

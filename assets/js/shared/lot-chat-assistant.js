@@ -675,20 +675,71 @@ function createLotChatAssistant(options) {
     // (e.g. "I need burial for my friend John Doe.") — users didn't edit it
     // down, so the whole sentence became the name. Left blank, forcing a
     // deliberate, clean name instead of a guess nobody double-checks.
+    // Batch I (Decedent Records module audit): the free-text box + "Fill in
+    // from description" button below are an ALTERNATIVE way to populate the
+    // exact same three fields already here — never a separate submission
+    // path. Extraction only writes into nameInput/dodInput/relationshipInput,
+    // which the citizen still sees and can edit; "Continue booking" below is
+    // completely unchanged and is the only thing that actually commits
+    // state.provisional_decedent. Same never-trust-the-model discipline as
+    // tryLlmExtraction() above: approximate_dod is only ever accepted as a
+    // literal YYYY-MM-DD (python-ai already re-validates this isn't in the
+    // future), and a missing/unparseable result just leaves the fields as
+    // they were rather than guessing.
     function appendDecedentRequestForm() {
         const bubble = appendRichMessage(`
             <div class="chat-decedent-request">
                 <label>Not in our records yet — book anyway:</label>
+                <textarea class="chat-request-freetext" placeholder="Optional: describe them in your own words, e.g. &quot;my father Juan dela Cruz, passed away last March 3, 2020&quot;" rows="2"></textarea>
+                <button type="button" class="chat-request-extract-btn">Fill in from description</button>
                 <input type="text" class="chat-request-name" placeholder="Full name">
                 <input type="date" class="chat-request-dod" max="${new Date().toISOString().split('T')[0]}">
                 <input type="text" class="chat-request-relationship" placeholder="Relationship (optional)">
                 <button type="button" class="btn-secondary chat-request-btn">Continue booking</button>
             </div>
         `);
+        const freetextInput = bubble.querySelector('.chat-request-freetext');
+        const extractBtn = bubble.querySelector('.chat-request-extract-btn');
         const nameInput = bubble.querySelector('.chat-request-name');
         const dodInput = bubble.querySelector('.chat-request-dod');
         const relationshipInput = bubble.querySelector('.chat-request-relationship');
         const btn = bubble.querySelector('.chat-request-btn');
+
+        extractBtn.addEventListener('click', async () => {
+            const text = freetextInput.value.trim();
+            if (!text) return;
+
+            extractBtn.disabled = true;
+            const originalLabel = extractBtn.textContent;
+            extractBtn.textContent = 'Reading...';
+
+            try {
+                const response = await api.request('ai/extract-decedent-request', {
+                    method: 'POST',
+                    body: { message: text },
+                });
+                const result = response && response.result;
+
+                if (result && typeof result === 'object' && result.full_name) {
+                    nameInput.value = result.full_name;
+                    if (result.approximate_dod) dodInput.value = result.approximate_dod;
+                    if (result.relationship) relationshipInput.value = result.relationship;
+                } else {
+                    appendMessage('assistant', "I couldn't quite make out who this is about — please fill in the fields below directly.");
+                }
+            } catch (error) {
+                if (isRateLimitError(error)) {
+                    noticeRateLimited();
+                } else {
+                    console.error('Decedent-request extraction failed', error);
+                    appendMessage('assistant', "I couldn't quite make out who this is about — please fill in the fields below directly.");
+                }
+            } finally {
+                extractBtn.disabled = false;
+                extractBtn.textContent = originalLabel;
+            }
+        });
+
         btn.addEventListener('click', () => {
             const fullName = nameInput.value.trim();
             if (!fullName) return;

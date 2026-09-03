@@ -624,7 +624,8 @@
 
 .chat-escape-hatch select,
 .chat-escape-hatch input,
-.chat-decedent-request input {
+.chat-decedent-request input,
+.chat-decedent-request textarea {
     height: 38px;
     padding: 0 12px;
     border: 1px solid #cbd5e1;
@@ -638,9 +639,26 @@
 
 .chat-escape-hatch select:focus,
 .chat-escape-hatch input:focus,
-.chat-decedent-request input:focus {
+.chat-decedent-request input:focus,
+.chat-decedent-request textarea:focus {
     border-color: #2c5e47;
     box-shadow: 0 0 0 3px rgba(44, 94, 71, 0.12);
+}
+
+/* Batch I (Decedent Records audit): the free-text extraction helper takes
+   the full row on its own — a textarea and its "fill in" button don't read
+   well jammed inline alongside the short structured inputs the way an
+   escape-hatch date+button pair does. */
+.chat-decedent-request textarea {
+    flex: 1 1 100%;
+    height: 56px;
+    padding: 8px 12px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.chat-request-extract-btn {
+    flex: 1 1 100%;
 }
 
 .chat-escape-btn,
@@ -660,6 +678,29 @@
 .chat-escape-btn:hover,
 .chat-request-btn:hover {
     background: #244d3a;
+}
+
+.chat-request-extract-btn {
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    border: 1px solid #2c5e47;
+    background: transparent;
+    color: #2c5e47;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.chat-request-extract-btn:hover:not(:disabled) {
+    background: #2c5e47;
+    color: #ffffff;
+}
+
+.chat-request-extract-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
 }
 
 /* ---------- CONTEXTUAL SUGGESTION PROMPTS ---------- */
