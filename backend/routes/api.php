@@ -1105,14 +1105,18 @@ if ($path === 'ai/extract-decedent-request' && $requestMethod === 'POST') {
 }
 
 if ($path === 'ai/extract-certificate' && $requestMethod === 'POST') {
-    // Decedent Records audit, Batch K: staff-only (unlike ai/extract and
-    // ai/extract-decedent-request above, which citizens reach mid-chat) —
-    // this is the Add Decedent Record form's own "Extract & Fill Fields"
-    // action. A tighter rate limit than the text extractors: a vision call
-    // costs more and staff only fires this once per document, not once per
-    // fast-moving chat message.
-    $user = AuthMiddleware::requireRole(['admin', 'staff']);
-    if (!RateLimiter::allow('ai_extract_certificate_' . $user['user_id'], 10, 60)) {
+    // Decedent Records audit, Batch K: originally staff-only (the Add
+    // Decedent Record form's "Extract & Fill Fields" action). Batch L2
+    // opens this to citizens too — the same vision extraction, called from
+    // the booking chat's decedent-request step, so online booking can
+    // benefit from the same pre-fill face-to-face processing already gets.
+    // A citizen gets a tighter limit than staff: they fire this at most
+    // once or twice per booking (one certificate), never repeatedly across
+    // many records the way staff processing a backlog might.
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $isCitizen = strtolower($user['role'] ?? '') === 'user';
+    $rateLimit = $isCitizen ? 5 : 10;
+    if (!RateLimiter::allow('ai_extract_certificate_' . $user['user_id'], $rateLimit, 60)) {
         http_response_code(429);
         echo json_encode(['error' => 'Too many requests — please wait a moment before trying again.']);
         exit;
@@ -1437,6 +1441,21 @@ if ($path === 'decedent-requests' && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $input = readRequestBody();
     $result = $decedentRequestController->store($input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+// Decedent Records module audit, Batch L1: lets a citizen attach a death
+// certificate/burial permit to their OWN pending request (or admin/staff to
+// any) before staff formalizes a real decedent record — see
+// DecedentRequestController::uploadAttachment()'s own comment.
+if (preg_match('/^decedent-requests\/(\d+)\/attachment$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $input = readRequestBody();
+    $file = $input['files']['attachment_file'] ?? null;
+    $result = $decedentRequestController->uploadAttachment($matches[1], $file, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);

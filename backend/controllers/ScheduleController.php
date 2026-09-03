@@ -278,7 +278,21 @@ class ScheduleController {
         }
 
         $this->notifySchedule($data, $userId);
-        return ['success' => true, 'message' => 'Schedule created', 'schedule_id' => $outcome['schedule_id']];
+        // Decedent Records module audit, Batch L1: exposes the
+        // decedent_request_id this call just created/reused (set above,
+        // around line 176) so the frontend can immediately follow up with
+        // POST decedent-requests/{id}/attachment for a citizen who selected
+        // a certificate file before submitting the booking — that upload
+        // has to happen as its own request either way, since a
+        // decedent_requests row only exists once THIS call returns. null
+        // for every non-provisional booking (a real deceased_id was
+        // supplied), unchanged from before this batch.
+        return [
+            'success' => true,
+            'message' => 'Schedule created',
+            'schedule_id' => $outcome['schedule_id'],
+            'decedent_request_id' => $data['decedent_request_id'] ?? null,
+        ];
     }
 
     // Batch L2.3: the uq_active_schedule_slot unique index

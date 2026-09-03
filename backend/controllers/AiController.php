@@ -182,9 +182,13 @@ class AiController {
     }
 
     // Decedent Records module audit, Batch K: same thin pass-through shape
-    // as the other extractors above, for the Add Decedent Record form's
-    // "Extract & Fill Fields" action — pre-fills that form's own inputs
-    // only, never writes to decedent_records or decedent_documents itself.
+    // as the other extractors above. Originally the Add Decedent Record
+    // form's staff-only "Extract & Fill Fields" action; Batch L2 reuses this
+    // exact same method for the citizen booking chat's decedent-request
+    // step (route-level role gate — see routes/api.php — is what actually
+    // controls who may call it, this method doesn't distinguish). Pre-fills
+    // a form's own inputs only, never writes to decedent_records or
+    // decedent_documents itself.
     public function extractCertificate($payload) {
         $payload = is_array($payload) ? $payload : [];
         $result = $this->aiService->getCertificateExtraction($payload);

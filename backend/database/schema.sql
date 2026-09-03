@@ -198,6 +198,8 @@ CREATE TABLE `decedent_requests` (
   `approximate_dod` date DEFAULT NULL,
   `relationship` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `notes` text COLLATE utf8mb4_general_ci,
+  `attachment_path` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `attachment_original_filename` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `status` enum('pending','approved','rejected') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pending',
   `last_notified_status` enum('pending','approved','rejected') COLLATE utf8mb4_general_ci DEFAULT NULL,
   `decedent_id` int DEFAULT NULL,

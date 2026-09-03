@@ -48,14 +48,15 @@ class DecedentDocumentController {
         return $this->documentModel->findByDecedentId($decedentId);
     }
 
-    public function store($decedentId, $file, $documentType, $actor = null) {
-        $decedent = $this->decedentModel->findById($decedentId);
-        if (!$decedent) {
-            return ['error' => 'Decedent record not found', 'code' => 404];
-        }
-
-        $documentType = in_array($documentType, self::ALLOWED_TYPES, true) ? $documentType : 'other';
-
+    // Decedent Records module audit, Batch L1: split out of store() below so
+    // DecedentRequestController's citizen-facing attachment upload (a file
+    // has to land somewhere before any decedent_id exists to hang a
+    // decedent_documents row off of — see that controller's own comment)
+    // can reuse the exact same validation and on-disk save logic, instead
+    // of a second, drifting copy of it. Returns
+    // ['file_path' => ..., 'original_filename' => ...] on success, or
+    // ['error' => ..., 'code' => ...] on failure — never throws.
+    public static function saveUploadedFile($file) {
         if (empty($file['tmp_name']) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
             return ['error' => 'No valid file was uploaded', 'code' => 400];
         }
@@ -97,6 +98,36 @@ class DecedentDocumentController {
 
         $originalFilename = is_string($file['name'] ?? null) ? basename($file['name']) : $filename;
 
+        return ['file_path' => $filePath, 'original_filename' => $originalFilename];
+    }
+
+    public function store($decedentId, $file, $documentType, $actor = null) {
+        $decedent = $this->decedentModel->findById($decedentId);
+        if (!$decedent) {
+            return ['error' => 'Decedent record not found', 'code' => 404];
+        }
+
+        $documentType = in_array($documentType, self::ALLOWED_TYPES, true) ? $documentType : 'other';
+
+        $saved = self::saveUploadedFile($file);
+        if (isset($saved['error'])) {
+            return $saved;
+        }
+
+        return $this->attachExistingFile($decedentId, $saved['file_path'], $saved['original_filename'], $documentType, $actor, 'Decedent document uploaded');
+    }
+
+    // Decedent Records module audit, Batch L1: records a decedent_documents
+    // row for a file that's ALREADY been validated and saved to disk —
+    // shared by store() above (which just did that itself) and, later,
+    // DecedentRequestController::approve() (finalizing a citizen's
+    // decedent_requests-stage attachment onto the real decedent_id that
+    // only exists once staff formalizes the record — that file was
+    // originally saved via this same saveUploadedFile(), at request time).
+    // Never touches the filesystem itself, only the database.
+    public function attachExistingFile($decedentId, $filePath, $originalFilename, $documentType, $actor = null, $auditAction = 'Decedent document uploaded') {
+        $documentType = in_array($documentType, self::ALLOWED_TYPES, true) ? $documentType : 'other';
+
         $result = $this->documentModel->create([
             'decedent_id' => $decedentId,
             'document_type' => $documentType,
@@ -107,7 +138,7 @@ class DecedentDocumentController {
 
         if ($result) {
             $this->auditLogModel->log(
-                'Decedent document uploaded',
+                $auditAction,
                 self::actorId($actor),
                 self::actorUsername($actor),
                 'Decedent',
@@ -117,8 +148,23 @@ class DecedentDocumentController {
             return ['success' => true, 'message' => 'Document uploaded', 'document_id' => $result];
         }
 
-        @unlink($destination);
+        self::deleteUploadedFile($filePath);
         return ['error' => 'Failed to record the uploaded document', 'code' => 500];
+    }
+
+    // Decedent Records module audit, Batch L1: shared with
+    // DecedentRequestController's citizen-attachment cleanup (a rejected
+    // request's file is never needed again either) — best-effort, since
+    // whatever DB row was the source of truth is already gone/updated
+    // either way by the time a caller reaches this; a leftover orphan file
+    // on disk is a cleanup nuisance, not a correctness problem.
+    public static function deleteUploadedFile($filePath) {
+        if (empty($filePath)) {
+            return;
+        }
+        $relativePath = parse_url($filePath, PHP_URL_PATH) ?: $filePath;
+        $diskPath = __DIR__ . '/../uploads/decedent-documents/' . basename($relativePath);
+        @unlink($diskPath);
     }
 
     public function destroy($documentId, $actor = null) {
@@ -129,12 +175,7 @@ class DecedentDocumentController {
 
         $result = $this->documentModel->delete($documentId);
         if ($result) {
-            // Best-effort — the DB row (the source of truth for what staff
-            // sees) is already gone either way; a leftover orphan file on
-            // disk is a cleanup nuisance, not a correctness problem.
-            $relativePath = parse_url($document['file_path'], PHP_URL_PATH) ?: $document['file_path'];
-            $diskPath = __DIR__ . '/../uploads/decedent-documents/' . basename($relativePath);
-            @unlink($diskPath);
+            self::deleteUploadedFile($document['file_path']);
 
             $this->auditLogModel->log(
                 'Decedent document deleted',

@@ -68,6 +68,29 @@ class DecedentRequest {
         return $success ? (int) $this->db->lastInsertId() : false;
     }
 
+    // Decedent Records module audit, Batch L1: lets a citizen attach a
+    // death certificate/burial permit to their OWN pending request before
+    // any decedent_records row (and therefore any decedent_id a
+    // decedent_documents row could reference) exists — see
+    // DecedentRequestController::uploadAttachment()'s own comment for the
+    // full lifecycle (moved into decedent_documents on approve(), deleted
+    // on reject()).
+    public function setAttachment($id, $filePath, $originalFilename) {
+        $stmt = $this->db->prepare("
+            UPDATE decedent_requests SET attachment_path = ?, attachment_original_filename = ?
+            WHERE request_id = ?
+        ");
+        return $stmt->execute([$filePath, $originalFilename, $id]);
+    }
+
+    public function clearAttachment($id) {
+        $stmt = $this->db->prepare("
+            UPDATE decedent_requests SET attachment_path = NULL, attachment_original_filename = NULL
+            WHERE request_id = ?
+        ");
+        return $stmt->execute([$id]);
+    }
+
     public function approve($id, $decedentId, $reviewedBy) {
         $stmt = $this->db->prepare("
             UPDATE decedent_requests

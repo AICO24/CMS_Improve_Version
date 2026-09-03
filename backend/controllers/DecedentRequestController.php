@@ -7,18 +7,21 @@ require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../services/AutomationEngine.php';
 require_once __DIR__ . '/ScheduleController.php';
+require_once __DIR__ . '/DecedentDocumentController.php';
 
 class DecedentRequestController {
     private $requestModel;
     private $decedentModel;
     private $scheduleModel;
     private $auditLogModel;
+    private $documentController;
 
     public function __construct() {
         $this->requestModel = new DecedentRequest();
         $this->decedentModel = new Decedent();
         $this->scheduleModel = new Schedule();
         $this->auditLogModel = new AuditLog();
+        $this->documentController = new DecedentDocumentController();
     }
 
     public function index($status = null) {
@@ -47,6 +50,64 @@ class DecedentRequestController {
             return ['success' => true, 'message' => 'Request submitted', 'request_id' => $requestId];
         }
         return ['error' => 'Failed to submit request', 'code' => 500];
+    }
+
+    // Decedent Records module audit, Batch L1: lets the citizen who filed
+    // this request (or admin/staff) attach a death certificate/burial
+    // permit to it BEFORE staff formalizes a real decedent_records row —
+    // this is what makes online booking match the face-to-face process,
+    // where the family hands staff the physical document up front. The file
+    // itself is validated/saved exactly like a staff-side decedent-document
+    // upload (DecedentDocumentController::saveUploadedFile() — same MIME/
+    // size checks, same on-disk location), it just can't become a real
+    // decedent_documents row yet since there's no decedent_id. Only ever
+    // allowed on a still-'pending' request — once reviewed, the request's
+    // outcome is fixed, so a new attachment attempt after that point would
+    // just be silently ignored by approve()/reject() rather than surfacing
+    // a real error, which is more confusing than blocking it outright here.
+    public function uploadAttachment($id, $file, $user) {
+        $request = $this->requestModel->findById($id);
+        if (!$request) {
+            return ['error' => 'Request not found', 'code' => 404];
+        }
+
+        $userId = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        $role = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
+        if (!in_array($role, ['admin', 'staff'], true) && (int) $request['requested_by'] !== (int) $userId) {
+            return ['error' => 'You may only attach files to your own requests', 'code' => 403];
+        }
+        if ($request['status'] !== 'pending') {
+            return ['error' => 'This request has already been reviewed', 'code' => 409];
+        }
+
+        $saved = DecedentDocumentController::saveUploadedFile($file);
+        if (isset($saved['error'])) {
+            return $saved;
+        }
+
+        // A re-upload replacing an earlier attachment on the same still-
+        // pending request — remove the old file so it doesn't linger as an
+        // orphan once this one takes its place.
+        if (!empty($request['attachment_path'])) {
+            DecedentDocumentController::deleteUploadedFile($request['attachment_path']);
+        }
+
+        $result = $this->requestModel->setAttachment($id, $saved['file_path'], $saved['original_filename']);
+        if (!$result) {
+            DecedentDocumentController::deleteUploadedFile($saved['file_path']);
+            return ['error' => 'Failed to record the attachment', 'code' => 500];
+        }
+
+        $this->auditLogModel->log(
+            'Decedent request attachment uploaded',
+            $userId,
+            is_array($user) ? ($user['username'] ?? null) : null,
+            'DecedentRequest',
+            $id,
+            ['original_filename' => $saved['original_filename']]
+        );
+
+        return ['success' => true, 'message' => 'Attachment uploaded'];
     }
 
     public function approve($id, $data, $user) {
