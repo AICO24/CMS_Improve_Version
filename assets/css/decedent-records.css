@@ -670,6 +670,73 @@
     color: var(--color-text-muted);
 }
 
+/* ---------- ACTIVITY TIMELINE (view modal, Batch D) ---------- */
+.activity-timeline-section {
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+}
+
+.activity-timeline-section h4 {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body-sm);
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.activity-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.activity-entry {
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-left: 3px solid #2c5e47;
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+}
+
+.activity-entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-3);
+    font-size: var(--fs-body-sm);
+    color: var(--color-text);
+}
+
+.activity-entry-time {
+    flex: 0 0 auto;
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+.activity-entry-meta {
+    margin-top: 2px;
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+}
+
+.activity-entry-details {
+    margin-top: 6px;
+    color: var(--color-text);
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+
+.activity-empty,
+.activity-loading {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--fs-body-sm);
+}
+
 /* ---------- MODALS ---------- */
 /* .modal overlay now comes from assets/css/components/modals.css (Batch 5) */
 /* background/radius/padding/shadow now come from assets/css/components/modals.css (Batch 5); sizing kept as page-specific */

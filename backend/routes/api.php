@@ -849,6 +849,11 @@ if ($path === 'audit-logs' && $requestMethod === 'GET') {
     if (isset($_GET['q'])) $filters['q'] = $_GET['q'];
     if (isset($_GET['action'])) $filters['action'] = $_GET['action'];
     if (isset($_GET['entity_type'])) $filters['entity_type'] = $_GET['entity_type'];
+    // Batch D (Decedent Records audit): lets a caller scope to one specific
+    // record's own history (e.g. Decedent #12) instead of every row of that
+    // entity_type — AuditLog::applyFilters() already supported this filter
+    // for AuditIntelligenceService, it just wasn't reachable over HTTP yet.
+    if (isset($_GET['entity_id'])) $filters['entity_id'] = $_GET['entity_id'];
     if (isset($_GET['user_id'])) $filters['user_id'] = $_GET['user_id'];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];

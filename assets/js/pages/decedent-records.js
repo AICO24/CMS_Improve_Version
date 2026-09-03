@@ -450,7 +450,61 @@ document.addEventListener('DOMContentLoaded', async function() {
         recordModal.style.display = 'flex';
     }
 
-    function openViewModal(id) {
+    // Batch D (activity history): audit_logs.details is either a plain note
+    // string, `{field: {from, to}}` (DecedentController::update()'s normal
+    // diff), or `{field: 'changed'}` for a sensitive field whose value is
+    // deliberately redacted before it ever reaches audit_logs — rendered as
+    // "updated" rather than the literal word "changed" so it still reads as
+    // a sentence.
+    function formatAuditDetails(rawDetails) {
+        let details = rawDetails;
+        if (typeof details === 'string') {
+            try {
+                details = JSON.parse(details);
+            } catch (error) {
+                return escapeHtml(rawDetails);
+            }
+        }
+        if (!details || typeof details !== 'object') {
+            return '';
+        }
+
+        return Object.entries(details).map(([field, value]) => {
+            if (field === 'note') return escapeHtml(String(value));
+            if (field === 'duplicate_warning_overridden' && value) return 'saved despite a possible-duplicate warning';
+            if (value === 'changed') return `${escapeHtml(field)} updated`;
+            if (value && typeof value === 'object' && ('from' in value || 'to' in value)) {
+                return `${escapeHtml(field)}: ${escapeHtml(value.from ?? '—')} → ${escapeHtml(value.to ?? '—')}`;
+            }
+            return `${escapeHtml(field)}: ${escapeHtml(String(value))}`;
+        }).join('; ');
+    }
+
+    function renderActivityTimeline(entries) {
+        const timelineEl = document.getElementById('viewActivityTimeline');
+        if (!timelineEl) return;
+
+        if (!Array.isArray(entries) || entries.length === 0) {
+            timelineEl.innerHTML = '<p class="activity-empty">No activity recorded yet.</p>';
+            return;
+        }
+
+        timelineEl.innerHTML = entries.map((entry) => {
+            const summary = formatAuditDetails(entry.details);
+            return `
+                <div class="activity-entry">
+                    <div class="activity-entry-header">
+                        <strong>${escapeHtml(entry.action)}</strong>
+                        <span class="activity-entry-time">${escapeHtml(entry.created_at)}</span>
+                    </div>
+                    <div class="activity-entry-meta">${escapeHtml(entry.user_full_name || entry.username || 'System')}</div>
+                    ${summary ? `<div class="activity-entry-details">${summary}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function openViewModal(id) {
         const record = records.find((item) => item.decedent_id === id);
         if (!record) {
             return;
@@ -480,6 +534,18 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('viewModal').style.display = 'none';
             openEditModal(id);
         };
+
+        const timelineEl = document.getElementById('viewActivityTimeline');
+        if (timelineEl) {
+            timelineEl.innerHTML = '<p class="activity-loading">Loading activity...</p>';
+            try {
+                const entries = await api.request(`audit-logs?entity_type=Decedent&entity_id=${id}`, { method: 'GET' });
+                renderActivityTimeline(entries);
+            } catch (error) {
+                console.error('Failed to load activity history', error);
+                timelineEl.innerHTML = '<p class="activity-empty">Could not load activity history.</p>';
+            }
+        }
     }
 
     async function saveRecord() {

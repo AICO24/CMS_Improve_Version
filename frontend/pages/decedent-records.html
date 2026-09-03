@@ -275,7 +275,17 @@
             <button type="button" class="close-view" aria-label="Close">&times;</button>
             <h3 id="viewModalTitle">Decedent Record Details</h3>
             <div id="viewDetails"></div>
-            <button class="btn-edit">
+
+            <!-- Batch D (activity history): this record's own audit_logs
+                 entries (entity_type=Decedent&entity_id={id}) — the same
+                 data the global Audit Logs page shows, scoped to just this
+                 record so staff don't have to leave the module to see it. -->
+            <div class="activity-timeline-section">
+                <h4>Activity History</h4>
+                <div id="viewActivityTimeline" class="activity-timeline"></div>
+            </div>
+
+            <button class="btn-edit" id="editFromView">
                 <span class="edit-text">Edit Record</span>
 
                 <span class="edit-icon">
