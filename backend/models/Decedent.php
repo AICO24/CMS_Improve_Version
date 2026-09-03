@@ -45,7 +45,7 @@ class Decedent {
             JOIN lots l ON dr.lot_id = l.lot_id
             JOIN blocks b ON l.block_id = b.block_id
             JOIN sections s ON b.section_id = s.section_id
-            WHERE 1=1
+            WHERE dr.deleted_at IS NULL
         ";
         $params = [];
         $this->applyFilters($sql, $params, $filters);
@@ -78,7 +78,7 @@ class Decedent {
             JOIN lots l ON dr.lot_id = l.lot_id
             JOIN blocks b ON l.block_id = b.block_id
             JOIN sections s ON b.section_id = s.section_id
-            WHERE 1=1
+            WHERE dr.deleted_at IS NULL
         ";
         $params = [];
         $this->applyFilters($sql, $params, $filters);
@@ -90,13 +90,13 @@ class Decedent {
     }
 
     public function findById($id) {
-        $stmt = $this->db->prepare(" 
+        $stmt = $this->db->prepare("
             SELECT dr.*, l.lot_number, s.section_name
             FROM decedent_records dr
             JOIN lots l ON dr.lot_id = l.lot_id
             JOIN blocks b ON l.block_id = b.block_id
             JOIN sections s ON b.section_id = s.section_id
-            WHERE dr.decedent_id = ?
+            WHERE dr.decedent_id = ? AND dr.deleted_at IS NULL
         ");
         $stmt->execute([(int) $id]);
         return $stmt->fetch();
@@ -195,19 +195,42 @@ class Decedent {
         return $stmt->execute($params);
     }
 
+    // Batch A (data-integrity foundation): soft delete instead of a real
+    // DELETE, so a mistaken removal is recoverable at the database level.
+    // Callers must check hasRelatedRecords() first — an UPDATE never trips
+    // MySQL's own FK check the way the previous DELETE did, so that
+    // protection has to be enforced explicitly now instead of by catching
+    // error 1451.
     public function delete($id) {
-        $stmt = $this->db->prepare("DELETE FROM decedent_records WHERE decedent_id = ?");
+        $stmt = $this->db->prepare("UPDATE decedent_records SET deleted_at = NOW() WHERE decedent_id = ?");
         return $stmt->execute([(int) $id]);
     }
 
+    // Mirrors what the old DELETE's FK constraints (burial_schedules,
+    // cremation_records, relocation_requests all reference decedent_id with
+    // RESTRICT) used to enforce for free. Any reference — regardless of that
+    // related record's own status — blocks the soft delete, exactly like
+    // before.
+    public function hasRelatedRecords($id) {
+        $stmt = $this->db->prepare("
+            SELECT
+                (SELECT COUNT(*) FROM burial_schedules WHERE deceased_id = ?) +
+                (SELECT COUNT(*) FROM cremation_records WHERE deceased_id = ?) +
+                (SELECT COUNT(*) FROM relocation_requests WHERE deceased_id = ?) AS total
+        ");
+        $stmt->execute([(int) $id, (int) $id, (int) $id]);
+        return (int) ($stmt->fetch()['total'] ?? 0) > 0;
+    }
+
     public function getStats() {
-        $stmt = $this->db->query(" 
+        $stmt = $this->db->query("
             SELECT
                 COUNT(*) AS total,
                 SUM(CASE WHEN is_cremated = 'no' THEN 1 ELSE 0 END) AS burials,
                 SUM(CASE WHEN is_cremated = 'yes' THEN 1 ELSE 0 END) AS cremations,
                 ROUND(AVG(TIMESTAMPDIFF(YEAR, dob, dod))) AS avg_age
             FROM decedent_records
+            WHERE deleted_at IS NULL
         ");
         return $stmt->fetch();
     }

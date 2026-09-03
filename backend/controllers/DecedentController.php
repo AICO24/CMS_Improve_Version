@@ -16,18 +16,6 @@ class DecedentController {
         $this->auditLogModel = new AuditLog();
     }
 
-    // Batch D (reservation module audit): decedent_records.decedent_id is
-    // FK-referenced (RESTRICT, no ON DELETE clause) by burial_schedules,
-    // cremation_records and relocation_requests — deleting a decedent still
-    // tied to any of those previously threw a raw, uncaught PDOException
-    // (surfacing as a generic 500 via backend/index.php's catch-all) instead
-    // of a friendly, actionable error. Mirrors LotController's own
-    // isForeignKeyViolation()/try-catch convention for the exact same MySQL
-    // 1451 "foreign key constraint fails" error.
-    private static function isForeignKeyViolation(PDOException $e) {
-        return ($e->errorInfo[1] ?? null) === 1451;
-    }
-
     private static function actorId($actor) {
         return is_array($actor) ? ($actor['user_id'] ?? null) : $actor;
     }
@@ -101,12 +89,25 @@ class DecedentController {
         return $this->isFullAccessRole($user) ? $decedent : $this->redactDecedent($decedent);
     }
 
+    // Batch A (data-integrity foundation): both callers below require the
+    // same 5 fields and the same dob/dod ordering — shared so the two
+    // checks can never drift apart.
+    private function validateDates($data) {
+        if (strtotime($data['dod']) < strtotime($data['dob'])) {
+            return "Field 'dod' cannot be before 'dob'";
+        }
+        return null;
+    }
+
     public function store($data, $actor = null) {
         $required = ['lot_id', 'first_name', 'last_name', 'dob', 'dod'];
         foreach ($required as $field) {
             if (empty($data[$field])) {
                 return ['error' => "Field '$field' is required", 'code' => 400];
             }
+        }
+        if ($dateError = $this->validateDates($data)) {
+            return ['error' => $dateError, 'code' => 400];
         }
 
         $data['is_cremated'] = isset($data['is_cremated']) && $data['is_cremated'] === 'yes' ? 'yes' : 'no';
@@ -137,6 +138,9 @@ class DecedentController {
             if (empty($data[$field])) {
                 return ['error' => "Field '$field' is required", 'code' => 400];
             }
+        }
+        if ($dateError = $this->validateDates($data)) {
+            return ['error' => $dateError, 'code' => 400];
         }
 
         $data['is_cremated'] = isset($data['is_cremated']) && $data['is_cremated'] === 'yes' ? 'yes' : 'no';
@@ -171,14 +175,15 @@ class DecedentController {
             return ['error' => 'Decedent record not found', 'code' => 404];
         }
 
-        try {
-            $result = $this->decedentModel->delete($id);
-        } catch (PDOException $e) {
-            if (self::isForeignKeyViolation($e)) {
-                return ['error' => 'Cannot delete this decedent record: it still has related burial, cremation, or relocation records', 'code' => 409];
-            }
-            throw $e;
+        // Batch A: delete() is now a soft delete (sets deleted_at), which
+        // never trips MySQL's own FK check the way the previous real DELETE
+        // did — this has to be checked explicitly now instead of catching
+        // error 1451.
+        if ($this->decedentModel->hasRelatedRecords($id)) {
+            return ['error' => 'Cannot delete this decedent record: it still has related burial, cremation, or relocation records', 'code' => 409];
         }
+
+        $result = $this->decedentModel->delete($id);
         if ($result) {
             $this->auditLogModel->log(
                 'Decedent record deleted',
