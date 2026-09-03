@@ -181,6 +181,7 @@ const PAGE_ROLE_ACCESS = {
     'burial-scheduling.html': ['admin', 'staff'],
     'manage-reservations.html': ['admin', 'staff'],
     'cremation-management.html': ['admin'],
+    'manage-cremations.html': ['admin', 'staff'],
     'relocation-management.html': ['admin'],
     'expiration-monitoring.html': ['admin'],
     'decedent-records.html': ['admin', 'staff'],
@@ -288,6 +289,7 @@ const ROLE_SIDEBAR_LINKS = {
         { group: 'Records', items: [
             ['decedent-records.html', 'fa-folder-open', 'Decedent Records'],
             ['cremation-management.html', 'fa-fire', 'Cremation Management'],
+            ['manage-cremations.html', 'fa-calendar-check', 'Manage Cremations'],
             ['relocation-management.html', 'fa-truck-moving', 'Relocation Management'],
             ['expiration-monitoring.html', 'fa-hourglass-half', 'Expiration Monitoring'],
         ] },
@@ -322,8 +324,15 @@ const ROLE_SIDEBAR_LINKS = {
         // requireRole(['admin', 'staff'])). Only this one Records-group page
         // is added here; Cremation/Relocation/Expiration Monitoring stay
         // admin-only and out of this module's scope.
+        // "Phase D": manage-cremations.html (the records-list view over
+        // citizen cremation bookings) is deliberately staff-accessible even
+        // though cremation-management.html (the admin-direct niche-grid
+        // page) above stays out of scope for staff — this is a new page,
+        // not a widening of the niche-grid page's access, mirroring
+        // Manage Reservations' own staff access to Burial Scheduling.
         { group: 'Records', items: [
             ['decedent-records.html', 'fa-folder-open', 'Decedent Records'],
+            ['manage-cremations.html', 'fa-calendar-check', 'Manage Cremations'],
         ] },
         { group: 'Finance', items: [
             ['payments.html', 'fa-credit-card', 'Payments'],

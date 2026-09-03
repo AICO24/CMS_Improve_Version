@@ -2,12 +2,19 @@
 require_once __DIR__ . '/../models/Cremation.php';
 require_once __DIR__ . '/../models/Decedent.php';
 require_once __DIR__ . '/../models/DecedentRequest.php';
+require_once __DIR__ . '/../models/Payment.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/CapacityAlert.php';
 require_once __DIR__ . '/../services/AutomationEngine.php';
 require_once __DIR__ . '/../config/database.php';
+// "Phase D" F.1 parity: PaymentController.php already requires THIS file
+// (CremationController.php) at its own top — this is the reverse direction
+// of the exact same circular require_once pattern already proven safe in
+// this codebase for ScheduleController.php <-> PaymentController.php
+// (empirically tested both load orders before relying on it there).
+require_once __DIR__ . '/PaymentController.php';
 
 class CremationController {
     private $cremationModel;
@@ -304,6 +311,59 @@ class CremationController {
         ];
     }
 
+    // "Phase D" F.1 parity: mirrors ScheduleController::
+    // ensurePaymentForDirectCompletion() exactly. Skipped entirely (no-op)
+    // when a Verified Cremation payment already exists for this record —
+    // covers recovering from a stuck payment.verified exception without
+    // double-billing. Otherwise requires payment_amount + payment_method and
+    // creates a real Payment row through PaymentController's own
+    // store()/verify() (not a parallel bypass implementation), which flows
+    // through the exact same autoConfirmCremationForVerifiedPayment()/
+    // autoUpdateCremationForVerifiedPayment() automation a normal online
+    // payment would.
+    private function ensurePaymentForDirectCompletionForCremation($id, $existing, $data, $userId) {
+        $paymentModel = new Payment();
+        $existingVerifiedPayments = $paymentModel->findAll([
+            'reference_id' => $id,
+            'transaction_type' => 'Cremation',
+            'verification_status' => 'Verified',
+        ]);
+        if (!empty($existingVerifiedPayments)) {
+            return ['ok' => true];
+        }
+
+        $amount = $data['payment_amount'] ?? null;
+        $method = trim((string) ($data['payment_method'] ?? ''));
+        if ($amount === null || $amount === '' || !is_numeric($amount) || (float) $amount <= 0) {
+            return ['error' => 'This cremation request has no payment on file. To complete it directly, provide the cash/offline payment amount received (payment_amount).', 'code' => 422];
+        }
+        if ($method === '') {
+            return ['error' => 'This cremation request has no payment on file. To complete it directly, provide the payment method used (payment_method), e.g. Cash.', 'code' => 422];
+        }
+
+        $paymentController = new PaymentController();
+        $paymentData = [
+            'transaction_type' => 'Cremation',
+            'reference_id' => $id,
+            'amount' => $amount,
+            'payment_date' => $data['payment_date'] ?? date('Y-m-d'),
+            'payment_method' => $method,
+            'receipt_number' => $data['receipt_number'] ?? '',
+            'notes' => 'Recorded automatically: offline/cash payment for direct completion of a Pending cremation request.',
+        ];
+        $storeResult = $paymentController->store($paymentData, $userId);
+        if (empty($storeResult['success'])) {
+            return ['error' => $storeResult['error'] ?? 'Failed to record the payment for this cremation request.', 'code' => $storeResult['code'] ?? 500];
+        }
+
+        $verifyResult = $paymentController->verify($storeResult['payment_id'], 'Verified', $userId);
+        if (empty($verifyResult['success'])) {
+            return ['error' => $verifyResult['error'] ?? 'Payment recorded but could not be verified.', 'code' => $verifyResult['code'] ?? 500];
+        }
+
+        return ['ok' => true];
+    }
+
     // Cremation Phase B: the new third call site for autoAssignNiche() —
     // staff (or the automated payment-verified path, indirectly) marks a
     // Pending/Scheduled cremation Completed with no niche_number supplied
@@ -385,6 +445,23 @@ class CremationController {
         if (!empty($data['niche_number']) && $data['niche_number'] != $existing['niche_number']) {
             if (!$this->cremationModel->isNicheAvailable($data['niche_number'])) {
                 return ['error' => 'This niche is already occupied', 'code' => 409];
+            }
+        }
+
+        // "Phase D" F.1 parity (confirmed 2026-09-03): mirrors
+        // ScheduleController::update()'s identical guard exactly — staff
+        // genuinely need to mark a Pending cremation Completed directly when
+        // it was paid in cash/offline, but doing so silently skipped BOTH
+        // accountability and revenue reporting (no Payment row). Only
+        // applies to the true bypass case (still Pending, i.e. never even
+        // reached Scheduled/payment-verified) — a Scheduled row completing
+        // normally needs no payment prompt, it's already paid. See
+        // ensurePaymentForDirectCompletionForCremation() below.
+        if (isset($data['status']) && $data['status'] === 'Completed'
+            && $existing['status'] !== 'Scheduled' && $existing['status'] !== 'Completed') {
+            $paymentCheck = $this->ensurePaymentForDirectCompletionForCremation($id, $existing, $data, $userId);
+            if (isset($paymentCheck['error'])) {
+                return $paymentCheck;
             }
         }
 

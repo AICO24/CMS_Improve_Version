@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expiration Monitoring | Cemetery Management</title>
+    <title>Manage Cremations | Cemetery Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -19,9 +19,10 @@
     <link rel="stylesheet" href="../../assets/css/components/forms.css">
     <link rel="stylesheet" href="../../assets/css/components/tables.css?v=2">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
+    <link rel="stylesheet" href="../../assets/css/components/toast.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/expiration-monitoring.css">
     <link rel="stylesheet" href="../../assets/css/components/search-input.css">
+    <link rel="stylesheet" href="../../assets/css/manage-reservations.css">
     <link rel="stylesheet" href="../../assets/css/shared/ai-assistant-widget.css">
 
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
@@ -30,6 +31,7 @@
 <body class="dashboard-body">
 <script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
     <div class="dashboard-container">
+
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
@@ -50,9 +52,9 @@
                     <div class="nav-group-body">
                     <a href="decedent-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>Decedent Records</span></a>
                     <a href="cremation-management.html" class="nav-item"><i class="fas fa-fire icon"></i> <span>Cremation Management</span></a>
-                    <a href="manage-cremations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Cremations</span></a>
+                    <a href="manage-cremations.html" class="nav-item active"><i class="fas fa-calendar-check icon"></i> <span>Manage Cremations</span></a>
                     <a href="relocation-management.html" class="nav-item"><i class="fas fa-truck-moving icon"></i> <span>Relocation Management</span></a>
-                    <a href="expiration-monitoring.html" class="nav-item active"><i class="fas fa-hourglass-half icon"></i> <span>Expiration Monitoring</span></a>
+                    <a href="expiration-monitoring.html" class="nav-item"><i class="fas fa-hourglass-half icon"></i> <span>Expiration Monitoring</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -103,7 +105,7 @@
                             <path class="line" d="M7 16H27"></path>
                         </svg>
                     </label>
-                    <h3 id="pageTitle">Expiration Monitoring</h3>
+                    <h3 id="pageTitle">Manage Cremations</h3>
                     <div id="aiAssistantMount"></div>
                 </div>
                 <div class="user-info">
@@ -126,112 +128,140 @@
                 </div>
             </div>
                 <div class="content-area">
-                <div class="stats-row expmon-stats">
-                    <div class="stat-card"><div class="stat-title">Expiring Soon</div><div class="stat-value" id="expiringSoonCount">0</div><div class="stat-sub">Next 30 days</div></div>
-                    <div class="stat-card"><div class="stat-title">Expired Lots</div><div class="stat-value" id="expiredCount">0</div><div class="stat-sub">Past due</div></div>
-                    <div class="stat-card"><div class="stat-title">Renewals Due</div><div class="stat-value" id="renewalsDueCount">0</div><div class="stat-sub">Pending renewals</div></div>
-                    <div class="stat-card"><div class="stat-title">Exhumations</div><div class="stat-value" id="exhumationCount">0</div><div class="stat-sub">Scheduled/required</div></div>
-                </div>
-
-                <div class="control-row">
-                    <div class="toolbar-action-row">
-                        <div class="toolbar-section-label">
-                            <i class="fas fa-filter"></i>
-                            <span>Filters</span>
+                <div class="card">
+                    <div class="toolbar-row">
+                        <div class="toolbar-action-row">
+                            <div class="toolbar-section-label">
+                                <i class="fas fa-filter"></i>
+                                <span>Filters</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="toolbar-main-row">
-                        <div class="search-field">
-                            <input id="expirationSearch" type="text" class="search-field__input" placeholder=" ">
-                            <label for="expirationSearch" class="search-field__label">Search lot, section or status</label>
-                            <span class="search-field__icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
-                            </span>
-                        </div>
-                        <label class="status-select-field" for="expirationStatusFilter">
-                            <span>Status</span>
-                            <select id="expirationStatusFilter" aria-label="Filter by status">
-                            <option value="all">All Statuses</option>
-                            <option value="expiring">Still Active</option>
-                            <option value="expired">Expired</option>
-                            <option value="renewal">Renewal Due</option>
-                            <option value="exhumation">Exhumation</option>
-                            </select>
-                        </label>
-                        <button id="refreshExpirationData" class="btn-primary">Refresh Data</button>
-                    </div>
-                </div>
-
-                <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
-                <div id="expirationStatusMessage" class="status-message"></div>
-
-                <div class="card card-grid">
-                    <div class="card-block">
-                        <h4>Upcoming Expirations</h4>
-                        <p class="muted">Monitor the lots with lease end dates approaching within 30 days.</p>
-                        <div class="table-scroll">
-                            <table class="data-table">
-                                <thead>
-                                    <tr><th>Lot #</th><th>Section</th><th>Lease End</th><th>Status</th><th>Action</th></tr>
-                                </thead>
-                                <tbody id="upcomingTableBody">
-                                    <tr><td colspan="5">Loading expiration records...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="card-block">
-                        <h4>Expired Lots</h4>
-                        <p class="muted">Review recently expired lots and take action.</p>
-                        <div class="table-scroll">
-                            <table class="data-table">
-                                <thead>
-                                    <tr><th>Lot #</th><th>Section</th><th>Lease End</th><th>Status</th><th>Notes</th></tr>
-                                </thead>
-                                <tbody id="expiredTableBody">
-                                    <tr><td colspan="5">Loading expired lots...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="pagination-controls" id="expiredPaginationControls">
-                            <span class="pagination-info" id="expiredPaginationInfo"></span>
-                            <div class="pagination-actions">
-                                <form class="pagination-jump" id="expiredPaginationJumpForm">
-                                    <label for="expiredPageJumpInput">Jump to page</label>
-                                    <input type="number" id="expiredPageJumpInput" min="1" step="1" placeholder="Enter page number">
-                                    <button class="btn-secondary" id="expiredPageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
-                                </form>
-                                <span class="pagination-divider" aria-hidden="true"></span>
-                                <button class="btn-secondary" id="expiredPrevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
-                                <button class="btn-secondary" id="expiredNextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
+                        <div class="toolbar-main-row">
+                            <div class="toolbar-filters">
+                                <div class="search-field">
+                                    <input type="text" id="searchQuery" class="search-field__input" placeholder=" ">
+                                    <label for="searchQuery" class="search-field__label">Search by niche or decedent</label>
+                                    <span class="search-field__icon" aria-hidden="true">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
+                                    </span>
+                                </div>
+                                <label class="status-select-field" for="statusFilter">
+                                    <span>Status</span>
+                                    <select id="statusFilter" aria-label="Filter by status">
+                                    <option value="">All statuses</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Scheduled">Scheduled</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div class="toolbar-actions-panel">
+                                <div class="toolbar-actions">
+                                    <a class="btn-secondary btn-action-pill" href="exceptions.html">
+                                        <i class="fas fa-triangle-exclamation"></i> Exceptions
+                                    </a>
+                                    <button class="btn-secondary btn-action-pill" id="clearFilters">Clear</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="card activity-row">
-                    <div class="activity-block">
-                        <h4>Renewal Alerts</h4>
-                        <p>Lots approaching renewal are listed in the Upcoming Expirations table above.</p>
+                    <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
+
+                    <div class="table-container">
+                        <table class="data-table" id="cremationsTable">
+                            <thead>
+                                <tr>
+                                    <th>Request</th>
+                                    <th>Decedent</th>
+                                    <th>Columbarium</th>
+                                    <th>Niche</th>
+                                    <th>Cremation Date</th>
+                                    <th>Requested By</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cremationsBody">
+                                <tr><td colspan="8">Loading cremation requests...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="activity-block">
-                        <h4>Exhumation Schedule</h4>
-                        <p>Check Relocation Management for scheduled exhumations.</p>
-                    </div>
-                    <div class="activity-block">
-                        <h4>Owner Notifications</h4>
-                        <p>Send reminders and review returned delivery statuses.</p>
+
+                    <div class="pagination-controls" id="paginationControls">
+                        <span class="pagination-info" id="paginationInfo"></span>
+                        <div class="pagination-actions">
+                            <form class="pagination-jump" id="paginationJumpForm">
+                                <label for="pageJumpInput">Jump to page</label>
+                                <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Enter page number">
+                                <button class="btn-secondary" id="pageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
+                            </form>
+                            <span class="pagination-divider" aria-hidden="true"></span>
+                            <button class="btn-secondary" id="prevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
+                            <button class="btn-secondary" id="nextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
+                        </div>
                     </div>
                 </div>
             </div>
         </main>
     </div>
 
+    <div class="modal" id="cremationDetailModal">
+        <div class="modal-content modal--md">
+            <button type="button" class="close-view" id="closeDetailModal" aria-label="Close">&times;</button>
+            <div class="modal-header">Cremation Request Details</div>
+            <div class="modal-body" id="cremationDetailBody">
+                <p>Loading...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="closeDetailModalBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="cashPaymentModal">
+        <div class="modal-content modal--sm">
+            <button type="button" class="close-view" id="closeCashModal" aria-label="Close">&times;</button>
+            <div class="modal-header">Record Cash / Offline Payment</div>
+            <form id="cashPaymentForm">
+                <div class="modal-body">
+                    <input type="hidden" id="cashPaymentCremationId">
+                    <div class="form-group">
+                        <label for="cashPaymentAmount">Amount received (&#8369;)</label>
+                        <input type="number" id="cashPaymentAmount" min="0.01" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cashPaymentMethod">Payment method</label>
+                        <select id="cashPaymentMethod">
+                            <option value="Cash">Cash</option>
+                            <option value="Check">Check</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cashPaymentReceipt">Receipt number <span class="muted">(optional — leave blank to auto-generate)</span></label>
+                        <input type="text" id="cashPaymentReceipt" placeholder="Leave blank to auto-generate">
+                    </div>
+                    <p class="help">Marks the cremation Completed, auto-assigns a niche, and creates a Verified payment record so it appears in Revenue Reports.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancelCashModal">Cancel</button>
+                    <button type="submit" class="btn-primary" id="submitCashPayment">Confirm Payment &amp; Complete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/shared/button-loading.js"></script>
     <script src="../../assets/js/shared/pagination.js"></script>
+    <script src="../../assets/js/shared/toast.js"></script>
+    <script src="../../assets/js/shared/confirm-modal.js"></script>
+    <script src="../../assets/js/shared/reservation-ui.js"></script>
     <script src="../../assets/js/shared/ai-assistant-widget.js"></script>
-    <script src="../../assets/js/pages/expiration-monitoring.js"></script>
+    <script src="../../assets/js/pages/manage-cremations.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
 </body>
