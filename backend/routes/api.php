@@ -3,6 +3,7 @@ require_once __DIR__ . '/../controllers/AuthController.php';
 require_once __DIR__ . '/../controllers/LotController.php';
 require_once __DIR__ . '/../controllers/DecedentController.php';
 require_once __DIR__ . '/../controllers/DecedentRequestController.php';
+require_once __DIR__ . '/../controllers/DecedentImportController.php';
 require_once __DIR__ . '/../controllers/ScheduleController.php';
 require_once __DIR__ . '/../controllers/CremationController.php';
 require_once __DIR__ . '/../controllers/RelocationController.php';
@@ -160,6 +161,7 @@ if ($path === 'auth/me' && $requestMethod === 'GET') {
 $lotController = new LotController();
 $decedentController = new DecedentController();
 $decedentRequestController = new DecedentRequestController();
+$decedentImportController = new DecedentImportController();
 $scheduleController = new ScheduleController();
 $aiController = new AiController();
 
@@ -1407,6 +1409,33 @@ if (preg_match('/^decedent-requests\/(\d+)\/reject$/', $path, $matches) && $requ
 if (preg_match('/^decedent-requests\/(\d+)\/acknowledge$/', $path, $matches) && $requestMethod === 'PUT') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $result = $decedentRequestController->acknowledge($matches[1], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+// Decedent Records module audit, Batch J: bulk CSV import for digitizing
+// historical/paper records. Two steps — preview never writes anything
+// (see DecedentImportController::preview()'s own comment), confirm commits
+// only the rows staff kept checked, each through the same
+// DecedentController::store() every other create path uses.
+if ($path === 'decedents/import/preview' && $requestMethod === 'POST') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $file = $input['files']['csv_file'] ?? null;
+    $result = $decedentImportController->preview($file);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if ($path === 'decedents/import/confirm' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $rows = is_array($input['rows'] ?? null) ? $input['rows'] : [];
+    $result = $decedentImportController->confirmImport($rows, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);

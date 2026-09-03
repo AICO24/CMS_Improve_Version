@@ -179,6 +179,10 @@
                             Add New Record
                         </span>
                     </button>
+                    <button class="btn-secondary" id="openImportModal" type="button">
+                        <i class="fas fa-file-csv"></i>
+                        Import CSV
+                    </button>
                 </div>
 
                 <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
@@ -293,6 +297,49 @@
                     <i class="fas fa-pen"></i>
                 </span>
             </button>
+        </div>
+    </div>
+
+    <!-- Import Modal (Batch J: bulk CSV import for historical records) -->
+    <div id="importModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
+        <div class="modal-content modal--lg">
+            <button type="button" class="close-import" aria-label="Close">&times;</button>
+            <h3 id="importModalTitle">Import Decedent Records from CSV</h3>
+
+            <div class="import-step">
+                <p class="import-help">
+                    Required columns: <code>first_name, last_name, dob, dod, lot_number, section_name</code>
+                    (dates as YYYY-MM-DD). Optional: <code>middle_name, suffix, cause_of_death, contact_name, contact_number, is_cremated, ash_storage</code>.
+                    <a href="#" id="downloadImportTemplate">Download a template</a>.
+                </p>
+                <div class="import-upload-row">
+                    <input type="file" id="importFileInput" accept=".csv,text/csv">
+                    <button type="button" class="btn-secondary" id="previewImportBtn">Preview</button>
+                </div>
+            </div>
+
+            <div id="importPreviewSection" class="import-preview-section" hidden>
+                <div class="import-summary" id="importSummary"></div>
+                <div class="table-container import-preview-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Row</th>
+                                <th>Name</th>
+                                <th>DOB — DOD</th>
+                                <th>Lot</th>
+                                <th>Status / Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="importPreviewBody"></tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn-save bookmarkBtn" id="confirmImportBtn">
+                    <span class="IconContainer"><i class="fas fa-upload icon"></i></span>
+                    <span class="text">Import Selected Rows</span>
+                </button>
+            </div>
         </div>
     </div>
 

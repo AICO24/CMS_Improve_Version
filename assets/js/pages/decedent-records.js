@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const tableBody = document.getElementById('tableBody');
     const recordModal = document.getElementById('recordModal');
     const viewModal = document.getElementById('viewModal');
+    const importModal = document.getElementById('importModal');
     const recordForm = document.getElementById('recordForm');
     const ashStorageGroup = document.getElementById('ashStorageGroup');
     const modalTitle = document.getElementById('modalTitle');
@@ -145,12 +146,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         recordModal.style.display = 'none';
     });
     document.querySelector('.close-view').addEventListener('click', () => viewModal.style.display = 'none');
+    document.getElementById('openImportModal').addEventListener('click', () => openImportModal());
+    document.querySelector('.close-import').addEventListener('click', () => { importModal.style.display = 'none'; });
     window.addEventListener('click', (e) => {
         if (e.target === recordModal) {
             approvingRequestId = null;
             recordModal.style.display = 'none';
         }
         if (e.target === viewModal) viewModal.style.display = 'none';
+        if (e.target === importModal) importModal.style.display = 'none';
     });
     const refreshFiltered = debounce(() => {
         currentQuery = searchInput.value.trim();
@@ -706,6 +710,148 @@ document.addEventListener('DOMContentLoaded', async function() {
             showToast(error.message || 'Could not delete record.', { type: 'error' });
         }
     }
+
+    // ---------- Batch J: bulk CSV import ----------
+    // importPreviewRows holds the server's per-row evaluation (status/
+    // errors/warnings/parsed data) between Preview and Confirm — the file
+    // itself is never re-uploaded or stored server-side; only this parsed,
+    // annotated JSON travels to the confirm step.
+    let importPreviewRows = [];
+
+    const importFileInput = document.getElementById('importFileInput');
+    const previewImportBtn = document.getElementById('previewImportBtn');
+    const importPreviewSection = document.getElementById('importPreviewSection');
+    const importSummaryEl = document.getElementById('importSummary');
+    const importPreviewBody = document.getElementById('importPreviewBody');
+    const confirmImportBtn = document.getElementById('confirmImportBtn');
+
+    function openImportModal() {
+        importFileInput.value = '';
+        importPreviewRows = [];
+        importPreviewSection.hidden = true;
+        importPreviewBody.innerHTML = '';
+        importModal.style.display = 'flex';
+    }
+
+    document.getElementById('downloadImportTemplate').addEventListener('click', (event) => {
+        event.preventDefault();
+        const header = 'first_name,last_name,middle_name,suffix,dob,dod,lot_number,section_name,cause_of_death,contact_name,contact_number,is_cremated,ash_storage';
+        const sample = 'Juan,Dela Cruz,,,1950-01-01,2020-03-15,A1-01,Section A,Natural causes,Maria Dela Cruz,09171234567,no,';
+        const blob = new Blob([`${header}\n${sample}\n`], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'decedent_import_template.csv';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    });
+
+    const STATUS_LABELS = {
+        ready: 'Ready',
+        needs_review: 'Needs Review',
+        rejected: 'Rejected',
+    };
+    const STATUS_BADGE_CLASS = {
+        ready: 'status-success',
+        needs_review: 'status-warning',
+        rejected: 'status-danger',
+    };
+
+    function renderImportPreview(preview) {
+        importPreviewRows = Array.isArray(preview.rows) ? preview.rows : [];
+        const summary = preview.summary || {};
+        importSummaryEl.innerHTML = `
+            <strong>${summary.total || 0}</strong> row(s) —
+            <span class="status-badge status-success">${summary.ready || 0} ready</span>
+            <span class="status-badge status-warning">${summary.needs_review || 0} need review</span>
+            <span class="status-badge status-danger">${summary.rejected || 0} rejected</span>
+        `;
+
+        importPreviewBody.innerHTML = importPreviewRows.map((row, index) => {
+            const checked = row.status === 'ready' ? 'checked' : '';
+            const disabled = row.status === 'rejected' ? 'disabled' : '';
+            const notes = [...(row.errors || []), ...(row.warnings || [])].join('; ') || '—';
+            return `
+                <tr data-index="${index}">
+                    <td><input type="checkbox" class="import-row-check" ${checked} ${disabled}></td>
+                    <td>${row.row_number}</td>
+                    <td>${escapeHtml(`${row.data.first_name} ${row.data.last_name}`)}</td>
+                    <td>${escapeHtml(row.data.dob)} — ${escapeHtml(row.data.dod)}</td>
+                    <td>${escapeHtml(row.lot_number)} (${escapeHtml(row.section_name)})</td>
+                    <td><span class="status-badge ${STATUS_BADGE_CLASS[row.status]}">${STATUS_LABELS[row.status]}</span> <span class="import-row-notes">${escapeHtml(notes)}</span></td>
+                </tr>
+            `;
+        }).join('');
+
+        importPreviewSection.hidden = false;
+    }
+
+    previewImportBtn.addEventListener('click', async () => {
+        const file = importFileInput.files[0];
+        if (!file) {
+            showToast('Please choose a CSV file first.', { type: 'error' });
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('csv_file', file);
+
+        await withButtonLoading(previewImportBtn, async () => {
+            try {
+                const preview = await api.request('decedents/import/preview', { method: 'POST', body: formData });
+                renderImportPreview(preview);
+            } catch (error) {
+                showToast(error.message || 'Could not preview this file.', { type: 'error' });
+            }
+        });
+    });
+
+    confirmImportBtn.addEventListener('click', async () => {
+        const checkedRows = [];
+        importPreviewBody.querySelectorAll('tr').forEach((tr) => {
+            const checkbox = tr.querySelector('.import-row-check');
+            if (!checkbox || !checkbox.checked) return;
+            const index = parseInt(tr.dataset.index, 10);
+            const row = importPreviewRows[index];
+            if (!row) return;
+            // A row still checked despite a near-duplicate warning is staff
+            // explicitly choosing to keep it — same confirm_duplicate
+            // contract the single-record Add form already uses (Batch B).
+            checkedRows.push({
+                row_number: row.row_number,
+                data: row.data,
+                confirm_duplicate: row.status === 'needs_review',
+            });
+        });
+
+        if (checkedRows.length === 0) {
+            showToast('No rows selected to import.', { type: 'error' });
+            return;
+        }
+
+        await withButtonLoading(confirmImportBtn, async () => {
+            try {
+                const result = await api.request('decedents/import/confirm', {
+                    method: 'POST',
+                    body: { rows: checkedRows },
+                });
+                const failedCount = (result.failed || []).length;
+                if (failedCount > 0) {
+                    const detail = result.failed.map((f) => `Row ${f.row_number}: ${f.error}`).join('; ');
+                    showToast(`Imported ${result.imported}, ${failedCount} failed — ${detail}`, { type: failedCount === checkedRows.length ? 'error' : 'info', duration: 8000 });
+                } else {
+                    showToast(result.message || 'Import complete.', { type: 'success' });
+                }
+                importModal.style.display = 'none';
+                pagination.reset();
+                await refreshPage();
+            } catch (error) {
+                showToast(error.message || 'Could not complete the import.', { type: 'error' });
+            }
+        });
+    });
     // (escapeHtml is defined once, near the top of this file — this file
     // used to have a second, functionally-identical copy down here.)
 });
