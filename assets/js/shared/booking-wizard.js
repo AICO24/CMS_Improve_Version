@@ -659,6 +659,30 @@ function createBookingWizard(options) {
                         chatAssistant.appendMessage('assistant', `🎉 Success! Your reservation for Lot ${bookedLot.lot_number} is recorded. Complete payment and it'll confirm automatically — no separate approval step.`);
                         updateBlueprintHUD();
                         onBookingSuccess({ scheduleId, bookedLot });
+
+                        // Batch L2: the certificate/permit picked in
+                        // lot-chat-assistant.js's appendDecedentRequestForm()
+                        // (if any) couldn't be attached until this exact
+                        // moment — a decedent_requests row only exists once
+                        // this call actually returns. Never blocks the
+                        // booking success already shown above; a failure
+                        // here just means staff sees the request without an
+                        // attachment, same as if nothing had been selected.
+                        if (result.decedent_request_id && state.provisional_decedent_attachment_file) {
+                            const attachmentFormData = new FormData();
+                            attachmentFormData.append('attachment_file', state.provisional_decedent_attachment_file);
+                            try {
+                                await api.request(`decedent-requests/${result.decedent_request_id}/attachment`, {
+                                    method: 'POST',
+                                    body: attachmentFormData,
+                                });
+                                chatAssistant.appendMessage('assistant', 'Your uploaded document has been attached to this request.');
+                            } catch (attachmentError) {
+                                console.error('Booking succeeded but attaching the document failed', attachmentError);
+                                chatAssistant.appendMessage('assistant', "We couldn't attach your uploaded document, but your booking is still confirmed — just bring the original copy on the day of service.");
+                            }
+                            state.provisional_decedent_attachment_file = null;
+                        }
                     } else {
                         chatAssistant.appendMessage('assistant', result.error || 'Failed to create schedule.');
                     }

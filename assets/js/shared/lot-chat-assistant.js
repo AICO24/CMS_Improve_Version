@@ -686,11 +686,29 @@ function createLotChatAssistant(options) {
     // literal YYYY-MM-DD (python-ai already re-validates this isn't in the
     // future), and a missing/unparseable result just leaves the fields as
     // they were rather than guessing.
+    // Decedent Records module audit, Batch L2: lets a citizen attach their
+    // Death Certificate/Burial Permit right here during online booking,
+    // instead of that only being possible face-to-face when staff
+    // physically receives the document — the same reasoning that motivated
+    // Batches K/L1. Uploading here is convenience only: it (a) reads the
+    // document via the same ai/extract-certificate vision call the staff
+    // Add form uses, to pre-fill full_name/dod below, and (b) travels with
+    // the booking so staff has it on hand when reviewing the request — it
+    // is NOT a replacement for presenting the physical original on the day
+    // of service, which is a separate, unchanged requirement. The file
+    // itself can't be attached yet at this point in the flow (no
+    // decedent_requests row exists until the whole booking is submitted —
+    // see booking-wizard.js's submitBooking()), so it's held here in
+    // state.provisional_decedent_attachment_file and uploaded as a
+    // follow-up call once that row's id comes back.
     function appendDecedentRequestForm() {
         const bubble = appendRichMessage(`
             <div class="chat-decedent-request">
                 <label>Not in our records yet — book anyway:</label>
-                <textarea class="chat-request-freetext" placeholder="Optional: describe them in your own words, e.g. &quot;my father Juan dela Cruz, passed away last March 3, 2020&quot;" rows="2"></textarea>
+                <input type="file" class="chat-request-certfile" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
+                <button type="button" class="chat-request-extract-btn chat-request-cert-extract-btn">Extract from Certificate</button>
+                <p class="chat-request-cert-hint">Optional — speeds up processing. You'll still need to bring the original on the day of service.</p>
+                <textarea class="chat-request-freetext" placeholder="Or describe them in your own words, e.g. &quot;my father Juan dela Cruz, passed away last March 3, 2020&quot;" rows="2"></textarea>
                 <button type="button" class="chat-request-extract-btn">Fill in from description</button>
                 <input type="text" class="chat-request-name" placeholder="Full name">
                 <input type="date" class="chat-request-dod" max="${new Date().toISOString().split('T')[0]}">
@@ -698,12 +716,62 @@ function createLotChatAssistant(options) {
                 <button type="button" class="btn-secondary chat-request-btn">Continue booking</button>
             </div>
         `);
+        const certFileInput = bubble.querySelector('.chat-request-certfile');
+        const certExtractBtn = bubble.querySelector('.chat-request-cert-extract-btn');
         const freetextInput = bubble.querySelector('.chat-request-freetext');
         const extractBtn = bubble.querySelector('.chat-request-extract-btn');
         const nameInput = bubble.querySelector('.chat-request-name');
         const dodInput = bubble.querySelector('.chat-request-dod');
         const relationshipInput = bubble.querySelector('.chat-request-relationship');
         const btn = bubble.querySelector('.chat-request-btn');
+
+        function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const commaIndex = reader.result.indexOf(',');
+                    resolve(commaIndex >= 0 ? reader.result.slice(commaIndex + 1) : reader.result);
+                };
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        certExtractBtn.addEventListener('click', async () => {
+            const file = certFileInput.files[0];
+            if (!file) return;
+
+            certExtractBtn.disabled = true;
+            const originalLabel = certExtractBtn.textContent;
+            certExtractBtn.textContent = 'Reading...';
+
+            try {
+                const imageBase64 = await readFileAsBase64(file);
+                const response = await api.request('ai/extract-certificate', {
+                    method: 'POST',
+                    body: { image_base64: imageBase64, mime_type: file.type },
+                });
+                const result = response && response.result;
+
+                if (result && (result.first_name || result.last_name)) {
+                    const fullName = [result.first_name, result.middle_name, result.last_name, result.suffix].filter(Boolean).join(' ');
+                    if (fullName) nameInput.value = fullName;
+                    if (result.dod) dodInput.value = result.dod;
+                } else {
+                    appendMessage('assistant', "I couldn't quite read that document — please fill in the fields below directly.");
+                }
+            } catch (error) {
+                if (isRateLimitError(error)) {
+                    noticeRateLimited();
+                } else {
+                    console.error('Certificate extraction failed', error);
+                    appendMessage('assistant', "I couldn't quite read that document — please fill in the fields below directly.");
+                }
+            } finally {
+                certExtractBtn.disabled = false;
+                certExtractBtn.textContent = originalLabel;
+            }
+        });
 
         extractBtn.addEventListener('click', async () => {
             const text = freetextInput.value.trim();
@@ -748,6 +816,12 @@ function createLotChatAssistant(options) {
                 approximate_dod: dodInput.value || null,
                 relationship: relationshipInput.value.trim() || null,
             };
+            // Batch L2: captured here (a plain in-memory reference, valid
+            // independent of the DOM node it came from) since certFileInput
+            // is about to be removed along with the rest of this bubble —
+            // booking-wizard.js's submitBooking() reads this once the
+            // booking succeeds and a decedent_request_id exists to attach it to.
+            state.provisional_decedent_attachment_file = certFileInput.files[0] || null;
             updateChips();
             bubble.remove();
             appendMessage('assistant', `Got it — I'll book this for ${fullName}. Our staff will add their official record before the burial takes place.`);

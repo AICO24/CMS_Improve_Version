@@ -661,6 +661,21 @@
     flex: 1 1 100%;
 }
 
+/* Batch L2 (Decedent Records audit): the certificate upload — same
+   full-row-of-its-own treatment as the free-text box above, plus a small
+   reassurance line clarifying this doesn't replace the physical original. */
+.chat-decedent-request input[type="file"] {
+    flex: 1 1 100%;
+    font-size: 0.8rem;
+}
+
+.chat-request-cert-hint {
+    flex: 1 1 100%;
+    margin: 0;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
 .chat-escape-btn,
 .chat-request-btn {
     height: 38px;
