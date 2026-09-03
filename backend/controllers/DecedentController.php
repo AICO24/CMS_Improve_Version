@@ -149,12 +149,29 @@ class DecedentController {
         return null;
     }
 
-    public function store($data, $actor = null) {
-        $required = ['lot_id', 'first_name', 'last_name', 'dob', 'dod'];
-        foreach ($required as $field) {
+    // Cremation Phase A: shared by store()/update() so the required-field
+    // list (and the cremation-only lot_id exception) can't drift apart
+    // between the two. lot_id is only required for a decedent who actually
+    // has a burial lot — a cremation-only record (is_cremated === 'yes')
+    // legitimately has none; forcing one meant staff had to consume a real,
+    // otherwise-unused burial lot just to register a purely-cremated person.
+    // See migration_20260903_make_decedent_lot_optional.sql.
+    private function requiredFieldsError($data) {
+        foreach (['first_name', 'last_name', 'dob', 'dod'] as $field) {
             if (empty($data[$field])) {
-                return ['error' => "Field '$field' is required", 'code' => 400];
+                return "Field '$field' is required";
             }
+        }
+        $isCremationOnly = isset($data['is_cremated']) && $data['is_cremated'] === 'yes';
+        if (!$isCremationOnly && empty($data['lot_id'])) {
+            return "Field 'lot_id' is required";
+        }
+        return null;
+    }
+
+    public function store($data, $actor = null) {
+        if ($fieldError = $this->requiredFieldsError($data)) {
+            return ['error' => $fieldError, 'code' => 400];
         }
         if ($dateError = $this->validateDates($data)) {
             return ['error' => $dateError, 'code' => 400];
@@ -167,7 +184,7 @@ class DecedentController {
 
         $result = $this->decedentModel->create($data);
         if ($result) {
-            $auditDetails = ['lot_id' => (int) $data['lot_id'], 'first_name' => $data['first_name'], 'last_name' => $data['last_name']];
+            $auditDetails = ['lot_id' => !empty($data['lot_id']) ? (int) $data['lot_id'] : null, 'first_name' => $data['first_name'], 'last_name' => $data['last_name']];
             if (!empty($data['confirm_duplicate'])) {
                 $auditDetails['duplicate_warning_overridden'] = true;
             }
@@ -188,9 +205,14 @@ class DecedentController {
             // (see Schedule::findUnlinkedByLot()'s own comment). Never links
             // automatically; the frontend must send an explicit follow-up
             // PUT schedules/{id}/link-decedent to act on this.
-            $unlinkedSchedules = $this->scheduleModel->findUnlinkedByLot($data['lot_id']);
-            if ($unlinkedSchedules) {
-                $response['suggested_schedules'] = $unlinkedSchedules;
+            // Cremation Phase A: nothing to suggest for a lot-less
+            // (cremation-only) record — findUnlinkedByLot() expects a real
+            // lot_id.
+            if (!empty($data['lot_id'])) {
+                $unlinkedSchedules = $this->scheduleModel->findUnlinkedByLot($data['lot_id']);
+                if ($unlinkedSchedules) {
+                    $response['suggested_schedules'] = $unlinkedSchedules;
+                }
             }
 
             return $response;
@@ -204,11 +226,8 @@ class DecedentController {
             return ['error' => 'Decedent record not found', 'code' => 404];
         }
 
-        $required = ['lot_id', 'first_name', 'last_name', 'dob', 'dod'];
-        foreach ($required as $field) {
-            if (empty($data[$field])) {
-                return ['error' => "Field '$field' is required", 'code' => 400];
-            }
+        if ($fieldError = $this->requiredFieldsError($data)) {
+            return ['error' => $fieldError, 'code' => 400];
         }
         if ($dateError = $this->validateDates($data)) {
             return ['error' => $dateError, 'code' => 400];

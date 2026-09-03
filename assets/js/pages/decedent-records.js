@@ -179,8 +179,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         await withButtonLoading(saveBtn, saveRecord);
     });
 
+    // Cremation Phase A: lot_id is only required for a decedent who
+    // actually has a burial lot — a cremation-only record legitimately has
+    // none (see migration_20260903_make_decedent_lot_optional.sql and
+    // DecedentController::requiredFieldsError()). Toggled alongside the
+    // existing ashStorageGroup show/hide, on the same isCremated change.
+    function updateLotRequirement(isCremated) {
+        lotSelect.required = isCremated !== 'yes';
+        lotSelect.previousElementSibling.textContent = isCremated === 'yes' ? 'Lot Number (optional)' : 'Lot Number';
+    }
+
     document.getElementById('isCremated').addEventListener('change', function() {
         ashStorageGroup.style.display = this.value === 'yes' ? 'block' : 'none';
+        updateLotRequirement(this.value);
     });
 
     lotSelect.addEventListener('change', function() {
@@ -429,6 +440,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             lotSelect.selectedIndex = 0;
             sectionInput.value = '';
         }
+        updateLotRequirement('no');
         resetCertificateUpload();
         recordModal.style.display = 'flex';
     }
@@ -461,6 +473,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         ashStorageGroup.style.display = record.is_cremated === 'yes' ? 'block' : 'none';
+        updateLotRequirement(record.is_cremated);
         resetCertificateUpload();
         recordModal.style.display = 'flex';
     }
@@ -757,14 +770,17 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     async function saveRecord() {
         const id = document.getElementById('recordId').value;
+        const isCremated = document.getElementById('isCremated').value;
         const lotId = parseInt(lotSelect.value, 10);
-        if (!lotId) {
+        // Cremation Phase A: lot is only required when NOT cremation-only —
+        // see updateLotRequirement() and DecedentController::requiredFieldsError().
+        if (!lotId && isCremated !== 'yes') {
             showToast('Please select a lot.', { type: 'error' });
             return;
         }
 
         const payload = {
-            lot_id: lotId,
+            lot_id: lotId || null,
             first_name: document.getElementById('firstName').value.trim(),
             last_name: document.getElementById('lastName').value.trim(),
             middle_name: document.getElementById('middleName').value.trim() || null,

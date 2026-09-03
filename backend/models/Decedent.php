@@ -55,13 +55,19 @@ class Decedent {
         }
     }
 
+    // Cremation Phase A: lot_id is now nullable (see
+    // migration_20260903_make_decedent_lot_optional.sql) — a cremation-only
+    // decedent has no lot at all. All three joins in this chain must be LEFT
+    // JOIN together, not just the first: if l is NULL, a plain INNER JOIN on
+    // l.block_id would never match anything and silently drop the row from
+    // the result entirely, which is exactly the bug this migration fixes.
     public function findAll($filters = [], $pagination = []) {
         $sql = "
             SELECT dr.*, l.lot_number, s.section_name
             FROM decedent_records dr
-            JOIN lots l ON dr.lot_id = l.lot_id
-            JOIN blocks b ON l.block_id = b.block_id
-            JOIN sections s ON b.section_id = s.section_id
+            LEFT JOIN lots l ON dr.lot_id = l.lot_id
+            LEFT JOIN blocks b ON l.block_id = b.block_id
+            LEFT JOIN sections s ON b.section_id = s.section_id
             WHERE dr.deleted_at IS NULL
         ";
         $params = [];
@@ -92,9 +98,9 @@ class Decedent {
         $sql = "
             SELECT COUNT(*) AS total
             FROM decedent_records dr
-            JOIN lots l ON dr.lot_id = l.lot_id
-            JOIN blocks b ON l.block_id = b.block_id
-            JOIN sections s ON b.section_id = s.section_id
+            LEFT JOIN lots l ON dr.lot_id = l.lot_id
+            LEFT JOIN blocks b ON l.block_id = b.block_id
+            LEFT JOIN sections s ON b.section_id = s.section_id
             WHERE dr.deleted_at IS NULL
         ";
         $params = [];
@@ -110,9 +116,9 @@ class Decedent {
         $stmt = $this->db->prepare("
             SELECT dr.*, l.lot_number, s.section_name
             FROM decedent_records dr
-            JOIN lots l ON dr.lot_id = l.lot_id
-            JOIN blocks b ON l.block_id = b.block_id
-            JOIN sections s ON b.section_id = s.section_id
+            LEFT JOIN lots l ON dr.lot_id = l.lot_id
+            LEFT JOIN blocks b ON l.block_id = b.block_id
+            LEFT JOIN sections s ON b.section_id = s.section_id
             WHERE dr.decedent_id = ? AND dr.deleted_at IS NULL
         ");
         $stmt->execute([(int) $id]);
@@ -188,7 +194,7 @@ class Decedent {
         ");
 
         $success = $stmt->execute([
-            (int) $data['lot_id'],
+            !empty($data['lot_id']) ? (int) $data['lot_id'] : null,
             $data['first_name'],
             $data['last_name'],
             $data['middle_name'] ?? null,
@@ -224,7 +230,7 @@ class Decedent {
         ");
 
         return $stmt->execute([
-            (int) $data['lot_id'],
+            !empty($data['lot_id']) ? (int) $data['lot_id'] : null,
             $data['first_name'],
             $data['last_name'],
             $data['middle_name'] ?? null,
