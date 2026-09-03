@@ -27,21 +27,31 @@ class Cremation {
             $params[] = (int) $filters['deceased_id'];
         }
         if (!empty($filters['q'])) {
-            $sql .= " AND (c.niche_number LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ?)";
+            $sql .= " AND (c.niche_number LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ? OR dr.full_name LIKE ?)";
             $search = '%' . $filters['q'] . '%';
+            $params[] = $search;
             $params[] = $search;
             $params[] = $search;
             $params[] = $search;
         }
     }
 
+    // Cremation Phase B: deceased_id is now nullable (see
+    // migration_20260903_add_cremation_provisional_booking.sql) — a citizen
+    // can book against a decedent_requests row instead of a formal
+    // decedent_records one. JOIN -> LEFT JOIN so those rows aren't silently
+    // excluded (the exact bug Decedent Phase A found and fixed for
+    // decedent_records.lot_id). provisional_name/provisional_status mirror
+    // Schedule::findAll()'s identical pattern for burial_schedules.
     public function findAll($filters = [], $pagination = []) {
         $sql = "
             SELECT c.*,
                    d.first_name, d.last_name,
+                   dr.full_name AS provisional_name, dr.status AS provisional_status,
                    u.full_name as created_by_name
             FROM cremation_records c
-            JOIN decedent_records d ON c.deceased_id = d.decedent_id
+            LEFT JOIN decedent_records d ON c.deceased_id = d.decedent_id
+            LEFT JOIN decedent_requests dr ON c.decedent_request_id = dr.request_id
             LEFT JOIN users u ON c.created_by = u.user_id
             WHERE 1=1
         ";
@@ -73,7 +83,8 @@ class Cremation {
         $sql = "
             SELECT COUNT(*) AS total
             FROM cremation_records c
-            JOIN decedent_records d ON c.deceased_id = d.decedent_id
+            LEFT JOIN decedent_records d ON c.deceased_id = d.decedent_id
+            LEFT JOIN decedent_requests dr ON c.decedent_request_id = dr.request_id
             LEFT JOIN users u ON c.created_by = u.user_id
             WHERE 1=1
         ";
@@ -87,17 +98,29 @@ class Cremation {
     }
 
     public function findById($id) {
-        $stmt = $this->db->prepare(" 
-            SELECT c.*, 
+        $stmt = $this->db->prepare("
+            SELECT c.*,
                    d.first_name, d.last_name,
+                   dr.full_name AS provisional_name, dr.status AS provisional_status,
                    u.full_name as created_by_name
             FROM cremation_records c
-            JOIN decedent_records d ON c.deceased_id = d.decedent_id
+            LEFT JOIN decedent_records d ON c.deceased_id = d.decedent_id
+            LEFT JOIN decedent_requests dr ON c.decedent_request_id = dr.request_id
             LEFT JOIN users u ON c.created_by = u.user_id
             WHERE c.cremation_id = ?
         ");
         $stmt->execute([(int) $id]);
         return $stmt->fetch();
+    }
+
+    // Batch (Cremation Phase B): lets DecedentRequestController::approve()
+    // find the cremation(s) (if any) created against this request's
+    // decedent_request_id, so the formal decedent record can be auto-linked
+    // — mirrors Schedule::findByDecedentRequestId() exactly.
+    public function findByDecedentRequestId($requestId) {
+        $stmt = $this->db->prepare("SELECT * FROM cremation_records WHERE decedent_request_id = ?");
+        $stmt->execute([(int) $requestId]);
+        return $stmt->fetchAll();
     }
 
     public function findNiche($nicheNumber) {
@@ -171,14 +194,20 @@ class Cremation {
         return $rows;
     }
 
+    // deceased_id/decedent_request_id are mutually exclusive (see
+    // CremationController::store()) — passed through null-aware rather than
+    // cast with (int), which would turn a genuinely absent value into 0 and
+    // violate the fk_cremation_lot-style FK constraint. Mirrors
+    // Schedule::create()'s identical convention.
     public function create($data) {
-        $stmt = $this->db->prepare(" 
-            INSERT INTO cremation_records 
-            (deceased_id, niche_number, columbarium, level, cremation_date, status, ash_storage_location, notes, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        $stmt = $this->db->prepare("
+            INSERT INTO cremation_records
+            (deceased_id, decedent_request_id, niche_number, columbarium, level, cremation_date, status, ash_storage_location, notes, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $success = $stmt->execute([
-            (int) $data['deceased_id'],
+            !empty($data['deceased_id']) ? (int) $data['deceased_id'] : null,
+            !empty($data['decedent_request_id']) ? (int) $data['decedent_request_id'] : null,
             $data['niche_number'] ?? null,
             $data['columbarium'] ?? null,
             isset($data['level']) ? (int) $data['level'] : null,
@@ -191,10 +220,21 @@ class Cremation {
         return $success ? (int) $this->db->lastInsertId() : false;
     }
 
+    // Formalizing a provisional booking (CremationController::linkDecedent())
+    // sets deceased_id while leaving decedent_request_id in place for audit
+    // traceability — decedent_request_id is only ever changed by an explicit
+    // key in $data, never implicitly cleared here. Mirrors Schedule::update()'s
+    // identical convention.
     public function update($id, $data) {
-        $stmt = $this->db->prepare(" 
+        $existing = $this->findById($id);
+        if (!$existing) {
+            return false;
+        }
+
+        $stmt = $this->db->prepare("
             UPDATE cremation_records SET
                 deceased_id = ?,
+                decedent_request_id = ?,
                 niche_number = ?,
                 columbarium = ?,
                 level = ?,
@@ -205,7 +245,12 @@ class Cremation {
             WHERE cremation_id = ?
         ");
         return $stmt->execute([
-            (int) $data['deceased_id'],
+            array_key_exists('deceased_id', $data)
+                ? (!empty($data['deceased_id']) ? (int) $data['deceased_id'] : null)
+                : (!empty($existing['deceased_id']) ? (int) $existing['deceased_id'] : null),
+            array_key_exists('decedent_request_id', $data)
+                ? (!empty($data['decedent_request_id']) ? (int) $data['decedent_request_id'] : null)
+                : (!empty($existing['decedent_request_id']) ? (int) $existing['decedent_request_id'] : null),
             $data['niche_number'] ?? null,
             $data['columbarium'] ?? null,
             isset($data['level']) ? (int) $data['level'] : null,

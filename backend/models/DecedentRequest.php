@@ -24,10 +24,12 @@ class DecedentRequest {
     public function findAll($status = null) {
         $sql = "
             SELECT r.*, u.full_name AS requested_by_name, u.contact_number AS requested_by_contact_number,
-                   s.schedule_id AS linked_schedule_id, s.status AS linked_schedule_status
+                   s.schedule_id AS linked_schedule_id, s.status AS linked_schedule_status,
+                   cr.cremation_id AS linked_cremation_id, cr.status AS linked_cremation_status
             FROM decedent_requests r
             LEFT JOIN users u ON r.requested_by = u.user_id
             LEFT JOIN burial_schedules s ON s.decedent_request_id = r.request_id
+            LEFT JOIN cremation_records cr ON cr.decedent_request_id = r.request_id
             WHERE 1=1
         ";
         $params = [];
