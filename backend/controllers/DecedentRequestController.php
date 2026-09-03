@@ -2,17 +2,20 @@
 require_once __DIR__ . '/../models/DecedentRequest.php';
 require_once __DIR__ . '/../models/Decedent.php';
 require_once __DIR__ . '/../models/Schedule.php';
+require_once __DIR__ . '/../models/Cremation.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../services/AutomationEngine.php';
 require_once __DIR__ . '/ScheduleController.php';
+require_once __DIR__ . '/CremationController.php';
 require_once __DIR__ . '/DecedentDocumentController.php';
 
 class DecedentRequestController {
     private $requestModel;
     private $decedentModel;
     private $scheduleModel;
+    private $cremationModel;
     private $auditLogModel;
     private $documentController;
 
@@ -20,6 +23,7 @@ class DecedentRequestController {
         $this->requestModel = new DecedentRequest();
         $this->decedentModel = new Decedent();
         $this->scheduleModel = new Schedule();
+        $this->cremationModel = new Cremation();
         $this->auditLogModel = new AuditLog();
         $this->documentController = new DecedentDocumentController();
     }
@@ -201,6 +205,7 @@ class DecedentRequestController {
                 ['full_name' => $request['full_name'] ?? null, 'linked_decedent_id' => (int) $data['decedent_id']]
             );
             $this->autoLinkSchedules($id, (int) $data['decedent_id'], $user);
+            $this->autoLinkCremations($id, (int) $data['decedent_id'], $user);
 
             // Decedent Records module audit, Batch L3: finalize a citizen's
             // booking-time attachment (Batch L1/L2) onto the real decedent
@@ -349,6 +354,55 @@ class DecedentRequestController {
                     // already records this fact as a 'decedent_request.approved'
                     // audit entry.
                     return $scheduleController->linkDecedent($scheduleId, $decedentId, $user, true);
+                }
+            );
+        }
+    }
+
+    // Cremation Phase B: the Cremation counterpart to
+    // validateScheduleLink()/autoLinkSchedules() above — a citizen's
+    // provisional cremation booking (CremationController::store()'s
+    // decedent_request_id path) references this request but has no formal
+    // deceased_id yet. Same reasoning throughout: approving the request now
+    // gives the system everything it needs to finish the link itself, and
+    // AutomationEngine raises a reviewable exception rather than silently
+    // doing nothing or overwriting an existing link.
+    private function validateCremationLink($cremationId) {
+        $current = $this->cremationModel->findById($cremationId);
+        if (!$current) {
+            return ['Linked cremation record no longer exists'];
+        }
+        if (!empty($current['deceased_id'])) {
+            return ['Cremation record already has a formal decedent record linked'];
+        }
+        return true;
+    }
+
+    private function autoLinkCremations($requestId, $decedentId, $user) {
+        $cremations = $this->cremationModel->findByDecedentRequestId($requestId);
+
+        foreach ($cremations as $cremation) {
+            if (!empty($cremation['deceased_id'])) {
+                continue;
+            }
+
+            $cremationId = $cremation['cremation_id'];
+            AutomationEngine::run(
+                'decedent_request.approved',
+                'Cremation',
+                $cremationId,
+                $user,
+                function () use ($cremationId) {
+                    return $this->validateCremationLink($cremationId);
+                },
+                function () use ($cremationId, $decedentId, $user) {
+                    $cremationController = new CremationController();
+                    // Batch F convention: true marks this as the automatic
+                    // link, so linkDecedent() doesn't also log its own
+                    // 'Decedent manually linked' entry — AutomationEngine::run()
+                    // above already records this fact as a
+                    // 'decedent_request.approved' audit entry.
+                    return $cremationController->linkDecedent($cremationId, $decedentId, $user, true);
                 }
             );
         }
