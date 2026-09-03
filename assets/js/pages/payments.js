@@ -801,6 +801,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     const urlReservationId = urlParams.get('reservation_id');
     const urlLotId = urlParams.get('lot_id');
     const urlLotNum = urlParams.get('lot_number');
+    // Cremation Phase B: mirrors the lot_id/reservation_id pattern above —
+    // cremation_id has no reference_kind ambiguity (unlike Lot Purchase's
+    // schedule_id/lot_id collision risk), so urlReferenceKind is
+    // deliberately left untouched by this addition; PaymentController::
+    // validatePaymentReference()'s Cremation case never uses it.
+    const urlCremationId = urlParams.get('cremation_id');
     const urlPrice = urlParams.get('price');
     const urlTransactionType = urlParams.get('transaction_type');
     // Explicit query param wins; otherwise infer from which id param is
@@ -809,7 +815,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // this can't be left to guess server-side.
     const urlReferenceKind = urlParams.get('reference_kind')
         || (urlReservationId ? 'schedule' : (urlLotId ? 'lot' : null));
-    if (urlReservationId || urlLotId || urlLotNum) {
+    if (urlReservationId || urlLotId || urlLotNum || urlCremationId) {
         openAddModal();
         if (urlTransactionType) {
             document.getElementById('transactionType').value = urlTransactionType;
@@ -818,7 +824,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // setting its value — openAddModal() only set it up for the default
         // (first option) type.
         updateReferenceModeForType();
-        const refId = urlReservationId || urlLotId;
+        const refId = urlReservationId || urlLotId || urlCremationId;
         if (refId) {
             setReferenceValue(refId, urlLotNum ? `Lot ${urlLotNum}` : null, urlReferenceKind);
             if (urlLotNum) referenceSearchInput.value = `Lot ${urlLotNum}`;

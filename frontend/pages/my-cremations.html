@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Reservations | Cemetery Management</title>
+    <title>My Cremations | Cemetery Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -44,9 +44,9 @@
                     <button type="button" class="nav-group-header"><span>Operations</span><i class="fas fa-chevron-down chev"></i></button>
                     <div class="nav-group-body">
                     <a href="reserve-burial-slot.html" class="nav-item"><i class="fas fa-monument icon"></i> <span>Reserve Burial Slot</span></a>
-                    <a href="my-reservations.html" class="nav-item active"><i class="fas fa-bookmark icon"></i> <span>My Reservations</span></a>
+                    <a href="my-reservations.html" class="nav-item"><i class="fas fa-bookmark icon"></i> <span>My Reservations</span></a>
                     <a href="reserve-cremation.html" class="nav-item"><i class="fas fa-fire icon"></i> <span>Reserve Cremation</span></a>
-                    <a href="my-cremations.html" class="nav-item"><i class="fas fa-box-archive icon"></i> <span>My Cremations</span></a>
+                    <a href="my-cremations.html" class="nav-item active"><i class="fas fa-box-archive icon"></i> <span>My Cremations</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -88,8 +88,7 @@
                             <path class="line" d="M7 16H27"></path>
                         </svg>
                     </label>
-                    <h3 id="pageTitle">My Reservations</h3>
-                    <div id="aiAssistantMount"></div>
+                    <h3 id="pageTitle">My Cremations</h3>
                 </div>
                 <div class="user-info">
                     <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
@@ -123,7 +122,7 @@
                             <div class="toolbar-filters">
                                 <div class="search-field">
                                     <input type="text" id="searchQuery" class="search-field__input" placeholder=" ">
-                                    <label for="searchQuery" class="search-field__label">Search by lot, section or decedent</label>
+                                    <label for="searchQuery" class="search-field__label">Search by columbarium or decedent</label>
                                     <span class="search-field__icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
                                     </span>
@@ -133,7 +132,7 @@
                                     <select id="statusFilter" aria-label="Filter by status">
                                     <option value="">All statuses</option>
                                     <option value="Pending">Pending</option>
-                                    <option value="Confirmed">Confirmed</option>
+                                    <option value="Scheduled">Scheduled</option>
                                     <option value="Completed">Completed</option>
                                     <option value="Cancelled">Cancelled</option>
                                     </select>
@@ -146,20 +145,20 @@
                     <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
 
                     <div class="table-container">
-                        <table class="data-table" id="reservationsTable">
+                        <table class="data-table" id="cremationsTable">
                             <thead>
                                 <tr>
-                                    <th>Reservation</th>
-                                    <th>Lot</th>
-                                    <th>Section</th>
-                                    <th>Burial Date</th>
+                                    <th>Request</th>
+                                    <th>Columbarium</th>
+                                    <th>Niche</th>
+                                    <th>Cremation Date</th>
                                     <th>Status</th>
                                     <th>Decedent</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="reservationsBody">
-                                <tr><td colspan="7">Loading reservations...</td></tr>
+                            <tbody id="cremationsBody">
+                                <tr><td colspan="7">Loading cremation requests...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -188,8 +187,7 @@
     <script src="../../assets/js/shared/toast.js"></script>
     <script src="../../assets/js/shared/confirm-modal.js"></script>
     <script src="../../assets/js/shared/reservation-ui.js"></script>
-    <script src="../../assets/js/shared/ai-assistant-widget.js"></script>
-    <script src="../../assets/js/pages/my-reservations.js"></script>
+    <script src="../../assets/js/pages/my-cremations.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
 </body>

@@ -19,10 +19,24 @@
         }[char]));
     }
 
+    // Cremation Phase B: 'Scheduled' is cremation's payment-verified state
+    // (mirrors burial's 'Confirmed' — see PaymentController::
+    // autoConfirmCremationForVerifiedPayment()'s comment for why that word
+    // was reused instead of introducing a second one). No .status-badge.scheduled
+    // CSS class exists, so it maps onto .confirmed's existing styling while
+    // the visible label stays the real status text — not folded into
+    // 'known' as its own class, which would render unstyled.
+    const STATUS_CLASS_BY_VALUE = {
+        pending: 'pending',
+        confirmed: 'confirmed',
+        scheduled: 'confirmed',
+        completed: 'completed',
+        cancelled: 'cancelled',
+    };
+
     function buildStatusBadge(status) {
         const normalized = String(status || '').toLowerCase();
-        const known = ['pending', 'confirmed', 'completed', 'cancelled'];
-        const badgeClass = known.includes(normalized) ? normalized : 'pending';
+        const badgeClass = STATUS_CLASS_BY_VALUE[normalized] || 'pending';
         return `<span class="status-badge ${badgeClass}">${status || 'Pending'}</span>`;
     }
 

@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         Payment: { icon: 'fa-credit-card', tone: 'success' },
         Expiration: { icon: 'fa-hourglass-half', tone: 'warning' },
         Relocation: { icon: 'fa-truck-moving', tone: 'info' },
+        Cremation: { icon: 'fa-fire', tone: 'info' },
         System: { icon: 'fa-gear', tone: 'neutral' },
     };
     function typeMeta(type) {

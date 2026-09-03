@@ -193,6 +193,8 @@ const PAGE_ROLE_ACCESS = {
     'exceptions.html': ['admin', 'staff'],
     'reserve-burial-slot.html': ['user'],
     'my-reservations.html': ['user'],
+    'reserve-cremation.html': ['user'],
+    'my-cremations.html': ['user'],
     'payment-history.html': ['user'],
     'my-records.html': ['user'],
     'notifications.html': ['admin', 'staff', 'user'],
@@ -339,6 +341,8 @@ const ROLE_SIDEBAR_LINKS = {
         { group: 'Operations', items: [
             ['reserve-burial-slot.html', 'fa-monument', 'Reserve Burial Slot'],
             ['my-reservations.html', 'fa-bookmark', 'My Reservations'],
+            ['reserve-cremation.html', 'fa-fire', 'Reserve Cremation'],
+            ['my-cremations.html', 'fa-box-archive', 'My Cremations'],
         ] },
         { group: 'Records', items: [
             ['my-records.html', 'fa-folder-open', 'My Records'],

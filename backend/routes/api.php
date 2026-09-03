@@ -502,6 +502,8 @@ if ($path === 'cremations/assign' && $requestMethod === 'POST') {
 if ($path === 'cremations/mine' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $filters = [];
+    if (isset($_GET['status'])) $filters['status'] = $_GET['status'];
+    if (isset($_GET['q'])) $filters['q'] = $_GET['q'];
     if (isset($_GET['page'])) $filters['page'] = $_GET['page'];
     if (isset($_GET['per_page'])) $filters['per_page'] = $_GET['per_page'];
     echo json_encode($cremationController->mine($user['user_id'], $filters));
