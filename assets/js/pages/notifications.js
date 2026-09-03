@@ -134,6 +134,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch (error) {
             console.error('Failed to auto-cancel stale reservations:', error);
         }
+        try {
+            // Decedent Records audit, Batch H: proactive watchdog for a
+            // Confirmed schedule with no decedent record ever linked.
+            await api.request('schedules/flag-unlinked-decedent', { method: 'POST' });
+        } catch (error) {
+            console.error('Failed to flag unlinked-decedent schedules:', error);
+        }
     }
 
     const markAllReadBtn = document.getElementById('markAllReadBtn');

@@ -87,6 +87,14 @@ run_sweep_stage('schedules/auto-cancel-stale-pending', function () use ($schedul
     return $scheduleController->autoCancelStalePending();
 });
 
+// Decedent Records audit, Batch H: proactive watchdog for a Confirmed
+// schedule whose burial date has long passed with no decedent record ever
+// linked (see ScheduleController::flagUnlinkedDecedentSchedules()'s own
+// comment for the full reasoning).
+run_sweep_stage('schedules/flag-unlinked-decedent', function () use ($scheduleController) {
+    return $scheduleController->flagUnlinkedDecedentSchedules();
+});
+
 // Lot::syncExpiredLots() is private and only runs as a side effect of a
 // public read — getStats() is the cheapest one available (a single
 // aggregate query, no row list to build).

@@ -306,6 +306,39 @@ class Schedule {
         return $stmt->execute([(int) $id]);
     }
 
+    // Batch H (Decedent Records audit, proactive unlinked-schedule watchdog):
+    // a Confirmed schedule whose burial date is $days+ in the past with no
+    // deceased_id almost certainly means the burial already happened with
+    // no formal decedent record on file. decedent_request_id IS NULL
+    // excludes the one case that already resolves itself automatically —
+    // see DecedentRequestController::autoLinkSchedules(), which links a
+    // decedent the moment ITS OWN request is approved — flagging those here
+    // too would be redundant noise for something not actually stuck.
+    // unlinked_decedent_notified_at is this method's own idempotency guard,
+    // same shape as stale_notified_at/final_warning_notified_at above.
+    public function findUnlinkedDecedentCandidates($days) {
+        $stmt = $this->db->prepare("
+            SELECT s.*, l.lot_number, sec.section_name
+            FROM burial_schedules s
+            JOIN lots l ON s.lot_id = l.lot_id
+            JOIN blocks b ON l.block_id = b.block_id
+            JOIN sections sec ON b.section_id = sec.section_id
+            WHERE s.status = 'Confirmed'
+              AND s.deceased_id IS NULL
+              AND s.decedent_request_id IS NULL
+              AND s.unlinked_decedent_notified_at IS NULL
+              AND s.schedule_date <= (CURDATE() - INTERVAL ? DAY)
+            ORDER BY s.schedule_date ASC
+        ");
+        $stmt->execute([(int) $days]);
+        return $stmt->fetchAll();
+    }
+
+    public function markUnlinkedDecedentNotified($id) {
+        $stmt = $this->db->prepare("UPDATE burial_schedules SET unlinked_decedent_notified_at = NOW() WHERE schedule_id = ?");
+        return $stmt->execute([(int) $id]);
+    }
+
     // Auto-cancel policy, stage 3 of 3: candidates for actual cancellation,
     // $days after the final warning actually fired — final_warning_notified_at,
     // not created_at. Same fix as findStalePendingForFinalWarning() above,

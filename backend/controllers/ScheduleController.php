@@ -928,6 +928,9 @@ class ScheduleController {
     private const STALE_PENDING_FINAL_WARNING_GAP_DAYS = 4;
     private const STALE_PENDING_CANCEL_GAP_DAYS = 3;
 
+    // Decedent Records audit, Batch H (proactive unlinked-schedule watchdog).
+    private const UNLINKED_DECEDENT_DAYS = 7;
+
     public function notifyStalePending($days = null) {
         $days = $days !== null ? (int) $days : self::STALE_PENDING_DAYS;
         $rows = $this->scheduleModel->findStalePendingUnnotified($days);
@@ -1090,5 +1093,67 @@ class ScheduleController {
         }
 
         return ['success' => true, 'cancelled' => $cancelledCount, 'message' => "$cancelledCount stale reservation(s) automatically cancelled"];
+    }
+
+    // Decedent Records audit, Batch H — the reverse of Batch F's suggested-
+    // link automation (DecedentController::store()'s suggested_schedules):
+    // that one nudges staff at the moment a new decedent record is created;
+    // this catches the case where staff never came back to link one at all.
+    // A Confirmed schedule with no deceased_id, whose burial date is $days+
+    // in the past, almost certainly had its burial happen with no formal
+    // decedent record ever filed for it — raised as a system_exceptions
+    // entry (the same queue every other automation gap in this app lands
+    // in) rather than a silent log line, so it surfaces on the Exceptions
+    // page staff already checks. Not run through AutomationEngine::run() —
+    // there's no action being attempted here to validate/retry, just a
+    // condition being detected, so it raises directly the same way
+    // Schedule::findUnlinkedDecedentCandidates()'s own idempotency guard
+    // (unlinked_decedent_notified_at) keeps this from re-firing on every
+    // sweep run once a schedule has already been flagged once.
+    public function flagUnlinkedDecedentSchedules($days = null) {
+        $days = $days !== null ? (int) $days : self::UNLINKED_DECEDENT_DAYS;
+        $rows = $this->scheduleModel->findUnlinkedDecedentCandidates($days);
+
+        $notificationModel = new Notification();
+        $count = 0;
+
+        foreach ($rows as $schedule) {
+            $reason = sprintf(
+                'Burial schedule #%d for lot %s (%s) was scheduled for %s with no decedent record linked, %d+ days past the schedule date.',
+                $schedule['schedule_id'],
+                $schedule['lot_number'] ?? 'N/A',
+                $schedule['section_name'] ?? 'N/A',
+                $schedule['schedule_date'],
+                $days
+            );
+
+            $this->systemExceptionModel->raise([
+                'event' => 'schedule.unlinked_decedent',
+                'entity_type' => 'Schedule',
+                'entity_id' => $schedule['schedule_id'],
+                'reason' => $reason,
+                'severity' => 'warning',
+            ]);
+
+            $notificationModel->create([
+                'title' => 'Decedent record needed',
+                'message' => $reason,
+                'notification_type' => 'System',
+                'is_read' => 0,
+            ]);
+
+            $this->scheduleModel->markUnlinkedDecedentNotified($schedule['schedule_id']);
+            $this->auditLogModel->log(
+                'Unlinked decedent exception raised',
+                null,
+                null,
+                'Schedule',
+                $schedule['schedule_id'],
+                ['days_past_schedule_date_threshold' => $days]
+            );
+            $count++;
+        }
+
+        return ['message' => "Flagged {$count} schedule(s) missing a decedent record"];
     }
 }

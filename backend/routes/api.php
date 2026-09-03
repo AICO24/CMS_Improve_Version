@@ -381,6 +381,16 @@ if ($path === 'schedules/auto-cancel-stale-pending' && $requestMethod === 'POST'
     exit;
 }
 
+// Decedent Records audit, Batch H: proactive watchdog, same lazy-sweep
+// shape as the three stale-pending stages above — see
+// ScheduleController::flagUnlinkedDecedentSchedules()'s own comment.
+if ($path === 'schedules/flag-unlinked-decedent' && $requestMethod === 'POST') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $days = $_GET['days'] ?? null;
+    echo json_encode($scheduleController->flagUnlinkedDecedentSchedules($days));
+    exit;
+}
+
 if ($path === 'schedules' && $requestMethod === 'GET') {
     $filters = [];
     if (isset($_GET['lot_id'])) $filters['lot_id'] = $_GET['lot_id'];

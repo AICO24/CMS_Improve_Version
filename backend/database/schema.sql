@@ -83,6 +83,7 @@ CREATE TABLE `burial_schedules` (
   `status` enum('Pending','Confirmed','Completed','Cancelled') COLLATE utf8mb4_general_ci DEFAULT 'Pending',
   `stale_notified_at` datetime DEFAULT NULL,
   `final_warning_notified_at` datetime DEFAULT NULL,
+  `unlinked_decedent_notified_at` datetime DEFAULT NULL,
   `notes` text COLLATE utf8mb4_general_ci,
   `confirmed_by` int DEFAULT NULL,
   `created_by` int NOT NULL,
