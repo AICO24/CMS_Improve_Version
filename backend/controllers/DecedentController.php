@@ -99,6 +99,53 @@ class DecedentController {
         return null;
     }
 
+    // Batch B (duplicate detection): shared by store()/update() so the exact-
+    // block / near-duplicate-warning logic can't drift apart between the two.
+    // Returns null when it's safe to proceed, or a response array to return
+    // to the caller as-is otherwise. $excludeId lets update() ignore the
+    // record being edited when comparing against itself.
+    private function checkForDuplicates($data, $excludeId = null) {
+        $exact = $this->decedentModel->findExactDuplicate($data, $excludeId);
+        if ($exact) {
+            return [
+                'error' => sprintf(
+                    "An identical record already exists (D-%d: %s %s, %s to %s).",
+                    $exact['decedent_id'], $exact['first_name'], $exact['last_name'], $exact['dob'], $exact['dod']
+                ),
+                'code' => 409,
+            ];
+        }
+
+        if (!empty($data['confirm_duplicate'])) {
+            return null;
+        }
+
+        $near = $this->decedentModel->findNearDuplicates($data, $excludeId);
+        if ($near) {
+            return [
+                'duplicate_warning' => true,
+                'message' => 'A similar record already exists. Review before saving.',
+                'candidates' => array_map(function ($candidate) {
+                    $name = trim(sprintf(
+                        '%s %s%s%s',
+                        $candidate['first_name'],
+                        $candidate['middle_name'] ? $candidate['middle_name'] . ' ' : '',
+                        $candidate['last_name'],
+                        $candidate['suffix'] ? ' ' . $candidate['suffix'] : ''
+                    ));
+                    return [
+                        'decedent_id' => $candidate['decedent_id'],
+                        'name' => $name,
+                        'dob' => $candidate['dob'],
+                        'dod' => $candidate['dod'],
+                    ];
+                }, $near),
+            ];
+        }
+
+        return null;
+    }
+
     public function store($data, $actor = null) {
         $required = ['lot_id', 'first_name', 'last_name', 'dob', 'dod'];
         foreach ($required as $field) {
@@ -109,18 +156,25 @@ class DecedentController {
         if ($dateError = $this->validateDates($data)) {
             return ['error' => $dateError, 'code' => 400];
         }
+        if ($duplicateResponse = $this->checkForDuplicates($data)) {
+            return $duplicateResponse;
+        }
 
         $data['is_cremated'] = isset($data['is_cremated']) && $data['is_cremated'] === 'yes' ? 'yes' : 'no';
 
         $result = $this->decedentModel->create($data);
         if ($result) {
+            $auditDetails = ['lot_id' => (int) $data['lot_id'], 'first_name' => $data['first_name'], 'last_name' => $data['last_name']];
+            if (!empty($data['confirm_duplicate'])) {
+                $auditDetails['duplicate_warning_overridden'] = true;
+            }
             $this->auditLogModel->log(
                 'Decedent record created',
                 self::actorId($actor),
                 self::actorUsername($actor),
                 'Decedent',
                 $result,
-                ['lot_id' => (int) $data['lot_id'], 'first_name' => $data['first_name'], 'last_name' => $data['last_name']]
+                $auditDetails
             );
             return ['success' => true, 'message' => 'Decedent record created', 'decedent_id' => $result];
         }
@@ -142,6 +196,9 @@ class DecedentController {
         if ($dateError = $this->validateDates($data)) {
             return ['error' => $dateError, 'code' => 400];
         }
+        if ($duplicateResponse = $this->checkForDuplicates($data, $id)) {
+            return $duplicateResponse;
+        }
 
         $data['is_cremated'] = isset($data['is_cremated']) && $data['is_cremated'] === 'yes' ? 'yes' : 'no';
 
@@ -155,6 +212,9 @@ class DecedentController {
                 if ((string) $data[$field] !== (string) ($decedent[$field] ?? '')) {
                     $changed[$field] = in_array($field, self::SENSITIVE_FIELDS, true) ? 'changed' : ['from' => $decedent[$field] ?? null, 'to' => $data[$field]];
                 }
+            }
+            if (!empty($data['confirm_duplicate'])) {
+                $changed['duplicate_warning_overridden'] = true;
             }
             $this->auditLogModel->log(
                 'Decedent record updated',

@@ -102,6 +102,56 @@ class Decedent {
         return $stmt->fetch();
     }
 
+    // Batch B (duplicate detection): same names (case/whitespace-insensitive)
+    // and the same dob AND dod — confident enough to hard-block automatically
+    // rather than merely flag (module audit, Phase 5D: "avoid unsafe
+    // automatic merging... flagged for review if confidence is uncertain" —
+    // an exact match on all four fields isn't uncertain).
+    public function findExactDuplicate($data, $excludeId = null) {
+        $sql = "
+            SELECT decedent_id, first_name, last_name, dob, dod
+            FROM decedent_records
+            WHERE deleted_at IS NULL
+              AND LOWER(TRIM(first_name)) = LOWER(TRIM(?))
+              AND LOWER(TRIM(last_name)) = LOWER(TRIM(?))
+              AND dob = ? AND dod = ?
+        ";
+        $params = [$data['first_name'], $data['last_name'], $data['dob'], $data['dod']];
+        if ($excludeId !== null) {
+            $sql .= " AND decedent_id != ?";
+            $params[] = (int) $excludeId;
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
+    // Batch B: the "uncertain confidence" tier — a phonetically similar full
+    // name (SOUNDEX, so "Jonh"/"John" or "Cruz"/"Crus" still match) with a
+    // dob or dod within 3 days of what's being entered. Never blocks
+    // anything by itself; DecedentController surfaces these as a warning the
+    // caller must explicitly acknowledge (resubmitting with
+    // confirm_duplicate=true) before the record is saved.
+    public function findNearDuplicates($data, $excludeId = null) {
+        $sql = "
+            SELECT decedent_id, first_name, last_name, middle_name, suffix, dob, dod
+            FROM decedent_records
+            WHERE deleted_at IS NULL
+              AND SOUNDEX(last_name) = SOUNDEX(?)
+              AND SOUNDEX(first_name) = SOUNDEX(?)
+              AND (ABS(DATEDIFF(dob, ?)) <= 3 OR ABS(DATEDIFF(dod, ?)) <= 3)
+        ";
+        $params = [$data['last_name'], $data['first_name'], $data['dob'], $data['dod']];
+        if ($excludeId !== null) {
+            $sql .= " AND decedent_id != ?";
+            $params[] = (int) $excludeId;
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
     public function create($data) {
         $stmt = $this->db->prepare(" 
             INSERT INTO decedent_records (

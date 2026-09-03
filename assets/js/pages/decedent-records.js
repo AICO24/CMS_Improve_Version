@@ -471,12 +471,26 @@ document.addEventListener('DOMContentLoaded', async function() {
             ash_storage: document.getElementById('ashStorage').value.trim() || null,
         };
 
+        const save = () => id
+            ? api.request(`decedents/${id}`, { method: 'PUT', body: payload })
+            : api.request('decedents', { method: 'POST', body: payload });
+
         try {
-            let result;
-            if (id) {
-                result = await api.request(`decedents/${id}`, { method: 'PUT', body: payload });
-            } else {
-                result = await api.request('decedents', { method: 'POST', body: payload });
+            let result = await save();
+
+            // Batch B (duplicate detection): a near-duplicate doesn't block
+            // the save (only an exact match does — that comes back as a
+            // thrown error via the catch block below, same as any other
+            // validation failure). Staff sees who it might match and
+            // explicitly decides whether to proceed.
+            if (result.duplicate_warning) {
+                const list = result.candidates.map((c) => `- D-${c.decedent_id}: ${c.name} (${c.dob} to ${c.dod})`).join('\n');
+                const proceed = confirm(`${result.message}\n\n${list}\n\nSave this record anyway?`);
+                if (!proceed) {
+                    return;
+                }
+                payload.confirm_duplicate = true;
+                result = await save();
             }
 
             if (result.success) {
