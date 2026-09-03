@@ -25,6 +25,19 @@ class DecedentImportController {
 
     private const REQUIRED_COLUMNS = ['first_name', 'last_name', 'dob', 'dod', 'lot_number', 'section_name'];
 
+    // Human-readable labels for every error/warning message this controller
+    // builds — staff reviewing the import preview should never see a raw
+    // snake_case column key like "first_name" in plain sentence text; the
+    // CSV template itself is the only place those exact spellings matter.
+    private const FIELD_LABELS = [
+        'first_name' => 'First Name',
+        'last_name' => 'Last Name',
+        'dob' => 'Date of Birth',
+        'dod' => 'Date of Death',
+        'lot_number' => 'Lot Number',
+        'section_name' => 'Section',
+    ];
+
     public function __construct() {
         $this->decedentModel = new Decedent();
         $this->lotModel = new Lot();
@@ -129,7 +142,7 @@ class DecedentImportController {
 
         foreach (self::REQUIRED_COLUMNS as $field) {
             if (empty($record[$field])) {
-                $errors[] = "Missing {$field}";
+                $errors[] = "Missing " . self::FIELD_LABELS[$field];
             }
         }
 
@@ -137,13 +150,13 @@ class DecedentImportController {
         $dod = $record['dod'] ?? '';
         if ($dob !== '' && $dod !== '') {
             if (!$this->isValidDate($dob)) {
-                $errors[] = "dob '{$dob}' is not a valid YYYY-MM-DD date";
+                $errors[] = "Date of Birth '{$dob}' is not a valid date (use YYYY-MM-DD)";
             }
             if (!$this->isValidDate($dod)) {
-                $errors[] = "dod '{$dod}' is not a valid YYYY-MM-DD date";
+                $errors[] = "Date of Death '{$dod}' is not a valid date (use YYYY-MM-DD)";
             }
             if (empty($errors) && strtotime($dod) < strtotime($dob)) {
-                $errors[] = 'dod cannot be before dob';
+                $errors[] = 'Date of Death cannot be before Date of Birth';
             }
         }
 

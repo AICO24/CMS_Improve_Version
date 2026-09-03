@@ -50,6 +50,16 @@ class AIService {
         return $this->request('/api/extract-decedent-request', 'POST', $payload);
     }
 
+    // Decedent Records module audit, Batch K: $payload is
+    // {image_base64: string, mime_type: string} — a staff-uploaded death
+    // certificate/burial permit. A larger default timeout than most other
+    // calls here: vision calls take noticeably longer than a plain-text
+    // extraction, and staff is actively waiting on this one in the Add
+    // form, not a background/best-effort call.
+    public function getCertificateExtraction($payload) {
+        return $this->request('/api/extract-certificate', 'POST', $payload, 45);
+    }
+
     public function getChatAnswer($payload) {
         return $this->request('/api/chat', 'POST', $payload);
     }

@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 import os
@@ -735,6 +736,113 @@ def extract_decedent_request():
         for field in ('relationship', 'notes'):
             value = result.get(field)
             result[field] = value.strip()[:255] if isinstance(value, str) and value.strip() else None
+
+        return jsonify({'result': result})
+    except Exception:
+        return jsonify({'result': None})
+
+
+# Decedent Records module audit, Batch K: the one caller of llm_provider's
+# new image_bytes/image_mime_type support (see that module's own comment) —
+# reads a staff-uploaded death certificate/burial permit image/PDF and
+# extracts the SAME fields the Add Decedent Record form's own inputs use.
+# Same safety contract as every other extractor in this file: fixed schema,
+# temperature 0, JSON-mode, "never invent what you can't actually read" —
+# plus here specifically, never guess an illegible/missing date. The
+# extracted fields only ever PRE-FILL the Add form; staff still reviews and
+# clicks Save themselves, and the document itself is attached to the record
+# by the PHP side only after that Save succeeds — this endpoint never writes
+# anything anywhere, it only reads an image and returns text.
+CERTIFICATE_EXTRACTION_MODEL = 'gemini-3.6-flash'
+
+CERTIFICATE_EXTRACTION_SYSTEM_PROMPT = (
+    "You extract information from an image or PDF of a death certificate or "
+    "burial permit, for a cemetery staff intake form. Output ONLY a compact "
+    "JSON object — no markdown, no code fences, no prose, no explanation.\n\n"
+    "Schema: {\"first_name\": string|null, \"last_name\": string|null, "
+    "\"middle_name\": string|null, \"suffix\": string|null, "
+    "\"dob\": string|null, \"dod\": string|null, \"cause_of_death\": string|null}\n\n"
+    "Rules:\n"
+    "- first_name/last_name/middle_name/suffix are the deceased person's "
+    "name as printed on the document, split into parts. suffix is only a "
+    "generational suffix (Jr., Sr., III, etc.), never a title or honorific.\n"
+    "- dob and dod are dates in strict YYYY-MM-DD format, only when the "
+    "document clearly and legibly states them. If a date is illegible, "
+    "partially printed, ambiguous, or simply not present, leave it null — "
+    "never guess a date you cannot actually read.\n"
+    "- cause_of_death is the cause as printed, or null if not stated or not "
+    "legible.\n"
+    "- Only extract what is actually printed and legible on the document "
+    "itself. Never invent, infer, or complete a value you cannot read."
+)
+
+
+def _extract_certificate(image_bytes: bytes, mime_type: str) -> Optional[Dict[str, Any]]:
+    text = llm_provider.generate(
+        system_prompt=CERTIFICATE_EXTRACTION_SYSTEM_PROMPT,
+        user_content='Extract the fields from this document.',
+        model=CERTIFICATE_EXTRACTION_MODEL,
+        json_mode=True,
+        temperature=0,
+        max_output_tokens=512,
+        image_bytes=image_bytes,
+        image_mime_type=mime_type,
+    )
+    if text is None:
+        return None
+
+    try:
+        parsed = json.loads(_strip_json_fences(text))
+        return parsed if isinstance(parsed, dict) else None
+    except Exception:
+        return None
+
+
+@app.post('/api/extract-certificate')
+def extract_certificate():
+    # Always returns 200; 'result' is null whenever extraction isn't
+    # available/didn't parse, so the caller falls back to a blank/manually-
+    # filled form — this never blocks record creation.
+    try:
+        payload = request.get_json(silent=True) or {}
+        image_b64 = payload.get('image_base64')
+        mime_type = payload.get('mime_type')
+
+        allowed_mime_types = {'image/jpeg', 'image/png', 'application/pdf'}
+        if not image_b64 or mime_type not in allowed_mime_types:
+            return jsonify({'result': None})
+
+        try:
+            image_bytes = base64.b64decode(image_b64, validate=True)
+        except Exception:
+            return jsonify({'result': None})
+
+        # Defense in depth — mirrors DecedentDocumentController's own 10MB
+        # cap on the PHP side, which is the only real caller of this endpoint.
+        if len(image_bytes) > 10 * 1024 * 1024:
+            return jsonify({'result': None})
+
+        result = _extract_certificate(image_bytes, mime_type)
+        if not result:
+            return jsonify({'result': None})
+
+        # Never trust the model's strings verbatim, same discipline as
+        # every other extractor above.
+        for field in ('first_name', 'last_name', 'middle_name', 'suffix', 'cause_of_death'):
+            value = result.get(field)
+            result[field] = value.strip()[:255] if isinstance(value, str) and value.strip() else None
+
+        for field in ('dob', 'dod'):
+            value = result.get(field)
+            parsed_value = None
+            if isinstance(value, str):
+                try:
+                    candidate = datetime.strptime(value.strip(), '%Y-%m-%d').date()
+                    if candidate <= datetime.now().date():
+                        parsed_value = candidate.isoformat()
+                except ValueError:
+                    parsed_value = None
+            result[field] = parsed_value
 
         return jsonify({'result': result})
     except Exception:

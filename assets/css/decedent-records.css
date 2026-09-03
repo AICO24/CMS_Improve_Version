@@ -164,6 +164,47 @@
     font-size: 0.85rem;
 }
 
+/* Batch K (document-assisted entry): the upload+extract box sits above the
+   Add/Edit form's own field grid. */
+.certificate-upload-box {
+    margin-bottom: var(--space-4);
+    padding: 12px 14px;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-soft);
+}
+
+.certificate-upload-box > label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.certificate-upload-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.certificate-upload-row select {
+    height: 38px;
+    padding: 0 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.85rem;
+}
+
+.certificate-upload-hint {
+    margin: 8px 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+}
+
 /* 2-column layout for the Add/Edit Decedent modal's many stacked fields
    (mirrors Payments' .payment-form-grid). */
 .decrec-form-grid {
@@ -831,11 +872,56 @@
     line-height: 1.5;
 }
 
-.import-help code {
-    font-size: 0.82em;
+.import-columns-legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+
+.import-columns-group {
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
     background: var(--color-surface-soft);
-    padding: 1px 5px;
-    border-radius: 4px;
+}
+
+.import-columns-group strong {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+    color: var(--color-text);
+}
+
+.import-columns-group ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.import-columns-group li {
+    position: relative;
+    padding: 3px 0 3px 16px;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+
+.import-columns-group li::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 10px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #2c5e47;
+}
+
+.import-template-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: var(--space-4);
 }
 
 .import-upload-row {
@@ -881,8 +967,49 @@
     overflow-y: auto;
 }
 
-/* .close / .close-view now come from assets/css/components/modals.css so this
-   module's modal close button matches every other module. */
+/* Page-specific close-button upgrade: the shared assets/css/components/
+   modals.css version is a bare, unstyled "×" glyph with no hover feedback.
+   Overridden here (not in the shared file, which other modules still use
+   as-is) as a round icon button matching this page's own .filter-chip
+   button hover treatment. .close-import (the Import CSV modal) has no
+   shared-file styling at all, so it's included here too rather than left
+   unstyled. */
+.close,
+.close-view,
+.close-import {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #eef6f0;
+    color: #2c5e47;
+    font-size: 1rem;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+/* .close-import has no base styling in the shared modals.css at all (that
+   file only ever anticipated .close/.close-view) — position/cursor/border
+   supplied here so it pins to the modal card's top-right corner exactly
+   like the other two, instead of sitting inline in normal document flow. */
+.close-import {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    line-height: 1;
+}
+
+.close:hover,
+.close-view:hover,
+.close-import:hover {
+    background: #d8e9de;
+    color: #1d3f30;
+    transform: rotate(90deg);
+}
 
 /* .form-group / .form-group label now come from assets/css/components/forms.css
    so this page's form spacing/labels match every other module. */

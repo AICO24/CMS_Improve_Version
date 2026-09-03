@@ -197,6 +197,8 @@ def _generate_with_gemini(
     temperature: float,
     max_output_tokens: int,
     timeout_ms: int,
+    image_bytes: Optional[bytes] = None,
+    image_mime_type: Optional[str] = None,
 ) -> Tuple[Optional[str], Optional[str]]:
     """Returns (text, failure_category). failure_category is None on success."""
     if _gemini_client is None:
@@ -213,9 +215,25 @@ def _generate_with_gemini(
         if json_mode:
             config_kwargs['response_mime_type'] = 'application/json'
 
+        # Decedent Records module audit, Batch K: the one call site that
+        # needs Gemini's vision input (certificate/permit extraction) passes
+        # image_bytes/image_mime_type; every other existing call site omits
+        # both and gets the exact same plain-text `contents` as before this
+        # batch. Gemini-only — this is never forwarded to
+        # _generate_with_backup() below, which has no vision equivalent in
+        # its plain chat-completions API, so an image-bearing call must not
+        # use a provider_chain that includes 'backup'.
+        if image_bytes and image_mime_type:
+            contents = [
+                genai_types.Part.from_bytes(data=image_bytes, mime_type=image_mime_type),
+                user_content,
+            ]
+        else:
+            contents = user_content
+
         response = _gemini_client.models.generate_content(
             model=model,
-            contents=user_content,
+            contents=contents,
             config=genai_types.GenerateContentConfig(**config_kwargs),
         )
         text = (response.text or '').strip()
@@ -349,6 +367,8 @@ def generate(
     max_output_tokens: int = 512,
     timeout_ms: int = DEFAULT_TIMEOUT_MS,
     provider_chain: Optional[List[str]] = None,
+    image_bytes: Optional[bytes] = None,
+    image_mime_type: Optional[str] = None,
 ) -> Optional[str]:
     """
     Provider-neutral text generation, walked sequentially across an
@@ -382,6 +402,14 @@ def generate(
     json_mode=True asks the active provider to return a raw JSON string
     (no markdown fences) when the provider supports it. This function only
     generates text — it never parses or validates JSON itself.
+
+    image_bytes/image_mime_type (Batch K, Decedent Records module audit):
+    optional vision input for the one call site that needs it (certificate/
+    permit extraction). Gemini-only — never forwarded to the backup
+    provider's plain chat-completions call, so a caller passing an image
+    must not also pass a provider_chain that includes 'backup' (every
+    existing/new image-bearing call site omits provider_chain entirely,
+    which defaults to Gemini-only).
     """
     chain = provider_chain if provider_chain else DEFAULT_PROVIDER_CHAIN
 
@@ -392,6 +420,7 @@ def generate(
             text, category = _generate_with_gemini(
                 system_prompt, user_content, model=model, json_mode=json_mode,
                 temperature=temperature, max_output_tokens=max_output_tokens, timeout_ms=timeout_ms,
+                image_bytes=image_bytes, image_mime_type=image_mime_type,
             )
             model_name = model
         elif provider_name == 'backup':

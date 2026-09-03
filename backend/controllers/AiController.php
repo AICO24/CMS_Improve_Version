@@ -181,6 +181,17 @@ class AiController {
         return ['result' => is_array($data) ? $data : null];
     }
 
+    // Decedent Records module audit, Batch K: same thin pass-through shape
+    // as the other extractors above, for the Add Decedent Record form's
+    // "Extract & Fill Fields" action — pre-fills that form's own inputs
+    // only, never writes to decedent_records or decedent_documents itself.
+    public function extractCertificate($payload) {
+        $payload = is_array($payload) ? $payload : [];
+        $result = $this->aiService->getCertificateExtraction($payload);
+        $data = (!empty($result['error']) || !is_array($result)) ? null : ($result['result'] ?? null);
+        return ['result' => is_array($data) ? $data : null];
+    }
+
     // General Q&A layer (see docs/plans burial-scheduling AI Q&A): answers
     // real questions ("what documents do I need?") grounded only in the
     // ai_knowledge content an admin/staff member has reviewed — never

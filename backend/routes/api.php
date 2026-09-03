@@ -1104,6 +1104,24 @@ if ($path === 'ai/extract-decedent-request' && $requestMethod === 'POST') {
     exit;
 }
 
+if ($path === 'ai/extract-certificate' && $requestMethod === 'POST') {
+    // Decedent Records audit, Batch K: staff-only (unlike ai/extract and
+    // ai/extract-decedent-request above, which citizens reach mid-chat) —
+    // this is the Add Decedent Record form's own "Extract & Fill Fields"
+    // action. A tighter rate limit than the text extractors: a vision call
+    // costs more and staff only fires this once per document, not once per
+    // fast-moving chat message.
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    if (!RateLimiter::allow('ai_extract_certificate_' . $user['user_id'], 10, 60)) {
+        http_response_code(429);
+        echo json_encode(['error' => 'Too many requests — please wait a moment before trying again.']);
+        exit;
+    }
+    $input = readRequestBody();
+    echo json_encode($aiController->extractCertificate($input));
+    exit;
+}
+
 if ($path === 'ai/chat' && $requestMethod === 'POST') {
     // General Q&A layer: answers real questions ("what documents do I
     // need?") grounded in the admin-editable ai_knowledge content, called by

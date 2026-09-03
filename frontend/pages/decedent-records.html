@@ -237,10 +237,32 @@
     <!-- Add/Edit Modal -->
     <div id="recordModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-content">
-            <button type="button" class="close" aria-label="Close">&times;</button>
+            <button type="button" class="close" aria-label="Close"><i class="fas fa-xmark"></i></button>
             <h3 id="modalTitle">Add Decedent Record</h3>
             <form id="recordForm">
                 <input type="hidden" id="recordId">
+
+                <!-- Batch K (document-assisted entry): reads a death
+                     certificate/burial permit and pre-fills the fields
+                     below as a draft — staff still reviews everything and
+                     clicks Save themselves; nothing here writes to the
+                     record directly. The same file also gets attached to
+                     this record automatically once Save succeeds, so it
+                     only needs to be selected once. -->
+                <div class="certificate-upload-box">
+                    <label>Upload Death Certificate or Burial Permit (optional)</label>
+                    <div class="certificate-upload-row">
+                        <select id="certificateDocType" aria-label="Document type">
+                            <option value="death_certificate">Death Certificate</option>
+                            <option value="burial_permit">Burial Permit</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <input type="file" id="certificateFileInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
+                        <button type="button" class="btn-secondary" id="extractCertificateBtn">Extract &amp; Fill Fields</button>
+                    </div>
+                    <p class="certificate-upload-hint" id="certificateUploadHint">This file will be attached to the record automatically once you save.</p>
+                </div>
+
                 <div class="decrec-form-grid">
                 <div class="form-group"><label>First Name</label><input type="text" id="firstName" required></div>
                 <div class="form-group"><label>Last Name</label><input type="text" id="lastName" required></div>
@@ -277,7 +299,7 @@
     <!-- View Modal -->
     <div id="viewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
         <div class="modal-content">
-            <button type="button" class="close-view" aria-label="Close">&times;</button>
+            <button type="button" class="close-view" aria-label="Close"><i class="fas fa-xmark"></i></button>
             <h3 id="viewModalTitle">Decedent Record Details</h3>
             <div id="viewDetails"></div>
 
@@ -319,15 +341,40 @@
     <!-- Import Modal (Batch J: bulk CSV import for historical records) -->
     <div id="importModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
         <div class="modal-content modal--lg">
-            <button type="button" class="close-import" aria-label="Close">&times;</button>
+            <button type="button" class="close-import" aria-label="Close"><i class="fas fa-xmark"></i></button>
             <h3 id="importModalTitle">Import Decedent Records from CSV</h3>
 
             <div class="import-step">
-                <p class="import-help">
-                    Required columns: <code>first_name, last_name, dob, dod, lot_number, section_name</code>
-                    (dates as YYYY-MM-DD). Optional: <code>middle_name, suffix, cause_of_death, contact_name, contact_number, is_cremated, ash_storage</code>.
-                    <a href="#" id="downloadImportTemplate">Download a template</a>.
-                </p>
+                <p class="import-help">Your spreadsheet needs one column per field below. Dates should be written as YYYY-MM-DD (e.g. 2020-03-15). Download the template below to get the exact column headers already set up for you.</p>
+                <div class="import-columns-legend">
+                    <div class="import-columns-group">
+                        <strong>Required</strong>
+                        <ul>
+                            <li>First Name</li>
+                            <li>Last Name</li>
+                            <li>Date of Birth</li>
+                            <li>Date of Death</li>
+                            <li>Lot Number</li>
+                            <li>Section</li>
+                        </ul>
+                    </div>
+                    <div class="import-columns-group">
+                        <strong>Optional</strong>
+                        <ul>
+                            <li>Middle Name</li>
+                            <li>Suffix</li>
+                            <li>Cause of Death</li>
+                            <li>Family Contact Name</li>
+                            <li>Family Contact Number</li>
+                            <li>Cremated? (Yes/No)</li>
+                            <li>Ash Storage Location</li>
+                        </ul>
+                    </div>
+                </div>
+                <button type="button" class="btn-secondary import-template-btn" id="downloadImportTemplate">
+                    <i class="fas fa-file-arrow-down"></i>
+                    Download Template
+                </button>
                 <div class="import-upload-row">
                     <input type="file" id="importFileInput" accept=".csv,text/csv">
                     <button type="button" class="btn-secondary" id="previewImportBtn">Preview</button>

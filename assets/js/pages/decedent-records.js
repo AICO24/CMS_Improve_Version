@@ -429,6 +429,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             lotSelect.selectedIndex = 0;
             sectionInput.value = '';
         }
+        resetCertificateUpload();
         recordModal.style.display = 'flex';
     }
 
@@ -460,7 +461,95 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         ashStorageGroup.style.display = record.is_cremated === 'yes' ? 'block' : 'none';
+        resetCertificateUpload();
         recordModal.style.display = 'flex';
+    }
+
+    // ---------- Batch K: document-assisted entry (upload + AI extraction) ----------
+    const certificateFileInput = document.getElementById('certificateFileInput');
+    const certificateDocType = document.getElementById('certificateDocType');
+    const extractCertificateBtn = document.getElementById('extractCertificateBtn');
+    const certificateUploadHint = document.getElementById('certificateUploadHint');
+
+    function resetCertificateUpload() {
+        certificateFileInput.value = '';
+        certificateDocType.value = 'death_certificate';
+        certificateUploadHint.textContent = 'This file will be attached to the record automatically once you save.';
+    }
+
+    function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                // reader.result is "data:<mime>;base64,<data>" — the server
+                // only wants the raw base64 payload, it already knows the
+                // mime type from the same request.
+                const commaIndex = reader.result.indexOf(',');
+                resolve(commaIndex >= 0 ? reader.result.slice(commaIndex + 1) : reader.result);
+            };
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(file);
+        });
+    }
+
+    extractCertificateBtn.addEventListener('click', async () => {
+        const file = certificateFileInput.files[0];
+        if (!file) {
+            showToast('Please choose a file first.', { type: 'error' });
+            return;
+        }
+
+        await withButtonLoading(extractCertificateBtn, async () => {
+            try {
+                const imageBase64 = await readFileAsBase64(file);
+                const response = await api.request('ai/extract-certificate', {
+                    method: 'POST',
+                    body: { image_base64: imageBase64, mime_type: file.type },
+                });
+                const result = response && response.result;
+
+                if (!result || (!result.first_name && !result.last_name)) {
+                    showToast("Couldn't read this document clearly — please fill in the fields manually.", { type: 'error' });
+                    return;
+                }
+
+                // Pre-fill only — every field stays a normal, editable input.
+                // Staff still reviews everything before Save.
+                if (result.first_name) document.getElementById('firstName').value = result.first_name;
+                if (result.last_name) document.getElementById('lastName').value = result.last_name;
+                if (result.middle_name) document.getElementById('middleName').value = result.middle_name;
+                if (result.suffix) document.getElementById('suffix').value = result.suffix;
+                if (result.dob) document.getElementById('dob').value = result.dob;
+                if (result.dod) document.getElementById('dod').value = result.dod;
+                if (result.cause_of_death) document.getElementById('cause').value = result.cause_of_death;
+
+                showToast('Fields filled in from the document — please review before saving.', { type: 'success' });
+            } catch (error) {
+                showToast(error.message || "Couldn't read this document.", { type: 'error' });
+            }
+        });
+    });
+
+    // Batch K: the same file selected for extraction is attached to the
+    // record automatically once it has a real decedent_id — reuses the
+    // Batch K1 upload endpoint as-is, no separate "attach" click needed.
+    // Upload failures are reported but never undo the record save that
+    // already succeeded, same non-blocking convention as the pending-
+    // request linking logic just above saveRecord()'s success branch.
+    async function attachCertificateIfSelected(decedentId) {
+        const file = certificateFileInput.files[0];
+        if (!file || !decedentId) return;
+
+        const formData = new FormData();
+        formData.append('document_file', file);
+        formData.append('document_type', certificateDocType.value);
+
+        try {
+            await api.request(`decedents/${decedentId}/documents`, { method: 'POST', body: formData });
+        } catch (error) {
+            console.error('Record was saved but attaching the document failed', error);
+            showToast('Record saved, but attaching the document failed — you can upload it from the record\'s Documents section.', { type: 'error' });
+        }
     }
 
     // Batch D (activity history): audit_logs.details is either a plain note
@@ -780,6 +869,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                     showToast(`This lot has ${result.suggested_schedules.length} unlinked schedules. Link the correct one from Manage Reservations.`, { type: 'info' });
                 }
 
+                await attachCertificateIfSelected(id || result.decedent_id);
+
                 approvingRequestId = null;
                 recordModal.style.display = 'none';
                 showToast(id ? 'Decedent record updated.' : 'Decedent record created.', { type: 'success' });
@@ -838,11 +929,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         importModal.style.display = 'flex';
     }
 
-    document.getElementById('downloadImportTemplate').addEventListener('click', (event) => {
-        event.preventDefault();
-        const header = 'first_name,last_name,middle_name,suffix,dob,dod,lot_number,section_name,cause_of_death,contact_name,contact_number,is_cremated,ash_storage';
-        const sample = 'Juan,Dela Cruz,,,1950-01-01,2020-03-15,A1-01,Section A,Natural causes,Maria Dela Cruz,09171234567,no,';
-        const blob = new Blob([`${header}\n${sample}\n`], { type: 'text/csv;charset=utf-8;' });
+    document.getElementById('downloadImportTemplate').addEventListener('click', () => {
+        // A few varied example rows (not just one) so the template reads as
+        // an organized little table when opened, not a single crammed line.
+        const columns = ['first_name', 'last_name', 'middle_name', 'suffix', 'dob', 'dod', 'lot_number', 'section_name', 'cause_of_death', 'contact_name', 'contact_number', 'is_cremated', 'ash_storage'];
+        const sampleRows = [
+            ['Juan', 'Dela Cruz', 'Santos', '', '1950-01-01', '2020-03-15', 'A1-01', 'Section A', 'Natural causes', 'Maria Dela Cruz', '09171234567', 'no', ''],
+            ['Rosario', 'Villanueva', '', 'Jr.', '1945-06-20', '2019-11-02', 'A1-02', 'Section A', 'Cardiac arrest', 'Pedro Villanueva', '09182223344', 'no', ''],
+            ['Elena', 'Bautista', 'Reyes', '', '1938-09-08', '2021-04-10', 'B1-05', 'Section B', 'Old age', 'Ana Bautista', '09193334455', 'yes', 'Columbarium Niche 12'],
+        ];
+        const csvRows = [columns, ...sampleRows].map((row) => row.join(','));
+        const blob = new Blob([csvRows.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
