@@ -31,10 +31,33 @@ class AuthController {
             $user = $this->userModel->findByUsername($inputUser);
         }
         if (!$user || !$this->userModel->verifyPassword($password, $user)) {
+            // AUTH-005 (Auth audit, Batch AUTH-2): only successful logins were
+            // ever audited — a brute-force run left no trail at all. user_id
+            // is null when $inputUser doesn't match any account, so this
+            // still records the attempted identifier without implying a real
+            // account exists (this log is admin-only, never returned to the
+            // client, so it isn't an enumeration risk the way an API
+            // response would be).
+            $this->auditLogModel->log(
+                'Failed login attempt',
+                $user['user_id'] ?? null,
+                $user['username'] ?? $inputUser,
+                'Authentication',
+                $user['user_id'] ?? null,
+                'Invalid credentials'
+            );
             return ['error' => 'Invalid credentials', 'code' => 401];
         }
 
         if (isset($user['is_active']) && (int) $user['is_active'] === 0) {
+            $this->auditLogModel->log(
+                'Failed login attempt',
+                $user['user_id'],
+                $user['username'],
+                'Authentication',
+                $user['user_id'],
+                'Account is deactivated'
+            );
             return ['error' => 'Account is deactivated', 'code' => 403];
         }
 
@@ -123,6 +146,14 @@ class AuthController {
             }
         }
 
+        // AUTH-009 (Auth audit, Batch AUTH-2): register.js's own email check
+        // is only `.includes('@')` and, being client-side, is trivially
+        // bypassed entirely — this was the only real validation actually in
+        // force.
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            return ['error' => 'A valid email address is required', 'code' => 400];
+        }
+
         if ($data['password'] !== $data['confirm_password']) {
             return ['error' => 'Password confirmation does not match', 'code' => 400];
         }
@@ -133,6 +164,17 @@ class AuthController {
 
         if ($this->userModel->findByEmail($data['email'])) {
             return ['error' => 'Email already registered', 'code' => 409];
+        }
+
+        // AUTH-006 (Auth audit, Batch AUTH-2): only email was pre-checked —
+        // an explicitly chosen duplicate username reached User::create()'s
+        // INSERT unchecked, which throws PDOException on the table's UNIQUE
+        // key (PDO is ERRMODE_EXCEPTION — see backend/config/database.php).
+        // Nothing here caught it, so it surfaced via the global handler in
+        // backend/api/index.php as a misleading 503 "Service temporarily
+        // unavailable" instead of a 409.
+        if (!empty($data['username']) && $this->userModel->findByUsername($data['username'])) {
+            return ['error' => 'Username already taken', 'code' => 409];
         }
 
         // Ignore any submitted role_id and always assign normal user role for anonymous registration.
@@ -147,7 +189,22 @@ class AuthController {
             'role_id' => $data['role_id'],
         ];
 
-        $result = $this->userModel->create($createData);
+        try {
+            $result = $this->userModel->create($createData);
+        } catch (PDOException $e) {
+            // Safety net for the case the explicit check above can't catch:
+            // no username was submitted, so User::create() derives one from
+            // the email's local part (e.g. "john" from john@gmail.com) —
+            // two different emails can derive the same username, and this
+            // also covers the race window between the check above and this
+            // INSERT. SQLSTATE 23000 is a constraint violation; with email
+            // already confirmed unique above, that leaves username as the
+            // only remaining UNIQUE key that could have fired it.
+            if ($e->getCode() === '23000') {
+                return ['error' => 'Username already taken', 'code' => 409];
+            }
+            throw $e;
+        }
         if ($result) {
             $created = $this->userModel->findByEmail($data['email']);
             if ($created) {
