@@ -240,7 +240,6 @@ function createBookingWizard(options) {
         let selectedLot = null;
         let confirmationShown = false;
         let confirmationBubble = null;
-        let decedents = [];
         let lotTypes = [];
         let sections = [];
         let latestRecommendations = [];
@@ -248,10 +247,11 @@ function createBookingWizard(options) {
 
         function updateBlueprintHUD() {
             const state = chatAssistant ? chatAssistant.state : {};
-            const decedent = decedents.find(d => d.decedent_id === state.decedent_id);
-            const decedentName = decedent
-                ? `${decedent.first_name} ${decedent.last_name}`
-                : (state.provisional_decedent ? `${state.provisional_decedent.full_name} (Unregistered)` : null);
+            // Privacy audit (2026-09-04): citizens never match against an
+            // existing decedent_records row here anymore (see loadDecedents()'s
+            // removal below) — state.decedent_id is never set for a citizen
+            // booking, only state.provisional_decedent.
+            const decedentName = state.provisional_decedent ? `${state.provisional_decedent.full_name} (Unregistered)` : null;
 
             // 1. Decedent Step
             if (decedentName) {
@@ -320,37 +320,39 @@ function createBookingWizard(options) {
 
             const suggestions = [];
 
-            if (state.decedent_id === null && state.provisional_decedent === null && decedents.length > 0) {
-                const sampleDecedents = decedents.slice(0, 3);
-                sampleDecedents.forEach(d => {
-                    suggestions.push({
-                        label: `👤 ${d.first_name} ${d.last_name}`,
-                        text: `${d.first_name} ${d.last_name}`,
-                    });
-                });
-            } else if (state.lot_type === null) {
-                suggestions.push({ label: '✨ Recommend a type for me', text: 'Recommend a type for me' });
-                if (lotTypes.length > 0) {
-                    lotTypes.slice(0, 3).forEach(t => {
-                        suggestions.push({ label: `🏛️ ${t.type_name}`, text: t.type_name });
-                    });
+            // Privacy audit (2026-09-04): this used to suggest 3 sample names
+            // pulled from the full cemetery-wide decedent list as clickable
+            // chips — itself a privacy leak (surfacing other families' names
+            // as UI suggestions). Deliberately no replacement suggestions for
+            // this step — the chat's own opening question already asks who
+            // the booking is for, and a "type their name" chip would just be
+            // a no-op click; falls through to the generic FAQ chips below
+            // (suggestions.length === 0) same as any other unmatched step.
+            if (state.decedent_id !== null || state.provisional_decedent !== null) {
+                if (state.lot_type === null) {
+                    suggestions.push({ label: '✨ Recommend a type for me', text: 'Recommend a type for me' });
+                    if (lotTypes.length > 0) {
+                        lotTypes.slice(0, 3).forEach(t => {
+                            suggestions.push({ label: `🏛️ ${t.type_name}`, text: t.type_name });
+                        });
+                    }
+                    suggestions.push({ label: '⏭️ No preference on type', text: 'no preference' });
+                } else if (state.budget === null) {
+                    suggestions.push({ label: '💰 Budget under ₱20,000', text: '20000' });
+                    suggestions.push({ label: '💰 Budget under ₱40,000', text: '40000' });
+                    suggestions.push({ label: '💰 Budget under ₱60,000', text: '60000' });
+                    suggestions.push({ label: '⏭️ Any budget / No limit', text: 'no preference' });
+                } else if (state.date === null) {
+                    const now = new Date();
+                    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+                    // Avoid Monday for default prompt
+                    if (tomorrow.getDay() === 1) tomorrow.setDate(tomorrow.getDate() + 1);
+                    const dateIso = tomorrow.toISOString().split('T')[0];
+                    const dateLabel = tomorrow.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    suggestions.push({ label: `📅 ${dateLabel}`, text: dateIso });
+                    suggestions.push({ label: '🌅 Morning 9:00 AM', text: 'Morning 9:00 AM' });
+                    suggestions.push({ label: '☀️ Afternoon 2:00 PM', text: 'Afternoon 2:00 PM' });
                 }
-                suggestions.push({ label: '⏭️ No preference on type', text: 'no preference' });
-            } else if (state.budget === null) {
-                suggestions.push({ label: '💰 Budget under ₱20,000', text: '20000' });
-                suggestions.push({ label: '💰 Budget under ₱40,000', text: '40000' });
-                suggestions.push({ label: '💰 Budget under ₱60,000', text: '60000' });
-                suggestions.push({ label: '⏭️ Any budget / No limit', text: 'no preference' });
-            } else if (state.date === null) {
-                const now = new Date();
-                const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-                // Avoid Monday for default prompt
-                if (tomorrow.getDay() === 1) tomorrow.setDate(tomorrow.getDate() + 1);
-                const dateIso = tomorrow.toISOString().split('T')[0];
-                const dateLabel = tomorrow.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                suggestions.push({ label: `📅 ${dateLabel}`, text: dateIso });
-                suggestions.push({ label: '🌅 Morning 9:00 AM', text: 'Morning 9:00 AM' });
-                suggestions.push({ label: '☀️ Afternoon 2:00 PM', text: 'Afternoon 2:00 PM' });
             }
 
             if (suggestions.length === 0) {
@@ -383,15 +385,17 @@ function createBookingWizard(options) {
             return { valid: true };
         }
 
-        async function loadDecedents() {
-            try {
-                const result = await api.request('decedents', { method: 'GET' });
-                decedents = Array.isArray(result) ? result : [];
-            } catch (error) {
-                console.error('Failed to load decedents', error);
-                decedents = [];
-            }
-        }
+        // Privacy audit (2026-09-04): loadDecedents() removed — it fetched
+        // the full cemetery-wide decedent list (GET /decedents, unscoped)
+        // purely so citizens could match/browse/pick from every existing
+        // decedent record, which leaked every other family's name to any
+        // citizen booking a burial. Citizens now always enter fresh
+        // decedent info (see appendDecedentRequestForm() in
+        // lot-chat-assistant.js), which is already the correct mechanism
+        // for "not yet in our records" — it's just the only path now,
+        // not a fallback. Staff still match/link it to an existing formal
+        // record on their own side (DecedentRequestController::approve(),
+        // full access there is appropriate).
 
         async function loadLookupData() {
             try {
@@ -558,10 +562,7 @@ function createBookingWizard(options) {
             }
 
             confirmationShown = true;
-            const decedent = decedents.find(d => d.decedent_id === state.decedent_id);
-            const decedentName = decedent
-                ? `${decedent.first_name} ${decedent.last_name}`
-                : (state.provisional_decedent ? `${state.provisional_decedent.full_name} (pending registration)` : 'N/A');
+            const decedentName = state.provisional_decedent ? `${state.provisional_decedent.full_name} (pending registration)` : 'N/A';
             const priceFormatted = `₱${parseFloat(selectedLot.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             const dateFormatted = new Date(`${state.date}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
@@ -717,7 +718,12 @@ function createBookingWizard(options) {
             chatWindow, chatForm, chatInput, chatSuggestTypeBtn, chatPrefStatus,
             getLotTypes: () => lotTypes,
             getSections: () => sections,
-            getDecedents: () => decedents,
+            // Privacy audit (2026-09-04): getDecedents intentionally not
+            // passed — see loadDecedents()'s removal comment above.
+            // allowProvisionalDecedent (below) is what now drives the
+            // fresh-entry decedent flow; lot-chat-assistant.js's own
+            // getNextMissingSlot()/checkMyDecedentRequests() gating were
+            // updated to key off that instead of getDecedents' presence.
             validateDate: validateBookingDate,
             interceptMessage: tryHandleLotSelectionText,
             allowProvisionalDecedent,
@@ -774,7 +780,7 @@ function createBookingWizard(options) {
             });
         }
 
-        await Promise.all([loadDecedents(), loadLookupData()]);
+        await loadLookupData();
         chatAssistant.init();
         updateBlueprintHUD();
         updatePromptSuggestions();

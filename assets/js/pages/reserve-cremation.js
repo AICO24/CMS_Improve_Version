@@ -1,10 +1,19 @@
 // Cremation Phase B (B4): plain citizen intake form — deliberately NOT an
 // AI chat wizard, see the plan's reasoning (cremation intake is 3 inputs
 // with no scarce/exclusive resource to rank or reserve at booking time,
-// unlike burial's lot recommendation/conflict-checking problem). Decedent
-// selection reuses the same "existing record OR register a new one via
-// decedent_requests" idea booking-wizard.js already established for
-// burial, just as a plain <select> + sub-form instead of a chat exchange.
+// unlike burial's lot recommendation/conflict-checking problem).
+//
+// Privacy audit (2026-09-04): this used to also let a citizen pick an
+// EXISTING decedent from a dropdown populated by GET /decedents — an
+// unscoped, cemetery-wide list, meaning any citizen booking a cremation
+// could see every deceased person's full name in the system, not just
+// their own family's. Removed entirely — a citizen now always types the
+// decedent's info fresh (provisional_decedent), the same mechanism this
+// page already used for "not in our records yet". Staff match/link it to
+// an existing formal decedent_records row on their own side (already-
+// existing tooling: DecedentRequestController::approve()/flagPossible
+// Duplicates()), where full access is appropriate. See
+// booking-wizard.js's identical fix for the burial flow.
 document.addEventListener('DOMContentLoaded', async function() {
     const user = await requireRole(['user']);
     if (!user) return;
@@ -38,8 +47,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    const decedentSelect = document.getElementById('decedentSelect');
-    const provisionalGroup = document.getElementById('provisionalDecedentGroup');
     const provisionalFullName = document.getElementById('provisionalFullName');
     const provisionalApproxDod = document.getElementById('provisionalApproxDod');
     const provisionalRelationship = document.getElementById('provisionalRelationship');
@@ -49,18 +56,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     const cremationForm = document.getElementById('cremationForm');
 
     provisionalApproxDod.max = new Date().toISOString().split('T')[0];
-
-    async function loadDecedents() {
-        try {
-            const decedents = await api.request('decedents', { method: 'GET' });
-            const list = Array.isArray(decedents) ? decedents : [];
-            const options = list.map((d) => `<option value="${d.decedent_id}">${d.first_name} ${d.last_name}</option>`).join('');
-            decedentSelect.innerHTML = `<option value="">Select existing decedent...</option>${options}<option value="__new__">— Not in our records (register a new person) —</option>`;
-        } catch (error) {
-            console.error('Failed to load decedents', error);
-            decedentSelect.innerHTML = `<option value="">Unable to load decedents</option><option value="__new__">— Not in our records (register a new person) —</option>`;
-        }
-    }
 
     async function loadColumbariums() {
         try {
@@ -72,15 +67,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    decedentSelect.addEventListener('change', () => {
-        provisionalGroup.style.display = decedentSelect.value === '__new__' ? 'block' : 'none';
-    });
-
     cremationForm.addEventListener('submit', async function(event) {
         event.preventDefault();
 
-        if (!decedentSelect.value) {
-            showToast('Please select or register a decedent.', { type: 'error' });
+        const fullName = provisionalFullName.value.trim();
+        if (!fullName) {
+            showToast('Please provide the full name of the deceased.', { type: 'error' });
             return;
         }
 
@@ -88,22 +80,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             preferred_columbarium: columbariumSelect.value || null,
             cremation_date: cremationDateInput.value || null,
             notes: cremationNotesInput.value.trim() || null,
-        };
-
-        if (decedentSelect.value === '__new__') {
-            const fullName = provisionalFullName.value.trim();
-            if (!fullName) {
-                showToast('Please provide the full name of the deceased.', { type: 'error' });
-                return;
-            }
-            payload.provisional_decedent = {
+            provisional_decedent: {
                 full_name: fullName,
                 approximate_dod: provisionalApproxDod.value || null,
                 relationship: provisionalRelationship.value.trim() || null,
-            };
-        } else {
-            payload.deceased_id = decedentSelect.value;
-        }
+            },
+        };
 
         const submitBtn = cremationForm.querySelector('button[type="submit"]');
         await withButtonLoading(submitBtn, async () => {
@@ -112,7 +94,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (result.success) {
                     showToast('Cremation request submitted and pending payment/confirmation.', { type: 'success' });
                     cremationForm.reset();
-                    provisionalGroup.style.display = 'none';
                     const goToPayment = confirm('Cremation request submitted. Proceed to payment now?');
                     if (goToPayment && result.cremation_id) {
                         window.location.href = `payments.html?transaction_type=Cremation&cremation_id=${result.cremation_id}`;
@@ -126,5 +107,5 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     });
 
-    await Promise.all([loadDecedents(), loadColumbariums()]);
+    await loadColumbariums();
 });

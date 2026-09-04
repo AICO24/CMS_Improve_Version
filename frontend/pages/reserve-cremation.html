@@ -112,18 +112,16 @@
                     <p class="muted">Tell us who this is for and your preferred columbarium and date. Your request starts as Pending — submit payment afterward and it will confirm automatically once verified. The specific niche is assigned once the cremation is completed.</p>
 
                     <form id="cremationForm">
-                        <div class="form-group">
-                            <label for="decedentSelect">Decedent</label>
-                            <select id="decedentSelect" required>
-                                <option value="">Loading decedents...</option>
-                                <option value="__new__">— Not in our records (register a new person) —</option>
-                            </select>
-                        </div>
-
-                        <div id="provisionalDecedentGroup" style="display:none;">
+                        <!-- Privacy audit (2026-09-04): a citizen never browses or
+                             selects an existing decedent here — that would expose
+                             other families' names/records. Always fresh entry;
+                             this becomes a decedent_requests row, and staff match
+                             it to an existing formal record (or create one) on
+                             their own side, where full access is appropriate. -->
+                        <div id="provisionalDecedentGroup">
                             <div class="form-group">
                                 <label for="provisionalFullName">Full Name</label>
-                                <input type="text" id="provisionalFullName" placeholder="Full name of the deceased">
+                                <input type="text" id="provisionalFullName" placeholder="Full name of the deceased" required>
                             </div>
                             <div class="form-group">
                                 <label for="provisionalApproxDod">Approximate Date of Death (optional)</label>
@@ -133,7 +131,7 @@
                                 <label for="provisionalRelationship">Your Relationship to the Deceased (optional)</label>
                                 <input type="text" id="provisionalRelationship" placeholder="e.g. Son, Daughter, Spouse">
                             </div>
-                            <p class="help">They're not in our system yet — that's okay. Your request still goes through, and our staff will register their official record before the cremation takes place.</p>
+                            <p class="help">Our staff will verify and register their official record — you don't need to check whether they're already on file.</p>
                         </div>
 
                         <div class="form-group">

@@ -518,7 +518,13 @@ function createLotChatAssistant(options) {
     // whenever state.date is null, so an early "August 25" is still captured
     // if volunteered.
     function getNextMissingSlot() {
-        if (state.decedent_id === null && state.provisional_decedent === null && typeof getDecedents === 'function') return 'decedent_id';
+        // Privacy audit (2026-09-04): was keyed off `typeof getDecedents ===
+        // 'function'` as a proxy for "this is the citizen wizard" — that
+        // broke once booking-wizard.js stopped passing getDecedents at all
+        // (see its own removal comment). allowProvisionalDecedent is the
+        // actual citizen-vs-staff signal now; getDecedents may still be
+        // absent for a citizen caller going forward.
+        if (state.decedent_id === null && state.provisional_decedent === null && (typeof getDecedents === 'function' || allowProvisionalDecedent)) return 'decedent_id';
         if (state.lot_type === null) return 'lot_type';
         if (state.budget === null) return 'budget';
         return null;
@@ -972,7 +978,7 @@ function createLotChatAssistant(options) {
                     state_flags: {
                         lot_type_set: state.lot_type !== null,
                         budget_set: state.budget !== null,
-                        decedent_set: state.decedent_id !== null,
+                        decedent_set: state.decedent_id !== null || state.provisional_decedent !== null,
                         date_set: state.date !== null,
                     },
                     // Last 5 exchanges only, same bound ai-assistant-widget.js
@@ -1390,7 +1396,12 @@ function createLotChatAssistant(options) {
                 : 'Could you share a budget? For example: 8000 or ₱8,000. You can also say "no preference".');
         } else if (pendingSlot === 'decedent_id' && !(ambiguousDecedentCandidates && ambiguousDecedentCandidates.length)) {
             if (allowProvisionalDecedent) {
-                appendMessage('assistant', "I couldn't find a decedent record matching that name. Could you check the spelling? If they're genuinely not in our system yet, that's okay — you can still book below and our staff will register them.");
+                // Privacy audit (2026-09-04): this now fires on essentially
+                // every attempt for a citizen caller (extractDecedentFromText()
+                // has nothing to match against anymore — see getDecedents'
+                // removal in booking-wizard.js), so the copy no longer implies
+                // a search/spelling-check happened.
+                appendMessage('assistant', "Let's get their details — please fill in the form below and our staff will register their official record.");
                 appendDecedentRequestForm();
             } else {
                 appendMessage('assistant', "I couldn't find a decedent record matching that name. Could you check the spelling, or add the record first if they're genuinely not in the system yet?");
@@ -1543,7 +1554,10 @@ function createLotChatAssistant(options) {
 
     async function init() {
         setInputEnabled(true);
-        if (typeof getDecedents === 'function') await checkMyDecedentRequests();
+        // Privacy audit (2026-09-04): same fix as getNextMissingSlot() above
+        // — this citizen-only notification must keep running even though
+        // getDecedents is no longer passed for citizens.
+        if (typeof getDecedents === 'function' || allowProvisionalDecedent) await checkMyDecedentRequests();
         // Adviser feedback: leads with budget instead of a hardcoded example
         // naming a specific lot type/section (the booker shouldn't need to
         // already know cemetery terminology), and now also invites decedent/
