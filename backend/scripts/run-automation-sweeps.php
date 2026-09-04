@@ -39,6 +39,7 @@ if (PHP_SAPI !== 'cli') {
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../controllers/ExpirationController.php';
 require_once __DIR__ . '/../controllers/ScheduleController.php';
+require_once __DIR__ . '/../controllers/CremationController.php';
 require_once __DIR__ . '/../models/Lot.php';
 
 function sweep_log_line($message) {
@@ -69,6 +70,7 @@ sweep_log_line('=== automation sweep run started ===');
 
 $expirationController = new ExpirationController();
 $scheduleController = new ScheduleController();
+$cremationController = new CremationController();
 $lotModel = new Lot();
 
 run_sweep_stage('expiration-records/generate-notifications', function () use ($expirationController) {
@@ -93,6 +95,21 @@ run_sweep_stage('schedules/auto-cancel-stale-pending', function () use ($schedul
 // comment for the full reasoning).
 run_sweep_stage('schedules/flag-unlinked-decedent', function () use ($scheduleController) {
     return $scheduleController->flagUnlinkedDecedentSchedules();
+});
+
+// Cremation module audit, Batch C: same three-stage stale-Pending pipeline
+// as burial above, ported to cremation_records — see
+// CremationController::notifyStalePending()'s comment.
+run_sweep_stage('cremations/notify-stale-pending', function () use ($cremationController) {
+    return $cremationController->notifyStalePending();
+});
+
+run_sweep_stage('cremations/send-final-warnings', function () use ($cremationController) {
+    return $cremationController->sendFinalWarnings();
+});
+
+run_sweep_stage('cremations/auto-cancel-stale-pending', function () use ($cremationController) {
+    return $cremationController->autoCancelStalePending();
 });
 
 // Lot::syncExpiredLots() is private and only runs as a side effect of a

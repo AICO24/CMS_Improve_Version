@@ -229,6 +229,25 @@ class Cremation {
     // traceability — decedent_request_id is only ever changed by an explicit
     // key in $data, never implicitly cleared here. Mirrors Schedule::update()'s
     // identical convention.
+    //
+    // Cremation module audit, Batch C: every field below now falls back to
+    // $existing's current value when absent from $data, matching
+    // Schedule::update()'s identical fallback for every one of its own
+    // fields. Previously only deceased_id/decedent_request_id had this
+    // fallback — niche_number/columbarium/level/cremation_date/
+    // ash_storage_location/notes silently reset to NULL (and status to
+    // 'Scheduled') on any partial update, since CremationController::
+    // update()'s own plain-write path (the one call site that sends a
+    // genuinely partial $data, e.g. the queue UI's Cancel button sending
+    // only {status: 'Cancelled'}) never merges before calling this. Every
+    // OTHER caller in this file already worked around the gap by merging
+    // with $existing itself first (destroy()'s citizen soft-cancel,
+    // linkDecedent(), completeWithAutoNiche()) — strong evidence the
+    // intended contract was always "partial update, like Schedule", just
+    // incompletely implemented here. Fixing it at the source removes the
+    // need for those callers to keep working around it, though their
+    // existing merge calls remain correct (a full row merged onto itself is
+    // a no-op either way).
     public function update($id, $data) {
         $existing = $this->findById($id);
         if (!$existing) {
@@ -255,13 +274,15 @@ class Cremation {
             array_key_exists('decedent_request_id', $data)
                 ? (!empty($data['decedent_request_id']) ? (int) $data['decedent_request_id'] : null)
                 : (!empty($existing['decedent_request_id']) ? (int) $existing['decedent_request_id'] : null),
-            $data['niche_number'] ?? null,
-            $data['columbarium'] ?? null,
-            isset($data['level']) ? (int) $data['level'] : null,
-            $data['cremation_date'] ?? null,
-            $data['status'] ?? 'Scheduled',
-            $data['ash_storage_location'] ?? null,
-            $data['notes'] ?? null,
+            array_key_exists('niche_number', $data) ? $data['niche_number'] : $existing['niche_number'],
+            array_key_exists('columbarium', $data) ? $data['columbarium'] : $existing['columbarium'],
+            array_key_exists('level', $data)
+                ? (isset($data['level']) ? (int) $data['level'] : null)
+                : $existing['level'],
+            array_key_exists('cremation_date', $data) ? $data['cremation_date'] : $existing['cremation_date'],
+            $data['status'] ?? $existing['status'],
+            array_key_exists('ash_storage_location', $data) ? $data['ash_storage_location'] : $existing['ash_storage_location'],
+            array_key_exists('notes', $data) ? $data['notes'] : $existing['notes'],
             (int) $id
         ]);
     }
@@ -335,12 +356,110 @@ class Cremation {
     }
 
     public function isNicheAvailable($nicheNumber) {
-        $stmt = $this->db->prepare(" 
-            SELECT COUNT(*) as count FROM cremation_records 
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) as count FROM cremation_records
             WHERE niche_number = ? AND status != 'Cancelled'
         ");
         $stmt->execute([$nicheNumber]);
         $result = $stmt->fetch();
         return isset($result['count']) ? ((int) $result['count'] === 0) : true;
+    }
+
+    // Cremation module audit, Batch C: stale-Pending sweep, mirroring
+    // Schedule::findStalePendingUnnotified()/markStaleNotified()/
+    // findStalePendingForFinalWarning()/markFinalWarningNotified()/
+    // findStalePendingForCancellation() exactly — same three-stage policy,
+    // same "gated on the previous stage's own timestamp, not created_at
+    // alone" reasoning (see the migration's header comment), same
+    // payment-existence gate via NOT EXISTS, just against cremation_records/
+    // transaction_type='Cremation' instead of burial_schedules/'Lot Purchase'.
+    // LEFT JOINs (not INNER) — a provisional (deceased_id-less) or
+    // not-yet-linked cremation must still surface here, matching
+    // findAll()/findById()'s own LEFT JOIN convention in this file.
+    public function findStalePendingUnnotified($days) {
+        $stmt = $this->db->prepare("
+            SELECT c.*, d.first_name, d.last_name, dr.full_name AS provisional_name
+            FROM cremation_records c
+            LEFT JOIN decedent_records d ON c.deceased_id = d.decedent_id
+            LEFT JOIN decedent_requests dr ON c.decedent_request_id = dr.request_id
+            WHERE c.status = 'Pending'
+              AND c.stale_notified_at IS NULL
+              AND c.created_at <= (NOW() - INTERVAL ? DAY)
+              AND NOT EXISTS (
+                  SELECT 1 FROM payments p
+                  WHERE p.transaction_type = 'Cremation' AND p.reference_id = c.cremation_id
+              )
+            ORDER BY c.created_at ASC
+        ");
+        $stmt->execute([(int) $days]);
+        return $stmt->fetchAll();
+    }
+
+    public function markStaleNotified($id) {
+        $stmt = $this->db->prepare("UPDATE cremation_records SET stale_notified_at = NOW() WHERE cremation_id = ?");
+        return $stmt->execute([(int) $id]);
+    }
+
+    public function findStalePendingForFinalWarning($days) {
+        $stmt = $this->db->prepare("
+            SELECT c.*, d.first_name, d.last_name, dr.full_name AS provisional_name
+            FROM cremation_records c
+            LEFT JOIN decedent_records d ON c.deceased_id = d.decedent_id
+            LEFT JOIN decedent_requests dr ON c.decedent_request_id = dr.request_id
+            WHERE c.status = 'Pending'
+              AND c.stale_notified_at IS NOT NULL
+              AND c.final_warning_notified_at IS NULL
+              AND c.stale_notified_at <= (NOW() - INTERVAL ? DAY)
+              AND NOT EXISTS (
+                  SELECT 1 FROM payments p
+                  WHERE p.transaction_type = 'Cremation' AND p.reference_id = c.cremation_id
+              )
+            ORDER BY c.created_at ASC
+        ");
+        $stmt->execute([(int) $days]);
+        return $stmt->fetchAll();
+    }
+
+    public function markFinalWarningNotified($id) {
+        $stmt = $this->db->prepare("UPDATE cremation_records SET final_warning_notified_at = NOW() WHERE cremation_id = ?");
+        return $stmt->execute([(int) $id]);
+    }
+
+    public function findStalePendingForCancellation($days) {
+        $stmt = $this->db->prepare("
+            SELECT c.*, d.first_name, d.last_name, dr.full_name AS provisional_name
+            FROM cremation_records c
+            LEFT JOIN decedent_records d ON c.deceased_id = d.decedent_id
+            LEFT JOIN decedent_requests dr ON c.decedent_request_id = dr.request_id
+            WHERE c.status = 'Pending'
+              AND c.final_warning_notified_at IS NOT NULL
+              AND c.final_warning_notified_at <= (NOW() - INTERVAL ? DAY)
+              AND NOT EXISTS (
+                  SELECT 1 FROM payments p
+                  WHERE p.transaction_type = 'Cremation' AND p.reference_id = c.cremation_id
+              )
+            ORDER BY c.created_at ASC
+        ");
+        $stmt->execute([(int) $days]);
+        return $stmt->fetchAll();
+    }
+
+    // Fresh, single-row re-check called right before the actual cancel write
+    // in CremationController::autoCancelStalePending() — mirrors
+    // Schedule::isStillEligibleForAutoCancel() exactly; the bulk candidate
+    // list above was read moments earlier in the same request, and a
+    // payment could have been submitted in the interim.
+    public function isStillEligibleForAutoCancel($cremationId) {
+        $stmt = $this->db->prepare("
+            SELECT 1 FROM cremation_records c
+            WHERE c.cremation_id = ?
+              AND c.status = 'Pending'
+              AND NOT EXISTS (
+                  SELECT 1 FROM payments p
+                  WHERE p.transaction_type = 'Cremation' AND p.reference_id = c.cremation_id
+              )
+        ");
+        $stmt->execute([(int) $cremationId]);
+        return (bool) $stmt->fetchColumn();
     }
 }

@@ -582,6 +582,31 @@ if (preg_match('/^cremations\/(\d+)$/', $path, $matches) && $requestMethod === '
     exit;
 }
 
+// Cremation module audit, Batch C: stale-Pending policy, mirroring
+// schedules/notify-stale-pending / send-final-warnings / auto-cancel-stale-
+// pending exactly — same lazy-sweep shape (this app has no scheduler, see
+// CremationController::notifyStalePending()'s own comment).
+if ($path === 'cremations/notify-stale-pending' && $requestMethod === 'POST') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $days = $_GET['days'] ?? null;
+    echo json_encode($cremationController->notifyStalePending($days));
+    exit;
+}
+
+if ($path === 'cremations/send-final-warnings' && $requestMethod === 'POST') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $days = $_GET['days'] ?? null;
+    echo json_encode($cremationController->sendFinalWarnings($days));
+    exit;
+}
+
+if ($path === 'cremations/auto-cancel-stale-pending' && $requestMethod === 'POST') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $days = $_GET['days'] ?? null;
+    echo json_encode($cremationController->autoCancelStalePending($days));
+    exit;
+}
+
 $relocationController = new RelocationController();
 
 if ($path === 'relocations/stats' && $requestMethod === 'GET') {

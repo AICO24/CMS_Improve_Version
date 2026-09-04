@@ -961,6 +961,193 @@ class CremationController {
             : ['error' => 'Failed to link decedent record', 'code' => 500];
     }
 
+    // Cremation module audit, Batch C: stale-Pending policy, mirroring
+    // ScheduleController's identical three-stage pipeline (STALE_PENDING_DAYS/
+    // STALE_PENDING_FINAL_WARNING_GAP_DAYS/STALE_PENDING_CANCEL_GAP_DAYS) —
+    // same day-7/gap-4/gap-3 policy, deliberately not a different schedule,
+    // since there's no stated reason a cremation request should be held to
+    // a different grace period than a burial reservation. Lazily triggered
+    // the same way (this app has no scheduler; see
+    // backend/scripts/run-automation-sweeps.php), never on a timer of its
+    // own.
+    private const STALE_PENDING_DAYS = 7;
+    private const STALE_PENDING_FINAL_WARNING_GAP_DAYS = 4;
+    private const STALE_PENDING_CANCEL_GAP_DAYS = 3;
+
+    // Shared by all three sweep stages below for the notification/email
+    // wording — prefers the formal decedent's name once linked, falls back
+    // to the provisional name on a still-unlinked booking, and to nothing
+    // (a generic "Your cremation request") if neither is available yet.
+    private function describeCremationSubject($cremation) {
+        $formalName = trim(($cremation['first_name'] ?? '') . ' ' . ($cremation['last_name'] ?? ''));
+        if ($formalName !== '') {
+            return $formalName;
+        }
+        if (!empty($cremation['provisional_name'])) {
+            return $cremation['provisional_name'];
+        }
+        return null;
+    }
+
+    public function notifyStalePending($days = null) {
+        $days = $days !== null ? (int) $days : self::STALE_PENDING_DAYS;
+        $rows = $this->cremationModel->findStalePendingUnnotified($days);
+
+        $notificationModel = new Notification();
+        $userModel = new User();
+        $count = 0;
+
+        foreach ($rows as $cremation) {
+            $name = $this->describeCremationSubject($cremation);
+            $title = "Cremation request #{$cremation['cremation_id']} still awaiting payment";
+            $message = sprintf(
+                'Your cremation request%s has been pending for %d+ days with no payment on file. Please complete payment soon to keep your request active.',
+                $name ? ' for ' . $name : '',
+                $days
+            );
+
+            $notificationModel->create([
+                'title' => $title,
+                'message' => $message,
+                'notification_type' => 'Cremation',
+                'user_id' => $cremation['created_by'],
+                'is_read' => 0,
+            ]);
+
+            $recipient = $userModel->findById($cremation['created_by']);
+            if (!empty($recipient['email'])) {
+                $this->sendEmail($recipient['email'], $title, $message);
+            }
+
+            $this->cremationModel->markStaleNotified($cremation['cremation_id']);
+            $this->auditLogModel->log(
+                'Stale cremation request reminder sent',
+                null,
+                null,
+                'Cremation',
+                $cremation['cremation_id'],
+                ['days_pending_threshold' => $days]
+            );
+            $count++;
+        }
+
+        return ['success' => true, 'notified' => $count, 'message' => "$count stale-cremation-request reminder(s) sent"];
+    }
+
+    // Stage 2 of 3: the final warning, sent STALE_PENDING_FINAL_WARNING_GAP_DAYS
+    // after the day-7 reminder actually fired (not a fixed day-11) — see
+    // Cremation::findStalePendingForFinalWarning()'s comment for why it's
+    // gap-based, mirroring ScheduleController::sendFinalWarnings() exactly.
+    public function sendFinalWarnings($days = null) {
+        $days = $days !== null ? (int) $days : self::STALE_PENDING_FINAL_WARNING_GAP_DAYS;
+        $rows = $this->cremationModel->findStalePendingForFinalWarning($days);
+
+        $notificationModel = new Notification();
+        $userModel = new User();
+        $count = 0;
+
+        foreach ($rows as $cremation) {
+            $name = $this->describeCremationSubject($cremation);
+            $title = "Final notice: Cremation request #{$cremation['cremation_id']} will be cancelled soon";
+            $message = sprintf(
+                'Your cremation request%s will be automatically cancelled in a few days if payment is not received. Please complete payment as soon as possible to keep your request.',
+                $name ? ' for ' . $name : ''
+            );
+
+            $notificationModel->create([
+                'title' => $title,
+                'message' => $message,
+                'notification_type' => 'Cremation',
+                'user_id' => $cremation['created_by'],
+                'is_read' => 0,
+            ]);
+
+            $recipient = $userModel->findById($cremation['created_by']);
+            if (!empty($recipient['email'])) {
+                $this->sendEmail($recipient['email'], $title, $message);
+            }
+
+            $this->cremationModel->markFinalWarningNotified($cremation['cremation_id']);
+            $this->auditLogModel->log(
+                'Final stale-cremation-request warning sent',
+                null,
+                null,
+                'Cremation',
+                $cremation['cremation_id'],
+                ['days_pending_threshold' => $days]
+            );
+            $count++;
+        }
+
+        return ['success' => true, 'notified' => $count, 'message' => "$count final warning(s) sent"];
+    }
+
+    // Stage 3 of 3: the actual cancellation, STALE_PENDING_CANCEL_GAP_DAYS
+    // after the final warning actually fired. Every candidate is re-checked
+    // fresh (isStillEligibleForAutoCancel()) right before writing, mirroring
+    // ScheduleController::autoCancelStalePending() exactly. Unlike burial
+    // (which releases the lot back to Available via transitionLotStatus()),
+    // there is nothing to release here — a Pending cremation never has a
+    // niche assigned (CremationController::store() strips niche_number for
+    // a citizen booking; a niche is only ever assigned at Completion, see
+    // completeWithAutoNiche()) — so cancelling one frees no resource beyond
+    // the request itself. Calls Cremation::update() directly with just
+    // ['status' => 'Cancelled'] — safe now that Batch C's fix makes every
+    // other field fall back to the existing row's value, matching
+    // Schedule::update()'s identical behavior burial's own call already
+    // relied on.
+    public function autoCancelStalePending($days = null) {
+        $days = $days !== null ? (int) $days : self::STALE_PENDING_CANCEL_GAP_DAYS;
+        $candidates = $this->cremationModel->findStalePendingForCancellation($days);
+
+        $notificationModel = new Notification();
+        $userModel = new User();
+        $cancelledCount = 0;
+
+        foreach ($candidates as $cremation) {
+            $cremationId = $cremation['cremation_id'];
+            if (!$this->cremationModel->isStillEligibleForAutoCancel($cremationId)) {
+                continue;
+            }
+
+            $result = $this->cremationModel->update($cremationId, ['status' => 'Cancelled']);
+            if (!$result) {
+                continue;
+            }
+
+            $this->auditLogModel->log(
+                'Cremation request automatically cancelled (no payment within policy window)',
+                null,
+                null,
+                'Cremation',
+                $cremationId,
+                ['previous_status' => 'Pending', 'cancel_gap_days_since_final_warning' => $days]
+            );
+
+            $name = $this->describeCremationSubject($cremation);
+            $title = 'Cremation Request Automatically Cancelled';
+            $message = sprintf(
+                'Your cremation request%s has been automatically cancelled because payment was not received after multiple reminders. If you still wish to proceed, please submit a new booking.',
+                $name ? ' for ' . $name : ''
+            );
+            $notificationModel->create([
+                'title' => $title,
+                'message' => $message,
+                'notification_type' => 'Cremation',
+                'user_id' => $cremation['created_by'],
+                'is_read' => 0,
+            ]);
+            $recipient = $userModel->findById($cremation['created_by']);
+            if (!empty($recipient['email'])) {
+                $this->sendEmail($recipient['email'], $title, $message);
+            }
+
+            $cancelledCount++;
+        }
+
+        return ['success' => true, 'cancelled' => $cancelledCount, 'message' => "$cancelledCount stale cremation request(s) automatically cancelled"];
+    }
+
     // Mirrors ScheduleController::notifySchedule() — fires on submit.
     private function notifyCremation($data, $userId) {
         $notificationModel = new Notification();

@@ -130,6 +130,8 @@ CREATE TABLE `cremation_records` (
   `level` int DEFAULT NULL,
   `cremation_date` date DEFAULT NULL,
   `status` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'Scheduled',
+  `stale_notified_at` datetime DEFAULT NULL,
+  `final_warning_notified_at` datetime DEFAULT NULL,
   `ash_storage_location` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `notes` text COLLATE utf8mb4_general_ci,
   `created_by` int DEFAULT NULL,
@@ -140,6 +142,8 @@ CREATE TABLE `cremation_records` (
   UNIQUE KEY `uq_active_cremation_niche` (`active_niche_key`),
   KEY `deceased_id` (`deceased_id`),
   KEY `created_by` (`created_by`),
+  KEY `idx_cremation_stale_sweep` (`status`, `stale_notified_at`),
+  KEY `idx_cremation_final_warning_sweep` (`status`, `final_warning_notified_at`, `stale_notified_at`),
   CONSTRAINT `cremation_records_ibfk_1` FOREIGN KEY (`deceased_id`) REFERENCES `decedent_records` (`decedent_id`),
   CONSTRAINT `cremation_records_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

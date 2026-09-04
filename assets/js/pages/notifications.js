@@ -142,6 +142,24 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch (error) {
             console.error('Failed to flag unlinked-decedent schedules:', error);
         }
+        // Cremation module audit, Batch C: same three-stage stale-Pending
+        // pipeline as burial above, now ported to cremation_records — see
+        // CremationController::notifyStalePending()'s comment.
+        try {
+            await api.request('cremations/notify-stale-pending', { method: 'POST' });
+        } catch (error) {
+            console.error('Failed to generate stale-cremation-request reminders:', error);
+        }
+        try {
+            await api.request('cremations/send-final-warnings', { method: 'POST' });
+        } catch (error) {
+            console.error('Failed to send final stale-cremation-request warnings:', error);
+        }
+        try {
+            await api.request('cremations/auto-cancel-stale-pending', { method: 'POST' });
+        } catch (error) {
+            console.error('Failed to auto-cancel stale cremation requests:', error);
+        }
     }
 
     const markAllReadBtn = document.getElementById('markAllReadBtn');
