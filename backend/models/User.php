@@ -112,7 +112,7 @@ class User {
     // their existing token naturally expires. Returns null if the account no
     // longer exists (e.g. deleted after the token was issued).
     public function getAuthStatus($userId) {
-        $stmt = $this->db->prepare("SELECT u.is_active, r.title FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.user_id = ?");
+        $stmt = $this->db->prepare("SELECT u.is_active, u.session_version, r.title FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.user_id = ?");
         $stmt->execute([$userId]);
         $row = $stmt->fetch();
         if (!$row) {
@@ -122,7 +122,33 @@ class User {
         return [
             'is_active' => (bool) (int) $row['is_active'],
             'role' => self::normalizeRoleKey($row['title']),
+            'session_version' => (int) $row['session_version'],
         ];
+    }
+
+    // AUTH-004b (Auth audit, Batch AUTH-4b): stateless JWTs stay valid until
+    // natural expiry regardless of "logout" — this is the server-side half
+    // of fixing that. AuthController::login() embeds the user's current
+    // session_version in every token it issues; AuthMiddleware::authenticate()
+    // rejects any token whose embedded version doesn't exactly match the
+    // user's CURRENT version. Incrementing it here therefore invalidates
+    // every previously issued token for this user at once — there's no
+    // per-token tracking, only this one counter, so logging out (or
+    // changing password) on one device signs the user out everywhere. That's
+    // the simplest correct behavior without a dedicated sessions table.
+    // Called from AuthController::logout() and also from any password-change
+    // path (AuthController::resetPassword(), UserController::update()) so a
+    // stolen token can't outlive a password change either.
+    //
+    // A counter, not a timestamp: see this migration's own comment
+    // (backend/database/migration_20260904_add_session_invalidation.sql) for
+    // why a NOW()/iat timestamp comparison was tried first and replaced —
+    // 1-second resolution let a login tie with its own immediate logout, and
+    // ties made the old token permanently escape invalidation instead of
+    // glitching for a moment. Integer equality has no such collision.
+    public function invalidateSessions($userId) {
+        $stmt = $this->db->prepare("UPDATE users SET session_version = session_version + 1 WHERE user_id = ?");
+        return $stmt->execute([$userId]);
     }
 
     private function applyFilters(&$sql, &$params, $filters) {

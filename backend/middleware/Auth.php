@@ -46,6 +46,23 @@ class AuthMiddleware {
             echo json_encode(['error' => 'Account is deactivated']);
             exit;
         }
+
+        // AUTH-004b: reject any token whose embedded session_version isn't
+        // the user's CURRENT one — see User::invalidateSessions()'s comment
+        // for why this is a counter (bumped on logout/password-change)
+        // rather than a timestamp compared against the token's `iat`: that
+        // was tried first and had a real same-second tie collision that let
+        // a token permanently escape invalidation. A token issued before
+        // this claim existed has no session_version at all, which
+        // (int) null-coalesces to 0 and correctly never matches a real
+        // account's version (starts at 1), so it's rejected the same way —
+        // pre-existing sessions get signed out once when this ships.
+        if ((int) ($payload['session_version'] ?? 0) !== $status['session_version']) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Invalid or expired token']);
+            exit;
+        }
+
         $payload['role'] = $status['role'];
 
         return $payload;

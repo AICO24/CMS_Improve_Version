@@ -449,6 +449,7 @@ CREATE TABLE `users` (
   `role_id` int NOT NULL,
   `is_active` tinyint(1) DEFAULT '1',
   `last_login` datetime DEFAULT NULL,
+  `session_version` int NOT NULL DEFAULT '1',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`user_id`),

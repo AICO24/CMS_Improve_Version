@@ -78,6 +78,10 @@ class AuthController {
             'username' => $user['username'],
             'role' => $role,
             'full_name' => $user['full_name'],
+            // AUTH-004b: checked against the live value in
+            // AuthMiddleware::authenticate() on every request — see
+            // User::invalidateSessions()'s comment.
+            'session_version' => (int) ($user['session_version'] ?? 1),
         ];
         try {
             $token = JWTConfig::encode($payload);
@@ -221,10 +225,18 @@ class AuthController {
         return ['error' => 'Registration failed', 'code' => 500];
     }
 
-    public function logout($data) {
-        // Stateless JWT: logout is performed client-side by clearing token.
-        // This endpoint exists to provide a consistent API and allow server-side
-        // hooks in future (token blacklist, audits).
+    // AUTH-004b (Auth audit, Batch AUTH-4b): $userId is resolved by
+    // routes/api.php from the Authorization header, if present and valid —
+    // decoded leniently there (not via AuthMiddleware::authenticate(), which
+    // would hard-fail the request instead of just skipping invalidation) so
+    // logout stays a no-fail, idempotent call even against an
+    // already-expired/garbage/missing token. When present, this is the one
+    // real server-side effect of "logging out" a stateless JWT: see
+    // User::invalidateSessions()'s comment.
+    public function logout($data, $userId = null) {
+        if ($userId !== null) {
+            $this->userModel->invalidateSessions($userId);
+        }
         return ['success' => true, 'message' => 'Logged out'];
     }
 
@@ -310,6 +322,11 @@ class AuthController {
 
         $this->userModel->updatePasswordHash($user['user_id'], password_hash($password, PASSWORD_BCRYPT));
         $this->userModel->clearResetToken($user['user_id']);
+        // AUTH-004b: a token issued before this reset (e.g. one stolen
+        // alongside the password) shouldn't outlive the very password change
+        // meant to lock that access out — see User::invalidateSessions()'s
+        // comment.
+        $this->userModel->invalidateSessions($user['user_id']);
 
         $this->auditLogModel->log(
             'Password reset completed',

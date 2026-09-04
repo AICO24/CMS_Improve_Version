@@ -122,6 +122,15 @@ class UserController {
 
         $result = $this->userModel->update($id, $data);
         if ($result) {
+            if (!empty($data['password'])) {
+                // AUTH-004b (Auth audit, Batch AUTH-4b): an admin-driven
+                // password change should invalidate that user's existing
+                // sessions for the same reason a self-service reset does —
+                // see User::invalidateSessions()'s comment. Role/is_active
+                // changes don't need this: AuthMiddleware::authenticate()
+                // already re-checks those fresh on every request (AUTH-004).
+                $this->userModel->invalidateSessions($id);
+            }
             $this->auditLogModel->log(
                 'User updated',
                 $actor['user_id'] ?? null,

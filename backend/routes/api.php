@@ -140,7 +140,25 @@ if ($path === 'auth/register' && $requestMethod === 'POST') {
 
 if ($path === 'auth/logout' && $requestMethod === 'POST') {
     $input = readRequestBody();
-    $result = $controller->logout($input);
+    // AUTH-004b: decoded leniently here rather than via
+    // AuthMiddleware::authenticate() — an already-expired, malformed, or
+    // missing token just means there's nothing to invalidate server-side
+    // (the client still clears its own storage), not a reason to fail the
+    // logout request itself.
+    $userId = null;
+    $headers = getallheaders();
+    $authHeader = $headers['Authorization'] ?? '';
+    if (preg_match('/Bearer\s(\S+)/', $authHeader, $authMatches)) {
+        try {
+            $decoded = JWTConfig::decode($authMatches[1]);
+            if ($decoded && isset($decoded['user_id'])) {
+                $userId = $decoded['user_id'];
+            }
+        } catch (Exception $e) {
+            // JWT_SECRET missing/misconfigured — nothing to invalidate.
+        }
+    }
+    $result = $controller->logout($input, $userId);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
