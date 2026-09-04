@@ -63,6 +63,33 @@ class AuthController {
 
         $role = User::normalizeRoleKey($this->userModel->getRole($user['user_id']));
 
+        // AUTH-012 (Auth audit follow-up, requested by product owner): the
+        // login form's "Sign in as" selector previously had no server-side
+        // effect at all — actual access always came from the account's real
+        // role (unchanged below), but the field itself was silently ignored,
+        // so picking the wrong option gave no feedback. This validates the
+        // selection against the account's real role and rejects a mismatch
+        // with a clear message, without changing what determines access:
+        // $role (from the database) is still the only value that ends up in
+        // the JWT and everywhere authorization is checked.
+        $requestedLoginRole = isset($data['role']) && trim((string) $data['role']) !== ''
+            ? User::normalizeRoleKey($data['role'])
+            : null;
+        if ($requestedLoginRole !== null && $requestedLoginRole !== $role) {
+            $this->auditLogModel->log(
+                'Failed login attempt',
+                $user['user_id'],
+                $user['username'],
+                'Authentication',
+                $user['user_id'],
+                "Role mismatch: selected '$requestedLoginRole', account is '$role'"
+            );
+            return [
+                'error' => 'This account is registered as ' . self::roleLabel($role) . ', not ' . self::roleLabel($requestedLoginRole) . '. Please select the correct role.',
+                'code' => 400,
+            ];
+        }
+
         $this->userModel->updateLastLogin($user['user_id']);
         $this->auditLogModel->log(
             'User login',
@@ -110,6 +137,14 @@ class AuthController {
     // been wired up yet — see the APP_ENV comment in .env.example.
     private function isProduction() {
         return strtolower((string) EnvironmentService::get('APP_ENV', 'local')) === 'production';
+    }
+
+    // AUTH-012: human-readable label for the login role-mismatch message —
+    // mirrors ROLE_LABELS in assets/js/shared/api.js so the wording matches
+    // what the frontend already shows elsewhere.
+    private static function roleLabel($role) {
+        $labels = ['admin' => 'Administrator', 'staff' => 'Staff', 'user' => 'User'];
+        return $labels[$role] ?? ucfirst((string) $role);
     }
 
     public function register($data) {
