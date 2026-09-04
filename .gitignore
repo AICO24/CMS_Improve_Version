@@ -1,5 +1,7 @@
 # Environment files
 .env
+.env.production
+.env.*.local
 
 # Python virtual environments
 python-ai/venv/
