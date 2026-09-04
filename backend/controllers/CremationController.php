@@ -713,6 +713,15 @@ class CremationController {
         return $stats;
     }
 
+    // Cremation module audit, Batch D: the request-queue equivalent of
+    // ScheduleController::stats() — a separate endpoint (cremations/queue-
+    // stats, not cremations/stats) since that name is already taken by
+    // getStats() above's niche/columbarium occupancy shape, which
+    // manage-cremations.html has no use for.
+    public function queueStats() {
+        return $this->cremationModel->getStatusCounts();
+    }
+
     // Batch G Sub-batch 3: deterministic capacity alerting for columbarium
     // occupancy, reusing Batch D's CapacityAlert dedup pattern exactly (see
     // AiController::maybeAlertCapacity(), the burial-lot equivalent this

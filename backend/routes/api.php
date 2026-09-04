@@ -468,6 +468,16 @@ if ($path === 'cremations/stats' && $requestMethod === 'GET') {
     exit;
 }
 
+// Cremation module audit, Batch D: the request-queue status-count stats for
+// manage-cremations.html's stat row — distinct from cremations/stats above
+// (niche/columbarium occupancy, a different shape), mirroring
+// schedules/stats.
+if ($path === 'cremations/queue-stats' && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    echo json_encode($cremationController->queueStats());
+    exit;
+}
+
 if ($path === 'cremations/niches' && $requestMethod === 'GET') {
     $columbarium = $_GET['columbarium'] ?? null;
     echo json_encode($cremationController->getNiches($columbarium));
@@ -521,6 +531,9 @@ if ($path === 'cremations' && $requestMethod === 'GET') {
     if (isset($_GET['columbarium'])) $filters['columbarium'] = $_GET['columbarium'];
     if (isset($_GET['deceased_id'])) $filters['deceased_id'] = $_GET['deceased_id'];
     if (isset($_GET['q'])) $filters['q'] = $_GET['q'];
+    // Cremation module audit, Batch D: mirrors schedules' identical
+    // awaiting_confirmation filter — see Cremation::applyFilters()'s comment.
+    if (isset($_GET['awaiting_confirmation'])) $filters['awaiting_confirmation'] = $_GET['awaiting_confirmation'];
     $pagination = [];
     if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
     if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];

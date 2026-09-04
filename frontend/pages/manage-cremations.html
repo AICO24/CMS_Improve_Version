@@ -128,6 +128,30 @@
                 </div>
             </div>
                 <div class="content-area">
+                <!-- Stats row -->
+                <div class="stats-row mgmtres-stats">
+                    <div class="stat-card">
+                        <div class="stat-title">Pending</div>
+                        <div class="stat-value" id="pendingCount">0</div>
+                        <div class="stat-sub">Awaiting confirmation</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Scheduled</div>
+                        <div class="stat-value" id="scheduledCount">0</div>
+                        <div class="stat-sub">Confirmed, not yet performed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Completed</div>
+                        <div class="stat-value" id="completedCount">0</div>
+                        <div class="stat-sub">Finished cremations</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Cancelled</div>
+                        <div class="stat-value" id="cancelledCount">0</div>
+                        <div class="stat-sub">Not proceeding</div>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="toolbar-row">
                         <div class="toolbar-action-row">
@@ -158,6 +182,9 @@
                             </div>
                             <div class="toolbar-actions-panel">
                                 <div class="toolbar-actions">
+                                    <button class="btn-secondary btn-action-pill" id="toggleAwaitingConfirmation" type="button" aria-pressed="false">
+                                        Needs Review <span class="count-badge" id="awaitingConfirmationCount">0</span>
+                                    </button>
                                     <a class="btn-secondary btn-action-pill" href="exceptions.html">
                                         <i class="fas fa-triangle-exclamation"></i> Exceptions
                                     </a>
@@ -180,11 +207,12 @@
                                     <th>Cremation Date</th>
                                     <th>Requested By</th>
                                     <th>Status</th>
+                                    <th>Payment</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="cremationsBody">
-                                <tr><td colspan="8">Loading cremation requests...</td></tr>
+                                <tr><td colspan="9">Loading cremation requests...</td></tr>
                             </tbody>
                         </table>
                     </div>

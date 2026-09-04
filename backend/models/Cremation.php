@@ -9,6 +9,22 @@ class Cremation {
     // (capacity denominator) so the two stay consistent.
     const DEFAULT_CAPACITY = 10;
 
+    // Cremation module audit, Batch D: mirrors Schedule::LATEST_PAYMENT_SELECT
+    // exactly, for the queue page's payment badge — matched on
+    // transaction_type = 'Cremation' + reference_id rather than
+    // reference_kind ('reference_kind' is a schedule/lot-only enum, see
+    // migration_20260902_add_payment_reference_kind.sql; cremation payments
+    // were never given a reference_kind value, PaymentController resolves
+    // them by transaction_type alone — see its validatePaymentReference()).
+    // A cremation with no payment attempt at all (a fresh Pending request,
+    // or Scheduled-by-staff-directly) gets NULLs here, same as burial.
+    private const LATEST_PAYMENT_SELECT = "
+        (SELECT p.verification_status FROM payments p WHERE p.transaction_type = 'Cremation' AND p.reference_id = c.cremation_id ORDER BY p.created_at DESC LIMIT 1) AS payment_status,
+        (SELECT p.amount FROM payments p WHERE p.transaction_type = 'Cremation' AND p.reference_id = c.cremation_id ORDER BY p.created_at DESC LIMIT 1) AS payment_amount,
+        (SELECT p.payment_date FROM payments p WHERE p.transaction_type = 'Cremation' AND p.reference_id = c.cremation_id ORDER BY p.created_at DESC LIMIT 1) AS payment_date,
+        (SELECT p.receipt_number FROM payments p WHERE p.transaction_type = 'Cremation' AND p.reference_id = c.cremation_id ORDER BY p.created_at DESC LIMIT 1) AS payment_receipt_number
+    ";
+
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
     }
@@ -38,6 +54,20 @@ class Cremation {
             $params[] = $search;
             $params[] = $search;
         }
+        // Cremation module audit, Batch D: mirrors Schedule::applyFilters()'s
+        // identical awaiting_confirmation clause — a Pending row that already
+        // has a Verified payment on file is exactly the case
+        // autoConfirmCremationForVerifiedPayment() should have already moved
+        // to Scheduled; still finding one here means that automation
+        // couldn't safely proceed (see the resulting open system_exceptions
+        // entry) and a human needs to look at it. Not a routine approval
+        // queue — see CremationController::queueStats()'s comment.
+        if (!empty($filters['awaiting_confirmation'])) {
+            $sql .= " AND c.status = 'Pending' AND EXISTS (
+                SELECT 1 FROM payments p
+                WHERE p.transaction_type = 'Cremation' AND p.reference_id = c.cremation_id AND p.verification_status = 'Verified'
+            )";
+        }
     }
 
     // Cremation Phase B: deceased_id is now nullable (see
@@ -52,7 +82,8 @@ class Cremation {
             SELECT c.*,
                    d.first_name, d.last_name,
                    dr.full_name AS provisional_name, dr.status AS provisional_status,
-                   u.full_name as created_by_name
+                   u.full_name as created_by_name,
+                   " . self::LATEST_PAYMENT_SELECT . "
             FROM cremation_records c
             LEFT JOIN decedent_records d ON c.deceased_id = d.decedent_id
             LEFT JOIN decedent_requests dr ON c.decedent_request_id = dr.request_id
@@ -106,7 +137,8 @@ class Cremation {
             SELECT c.*,
                    d.first_name, d.last_name,
                    dr.full_name AS provisional_name, dr.status AS provisional_status,
-                   u.full_name as created_by_name
+                   u.full_name as created_by_name,
+                   " . self::LATEST_PAYMENT_SELECT . "
             FROM cremation_records c
             LEFT JOIN decedent_records d ON c.deceased_id = d.decedent_id
             LEFT JOIN decedent_requests dr ON c.decedent_request_id = dr.request_id
@@ -290,6 +322,35 @@ class Cremation {
     public function delete($id) {
         $stmt = $this->db->prepare("DELETE FROM cremation_records WHERE cremation_id = ?");
         return $stmt->execute([(int) $id]);
+    }
+
+    // Cremation module audit, Batch D: request-queue status counts for
+    // manage-cremations.html's stat row — deliberately a separate method
+    // from getStats() below, which answers a different question (niche/
+    // columbarium occupancy for the niche-grid board) despite the similar
+    // name; keeping them distinct avoids overloading one method with two
+    // unrelated shapes. Mirrors Schedule::getStats()'s status-count half
+    // only (pending/confirmed/completed/cancelled) — cremation has no
+    // month-by-month booking breakdown to return alongside it, since
+    // nothing on this page renders one, so it isn't built.
+    public function getStatusCounts() {
+        $stmt = $this->db->query("
+            SELECT COUNT(*) AS total,
+                   SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) AS pending,
+                   SUM(CASE WHEN status = 'Scheduled' THEN 1 ELSE 0 END) AS scheduled,
+                   SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) AS completed,
+                   SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled
+            FROM cremation_records
+        ");
+        $counts = $stmt->fetch();
+
+        return [
+            'total' => (int) ($counts['total'] ?? 0),
+            'pending' => (int) ($counts['pending'] ?? 0),
+            'scheduled' => (int) ($counts['scheduled'] ?? 0),
+            'completed' => (int) ($counts['completed'] ?? 0),
+            'cancelled' => (int) ($counts['cancelled'] ?? 0),
+        ];
     }
 
     public function getStats($columbarium = null) {

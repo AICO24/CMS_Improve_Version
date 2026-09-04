@@ -1,16 +1,16 @@
 // "Phase D": staff-facing list view for citizen cremation bookings — mirrors
 // manage-reservations.js's table/filter/pagination/modal pattern (see that
-// file for the burial equivalent this was built from). Deliberately a
-// *subset* of that page's features: no stats row (Cremation has no
-// Schedule::stats()-equivalent status-count endpoint — cremations/stats is
-// the niche-grid page's occupancy-rate endpoint, a different shape), no
-// payment badge / urgency tag (Cremation.php's SELECT doesn't join payment
-// info or stale/final-warning timestamps — the stale-Pending sweep was
-// deliberately deferred for Cremation in Phase B), and no "Needs Review"
-// toggle (no awaiting_confirmation filter on GET cremations). A plain
-// Exceptions link in the toolbar covers discoverability instead. This page
-// does not replace cremation-management.html's niche-grid view, which stays
-// for its existing admin-direct add/edit/assign/delete workflow.
+// file for the burial equivalent this was built from). This page does not
+// replace cremation-management.html's niche-grid view, which stays for its
+// existing admin-direct add/edit/assign/delete workflow.
+//
+// Cremation module audit, Batch D: the stats row, payment badge, urgency
+// tag, and "Needs Review" toggle originally deferred here (Cremation had no
+// status-count endpoint, no payment/stale-timestamp data on the list
+// response, and no awaiting_confirmation filter) are now at parity with
+// manage-reservations.js — see cremations/queue-stats,
+// Cremation::LATEST_PAYMENT_SELECT, and the Batch C stale-pending sweep
+// that added stale_notified_at/final_warning_notified_at.
 document.addEventListener('DOMContentLoaded', async function() {
     const user = await requireRole(['admin', 'staff']);
     if (!user) return;
@@ -38,6 +38,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
+    const statsEls = {
+        pending: document.getElementById('pendingCount'),
+        scheduled: document.getElementById('scheduledCount'),
+        completed: document.getElementById('completedCount'),
+        cancelled: document.getElementById('cancelledCount'),
+    };
+
     const searchQuery = document.getElementById('searchQuery');
     const statusFilter = document.getElementById('statusFilter');
     const clearFilters = document.getElementById('clearFilters');
@@ -49,6 +56,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     const pageJumpForm = document.getElementById('paginationJumpForm');
     const pageJumpInput = document.getElementById('pageJumpInput');
     const pageJumpBtn = document.getElementById('pageJumpBtn');
+    const toggleAwaitingBtn = document.getElementById('toggleAwaitingConfirmation');
+    const awaitingCountBadge = document.getElementById('awaitingConfirmationCount');
 
     const detailModal = document.getElementById('cremationDetailModal');
     const detailModalBody = document.getElementById('cremationDetailBody');
@@ -62,6 +71,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const perPage = 10;
     let currentQuery = '';
     let currentStatus = '';
+    let awaitingConfirmationOnly = false;
 
     const pagination = createPagination({
         prevBtn: prevPageBtn,
@@ -80,16 +90,61 @@ document.addEventListener('DOMContentLoaded', async function() {
         renderFilterChips(activeFilterChips, [
             { key: 'q', label: 'Search', value: currentQuery, clear: () => { searchQuery.value = ''; currentQuery = ''; } },
             { key: 'status', label: 'Status', value: currentStatus, clear: () => { statusFilter.value = ''; currentStatus = ''; } },
+            { key: 'awaiting', label: 'Filter', value: awaitingConfirmationOnly ? 'Needs Review' : '', clear: () => {
+                awaitingConfirmationOnly = false;
+                toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+                statusFilter.disabled = false;
+            } },
         ], async () => {
             pagination.reset();
             await loadAndRenderCremations();
         });
     }
 
-    function buildActionButtons(cremation) {
+    // Cremation module audit, Batch D: mirrors manage-reservations.js's
+    // identical buildPaymentBadge() — payment_status/payment_amount/
+    // payment_date/payment_receipt_number are now returned directly by GET
+    // cremations (Cremation::LATEST_PAYMENT_SELECT).
+    function buildPaymentBadge(cremation) {
+        const status = cremation.payment_status;
+        if (!status) {
+            return '<span class="payment-badge none">No payment</span>';
+        }
+        const normalized = String(status).toLowerCase();
+        const known = ['verified', 'pending', 'rejected'];
+        const badgeClass = known.includes(normalized) ? normalized : 'none';
+        return `<span class="payment-badge ${badgeClass}">${status}</span>`;
+    }
+
+    // Cremation module audit, Batch D: mirrors manage-reservations.js's
+    // identical buildUrgencyTag() — stale_notified_at/final_warning_notified_at
+    // are now populated by the Batch C stale-pending sweep and returned
+    // directly by GET cremations (SELECT c.* already includes them).
+    function buildUrgencyTag(cremation) {
+        if (cremation.status !== 'Pending') return '';
+        if (cremation.final_warning_notified_at) {
+            return '<span class="urgency-tag urgency-tag--critical" title="Will be auto-cancelled soon if unpaid">Final warning sent</span>';
+        }
+        if (cremation.stale_notified_at) {
+            return '<span class="urgency-tag urgency-tag--warning" title="Reminder sent for lack of payment">Reminder sent</span>';
+        }
+        return '';
+    }
+
+    // Full Automation, Admin-First: a normally-paid cremation no longer
+    // needs a manual Complete click — PaymentController::verify() confirms
+    // it automatically the moment staff verifies the payment (see
+    // AutomationEngine::run() / autoConfirmCremationForVerifiedPayment()).
+    // A Pending row only needs admin attention when that automatic step
+    // couldn't safely proceed and raised an open system_exceptions entry —
+    // mirrors manage-reservations.js's identical buildActionButtons() logic.
+    function buildActionButtons(cremation, openExceptionIds) {
         const buttons = [];
         buttons.push(`<button class="btn-row-action" data-action="view" data-id="${cremation.cremation_id}">View</button>`);
 
+        if (cremation.status === 'Pending' && openExceptionIds.has(cremation.cremation_id)) {
+            buttons.push(`<a class="btn-row-action btn-row-action--confirm" href="exceptions.html?entity_type=Cremation&entity_id=${cremation.cremation_id}">Review Exception</a>`);
+        }
         if (cremation.status === 'Scheduled') {
             buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete" data-id="${cremation.cremation_id}">Complete</button>`);
         }
@@ -98,8 +153,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         // the only way to record it. See CremationController::
         // ensurePaymentForDirectCompletionForCremation() for what this does
         // server-side (creates a real, Verified Payment record too, so it
-        // still shows up in Revenue Reports; niche is auto-assigned).
-        if (cremation.status === 'Pending') {
+        // still shows up in Revenue Reports; niche is auto-assigned). Hidden
+        // when an exception is already flagged above, matching
+        // manage-reservations.js's identical convention — resolve that
+        // first rather than offering two competing actions on the same row.
+        if (cremation.status === 'Pending' && !openExceptionIds.has(cremation.cremation_id)) {
             buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete-cash" data-id="${cremation.cremation_id}">Complete (Cash)</button>`);
         }
         if (cremation.status === 'Pending' || cremation.status === 'Scheduled') {
@@ -109,7 +167,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         return buttons.length ? buttons.join('') : '<span class="muted">No actions</span>';
     }
 
-    function buildCremationRow(cremation) {
+    function buildCremationRow(cremation, openExceptionIds) {
         const nameCell = (cremation.first_name || cremation.last_name)
             ? `${cremation.first_name || ''} ${cremation.last_name || ''}`
             : (cremation.provisional_name ? `${cremation.provisional_name} <span class="muted">(unregistered)</span>` : 'N/A');
@@ -121,8 +179,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <td>${cremation.niche_number || '&mdash;'}</td>
                 <td>${cremation.cremation_date || 'N/A'}</td>
                 <td>${cremation.created_by_name || 'N/A'}</td>
-                <td>${buildStatusBadge(cremation.status)}</td>
-                <td class="action-buttons">${buildActionButtons(cremation)}</td>
+                <td>${buildStatusBadge(cremation.status)}${buildUrgencyTag(cremation)}</td>
+                <td>${buildPaymentBadge(cremation)}</td>
+                <td class="action-buttons">${buildActionButtons(cremation, openExceptionIds)}</td>
             </tr>
         `;
     }
@@ -132,20 +191,52 @@ document.addEventListener('DOMContentLoaded', async function() {
         params.set('page', pagination.page);
         params.set('per_page', perPage);
         if (currentQuery.trim()) params.set('q', currentQuery.trim());
-        if (currentStatus) params.set('status', currentStatus);
+        if (awaitingConfirmationOnly) {
+            params.set('awaiting_confirmation', '1');
+        } else if (currentStatus) {
+            params.set('status', currentStatus);
+        }
         return await api.request(`cremations?${params.toString()}`, { method: 'GET' });
     }
 
-    async function loadAndRenderCremations() {
-        cremationsBody.innerHTML = '<tr><td colspan="8">Loading cremation requests...</td></tr>';
+    async function loadStats() {
+        return await api.request('cremations/queue-stats', { method: 'GET' });
+    }
+
+    function renderStats(stats) {
+        statsEls.pending.innerText = stats.pending || 0;
+        statsEls.scheduled.innerText = stats.scheduled || 0;
+        statsEls.completed.innerText = stats.completed || 0;
+        statsEls.cancelled.innerText = stats.cancelled || 0;
+    }
+
+    // Set of cremation_ids with an OPEN system_exceptions entry — the only
+    // Pending rows that still need a human action (see buildActionButtons()).
+    async function loadOpenCremationExceptionIds() {
         try {
-            const result = await loadCremations();
+            const exceptions = await api.request('exceptions?status=open&entity_type=Cremation', { method: 'GET' });
+            return new Set((Array.isArray(exceptions) ? exceptions : []).map((exception) => Number(exception.entity_id)));
+        } catch (error) {
+            console.error('Failed to load open exceptions', error);
+            return new Set();
+        }
+    }
+
+    async function refreshAwaitingConfirmationCount() {
+        const openExceptionIds = await loadOpenCremationExceptionIds();
+        awaitingCountBadge.textContent = openExceptionIds.size;
+    }
+
+    async function loadAndRenderCremations() {
+        cremationsBody.innerHTML = '<tr><td colspan="9">Loading cremation requests...</td></tr>';
+        try {
+            const [result, openExceptionIds] = await Promise.all([loadCremations(), loadOpenCremationExceptionIds()]);
             const data = Array.isArray(result.data) ? result.data : [];
             cremationsBody.innerHTML = data.length > 0
-                ? data.map((cremation) => buildCremationRow(cremation)).join('')
+                ? data.map((cremation) => buildCremationRow(cremation, openExceptionIds)).join('')
                 : `
                     <tr>
-                        <td colspan="8">
+                        <td colspan="9">
                             <div class="mgmtres-empty-state">
                                 <i class="fas fa-fire"></i>
                                 <strong>No cremation requests found</strong>
@@ -158,9 +249,22 @@ document.addEventListener('DOMContentLoaded', async function() {
             pagination.render(result.meta || { page: 1, pages: 1, total: data.length });
         } catch (error) {
             console.error('Failed to load cremation requests', error);
-            cremationsBody.innerHTML = '<tr><td colspan="8">Unable to load cremation requests right now.</td></tr>';
+            cremationsBody.innerHTML = '<tr><td colspan="9">Unable to load cremation requests right now.</td></tr>';
             pagination.render({ page: 1, pages: 1, total: 0 });
         }
+    }
+
+    // Batch D: the three stages below are mutually independent reads (stats,
+    // the open-exceptions count, and the cremation list itself each hit
+    // their own endpoint) — run concurrently so a refresh after any action
+    // isn't gated on three round-trips back to back, mirroring
+    // manage-reservations.js's identical refreshAll().
+    async function refreshAll() {
+        await Promise.all([
+            loadStats().then(renderStats).catch((error) => console.error('Failed to load cremation stats', error)),
+            refreshAwaitingConfirmationCount(),
+            loadAndRenderCremations(),
+        ]);
     }
 
     async function completeCremation(id, button) {
@@ -175,7 +279,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const result = await api.request(`cremations/${id}`, { method: 'PUT', body: { status: 'Completed' } });
                 if (result.success) {
                     showToast('Cremation marked completed.', { type: 'success' });
-                    await loadAndRenderCremations();
+                    await refreshAll();
                 } else {
                     showToast(result.error || 'Unable to complete cremation.', { type: 'error' });
                 }
@@ -224,7 +328,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (result.success) {
                     closeCashPaymentModal();
                     showToast('Payment recorded and cremation completed.', { type: 'success' });
-                    await loadAndRenderCremations();
+                    await refreshAll();
                 } else {
                     showToast(result.error || 'Unable to complete cremation.', { type: 'error' });
                 }
@@ -252,6 +356,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             const nameCell = (cremation.first_name || cremation.last_name)
                 ? `${cremation.first_name || ''} ${cremation.last_name || ''}`
                 : (cremation.provisional_name ? `${cremation.provisional_name} (unregistered)` : 'N/A');
+            const paymentLine = cremation.payment_status
+                ? `${escapeHtml(cremation.payment_status)} &mdash; &#8369;${escapeHtml(cremation.payment_amount || 'N/A')} on ${escapeHtml(cremation.payment_date || 'N/A')} (receipt ${escapeHtml(cremation.payment_receipt_number || 'N/A')})`
+                : 'No payment on file';
             detailModalBody.innerHTML = `
                 <div class="form-group"><label>Request</label>#${escapeHtml(cremation.cremation_id)} &mdash; ${buildStatusBadge(cremation.status)}</div>
                 <div class="form-group"><label>Decedent</label>${escapeHtml(nameCell)}</div>
@@ -259,6 +366,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <div class="form-group"><label>Niche</label>${escapeHtml(cremation.niche_number || 'Not yet assigned')}</div>
                 <div class="form-group"><label>Cremation date</label>${escapeHtml(cremation.cremation_date || 'N/A')}</div>
                 <div class="form-group"><label>Requested by</label>${escapeHtml(cremation.created_by_name || 'N/A')}</div>
+                <div class="form-group"><label>Payment</label>${paymentLine}</div>
                 <div class="form-group"><label>Notes</label>${escapeHtml(cremation.notes || 'None')}</div>
             `;
         } catch (error) {
@@ -294,7 +402,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const result = await api.request(`cremations/${id}`, { method: 'PUT', body: { status: 'Cancelled' } });
                 if (result.success) {
                     showToast('Cremation request cancelled.', { type: 'success' });
-                    await loadAndRenderCremations();
+                    await refreshAll();
                 } else {
                     showToast(result.error || 'Unable to cancel cremation request.', { type: 'error' });
                 }
@@ -327,14 +435,27 @@ document.addEventListener('DOMContentLoaded', async function() {
     searchQuery.addEventListener('input', refreshFiltered);
     statusFilter.addEventListener('change', refreshFiltered);
 
-    clearFilters.addEventListener('click', async () => {
-        searchQuery.value = '';
-        statusFilter.value = '';
-        currentQuery = '';
-        currentStatus = '';
+    toggleAwaitingBtn.addEventListener('click', async () => {
+        awaitingConfirmationOnly = !awaitingConfirmationOnly;
+        toggleAwaitingBtn.setAttribute('aria-pressed', String(awaitingConfirmationOnly));
+        // The filter is inherently Pending-only server-side; disable the status
+        // dropdown while active so it can't silently conflict with the toggle.
+        statusFilter.disabled = awaitingConfirmationOnly;
         pagination.reset();
         await loadAndRenderCremations();
     });
 
-    await loadAndRenderCremations();
+    clearFilters.addEventListener('click', async () => {
+        searchQuery.value = '';
+        statusFilter.value = '';
+        statusFilter.disabled = false;
+        currentQuery = '';
+        currentStatus = '';
+        awaitingConfirmationOnly = false;
+        toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+        pagination.reset();
+        await loadAndRenderCremations();
+    });
+
+    await refreshAll();
 });
