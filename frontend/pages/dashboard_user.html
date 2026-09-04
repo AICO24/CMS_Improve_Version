@@ -39,6 +39,7 @@
                 <div class="nav-group">
                     <button type="button" class="nav-group-header"><span>Operations</span><i class="fas fa-chevron-down chev"></i></button>
                     <div class="nav-group-body">
+                    <a href="book-a-service.html" class="nav-item"><i class="fas fa-handshake icon"></i> <span>Book a Service</span></a>
                     <a href="reserve-burial-slot.html" class="nav-item"><i class="fas fa-monument icon"></i> <span>Reserve Burial Slot</span></a>
                     <a href="my-reservations.html" class="nav-item"><i class="fas fa-bookmark icon"></i> <span>My Reservations</span></a>
                     <a href="reserve-cremation.html" class="nav-item"><i class="fas fa-fire icon"></i> <span>Reserve Cremation</span></a>
@@ -109,6 +110,16 @@
                 <div class="user-welcome-card card">
                     <p class="welcome-label">👋 Welcome, <span id="welcomeName">Client</span></p>
                     <p class="welcome-note">Your account summary is below. Check your reservations, payments, and upcoming burial schedule.</p>
+                </div>
+                <!-- Cremation module audit, Batch H: one shared entry point for
+                     "which service do I need" instead of linking straight into
+                     either flow — see book-a-service.html. -->
+                <div class="attention-row">
+                    <div class="card">
+                        <h4><i class="fas fa-handshake"></i> Need to book a service?</h4>
+                        <p class="muted">Reserve a burial slot or a cremation request — we'll guide you through the requirements, schedule, and payment for whichever one you need.</p>
+                        <a href="book-a-service.html" class="btn-primary">Book a Service &rarr;</a>
+                    </div>
                 </div>
                 <div class="stats-row">
                     <div class="stat-card">

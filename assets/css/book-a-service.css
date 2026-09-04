@@ -1,0 +1,58 @@
+/*
+  Book a Service (citizen landing/chooser) — Cremation module audit, Batch H.
+  Part E of the audit's recommendation: one shared entry point for "which
+  service do I need", routing into the existing separate burial/cremation
+  booking flows rather than merging them into one form (burial's lot
+  recommendation/conflict-checking has no cremation equivalent — see
+  reserve-cremation.js's own header comment on why that split is
+  deliberate). This page is pure navigation, so its only job is presenting
+  the two choices clearly — everything else reuses assets/css/components/
+  cards.css and buttons.css already loaded on this page.
+*/
+.service-choice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 18px;
+}
+
+.service-choice-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: var(--space-5, 24px);
+    text-align: left;
+}
+
+.service-choice-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--color-primary-50);
+    color: var(--color-primary-500);
+    font-size: 1.3rem;
+    margin-bottom: 4px;
+}
+
+.service-choice-card h4 {
+    margin: 0;
+}
+
+.service-choice-card p.muted {
+    margin: 0 0 8px;
+}
+
+.service-choice-card a.btn-primary {
+    text-decoration: none;
+    margin-top: auto;
+}
+
+@media (max-width: 900px) {
+    .service-choice-grid {
+        grid-template-columns: 1fr;
+    }
+}

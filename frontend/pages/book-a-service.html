@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile | Cemetery Management</title>
+    <title>Book a Service | Cemetery Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -16,12 +16,9 @@
     <link rel="stylesheet" href="../../assets/css/dashboard.css?v=2">
     <link rel="stylesheet" href="../../assets/css/components/buttons.css">
     <link rel="stylesheet" href="../../assets/css/components/cards.css">
-    <link rel="stylesheet" href="../../assets/css/components/forms.css">
-    <link rel="stylesheet" href="../../assets/css/components/tables.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/dashboard_staff.css">
     <link rel="stylesheet" href="../../assets/css/dashboard_user.css">
+    <link rel="stylesheet" href="../../assets/css/book-a-service.css">
 
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
@@ -39,7 +36,7 @@
                 <div class="nav-group">
                     <button type="button" class="nav-group-header"><span>Operations</span><i class="fas fa-chevron-down chev"></i></button>
                     <div class="nav-group-body">
-                    <a href="book-a-service.html" class="nav-item"><i class="fas fa-handshake icon"></i> <span>Book a Service</span></a>
+                    <a href="book-a-service.html" class="nav-item active"><i class="fas fa-handshake icon"></i> <span>Book a Service</span></a>
                     <a href="reserve-burial-slot.html" class="nav-item"><i class="fas fa-monument icon"></i> <span>Reserve Burial Slot</span></a>
                     <a href="my-reservations.html" class="nav-item"><i class="fas fa-bookmark icon"></i> <span>My Reservations</span></a>
                     <a href="reserve-cremation.html" class="nav-item"><i class="fas fa-fire icon"></i> <span>Reserve Cremation</span></a>
@@ -63,7 +60,7 @@
                     <button type="button" class="nav-group-header"><span>System</span><i class="fas fa-chevron-down chev"></i></button>
                     <div class="nav-group-body">
                     <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
-                    <a href="profile.html" class="nav-item active"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
+                    <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
                     </div>
                 </div>
             </div>
@@ -85,7 +82,7 @@
                             <path class="line" d="M7 16H27"></path>
                         </svg>
                     </label>
-                    <h3 id="pageTitle">Profile</h3>
+                    <h3 id="pageTitle">Book a Service</h3>
                 </div>
                 <div class="user-info">
                     <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
@@ -107,19 +104,30 @@
                 </div>
             </div>
                 <div class="content-area">
-                <div class="card">
-                    <h4>Account Information</h4>
-                    <p class="muted">Your account details as registered with the Cemetery Management System.</p>
-                    <div class="detail-row"><span>Full Name</span><strong id="profileFullName">—</strong></div>
-                    <div class="detail-row"><span>Username</span><strong id="profileUsername">—</strong></div>
-                    <div class="detail-row"><span>Email</span><strong id="profileEmail">—</strong></div>
-                    <div class="detail-row"><span>Role</span><strong id="profileRole">—</strong></div>
+                <div class="user-welcome-card card">
+                    <p class="welcome-label">What would you like to arrange?</p>
+                    <p class="welcome-note">Choose a service below and we'll guide you through the rest — the requirements, schedule, and payment steps are specific to each one.</p>
                 </div>
+                <div class="service-choice-grid">
+                    <div class="card service-choice-card">
+                        <div class="service-choice-icon"><i class="fas fa-monument"></i></div>
+                        <h4>Burial Service</h4>
+                        <p class="muted">Reserve a burial lot. Chat with the AI Burial Assistant for a personalized lot type and specific lot suggestion based on budget, section, and current availability.</p>
+                        <a href="reserve-burial-slot.html" class="btn-primary">Reserve a Burial Slot &rarr;</a>
+                    </div>
+                    <div class="card service-choice-card">
+                        <div class="service-choice-icon"><i class="fas fa-fire"></i></div>
+                        <h4>Cremation Service</h4>
+                        <p class="muted">Book a cremation request for a columbarium niche. Provide who it's for and your preferred columbarium and date — the specific niche is assigned once the cremation is completed.</p>
+                        <a href="reserve-cremation.html" class="btn-primary">Reserve a Cremation &rarr;</a>
+                    </div>
+                </div>
+                <p class="muted small" style="margin-top:14px;">Already booked? Check <a href="my-reservations.html">My Reservations</a> or <a href="my-cremations.html">My Cremations</a> for status updates.</p>
             </div>
         </main>
     </div>
-<script src="../../assets/js/shared/api.js"></script>
-    <script src="../../assets/js/pages/profile.js"></script>
+    <script src="../../assets/js/shared/api.js"></script>
+    <script src="../../assets/js/pages/book-a-service.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
 </body>
