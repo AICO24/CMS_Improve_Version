@@ -48,6 +48,24 @@ class UserController {
             }
         }
 
+        // User Management audit follow-up: this endpoint had none of the
+        // input validation AuthController::register() has (that gap is why
+        // it was previously possible for a nonexistent role_id, a malformed
+        // email, or a 1-character password to reach the database
+        // unguarded) — added here to match, since this is now the one
+        // place admin/staff accounts actually get created.
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            return ['error' => 'A valid email address is required', 'code' => 400];
+        }
+
+        if (strlen($data['password']) < 6) {
+            return ['error' => 'Password must be at least 6 characters', 'code' => 400];
+        }
+
+        if (!$this->userModel->roleIdExists($data['role_id'])) {
+            return ['error' => 'Invalid role selected', 'code' => 400];
+        }
+
         if ($this->userModel->findByUsername($data['username'])) {
             return ['error' => 'Username already taken', 'code' => 409];
         }
@@ -56,7 +74,20 @@ class UserController {
             return ['error' => 'Email already registered', 'code' => 409];
         }
 
-        $result = $this->userModel->create($data);
+        try {
+            $result = $this->userModel->create($data);
+        } catch (PDOException $e) {
+            // Safety net for the race between the uniqueness checks above and
+            // this INSERT (two concurrent admin requests) — mirrors
+            // AuthController::register()'s identical catch. Email and
+            // username were both just confirmed free of a pre-existing row,
+            // so a 23000 constraint violation here means one of them was
+            // taken in that same window.
+            if ($e->getCode() === '23000') {
+                return ['error' => 'Username or email already registered', 'code' => 409];
+            }
+            throw $e;
+        }
         if ($result) {
             $created = $this->userModel->findByEmail($data['email']);
             if ($created) {
@@ -88,13 +119,24 @@ class UserController {
         }
 
         if (!empty($data['email']) && $data['email'] !== $existing['email']) {
+            if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                return ['error' => 'A valid email address is required', 'code' => 400];
+            }
             if ($this->userModel->findByEmail($data['email'])) {
                 return ['error' => 'Email already registered', 'code' => 409];
             }
         }
 
+        if (!empty($data['password']) && strlen($data['password']) < 6) {
+            return ['error' => 'Password must be at least 6 characters', 'code' => 400];
+        }
+
         $data['role_id'] = isset($data['role_id']) ? (int) $data['role_id'] : $existing['role_id'];
         $data['is_active'] = isset($data['is_active']) ? (int) $data['is_active'] : $existing['is_active'];
+
+        if ((int) $data['role_id'] !== (int) $existing['role_id'] && !$this->userModel->roleIdExists($data['role_id'])) {
+            return ['error' => 'Invalid role selected', 'code' => 400];
+        }
 
         $adminRoleId = $this->userModel->getRoleIdByTitle('admin');
         $wasActiveAdmin = $adminRoleId !== null

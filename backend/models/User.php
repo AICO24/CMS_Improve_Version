@@ -213,6 +213,23 @@ class User {
         return $row ? (int) $row['role_id'] : null;
     }
 
+    // User Management audit follow-up: UserController::store()/update() take
+    // a raw role_id from the request. The real frontend form only ever sends
+    // 1 or 2 (hardcoded to the seeded admin/staff ids — see
+    // assets/js/pages/user-management.js), but a role_id has a FOREIGN KEY
+    // to roles(role_id), and nothing validated it before this — a
+    // nonexistent id (a direct API call, or if the roles table is ever
+    // reseeded with different ids) hit the INSERT/UPDATE's FK constraint
+    // unguarded, throwing an uncaught PDOException that the global handler
+    // in backend/api/index.php classifies as a 503 "Service temporarily
+    // unavailable" — the exact same misleading-error shape AUTH-006 fixed
+    // for a duplicate username on public registration.
+    public function roleIdExists($roleId) {
+        $stmt = $this->db->prepare("SELECT 1 FROM roles WHERE role_id = ?");
+        $stmt->execute([(int) $roleId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
     public function update($id, $data) {
         $fields = [];
         $params = [];
