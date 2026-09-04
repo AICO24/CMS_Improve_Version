@@ -17,6 +17,22 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/PaymentController.php';
 
 class CremationController {
+    // Cremation module audit, Batch A: status has always been a free-text
+    // VARCHAR(50) with no application-level check on write — a typo'd value
+    // (e.g. "Complete" instead of "Completed") would silently write a status
+    // string nothing else in the codebase recognizes. These are the only
+    // four values ever written anywhere in this module (controller, model
+    // default, both admin frontends) — enforced here rather than promoted to
+    // a DB-level ENUM, so a future 5th state doesn't need a schema migration
+    // to introduce, just a change to this list.
+    private const ALLOWED_STATUSES = ['Pending', 'Scheduled', 'Completed', 'Cancelled'];
+
+    // A Completed or Cancelled record is terminal — nothing in this file
+    // previously stopped a PUT from moving either back to Pending/Scheduled.
+    // Citizens can't reach this (destroy()/update() already restrict them to
+    // their own still-Pending requests), so this guards staff/admin only.
+    private const TERMINAL_STATUSES = ['Completed', 'Cancelled'];
+
     private $cremationModel;
     private $decedentModel;
     private $requestModel;
@@ -173,6 +189,14 @@ class CremationController {
             unset($data['preferred_columbarium']);
         }
 
+        // Cremation module audit, Batch A: same whitelist update() enforces —
+        // an admin/staff direct-creation form is the only other place a
+        // status string reaches this table (citizens are already forced to
+        // 'Pending' above).
+        if (isset($data['status']) && !in_array($data['status'], self::ALLOWED_STATUSES, true)) {
+            return ['error' => "Invalid status '{$data['status']}'. Must be one of: " . implode(', ', self::ALLOWED_STATUSES), 'code' => 400];
+        }
+
         if (!empty($data['niche_number']) && !$this->cremationModel->isNicheAvailable($data['niche_number'])) {
             return ['error' => 'This niche is already occupied', 'code' => 409];
         }
@@ -193,7 +217,20 @@ class CremationController {
         }
 
         $data['created_by'] = $userId;
-        $result = $this->cremationModel->create($data);
+        // Cremation module audit, Batch A: same uq_active_cremation_niche
+        // backstop as update() — an explicit niche_number supplied directly
+        // on a create (not via assignNiche()/createWithAutoNiche(), both
+        // already AutomationEngine-wrapped) has the same narrow
+        // check-then-write race the isNicheAvailable() call above doesn't
+        // close on its own.
+        try {
+            $result = $this->cremationModel->create($data);
+        } catch (PDOException $e) {
+            if (self::isDuplicateActiveNicheViolation($e)) {
+                return ['error' => 'This niche is already occupied', 'code' => 409];
+            }
+            throw $e;
+        }
         if ($result) {
             // Cremation Phase B: nothing to patch yet for a provisional
             // (deceased_id-less) booking — see linkDecedent()/autoLinkCremations().
@@ -239,22 +276,39 @@ class CremationController {
         $cremationModel = $this->cremationModel;
         $suggestion = null;
 
-        $automationResult = AutomationEngine::run(
-            'cremation.niche_assigned',
-            'Decedent',
-            $deceasedId,
-            $userId,
-            function () use ($cremationModel, $columbarium, &$suggestion) {
-                $suggestion = $cremationModel->findNextAvailableNiche($columbarium);
-                if (!$suggestion) {
-                    return ['No available niches in columbarium ' . ($columbarium ?: 'Columbarium A') . ' — assign one manually once space opens up, or choose another columbarium'];
+        // Cremation module audit, Batch A: findNextAvailableNiche() re-checks
+        // the grid immediately before apply() writes, so a genuine collision
+        // with the uq_active_cremation_niche index (migration_20260904_
+        // add_active_niche_constraint.sql) here is already narrow — but not
+        // impossible, since the re-check read and this write still aren't
+        // atomic with each other. Translated into the same 409 the
+        // validate()-failure branch below already returns for "no niche
+        // available" — from the caller's perspective it's the identical
+        // outcome (the niche this call wanted is gone), just discovered a
+        // moment later than usual.
+        try {
+            $automationResult = AutomationEngine::run(
+                'cremation.niche_assigned',
+                'Decedent',
+                $deceasedId,
+                $userId,
+                function () use ($cremationModel, $columbarium, &$suggestion) {
+                    $suggestion = $cremationModel->findNextAvailableNiche($columbarium);
+                    if (!$suggestion) {
+                        return ['No available niches in columbarium ' . ($columbarium ?: 'Columbarium A') . ' — assign one manually once space opens up, or choose another columbarium'];
+                    }
+                    return true;
+                },
+                function () use (&$suggestion, $persist) {
+                    return $persist($suggestion);
                 }
-                return true;
-            },
-            function () use (&$suggestion, $persist) {
-                return $persist($suggestion);
+            );
+        } catch (PDOException $e) {
+            if (self::isDuplicateActiveNicheViolation($e)) {
+                return ['error' => 'No niches are currently available for automatic assignment — flagged for review under Exceptions.', 'code' => 409];
             }
-        );
+            throw $e;
+        }
 
         if (empty($automationResult['success'])) {
             return ['error' => 'No niches are currently available for automatic assignment — flagged for review under Exceptions.', 'code' => 409];
@@ -442,6 +496,21 @@ class CremationController {
             unset($data['status'], $data['niche_number']);
         }
 
+        // Cremation module audit, Batch A: reject a status value nothing
+        // else in this module recognizes, and block any transition out of a
+        // terminal state (Completed/Cancelled) — see the ALLOWED_STATUSES/
+        // TERMINAL_STATUSES class constants above. A no-op resubmission of
+        // the record's current (terminal) status is not a transition and
+        // stays allowed, so an otherwise-ordinary field edit (e.g. notes) on
+        // an already-Completed record isn't blocked by this.
+        if (isset($data['status']) && !in_array($data['status'], self::ALLOWED_STATUSES, true)) {
+            return ['error' => "Invalid status '{$data['status']}'. Must be one of: " . implode(', ', self::ALLOWED_STATUSES), 'code' => 400];
+        }
+        if (isset($data['status']) && $data['status'] !== $existing['status']
+            && in_array($existing['status'], self::TERMINAL_STATUSES, true)) {
+            return ['error' => "This cremation record is already {$existing['status']} and cannot be changed.", 'code' => 409];
+        }
+
         if (!empty($data['niche_number']) && $data['niche_number'] != $existing['niche_number']) {
             if (!$this->cremationModel->isNicheAvailable($data['niche_number'])) {
                 return ['error' => 'This niche is already occupied', 'code' => 409];
@@ -476,7 +545,23 @@ class CremationController {
             }
         }
 
-        $result = $this->cremationModel->update($id, $data);
+        // Cremation module audit, Batch A: the isNicheAvailable() check above
+        // narrows the race but isn't itself atomic with this UPDATE, so a
+        // concurrent request can still reach the uq_active_cremation_niche
+        // unique index first (see migration_20260904_add_active_niche_
+        // constraint.sql) — the same isolation-level-independent backstop
+        // ScheduleController::update() already relies on for
+        // uq_active_schedule_slot. Translate that one specific violation
+        // into the same friendly 409 the early check above returns;
+        // anything else propagates unchanged.
+        try {
+            $result = $this->cremationModel->update($id, $data);
+        } catch (PDOException $e) {
+            if (self::isDuplicateActiveNicheViolation($e)) {
+                return ['error' => 'This niche is already occupied', 'code' => 409];
+            }
+            throw $e;
+        }
         if ($result) {
             $decedentData = [];
             if (isset($data['status'])) {
@@ -542,6 +627,14 @@ class CremationController {
         }
 
         return ['error' => 'Failed to update cremation record', 'code' => 500];
+    }
+
+    // Cremation module audit, Batch A: mirrors ScheduleController::
+    // isDuplicateActiveSlotViolation() exactly, for the
+    // uq_active_cremation_niche unique index added by
+    // migration_20260904_add_active_niche_constraint.sql.
+    private static function isDuplicateActiveNicheViolation(PDOException $e) {
+        return $e->getCode() === '23000' && strpos($e->getMessage(), 'uq_active_cremation_niche') !== false;
     }
 
     // Cremation Phase B: $userId is now $user (full actor). Admin/staff
@@ -781,28 +874,39 @@ class CremationController {
         // changed rather than the one that triggered the event. The
         // resulting cremation_id is still fully traceable in the audit's
         // own 'result' details.
-        $automationResult = AutomationEngine::run(
-            'cremation.niche_assigned',
-            'Decedent',
-            $deceasedId,
-            $userId,
-            function () use ($cremationModel, $nicheNumber) {
-                if (!$cremationModel->isNicheAvailable($nicheNumber)) {
-                    return ['Niche ' . $nicheNumber . ' was assigned to someone else before this could complete'];
+        // Cremation module audit, Batch A: same uq_active_cremation_niche
+        // backstop as autoAssignNiche() above — the re-check inside
+        // validate() narrows this race but isn't atomic with apply()'s
+        // write.
+        try {
+            $automationResult = AutomationEngine::run(
+                'cremation.niche_assigned',
+                'Decedent',
+                $deceasedId,
+                $userId,
+                function () use ($cremationModel, $nicheNumber) {
+                    if (!$cremationModel->isNicheAvailable($nicheNumber)) {
+                        return ['Niche ' . $nicheNumber . ' was assigned to someone else before this could complete'];
+                    }
+                    return true;
+                },
+                function () use ($cremationModel, $decedentModel, $cremationData, $deceasedId, $nicheNumber) {
+                    $newId = $cremationModel->create($cremationData);
+                    if ($newId) {
+                        $decedentModel->patchCremationStatus($deceasedId, [
+                            'is_cremated' => 'yes',
+                            'ash_storage' => $nicheNumber,
+                        ]);
+                    }
+                    return ['cremation_id' => $newId, 'niche_number' => $nicheNumber];
                 }
-                return true;
-            },
-            function () use ($cremationModel, $decedentModel, $cremationData, $deceasedId, $nicheNumber) {
-                $newId = $cremationModel->create($cremationData);
-                if ($newId) {
-                    $decedentModel->patchCremationStatus($deceasedId, [
-                        'is_cremated' => 'yes',
-                        'ash_storage' => $nicheNumber,
-                    ]);
-                }
-                return ['cremation_id' => $newId, 'niche_number' => $nicheNumber];
+            );
+        } catch (PDOException $e) {
+            if (self::isDuplicateActiveNicheViolation($e)) {
+                return ['error' => 'This niche was just taken by another assignment. Please choose a different niche.', 'code' => 409];
             }
-        );
+            throw $e;
+        }
 
         if (empty($automationResult['success'])) {
             // validate() failed -> AutomationEngine already raised a

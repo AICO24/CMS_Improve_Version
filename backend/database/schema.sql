@@ -135,12 +135,20 @@ CREATE TABLE `cremation_records` (
   `created_by` int DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `active_niche_key` varchar(160) COLLATE utf8mb4_general_ci GENERATED ALWAYS AS ((case when ((`status` <> _utf8mb4'Cancelled') and (`niche_number` is not null) and (`niche_number` <> '')) then concat(coalesce(`columbarium`,''),'|',`niche_number`) else NULL end)) STORED,
   PRIMARY KEY (`cremation_id`),
+  UNIQUE KEY `uq_active_cremation_niche` (`active_niche_key`),
   KEY `deceased_id` (`deceased_id`),
   KEY `created_by` (`created_by`),
   CONSTRAINT `cremation_records_ibfk_1` FOREIGN KEY (`deceased_id`) REFERENCES `decedent_records` (`decedent_id`),
   CONSTRAINT `cremation_records_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- NOTE: this base dump still predates migration_20260903_add_cremation_provisional_booking.sql
+-- (decedent_request_id column/FK, deceased_id made nullable) — full schema.sql
+-- regeneration against live migrations is scoped to a later cleanup batch,
+-- not this one. Only the active_niche_key/uq_active_cremation_niche addition
+-- from migration_20260904_add_active_niche_constraint.sql is reflected here
+-- so this migration doesn't add further drift on top of the existing gap.
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `decedent_documents`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
