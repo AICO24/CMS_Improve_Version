@@ -92,8 +92,35 @@ function readRequestBody() {
     return $result;
 }
 
+// Auth audit, Batch AUTH-1 (AUTH-002/AUTH-007): none of the auth/* endpoints
+// had any throttling — login was open to unlimited password guessing, and
+// the reset-code endpoints (a 6-digit, 1,000,000-value code) were brute-
+// forceable outright with no limiter at all. Mirrors the existing
+// RateLimiter::allow() pattern already used for ai/* below, just factored
+// into one helper since this block needs it at every route rather than one
+// call each. Identifier-scoped limits (username/email) stop a targeted
+// attack against one account even when spread across many IPs; IP-scoped
+// limits catch flooding across many accounts from one source. Windows are
+// generous enough that a real user mistyping a password a few times, or
+// re-requesting a reset code, never trips them.
+function rateLimitOrFail($key, $limit, $windowSeconds) {
+    if (RateLimiter::allow($key, $limit, $windowSeconds)) {
+        return;
+    }
+    http_response_code(429);
+    echo json_encode(['error' => 'Too many requests — please wait a moment before trying again.']);
+    exit;
+}
+
+$clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+
 if ($path === 'auth/login' && $requestMethod === 'POST') {
     $input = readRequestBody();
+    $identifier = strtolower(trim((string) ($input['username'] ?? $input['email'] ?? '')));
+    rateLimitOrFail('auth_login_ip_' . $clientIp, 20, 300);
+    if ($identifier !== '') {
+        rateLimitOrFail('auth_login_id_' . $identifier, 8, 300);
+    }
     $result = $controller->login($input);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -102,6 +129,7 @@ if ($path === 'auth/login' && $requestMethod === 'POST') {
 }
 
 if ($path === 'auth/register' && $requestMethod === 'POST') {
+    rateLimitOrFail('auth_register_ip_' . $clientIp, 5, 600);
     $input = readRequestBody();
     $result = $controller->register($input);
     http_response_code($result['code'] ?? 200);
@@ -121,6 +149,11 @@ if ($path === 'auth/logout' && $requestMethod === 'POST') {
 
 if ($path === 'auth/forgot-password' && $requestMethod === 'POST') {
     $input = readRequestBody();
+    $email = strtolower(trim((string) ($input['email'] ?? '')));
+    rateLimitOrFail('auth_forgot_ip_' . $clientIp, 5, 600);
+    if ($email !== '') {
+        rateLimitOrFail('auth_forgot_email_' . $email, 5, 600);
+    }
     $result = $controller->forgotPassword($input);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -130,6 +163,15 @@ if ($path === 'auth/forgot-password' && $requestMethod === 'POST') {
 
 if ($path === 'auth/verify-reset-code' && $requestMethod === 'POST') {
     $input = readRequestBody();
+    $email = strtolower(trim((string) ($input['email'] ?? '')));
+    // 10 attempts per 10-minute window — the code itself expires after 10
+    // minutes (AuthController::forgotPassword()), so this makes the
+    // 1,000,000-value code space effectively unguessable regardless of how
+    // many separate reset requests an attacker generates.
+    rateLimitOrFail('auth_verify_ip_' . $clientIp, 30, 600);
+    if ($email !== '') {
+        rateLimitOrFail('auth_verify_email_' . $email, 10, 600);
+    }
     $result = $controller->verifyResetCode($input);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -139,6 +181,14 @@ if ($path === 'auth/verify-reset-code' && $requestMethod === 'POST') {
 
 if ($path === 'auth/reset-password' && $requestMethod === 'POST') {
     $input = readRequestBody();
+    $email = strtolower(trim((string) ($input['email'] ?? '')));
+    // resetPassword() re-validates the code itself (User::verifyResetCode()),
+    // so it's an equally viable brute-force target as verify-reset-code above
+    // and needs the same per-email limit.
+    rateLimitOrFail('auth_verify_ip_' . $clientIp, 30, 600);
+    if ($email !== '') {
+        rateLimitOrFail('auth_resetpw_email_' . $email, 10, 600);
+    }
     $result = $controller->resetPassword($input);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);

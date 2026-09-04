@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../config/jwt.php';
+require_once __DIR__ . '/../services/EnvironmentService.php';
 
 class AuthController {
     private $userModel;
@@ -20,7 +21,7 @@ class AuthController {
             return ['error' => 'Email/Username and password are required', 'code' => 400];
         }
 
-        if (strtolower((string) EnvironmentService::get('SEED_DEFAULT_USERS', 'false')) === 'true') {
+        if (!$this->isProduction() && strtolower((string) EnvironmentService::get('SEED_DEFAULT_USERS', 'false')) === 'true') {
             $this->userModel->ensureDefaultUsers();
         }
         // allow login by email or username
@@ -73,6 +74,15 @@ class AuthController {
                 'is_active' => (bool) ($user['is_active'] ?? 1),
             ],
         ];
+    }
+
+    // AUTH-001/AUTH-003 (Auth audit, Batch AUTH-1): a single switch that keeps
+    // dev-only behavior (default-user seeding, returning reset codes directly
+    // instead of emailing them) inert on a real deployment even if
+    // SEED_DEFAULT_USERS is accidentally left true or no mail service has
+    // been wired up yet — see the APP_ENV comment in .env.example.
+    private function isProduction() {
+        return strtolower((string) EnvironmentService::get('APP_ENV', 'local')) === 'production';
     }
 
     private function normalizeRoleKey($role) {
@@ -182,12 +192,6 @@ class AuthController {
         return ['success' => true, 'message' => 'Logged out'];
     }
 
-    // Dev-mode password reset: no SMTP/mail capability exists in this
-    // codebase, so instead of emailing the code, it's returned directly in
-    // the response as `dev_code` for the frontend to display. When real
-    // email delivery is added later, stop returning `dev_code` and send
-    // the code instead — verifyResetCode()/resetPassword() below don't
-    // need to change.
     public function forgotPassword($data) {
         $email = trim((string) ($data['email'] ?? ''));
         if ($email === '') {
@@ -219,8 +223,16 @@ class AuthController {
             'Verification code generated'
         );
 
-        $genericResponse['dev_code'] = $code;
         $genericResponse['expires_in_minutes'] = 10;
+        if (!$this->isProduction()) {
+            // Dev-mode stand-in: no SMTP/mail capability exists in this
+            // codebase yet, so the code is returned directly instead of
+            // emailed. isProduction() keeps this off on a real deployment
+            // regardless of that — see its own comment. When real email
+            // delivery is added later, remove this block and send the code
+            // instead — verifyResetCode()/resetPassword() don't need to change.
+            $genericResponse['dev_code'] = $code;
+        }
         return $genericResponse;
     }
 
