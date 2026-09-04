@@ -2,9 +2,7 @@
 // my-reservations.js closely (same shared reservation-ui.js helpers,
 // pagination, filter-chip pattern), adapted for cremation's fields
 // (columbarium/niche instead of lot/section, cremation_date instead of
-// schedule_date). No AI assistant mount here — that's scoped to Schedule
-// module context today (see my-reservations.js's own comment); adding a
-// Cremation-scoped one is a separate decision, not part of this phase.
+// schedule_date).
 document.addEventListener('DOMContentLoaded', async function() {
     try {
         const user = await requireRole(['user']);
@@ -16,6 +14,22 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     document.getElementById('logoutBtn').addEventListener('click', () => {
         api.logout();
+    });
+
+    // Cremation module audit, Batch F: mirrors my-reservations.js's
+    // identical citizen-scoped mount exactly — scope='module' only, always
+    // filtered server-side to this citizen's own cremation requests (see
+    // AuditIntelligenceService::buildCitizenModuleContext('Cremation', ...)
+    // and AiController::askAssistant()'s citizen branch), never another
+    // citizen's, never system-wide.
+    initAiAssistant({
+        mountSelector: '#aiAssistantMount',
+        context: { scope: 'module', module: 'Cremation' },
+        greeting: "Hello! I'm your AI assistant for your cremation requests. How can I help you today?",
+        suggestions: [
+            { icon: 'fa-list-check', label: 'My requests', question: 'What is the status of my cremation requests right now?' },
+            { icon: 'fa-clock-rotate-left', label: 'Anything pending?', question: 'Do I have any pending cremation requests, and what do they need?' },
+        ],
     });
 
     const toggleBtn = document.getElementById('toggleSidebar');
@@ -37,6 +51,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     const pageJumpForm = document.getElementById('paginationJumpForm');
     const pageJumpInput = document.getElementById('pageJumpInput');
     const pageJumpBtn = document.getElementById('pageJumpBtn');
+    const detailModal = document.getElementById('cremationDetailModal');
+    const detailModalBody = document.getElementById('cremationDetailBody');
 
     let perPage = 10;
     let currentQuery = '';
@@ -53,7 +69,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         onChange: loadCremations,
     });
 
-    const { buildStatusBadge, debounce, renderFilterChips } = window.reservationUI;
+    const { escapeHtml, buildStatusBadge, buildStatusTracker, debounce, renderFilterChips } = window.reservationUI;
 
     function renderActiveFilterChips() {
         renderFilterChips(activeFilterChips, [
@@ -82,7 +98,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <td>${buildStatusBadge(cremation.status)}</td>
                 <td>${decedentCell}</td>
                 <td>
-                    ${canCancel ? `<button class="btn-secondary" data-action="cancel" data-id="${cremation.cremation_id}">Cancel</button>` : '<span class="muted">No actions</span>'}
+                    <button class="btn-secondary" data-action="view" data-id="${cremation.cremation_id}">View</button>
+                    ${canCancel ? `<button class="btn-secondary" data-action="cancel" data-id="${cremation.cremation_id}">Cancel</button>` : ''}
                 </td>
             </tr>
         `;
@@ -144,12 +161,58 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    // Cremation module audit, Batch F: citizen-facing progress tracker,
+    // opened per-row so the table itself stays a compact badge (matching
+    // the admin queue's own "badge in the table, detail on demand" split —
+    // see manage-cremations.js's identical View action).
+    async function viewCremation(id) {
+        detailModalBody.innerHTML = '<p>Loading...</p>';
+        detailModal.style.display = 'flex';
+        try {
+            const cremation = await api.request(`cremations/${id}`, { method: 'GET' });
+            if (cremation.error) {
+                detailModalBody.innerHTML = `<p>${escapeHtml(cremation.error)}</p>`;
+                return;
+            }
+            const decedentCell = (cremation.first_name || cremation.last_name)
+                ? `${cremation.first_name || ''} ${cremation.last_name || ''}`.trim()
+                : (cremation.provisional_name ? `${cremation.provisional_name} (unregistered)` : 'N/A');
+            const paymentLine = cremation.payment_status
+                ? `${escapeHtml(cremation.payment_status)} &mdash; &#8369;${escapeHtml(cremation.payment_amount || 'N/A')} on ${escapeHtml(cremation.payment_date || 'N/A')}`
+                : 'No payment on file';
+            detailModalBody.innerHTML = `
+                <div class="form-group">${buildStatusTracker(cremation.status, cremation.payment_status, { confirmedLabel: 'Scheduled' })}</div>
+                <div class="form-group"><label>Request</label>#${escapeHtml(cremation.cremation_id)} &mdash; ${buildStatusBadge(cremation.status)}</div>
+                <div class="form-group"><label>Decedent</label>${escapeHtml(decedentCell)}</div>
+                <div class="form-group"><label>Columbarium</label>${escapeHtml(cremation.columbarium || 'N/A')}</div>
+                <div class="form-group"><label>Niche</label>${escapeHtml(cremation.niche_number || 'Not yet assigned')}</div>
+                <div class="form-group"><label>Cremation date</label>${escapeHtml(cremation.cremation_date || 'N/A')}</div>
+                <div class="form-group"><label>Payment</label>${paymentLine}</div>
+                <div class="form-group"><label>Notes</label>${escapeHtml(cremation.notes || 'None')}</div>
+            `;
+        } catch (error) {
+            detailModalBody.innerHTML = '<p>Unable to load cremation details right now.</p>';
+        }
+    }
+
+    function closeDetailModal() {
+        detailModal.style.display = 'none';
+    }
+
+    document.getElementById('closeDetailModal').addEventListener('click', closeDetailModal);
+    document.getElementById('closeDetailModalBtn').addEventListener('click', closeDetailModal);
+    detailModal.addEventListener('click', (event) => {
+        if (event.target === detailModal) closeDetailModal();
+    });
+
     cremationsBody.addEventListener('click', async function(event) {
-        const button = event.target.closest('button[data-action="cancel"]');
+        const button = event.target.closest('button[data-action]');
         if (!button) return;
         const cremationId = button.getAttribute('data-id');
-        if (!cremationId) return;
-        await withButtonLoading(button, () => cancelCremation(cremationId));
+        const action = button.getAttribute('data-action');
+        if (!cremationId || !action) return;
+        if (action === 'view') await viewCremation(cremationId);
+        else if (action === 'cancel') await withButtonLoading(button, () => cancelCremation(cremationId));
     });
 
     const refreshCremations = debounce(async () => {

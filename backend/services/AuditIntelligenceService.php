@@ -391,9 +391,15 @@ class AuditIntelligenceService {
     // decedent names to a citizen who has no ownership relationship to
     // them, so it's left out of this batch rather than done unsafely; see
     // the AI Architecture Audit roadmap for the follow-up.
+    // Cremation module audit, Batch F: 'Cremation' added so
+    // reserve-cremation.html/my-cremations.html can mount a citizen-scoped
+    // AI assistant like my-reservations.html already does for 'Schedule' —
+    // same ownership field (created_by), same buildCitizenModuleContext()
+    // path below.
     private const CITIZEN_MODULE_OWNER_FIELD = [
         'Schedule' => 'created_by',
         'Payment' => 'received_by',
+        'Cremation' => 'created_by',
     ];
 
     public static function isCitizenModule($module) {
@@ -414,7 +420,15 @@ class AuditIntelligenceService {
             $records = $this->decedentRequestModel->findByUser($userId);
         } else {
             $ownerField = self::CITIZEN_MODULE_OWNER_FIELD[$module];
-            $model = $module === 'Schedule' ? $this->scheduleModel : $this->paymentModel;
+            // Cremation module audit, Batch F: was a Schedule/Payment-only
+            // ternary — a third module needs an actual lookup, not a wider
+            // ternary chain.
+            $modelsByModule = [
+                'Schedule' => $this->scheduleModel,
+                'Payment' => $this->paymentModel,
+                'Cremation' => $this->cremationModel,
+            ];
+            $model = $modelsByModule[$module];
             $records = $model->findAll([$ownerField => $userId]);
         }
 
@@ -439,6 +453,19 @@ class AuditIntelligenceService {
                 // same facts the deterministic sweep uses, rather than
                 // declining or guessing — mirrors buildModuleContext()'s
                 // identical addition above.
+                if (!empty($record['stale_notified_at'])) {
+                    $summary['stale_reminder_sent_at'] = $record['stale_notified_at'];
+                }
+                if (!empty($record['final_warning_notified_at'])) {
+                    $summary['final_warning_sent_at'] = $record['final_warning_notified_at'];
+                }
+            }
+            // Cremation module audit, Batch F: mirrors the Schedule branch
+            // above exactly — cremation_date instead of schedule_date, same
+            // stale/final-warning grounding (cremation_records gained both
+            // columns in the Batch C stale-pending sweep).
+            if ($module === 'Cremation' && isset($record['cremation_date'])) {
+                $summary['cremation_date'] = $record['cremation_date'];
                 if (!empty($record['stale_notified_at'])) {
                     $summary['stale_reminder_sent_at'] = $record['stale_notified_at'];
                 }

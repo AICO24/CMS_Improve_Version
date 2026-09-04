@@ -164,6 +164,23 @@
                         </table>
                     </div>
 
+                    <!-- Cremation module audit, Batch F: citizen-facing progress
+                         tracker (Submitted / Payment / Confirmed / Completed),
+                         opened via each row's new View button. Shared markup
+                         shape with my-cremations.html's identical modal. -->
+                    <div class="modal" id="reservationDetailModal">
+                        <div class="modal-content modal--md">
+                            <button type="button" class="close-view" id="closeDetailModal" aria-label="Close">&times;</button>
+                            <div class="modal-header">Reservation Details</div>
+                            <div class="modal-body" id="reservationDetailBody">
+                                <p>Loading...</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn-secondary" id="closeDetailModalBtn">Close</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="pagination-controls" id="paginationControls">
                         <span class="pagination-info" id="paginationInfo"></span>
                         <div class="pagination-actions">

@@ -40,6 +40,86 @@
         return `<span class="status-badge ${badgeClass}">${status || 'Pending'}</span>`;
     }
 
+    // Cremation module audit, Batch F: translates a booking's raw status +
+    // latest payment_status into the citizen-facing progress tracker (Part
+    // 9's "Submitted / Payment / Confirmed / Completed" concept) — shared
+    // between my-reservations.html (burial) and my-cremations.html
+    // (cremation) since both now return the same payment_status/
+    // payment_amount/etc. fields (Schedule::LATEST_PAYMENT_SELECT /
+    // Cremation::LATEST_PAYMENT_SELECT) and use the same 4-state machine
+    // shape (Pending/[Confirmed|Scheduled]/Completed/Cancelled).
+    // confirmedLabel lets each caller use its own real status word
+    // ('Confirmed' for burial, 'Scheduled' for cremation) rather than
+    // inventing a fifth, generic label neither backend actually uses.
+    //
+    // Deliberately does NOT try to reconstruct which stage a Cancelled
+    // booking was cancelled from — that information isn't reliably
+    // available client-side (a citizen can only cancel from Pending, but
+    // admin/staff can cancel from Confirmed/Scheduled too, and nothing
+    // tracks a "cancelled from" fact) — so Cancelled always renders as a
+    // simple two-node "Submitted -> Cancelled" halt, not a partially-filled
+    // version of the normal 4-step pipeline.
+    function buildStatusTracker(status, paymentStatus, options = {}) {
+        const confirmedLabel = options.confirmedLabel || 'Confirmed';
+        const normalizedStatus = String(status || '').toLowerCase();
+
+        if (normalizedStatus === 'cancelled') {
+            return renderTrackerSteps([
+                { label: 'Submitted', state: 'done' },
+                { label: 'Cancelled', state: 'halted' },
+            ]);
+        }
+
+        const normalizedPayment = String(paymentStatus || '').toLowerCase();
+        let paymentState = 'upcoming';
+        let confirmedState = 'upcoming';
+        let completedState = 'upcoming';
+
+        if (normalizedStatus === 'completed') {
+            paymentState = 'done';
+            confirmedState = 'done';
+            completedState = 'done';
+        } else if (normalizedStatus === 'confirmed' || normalizedStatus === 'scheduled') {
+            paymentState = 'done';
+            confirmedState = 'done';
+            completedState = 'current';
+        } else if (normalizedPayment === 'verified') {
+            // Pending, but payment already verified — the automated
+            // confirm step (PaymentController::verify()'s AutomationEngine
+            // path) hasn't landed yet, or couldn't (see the Batch D
+            // "Needs Review" queue for that exception case). Shown as
+            // "Confirmed" actively in-progress, not stalled at Payment.
+            paymentState = 'done';
+            confirmedState = 'current';
+        } else if (normalizedPayment === 'rejected') {
+            paymentState = 'attention';
+        } else {
+            paymentState = 'current';
+        }
+
+        return renderTrackerSteps([
+            { label: 'Submitted', state: 'done' },
+            { label: 'Payment', state: paymentState },
+            { label: confirmedLabel, state: confirmedState },
+            { label: 'Completed', state: completedState },
+        ]);
+    }
+
+    function renderTrackerSteps(steps) {
+        const stepsHtml = steps.map((step, index) => {
+            const nodeHtml = `
+                <div class="status-tracker__step status-tracker__step--${step.state}">
+                    <span class="status-tracker__dot" aria-hidden="true"></span>
+                    <span class="status-tracker__label">${escapeHtml(step.label)}</span>
+                </div>
+            `;
+            if (index === steps.length - 1) return nodeHtml;
+            const connectorDone = step.state === 'done';
+            return `${nodeHtml}<div class="status-tracker__connector${connectorDone ? ' status-tracker__connector--done' : ''}"></div>`;
+        }).join('');
+        return `<div class="status-tracker">${stepsHtml}</div>`;
+    }
+
     function debounce(fn, delay = 300) {
         let timeout;
         return (...args) => {
@@ -74,5 +154,5 @@
         });
     }
 
-    window.reservationUI = { escapeHtml, buildStatusBadge, debounce, renderFilterChips };
+    window.reservationUI = { escapeHtml, buildStatusBadge, buildStatusTracker, debounce, renderFilterChips };
 })();

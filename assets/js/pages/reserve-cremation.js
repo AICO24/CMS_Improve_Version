@@ -13,6 +13,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         api.logout();
     });
 
+    // Cremation module audit, Batch F: citizen-scoped AI mount, mirroring
+    // my-reservations.js's — see AuditIntelligenceService::
+    // buildCitizenModuleContext('Cremation', ...). Unlike burial's
+    // reserve-burial-slot.html, this page is a plain form, not an AI-chat
+    // booking wizard (see this file's own header comment on why) — this
+    // mount is guidance alongside the form, not the booking flow itself.
+    initAiAssistant({
+        mountSelector: '#aiAssistantMount',
+        context: { scope: 'module', module: 'Cremation' },
+        greeting: "Hello! I'm your AI assistant for cremation booking. How can I help you today?",
+        suggestions: [
+            { icon: 'fa-circle-question', label: 'What do I need?', question: 'What information do I need to provide to book a cremation?' },
+            { icon: 'fa-credit-card', label: 'How does payment work?', question: 'How does payment work for a cremation booking, and when is it confirmed?' },
+            { icon: 'fa-list-check', label: 'My existing requests', question: 'What is the status of my cremation requests right now?' },
+        ],
+    });
+
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.querySelector('.sidebar');
     if (toggleBtn && sidebar) {

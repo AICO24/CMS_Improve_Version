@@ -33,3 +33,100 @@
     background: #e8f5ff;
     color: #1d4ed8;
 }
+
+/* Cremation module audit, Batch F: shared citizen-facing progress tracker,
+   used by both this page and my-cremations.html (both load this file) —
+   translates the raw status + payment_status into a horizontal step
+   sequence inside the detail modal. See assets/js/shared/reservation-ui.js's
+   buildStatusTracker(). Uses the design-token warning/success/danger/info
+   trio (matching payment-badge/urgency-tag's convention in
+   manage-reservations.css), not the raw hex .status-badge above uses. */
+.status-tracker {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 4px 0;
+}
+
+.status-tracker__step {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.status-tracker__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color-border);
+    flex-shrink: 0;
+}
+
+.status-tracker__label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.status-tracker__connector {
+    width: 28px;
+    height: 2px;
+    background: var(--color-border);
+    margin: 0 6px;
+    flex-shrink: 0;
+}
+
+.status-tracker__connector--done {
+    background: var(--color-success);
+}
+
+.status-tracker__step--done .status-tracker__dot {
+    background: var(--color-success);
+}
+
+.status-tracker__step--done .status-tracker__label {
+    color: var(--color-success-strong);
+}
+
+.status-tracker__step--current .status-tracker__dot {
+    background: var(--color-info);
+    box-shadow: 0 0 0 3px var(--color-info-soft);
+}
+
+.status-tracker__step--current .status-tracker__label {
+    color: var(--color-info-strong);
+    font-weight: 700;
+}
+
+.status-tracker__step--attention .status-tracker__dot,
+.status-tracker__step--halted .status-tracker__dot {
+    background: var(--color-danger);
+}
+
+.status-tracker__step--attention .status-tracker__label,
+.status-tracker__step--halted .status-tracker__label {
+    color: var(--color-danger-strong);
+    font-weight: 700;
+}
+
+.status-tracker__step--upcoming .status-tracker__dot {
+    background: var(--color-border);
+}
+
+.status-tracker__step--upcoming .status-tracker__label {
+    color: var(--color-text-muted);
+}
+
+@media (max-width: 480px) {
+    .status-tracker {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    .status-tracker__connector {
+        width: 2px;
+        height: 16px;
+        margin: 0 0 0 4px;
+    }
+}

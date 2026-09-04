@@ -89,6 +89,7 @@
                         </svg>
                     </label>
                     <h3 id="pageTitle">My Cremations</h3>
+                    <div id="aiAssistantMount"></div>
                 </div>
                 <div class="user-info">
                     <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
@@ -163,6 +164,22 @@
                         </table>
                     </div>
 
+                    <!-- Cremation module audit, Batch F: citizen-facing progress
+                         tracker (Submitted / Payment / Scheduled / Completed),
+                         opened via each row's new View button. -->
+                    <div class="modal" id="cremationDetailModal">
+                        <div class="modal-content modal--md">
+                            <button type="button" class="close-view" id="closeDetailModal" aria-label="Close">&times;</button>
+                            <div class="modal-header">Cremation Request Details</div>
+                            <div class="modal-body" id="cremationDetailBody">
+                                <p>Loading...</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn-secondary" id="closeDetailModalBtn">Close</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="pagination-controls" id="paginationControls">
                         <span class="pagination-info" id="paginationInfo"></span>
                         <div class="pagination-actions">
@@ -187,6 +204,7 @@
     <script src="../../assets/js/shared/toast.js"></script>
     <script src="../../assets/js/shared/confirm-modal.js"></script>
     <script src="../../assets/js/shared/reservation-ui.js"></script>
+    <script src="../../assets/js/shared/ai-assistant-widget.js"></script>
     <script src="../../assets/js/pages/my-cremations.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>

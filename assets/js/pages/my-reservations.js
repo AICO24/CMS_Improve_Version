@@ -47,6 +47,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     const pageJumpForm = document.getElementById('paginationJumpForm');
     const pageJumpInput = document.getElementById('pageJumpInput');
     const pageJumpBtn = document.getElementById('pageJumpBtn');
+    const detailModal = document.getElementById('reservationDetailModal');
+    const detailModalBody = document.getElementById('reservationDetailBody');
 
     let perPage = 10;
     let currentQuery = '';
@@ -67,7 +69,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // debounce/the filter-chip renderer used to be defined locally here,
     // byte-for-byte (or near-identical) duplicates of the same functions in
     // manage-reservations.js — now shared via reservation-ui.js.
-    const { buildStatusBadge, debounce, renderFilterChips } = window.reservationUI;
+    const { escapeHtml, buildStatusBadge, buildStatusTracker, debounce, renderFilterChips } = window.reservationUI;
 
     function renderActiveFilterChips() {
         renderFilterChips(activeFilterChips, [
@@ -93,7 +95,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <td>${buildStatusBadge(schedule.status)}</td>
                 <td>${schedule.first_name || 'N/A'} ${schedule.last_name || ''}</td>
                 <td>
-                    ${canCancel ? `<button class="btn-secondary" data-action="cancel" data-id="${schedule.schedule_id}">Cancel</button>` : '<span class="muted">No actions</span>'}
+                    <button class="btn-secondary" data-action="view" data-id="${schedule.schedule_id}">View</button>
+                    ${canCancel ? `<button class="btn-secondary" data-action="cancel" data-id="${schedule.schedule_id}">Cancel</button>` : ''}
                 </td>
             </tr>
         `;
@@ -155,12 +158,57 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    // Cremation module audit, Batch F: citizen-facing progress tracker,
+    // opened per-row so the table itself stays a compact badge — mirrors
+    // my-cremations.js's identical viewCremation().
+    async function viewReservation(id) {
+        detailModalBody.innerHTML = '<p>Loading...</p>';
+        detailModal.style.display = 'flex';
+        try {
+            const schedule = await api.request(`schedules/${id}`, { method: 'GET' });
+            if (schedule.error) {
+                detailModalBody.innerHTML = `<p>${escapeHtml(schedule.error)}</p>`;
+                return;
+            }
+            const decedentCell = (schedule.first_name || schedule.last_name)
+                ? `${schedule.first_name || ''} ${schedule.last_name || ''}`.trim()
+                : (schedule.provisional_name ? `${schedule.provisional_name} (unregistered)` : 'N/A');
+            const paymentLine = schedule.payment_status
+                ? `${escapeHtml(schedule.payment_status)} &mdash; &#8369;${escapeHtml(schedule.payment_amount || 'N/A')} on ${escapeHtml(schedule.payment_date || 'N/A')}`
+                : 'No payment on file';
+            detailModalBody.innerHTML = `
+                <div class="form-group">${buildStatusTracker(schedule.status, schedule.payment_status, { confirmedLabel: 'Confirmed' })}</div>
+                <div class="form-group"><label>Booking</label>#${escapeHtml(schedule.schedule_id)} &mdash; ${buildStatusBadge(schedule.status)}</div>
+                <div class="form-group"><label>Decedent</label>${escapeHtml(decedentCell)}</div>
+                <div class="form-group"><label>Lot</label>${escapeHtml(schedule.lot_number || 'N/A')}</div>
+                <div class="form-group"><label>Section</label>${escapeHtml(schedule.section_name || 'N/A')}</div>
+                <div class="form-group"><label>Burial date</label>${escapeHtml(schedule.schedule_date || 'N/A')} ${escapeHtml(schedule.schedule_time || '')}</div>
+                <div class="form-group"><label>Payment</label>${paymentLine}</div>
+                <div class="form-group"><label>Notes</label>${escapeHtml(schedule.notes || 'None')}</div>
+            `;
+        } catch (error) {
+            detailModalBody.innerHTML = '<p>Unable to load reservation details right now.</p>';
+        }
+    }
+
+    function closeDetailModal() {
+        detailModal.style.display = 'none';
+    }
+
+    document.getElementById('closeDetailModal').addEventListener('click', closeDetailModal);
+    document.getElementById('closeDetailModalBtn').addEventListener('click', closeDetailModal);
+    detailModal.addEventListener('click', (event) => {
+        if (event.target === detailModal) closeDetailModal();
+    });
+
     reservationsBody.addEventListener('click', async function(event) {
-        const button = event.target.closest('button[data-action="cancel"]');
+        const button = event.target.closest('button[data-action]');
         if (!button) return;
         const scheduleId = button.getAttribute('data-id');
-        if (!scheduleId) return;
-        await withButtonLoading(button, () => cancelReservation(scheduleId));
+        const action = button.getAttribute('data-action');
+        if (!scheduleId || !action) return;
+        if (action === 'view') await viewReservation(scheduleId);
+        else if (action === 'cancel') await withButtonLoading(button, () => cancelReservation(scheduleId));
     });
 
     const refreshReservations = debounce(async () => {
