@@ -61,7 +61,7 @@ class AuthController {
             return ['error' => 'Account is deactivated', 'code' => 403];
         }
 
-        $role = $this->normalizeRoleKey($this->userModel->getRole($user['user_id']));
+        $role = User::normalizeRoleKey($this->userModel->getRole($user['user_id']));
 
         $this->userModel->updateLastLogin($user['user_id']);
         $this->auditLogModel->log(
@@ -106,27 +106,6 @@ class AuthController {
     // been wired up yet — see the APP_ENV comment in .env.example.
     private function isProduction() {
         return strtolower((string) EnvironmentService::get('APP_ENV', 'local')) === 'production';
-    }
-
-    private function normalizeRoleKey($role) {
-        $value = strtolower(trim((string) $role));
-        if ($value === '') {
-            return null;
-        }
-
-        if (strpos($value, 'admin') !== false) {
-            return 'admin';
-        }
-
-        if (strpos($value, 'staff') !== false) {
-            return 'staff';
-        }
-
-        if (strpos($value, 'user') !== false) {
-            return 'user';
-        }
-
-        return $value;
     }
 
     public function register($data) {

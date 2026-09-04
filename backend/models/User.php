@@ -79,6 +79,52 @@ class User {
         return $result ? strtolower($result['title']) : null;
     }
 
+    // Moved here from AuthController (was a private method there) so
+    // AuthController::login() and getAuthStatus() below always normalize a
+    // raw role title the same way — see getAuthStatus()'s comment for why
+    // that consistency matters.
+    public static function normalizeRoleKey($role) {
+        $value = strtolower(trim((string) $role));
+        if ($value === '') {
+            return null;
+        }
+
+        if (strpos($value, 'admin') !== false) {
+            return 'admin';
+        }
+
+        if (strpos($value, 'staff') !== false) {
+            return 'staff';
+        }
+
+        if (strpos($value, 'user') !== false) {
+            return 'user';
+        }
+
+        return $value;
+    }
+
+    // AUTH-004 (Auth audit, Batch AUTH-4): used by AuthMiddleware::authenticate()
+    // to re-check role/is_active on every request instead of trusting the JWT
+    // payload's copy of them, which is only as fresh as when the token was
+    // issued (up to JWT_EXPIRY — 1h by default). Without this, a user demoted
+    // or deactivated mid-session keeps acting on their old privileges until
+    // their existing token naturally expires. Returns null if the account no
+    // longer exists (e.g. deleted after the token was issued).
+    public function getAuthStatus($userId) {
+        $stmt = $this->db->prepare("SELECT u.is_active, r.title FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.user_id = ?");
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            return null;
+        }
+
+        return [
+            'is_active' => (bool) (int) $row['is_active'],
+            'role' => self::normalizeRoleKey($row['title']),
+        ];
+    }
+
     private function applyFilters(&$sql, &$params, $filters) {
         if (!empty($filters['role'])) {
             $sql .= " AND LOWER(r.title) = ?";
