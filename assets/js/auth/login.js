@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value;
-        const role = document.getElementById('role').value;
 
         document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
         alertBox.classList.remove('show');
@@ -46,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setButtonLoading(submitBtn, true);
 
         try {
-            const result = await api.login(username, password, role);
+            const result = await api.login(username, password);
             if (result.success) {
                 localStorage.setItem('user_session', JSON.stringify(result.user));
                 localStorage.setItem('cemetery_session', JSON.stringify(result.user));
