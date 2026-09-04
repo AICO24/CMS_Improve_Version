@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../models/SystemException.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../models/Schedule.php';
+require_once __DIR__ . '/../models/Cremation.php';
 require_once __DIR__ . '/../models/DecedentRequest.php';
 require_once __DIR__ . '/DecedentRequestController.php';
 
@@ -76,6 +77,14 @@ class SystemExceptionController {
             return $this->retryDecedentRequestApproved($exception, $user);
         }
 
+        // Cremation module audit, Batch B: previously missing — autoLinkCremations()
+        // (DecedentRequestController.php) raises this exact same event/shape
+        // against a Cremation entity, but only the Schedule branch above could
+        // ever be retried. Mirrors that branch exactly.
+        if ($exception['event'] === 'decedent_request.approved' && $exception['entity_type'] === 'Cremation') {
+            return $this->retryCremationDecedentRequestApproved($exception, $user);
+        }
+
         return ['error' => 'No automatic retry is available for this exception type — resolve it manually.', 'code' => 422];
     }
 
@@ -94,6 +103,42 @@ class SystemExceptionController {
 
         $decedentRequestController = new DecedentRequestController();
         $result = $decedentRequestController->retryLinkSchedule((int) $exception['entity_id'], (int) $request['decedent_id'], $user);
+        if (empty($result['success'])) {
+            return ['error' => $result['error'] ?? 'Retry failed.', 'code' => $result['code'] ?? 409];
+        }
+
+        $resolvedBy = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        $this->exceptionModel->resolve($exception['exception_id'], $resolvedBy, 'Auto-resolved: retry succeeded (decedent record linked).');
+        $this->auditLogModel->log(
+            'Exception retried and resolved',
+            $resolvedBy,
+            is_array($user) ? ($user['username'] ?? null) : null,
+            $exception['entity_type'] ?? 'SystemException',
+            $exception['entity_id'] ?? $exception['exception_id'],
+            ['exception_id' => (int) $exception['exception_id'], 'event' => $exception['event'] ?? null]
+        );
+
+        return ['success' => true, 'message' => 'Retried successfully — decedent record linked and exception resolved'];
+    }
+
+    // Cremation module audit, Batch B: the Cremation counterpart to
+    // retryDecedentRequestApproved() above — mirrors it exactly, substituting
+    // the Cremation model and DecedentRequestController::retryLinkCremation().
+    private function retryCremationDecedentRequestApproved($exception, $user) {
+        $cremationModel = new Cremation();
+        $cremation = $cremationModel->findById($exception['entity_id']);
+        if (!$cremation || empty($cremation['decedent_request_id'])) {
+            return ['error' => 'Cannot retry automatically: the originating decedent request can no longer be found. Resolve manually.', 'code' => 409];
+        }
+
+        $requestModel = new DecedentRequest();
+        $request = $requestModel->findById($cremation['decedent_request_id']);
+        if (!$request || $request['status'] !== 'approved' || empty($request['decedent_id'])) {
+            return ['error' => 'Cannot retry automatically: the source decedent request is not in an approved state. Resolve manually.', 'code' => 409];
+        }
+
+        $decedentRequestController = new DecedentRequestController();
+        $result = $decedentRequestController->retryLinkCremation((int) $exception['entity_id'], (int) $request['decedent_id'], $user);
         if (empty($result['success'])) {
             return ['error' => $result['error'] ?? 'Retry failed.', 'code' => $result['code'] ?? 409];
         }

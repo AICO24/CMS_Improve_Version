@@ -439,6 +439,37 @@ class DecedentRequestController {
         return $result;
     }
 
+    // Cremation module audit, Batch B: the Cremation counterpart to
+    // retryLinkSchedule() above, previously missing — autoLinkCremations()
+    // raises the identical 'decedent_request.approved' exception shape
+    // autoLinkSchedules() does for Schedule, but nothing on the Cremation
+    // side could ever retry it; only manual resolution was possible. Mirrors
+    // retryLinkSchedule() exactly, substituting the Cremation model/
+    // controller and validateCremationLink().
+    public function retryLinkCremation($cremationId, $decedentId, $user) {
+        $validation = $this->validateCremationLink($cremationId);
+        if ($validation !== true) {
+            return ['error' => implode('; ', $validation), 'code' => 409];
+        }
+
+        $cremationController = new CremationController();
+        $result = $cremationController->linkDecedent($cremationId, $decedentId, $user, true);
+        if (empty($result['success'])) {
+            return $result;
+        }
+
+        $this->auditLogModel->log(
+            'Decedent link retried from exception',
+            is_array($user) ? ($user['user_id'] ?? null) : $user,
+            is_array($user) ? ($user['username'] ?? null) : null,
+            'Cremation',
+            $cremationId,
+            ['decedent_id' => (int) $decedentId]
+        );
+
+        return $result;
+    }
+
     public function reject($id, $data, $user) {
         $request = $this->requestModel->findById($id);
         if (!$request) {
