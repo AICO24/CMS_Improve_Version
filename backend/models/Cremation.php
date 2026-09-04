@@ -350,7 +350,25 @@ class Cremation {
             'scheduled' => (int) ($counts['scheduled'] ?? 0),
             'completed' => (int) ($counts['completed'] ?? 0),
             'cancelled' => (int) ($counts['cancelled'] ?? 0),
+            // Cremation module audit, Batch E: for the admin dashboard's
+            // Cremation Requests card — a plain status count alone can't
+            // answer "what's happening today," and this app has no other
+            // today's-schedule view for cremation (a full timeline view was
+            // scoped out of this audit as a larger future feature; this is
+            // just the one number). Kept inside getStatusCounts() rather
+            // than a new endpoint since manage-cremations.js's stat row
+            // already calls this one and simply ignores the extra key.
+            'today_scheduled' => $this->countTodayScheduled(),
         ];
+    }
+
+    private function countTodayScheduled() {
+        $stmt = $this->db->query("
+            SELECT COUNT(*) AS count FROM cremation_records
+            WHERE status = 'Scheduled' AND cremation_date = CURDATE()
+        ");
+        $row = $stmt->fetch();
+        return (int) ($row['count'] ?? 0);
     }
 
     public function getStats($columbarium = null) {

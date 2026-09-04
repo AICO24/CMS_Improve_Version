@@ -67,6 +67,26 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     updateAttentionCard();
 
+    // Cremation module audit, Batch E: baseline visibility, not an alert —
+    // always renders (unlike updateAttentionCard() above, which hides when
+    // there's nothing open) since the point is that a staff member landing
+    // here gets *some* signal about Cremation, not just silence when it
+    // happens to be quiet.
+    async function updateCremationSummary() {
+        const pendingEl = document.getElementById('cremationPendingCount');
+        const todayEl = document.getElementById('cremationTodayScheduledCount');
+        if (!pendingEl || !todayEl) return;
+        try {
+            const stats = await api.request('cremations/queue-stats', { method: 'GET' });
+            pendingEl.textContent = stats.pending || 0;
+            todayEl.textContent = stats.today_scheduled || 0;
+        } catch (e) {
+            pendingEl.textContent = '—';
+            todayEl.textContent = '—';
+        }
+    }
+    updateCremationSummary();
+
     // System-Wide AI Assistant: system-scoped follow-up on the briefing
     // below ("what's that one open exception about?") without leaving the
     // dashboard — reaches every module, not just what's summarized there.

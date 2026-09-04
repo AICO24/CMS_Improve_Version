@@ -140,6 +140,18 @@
                         <a href="exceptions.html" class="btn-primary">Review Exceptions →</a>
                     </div>
                 </div>
+                <!-- Cremation module audit, Batch E: previously zero cremation
+                     awareness anywhere on this dashboard. Reuses the existing
+                     single-card attention-row pattern (same shape as the AI
+                     Briefing card below) rather than adding a new grid
+                     column or CSS. -->
+                <div class="attention-row">
+                    <div class="card">
+                        <h4><i class="fas fa-fire"></i> Cremation Requests</h4>
+                        <p class="muted"><strong id="cremationPendingCount">0</strong> pending &middot; <strong id="cremationTodayScheduledCount">0</strong> scheduled today</p>
+                        <a href="manage-cremations.html" class="btn-primary">View Cremation Queue &rarr;</a>
+                    </div>
+                </div>
                 <div class="attention-row">
                     <div class="card ai-briefing-card" id="aiBriefingCard">
                         <div class="ai-briefing-header">
