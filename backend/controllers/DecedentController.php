@@ -9,8 +9,7 @@ class DecedentController {
     private $scheduleModel;
 
     // Fields never written to audit_logs.details verbatim — the audit only
-    // needs to show a sensitive field changed, not its value. Matches
-    // redactDecedent()'s existing notion of what's sensitive on this model.
+    // needs to show a sensitive field changed, not its value.
     private const SENSITIVE_FIELDS = ['dob', 'dod', 'cause_of_death', 'contact_name', 'contact_number', 'is_cremated', 'ash_storage'];
 
     public function __construct() {
@@ -27,51 +26,44 @@ class DecedentController {
         return is_array($actor) ? ($actor['username'] ?? null) : null;
     }
 
-    // Batch M6: decedent_records has no owner/user column, so there is no
-    // way to filter WHICH rows a non-staff caller may see (that would need
-    // a schema change, out of scope here). Instead, redact WHICH FIELDS a
-    // non-admin/staff caller receives — every citizen can still browse/pick
-    // any decedent by name to book a burial (unchanged), but the sensitive
-    // fields (dob, dod, cause_of_death, contact_name, contact_number, ...)
-    // for every OTHER family are no longer exposed to them.
     private function isFullAccessRole($user) {
         $role = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
         return in_array($role, ['admin', 'staff'], true);
     }
 
-    private function redactDecedent($decedent) {
-        if (!is_array($decedent)) {
-            return $decedent;
-        }
-        return [
-            'decedent_id' => $decedent['decedent_id'] ?? null,
-            'first_name' => $decedent['first_name'] ?? null,
-            'last_name' => $decedent['last_name'] ?? null,
-            'middle_name' => $decedent['middle_name'] ?? null,
-            'suffix' => $decedent['suffix'] ?? null,
-            'lot_id' => $decedent['lot_id'] ?? null,
-            'lot_number' => $decedent['lot_number'] ?? null,
-            'section_name' => $decedent['section_name'] ?? null,
-        ];
+    // Privacy audit (2026-09-04): decedent_records has no owner/user column
+    // of its own, so a citizen's access is scoped indirectly — see
+    // Decedent::OWNED_DECEDENT_IDS_SUBQUERY's comment for exactly how
+    // "connected to this citizen" is defined (their own bookings/requests
+    // that have since been linked to a formal record). This replaces the
+    // previous approach (Batch M6) of letting every citizen browse/pick any
+    // decedent cemetery-wide with only sensitive FIELDS redacted — that
+    // still exposed every other family's name, which is the actual PII a
+    // citizen has no legitimate reason to see. Scoping rows instead of
+    // redacting fields also means a citizen now sees FULL detail (cause of
+    // death, contact info on file, etc.) for their own connected records,
+    // which redaction previously hid even from the family it belonged to.
+    private function scopeToOwner(&$filters, $user) {
+        $userId = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        $filters['owner_id'] = $userId;
     }
 
     public function index($filters = [], $pagination = [], $user = null) {
         $page = !empty($pagination['page']) ? (int) $pagination['page'] : null;
         $perPage = !empty($pagination['per_page']) ? (int) $pagination['per_page'] : null;
-        $fullAccess = $this->isFullAccessRole($user);
+
+        if (!$this->isFullAccessRole($user)) {
+            $this->scopeToOwner($filters, $user);
+        }
 
         if ($page === null && $perPage === null) {
-            $data = $this->decedentModel->findAll($filters);
-            return $fullAccess ? $data : array_map([$this, 'redactDecedent'], $data);
+            return $this->decedentModel->findAll($filters);
         }
 
         $page = max(1, $page ?: 1);
         $perPage = max(1, min(100, $perPage ?: 10));
         $total = $this->decedentModel->countAll($filters);
         $data = $this->decedentModel->findAll($filters, ['page' => $page, 'per_page' => $perPage]);
-        if (!$fullAccess) {
-            $data = array_map([$this, 'redactDecedent'], $data);
-        }
 
         return [
             'data' => $data,
@@ -89,7 +81,14 @@ class DecedentController {
         if (!$decedent) {
             return ['error' => 'Decedent record not found', 'code' => 404];
         }
-        return $this->isFullAccessRole($user) ? $decedent : $this->redactDecedent($decedent);
+        if ($this->isFullAccessRole($user)) {
+            return $decedent;
+        }
+        $userId = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        if (!$this->decedentModel->isOwnedBy($id, $userId)) {
+            return ['error' => 'You may only view decedent records connected to your own bookings or requests', 'code' => 403];
+        }
+        return $decedent;
     }
 
     // Batch A (data-integrity foundation): both callers below require the
@@ -294,8 +293,16 @@ class DecedentController {
         return ['error' => 'Failed to delete decedent record', 'code' => 500];
     }
 
-    public function stats() {
-        $stats = $this->decedentModel->getStats();
+    // Privacy audit (2026-09-04): $user added so My Records' stat row shows
+    // counts scoped to that citizen's own connected decedents, not a
+    // cemetery-wide total — mirrors index()'s identical scoping. Omitted
+    // (null) or an admin/staff caller keeps the original unscoped behavior.
+    public function stats($user = null) {
+        $ownerId = null;
+        if (!$this->isFullAccessRole($user)) {
+            $ownerId = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        }
+        $stats = $this->decedentModel->getStats($ownerId);
         if (!$stats) {
             return ['total' => 0, 'burials' => 0, 'cremations' => 0, 'avg_age' => 0, 'needs_attention' => 0];
         }

@@ -1422,7 +1422,11 @@ if ($path === 'decedents' && $requestMethod === 'GET') {
     exit;
 }
 if ($path === 'decedents/stats' && $requestMethod === 'GET') {
-    echo json_encode($decedentController->stats());
+    // Privacy audit (2026-09-04): $user threaded through so a citizen gets
+    // stats scoped to their own connected decedents (see
+    // DecedentController::stats()'s comment) instead of a cemetery-wide
+    // total.
+    echo json_encode($decedentController->stats($user));
     exit;
 }
 if (preg_match('/^decedents\/(\d+)$/', $path, $matches) && $requestMethod === 'GET') {

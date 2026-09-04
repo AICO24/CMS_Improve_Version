@@ -53,6 +53,42 @@ class Decedent {
         if (!empty($filters['incomplete'])) {
             $sql .= " AND " . self::INCOMPLETE_CONDITION;
         }
+
+        if (!empty($filters['owner_id'])) {
+            $sql .= " AND dr.decedent_id IN (" . self::OWNED_DECEDENT_IDS_SUBQUERY . ")";
+            array_push($params, (int) $filters['owner_id'], (int) $filters['owner_id'], (int) $filters['owner_id']);
+        }
+    }
+
+    // Privacy audit (2026-09-04): decedent_records has no owner/user column
+    // of its own (same structural gap Batch M6 already documented for
+    // DecedentController's old field-redaction approach — see that
+    // controller's isFullAccessRole()/redactDecedent() comments). A citizen
+    // "owns" a decedent only indirectly, via one of three linking tables:
+    // a burial/cremation booking THEY created that's since been linked to
+    // this decedent, or a decedent_request THEY submitted that's since been
+    // approved and linked. UNION (not UNION ALL) since a citizen could
+    // plausibly appear in more than one of these three for the same
+    // decedent_id — the IN() only needs distinct ids, not counts.
+    private const OWNED_DECEDENT_IDS_SUBQUERY = "
+        SELECT deceased_id FROM burial_schedules WHERE created_by = ? AND deceased_id IS NOT NULL
+        UNION
+        SELECT deceased_id FROM cremation_records WHERE created_by = ? AND deceased_id IS NOT NULL
+        UNION
+        SELECT decedent_id FROM decedent_requests WHERE requested_by = ? AND decedent_id IS NOT NULL
+    ";
+
+    // Used by DecedentController::show() to 403 a citizen requesting a
+    // decedent_id they have no connection to, rather than the old behavior
+    // of returning it anyway with sensitive fields merely redacted.
+    public function isOwnedBy($decedentId, $userId) {
+        $stmt = $this->db->prepare("
+            SELECT 1 FROM decedent_records
+            WHERE decedent_id = ? AND decedent_id IN (" . self::OWNED_DECEDENT_IDS_SUBQUERY . ")
+            LIMIT 1
+        ");
+        $stmt->execute([(int) $decedentId, (int) $userId, (int) $userId, (int) $userId]);
+        return (bool) $stmt->fetchColumn();
     }
 
     // Cremation Phase A: lot_id is now nullable (see
@@ -295,9 +331,14 @@ class Decedent {
         return (int) ($stmt->fetch()['total'] ?? 0) > 0;
     }
 
-    public function getStats() {
+    // Privacy audit (2026-09-04): $ownerId scopes the stats to one citizen's
+    // own connected decedents (same OWNED_DECEDENT_IDS_SUBQUERY as
+    // applyFilters()'s owner_id filter), for My Records' stat row — omitted
+    // (null) keeps the original cemetery-wide behavior, unchanged for
+    // staff/admin callers.
+    public function getStats($ownerId = null) {
         $condition = str_replace('dr.', '', self::INCOMPLETE_CONDITION);
-        $stmt = $this->db->query("
+        $sql = "
             SELECT
                 COUNT(*) AS total,
                 SUM(CASE WHEN is_cremated = 'no' THEN 1 ELSE 0 END) AS burials,
@@ -306,7 +347,14 @@ class Decedent {
                 SUM(CASE WHEN $condition THEN 1 ELSE 0 END) AS needs_attention
             FROM decedent_records
             WHERE deleted_at IS NULL
-        ");
+        ";
+        $params = [];
+        if (!empty($ownerId)) {
+            $sql .= " AND decedent_id IN (" . self::OWNED_DECEDENT_IDS_SUBQUERY . ")";
+            array_push($params, (int) $ownerId, (int) $ownerId, (int) $ownerId);
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetch();
     }
 }
