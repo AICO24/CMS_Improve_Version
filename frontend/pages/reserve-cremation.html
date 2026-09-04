@@ -20,7 +20,9 @@
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/toast.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/booking-chat.css?v=2">
     <link rel="stylesheet" href="../../assets/css/shared/ai-assistant-widget.css">
+    <link rel="stylesheet" href="../../assets/css/cremation-chat-wizard.css">
 
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
@@ -106,55 +108,7 @@
                     </button>
                 </div>
             </div>
-            <div class="content-area">
-                <div class="card" style="max-width: 640px; margin: 0 auto;">
-                    <h3 style="margin-top:0;"><i class="fas fa-fire"></i> Reserve a Cremation</h3>
-                    <p class="muted">Tell us who this is for and your preferred columbarium and date. Your request starts as Pending — submit payment afterward and it will confirm automatically once verified. The specific niche is assigned once the cremation is completed.</p>
-
-                    <form id="cremationForm">
-                        <!-- Privacy audit (2026-09-04): a citizen never browses or
-                             selects an existing decedent here — that would expose
-                             other families' names/records. Always fresh entry;
-                             this becomes a decedent_requests row, and staff match
-                             it to an existing formal record (or create one) on
-                             their own side, where full access is appropriate. -->
-                        <div id="provisionalDecedentGroup">
-                            <div class="form-group">
-                                <label for="provisionalFullName">Full Name</label>
-                                <input type="text" id="provisionalFullName" placeholder="Full name of the deceased" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="provisionalApproxDod">Approximate Date of Death (optional)</label>
-                                <input type="date" id="provisionalApproxDod" max="">
-                            </div>
-                            <div class="form-group">
-                                <label for="provisionalRelationship">Your Relationship to the Deceased (optional)</label>
-                                <input type="text" id="provisionalRelationship" placeholder="e.g. Son, Daughter, Spouse">
-                            </div>
-                            <p class="help">Our staff will verify and register their official record — you don't need to check whether they're already on file.</p>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="columbariumSelect">Preferred Columbarium</label>
-                            <select id="columbariumSelect">
-                                <option value="">No preference</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="cremationDate">Preferred Cremation Date</label>
-                            <input type="date" id="cremationDate">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="cremationNotes">Notes (optional)</label>
-                            <textarea id="cremationNotes" rows="2"></textarea>
-                        </div>
-
-                        <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-check-circle"></i></span><span class="text">Submit Request</span></button>
-                    </form>
-                </div>
-            </div>
+            <div class="content-area" id="cremationWizardMount"></div>
         </main>
     </div>
 
@@ -162,6 +116,7 @@
     <script src="../../assets/js/shared/button-loading.js"></script>
     <script src="../../assets/js/shared/toast.js"></script>
     <script src="../../assets/js/shared/ai-assistant-widget.js"></script>
+    <script src="../../assets/js/shared/cremation-chat-wizard.js"></script>
     <script src="../../assets/js/pages/reserve-cremation.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>

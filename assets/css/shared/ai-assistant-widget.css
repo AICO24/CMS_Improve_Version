@@ -151,7 +151,16 @@ body:has(.sidebar.collapsed) #aiAssistantMount.ai-assistant-mount {
 }
 
 /* ---------- Header: gradient + avatar + greeting ---------- */
+/* Bug fix (2026-09-04): display was previously left unset, relying on the
+   browser's default `block` for a <div> — fine on every page that only
+   loads this file, but reserve-cremation.html also loads booking-chat.css
+   (for its own, differently-named, unrelated chat wizard), which happens
+   to define its own .ai-assistant-header with `display: flex`. Since this
+   rule never set `display` at all, that flex leaked in wherever both files
+   load together, collapsing this header's layout. Explicit now, so this
+   rule's own `block` always wins regardless of what else is loaded. */
 .ai-assistant-header {
+    display: block;
     flex-shrink: 0;
     background: linear-gradient(160deg, var(--color-primary-600, #244d3a), var(--color-primary-800, #163229));
     color: var(--color-white, #fff);

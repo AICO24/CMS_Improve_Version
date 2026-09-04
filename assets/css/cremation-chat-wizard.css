@@ -1,0 +1,21 @@
+/*
+  Bug fix (2026-09-04): reserve-cremation.html is the only page that loads
+  BOTH booking-chat.css (for this wizard) and ai-assistant-widget.css (for
+  the separate header-docked Q&A helper) — every other page using either
+  file only loads one or the other, so this collision was never visible
+  before. Both files independently define .ai-assistant-header for their
+  own (differently-shaped) header bar; loaded together, whichever rule wins
+  bled its properties into the other's element, breaking both layouts.
+  Renamed this wizard's own header to .cremation-wizard-header — this rule
+  is an exact copy of booking-chat.css's .ai-assistant-header, just under a
+  name nothing else on this page also claims.
+*/
+.cremation-wizard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
