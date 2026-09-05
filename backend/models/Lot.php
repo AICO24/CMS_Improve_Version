@@ -200,6 +200,19 @@ class Lot {
         return $stmt->fetch();
     }
 
+    /**
+     * Shared contract with python-ai microservice (BATCH AI-6 Pattern 2):
+     * Queries the unified v_available_lots view ensuring PHP and Python services
+     * always evaluate lot availability with 100% identical joins and conditions.
+     *
+     * @return array List of available lots with block, section, and type details
+     */
+    public function findAvailableLots() {
+        $this->syncExpiredLots();
+        $stmt = $this->db->query("SELECT * FROM v_available_lots");
+        return $stmt->fetchAll();
+    }
+
     // Decedent Records module audit, Batch J (CSV import): lot_number alone
     // isn't unique cemetery-wide (only unique per block — see lots'
     // `block_id, lot_number` unique key), so a historical-records CSV

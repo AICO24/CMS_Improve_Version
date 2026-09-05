@@ -175,6 +175,9 @@ The system runs on MySQL / MariaDB (`cemetery_db`). Primary configuration is man
 - `ai_parameters` (`parameter_id` [PK], UQ[`module`, `param_name`]).
 - `schema_migrations` (`migration` [PK], `applied_at`).
 
+### Views
+- `v_available_lots`: Canonical view for available lots joining `lots`, `blocks`, `sections`, and `lot_types` filtering by `status = 'Available'`. Single source of truth shared by PHP `Lot::findAvailableLots()` and Python AI `_fetch_available_lots()`.
+
 ### Critical ENUMs & Generated Columns
 - `lots.status`: `'Available'`, `'Reserved'`, `'Occupied'`, `'Expired'`.
 - `burial_schedules.status`: `'Pending'`, `'Confirmed'`, `'Completed'`, `'Cancelled'`.
@@ -254,11 +257,11 @@ The system runs on MySQL / MariaDB (`cemetery_db`). Primary configuration is man
      - `AutomationEngine::run('payment.verified')` moves `burial_schedules` to `'Confirmed'`.
      - Audit logs and notifications are recorded.
    - Deferral pattern: Confirmation emails are dispatched via `Database::afterCommit()` only after transaction commits.
-4. **Stale Schedule Sweeps:**
-   - Schedules remaining `Pending` without payment receive automated warnings:
-     - 48 hours: Stale notification sent.
-     - 5 days: Final warning sent.
-     - 7 days: Auto-cancelled, lot freed back to `Available`, audit logged.
+4. **Stale Schedule & Cremation Sweeps:**
+   - Pending bookings without payment receive automated warnings gated on previous stage timestamps:
+     - Day 7: Stale notification sent (`stale_notified_at`).
+     - +4 days after reminder: Final warning sent (`final_warning_notified_at`).
+     - +3 days after final warning: Auto-cancelled, lot/niche freed back to `Available`, audit logged.
 
 ### 3. Cremation Workflow
 1. Citizen/Staff submits cremation booking (`cremation_records` with status `'Pending'`).
@@ -280,7 +283,7 @@ The system runs on MySQL / MariaDB (`cemetery_db`). Primary configuration is man
 - **Deterministic Automation Engine (`backend/services/AutomationEngine.php`):**
   - Standard execution wrapper: `AutomationEngine::run($event, $entityType, $entityId, $actor, $validateCallable, $applyCallable)`.
   - Never guesses or uses fuzzy logic. If `$validate()` fails, it creates a `system_exceptions` record, writes an audit log, and notifies administrators.
-  - Zero cron dependency: System maintenance runs on lazy-read sweeps (e.g., `Lot::syncExpiredLots()`, `OccupancySnapshot::captureFromSections()`) guarded by internal reentrancy flags.
+  - Dual execution pattern: System maintenance runs on lazy-read sweeps (e.g., `Lot::syncExpiredLots()`, `OccupancySnapshot::captureFromSections()`) guarded by internal reentrancy flags, AND proactive scheduled execution via CLI runner `backend/scripts/run-automation-sweeps.php` (see `docs/automation_and_schedulers.md`).
 - **Exception Resolution & Auto-Retry:**
   - Open exceptions display on `exceptions.html`.
   - Deterministic retry handler (`SystemExceptionController::retry()`) can safely replay failed automations (such as linking newly approved decedent requests to schedules/cremations) once prerequisites are satisfied.
@@ -324,18 +327,31 @@ The system runs on MySQL / MariaDB (`cemetery_db`). Primary configuration is man
 
 ---
 
+---
+
+## Testing Architecture
+
+The project contains a zero-dependency Python automated test suite:
+- `tests/smoke_test.py`: Fast static verification of syntax, routes, asset paths, and contract guards across frontend and backend.
+- `tests/ai_architecture_regression_test.py`: Invariant regression tests for AI-1 through AI-8 architecture batches.
+- `tests/integration_test.py`: Live integration test verifying 100% parity between PHP `Lot::findAvailableLots()` and Python `_fetch_available_lots()` over `v_available_lots`, and verifying CLI execution of `run-automation-sweeps.php`.
+- `tests/run_all_tests.py`: Unified test runner that executes all three suites and provides consolidated reporting. Run with:
+  ```bash
+  python tests/run_all_tests.py
+  ```
+
+---
+
 ## Known Technical Risks & Quirks
 
 1. **Dual MySQL Ports in Environment Defaults:**
-   - `backend/.env.example` defaults `DB_PORT=3307` (Laragon MariaDB default), whereas `python-ai/.env.example` defaults `DB_PORT=3306` (standard MySQL). Environments must ensure both configs point to the same active port.
-2. **No Persistent Background Cron Worker:**
-   - Background tasks (expiration synchronization, snapshot generation) rely on lazy execution triggered by user HTTP traffic. If the system experiences prolonged inactivity, expired lot statuses and occupancy snapshots will not advance until the next request.
+   - Standardized to `DB_PORT=3306` across `.env.example` and `python-ai/.env.example`, with notes regarding Laragon MariaDB (`3307`). Ensure both point to the active database port.
+2. **Background Automation Sweeps:**
+   - Background tasks (expiration synchronization, reservation stale sweeps) run lazily on HTTP reads, AND proactively via `backend/scripts/run-automation-sweeps.php` when scheduled via Windows Task Scheduler or cron (see `docs/automation_and_schedulers.md`).
 3. **Database Migration Sync:**
-   - Schema migrations under `backend/database/` are applied manually. `schema.sql` is a snapshot; any new columns or table modifications must be accompanied by explicit idempotent migration scripts and recorded in `schema_migrations`.
-4. **Smoke Test Fixture Discrepancy:**
-   - `tests/smoke_test.py` checks for `assets/js/pages/login.js`, but login logic was refactored to `assets/js/auth/login.js`. Use `tests/ai_architecture_regression_test.py` for automated AI batch regression tests.
-5. **Direct Python DB Coupling:**
-   - `python-ai/app.py` directly defines its own `DB_CONFIG` and connects to MySQL for recommendation and forecast routines. Any change to database credentials or table column names requires synchronized updates in both `backend/.env` and `python-ai/.env`.
+   - Schema baseline consolidated in `schema.sql` (as of 2026-09-05). All subsequent DDL changes must have a timestamped migration script (`migration_YYYYMMDD_<name>.sql`) recorded in `schema_migrations`.
+4. **Canonical Shared View Contract:**
+   - `v_available_lots` is the canonical shared contract between PHP and Python for available lots. Any future changes to lot availability criteria must be updated in `v_available_lots` rather than duplicate PHP/Python queries.
 
 ---
 
@@ -345,4 +361,6 @@ The system runs on MySQL / MariaDB (`cemetery_db`). Primary configuration is man
 - **Deterministic Priority:** Always use deterministic logic and database constraints for business rules, status transitions, and booking slots. Restrict AI strictly to extraction, prediction, and narration.
 - **Safe State Transitions:** Never execute ad-hoc SQL `UPDATE lots SET status = ...`. Always use `Lot::transitionStatus()` via `AutomationEngine::run()`.
 - **Database Schema Protection:** Never modify database structures without creating a corresponding timestamped migration script (`migration_YYYYMMDD_<name>.sql`) recorded in `schema_migrations`.
+- **Run Full Test Suite:** After backend, database, or AI modifications, verify by running `python tests/run_all_tests.py`.
+
 

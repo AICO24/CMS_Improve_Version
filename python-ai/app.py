@@ -407,17 +407,15 @@ def health_check():
 def _fetch_available_lots() -> List[Dict[str, Any]]:
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
+    # Queries the centralized v_available_lots view (migration_20260905_add_available_lots_view.sql)
+    # to eliminate lot-availability join logic duplication across PHP and Python.
     cursor.execute(
         """
-        SELECT l.lot_id, l.lot_number, l.price, l.status,
-               t.type_name AS lot_type_name,
-               s.section_name
-        FROM lots l
-        JOIN blocks b ON l.block_id = b.block_id
-        JOIN sections s ON b.section_id = s.section_id
-        JOIN lot_types t ON l.lot_type_id = t.type_id
-        WHERE l.status = 'Available'
-        ORDER BY s.section_name, b.block_name, l.lot_number
+        SELECT lot_id, lot_number, price, status,
+               lot_type_name,
+               section_name
+        FROM v_available_lots
+        ORDER BY section_name, block_name, lot_number
         """
     )
     lots = cursor.fetchall()

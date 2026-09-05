@@ -13,4 +13,6 @@ This project is structured as a lightweight full-stack PHP application with a st
 ## Runtime Notes
 - Frontend pages are served from the browser and call the backend API endpoints.
 - Backend routes are bootstrapped through backend/index.php.
-- Database setup scripts (schema, migrations, seed data) live under backend/database/ and backend/seedData.php.
+- Database setup scripts (schema, migrations, seed data) live under backend/database/ and backend/seedData.php (see docs/database.md).
+- Background automated sweeps and recurring policy tasks run via backend/scripts/run-automation-sweeps.php (see docs/automation_and_schedulers.md).
+

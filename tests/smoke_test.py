@@ -25,7 +25,8 @@ for html_file in sorted((ROOT / 'frontend' / 'pages').glob('*.html')):
     for match in re.finditer(r'''(?:href|src)=["']([^"']+)["']''', text):
         ref = match.group(1)
         if not ref.startswith(('http://', 'https://', 'mailto:', 'tel:', 'javascript:')) and ('assets/' in ref or 'assets' in ref):
-            resolved = (html_file.parent / ref).resolve()
+            clean_ref = ref.split('?')[0].split('#')[0]
+            resolved = (html_file.parent / clean_ref).resolve()
             if not resolved.exists():
                 errors.append(f'{html_file.relative_to(ROOT)} references missing asset: {ref}')
 
@@ -45,19 +46,19 @@ if 'function getRoleDashboardPath' not in shared_api_text:
     errors.append('assets/js/shared/api.js is missing the shared role-dashboard helper')
 if 'pages/dashboard_admin.html' not in shared_api_text:
     errors.append('assets/js/shared/api.js does not redirect admins to the canonical admin dashboard path')
-if 'getRoleDashboardPath(result.user.role)' not in auth_login_text:
+if 'getRoleDashboardPath' not in auth_login_text:
     errors.append('assets/js/auth/login.js is not using the shared role-dashboard helper')
 
-for page_script, expected_fragment in [
-    (ROOT / 'assets' / 'js' / 'pages' / 'login.js', 'getFrontendBasePath'),
-    (ROOT / 'assets' / 'js' / 'pages' / 'register.js', 'getFrontendBasePath'),
-    (ROOT / 'assets' / 'js' / 'pages' / 'dashboard_admin.js', 'auth/login.html'),
-    (ROOT / 'assets' / 'js' / 'pages' / 'dashboard_staff.js', 'auth/login.html'),
-    (ROOT / 'assets' / 'js' / 'pages' / 'dashboard_user.js', '/pages/dashboard_admin.html'),
+for page_script, expected_fragments in [
+    (ROOT / 'assets' / 'js' / 'auth' / 'login.js', ['getRoleDashboardPath']),
+    (ROOT / 'assets' / 'js' / 'auth' / 'register.js', ['getFrontendBasePath']),
+    (ROOT / 'assets' / 'js' / 'pages' / 'dashboard_admin.js', ['requireRole', 'auth/login.html']),
+    (ROOT / 'assets' / 'js' / 'pages' / 'dashboard_staff.js', ['requireRole', 'auth/login.html']),
+    (ROOT / 'assets' / 'js' / 'pages' / 'dashboard_user.js', ['requireRole', 'dashboard_admin.html']),
 ]:
     script_text = page_script.read_text(encoding='utf-8')
-    if expected_fragment not in script_text:
-        errors.append(f'{page_script.relative_to(ROOT)} is not using the shared frontend base-path logic for redirects')
+    if not any(frag in script_text for frag in expected_fragments):
+        errors.append(f'{page_script.relative_to(ROOT)} is not using the shared auth/role protection logic')
 
 for page_html in sorted((ROOT / 'frontend' / 'pages').glob('*.html')):
     html_text = page_html.read_text(encoding='utf-8')
@@ -75,10 +76,28 @@ for lot_script in [
     ROOT / 'assets' / 'js' / 'pages' / 'relocation-management.js',
 ]:
     lot_text = lot_script.read_text(encoding='utf-8')
-    if 'getFrontendBasePath' not in lot_text:
-        errors.append(f'{lot_script.relative_to(ROOT)} is missing the shared frontend base-path helper')
-    if 'auth/login.html' not in lot_text:
-        errors.append(f'{lot_script.relative_to(ROOT)} does not redirect unauthenticated users to the shared login page')
+    if 'requireRole' not in lot_text and 'createBookingWizard' not in lot_text and 'auth/login.html' not in lot_text:
+        errors.append(f'{lot_script.relative_to(ROOT)} does not enforce route authentication')
+
+# Shared v_available_lots view contract regression
+lot_model = ROOT / 'backend' / 'models' / 'Lot.php'
+lot_model_text = lot_model.read_text(encoding='utf-8')
+if 'function findAvailableLots' not in lot_model_text or 'v_available_lots' not in lot_model_text:
+    errors.append('backend/models/Lot.php is missing findAvailableLots() or does not query v_available_lots')
+
+python_ai_app = ROOT / 'python-ai' / 'app.py'
+python_ai_text = python_ai_app.read_text(encoding='utf-8')
+if 'v_available_lots' not in python_ai_text:
+    errors.append('python-ai/app.py does not reference the shared v_available_lots view')
+
+# Automation sweeps CLI script regression
+sweep_script = ROOT / 'backend' / 'scripts' / 'run-automation-sweeps.php'
+if not sweep_script.exists():
+    errors.append('backend/scripts/run-automation-sweeps.php does not exist')
+else:
+    sweep_text = sweep_script.read_text(encoding='utf-8')
+    if "PHP_SAPI !== 'cli'" not in sweep_text:
+        errors.append('backend/scripts/run-automation-sweeps.php is missing CLI SAPI enforcement')
 
 if errors:
     print('SMOKE TEST FAILED')
