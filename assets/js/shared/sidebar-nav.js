@@ -30,7 +30,6 @@
 
         function closeOthers(exceptGroup) {
             groups.forEach(function (group) {
-                if (group !== exceptGroup && !group.classList.contains('is-static')) group.classList.remove('open');
                 if (group !== exceptGroup) {
                     group.classList.remove('open');
                 }
@@ -38,13 +37,9 @@
         }
 
         // Group expand/collapse — single-open accordion. Guarded per-header
-        // so calling initSidebarNav() again on unchanged markup (rather than
-        // markup replaced via innerHTML, which already yields fresh nodes)
-        // never attaches a second listener to the same header.
         // so calling initSidebarNav() again on unchanged markup never attaches
         // a second listener to the same header.
         groups.forEach(function (group) {
-            if (group.classList.contains('is-static')) return;
             var header = group.querySelector('.nav-group-header');
             if (!header || header.dataset.sidebarNavBound === '1') return;
             header.dataset.sidebarNavBound = '1';
@@ -55,12 +50,6 @@
             });
         });
 
-        // Auto-open the group containing the current page
-        var currentPage = window.location.pathname.split('/').pop();
-        var activeGroup = groups.find(function (group) {
-            return Array.prototype.some.call(group.querySelectorAll('.nav-item[href]'), function (link) {
-                var href = link.getAttribute('href');
-                return !!href && href.split('?')[0].split('#')[0].split('/').pop() === currentPage;
         // Determine active page and parent group based on current URL / page
         var currentPage = (window.location.pathname.split('/').pop() || '').split('?')[0].split('#')[0];
         var isDashboard = !currentPage || currentPage === 'index.html' || currentPage.indexOf('dashboard_') === 0;
@@ -78,10 +67,6 @@
                     return linkPage === currentPage;
                 });
             });
-        });
-        if (activeGroup) {
-            closeOthers(activeGroup);
-            activeGroup.classList.add('open');
 
             if (activeGroup) {
                 closeOthers(activeGroup);

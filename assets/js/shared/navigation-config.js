@@ -414,7 +414,6 @@
         if (!container) return;
         const roleName = String(role || '').toLowerCase();
         const navStructure = getSidebarNavForRole(roleName);
-        const activeRoute = (currentRoute || window.location.pathname.split('/').pop() || '').split('?')[0].split('#')[0];
         const activeRoute = (currentRoute || (typeof window !== 'undefined' && window.location ? window.location.pathname.split('/').pop() : '') || '').split('?')[0].split('#')[0];
         const isDashboard = !activeRoute || activeRoute === 'index.html' || activeRoute.indexOf('dashboard_') === 0;
 
@@ -436,29 +435,15 @@
                 return;
             }
 
-            // Single-item group: render directly open without accordion chevron to avoid unnecessary dropdown clicks
-            if (section.items.length === 1) {
-                htmlChunks.push(
-                    '<div class="nav-group is-static open">' +
-                        '<div class="nav-group-header static"><span>' + section.group + '</span></div>' +
-                        '<div class="nav-group-body">' +
-                            renderLink(section.items[0]) +
-                        '</div>' +
-                    '</div>'
-                );
-                return;
-            }
             // Module pages: auto-open ONLY the group containing the active page
             // Dashboard pages: all groups remain closed
             const containsActive = !isDashboard && section.items.some(function(it) {
                 return it.route === activeRoute;
             });
 
-            // Multi-item category: collapsible single-open accordion
             // Single-open accordion category
             const bodyLinks = section.items.map(renderLink).join('');
             htmlChunks.push(
-                '<div class="nav-group">' +
                 '<div class="nav-group' + (containsActive ? ' open' : '') + '">' +
                     '<button type="button" class="nav-group-header">' +
                         '<span>' + section.group + '</span>' +
