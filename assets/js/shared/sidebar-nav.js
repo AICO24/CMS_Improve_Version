@@ -30,7 +30,6 @@
 
         function closeOthers(exceptGroup) {
             groups.forEach(function (group) {
-                if (group !== exceptGroup) group.classList.remove('open');
                 if (group !== exceptGroup && !group.classList.contains('is-static')) group.classList.remove('open');
             });
         }
