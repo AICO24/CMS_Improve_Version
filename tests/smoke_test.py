@@ -99,6 +99,25 @@ else:
     if "PHP_SAPI !== 'cli'" not in sweep_text:
         errors.append('backend/scripts/run-automation-sweeps.php is missing CLI SAPI enforcement')
 
+# Centralized Navigation & ROUTE_CONFIG regression
+nav_config_file = ROOT / 'assets' / 'js' / 'shared' / 'navigation-config.js'
+if not nav_config_file.exists():
+    errors.append('assets/js/shared/navigation-config.js does not exist')
+else:
+    nav_text = nav_config_file.read_text(encoding='utf-8')
+    if 'ROUTE_CONFIG' not in nav_text:
+        errors.append('navigation-config.js is missing ROUTE_CONFIG')
+    if 'notifications.html' not in nav_text or 'showInSidebar: false' not in nav_text:
+        errors.append('navigation-config.js does not properly declare notifications.html with showInSidebar: false')
+    if 'book-a-service.html' not in nav_text:
+        errors.append('navigation-config.js is missing book-a-service.html')
+    if 'Cemetery Inventory' not in nav_text:
+        errors.append('navigation-config.js is missing Cemetery Inventory category')
+    if 'Columbarium Management' not in nav_text:
+        errors.append('navigation-config.js is missing Columbarium Management label')
+    if 'Cremation Requests' not in nav_text:
+        errors.append('navigation-config.js is missing Cremation Requests label')
+
 if errors:
     print('SMOKE TEST FAILED')
     for error in errors:

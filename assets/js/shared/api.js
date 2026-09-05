@@ -202,6 +202,52 @@ const PAGE_ROLE_ACCESS = {
     'profile.html': ['admin', 'staff', 'user'],
     'settings.html': ['admin', 'staff', 'user'],
 };
+// Shared role-based access control: derived dynamically from centralized ROUTE_CONFIG
+// (navigation-config.js). A static fallback dictionary is preserved for environments
+// where navigation-config.js is not yet loaded, ensuring zero regressions.
+const PAGE_ROLE_ACCESS = (typeof window !== 'undefined' && window.CMS_NAVIGATION && typeof window.CMS_NAVIGATION.buildPageRoleAccess === 'function')
+    ? window.CMS_NAVIGATION.buildPageRoleAccess()
+    : {
+        'dashboard_admin.html': ['admin'],
+        'dashboard_staff.html': ['staff'],
+        'dashboard_user.html': ['user'],
+        'book-a-service.html': ['user'],
+        'lot-management.html': ['admin', 'staff'],
+        'burial-scheduling.html': ['admin', 'staff'],
+        'manage-reservations.html': ['admin', 'staff'],
+        'cremation-management.html': ['admin'],
+        'manage-cremations.html': ['admin', 'staff'],
+        'relocation-management.html': ['admin'],
+        'expiration-monitoring.html': ['admin'],
+        'decedent-records.html': ['admin', 'staff'],
+        'payments.html': ['admin', 'staff', 'user'],
+        'reports.html': ['admin'],
+        'forecast.html': ['admin'],
+        'user-management.html': ['admin'],
+        'audit.html': ['admin'],
+        'ai.html': ['admin'],
+        'exceptions.html': ['admin', 'staff'],
+        'reserve-burial-slot.html': ['user'],
+        'my-reservations.html': ['user'],
+        'reserve-cremation.html': ['user'],
+        'my-cremations.html': ['user'],
+        'payment-history.html': ['user'],
+        'my-records.html': ['user'],
+        'notifications.html': ['admin', 'staff', 'user'],
+        'profile.html': ['admin', 'staff', 'user'],
+        'settings.html': ['admin', 'staff', 'user'],
+    };
+
+// Dynamic getter to always check live CMS_NAVIGATION if loaded in the DOM
+function getRouteAllowedRoles(pageFileName) {
+    if (typeof window !== 'undefined' && window.CMS_NAVIGATION && typeof window.CMS_NAVIGATION.getRouteMetadata === 'function') {
+        const meta = window.CMS_NAVIGATION.getRouteMetadata(pageFileName);
+        if (meta && Array.isArray(meta.allowedRoles)) {
+            return meta.allowedRoles;
+        }
+    }
+    return PAGE_ROLE_ACCESS[pageFileName] || null;
+}
 
 const ROLE_LABELS = { admin: 'Administrator', staff: 'Staff', user: 'User' };
 
@@ -244,6 +290,7 @@ function filterSidebarByRole(role) {
         const href = link.getAttribute('href');
         if (!href) return;
         const allowedRoles = PAGE_ROLE_ACCESS[getPageFileName(href)];
+        const allowedRoles = getRouteAllowedRoles(getPageFileName(href));
         if (allowedRoles && !allowedRoles.includes(roleName)) {
             link.remove();
         }
@@ -369,8 +416,17 @@ const ROLE_SIDEBAR_LINKS = {
 
 function renderSidebarForRole(role) {
     const nav = document.querySelector('.sidebar .sidebar-nav');
+    if (!nav) return;
+
+    // Use centralized CMS_NAVIGATION rendering engine if available
+    if (typeof window.CMS_NAVIGATION !== 'undefined' && typeof window.CMS_NAVIGATION.renderSidebar === 'function') {
+        window.CMS_NAVIGATION.renderSidebar(nav, role);
+        return;
+    }
+
     const entries = ROLE_SIDEBAR_LINKS[String(role || '').toLowerCase()];
     if (!nav || !entries) return;
+    if (!entries) return;
 
     const currentPage = window.location.pathname.split('/').pop();
     const renderItem = ([href, icon, label]) => {

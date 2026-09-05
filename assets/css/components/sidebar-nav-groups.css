@@ -45,6 +45,21 @@
     color: #ffffff;
 }
 
+.nav-group-header.static {
+    cursor: default;
+    pointer-events: none;
+    user-select: none;
+}
+
+.nav-group-header.static:hover {
+    color: #a9b3c9;
+}
+
+.nav-group.is-static .nav-group-body {
+    max-height: none !important;
+    overflow: visible;
+}
+
 .nav-group-header .chev {
     font-size: 0.65rem;
     transition: transform 0.2s ease;
