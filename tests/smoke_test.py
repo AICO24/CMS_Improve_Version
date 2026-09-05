@@ -111,12 +111,14 @@ else:
         errors.append('navigation-config.js does not properly declare notifications.html with showInSidebar: false')
     if 'book-a-service.html' not in nav_text:
         errors.append('navigation-config.js is missing book-a-service.html')
-    if 'Cemetery Inventory' not in nav_text:
-        errors.append('navigation-config.js is missing Cemetery Inventory category')
+    if 'Cemetery Management' not in nav_text:
+        errors.append('navigation-config.js is missing Cemetery Management category')
+    if 'Cemetery Records' not in nav_text:
+        errors.append('navigation-config.js is missing Cemetery Records category')
     if 'Columbarium Management' not in nav_text:
         errors.append('navigation-config.js is missing Columbarium Management label')
-    if 'Cremation Requests' not in nav_text:
-        errors.append('navigation-config.js is missing Cremation Requests label')
+    if 'Manage Cremations' not in nav_text:
+        errors.append('navigation-config.js is missing Manage Cremations label')
 
 if errors:
     print('SMOKE TEST FAILED')

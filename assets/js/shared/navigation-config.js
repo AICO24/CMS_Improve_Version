@@ -67,7 +67,7 @@
             allowedRoles: ['admin', 'staff'],
             showInSidebar: true,
             sidebarGroup: 'Operations',
-            label: 'Cremation Requests',
+            label: 'Manage Cremations',
             icon: 'fa-calendar-check',
             navigationOrder: 12,
         },
@@ -137,12 +137,12 @@
             navigationOrder: 14,
         },
 
-        // ==================== CEMETERY INVENTORY (Admin & Staff) ====================
+        // ==================== CEMETERY INVENTORY / MANAGEMENT ====================
         {
             route: 'lot-management.html',
             allowedRoles: ['admin', 'staff'],
             showInSidebar: true,
-            sidebarGroup: 'Cemetery Inventory',
+            sidebarGroup: { admin: 'Cemetery Management', staff: 'Cemetery Records' },
             label: 'Lot Management',
             icon: 'fa-map-location-dot',
             navigationOrder: 20,
@@ -151,7 +151,7 @@
             route: 'cremation-management.html',
             allowedRoles: ['admin'],
             showInSidebar: true,
-            sidebarGroup: 'Cemetery Inventory',
+            sidebarGroup: 'Cemetery Management',
             label: 'Columbarium Management',
             icon: 'fa-fire',
             navigationOrder: 21,
@@ -162,7 +162,7 @@
             route: 'decedent-records.html',
             allowedRoles: ['admin', 'staff'],
             showInSidebar: true,
-            sidebarGroup: 'Records',
+            sidebarGroup: { admin: 'Records', staff: 'Cemetery Records' },
             label: 'Decedent Records',
             icon: 'fa-folder-open',
             navigationOrder: 30,
@@ -217,12 +217,12 @@
             navigationOrder: 51,
         },
 
-        // ==================== ADMINISTRATION (Admin & Staff) ====================
+        // ==================== SYSTEM & SYSTEM ADMINISTRATION ====================
         {
             route: 'user-management.html',
             allowedRoles: ['admin'],
             showInSidebar: true,
-            sidebarGroup: 'Administration',
+            sidebarGroup: 'System Administration',
             label: 'User Management',
             icon: 'fa-users',
             navigationOrder: 60,
@@ -231,7 +231,7 @@
             route: 'exceptions.html',
             allowedRoles: ['admin', 'staff'],
             showInSidebar: true,
-            sidebarGroup: 'Administration',
+            sidebarGroup: { admin: 'System Administration', staff: 'System' },
             label: 'System Exceptions',
             icon: 'fa-triangle-exclamation',
             navigationOrder: 61,
@@ -240,7 +240,7 @@
             route: 'ai.html',
             allowedRoles: ['admin'],
             showInSidebar: true,
-            sidebarGroup: 'Administration',
+            sidebarGroup: 'System Administration',
             label: 'AI Configuration',
             icon: 'fa-robot',
             navigationOrder: 62,
@@ -249,19 +249,10 @@
             route: 'audit.html',
             allowedRoles: ['admin'],
             showInSidebar: true,
-            sidebarGroup: 'Administration',
+            sidebarGroup: 'System Administration',
             label: 'Audit Logs',
             icon: 'fa-clipboard-list',
             navigationOrder: 63,
-        },
-        {
-            route: 'settings.html',
-            allowedRoles: ['admin', 'staff', 'user'],
-            showInSidebar: true,
-            sidebarGroup: { admin: 'Administration', staff: 'Administration', user: 'Account' },
-            label: 'Settings',
-            icon: 'fa-gear',
-            navigationOrder: 64,
         },
 
         // ==================== ACCOUNT ====================
@@ -273,6 +264,15 @@
             label: 'Profile',
             icon: 'fa-id-card',
             navigationOrder: 70,
+        },
+        {
+            route: 'settings.html',
+            allowedRoles: ['admin', 'staff', 'user'],
+            showInSidebar: true,
+            sidebarGroup: 'Account',
+            label: 'Settings',
+            icon: 'fa-gear',
+            navigationOrder: 71,
         },
 
         // ==================== HIDDEN / UTILITY ROUTES ====================
@@ -292,20 +292,19 @@
         admin: [
             'Overview',
             'Operations',
-            'Cemetery Inventory',
+            'Cemetery Management',
             'Records',
             'Finance',
             'Intelligence & Analytics',
-            'Administration',
+            'System Administration',
             'Account',
         ],
         staff: [
             'Overview',
             'Operations',
-            'Cemetery Inventory',
-            'Records',
+            'Cemetery Records',
             'Finance',
-            'Administration',
+            'System',
             'Account',
         ],
         user: [
