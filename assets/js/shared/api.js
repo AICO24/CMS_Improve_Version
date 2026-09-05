@@ -453,9 +453,7 @@ async function requireRole(allowedRoles) {
     }
 
     setUserDisplay(user);
-    filterSidebarByRole(roleName);
-    const currentPage = window.location.pathname.split('/').pop();
-    if (PAGES_NEEDING_SIDEBAR_REBUILD.includes(currentPage)) {
+
     if (typeof window !== 'undefined' && window.CMS_NAVIGATION && typeof window.CMS_NAVIGATION.renderSidebar === 'function') {
         renderSidebarForRole(roleName);
     } else {
