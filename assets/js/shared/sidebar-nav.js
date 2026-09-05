@@ -31,6 +31,9 @@
         function closeOthers(exceptGroup) {
             groups.forEach(function (group) {
                 if (group !== exceptGroup && !group.classList.contains('is-static')) group.classList.remove('open');
+                if (group !== exceptGroup) {
+                    group.classList.remove('open');
+                }
             });
         }
 
@@ -38,6 +41,8 @@
         // so calling initSidebarNav() again on unchanged markup (rather than
         // markup replaced via innerHTML, which already yields fresh nodes)
         // never attaches a second listener to the same header.
+        // so calling initSidebarNav() again on unchanged markup never attaches
+        // a second listener to the same header.
         groups.forEach(function (group) {
             if (group.classList.contains('is-static')) return;
             var header = group.querySelector('.nav-group-header');
@@ -56,11 +61,34 @@
             return Array.prototype.some.call(group.querySelectorAll('.nav-item[href]'), function (link) {
                 var href = link.getAttribute('href');
                 return !!href && href.split('?')[0].split('#')[0].split('/').pop() === currentPage;
+        // Determine active page and parent group based on current URL / page
+        var currentPage = (window.location.pathname.split('/').pop() || '').split('?')[0].split('#')[0];
+        var isDashboard = !currentPage || currentPage === 'index.html' || currentPage.indexOf('dashboard_') === 0;
+
+        if (isDashboard) {
+            // Rule 1: On all dashboard pages (Admin, Staff, User), ALL groups must be closed
+            closeOthers(null);
+        } else {
+            // Rule 2: On module pages, automatically open ONLY the parent group of the current page
+            var activeGroup = groups.find(function (group) {
+                return Array.prototype.some.call(group.querySelectorAll('.nav-item[href]'), function (link) {
+                    var href = link.getAttribute('href');
+                    if (!href) return false;
+                    var linkPage = href.split('?')[0].split('#')[0].split('/').pop();
+                    return linkPage === currentPage;
+                });
             });
         });
         if (activeGroup) {
             closeOthers(activeGroup);
             activeGroup.classList.add('open');
+
+            if (activeGroup) {
+                closeOthers(activeGroup);
+                activeGroup.classList.add('open');
+            } else {
+                closeOthers(null);
+            }
         }
 
         // Manual icon-rail (desktop only — CSS hides the button below
@@ -91,5 +119,8 @@
     }
 
     window.initSidebarNav = initSidebarNav;
+
+    // Listen to DOMContentLoaded and browser Back/Forward navigation
     document.addEventListener('DOMContentLoaded', initSidebarNav);
+    window.addEventListener('popstate', initSidebarNav);
 })();
