@@ -101,40 +101,58 @@
             navigationOrder: 10,
         },
         {
-            route: 'reserve-burial-slot.html',
+            route: 'booking-assistant.html',
             allowedRoles: ['user'],
             showInSidebar: true,
             sidebarGroup: 'Services',
+            label: 'Booking Assistant',
+            icon: 'fa-robot',
+            navigationOrder: 11,
+        },
+        {
+            route: 'my-bookings.html',
+            allowedRoles: ['user'],
+            showInSidebar: true,
+            sidebarGroup: 'Services',
+            label: 'My Bookings',
+            icon: 'fa-calendar-check',
+            navigationOrder: 12,
+        },
+        {
+            route: 'reserve-burial-slot.html',
+            allowedRoles: ['user'],
+            showInSidebar: false,
+            sidebarGroup: 'Services',
             label: 'Reserve Burial Slot',
             icon: 'fa-monument',
-            navigationOrder: 11,
+            navigationOrder: 13,
         },
         {
             route: 'reserve-cremation.html',
             allowedRoles: ['user'],
-            showInSidebar: true,
+            showInSidebar: false,
             sidebarGroup: 'Services',
             label: 'Reserve Cremation',
             icon: 'fa-fire',
-            navigationOrder: 12,
+            navigationOrder: 14,
         },
         {
             route: 'my-reservations.html',
             allowedRoles: ['user'],
-            showInSidebar: true,
+            showInSidebar: false,
             sidebarGroup: 'Services',
             label: 'My Reservations',
             icon: 'fa-bookmark',
-            navigationOrder: 13,
+            navigationOrder: 15,
         },
         {
             route: 'my-cremations.html',
             allowedRoles: ['user'],
-            showInSidebar: true,
+            showInSidebar: false,
             sidebarGroup: 'Services',
             label: 'My Cremations',
             icon: 'fa-box-archive',
-            navigationOrder: 14,
+            navigationOrder: 16,
         },
 
         // ==================== CEMETERY INVENTORY / MANAGEMENT ====================
@@ -414,7 +432,6 @@
         if (!container) return;
         const roleName = String(role || '').toLowerCase();
         const navStructure = getSidebarNavForRole(roleName);
-        const activeRoute = (currentRoute || window.location.pathname.split('/').pop() || '').split('?')[0].split('#')[0];
         const activeRoute = (currentRoute || (typeof window !== 'undefined' && window.location ? window.location.pathname.split('/').pop() : '') || '').split('?')[0].split('#')[0];
         const isDashboard = !activeRoute || activeRoute === 'index.html' || activeRoute.indexOf('dashboard_') === 0;
 
@@ -454,11 +471,9 @@
                 return it.route === activeRoute;
             });
 
-            // Multi-item category: collapsible single-open accordion
             // Single-open accordion category
             const bodyLinks = section.items.map(renderLink).join('');
             htmlChunks.push(
-                '<div class="nav-group">' +
                 '<div class="nav-group' + (containsActive ? ' open' : '') + '">' +
                     '<button type="button" class="nav-group-header">' +
                         '<span>' + section.group + '</span>' +

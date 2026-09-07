@@ -361,11 +361,10 @@ const ROLE_SIDEBAR_LINKS = {
     ],
     user: [
         { item: ['dashboard_user.html', 'fa-gauge-high', 'Dashboard'] },
-        { group: 'Operations', items: [
-            ['reserve-burial-slot.html', 'fa-monument', 'Reserve Burial Slot'],
-            ['my-reservations.html', 'fa-bookmark', 'My Reservations'],
-            ['reserve-cremation.html', 'fa-fire', 'Reserve Cremation'],
-            ['my-cremations.html', 'fa-box-archive', 'My Cremations'],
+        { group: 'Services', items: [
+            ['book-a-service.html', 'fa-handshake', 'Book a Service'],
+            ['booking-assistant.html', 'fa-robot', 'Booking Assistant'],
+            ['my-bookings.html', 'fa-calendar-check', 'My Bookings'],
         ] },
         { group: 'Records', items: [
             ['my-records.html', 'fa-folder-open', 'My Records'],

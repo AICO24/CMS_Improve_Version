@@ -743,19 +743,16 @@
     async function onConfirmBooking() {
         if (!state.draftId) return;
 
-        if (!confirm('Are you ready to submit your booking reservation? This will advance your draft for administrative review.')) {
         if (!confirm('Are you ready to finalize and submit your booking reservation?')) {
             return;
         }
 
         setLoading(true);
         btnConfirmBooking.disabled = true;
-        btnConfirmBooking.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirming...';
         btnConfirmBooking.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finalizing...';
 
         try {
             const res = await api.request(`booking-agent/drafts/${state.draftId}/confirm`, {
-                method: 'POST'
                 method: 'POST',
                 body: { finalize: true }
             });
