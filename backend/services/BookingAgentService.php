@@ -15,6 +15,7 @@ require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../models/Schedule.php';
 require_once __DIR__ . '/../models/DecedentRequest.php';
+require_once __DIR__ . '/../models/Cremation.php';
 
 class BookingAgentService {
     private BookingDraft $draftModel;
@@ -23,6 +24,7 @@ class BookingAgentService {
     private AuditLog $auditLogModel;
     private Schedule $scheduleModel;
     private DecedentRequest $decedentRequestModel;
+    private Cremation $cremationModel;
 
     // Supported Intents for BMS-3
     public const INTENT_CREATE_BOOKING          = 'CREATE_BOOKING';
@@ -51,7 +53,8 @@ class BookingAgentService {
         ?Lot $lotModel = null,
         ?AuditLog $auditLogModel = null,
         ?Schedule $scheduleModel = null,
-        ?DecedentRequest $decedentRequestModel = null
+        ?DecedentRequest $decedentRequestModel = null,
+        ?Cremation $cremationModel = null
     ) {
         $this->draftModel = $draftModel ?? new BookingDraft();
         $this->decedentModel = $decedentModel ?? new Decedent();
@@ -59,6 +62,7 @@ class BookingAgentService {
         $this->auditLogModel = $auditLogModel ?? new AuditLog();
         $this->scheduleModel = $scheduleModel ?? new Schedule();
         $this->decedentRequestModel = $decedentRequestModel ?? new DecedentRequest();
+        $this->cremationModel = $cremationModel ?? new Cremation();
     }
 
     /**
@@ -795,6 +799,201 @@ class BookingAgentService {
         }
     }
 
+    /**
+     * Safely finalize a cremation draft into the authoritative cremation_records table (BMS-8).
+     * 
+     * Enforces transactional boundary:
+     * - Verifies draft ownership and service_type === 'cremation'.
+     * - Validates 0 missing required fields ('service_type', 'decedent_name', 'cremation_date').
+     * - Validates cremation date format and ensures it is not in the past (non-Monday rule disabled).
+     * - Executes inside Database::transaction():
+     *   - Transitions draft READY_FOR_REVIEW -> AWAITING_CONFIRM if needed.
+     *   - Creates or links decedent:
+     *     - If deceased_id is present in extracted_data, links directly.
+     *     - Else, provisions a decedent_requests row via DecedentRequest::create().
+     *   - Inserts cremation_records row via Cremation::create():
+     *     - Citizens forced to 'Pending', niche unassigned (null).
+     *     - preferred_columbarium mapped to columbarium.
+     *     - Admin/staff can specify 'Scheduled' or 'Completed' status if provided.
+     *   - Atomically commits draft via BookingDraft::commit($draftId, $cremationId, 'cremation').
+     *   - Records immutable audit log entries for cremation and booking draft.
+     * 
+     * @param int         $draftId
+     * @param int         $userId
+     * @param string|null $username
+     * @param mixed       $user User context array or null
+     * @return array Standardized outcome payload.
+     * @throws BookingDraftException
+     */
+    public function finalizeCremationDraft(int $draftId, int $userId, ?string $username = null, $user = null): array {
+        $draft = $this->draftModel->requireOwnership($draftId, $userId);
+
+        if ($draft['service_type'] !== 'cremation') {
+            throw new BookingDraftException(
+                "Cannot finalize cremation draft. Draft service type is '{$draft['service_type']}'.",
+                'INVALID_SERVICE_TYPE',
+                400
+            );
+        }
+
+        if ($draft['status'] === BookingDraft::STATUS_COMMITTED) {
+            throw new BookingDraftException(
+                "Draft #{$draftId} has already been committed.",
+                'DRAFT_ALREADY_COMMITTED',
+                409
+            );
+        }
+
+        if (BookingDraft::isTerminalState($draft['status'])) {
+            throw new BookingDraftException(
+                "Cannot finalize draft in terminal state '{$draft['status']}'.",
+                'TERMINAL_STATE_MODIFICATION',
+                400
+            );
+        }
+
+        $extracted = !empty($draft['extracted_data']) ? json_decode($draft['extracted_data'], true) : [];
+        $missing = $this->evaluateMissingFields('cremation', $extracted);
+
+        if (!empty($missing)) {
+            throw new BookingDraftException(
+                "Cannot finalize cremation draft. Missing required fields: " . implode(', ', $missing),
+                'INCOMPLETE_DRAFT',
+                400
+            );
+        }
+
+        $cremationDateStr = (string) ($extracted['cremation_date'] ?? '');
+
+        // Date validation check (isBurial = false, Mondays are permitted for cremation)
+        $dateValidation = $this->validateBookingDate($cremationDateStr, false);
+        if (!$dateValidation['valid']) {
+            throw new BookingDraftException($dateValidation['error'] ?? 'Invalid booking date', 'INVALID_DATE', 400);
+        }
+
+        $userRole = strtolower(is_array($user) ? ($user['role'] ?? 'user') : 'user');
+        $isAdminOrStaff = in_array($userRole, ['admin', 'staff'], true);
+
+        return Database::getInstance()->transaction(function () use (
+            $draftId, $draft, $userId, $username, $isAdminOrStaff, $extracted, $cremationDateStr
+        ) {
+            // 1. If currently in READY_FOR_REVIEW, step into AWAITING_CONFIRM
+            if ($draft['status'] === BookingDraft::STATUS_READY_FOR_REVIEW) {
+                $this->draftModel->transitionStatus($draftId, BookingDraft::STATUS_AWAITING_CONFIRM);
+            } elseif ($draft['status'] !== BookingDraft::STATUS_AWAITING_CONFIRM) {
+                // Try legal step-through to AWAITING_CONFIRM
+                if ($draft['status'] === BookingDraft::STATUS_CREMATION_PREFS || $draft['status'] === BookingDraft::STATUS_COLLECTING_INFO) {
+                    $this->draftModel->transitionStatus($draftId, BookingDraft::STATUS_READY_FOR_REVIEW);
+                    $this->draftModel->transitionStatus($draftId, BookingDraft::STATUS_AWAITING_CONFIRM);
+                } else {
+                    throw new BookingDraftException(
+                        "Cannot commit draft from status '{$draft['status']}'. Draft must be in 'AWAITING_CONFIRM'.",
+                        'INVALID_COMMIT_ATTEMPT',
+                        400
+                    );
+                }
+            }
+
+            // 2. Provisional or Existing Decedent Handling
+            $deceasedId = !empty($extracted['deceased_id']) ? (int) $extracted['deceased_id'] : null;
+            $decedentRequestId = null;
+
+            if (!$deceasedId) {
+                $decedentRequestId = $this->decedentRequestModel->create([
+                    'requested_by'    => $userId,
+                    'full_name'       => $extracted['decedent_name'],
+                    'relationship'    => $extracted['relationship'] ?? null,
+                    'approximate_dod' => $extracted['approximate_dod'] ?? null,
+                    'notes'           => 'Created via AI Booking Assistant Draft #' . $draftId,
+                ]);
+
+                if (!$decedentRequestId) {
+                    throw new BookingDraftException("Failed to record provisional decedent information.", 'DECEDENT_CREATION_FAILED', 500);
+                }
+            }
+
+            // 3. Status & Columbarium determination
+            $status = 'Pending';
+            if ($isAdminOrStaff && !empty($extracted['status']) && in_array($extracted['status'], ['Pending', 'Scheduled', 'Completed'], true)) {
+                $status = $extracted['status'];
+            }
+
+            $columbarium = !empty($extracted['preferred_columbarium']) ? trim((string) $extracted['preferred_columbarium']) : null;
+            if (empty($columbarium) && !empty($extracted['columbarium'])) {
+                $columbarium = trim((string) $extracted['columbarium']);
+            }
+
+            $cremationData = [
+                'deceased_id'          => $deceasedId,
+                'decedent_request_id'  => $decedentRequestId,
+                'niche_number'         => $isAdminOrStaff ? ($extracted['niche_number'] ?? null) : null,
+                'columbarium'          => $columbarium,
+                'level'                => $isAdminOrStaff && isset($extracted['level']) ? (int) $extracted['level'] : null,
+                'cremation_date'       => $cremationDateStr,
+                'status'               => $status,
+                'ash_storage_location' => $extracted['ash_storage_location'] ?? null,
+                'notes'                => $extracted['notes'] ?? ('AI Booking Assistant Draft #' . $draftId),
+                'created_by'           => $userId,
+            ];
+
+            $cremationId = $this->cremationModel->create($cremationData);
+            if (!$cremationId) {
+                throw new BookingDraftException("Failed to create cremation record.", 'CREMATION_CREATION_FAILED', 500);
+            }
+
+            // 4. Atomic Draft Commitment
+            $this->draftModel->commit($draftId, $cremationId, 'cremation');
+
+            // 5. Immutable Audit Logging
+            $this->auditLogModel->log(
+                'Cremation record created',
+                $userId,
+                $username,
+                'Cremation',
+                $cremationId,
+                [
+                    'deceased_id'         => $deceasedId,
+                    'decedent_request_id' => $decedentRequestId,
+                    'cremation_date'      => $cremationDateStr,
+                    'status'              => $status,
+                    'columbarium'         => $columbarium,
+                    'draft_id'            => $draftId
+                ]
+            );
+
+            $this->auditLogModel->log(
+                'booking_draft.committed',
+                $userId,
+                $username,
+                'BookingDraft',
+                $draftId,
+                [
+                    'cremation_id' => $cremationId,
+                    'service_type' => 'cremation'
+                ]
+            );
+
+            return [
+                'success'             => true,
+                'draft_id'            => $draftId,
+                'service_type'        => 'cremation',
+                'status'              => BookingDraft::STATUS_COMMITTED,
+                'committed_record_id' => $cremationId,
+                'cremation_id'        => $cremationId,
+                'message'             => 'Cremation booking successfully finalized.'
+            ];
+        });
+    }
+
+    /**
+     * Cancel an Active Draft.
+     * 
+     * @param int         $draftId
+     * @param int         $userId
+     * @param string|null $username
+     * @return bool
+     * @throws BookingDraftException
+     */
     public function cancelDraft(int $draftId, int $userId, ?string $username = null): bool {
         $this->draftModel->requireOwnership($draftId, $userId);
         $result = $this->draftModel->cancel($draftId);
