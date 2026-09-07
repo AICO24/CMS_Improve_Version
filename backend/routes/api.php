@@ -15,6 +15,7 @@ require_once __DIR__ . '/../controllers/ReportController.php';
 require_once __DIR__ . '/../controllers/ExpirationController.php';
 require_once __DIR__ . '/../controllers/UserController.php';
 require_once __DIR__ . '/../controllers/SystemExceptionController.php';
+require_once __DIR__ . '/../controllers/BookingAgentController.php';
 require_once __DIR__ . '/../middleware/Auth.php';
 require_once __DIR__ . '/../services/RateLimiter.php';
 
@@ -234,6 +235,7 @@ $decedentImportController = new DecedentImportController();
 $decedentDocumentController = new DecedentDocumentController();
 $scheduleController = new ScheduleController();
 $aiController = new AiController();
+$bookingAgentController = new BookingAgentController();
 
 if ($path === 'sections' && $requestMethod === 'GET') {
     echo json_encode($lotController->getSections());
@@ -1659,6 +1661,103 @@ if ($path === 'decedents/import/confirm' && $requestMethod === 'POST') {
     $input = readRequestBody();
     $rows = is_array($input['rows'] ?? null) ? $input['rows'] : [];
     $result = $decedentImportController->confirmImport($rows, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+// =========================================================================
+// UNIFIED BOOKING AGENT ROUTES (BMS-4 / BMS-5)
+// =========================================================================
+
+if ($path === 'booking-agent/chat' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    if (!RateLimiter::allow('booking_agent_chat_' . $user['user_id'], 15, 60)) {
+        http_response_code(429);
+        echo json_encode(['error' => 'Too many requests — please wait a moment before trying again.']);
+        exit;
+    }
+    $input = readRequestBody();
+    $result = $bookingAgentController->chat($input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if ($path === 'booking-agent/process' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    if (!RateLimiter::allow('booking_agent_' . $user['user_id'], 30, 60)) {
+        http_response_code(429);
+        echo json_encode(['error' => 'Too many requests — please wait a moment before trying again.']);
+        exit;
+    }
+    $input = readRequestBody();
+    $result = $bookingAgentController->process($input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (($path === 'booking-agent/active' || $path === 'booking-agent/draft/active') && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $serviceType = !empty($query['service_type']) ? (string) $query['service_type'] : null;
+    $result = $bookingAgentController->getActiveDraft($user, $serviceType);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^booking-agent\/drafts?\/(\d+)\/update-field$/', $path, $matches) && in_array($requestMethod, ['POST', 'PUT'], true)) {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    if (!RateLimiter::allow('booking_agent_' . $user['user_id'], 30, 60)) {
+        http_response_code(429);
+        echo json_encode(['error' => 'Too many requests — please wait a moment before trying again.']);
+        exit;
+    }
+    $input = readRequestBody();
+    $result = $bookingAgentController->updateField((int) $matches[1], $input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^booking-agent\/drafts?\/(\d+)\/confirm$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $bookingAgentController->confirm((int) $matches[1], $user);
+    $input = readRequestBody();
+    $result = $bookingAgentController->confirm((int) $matches[1], $user, $input);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^booking-agent\/drafts?\/(\d+)\/finalize$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $bookingAgentController->finalize((int) $matches[1], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^booking-agent\/drafts?\/(\d+)\/cancel$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $bookingAgentController->cancel((int) $matches[1], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if ($path === 'booking-agent/drafts' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $bookingAgentController->listDrafts($user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
