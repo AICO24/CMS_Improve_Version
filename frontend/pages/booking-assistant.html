@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Booking Assistant | Cemetery Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/tokens.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/spacing.css">
+    <link rel="stylesheet" href="../../assets/css/shadows.css">
+    <link rel="stylesheet" href="../../assets/css/animations.css">
+    <link rel="stylesheet" href="../../assets/css/base.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/components/buttons.css">
+    <link rel="stylesheet" href="../../assets/css/components/cards.css">
+    <link rel="stylesheet" href="../../assets/css/components/forms.css">
+    <link rel="stylesheet" href="../../assets/css/components/modals.css">
+    <link rel="stylesheet" href="../../assets/css/components/toast.css">
+    <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/booking-chat.css?v=3">
+    <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
+</head>
+<body class="dashboard-body">
+<script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
+                <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
+            </div>
+            <div class="sidebar-nav">
+                <a href="dashboard_user.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
+                <div class="nav-group open">
+                    <button type="button" class="nav-group-header">
+                        <span>Services</span>
+                        <i class="fas fa-chevron-down chev"></i>
+                    </button>
+                    <div class="nav-group-body">
+                        <a href="book-a-service.html" class="nav-item"><i class="fas fa-handshake icon"></i> <span>Book a Service</span></a>
+                        <a href="booking-assistant.html" class="nav-item active"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
+                        <a href="reserve-burial-slot.html" class="nav-item"><i class="fas fa-monument icon"></i> <span>Reserve Burial Slot</span></a>
+                        <a href="reserve-cremation.html" class="nav-item"><i class="fas fa-fire icon"></i> <span>Reserve Cremation</span></a>
+                        <a href="my-bookings.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>My Bookings</span></a>
+                    </div>
+                </div>
+                <div class="nav-group">
+                    <button type="button" class="nav-group-header">
+                        <span>Records</span>
+                        <i class="fas fa-chevron-down chev"></i>
+                    </button>
+                    <div class="nav-group-body">
+                        <a href="my-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>My Records</span></a>
+                    </div>
+                </div>
+                <div class="nav-group">
+                    <button type="button" class="nav-group-header">
+                        <span>Finance</span>
+                        <i class="fas fa-chevron-down chev"></i>
+                    </button>
+                    <div class="nav-group-body">
+                        <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
+                        <a href="payment-history.html" class="nav-item"><i class="fas fa-receipt icon"></i> <span>Payment History</span></a>
+                    </div>
+                </div>
+                <div class="nav-group">
+                    <button type="button" class="nav-group-header">
+                        <span>Account</span>
+                        <i class="fas fa-chevron-down chev"></i>
+                    </button>
+                    <div class="nav-group-body">
+                        <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
+                        <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-footer">
+                <div class="user-chip">
+                    <i class="fas fa-user-circle"></i>
+                    <div><span id="sidebarUserName">User</span><small id="sidebarUserRole">Client</small></div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="top-bar">
+                <div class="top-left">
+                    <label class="hamburger">
+                        <input type="checkbox" id="toggleSidebar">
+                        <svg viewBox="0 0 32 32">
+                            <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
+                            <path class="line" d="M7 16H27"></path>
+                        </svg>
+                    </label>
+                    <h3 id="pageTitle">AI Booking Assistant</h3>
+                </div>
+                <div class="user-info">
+                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode"><i class="fas fa-moon"></i></button>
+                    <div class="profile">
+                        <div class="profile-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
+                        <div class="profile-text">
+                            <div class="user-name" id="userName">User</div>
+                            <div class="user-role" id="userRole">Client</div>
+                        </div>
+                    </div>
+                    <button class="Btn logout-btn" id="logoutBtn">
+                        <div class="sign"><i class="fas fa-sign-out-alt"></i></div>
+                        <div class="text">Logout</div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <div class="ai-chat-layout" id="bookingAppMount">
+                    <!-- Left Pane: Conversational Chat Assistant -->
+                    <div class="ai-chat-main">
+                        <div class="ai-assistant-header">
+                            <div class="ai-assistant-brand">
+                                <div class="ai-avatar-badge">
+                                    <i class="fas fa-robot"></i>
+                                    <div class="ai-avatar-glow"></div>
+                                </div>
+                                <div class="ai-assistant-meta">
+                                    <div class="ai-title-row">
+                                        <h4 class="ai-assistant-name">AI Booking Assistant</h4>
+                                        <span class="ai-status-pill" id="assistantStatusPill">
+                                            <span class="status-pulse-dot"></span> Online
+                                        </span>
+                                    </div>
+                                    <p class="ai-assistant-desc" id="assistantSubTitle">Unified conversational intake for burial and cremation arrangements</p>
+                                </div>
+                            </div>
+                            <div class="ai-header-actions">
+                                <button type="button" class="ai-action-btn" id="btnRestartDraft" title="Discard current draft and start fresh">
+                                    <i class="fas fa-rotate-left"></i> Start Over
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Chat stream container -->
+                        <div class="chat-window" id="chatThread">
+                            <!-- Messages appended dynamically -->
+                        </div>
+
+                        <!-- Dynamic Contextual Suggestions / Quick Prompts -->
+                        <div class="chat-prompt-suggestions" id="promptSuggestions">
+                            <!-- Populated dynamically based on draft status & missing fields -->
+                        </div>
+
+                        <!-- Chat input controls -->
+                        <div class="chat-input-row">
+                            <div class="chat-input-wrapper">
+                                <i class="fas fa-comment-dots chat-input-icon"></i>
+                                <input type="text" id="userInputMsg" placeholder="Type your details (e.g., 'Burial for my father Juan Santos on Nov 20')..." autocomplete="off" />
+                            </div>
+                            <button type="button" class="chat-send-btn" id="btnSendMessage" title="Send message">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right Pane: Live Booking Blueprint HUD -->
+                    <aside class="ai-booking-blueprint" id="blueprintPanel">
+                        <div class="blueprint-header">
+                            <div class="blueprint-title">
+                                <i class="fas fa-clipboard-list"></i>
+                                <span>Live Booking Blueprint</span>
+                            </div>
+                            <span class="blueprint-badge" id="blueprintStatusBadge">Intake</span>
+                        </div>
+
+                        <div class="blueprint-body">
+                            <!-- Stepper Progress Track -->
+                            <div class="blueprint-steps" id="blueprintStepper">
+                                <div class="blueprint-step" id="stepService">
+                                    <div class="step-num"><i class="fas fa-hand-holding-heart"></i></div>
+                                    <div class="step-content">
+                                        <span class="step-label">Service Type</span>
+                                        <span class="step-value" id="hudServiceVal">Pending</span>
+                                    </div>
+                                </div>
+                                <div class="blueprint-step" id="stepDetails">
+                                    <div class="step-num"><i class="fas fa-user"></i></div>
+                                    <div class="step-content">
+                                        <span class="step-label">Decedent Info</span>
+                                        <span class="step-value" id="hudDecedentVal">Pending</span>
+                                    </div>
+                                </div>
+                                <div class="blueprint-step" id="stepAllocation">
+                                    <div class="step-num"><i class="fas fa-map-location-dot"></i></div>
+                                    <div class="step-content">
+                                        <span class="step-label">Date & Lot</span>
+                                        <span class="step-value" id="hudAllocationVal">Pending</span>
+                                    </div>
+                                </div>
+                                <div class="blueprint-step" id="stepConfirm">
+                                    <div class="step-num"><i class="fas fa-clipboard-check"></i></div>
+                                    <div class="step-content">
+                                        <span class="step-label">Review & Confirm</span>
+                                        <span class="step-value" id="hudReviewVal">Incomplete</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Structured Cards -->
+                            <div class="blueprint-card" id="hudCardService">
+                                <div class="hud-card-header">
+                                    <span class="hud-label"><i class="fas fa-tag"></i> Service Type</span>
+                                    <span class="hud-badge" id="hudServiceBadge">Burial</span>
+                                </div>
+                                <div class="hud-card-body">
+                                    <div class="hud-detail-row">
+                                        <span>Arrangement:</span>
+                                        <strong id="hudServiceDesc">Burial Service</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="blueprint-card" id="hudCardDecedent">
+                                <div class="hud-card-header">
+                                    <span class="hud-label"><i class="fas fa-id-card"></i> Decedent Details</span>
+                                    <button type="button" class="btn-hud-edit" id="btnEditDecedent" title="Edit decedent details"><i class="fas fa-pen"></i></button>
+                                </div>
+                                <div class="hud-card-body">
+                                    <div class="hud-detail-row">
+                                        <span>Name:</span>
+                                        <strong id="hudDecedentName">Pending</strong>
+                                    </div>
+                                    <div class="hud-detail-row">
+                                        <span>Relationship:</span>
+                                        <strong id="hudRelationship">Pending</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="blueprint-card" id="hudCardSchedule">
+                                <div class="hud-card-header">
+                                    <span class="hud-label"><i class="fas fa-calendar-days"></i> Schedule & Allocation</span>
+                                    <button type="button" class="btn-hud-edit" id="btnEditSchedule" title="Edit schedule or lot"><i class="fas fa-pen"></i></button>
+                                </div>
+                                <div class="hud-card-body">
+                                    <div class="hud-detail-row">
+                                        <span>Preferred Date:</span>
+                                        <strong id="hudDate">Pending</strong>
+                                    </div>
+                                    <div class="hud-detail-row">
+                                        <span id="hudAllocationLabel">Burial Lot:</span>
+                                        <strong id="hudAllocationDetails">Not Selected</strong>
+                                    </div>
+                                    <div id="hudLotActionBox" style="margin-top: 8px; display: none;">
+                                        <button type="button" class="select-lot-btn" id="btnOpenLotPicker" style="padding: 8px 14px; font-size: 0.84rem;">
+                                            <i class="fas fa-map-marked-alt"></i> Browse Available Lots
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Missing Fields Callout -->
+                            <div class="blueprint-card missing-alert" id="hudMissingAlert" style="display: none;">
+                                <div class="hud-card-header">
+                                    <span class="hud-label text-warning"><i class="fas fa-circle-exclamation"></i> Required Information</span>
+                                </div>
+                                <div class="hud-card-body">
+                                    <ul class="missing-fields-list" id="hudMissingList">
+                                        <!-- Populated dynamically -->
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Advisory Match Alert -->
+                            <div class="blueprint-card match-alert" id="hudMatchCard" style="display: none;">
+                                <div class="hud-card-header">
+                                    <span class="hud-label text-info"><i class="fas fa-info-circle"></i> Cemetery Record Found</span>
+                                </div>
+                                <div class="hud-card-body">
+                                    <p id="hudMatchText" style="margin:0;font-size:0.8rem;line-height:1.4;color:#1e293b;"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="blueprint-footer">
+                            <button type="button" class="btn-confirm" id="btnConfirmBooking" disabled>
+                                <i class="fas fa-check-circle"></i> Confirm Booking Reservation
+                            </button>
+                            <small class="blueprint-disclaimer">Confirmation prepares your booking draft for administrative processing.</small>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Lot Picker Modal -->
+    <div class="lot-picker-modal-overlay" id="lotPickerModal" style="display: none;">
+        <div class="lot-picker-dialog">
+            <div class="lot-picker-header">
+                <div class="lot-picker-title">
+                    <i class="fas fa-map-location-dot"></i>
+                    <span>Select an Available Burial Lot</span>
+                </div>
+                <button type="button" class="btn-close-modal" id="btnCloseLotPicker"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="lot-picker-filters">
+                <div class="filter-input-wrap">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="lotSearchFilter" placeholder="Search lot number or block..." />
+                </div>
+                <select id="lotSectionFilter" class="form-control" style="max-width: 180px;">
+                    <option value="">All Sections</option>
+                </select>
+            </div>
+            <div class="lot-picker-body">
+                <div id="lotPickerSpinner" style="text-align: center; padding: 40px; display: none;">
+                    <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                    <p style="margin-top: 10px; font-size: 0.85rem; color: #64748b;">Loading available cemetery lots...</p>
+                </div>
+                <div class="recommendations-grid" id="lotGridContainer">
+                    <!-- Populated dynamically -->
+                </div>
+                <div id="lotPickerEmpty" style="text-align: center; padding: 40px; display: none;">
+                    <i class="fas fa-folder-open fa-2x text-muted"></i>
+                    <p style="margin-top: 10px; font-size: 0.88rem; color: #64748b;">No available lots found matching your criteria.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Field Correction Quick Modal -->
+    <div class="field-edit-modal-overlay" id="fieldEditModal" style="display: none;">
+        <div class="field-edit-dialog">
+            <div class="field-edit-header">
+                <h4 id="fieldEditTitle" style="margin: 0; font-size: 1rem; color: #0f172a;">Update Information</h4>
+                <button type="button" class="btn-close-modal" id="btnCloseFieldEdit"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="fieldEditForm" style="margin-top: 14px;">
+                <div class="form-group">
+                    <label id="fieldEditLabel" style="display: block; font-size: 0.82rem; font-weight: 600; color: #475569; margin-bottom: 6px;">Field Value</label>
+                    <input type="text" id="fieldEditInput" class="form-control" style="width: 100%; border-radius: 8px;" required />
+                    <small id="fieldEditHint" class="text-muted" style="display: block; margin-top: 4px; font-size: 0.75rem;"></small>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                    <button type="button" class="btn-secondary" id="btnCancelFieldEdit">Cancel</button>
+                    <button type="submit" class="btn-primary" id="btnSubmitFieldEdit">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../assets/js/shared/navigation-config.js"></script>
+    <script src="../../assets/js/shared/api.js"></script>
+    <script src="../../assets/js/shared/toast.js"></script>
+    <script src="../../assets/js/shared/button-loading.js"></script>
+    <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
+    <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
+    <script src="../../assets/js/pages/booking-assistant.js"></script>
+</body>
+</html>

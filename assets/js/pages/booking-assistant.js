@@ -1,0 +1,964 @@
+/**
+ * AI Booking Assistant Controller (Unified Burial & Cremation) — BMS-6
+ * 
+ * Presentation layer strictly bound to the authoritative PHP/AI state machine:
+ * - Conversational turns via POST /api/booking-agent/chat
+ * - Authoritative state via GET /api/booking-agent/active
+ * - Discrete field corrections via POST /api/booking-agent/drafts/{id}/update-field
+ * - Pre-confirmation boundary via POST /api/booking-agent/drafts/{id}/confirm
+ * - Cancellation via POST /api/booking-agent/drafts/{id}/cancel
+ * - Lot selection via GET /api/lots?status=Available
+ */
+(function() {
+    'use strict';
+
+    // Authoritative State Mirror
+    const state = {
+        draftId: null,
+        serviceType: null,
+        status: 'INTAKE',
+        extractedData: {},
+        missingFields: [],
+        isReadyForReview: false,
+        decedentMatch: null,
+        selectedLotDetails: null,
+        isLoading: false,
+        availableLots: [],
+        filteredLots: []
+    };
+
+    // UI Elements
+    let chatThread, userInputMsg, btnSendMessage, btnRestartDraft, promptSuggestions;
+    let blueprintStatusBadge, hudServiceVal, hudDecedentVal, hudAllocationVal, hudReviewVal;
+    let hudServiceBadge, hudServiceDesc, hudDecedentName, hudRelationship, hudDate, hudAllocationLabel, hudAllocationDetails, hudLotActionBox, btnOpenLotPicker;
+    let btnEditDecedent, btnEditSchedule, hudMissingAlert, hudMissingList, hudMatchCard, hudMatchText;
+    let btnConfirmBooking;
+    let lotPickerModal, btnCloseLotPicker, lotSearchFilter, lotSectionFilter, lotPickerSpinner, lotGridContainer, lotPickerEmpty;
+    let fieldEditModal, btnCloseFieldEdit, btnCancelFieldEdit, fieldEditForm, fieldEditTitle, fieldEditLabel, fieldEditInput, fieldEditHint;
+
+    let activeEditField = null;
+
+    /**
+     * Initialization entry point
+     */
+    async function init() {
+        cacheDOMElements();
+        bindEvents();
+        await loadCurrentUser();
+        await initializeSession();
+    }
+
+    /**
+     * Cache all interactive DOM elements
+     */
+    function cacheDOMElements() {
+        chatThread = document.getElementById('chatThread');
+        userInputMsg = document.getElementById('userInputMsg');
+        btnSendMessage = document.getElementById('btnSendMessage');
+        btnRestartDraft = document.getElementById('btnRestartDraft');
+        promptSuggestions = document.getElementById('promptSuggestions');
+
+        blueprintStatusBadge = document.getElementById('blueprintStatusBadge');
+        hudServiceVal = document.getElementById('hudServiceVal');
+        hudDecedentVal = document.getElementById('hudDecedentVal');
+        hudAllocationVal = document.getElementById('hudAllocationVal');
+        hudReviewVal = document.getElementById('hudReviewVal');
+
+        hudServiceBadge = document.getElementById('hudServiceBadge');
+        hudServiceDesc = document.getElementById('hudServiceDesc');
+        hudDecedentName = document.getElementById('hudDecedentName');
+        hudRelationship = document.getElementById('hudRelationship');
+        hudDate = document.getElementById('hudDate');
+        hudAllocationLabel = document.getElementById('hudAllocationLabel');
+        hudAllocationDetails = document.getElementById('hudAllocationDetails');
+        hudLotActionBox = document.getElementById('hudLotActionBox');
+        btnOpenLotPicker = document.getElementById('btnOpenLotPicker');
+
+        btnEditDecedent = document.getElementById('btnEditDecedent');
+        btnEditSchedule = document.getElementById('btnEditSchedule');
+        hudMissingAlert = document.getElementById('hudMissingAlert');
+        hudMissingList = document.getElementById('hudMissingList');
+        hudMatchCard = document.getElementById('hudMatchCard');
+        hudMatchText = document.getElementById('hudMatchText');
+
+        btnConfirmBooking = document.getElementById('btnConfirmBooking');
+
+        lotPickerModal = document.getElementById('lotPickerModal');
+        btnCloseLotPicker = document.getElementById('btnCloseLotPicker');
+        lotSearchFilter = document.getElementById('lotSearchFilter');
+        lotSectionFilter = document.getElementById('lotSectionFilter');
+        lotPickerSpinner = document.getElementById('lotPickerSpinner');
+        lotGridContainer = document.getElementById('lotGridContainer');
+        lotPickerEmpty = document.getElementById('lotPickerEmpty');
+
+        fieldEditModal = document.getElementById('fieldEditModal');
+        btnCloseFieldEdit = document.getElementById('btnCloseFieldEdit');
+        btnCancelFieldEdit = document.getElementById('btnCancelFieldEdit');
+        fieldEditForm = document.getElementById('fieldEditForm');
+        fieldEditTitle = document.getElementById('fieldEditTitle');
+        fieldEditLabel = document.getElementById('fieldEditLabel');
+        fieldEditInput = document.getElementById('fieldEditInput');
+        fieldEditHint = document.getElementById('fieldEditHint');
+    }
+
+    /**
+     * Bind DOM event listeners
+     */
+    function bindEvents() {
+        btnSendMessage.addEventListener('click', onSendMessage);
+        userInputMsg.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                onSendMessage();
+            }
+        });
+
+        btnRestartDraft.addEventListener('click', onRestartDraft);
+        btnConfirmBooking.addEventListener('click', onConfirmBooking);
+
+        btnOpenLotPicker.addEventListener('click', openLotPicker);
+        btnCloseLotPicker.addEventListener('click', closeLotPicker);
+        lotSearchFilter.addEventListener('input', filterLots);
+        lotSectionFilter.addEventListener('change', filterLots);
+
+        btnEditDecedent.addEventListener('click', () => openFieldEditor('decedent_name'));
+        btnEditSchedule.addEventListener('click', () => openFieldEditor(state.serviceType === 'cremation' ? 'cremation_date' : 'preferred_date'));
+
+        btnCloseFieldEdit.addEventListener('click', closeFieldEditor);
+        btnCancelFieldEdit.addEventListener('click', closeFieldEditor);
+        fieldEditForm.addEventListener('submit', onSubmitFieldEdit);
+
+        // Close modals on backdrop click
+        lotPickerModal.addEventListener('click', (e) => {
+            if (e.target === lotPickerModal) closeLotPicker();
+        });
+        fieldEditModal.addEventListener('click', (e) => {
+            if (e.target === fieldEditModal) closeFieldEditor();
+        });
+    }
+
+    /**
+     * Populate current user session information in top-bar and sidebar
+     */
+    async function loadCurrentUser() {
+        try {
+            let user = null;
+            if (typeof api !== 'undefined' && api.getMe) {
+                user = await api.getMe();
+            }
+            if (user) {
+                const nameEls = [document.getElementById('userName'), document.getElementById('sidebarUserName')];
+                const roleEls = [document.getElementById('userRole'), document.getElementById('sidebarUserRole')];
+                const displayName = user.full_name || user.username || 'Client';
+                const displayRole = user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'Client';
+
+                nameEls.forEach(el => { if (el) el.textContent = displayName; });
+                roleEls.forEach(el => { if (el) el.textContent = displayRole; });
+            }
+        } catch (e) {
+            console.warn('Could not fetch user profile:', e);
+        }
+    }
+
+    /**
+     * Check for active draft or initialize a new conversation
+     */
+    async function initializeSession() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paramService = urlParams.get('service');
+        if (paramService && ['burial', 'cremation'].includes(paramService.toLowerCase())) {
+            state.serviceType = paramService.toLowerCase();
+        }
+
+        try {
+            setLoading(true);
+            const endpoint = state.serviceType ? `booking-agent/active?service_type=${state.serviceType}` : 'booking-agent/active';
+            const res = await api.request(endpoint, { method: 'GET' });
+
+            if (res && res.success && res.draft) {
+                applyAuthoritativeState(res.draft);
+                appendAssistantMessage(`Welcome back! We are continuing your **${state.serviceType || 'cemetery'} arrangement** (Draft #${state.draftId}). Review your details in the blueprint on the right, or tell me what you'd like to update.`);
+                renderPromptChips();
+            } else {
+                renderIntakeGreeting();
+            }
+        } catch (e) {
+            renderIntakeGreeting();
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    /**
+     * Render the initial assistant greeting with service quick actions
+     */
+    function renderIntakeGreeting() {
+        chatThread.innerHTML = '';
+        appendAssistantMessage(
+            `Hello! I am your AI Booking Assistant. I will guide you step-by-step through arranging a **burial** or **cremation** service.\n\nTo begin, which type of service would you like to arrange?`
+        );
+        renderPromptChips([
+            { text: '⚰️ Arrange a Burial', action: () => selectService('burial') },
+            { text: '🔥 Arrange a Cremation', action: () => selectService('cremation') }
+        ]);
+        updateBlueprintHUD();
+    }
+
+    /**
+     * Quick service selector handler
+     */
+    async function selectService(serviceType) {
+        state.serviceType = serviceType;
+        appendUserMessage(`I want to arrange a ${serviceType} service.`);
+        await sendChatTurn(`I want to arrange a ${serviceType} service.`);
+    }
+
+    /**
+     * Handle user sending a message
+     */
+    async function onSendMessage() {
+        const text = userInputMsg.value.trim();
+        if (!text || state.isLoading) return;
+
+        userInputMsg.value = '';
+        appendUserMessage(text);
+        await sendChatTurn(text);
+    }
+
+    /**
+     * Core conversational turn wired to POST /api/booking-agent/chat
+     */
+    async function sendChatTurn(text) {
+        setLoading(true);
+        const typingEl = appendTypingIndicator();
+
+        try {
+            const payload = {
+                message: text,
+                draft_id: state.draftId,
+                service_type: state.serviceType
+            };
+
+            const res = await api.request('booking-agent/chat', {
+                method: 'POST',
+                body: payload
+            });
+
+            removeTypingIndicator(typingEl);
+
+            if (res && res.success) {
+                applyAuthoritativeState(res);
+
+                // Assistant reply
+                if (res.reply) {
+                    appendAssistantMessage(res.reply);
+                }
+
+                // Advisory decedent match alert
+                if (res.decedent_match && res.decedent_match.found) {
+                    appendAssistantMessage(`💡 *Cemetery Record Advisory*: We identified matching records for "${res.extracted_data.decedent_name}" in our registry. Our administration will cross-reference this during final review.`);
+                }
+
+                // If in LOT_SELECTION and burial, prompt lot selection
+                if (res.status === 'LOT_SELECTION' && state.serviceType === 'burial' && !state.extractedData.lot_id) {
+                    appendAssistantMessage(`Please choose an available burial lot from our cemetery map or browse our available lots list.`);
+                }
+
+                renderPromptChips();
+            } else {
+                appendAssistantMessage(res.error || 'I encountered an issue processing your request. Please try again.');
+            }
+        } catch (err) {
+            removeTypingIndicator(typingEl);
+            if (err.status === 429) {
+                appendAssistantMessage('⚠️ You are sending messages too quickly. Please wait a few moments before trying again.');
+                if (typeof showToast === 'function') showToast('Rate limit reached. Please wait a moment.', 'warning');
+            } else {
+                appendAssistantMessage('⚠️ Connection error. Please check your network and try again.');
+            }
+        } finally {
+            setLoading(false);
+            userInputMsg.focus();
+        }
+    }
+
+    /**
+     * Apply authoritative state returned by the server
+     */
+    function applyAuthoritativeState(data) {
+        if (!data) return;
+
+        state.draftId = data.draft_id || state.draftId;
+        state.serviceType = data.service_type || state.serviceType;
+        state.status = data.status || state.status;
+        state.extractedData = data.extracted_data || {};
+        state.missingFields = Array.isArray(data.missing_fields) ? data.missing_fields : [];
+        state.isReadyForReview = Boolean(data.is_ready_for_review);
+        state.decedentMatch = data.decedent_match || null;
+
+        // Fetch lot details if lot_id is present
+        if (state.extractedData.lot_id && (!state.selectedLotDetails || state.selectedLotDetails.lot_id !== state.extractedData.lot_id)) {
+            fetchSelectedLotDetails(state.extractedData.lot_id);
+        }
+
+        updateBlueprintHUD();
+    }
+
+    /**
+     * Fetch full lot details (section, block, type, price) for selected lot_id
+     */
+    async function fetchSelectedLotDetails(lotId) {
+        try {
+            const lot = await api.request(`lots/${lotId}`, { method: 'GET' });
+            if (lot && (lot.lot_id || lot.data)) {
+                state.selectedLotDetails = lot.data || lot;
+                updateBlueprintHUD();
+            }
+        } catch (e) {
+            console.warn('Could not fetch lot details for lot_id ' + lotId, e);
+        }
+    }
+
+    /**
+     * Render the Live Booking Blueprint HUD from state
+     */
+    function updateBlueprintHUD() {
+        // Status Badge
+        blueprintStatusBadge.textContent = formatStatusLabel(state.status);
+        blueprintStatusBadge.className = 'blueprint-badge status-' + (state.status || 'intake').toLowerCase();
+
+        // Stepper updates
+        updateStepper();
+
+        // Service Card
+        const isCremation = state.serviceType === 'cremation';
+        hudServiceBadge.textContent = state.serviceType ? (isCremation ? 'Cremation' : 'Burial') : 'Detecting...';
+        hudServiceBadge.style.background = isCremation ? '#fef3c7' : '#ecfdf5';
+        hudServiceBadge.style.color = isCremation ? '#b45309' : '#047857';
+        hudServiceBadge.style.borderColor = isCremation ? '#fde68a' : '#a7f3d0';
+        hudServiceDesc.textContent = state.serviceType ? (isCremation ? 'Cremation Service' : 'Standard Burial Service') : 'Pending selection';
+        hudServiceVal.textContent = state.serviceType ? (isCremation ? 'Cremation' : 'Burial') : 'Pending';
+
+        // Decedent Card
+        const dName = state.extractedData.decedent_name;
+        const dRel = state.extractedData.relationship;
+        hudDecedentName.innerHTML = dName ? `<strong>${escapeHtml(dName)}</strong>` : '<span class="text-muted">Pending</span>';
+        hudRelationship.innerHTML = dRel ? `<strong>${escapeHtml(dRel)}</strong>` : '<span class="text-muted">Pending</span>';
+        hudDecedentVal.textContent = dName || 'Pending';
+
+        // Schedule & Allocation Card
+        const dateVal = isCremation ? state.extractedData.cremation_date : state.extractedData.preferred_date;
+        hudDate.innerHTML = dateVal ? `<strong>${formatDate(dateVal)}</strong>` : '<span class="text-muted">Pending</span>';
+
+        if (isCremation) {
+            hudAllocationLabel.textContent = 'Columbarium:';
+            const col = state.extractedData.preferred_columbarium;
+            hudAllocationDetails.innerHTML = col ? `<strong>${escapeHtml(col)}</strong>` : '<span class="text-muted">Assigned upon arrival</span>';
+            hudAllocationVal.textContent = dateVal ? formatDate(dateVal) : 'Pending';
+            hudLotActionBox.style.display = 'none';
+        } else {
+            hudAllocationLabel.textContent = 'Burial Lot:';
+            if (state.selectedLotDetails) {
+                const l = state.selectedLotDetails;
+                hudAllocationDetails.innerHTML = `<strong>Lot ${escapeHtml(l.lot_number || l.lot_id)}</strong> <small class="text-muted">(${escapeHtml(l.section_name || 'Section')}, ${escapeHtml(l.block_name || 'Block')})</small>`;
+                hudAllocationVal.textContent = `Lot ${l.lot_number || l.lot_id}`;
+            } else if (state.extractedData.lot_id) {
+                hudAllocationDetails.innerHTML = `<strong>Lot #${state.extractedData.lot_id}</strong>`;
+                hudAllocationVal.textContent = `Lot #${state.extractedData.lot_id}`;
+            } else {
+                hudAllocationDetails.innerHTML = '<span class="text-muted">Not Selected</span>';
+                hudAllocationVal.textContent = dateVal ? `${formatDate(dateVal)} (No lot)` : 'Pending';
+            }
+
+            // Show lot picker button if burial and lot selection needed
+            hudLotActionBox.style.display = (state.serviceType === 'burial') ? 'block' : 'none';
+        }
+
+        // Missing Fields Alert
+        if (state.missingFields && state.missingFields.length > 0 && state.status !== 'INTAKE') {
+            hudMissingAlert.style.display = 'block';
+            hudMissingList.innerHTML = '';
+            state.missingFields.forEach(field => {
+                const li = document.createElement('li');
+                li.innerHTML = `<i class="fas fa-arrow-right"></i> ${formatFieldName(field)}`;
+                hudMissingList.appendChild(li);
+            });
+        } else {
+            hudMissingAlert.style.display = 'none';
+        }
+
+        // Advisory Record Match Alert
+        if (state.decedentMatch && state.decedentMatch.found) {
+            hudMatchCard.style.display = 'block';
+            hudMatchText.textContent = `Matching record found in registry (${state.decedentMatch.count || 1} candidate). Administration will link existing cemetery files.`;
+        } else {
+            hudMatchCard.style.display = 'none';
+        }
+
+        // Review & Confirm step text
+        if (state.status === 'AWAITING_CONFIRM' || state.status === 'COMMITTED') {
+            hudReviewVal.textContent = 'Confirmed';
+        } else if (state.isReadyForReview || (state.status === 'READY_FOR_REVIEW' && state.missingFields.length === 0)) {
+            hudReviewVal.textContent = 'Ready';
+        } else {
+            hudReviewVal.textContent = 'Incomplete';
+        }
+
+        // Confirm Button Eligibility (Strict Server Gate)
+        const isEligibleToConfirm = (state.status === 'READY_FOR_REVIEW' || state.isReadyForReview) && state.missingFields.length === 0;
+        btnConfirmBooking.disabled = !isEligibleToConfirm || state.isLoading || state.status === 'AWAITING_CONFIRM';
+        if (state.status === 'AWAITING_CONFIRM') {
+            btnConfirmBooking.innerHTML = '<i class="fas fa-check-double"></i> Reservation Confirmed';
+            btnConfirmBooking.style.background = '#047857';
+        } else {
+            btnConfirmBooking.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Booking Reservation';
+            btnConfirmBooking.style.background = '';
+        }
+    }
+
+    /**
+     * Stepper visual progress tracker
+     */
+    function updateStepper() {
+        const stepService = document.getElementById('stepService');
+        const stepDetails = document.getElementById('stepDetails');
+        const stepAllocation = document.getElementById('stepAllocation');
+        const stepConfirm = document.getElementById('stepConfirm');
+
+        // Reset classes
+        [stepService, stepDetails, stepAllocation, stepConfirm].forEach(el => {
+            el.className = 'blueprint-step pending';
+        });
+
+        // Step 1: Service
+        if (state.serviceType) {
+            stepService.className = 'blueprint-step completed';
+        } else {
+            stepService.className = 'blueprint-step active';
+            return;
+        }
+
+        // Step 2: Decedent Info
+        const hasDetails = Boolean(state.extractedData.decedent_name);
+        if (hasDetails) {
+            stepDetails.className = 'blueprint-step completed';
+        } else {
+            stepDetails.className = 'blueprint-step active';
+            return;
+        }
+
+        // Step 3: Allocation (Date + Lot/Columbarium)
+        const isCremation = state.serviceType === 'cremation';
+        const hasDate = Boolean(isCremation ? state.extractedData.cremation_date : state.extractedData.preferred_date);
+        const hasLot = isCremation || Boolean(state.extractedData.lot_id);
+
+        if (hasDate && hasLot) {
+            stepAllocation.className = 'blueprint-step completed';
+        } else {
+            stepAllocation.className = 'blueprint-step active';
+            return;
+        }
+
+        // Step 4: Review & Confirm
+        if (state.status === 'AWAITING_CONFIRM' || state.status === 'COMMITTED') {
+            stepConfirm.className = 'blueprint-step completed';
+        } else {
+            stepConfirm.className = 'blueprint-step active';
+        }
+    }
+
+    /**
+     * Dynamic Prompt Suggestion Chips based on server state
+     */
+    function renderPromptChips(customChips = null) {
+        promptSuggestions.innerHTML = '';
+
+        if (customChips && customChips.length > 0) {
+            customChips.forEach(chip => {
+                const btn = createChip(chip.text, chip.action);
+                promptSuggestions.appendChild(btn);
+            });
+            return;
+        }
+
+        const chips = [];
+
+        if (state.status === 'AWAITING_CONFIRM') {
+            chips.push({ text: '📄 View Booking Voucher', action: () => showVoucherInChat() });
+            chips.push({ text: '🔄 Start New Booking', action: () => onRestartDraft() });
+        } else if (state.status === 'READY_FOR_REVIEW' || (state.isReadyForReview && state.missingFields.length === 0)) {
+            chips.push({ text: '✅ Confirm Reservation', action: () => onConfirmBooking() });
+            chips.push({ text: '✏️ Change Date', action: () => openFieldEditor(state.serviceType === 'cremation' ? 'cremation_date' : 'preferred_date') });
+            chips.push({ text: '✏️ Change Decedent Name', action: () => openFieldEditor('decedent_name') });
+            if (state.serviceType === 'burial') {
+                chips.push({ text: '🗺️ Change Burial Lot', action: () => openLotPicker() });
+            }
+        } else if (state.status === 'LOT_SELECTION' || (state.serviceType === 'burial' && !state.extractedData.lot_id)) {
+            chips.push({ text: '🗺️ Browse Available Lots', action: () => openLotPicker() });
+            chips.push({ text: '📅 In 3 weeks', action: () => sendQuickDate('+21 days') });
+            chips.push({ text: '📅 Next month', action: () => sendQuickDate('+35 days') });
+        } else if (state.missingFields.includes('decedent_name')) {
+            chips.push({ text: '👤 For my father', action: () => sendQuickInput('The arrangement is for my father, ') });
+            chips.push({ text: '👤 For my mother', action: () => sendQuickInput('The arrangement is for my mother, ') });
+        } else if (state.missingFields.includes('preferred_date') || state.missingFields.includes('cremation_date')) {
+            chips.push({ text: '📅 In 2 weeks', action: () => sendQuickDate('+14 days') });
+            chips.push({ text: '📅 In 1 month', action: () => sendQuickDate('+30 days') });
+        } else {
+            chips.push({ text: 'ℹ️ What information is needed?', action: () => sendChatTurn('What information do you still need from me?') });
+        }
+
+        chips.forEach(chip => {
+            const btn = createChip(chip.text, chip.action);
+            promptSuggestions.appendChild(btn);
+        });
+    }
+
+    function createChip(text, handler) {
+        const span = document.createElement('span');
+        span.className = 'prompt-chip';
+        span.textContent = text;
+        span.addEventListener('click', handler);
+        return span;
+    }
+
+    function sendQuickInput(prefix) {
+        userInputMsg.value = prefix;
+        userInputMsg.focus();
+    }
+
+    function sendQuickDate(relativeOffset) {
+        const target = computeFutureDate(relativeOffset);
+        userInputMsg.value = `Preferred date: ${target}`;
+        onSendMessage();
+    }
+
+    function computeFutureDate(offsetStr) {
+        const days = parseInt(offsetStr, 10) || 30;
+        const d = new Date();
+        d.setDate(d.getDate() + Math.abs(days));
+        // Skip Mondays if burial
+        if (state.serviceType === 'burial' && d.getDay() === 1) {
+            d.setDate(d.getDate() + 1);
+        }
+        return d.toISOString().split('T')[0];
+    }
+
+    /**
+     * Direct Field Correction via POST /api/booking-agent/drafts/{id}/update-field
+     */
+    async function updateDraftField(field, value) {
+        if (!state.draftId) {
+            appendAssistantMessage(`Please start a booking conversation first before updating fields.`);
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const res = await api.request(`booking-agent/drafts/${state.draftId}/update-field`, {
+                method: 'POST',
+                body: { field, value }
+            });
+
+            if (res && res.success) {
+                applyAuthoritativeState(res);
+                appendAssistantMessage(`Updated **${formatFieldName(field)}** to: **${escapeHtml(String(value))}**.`);
+                renderPromptChips();
+                if (typeof showToast === 'function') showToast('Field updated successfully', 'success');
+            } else {
+                appendAssistantMessage(res.error || 'Failed to update field.');
+                if (typeof showToast === 'function') showToast(res.error || 'Failed to update field', 'error');
+            }
+        } catch (e) {
+            appendAssistantMessage(`Error updating field: ${e.message}`);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    /**
+     * Lot Picker Modal Workflow
+     */
+    async function openLotPicker() {
+        lotPickerModal.style.display = 'flex';
+        lotSearchFilter.value = '';
+        lotPickerSpinner.style.display = 'block';
+        lotGridContainer.innerHTML = '';
+        lotPickerEmpty.style.display = 'none';
+
+        try {
+            const res = await api.request('lots?status=Available', { method: 'GET' });
+            lotPickerSpinner.style.display = 'none';
+
+            state.availableLots = (res && Array.isArray(res.data)) ? res.data : (Array.isArray(res) ? res : []);
+            populateSectionFilter(state.availableLots);
+            filterLots();
+        } catch (e) {
+            lotPickerSpinner.style.display = 'none';
+            lotPickerEmpty.style.display = 'block';
+            lotPickerEmpty.querySelector('p').textContent = 'Could not load available lots: ' + e.message;
+        }
+    }
+
+    function closeLotPicker() {
+        lotPickerModal.style.display = 'none';
+    }
+
+    function populateSectionFilter(lots) {
+        lotSectionFilter.innerHTML = '<option value="">All Sections</option>';
+        const sections = [...new Set(lots.map(l => l.section_name).filter(Boolean))];
+        sections.sort().forEach(sec => {
+            const opt = document.createElement('option');
+            opt.value = sec;
+            opt.textContent = sec;
+            lotSectionFilter.appendChild(opt);
+        });
+    }
+
+    function filterLots() {
+        const query = (lotSearchFilter.value || '').toLowerCase().trim();
+        const selectedSec = lotSectionFilter.value;
+
+        state.filteredLots = state.availableLots.filter(lot => {
+            const matchSearch = !query ||
+                String(lot.lot_number || '').toLowerCase().includes(query) ||
+                String(lot.block_name || '').toLowerCase().includes(query) ||
+                String(lot.section_name || '').toLowerCase().includes(query) ||
+                String(lot.lot_type_name || '').toLowerCase().includes(query);
+
+            const matchSec = !selectedSec || lot.section_name === selectedSec;
+            return matchSearch && matchSec;
+        });
+
+        renderLotGrid(state.filteredLots);
+    }
+
+    function renderLotGrid(lots) {
+        lotGridContainer.innerHTML = '';
+
+        if (!lots || lots.length === 0) {
+            lotPickerEmpty.style.display = 'block';
+            return;
+        }
+        lotPickerEmpty.style.display = 'none';
+
+        lots.forEach(lot => {
+            const card = document.createElement('div');
+            const isSelected = state.extractedData.lot_id === lot.lot_id;
+            card.className = 'lot-card-item' + (isSelected ? ' selected' : '');
+
+            card.innerHTML = `
+                <div>
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                        <h4 style="margin:0;font-size:1rem;color:#0f172a;font-weight:700;">Lot ${escapeHtml(lot.lot_number)}</h4>
+                        <span class="meta-pill" style="background:#e0f2fe;color:#0369a1;font-size:0.72rem;">${escapeHtml(lot.lot_type_name || 'Standard')}</span>
+                    </div>
+                    <div style="font-size:0.82rem;color:#64748b;margin-top:4px;">
+                        ${escapeHtml(lot.section_name || '')} • ${escapeHtml(lot.block_name || '')}
+                    </div>
+                    <div style="font-size:1.05rem;font-weight:800;color:#166534;margin-top:8px;">
+                        ₱${Number(lot.price || 0).toLocaleString()}
+                    </div>
+                </div>
+                <button type="button" class="select-lot-btn" style="margin-top:10px;">
+                    ${isSelected ? '<i class="fas fa-check"></i> Selected' : '<i class="fas fa-check-circle"></i> Select This Lot'}
+                </button>
+            `;
+
+            card.querySelector('button').addEventListener('click', async () => {
+                closeLotPicker();
+                await updateDraftField('lot_id', lot.lot_id);
+            });
+
+            lotGridContainer.appendChild(card);
+        });
+    }
+
+    /**
+     * Quick Field Editor Modal
+     */
+    function openFieldEditor(fieldName) {
+        activeEditField = fieldName;
+        fieldEditModal.style.display = 'flex';
+
+        const isDate = fieldName.includes('date');
+        fieldEditTitle.textContent = `Update ${formatFieldName(fieldName)}`;
+        fieldEditLabel.textContent = formatFieldName(fieldName);
+        fieldEditInput.type = isDate ? 'date' : 'text';
+
+        const curVal = state.extractedData[fieldName] || '';
+        fieldEditInput.value = curVal;
+
+        if (isDate) {
+            fieldEditHint.textContent = 'Please choose a future date (Burials unavailable on Mondays).';
+            const minDate = new Date();
+            minDate.setDate(minDate.getDate() + 1);
+            fieldEditInput.min = minDate.toISOString().split('T')[0];
+        } else {
+            fieldEditHint.textContent = 'Enter the revised information accurately.';
+            fieldEditInput.removeAttribute('min');
+        }
+
+        fieldEditInput.focus();
+    }
+
+    function closeFieldEditor() {
+        fieldEditModal.style.display = 'none';
+        activeEditField = null;
+    }
+
+    async function onSubmitFieldEdit(e) {
+        e.preventDefault();
+        const newVal = fieldEditInput.value.trim();
+        if (!newVal || !activeEditField) return;
+
+        const field = activeEditField;
+        closeFieldEditor();
+        await updateDraftField(field, newVal);
+    }
+
+    /**
+     * Confirmation Workflow via POST /api/booking-agent/drafts/{id}/confirm
+     */
+    async function onConfirmBooking() {
+        if (!state.draftId) return;
+
+        if (!confirm('Are you ready to submit your booking reservation? This will advance your draft for administrative review.')) {
+        if (!confirm('Are you ready to finalize and submit your booking reservation?')) {
+            return;
+        }
+
+        setLoading(true);
+        btnConfirmBooking.disabled = true;
+        btnConfirmBooking.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirming...';
+        btnConfirmBooking.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finalizing...';
+
+        try {
+            const res = await api.request(`booking-agent/drafts/${state.draftId}/confirm`, {
+                method: 'POST'
+                method: 'POST',
+                body: { finalize: true }
+            });
+
+            if (res && res.success) {
+                state.status = res.status || 'COMMITTED';
+                state.committedRecordId = res.committed_record_id || res.cremation_id || res.schedule_id || null;
+                updateBlueprintHUD();
+                showVoucherInChat();
+                const serviceLabel = state.serviceType === 'cremation' ? 'Cremation' : 'Burial';
+                const successMsg = state.committedRecordId
+                    ? `${serviceLabel} scheduled successfully! Reference ID #${state.committedRecordId}`
+                    : 'Reservation draft confirmed!';
+                if (typeof showToast === 'function') showToast(successMsg, 'success');
+            } else {
+                appendAssistantMessage(res.error || 'Failed to confirm reservation.');
+                if (typeof showToast === 'function') showToast(res.error || 'Failed to confirm', 'error');
+            }
+        } catch (e) {
+            appendAssistantMessage(`Error confirming booking: ${e.message}`);
+        } finally {
+            setLoading(false);
+            updateBlueprintHUD();
+            renderPromptChips();
+        }
+    }
+
+    /**
+     * Display a Digital Reservation Voucher in the chat stream
+     */
+    function showVoucherInChat() {
+        const isCremation = state.serviceType === 'cremation';
+        const dateVal = isCremation ? state.extractedData.cremation_date : state.extractedData.preferred_date;
+        const refPrefix = isCremation ? 'Cremation #' : 'Schedule #';
+        const scheduleRef = state.committedRecordId ? `${refPrefix}${state.committedRecordId}` : `Draft #${state.draftId}`;
+        const isCommitted = state.status === 'COMMITTED';
+
+        const voucherHtml = `
+            <div class="reservation-voucher" style="background:#ffffff;border:2px solid #2c5e47;border-radius:14px;padding:18px;margin:8px 0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px dashed #cbd5e1;padding-bottom:12px;margin-bottom:12px;">
+                    <div>
+                        <span style="font-size:0.75rem;font-weight:700;color:#2c5e47;text-transform:uppercase;">Official Booking Voucher</span>
+                        <h3 style="margin:2px 0 0 0;font-size:1.15rem;color:#0f172a;">Draft #${state.draftId}</h3>
+                        <h3 style="margin:2px 0 0 0;font-size:1.15rem;color:#0f172a;">${scheduleRef}</h3>
+                    </div>
+                    <span class="score-badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:4px 10px;font-size:0.8rem;">
+                        <i class="fas fa-clock"></i> Awaiting Review
+                        <i class="fas fa-${isCommitted ? 'check-double' : 'clock'}"></i> ${isCommitted ? 'Pending Admin Review' : 'Awaiting Review'}
+                    </span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:0.85rem;">
+                    <div>
+                        <span style="color:#64748b;font-size:0.75rem;display:block;">Service Type</span>
+                        <strong style="color:#0f172a;">${isCremation ? 'Cremation Service' : 'Burial Service'}</strong>
+                    </div>
+                    <div>
+                        <span style="color:#64748b;font-size:0.75rem;display:block;">Scheduled Date</span>
+                        <strong style="color:#0f172a;">${formatDate(dateVal)}</strong>
+                    </div>
+                    <div>
+                        <span style="color:#64748b;font-size:0.75rem;display:block;">Decedent Name</span>
+                        <strong style="color:#0f172a;">${escapeHtml(state.extractedData.decedent_name || 'N/A')}</strong>
+                    </div>
+                    <div>
+                        <span style="color:#64748b;font-size:0.75rem;display:block;">${isCremation ? 'Columbarium' : 'Burial Lot'}</span>
+                        <strong style="color:#0f172a;">${isCremation ? (escapeHtml(state.extractedData.preferred_columbarium || 'Assigned on arrival')) : (state.selectedLotDetails ? `Lot ${escapeHtml(state.selectedLotDetails.lot_number)} (${escapeHtml(state.selectedLotDetails.section_name)})` : `Lot #${state.extractedData.lot_id}`)}</strong>
+                    </div>
+                </div>
+                <div style="margin-top:14px;padding-top:10px;border-top:1px solid #f1f5f9;font-size:0.78rem;color:#64748b;line-height:1.4;">
+                    <i class="fas fa-shield-alt text-success"></i> Your booking details are recorded. Our administrative staff will verify decedent documentation and finalize formal record creation upon submission.
+                    <i class="fas fa-shield-alt text-success"></i> Your booking details are recorded in our official scheduling system. Administrative staff will verify documents and review your schedule.
+                </div>
+            </div>
+        `;
+
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'chat-message assistant chat-message--rich';
+        msgDiv.innerHTML = voucherHtml;
+        chatThread.appendChild(msgDiv);
+        scrollChatToBottom();
+    }
+
+    /**
+     * Restart / Cancel current draft session
+     */
+    async function onRestartDraft() {
+        if (!confirm('Are you sure you want to discard your current booking progress and start a fresh session?')) {
+            return;
+        }
+
+        if (state.draftId) {
+            try {
+                await api.request(`booking-agent/drafts/${state.draftId}/cancel`, { method: 'POST' });
+            } catch (e) {
+                console.warn('Could not cleanly cancel draft on server:', e);
+            }
+        }
+
+        // Reset local state
+        state.draftId = null;
+        state.serviceType = null;
+        state.status = 'INTAKE';
+        state.extractedData = {};
+        state.missingFields = [];
+        state.isReadyForReview = false;
+        state.decedentMatch = null;
+        state.selectedLotDetails = null;
+
+        renderIntakeGreeting();
+    }
+
+    /**
+     * Chat Stream Rendering Helpers
+     */
+    function appendUserMessage(text) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'chat-message user';
+        msgDiv.textContent = text;
+        chatThread.appendChild(msgDiv);
+        scrollChatToBottom();
+    }
+
+    function appendAssistantMessage(text) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'chat-message assistant';
+        msgDiv.innerHTML = formatMarkdown(text);
+        chatThread.appendChild(msgDiv);
+        scrollChatToBottom();
+    }
+
+    function appendTypingIndicator() {
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'chat-message assistant chat-typing-indicator';
+        typingDiv.innerHTML = '<span>•</span><span>•</span><span>•</span>';
+        chatThread.appendChild(typingDiv);
+        scrollChatToBottom();
+        return typingDiv;
+    }
+
+    function removeTypingIndicator(el) {
+        if (el && el.parentNode) {
+            el.parentNode.removeChild(el);
+        }
+    }
+
+    function scrollChatToBottom() {
+        chatThread.scrollTop = chatThread.scrollHeight;
+    }
+
+    function setLoading(loading) {
+        state.isLoading = loading;
+        btnSendMessage.disabled = loading;
+        if (loading) {
+            btnSendMessage.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        } else {
+            btnSendMessage.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        }
+    }
+
+    /**
+     * Formatters and Utilities
+     */
+    function formatStatusLabel(status) {
+        const map = {
+            'INTAKE': 'Intake',
+            'DRAFT_STARTED': 'Started',
+            'COLLECTING_INFO': 'Collecting Info',
+            'LOT_SELECTION': 'Lot Selection',
+            'CREMATION_PREFS': 'Preferences',
+            'READY_FOR_REVIEW': 'Ready for Review',
+            'AWAITING_CONFIRM': 'Awaiting Confirm',
+            'COMMITTED': 'Committed',
+            'CANCELLED': 'Cancelled',
+            'EXPIRED': 'Expired'
+        };
+        return map[status] || status || 'Intake';
+    }
+
+    function formatFieldName(fieldName) {
+        const map = {
+            'decedent_name': 'Decedent Full Name',
+            'relationship': 'Relationship to Decedent',
+            'preferred_date': 'Preferred Burial Date',
+            'cremation_date': 'Preferred Cremation Date',
+            'lot_id': 'Burial Lot Selection',
+            'preferred_columbarium': 'Columbarium Preference',
+            'service_type': 'Service Type'
+        };
+        return map[fieldName] || fieldName.replace(/_/g, ' ');
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return 'Pending';
+        try {
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                const date = new Date(parts[0], parts[1] - 1, parts[2]);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            }
+            return dateStr;
+        } catch {
+            return dateStr;
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function formatMarkdown(text) {
+        if (!text) return '';
+        let escaped = escapeHtml(text);
+        // bold
+        escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // italic
+        escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        // line breaks
+        escaped = escaped.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
+        return escaped;
+    }
+
+    // Auto-init on DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', init);
+})();
