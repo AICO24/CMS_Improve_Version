@@ -15,20 +15,24 @@
 require_once __DIR__ . '/../services/BookingAgentService.php';
 require_once __DIR__ . '/../services/AIService.php';
 require_once __DIR__ . '/../models/BookingDraft.php';
+require_once __DIR__ . '/../models/UnifiedBooking.php';
 
 class BookingAgentController {
     private BookingAgentService $agentService;
     private BookingDraft $draftModel;
     private AIService $aiService;
+    private UnifiedBooking $unifiedModel;
 
     public function __construct(
         ?BookingAgentService $agentService = null,
         ?BookingDraft $draftModel = null,
-        ?AIService $aiService = null
+        ?AIService $aiService = null,
+        ?UnifiedBooking $unifiedModel = null
     ) {
         $this->agentService = $agentService ?? new BookingAgentService();
         $this->draftModel = $draftModel ?? new BookingDraft();
         $this->aiService = $aiService ?? new AIService();
+        $this->unifiedModel = $unifiedModel ?? new UnifiedBooking();
     }
 
     /**
@@ -521,6 +525,127 @@ class BookingAgentController {
             return [
                 'success' => false,
                 'error'   => 'Failed to list drafts',
+                'code'    => 500
+            ];
+        }
+    }
+
+    /**
+     * GET /api/booking-agent/drafts/{id}
+     * Retrieve authoritative state for a specific draft with ownership validation.
+     * Crucial for draft resumption (?draft_id={id}).
+     * 
+     * @param int   $draftId
+     * @param mixed $user
+     * @return array
+     */
+    public function getDraft(int $draftId, $user): array {
+        [$userId] = $this->resolveUserContext($user);
+        if ($userId <= 0) {
+            return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
+        }
+
+        try {
+            $draft = $this->draftModel->requireOwnership($draftId, $userId);
+            $extracted = !empty($draft['extracted_data']) ? json_decode($draft['extracted_data'], true) : [];
+            $missing = !empty($draft['missing_fields']) ? json_decode($draft['missing_fields'], true) : [];
+
+            $isExpired = BookingDraft::isExpired($draft);
+            $isTerminal = BookingDraft::isTerminalState($draft['status']);
+
+            if ($isExpired) {
+                return [
+                    'success'    => false,
+                    'error'      => 'This booking draft has expired and cannot be resumed.',
+                    'error_type' => 'DRAFT_EXPIRED',
+                    'code'       => 410
+                ];
+            }
+
+            return [
+                'success'             => true,
+                'draft'               => [
+                    'draft_id'              => (int) $draft['draft_id'],
+                    'service_type'          => $draft['service_type'],
+                    'status'                => $draft['status'],
+                    'extracted_data'        => $extracted,
+                    'missing_fields'        => $missing,
+                    'committed_record_id'   => $draft['committed_record_id'] ? (int) $draft['committed_record_id'] : null,
+                    'committed_record_type' => $draft['committed_record_type'],
+                    'expires_at'            => $draft['expires_at'],
+                    'is_expired'            => $isExpired,
+                    'is_terminal'           => $isTerminal,
+                    'is_resumable'          => !$isTerminal && !$isExpired,
+                    'created_at'            => $draft['created_at'],
+                    'updated_at'            => $draft['updated_at']
+                ],
+                'authoritative_state' => [
+                    'draft_id'                  => (int) $draft['draft_id'],
+                    'service_type'              => $draft['service_type'],
+                    'status'                    => $draft['status'],
+                    'extracted_fields'          => $extracted,
+                    'missing_fields'            => $missing,
+                    'is_ready_for_confirmation' => empty($missing),
+                    'is_resumable'              => !$isTerminal && !$isExpired
+                ],
+                'code'                => 200
+            ];
+        } catch (BookingDraftException $e) {
+            return [
+                'success'    => false,
+                'error'      => $e->getMessage(),
+                'error_type' => $e->getErrorType(),
+                'code'       => $this->mapExceptionToHttpCode($e)
+            ];
+        } catch (Throwable $t) {
+            return [
+                'success' => false,
+                'error'   => 'Failed to retrieve booking draft',
+                'code'    => 500
+            ];
+        }
+    }
+
+    /**
+     * GET /api/bookings/mine
+     * Retrieve unified booking history (burials, cremations, active drafts) for authenticated citizen.
+     * 
+     * @param mixed $user
+     * @param array $filters
+     * @param array $pagination
+     * @return array
+     */
+    public function getUnifiedBookings($user, array $filters = [], array $pagination = []): array {
+        [$userId] = $this->resolveUserContext($user);
+        if ($userId <= 0) {
+            return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
+        }
+
+        try {
+            $page = !empty($pagination['page']) ? max(1, (int) $pagination['page']) : 1;
+            $perPage = !empty($pagination['per_page']) ? max(1, min(100, (int) $pagination['per_page'])) : 20;
+
+            $bookings = $this->unifiedModel->findMine($userId, $filters, ['page' => $page, 'per_page' => $perPage]);
+            $total = $this->unifiedModel->countMine($userId, $filters);
+            $stats = $this->unifiedModel->getStats($userId);
+
+            return [
+                'success'    => true,
+                'data'       => $bookings,
+                'bookings'   => $bookings,
+                'pagination' => [
+                    'page'        => $page,
+                    'per_page'    => $perPage,
+                    'total'       => $total,
+                    'total_pages' => (int) ceil($total / $perPage),
+                ],
+                'stats'      => $stats,
+                'code'       => 200
+            ];
+        } catch (Throwable $t) {
+            return [
+                'success' => false,
+                'error'   => 'Failed to retrieve unified bookings',
                 'code'    => 500
             ];
         }

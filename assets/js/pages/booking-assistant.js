@@ -161,10 +161,11 @@
     }
 
     /**
-     * Check for active draft or initialize a new conversation
+     * Check for active draft or initialize a new conversation with draft resumption support (BMS-9)
      */
     async function initializeSession() {
         const urlParams = new URLSearchParams(window.location.search);
+        const paramDraftId = urlParams.get('draft_id');
         const paramService = urlParams.get('service');
         if (paramService && ['burial', 'cremation'].includes(paramService.toLowerCase())) {
             state.serviceType = paramService.toLowerCase();
@@ -172,6 +173,26 @@
 
         try {
             setLoading(true);
+
+            // 1. If explicit draft_id is passed in URL, fetch that specific draft
+            if (paramDraftId && /^\d+$/.test(paramDraftId)) {
+                try {
+                    const draftRes = await api.request(`booking-agent/drafts/${paramDraftId}`, { method: 'GET' });
+                    if (draftRes && draftRes.success && draftRes.draft) {
+                        applyAuthoritativeState(draftRes.draft);
+                        appendAssistantMessage(`Welcome back! Resumed your **${state.serviceType || 'cemetery'} arrangement** (Draft #${state.draftId}). You can review your details on the right or make adjustments conversationally.`);
+                        renderPromptChips();
+                        return;
+                    } else if (draftRes && draftRes.error) {
+                        appendAssistantMessage(`⚠️ Could not resume Draft #${escapeHtml(paramDraftId)}: ${escapeHtml(draftRes.error)}`);
+                    }
+                } catch (err) {
+                    console.warn(`Could not load draft #${paramDraftId}:`, err);
+                    appendAssistantMessage(`⚠️ Notice: Draft #${escapeHtml(paramDraftId)} could not be resumed (it may be expired, completed, or unavailable). Starting fresh.`);
+                }
+            }
+
+            // 2. Fall back to active draft lookup
             const endpoint = state.serviceType ? `booking-agent/active?service_type=${state.serviceType}` : 'booking-agent/active';
             const res = await api.request(endpoint, { method: 'GET' });
 

@@ -125,10 +125,40 @@
 
                 <!-- Combined Bookings Table Card -->
                 <div class="card" style="padding:20px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                        <h4 style="margin:0;font-size:1.15rem;">All Bookings & Reservations</h4>
-                        <div style="display:flex;gap:8px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+                        <div>
+                            <h4 style="margin:0;font-size:1.15rem;">All Bookings & Reservations</h4>
+                            <p style="margin:4px 0 0 0;font-size:0.85rem;color:#64748b;">Unified view of your burial schedules, cremations, and active drafts.</p>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <input type="text" id="bookingSearchInput" placeholder="Search reference, decedent..." style="padding:6px 12px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.85rem;min-width:200px;">
+                            <select id="bookingTypeFilter" style="padding:6px 12px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.85rem;">
+                                <option value="">All Services</option>
+                                <option value="burial">Burials</option>
+                                <option value="cremation">Cremations</option>
+                                <option value="draft">Active Drafts</option>
+                            </select>
                             <a href="book-a-service.html" class="btn-primary" style="text-decoration:none;"><i class="fas fa-plus"></i> New Booking</a>
+                        </div>
+                    </div>
+
+                    <!-- Summary Stats Row -->
+                    <div id="bookingStatsRow" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:12px;margin-bottom:16px;">
+                        <div style="background:#f8fafc;padding:10px 14px;border-radius:8px;border:1px solid #e2e8f0;">
+                            <div style="font-size:0.75rem;color:#64748b;font-weight:600;text-transform:uppercase;">Total</div>
+                            <div id="statTotal" style="font-size:1.25rem;font-weight:700;color:#0f172a;">-</div>
+                        </div>
+                        <div style="background:#f0fdf4;padding:10px 14px;border-radius:8px;border:1px solid #bbf7d0;">
+                            <div style="font-size:0.75rem;color:#166534;font-weight:600;text-transform:uppercase;">Burials</div>
+                            <div id="statBurials" style="font-size:1.25rem;font-weight:700;color:#15803d;">-</div>
+                        </div>
+                        <div style="background:#faf5ff;padding:10px 14px;border-radius:8px;border:1px solid #e9d5ff;">
+                            <div style="font-size:0.75rem;color:#6b21a8;font-weight:600;text-transform:uppercase;">Cremations</div>
+                            <div id="statCremations" style="font-size:1.25rem;font-weight:700;color:#7e22ce;">-</div>
+                        </div>
+                        <div style="background:#fffbeb;padding:10px 14px;border-radius:8px;border:1px solid #fde68a;">
+                            <div style="font-size:0.75rem;color:#92400e;font-weight:600;text-transform:uppercase;">Active Drafts</div>
+                            <div id="statDrafts" style="font-size:1.25rem;font-weight:700;color:#b45309;">-</div>
                         </div>
                     </div>
 

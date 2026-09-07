@@ -1728,7 +1728,6 @@ if (preg_match('/^booking-agent\/drafts?\/(\d+)\/update-field$/', $path, $matche
 
 if (preg_match('/^booking-agent\/drafts?\/(\d+)\/confirm$/', $path, $matches) && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
-    $result = $bookingAgentController->confirm((int) $matches[1], $user);
     $input = readRequestBody();
     $result = $bookingAgentController->confirm((int) $matches[1], $user, $input);
     http_response_code($result['code'] ?? 200);
@@ -1758,6 +1757,38 @@ if (preg_match('/^booking-agent\/drafts?\/(\d+)\/cancel$/', $path, $matches) && 
 if ($path === 'booking-agent/drafts' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $result = $bookingAgentController->listDrafts($user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+// BMS-9: Authoritative single draft lookup for draft resumption
+if (preg_match('/^booking-agent\/drafts?\/(\d+)$/', $path, $matches) && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $bookingAgentController->getDraft((int) $matches[1], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+// BMS-9: Unified booking history (burials, cremations, active drafts)
+if ($path === 'bookings/mine' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $filters = [];
+    if (!empty($_GET['service_type'])) $filters['service_type'] = $_GET['service_type'];
+    if (!empty($_GET['status'])) $filters['status'] = $_GET['status'];
+    if (!empty($_GET['source_kind'])) $filters['source_kind'] = $_GET['source_kind'];
+    if (isset($_GET['is_draft']) && $_GET['is_draft'] !== '') $filters['is_draft'] = $_GET['is_draft'];
+    if (!empty($_GET['q'])) $filters['q'] = $_GET['q'];
+
+    $pagination = [
+        'page'     => $_GET['page'] ?? 1,
+        'per_page' => $_GET['per_page'] ?? 20,
+    ];
+
+    $result = $bookingAgentController->getUnifiedBookings($user, $filters, $pagination);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
