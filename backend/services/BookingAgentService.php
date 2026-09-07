@@ -13,12 +13,16 @@ require_once __DIR__ . '/../models/BookingDraft.php';
 require_once __DIR__ . '/../models/Decedent.php';
 require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/../models/AuditLog.php';
+require_once __DIR__ . '/../models/Schedule.php';
+require_once __DIR__ . '/../models/DecedentRequest.php';
 
 class BookingAgentService {
     private BookingDraft $draftModel;
     private Decedent $decedentModel;
     private Lot $lotModel;
     private AuditLog $auditLogModel;
+    private Schedule $scheduleModel;
+    private DecedentRequest $decedentRequestModel;
 
     // Supported Intents for BMS-3
     public const INTENT_CREATE_BOOKING          = 'CREATE_BOOKING';
@@ -45,12 +49,16 @@ class BookingAgentService {
         ?BookingDraft $draftModel = null,
         ?Decedent $decedentModel = null,
         ?Lot $lotModel = null,
-        ?AuditLog $auditLogModel = null
+        ?AuditLog $auditLogModel = null,
+        ?Schedule $scheduleModel = null,
+        ?DecedentRequest $decedentRequestModel = null
     ) {
         $this->draftModel = $draftModel ?? new BookingDraft();
         $this->decedentModel = $decedentModel ?? new Decedent();
         $this->lotModel = $lotModel ?? new Lot();
         $this->auditLogModel = $auditLogModel ?? new AuditLog();
+        $this->scheduleModel = $scheduleModel ?? new Schedule();
+        $this->decedentRequestModel = $decedentRequestModel ?? new DecedentRequest();
     }
 
     /**
@@ -575,14 +583,218 @@ class BookingAgentService {
     }
 
     /**
-     * Cancel an Active Draft.
+     * Safely finalize a burial draft into the authoritative burial_schedules table (BMS-7).
+     * 
+     * Enforces transactional boundary:
+     * - Verifies draft ownership and service_type === 'burial'.
+     * - Validates 0 missing required fields.
+     * - Executes inside Database::transaction():
+     *   - Transitions draft READY_FOR_REVIEW -> AWAITING_CONFIRM if needed.
+     *   - Acquires row lock via Lot::findByIdForUpdate($lotId). Verifies existence and 'Available' status.
+     *   - Validates schedule date (valid format, non-past, non-Monday).
+     *   - Acquires next-key schedule range lock via Schedule::lockScheduleRangeForLot($lotId).
+     *   - Checks slot conflict via Schedule::checkConflict($lotId, $date, $time). Throws 409 if conflict.
+     *   - Creates or links decedent:
+     *     - If deceased_id is present in extracted_data, links directly.
+     *     - Else, provisions a decedent_requests row via DecedentRequest::create().
+     *   - Inserts burial_schedules row via Schedule::create() with status 'Pending' (or Confirmed for admin/staff).
+     *   - Atomically commits draft via BookingDraft::commit($draftId, $scheduleId, 'burial').
+     *   - Records immutable audit log entries.
      * 
      * @param int         $draftId
      * @param int         $userId
      * @param string|null $username
-     * @return bool
+     * @param mixed       $user User context array or null
+     * @return array Standardized outcome payload.
      * @throws BookingDraftException
      */
+    public function finalizeBurialDraft(int $draftId, int $userId, ?string $username = null, $user = null): array {
+        $draft = $this->draftModel->requireOwnership($draftId, $userId);
+
+        if ($draft['service_type'] !== 'burial') {
+            throw new BookingDraftException(
+                "Cannot finalize burial draft. Draft service type is '{$draft['service_type']}'.",
+                'INVALID_SERVICE_TYPE',
+                400
+            );
+        }
+
+        if ($draft['status'] === BookingDraft::STATUS_COMMITTED) {
+            throw new BookingDraftException(
+                "Draft #{$draftId} has already been committed.",
+                'DRAFT_ALREADY_COMMITTED',
+                409
+            );
+        }
+
+        if (BookingDraft::isTerminalState($draft['status'])) {
+            throw new BookingDraftException(
+                "Cannot finalize draft in terminal state '{$draft['status']}'.",
+                'TERMINAL_STATE_MODIFICATION',
+                400
+            );
+        }
+
+        $extracted = !empty($draft['extracted_data']) ? json_decode($draft['extracted_data'], true) : [];
+        $missing = $this->evaluateMissingFields('burial', $extracted);
+
+        if (!empty($missing)) {
+            throw new BookingDraftException(
+                "Cannot finalize burial draft. Missing required fields: " . implode(', ', $missing),
+                'INCOMPLETE_DRAFT',
+                400
+            );
+        }
+
+        $lotId = (int) ($extracted['lot_id'] ?? 0);
+        $scheduleDateStr = (string) ($extracted['preferred_date'] ?? '');
+        $scheduleTime = !empty($extracted['preferred_time']) ? (string) $extracted['preferred_time'] : null;
+
+        if ($lotId <= 0) {
+            throw new BookingDraftException("A valid lot_id is required to finalize burial booking.", 'MISSING_LOT', 400);
+        }
+
+        // Date validation check
+        $dateValidation = $this->validateBookingDate($scheduleDateStr, true);
+        if (!$dateValidation['valid']) {
+            throw new BookingDraftException($dateValidation['error'] ?? 'Invalid booking date', 'INVALID_DATE', 400);
+        }
+
+        $userRole = strtolower(is_array($user) ? ($user['role'] ?? 'user') : 'user');
+
+        try {
+            $outcome = Database::getInstance()->transaction(function () use (
+                $draftId, $draft, $userId, $username, $userRole, $extracted, $lotId, $scheduleDateStr, $scheduleTime
+            ) {
+                // 1. If currently in READY_FOR_REVIEW, step into AWAITING_CONFIRM
+                if ($draft['status'] === BookingDraft::STATUS_READY_FOR_REVIEW) {
+                    $this->draftModel->transitionStatus($draftId, BookingDraft::STATUS_AWAITING_CONFIRM);
+                } elseif ($draft['status'] !== BookingDraft::STATUS_AWAITING_CONFIRM) {
+                    // Try legal step-through to AWAITING_CONFIRM
+                    if ($draft['status'] === BookingDraft::STATUS_LOT_SELECTION || $draft['status'] === BookingDraft::STATUS_COLLECTING_INFO) {
+                        $this->draftModel->transitionStatus($draftId, BookingDraft::STATUS_READY_FOR_REVIEW);
+                        $this->draftModel->transitionStatus($draftId, BookingDraft::STATUS_AWAITING_CONFIRM);
+                    } else {
+                        throw new BookingDraftException(
+                            "Cannot commit draft from status '{$draft['status']}'. Draft must be in 'AWAITING_CONFIRM'.",
+                            'INVALID_COMMIT_ATTEMPT',
+                            400
+                        );
+                    }
+                }
+
+                // 2. Pessimistic Locking Read on Lot
+                $lot = $this->lotModel->findByIdForUpdate($lotId);
+                if (!$lot) {
+                    throw new BookingDraftException("Lot #{$lotId} not found.", 'LOT_NOT_FOUND', 404);
+                }
+                if ($lot['status'] !== 'Available') {
+                    throw new BookingDraftException("This lot is no longer available for booking", 'LOT_NOT_AVAILABLE', 409);
+                }
+
+                // 3. Locking read for schedule slot
+                $this->scheduleModel->lockScheduleRangeForLot($lotId);
+
+                // 4. Conflict check
+                $hasConflict = $this->scheduleModel->checkConflict($lotId, $scheduleDateStr, $scheduleTime);
+                if ($hasConflict) {
+                    throw new BookingDraftException("This lot is already booked for the selected date/time", 'LOT_ALREADY_BOOKED', 409);
+                }
+
+                // 5. Provisional or Existing Decedent Handling
+                $deceasedId = !empty($extracted['deceased_id']) ? (int) $extracted['deceased_id'] : null;
+                $decedentRequestId = null;
+
+                if (!$deceasedId) {
+                    $decedentRequestId = $this->decedentRequestModel->create([
+                        'requested_by'    => $userId,
+                        'full_name'       => $extracted['decedent_name'],
+                        'relationship'    => $extracted['relationship'] ?? null,
+                        'approximate_dod' => $extracted['approximate_dod'] ?? null,
+                        'notes'           => 'Created via AI Booking Assistant Draft #' . $draftId,
+                    ]);
+
+                    if (!$decedentRequestId) {
+                        throw new BookingDraftException("Failed to record provisional decedent information.", 'DECEDENT_CREATION_FAILED', 500);
+                    }
+                }
+
+                // 6. Schedule Creation (Citizens forced to Pending)
+                $scheduleStatus = 'Pending';
+                $confirmedBy = null;
+                if (in_array($userRole, ['admin', 'staff'], true) && !empty($extracted['status']) && $extracted['status'] === 'Confirmed') {
+                    $scheduleStatus = 'Confirmed';
+                    $confirmedBy = $userId;
+                }
+
+                $scheduleData = [
+                    'lot_id'              => $lotId,
+                    'deceased_id'         => $deceasedId,
+                    'decedent_request_id' => $decedentRequestId,
+                    'schedule_date'       => $scheduleDateStr,
+                    'schedule_time'       => $scheduleTime,
+                    'status'              => $scheduleStatus,
+                    'notes'               => $extracted['notes'] ?? ('AI Booking Assistant Draft #' . $draftId),
+                    'created_by'          => $userId,
+                    'confirmed_by'        => $confirmedBy,
+                ];
+
+                $scheduleId = $this->scheduleModel->create($scheduleData);
+                if (!$scheduleId) {
+                    throw new BookingDraftException("Failed to create burial schedule record.", 'SCHEDULE_CREATION_FAILED', 500);
+                }
+
+                // 7. Atomic Draft Commitment
+                $this->draftModel->commit($draftId, $scheduleId, 'burial');
+
+                // 8. Immutable Audit Logging
+                $this->auditLogModel->log(
+                    'Schedule created',
+                    $userId,
+                    $username,
+                    'Schedule',
+                    $scheduleId,
+                    [
+                        'lot_id'         => $lotId,
+                        'schedule_date'  => $scheduleDateStr,
+                        'initial_status' => $scheduleStatus,
+                        'draft_id'       => $draftId
+                    ]
+                );
+
+                $this->auditLogModel->log(
+                    'booking_draft.committed',
+                    $userId,
+                    $username,
+                    'BookingDraft',
+                    $draftId,
+                    [
+                        'schedule_id'  => $scheduleId,
+                        'service_type' => 'burial'
+                    ]
+                );
+
+                return [
+                    'success'             => true,
+                    'draft_id'            => $draftId,
+                    'service_type'        => 'burial',
+                    'status'              => BookingDraft::STATUS_COMMITTED,
+                    'committed_record_id' => $scheduleId,
+                    'schedule_id'         => $scheduleId,
+                    'message'             => 'Burial reservation successfully finalized and scheduled.'
+                ];
+            });
+
+            return $outcome;
+        } catch (PDOException $e) {
+            // Check for duplicate active slot key constraint
+            if (($e->errorInfo[1] ?? null) === 1062 && strpos($e->getMessage(), 'uq_active_schedule_slot') !== false) {
+                throw new BookingDraftException("This lot is already booked for the selected date/time", 'LOT_ALREADY_BOOKED', 409);
+            }
+            throw $e;
+        }
+    }
+
     public function cancelDraft(int $draftId, int $userId, ?string $username = null): bool {
         $this->draftModel->requireOwnership($draftId, $userId);
         $result = $this->draftModel->cancel($draftId);
