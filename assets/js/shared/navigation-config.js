@@ -90,33 +90,33 @@
             navigationOrder: 14,
         },
 
-        // ==================== SERVICES (Citizen / User) ====================
+        // ==================== SERVICES & BOOKING MANAGEMENT ====================
         {
             route: 'book-a-service.html',
-            allowedRoles: ['user'],
+            allowedRoles: ['admin', 'staff', 'user'],
             showInSidebar: true,
-            sidebarGroup: 'Services',
+            sidebarGroup: { admin: 'Operations', staff: 'Operations', user: 'Services' },
             label: 'Book a Service',
             icon: 'fa-handshake',
-            navigationOrder: 10,
+            navigationOrder: 15,
         },
         {
             route: 'booking-assistant.html',
-            allowedRoles: ['user'],
+            allowedRoles: ['admin', 'staff', 'user'],
             showInSidebar: true,
-            sidebarGroup: 'Services',
+            sidebarGroup: { admin: 'Operations', staff: 'Operations', user: 'Services' },
             label: 'Booking Assistant',
             icon: 'fa-robot',
-            navigationOrder: 11,
+            navigationOrder: 16,
         },
         {
             route: 'my-bookings.html',
-            allowedRoles: ['user'],
+            allowedRoles: ['admin', 'staff', 'user'],
             showInSidebar: true,
-            sidebarGroup: 'Services',
+            sidebarGroup: { admin: 'Operations', staff: 'Operations', user: 'Services' },
             label: 'My Bookings',
             icon: 'fa-calendar-check',
-            navigationOrder: 12,
+            navigationOrder: 17,
         },
         {
             route: 'reserve-burial-slot.html',

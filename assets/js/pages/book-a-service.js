@@ -6,16 +6,19 @@
 // citizen page has; there is no data to fetch or render here.
 document.addEventListener('DOMContentLoaded', async function() {
     try {
-        const user = await requireRole(['user']);
+        const user = await requireRole(['admin', 'staff', 'user']);
         if (!user) return;
     } catch (error) {
         console.error('Auth error', error);
         return;
     }
 
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-        api.logout();
-    });
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn && typeof api !== 'undefined' && typeof api.logout === 'function') {
+        logoutBtn.addEventListener('click', () => {
+            api.logout();
+        });
+    }
 
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.querySelector('.sidebar');

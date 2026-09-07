@@ -51,6 +51,14 @@
             });
         }
 
+        const toggleBtn = document.getElementById('toggleSidebar');
+        const sidebar = document.querySelector('.sidebar');
+        if (toggleBtn && sidebar) {
+            toggleBtn.addEventListener('change', () => {
+                sidebar.classList.toggle('collapsed');
+            });
+        }
+
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn && typeof api !== 'undefined' && typeof api.logout === 'function') {
             logoutBtn.addEventListener('click', () => api.logout());

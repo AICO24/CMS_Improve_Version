@@ -42,9 +42,20 @@
      * Initialization entry point
      */
     async function init() {
+        try {
+            if (typeof requireRole === 'function') {
+                const user = await requireRole(['admin', 'staff', 'user']);
+                if (!user) return;
+            } else {
+                await loadCurrentUser();
+            }
+        } catch (e) {
+            console.error('Role validation failed:', e);
+            await loadCurrentUser();
+        }
+
         cacheDOMElements();
         bindEvents();
-        await loadCurrentUser();
         await initializeSession();
     }
 
@@ -135,6 +146,20 @@
         fieldEditModal.addEventListener('click', (e) => {
             if (e.target === fieldEditModal) closeFieldEditor();
         });
+
+        // Shell & Navigation controls (Batch A)
+        const toggleBtn = document.getElementById('toggleSidebar');
+        const sidebar = document.querySelector('.sidebar');
+        if (toggleBtn && sidebar) {
+            toggleBtn.addEventListener('change', () => {
+                sidebar.classList.toggle('collapsed');
+            });
+        }
+
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn && typeof api !== 'undefined' && typeof api.logout === 'function') {
+            logoutBtn.addEventListener('click', () => api.logout());
+        }
     }
 
     /**
