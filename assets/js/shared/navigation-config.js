@@ -120,7 +120,7 @@
         },
         {
             route: 'reserve-burial-slot.html',
-            allowedRoles: ['user'],
+            allowedRoles: ['admin', 'staff', 'user'],
             showInSidebar: false,
             sidebarGroup: 'Services',
             label: 'Reserve Burial Slot',
@@ -129,7 +129,7 @@
         },
         {
             route: 'reserve-cremation.html',
-            allowedRoles: ['user'],
+            allowedRoles: ['admin', 'staff', 'user'],
             showInSidebar: false,
             sidebarGroup: 'Services',
             label: 'Reserve Cremation',
