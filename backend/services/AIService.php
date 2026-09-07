@@ -96,6 +96,18 @@ class AIService {
         return $this->request('/api/assistant-ask', 'POST', $payload, $timeoutSeconds);
     }
 
+    /**
+     * Unified Booking Agent (BMS-5): Natural language intent & slot extraction
+     * Calls Python Flask /api/booking-agent/extract.
+     * 
+     * @param array    $payload {message: string, draft_context?: array, conversation_context?: array}
+     * @param int|null $timeoutSeconds
+     * @return array
+     */
+    public function extractBookingAgent($payload, $timeoutSeconds = null) {
+        return $this->request('/api/booking-agent/extract', 'POST', $payload, $timeoutSeconds);
+    }
+
     private function request($path, $method = 'GET', $data = null, $timeoutSeconds = null) {
         if (!function_exists('curl_init')) {
             return ['error' => 'cURL extension is not available', 'code' => 500];
