@@ -40,6 +40,7 @@
     let isInitialized = false;
     let cooldownTimer = null;
     let isCooldownActive = false;
+    let lastFocusedElementBeforeModal = null;
 
     /**
      * Initialization entry point
@@ -289,13 +290,33 @@
      */
     function renderIntakeGreeting() {
         chatThread.innerHTML = '';
-        appendAssistantMessage(
-            `Hello! I am your AI Booking Assistant. I will guide you step-by-step through arranging a **burial** or **cremation** service.\n\nTo begin, which type of service would you like to arrange?`
-        );
-        renderPromptChips([
-            { text: '⚰️ Arrange a Burial', action: () => selectService('burial') },
-            { text: '🔥 Arrange a Cremation', action: () => selectService('cremation') }
-        ]);
+        if (state.serviceType === 'burial') {
+            appendAssistantMessage(
+                `Hello! I am your AI Booking Assistant. I will guide you step-by-step through arranging a **burial service**.\n\nTo begin, who is this burial arrangement for (the decedent's full name)?`
+            );
+            renderPromptChips([
+                { text: '👤 For my father', action: () => sendQuickInput('The burial arrangement is for my father, ') },
+                { text: '👤 For my mother', action: () => sendQuickInput('The burial arrangement is for my mother, ') },
+                { text: '❓ Requirements & Pricing', action: () => sendChatTurn('What are the burial requirements and lot types?') }
+            ]);
+        } else if (state.serviceType === 'cremation') {
+            appendAssistantMessage(
+                `Hello! I am your AI Booking Assistant. I will guide you step-by-step through arranging a **cremation service**.\n\nTo begin, who is this cremation arrangement for (the decedent's full name)?`
+            );
+            renderPromptChips([
+                { text: '👤 For my father', action: () => sendQuickInput('The cremation arrangement is for my father, ') },
+                { text: '👤 For my mother', action: () => sendQuickInput('The cremation arrangement is for my mother, ') },
+                { text: '❓ Columbarium & Date Info', action: () => sendChatTurn('What are the cremation requirements and columbarium details?') }
+            ]);
+        } else {
+            appendAssistantMessage(
+                `Hello! I am your AI Booking Assistant. I will guide you step-by-step through arranging a **burial** or **cremation** service.\n\nTo begin, which type of service would you like to arrange?`
+            );
+            renderPromptChips([
+                { text: '⚰️ Arrange a Burial', action: () => selectService('burial') },
+                { text: '🔥 Arrange a Cremation', action: () => selectService('cremation') }
+            ]);
+        }
         updateBlueprintHUD();
     }
 
@@ -649,9 +670,10 @@
 
         const chips = [];
 
-        if (state.status === 'AWAITING_CONFIRM') {
+        if (state.status === 'COMMITTED' || state.status === 'AWAITING_CONFIRM') {
+            chips.push({ text: '📋 View in My Bookings', action: () => { window.location.href = 'my-bookings.html'; } });
             chips.push({ text: '📄 View Booking Voucher', action: () => showVoucherInChat() });
-            chips.push({ text: '🔄 Start New Booking', action: () => onRestartDraft() });
+            chips.push({ text: '🔄 Book Another Service', action: () => onRestartDraft() });
         } else if (state.status === 'READY_FOR_REVIEW' || (state.isReadyForReview && state.missingFields.length === 0)) {
             chips.push({ text: '✅ Confirm Reservation', action: () => onConfirmBooking() });
             chips.push({ text: '✏️ Change Date', action: () => openFieldEditor(state.serviceType === 'cremation' ? 'cremation_date' : 'preferred_date') });
@@ -752,12 +774,14 @@
      * Lot Picker Modal Workflow
      */
     async function openLotPicker() {
+        lastFocusedElementBeforeModal = (document.activeElement && typeof document.activeElement.focus === 'function') ? document.activeElement : null;
         document.body.style.overflow = 'hidden';
         lotPickerModal.style.display = 'flex';
         lotSearchFilter.value = '';
         lotPickerSpinner.style.display = 'block';
         lotGridContainer.innerHTML = '';
         lotPickerEmpty.style.display = 'none';
+        if (lotSearchFilter) lotSearchFilter.focus();
 
         try {
             const res = await api.request('lots?status=Available', { method: 'GET' });
@@ -776,7 +800,12 @@
     function closeLotPicker() {
         lotPickerModal.style.display = 'none';
         document.body.style.overflow = '';
-        if (userInputMsg) userInputMsg.focus();
+        if (lastFocusedElementBeforeModal && typeof lastFocusedElementBeforeModal.focus === 'function') {
+            lastFocusedElementBeforeModal.focus();
+        } else if (userInputMsg) {
+            userInputMsg.focus();
+        }
+        lastFocusedElementBeforeModal = null;
     }
 
     function populateSectionFilter(lots) {
@@ -853,6 +882,7 @@
      * Quick Field Editor Modal
      */
     function openFieldEditor(fieldName) {
+        lastFocusedElementBeforeModal = (document.activeElement && typeof document.activeElement.focus === 'function') ? document.activeElement : null;
         activeEditField = fieldName;
         document.body.style.overflow = 'hidden';
         fieldEditModal.style.display = 'flex';
@@ -882,7 +912,12 @@
         fieldEditModal.style.display = 'none';
         document.body.style.overflow = '';
         activeEditField = null;
-        if (userInputMsg) userInputMsg.focus();
+        if (lastFocusedElementBeforeModal && typeof lastFocusedElementBeforeModal.focus === 'function') {
+            lastFocusedElementBeforeModal.focus();
+        } else if (userInputMsg) {
+            userInputMsg.focus();
+        }
+        lastFocusedElementBeforeModal = null;
     }
 
     async function onSubmitFieldEdit(e) {
@@ -977,8 +1012,14 @@
                         <strong style="color:#0f172a;">${isCremation ? (escapeHtml(state.extractedData.preferred_columbarium || 'Assigned on arrival')) : (state.selectedLotDetails ? `Lot ${escapeHtml(state.selectedLotDetails.lot_number)} (${escapeHtml(state.selectedLotDetails.section_name)})` : `Lot #${state.extractedData.lot_id}`)}</strong>
                     </div>
                 </div>
-                <div style="margin-top:14px;padding-top:10px;border-top:1px solid #f1f5f9;font-size:0.78rem;color:#64748b;line-height:1.4;">
-                    <i class="fas fa-shield-alt text-success"></i> Your booking details are recorded in our official scheduling system. Administrative staff will verify documents and review your schedule.
+                <div style="margin-top:14px;padding-top:12px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                    <span style="font-size:0.78rem;color:#64748b;line-height:1.4;">
+                        <i class="fas fa-shield-alt text-success"></i> Your booking details are recorded in our official scheduling system. Administrative staff will verify documents and review your schedule.
+                    </span>
+                    <div style="display:flex;gap:8px;">
+                        <button type="button" onclick="window.print()" style="padding:6px 12px;font-size:0.8rem;background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;cursor:pointer;color:#334155;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-print"></i> Print</button>
+                        <a href="my-bookings.html" style="padding:6px 14px;font-size:0.8rem;background:#2c5e47;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-calendar-check"></i> My Bookings &rarr;</a>
+                    </div>
                 </div>
             </div>
         `;
@@ -1083,18 +1124,18 @@
      */
     function formatStatusLabel(status) {
         const map = {
-            'INTAKE': 'Intake',
-            'DRAFT_STARTED': 'Started',
-            'COLLECTING_INFO': 'Collecting Info',
-            'LOT_SELECTION': 'Lot Selection',
-            'CREMATION_PREFS': 'Preferences',
-            'READY_FOR_REVIEW': 'Ready for Review',
-            'AWAITING_CONFIRM': 'Awaiting Confirm',
-            'COMMITTED': 'Committed',
+            'INTAKE': 'Getting Started',
+            'DRAFT_STARTED': 'In Progress',
+            'COLLECTING_INFO': 'Gathering Details',
+            'LOT_SELECTION': 'Selecting Lot',
+            'CREMATION_PREFS': 'Cremation Preferences',
+            'READY_FOR_REVIEW': 'Ready to Confirm',
+            'AWAITING_CONFIRM': 'Pending Final Submission',
+            'COMMITTED': 'Submitted (Pending Review)',
             'CANCELLED': 'Cancelled',
             'EXPIRED': 'Expired'
         };
-        return map[status] || status || 'Intake';
+        return map[status] || status || 'Getting Started';
     }
 
     function formatFieldName(fieldName) {

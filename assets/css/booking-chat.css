@@ -1664,3 +1664,98 @@
     border-color: #4ade80;
     color: #4ade80;
 }
+
+/* ==========================================================================
+   BATCH D — RESPONSIVE & LAYOUT REFINEMENTS
+   Tablet (769px–1024px): Preserve side-by-side workspace with proportional sizing
+   Mobile (<=768px): Vertical stacking with full scroll accessibility
+   ========================================================================== */
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .content-area {
+        padding: 14px 16px;
+    }
+
+    .ai-chat-layout {
+        gap: 14px;
+    }
+
+    .ai-booking-blueprint {
+        width: 280px;
+        flex-shrink: 0;
+    }
+
+    .blueprint-body {
+        padding: 14px;
+        gap: 12px;
+    }
+
+    .lot-picker-dialog {
+        max-width: 92vw;
+    }
+}
+
+@media (max-width: 768px) {
+    .content-area {
+        overflow-y: auto !important;
+        display: block !important;
+        padding: 12px;
+        height: auto;
+    }
+
+    .ai-chat-layout {
+        flex-direction: column;
+        height: auto;
+        min-height: auto;
+        gap: 16px;
+    }
+
+    .ai-chat-main {
+        min-height: 520px;
+        height: 70vh;
+        flex: none;
+    }
+
+    .ai-booking-blueprint {
+        width: 100%;
+        flex: none;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .blueprint-body {
+        max-height: none;
+        overflow: visible;
+    }
+
+    .lot-picker-dialog {
+        width: 95%;
+        max-width: 95vw;
+        max-height: 90vh;
+        margin: 8px auto;
+    }
+
+    .field-edit-dialog {
+        width: 95%;
+        max-width: 95vw;
+        margin: 8px auto;
+    }
+
+    .lot-picker-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .lot-picker-filters select {
+        max-width: 100% !important;
+    }
+
+    .chat-prompt-suggestions {
+        padding: 8px 12px;
+        gap: 6px;
+    }
+
+    .chat-input-row {
+        padding: 10px 12px;
+    }
+}

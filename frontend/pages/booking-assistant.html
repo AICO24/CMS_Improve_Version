@@ -293,20 +293,20 @@
 
     <!-- Lot Picker Modal -->
     <div class="lot-picker-modal-overlay" id="lotPickerModal" style="display: none;">
-        <div class="lot-picker-dialog">
+        <div class="lot-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="lotPickerTitle">
             <div class="lot-picker-header">
-                <div class="lot-picker-title">
+                <div class="lot-picker-title" id="lotPickerTitle">
                     <i class="fas fa-map-location-dot"></i>
                     <span>Select an Available Burial Lot</span>
                 </div>
-                <button type="button" class="btn-close-modal" id="btnCloseLotPicker"><i class="fas fa-times"></i></button>
+                <button type="button" class="btn-close-modal" id="btnCloseLotPicker" aria-label="Close lot picker"><i class="fas fa-times"></i></button>
             </div>
             <div class="lot-picker-filters">
                 <div class="filter-input-wrap">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="lotSearchFilter" placeholder="Search lot number or block..." />
+                    <input type="text" id="lotSearchFilter" placeholder="Search lot number or block..." aria-label="Search lot number or block" />
                 </div>
-                <select id="lotSectionFilter" class="form-control" style="max-width: 180px;">
+                <select id="lotSectionFilter" class="form-control" style="max-width: 180px;" aria-label="Filter by cemetery section">
                     <option value="">All Sections</option>
                 </select>
             </div>
@@ -328,14 +328,14 @@
 
     <!-- Field Correction Quick Modal -->
     <div class="field-edit-modal-overlay" id="fieldEditModal" style="display: none;">
-        <div class="field-edit-dialog">
+        <div class="field-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="fieldEditTitle">
             <div class="field-edit-header">
                 <h4 id="fieldEditTitle" style="margin: 0; font-size: 1rem; color: #0f172a;">Update Information</h4>
-                <button type="button" class="btn-close-modal" id="btnCloseFieldEdit"><i class="fas fa-times"></i></button>
+                <button type="button" class="btn-close-modal" id="btnCloseFieldEdit" aria-label="Close field editor"><i class="fas fa-times"></i></button>
             </div>
             <form id="fieldEditForm" style="margin-top: 14px;">
                 <div class="form-group">
-                    <label id="fieldEditLabel" style="display: block; font-size: 0.82rem; font-weight: 600; color: #475569; margin-bottom: 6px;">Field Value</label>
+                    <label id="fieldEditLabel" for="fieldEditInput" style="display: block; font-size: 0.82rem; font-weight: 600; color: #475569; margin-bottom: 6px;">Field Value</label>
                     <input type="text" id="fieldEditInput" class="form-control" style="width: 100%; border-radius: 8px;" required />
                     <small id="fieldEditHint" class="text-muted" style="display: block; margin-top: 4px; font-size: 0.75rem;"></small>
                 </div>

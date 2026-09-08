@@ -176,7 +176,7 @@
                 badgeColor = '#dc2626';
                 badgeBg = '#fee2e2';
             }
-            const statusBadge = `<span style="display:inline-block;padding:3px 8px;border-radius:4px;font-size:0.75rem;background:${badgeBg};color:${badgeColor};font-weight:600;">${escapeHtml(item.status || 'Pending')}</span>`;
+            const statusBadge = `<span style="display:inline-block;padding:3px 8px;border-radius:4px;font-size:0.75rem;background:${badgeBg};color:${badgeColor};font-weight:600;">${escapeHtml(formatBookingStatus(item.status, isDraft))}</span>`;
 
             // Format Date
             let displayDate = item.booking_date;
@@ -212,6 +212,35 @@
             `;
             bookingsTableBody.appendChild(tr);
         });
+    }
+
+    function formatBookingStatus(status, isDraft) {
+        if (!status) return isDraft ? 'Draft (In Progress)' : 'Pending Review';
+        const s = String(status).toUpperCase();
+        if (isDraft) {
+            const draftMap = {
+                'INTAKE': 'Draft (Started)',
+                'DRAFT_STARTED': 'Draft (Started)',
+                'COLLECTING_INFO': 'Draft (In Progress)',
+                'LOT_SELECTION': 'Draft (Lot Selection)',
+                'CREMATION_PREFS': 'Draft (Preferences)',
+                'READY_FOR_REVIEW': 'Draft (Ready to Confirm)',
+                'AWAITING_CONFIRM': 'Draft (Awaiting Final Submission)',
+                'COMMITTED': 'Submitted (Pending Review)'
+            };
+            return draftMap[s] || `Draft (${capitalize(status.replace(/_/g, ' ').toLowerCase())})`;
+        }
+        const recordMap = {
+            'PENDING': 'Pending Review',
+            'CONFIRMED': 'Confirmed',
+            'SCHEDULED': 'Scheduled',
+            'COMPLETED': 'Completed',
+            'CANCELLED': 'Cancelled',
+            'EXPIRED': 'Expired',
+            'APPROVED': 'Approved',
+            'REJECTED': 'Rejected'
+        };
+        return recordMap[s] || capitalize(status.replace(/_/g, ' ').toLowerCase());
     }
 
     function capitalize(str) {
