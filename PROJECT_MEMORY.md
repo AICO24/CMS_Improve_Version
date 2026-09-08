@@ -28,7 +28,7 @@ The system features dual-layered automation (deterministic workflows executed vi
 - **Styling:** Custom CSS with CSS variables, responsive design, dark/light theme switching (`assets/js/shared/theme-toggle.js`), and FontAwesome 6 icon set.
 - **Client Networking:** Centralized `ApiClient` (`assets/js/shared/api.js`) managing JWT injection, standard base path detection, unified 401 redirect handling, and error wrapping.
 - **Interactive UI Components:**
-  - Conversational Booking Blueprint HUD (`booking-wizard.js`, `cremation-chat-wizard.js`).
+  - Conversational Booking Blueprint HUD (`booking-wizard.js`, superseded by Unified Booking Assistant).
   - Modular AI Assistant Slide-in Drawer (`ai-assistant-widget.js`).
   - Dynamic pagination, modals, and toasts.
 
@@ -74,7 +74,7 @@ The system features dual-layered automation (deterministic workflows executed vi
 - `assets/`: Global static assets (`css/`, `images/`, `js/`).
   - `assets/js/auth/`: Login, registration, password reset flows.
   - `assets/js/pages/`: Page-specific frontend controllers (29 scripts).
-  - `assets/js/shared/`: Reusable runtime components (`api.js`, `sidebar-nav.js`, `booking-wizard.js`, `lot-chat-assistant.js`, `cremation-chat-wizard.js`, `ai-assistant-widget.js`, `confirm-modal.js`, `toast.js`).
+  - `assets/js/shared/`: Reusable runtime components (`api.js`, `sidebar-nav.js`, `booking-wizard.js`, `lot-chat-assistant.js`, `ai-assistant-widget.js`, `confirm-modal.js`, `toast.js`).
 - `backend/`: PHP API application.
   - `bootstrap.php`: Root directory path constants (`CMS_ROOT`, `BACKEND_ROOT`, `STORAGE_ROOT`, `UPLOADS_ROOT`, `LOGS_ROOT`).
   - `index.php`: Top-level request wrapper, CORS enforcement, and global exception boundary.
