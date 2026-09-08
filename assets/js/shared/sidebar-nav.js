@@ -30,7 +30,7 @@
 
         function closeOthers(exceptGroup) {
             groups.forEach(function (group) {
-                if (group !== exceptGroup && !group.classList.contains('is-static')) {
+                if (group !== exceptGroup) {
                     group.classList.remove('open');
                 }
             });
@@ -40,7 +40,6 @@
         // so calling initSidebarNav() again on unchanged markup never attaches
         // a second listener to the same header.
         groups.forEach(function (group) {
-            if (group.classList.contains('is-static')) return;
             var header = group.querySelector('.nav-group-header');
             if (!header || header.dataset.sidebarNavBound === '1') return;
             header.dataset.sidebarNavBound = '1';
