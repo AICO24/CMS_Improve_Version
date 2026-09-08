@@ -110,7 +110,7 @@ fields5 = result5.get('extracted_fields') or {}
 
 test5_ok = (
     res5.status_code == 200
-    and result5.get('intent') == 'UPDATE_FIELD'
+    and result5.get('intent') in ('UPDATE_FIELD', 'CORRECT_BOOKING_DETAILS')
     and fields5.get('preferred_date') == '2026-11-20'
 )
 report(5, "Update field intent and corrected slot extracted", test5_ok, str(result5))

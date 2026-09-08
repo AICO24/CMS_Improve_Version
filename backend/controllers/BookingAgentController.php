@@ -170,11 +170,32 @@ class BookingAgentController {
             ];
         }
 
-        // 2. Query Python AI Extraction Endpoint
+        // 2. Fetch lightweight user booking context (committed bookings)
+        $userActiveBookings = [];
+        try {
+            $rawBookings = $this->unifiedModel->findMine($userId, ['is_draft' => 0], ['page' => 1, 'per_page' => 20]);
+            foreach ($rawBookings as $b) {
+                $userActiveBookings[] = [
+                    'reference'     => $b['booking_reference'],
+                    'booking_id'    => (int) $b['source_id'],
+                    'source_kind'   => $b['source_kind'],
+                    'service_type'  => $b['service_type'],
+                    'decedent_name' => $b['decedent_name'],
+                    'status'        => $b['status'],
+                    'schedule_date' => $b['booking_date'],
+                    'allocation'    => $b['allocation'],
+                ];
+            }
+        } catch (Throwable $t) {
+            $userActiveBookings = [];
+        }
+
+        // 3. Query Python AI Extraction Endpoint
         $aiPayload = [
             'message'              => $message,
             'draft_context'        => $draftContext,
-            'conversation_context' => $conversationContext
+            'conversation_context' => $conversationContext,
+            'user_bookings'        => $userActiveBookings,
         ];
 
         $aiResponse = $this->aiService->extractBookingAgent($aiPayload);
@@ -185,15 +206,84 @@ class BookingAgentController {
             $extractedResult = $aiResponse['result'];
         } else {
             // Local fallback extraction
-            $extractedResult = $this->fallbackExtract($message, $draftContext);
+            $extractedResult = $this->fallbackExtract($message, $draftContext, $userActiveBookings);
         }
 
-        $intent = $extractedResult['intent'] ?? BookingAgentService::INTENT_PROVIDE_INFO;
+        $rawIntent = $extractedResult['intent'] ?? BookingAgentService::INTENT_PROVIDE_INFO;
+        // Normalize legacy aliases
+        $intent = match ($rawIntent) {
+            'PROVIDE_INFO' => BookingAgentService::INTENT_PROVIDE_INFORMATION,
+            'UPDATE_FIELD' => BookingAgentService::INTENT_CORRECT_BOOKING_DETAILS,
+            default        => $rawIntent,
+        };
+
+        $confidence = (float) ($extractedResult['confidence'] ?? 0.95);
+        $slots = is_array($extractedResult['slots'] ?? null) ? $extractedResult['slots'] : [];
         $extractedFields = is_array($extractedResult['extracted_fields'] ?? null) ? $extractedResult['extracted_fields'] : [];
-        $serviceTypeExtracted = $extractedResult['service_type'] ?? ($draftContext['service_type'] ?? $serviceTypeInput);
+        $extractedReference = $extractedResult['booking_reference'] ?? ($slots['booking_reference'] ?? null);
+        $serviceTypeExtracted = $extractedResult['service_type'] ?? ($slots['service_type'] ?? ($draftContext['service_type'] ?? $serviceTypeInput));
         $replyMessage = $extractedResult['reply'] ?? "I have updated your booking details.";
 
-        // 3. Authoritatively Update Draft via BookingAgentService
+        // 4. Deterministic Context Resolution Layer
+        $contextResolution = $this->agentService->resolveBookingContext(
+            $userId,
+            $intent,
+            $extractedReference,
+            $draftContext,
+            $userActiveBookings,
+            $serviceTypeExtracted
+        );
+
+        // 5. Check if intent is an action targeting a committed booking (no destructive execution in Batch 1)
+        $isCommittedAction = in_array($intent, [
+            BookingAgentService::INTENT_RESCHEDULE_BOOKING,
+            BookingAgentService::INTENT_CANCEL_BOOKING,
+            BookingAgentService::INTENT_CHECK_BOOKING_STATUS,
+            BookingAgentService::INTENT_UPDATE_BOOKING,
+        ], true) && $contextResolution['type'] !== 'DRAFT';
+
+        if ($isCommittedAction) {
+            if ($contextResolution['status'] === 'AMBIGUOUS') {
+                $replyMessage = $contextResolution['message'];
+            } elseif ($contextResolution['status'] === 'NOT_FOUND') {
+                $replyMessage = $contextResolution['reason'] ?? "I could not find an active booking matching that reference on your account.";
+            } elseif ($contextResolution['status'] === 'RESOLVED') {
+                $ref = $contextResolution['reference'];
+                $curStatus = $contextResolution['current_status'] ?? 'Active';
+                if ($intent === BookingAgentService::INTENT_RESCHEDULE_BOOKING) {
+                    $targetDate = $slots['target_date'] ?? $slots['preferred_date'] ?? $slots['cremation_date'] ?? 'the requested date';
+                    $replyMessage = "I have identified your booking {$ref} ({$curStatus}). You requested to reschedule to {$targetDate}. (Context resolved — action execution deferred to Batch 2).";
+                } elseif ($intent === BookingAgentService::INTENT_CANCEL_BOOKING) {
+                    $replyMessage = "I have identified your booking {$ref} ({$curStatus}). You requested to cancel this reservation. (Context resolved — action execution deferred to Batch 2).";
+                } elseif ($intent === BookingAgentService::INTENT_CHECK_BOOKING_STATUS) {
+                    $rec = $contextResolution['record'] ?? [];
+                    $decName = !empty($rec['decedent_name']) ? " for {$rec['decedent_name']}" : "";
+                    $dateStr = !empty($rec['schedule_date']) ? " scheduled on {$rec['schedule_date']}" : "";
+                    $replyMessage = "Your booking {$ref}{$decName} is currently {$curStatus}{$dateStr}.";
+                } elseif ($intent === BookingAgentService::INTENT_UPDATE_BOOKING) {
+                    $replyMessage = "I have identified your booking {$ref} ({$curStatus}) for update. (Context resolved — action execution deferred to Batch 2).";
+                }
+            } elseif ($contextResolution['status'] === 'NO_ACTIVE_CONTEXT') {
+                $replyMessage = "You do not have any active bookings to " . strtolower(str_replace('_', ' ', $intent)) . ".";
+            }
+
+            return [
+                'success'              => true,
+                'reply'                => $replyMessage,
+                'intent'               => $intent,
+                'intent_confidence'    => $confidence,
+                'context_resolution'   => $contextResolution,
+                'slots'                => $slots,
+                'booking_reference'    => $extractedReference,
+                'draft_id'             => $draftId ?: ($currentDraft['draft_id'] ?? null),
+                'service_type'         => $serviceTypeExtracted,
+                'status'               => $currentDraft['status'] ?? 'INTAKE',
+                'missing_requirements' => [],
+                'code'                 => 200,
+            ];
+        }
+
+        // 6. Authoritatively Update Draft via BookingAgentService for intake/draft interactions
         $processPayload = [
             'intent'           => $intent,
             'service_type'     => $serviceTypeExtracted,
@@ -209,9 +299,15 @@ class BookingAgentController {
             );
 
             return array_merge([
-                'success' => true,
-                'reply'   => $replyMessage,
-                'code'    => 200
+                'success'              => true,
+                'reply'                => $replyMessage,
+                'intent'               => $intent,
+                'intent_confidence'    => $confidence,
+                'context_resolution'   => $contextResolution,
+                'slots'                => $slots,
+                'booking_reference'    => $extractedReference,
+                'missing_requirements' => $serviceOutcome['missing_fields'] ?? [],
+                'code'                 => 200
             ], $serviceOutcome);
         } catch (BookingDraftException $e) {
             return [
@@ -232,47 +328,181 @@ class BookingAgentController {
     /**
      * Local deterministic fallback extraction if Python AI service is unavailable.
      */
-    private function fallbackExtract(string $message, array $draftContext): array {
+    private function fallbackExtract(string $message, array $draftContext, array $userBookings = []): array {
         $msgLower = strtolower(trim($message));
-        $serviceType = $draftContext['service_type'] ?? 'burial';
+        $serviceType = $draftContext['service_type'] ?? null;
+
+        // Extract Booking Reference
+        $bookingReference = null;
+        if (preg_match('/\b(BUR-\d+|CREM-\d+|DFT-\d+|Draft\s*#?\s*(\d+)|Booking\s*#?\s*(\d+)|Schedule\s*#?\s*(\d+)|Reservation\s*#?\s*(\d+))\b/i', $message, $m)) {
+            $matched = trim($m[1]);
+            $upper = strtoupper($matched);
+            if (str_starts_with($upper, 'BUR-') || str_starts_with($upper, 'CREM-') || str_starts_with($upper, 'DFT-')) {
+                $bookingReference = $upper;
+            } elseif (preg_match('/^draft\s*#?\s*(\d+)$/i', $matched, $dm)) {
+                $bookingReference = 'DFT-' . $dm[1];
+            } elseif (preg_match('/^schedule\s*#?\s*(\d+)$/i', $matched, $sm)) {
+                $bookingReference = 'BUR-' . $sm[1];
+            } elseif (preg_match('/^(?:booking|reservation)\s*#?\s*(\d+)$/i', $matched, $bm)) {
+                $num = $bm[1];
+                $matchedRef = null;
+                foreach ($userBookings as $b) {
+                    $bRef = strtoupper(trim((string) ($b['reference'] ?? '')));
+                    if ($bRef === "BUR-{$num}" || $bRef === "CREM-{$num}" || (int) ($b['booking_id'] ?? 0) === (int) $num) {
+                        $matchedRef = $bRef;
+                        break;
+                    }
+                }
+                $bookingReference = $matchedRef ?: "BUR-{$num}";
+            }
+        }
 
         if (str_contains($msgLower, 'cremat') || str_contains($msgLower, 'urn') || str_contains($msgLower, 'columbarium')) {
             $serviceType = 'cremation';
         } elseif (str_contains($msgLower, 'burial') || str_contains($msgLower, 'interment') || str_contains($msgLower, 'grave')) {
             $serviceType = 'burial';
+        } elseif (!$serviceType) {
+            if ($bookingReference && str_starts_with($bookingReference, 'CREM-')) {
+                $serviceType = 'cremation';
+            } else {
+                $serviceType = 'burial';
+            }
         }
 
-        $intent = BookingAgentService::INTENT_PROVIDE_INFO;
-        if (preg_match('/\b(confirm|proceed|looks good|ready to confirm|finalize|yes confirm)\b/i', $msgLower)) {
+        // Intent Classification
+        $intent = BookingAgentService::INTENT_PROVIDE_INFORMATION;
+        $confidence = 0.95;
+
+        if (preg_match('/\b(cancel|withdraw|drop booking|cancel my booking|cancel reservation)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_CANCEL_BOOKING;
+        } elseif (preg_match('/\b(reschedule|move the burial|move my burial|move the booking|move my booking|move the cremation|postpone|shift date|move from|change date to|reschedule to)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_RESCHEDULE_BOOKING;
+        } elseif (preg_match('/\b(spelled|misspelled|spelling|typo|incorrect|surname is actually|name is actually|should be|last name is)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_CORRECT_BOOKING_DETAILS;
+        } elseif (preg_match('/\b(change my booking|update my booking|modify my booking|edit my booking)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_UPDATE_BOOKING;
+        } elseif (preg_match('/\b(availability|available|is it free|is there space|open slots|any available)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_CHECK_AVAILABILITY;
+        } elseif (preg_match('/\b(status|check status|what is the status|is my booking confirmed|has it been approved)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_CHECK_BOOKING_STATUS;
+        } elseif (preg_match('/\b(switch lot|different lot|change lot|change columbarium)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_CHANGE_ALLOCATION;
+        } elseif (preg_match('/\b(select lot|choose lot|assign lot|pick lot|take lot|i want lot)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_SELECT_ALLOCATION;
+        } elseif (preg_match('/\b(resume|continue my|pick up where)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_RESUME_BOOKING;
+        } elseif (preg_match('/\b(confirm|proceed|looks good|ready to confirm|finalize|yes confirm)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_CONFIRM_BOOKING;
-        } elseif (preg_match('/\b(change|correct|update|instead of|actually)\b/i', $msgLower)) {
-            $intent = BookingAgentService::INTENT_UPDATE_FIELD;
         } elseif (preg_match('/\b(recommend|suggest|which lot|help me choose)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_REQUEST_RECOMMENDATION;
+        } elseif (preg_match('/\b(book|schedule|reserve|i want to book|arrange a burial|arrange a cremation|start booking)\b/i', $msgLower) && empty($draftContext['draft_id'])) {
+            $intent = BookingAgentService::INTENT_CREATE_BOOKING;
         }
 
-        $extracted = [];
+        $slots = [
+            'service_type'          => $serviceType,
+            'decedent_name'         => null,
+            'relationship'          => null,
+            'preferred_date'        => null,
+            'cremation_date'        => null,
+            'target_date'           => null,
+            'booking_reference'     => $bookingReference,
+            'lot_identifier'        => null,
+            'lot_id'                => null,
+            'section'               => null,
+            'block'                 => null,
+            'preferred_columbarium' => null,
+            'correction_field'      => null,
+            'corrected_value'       => null,
+            'notes'                 => null,
+        ];
+
+        // Date extraction (ISO or natural)
+        $dateVal = null;
         if (preg_match('/\b(20\d{2}-\d{2}-\d{2})\b/', $message, $m)) {
+            $dateVal = $m[1];
+        } else {
+            $monthMap = [
+                'january' => 1, 'jan' => 1, 'february' => 2, 'feb' => 2, 'march' => 3, 'mar' => 3,
+                'april' => 4, 'apr' => 4, 'may' => 5, 'june' => 6, 'jun' => 6, 'july' => 7, 'jul' => 7,
+                'august' => 8, 'aug' => 8, 'september' => 9, 'sept' => 9, 'sep' => 9, 'october' => 10, 'oct' => 10,
+                'november' => 11, 'nov' => 11, 'december' => 12, 'dec' => 12
+            ];
+            if (preg_match('/\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*,?\s*(20\d{2}))?\b/i', $msgLower, $nm)) {
+                $mNum = $monthMap[strtolower($nm[1])] ?? 1;
+                $dNum = (int) $nm[2];
+                $yNum = !empty($nm[3]) ? (int) $nm[3] : (int) date('Y');
+                $dateVal = sprintf('%04d-%02d-%02d', $yNum, $mNum, $dNum);
+            } elseif (str_contains($msgLower, 'tomorrow')) {
+                $dateVal = date('Y-m-d', strtotime('+1 day'));
+            } elseif (str_contains($msgLower, 'in 2 weeks')) {
+                $dateVal = date('Y-m-d', strtotime('+14 days'));
+            } elseif (str_contains($msgLower, 'in 3 weeks')) {
+                $dateVal = date('Y-m-d', strtotime('+21 days'));
+            }
+        }
+
+        if ($dateVal) {
             if ($serviceType === 'cremation') {
-                $extracted['cremation_date'] = $m[1];
+                $slots['cremation_date'] = $dateVal;
             } else {
-                $extracted['preferred_date'] = $m[1];
+                $slots['preferred_date'] = $dateVal;
+            }
+            if ($intent === BookingAgentService::INTENT_RESCHEDULE_BOOKING || $intent === BookingAgentService::INTENT_UPDATE_BOOKING) {
+                $slots['target_date'] = $dateVal;
             }
         }
 
         if (preg_match('/\blot\s*(?:id|#|number)?\s*:?\s*(\d+)\b/i', $message, $m)) {
-            $extracted['lot_id'] = (int) $m[1];
+            $slots['lot_id'] = (int) $m[1];
+            $slots['lot_identifier'] = (int) $m[1];
         }
 
-        if (preg_match('/(?:decedent(?:\s+name)?|name\s+is|named|for)\s+([A-Z][a-zA-Z\.\s]{2,40})/i', $message, $m)) {
-            $extracted['decedent_name'] = trim($m[1]);
+        if (preg_match('/\bsection\s+([A-Za-z0-9]+)\b/i', $message, $m)) {
+            $slots['section'] = strtoupper($m[1]);
         }
+
+        if (preg_match('/\bmy\s+(father|mother|brother|sister|son|daughter|husband|wife|friend|relative|grandfather|grandmother|parent|spouse)\b/i', $message, $m)) {
+            $slots['relationship'] = ucfirst(strtolower($m[1]));
+        }
+
+        if ($intent === BookingAgentService::INTENT_CORRECT_BOOKING_DETAILS) {
+            $slots['correction_field'] = 'decedent_name';
+            if (preg_match('/(?:should be|it is|actually|surname is|name is)\s+([A-Z][a-zA-Z\.\s]{1,30})/i', $message, $m)) {
+                $slots['corrected_value'] = rtrim(trim($m[1]), '.');
+                $slots['decedent_name'] = $slots['corrected_value'];
+            }
+        } else {
+            if (preg_match('/(?:decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s]{2,40})/i', $message, $m)) {
+                $cand = trim($m[1]);
+                $cand = preg_replace('/\s+(?:my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$/i', '', $cand);
+                $cand = preg_replace('/\s+(?:on|at|in|prefer|preferably|date|burial|cremation).*$/i', '', $cand);
+                if (strlen($cand) >= 2) {
+                    $slots['decedent_name'] = $cand;
+                }
+            }
+        }
+
+        $extractedFields = [
+            'service_type'          => $slots['service_type'],
+            'decedent_name'         => $slots['decedent_name'],
+            'relationship'          => $slots['relationship'],
+            'preferred_date'        => $slots['preferred_date'],
+            'cremation_date'        => $slots['cremation_date'],
+            'lot_id'                => $slots['lot_id'],
+            'preferred_columbarium' => $slots['preferred_columbarium'],
+            'notes'                 => $slots['notes']
+        ];
+        $extractedFields = array_filter($extractedFields, fn($v) => $v !== null && $v !== '');
 
         return [
-            'intent'           => $intent,
-            'service_type'     => $serviceType,
-            'extracted_fields' => $extracted,
-            'reply'            => "I have noted your booking request. Let me know if you would like to make any adjustments."
+            'intent'            => $intent,
+            'confidence'        => $confidence,
+            'service_type'      => $serviceType,
+            'booking_reference' => $bookingReference,
+            'slots'             => $slots,
+            'extracted_fields'  => $extractedFields,
+            'reply'             => "I have noted your booking request. Let me know if you would like to make any adjustments."
         ];
     }
 

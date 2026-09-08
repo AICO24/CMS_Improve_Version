@@ -874,13 +874,32 @@ def chat_answer():
 # =========================================================================
 
 BOOKING_AGENT_SYSTEM_PROMPT = (
-    "You are an empathetic, professional AI Booking Assistant for a Cemetery Management System.\n"
-    "Your goal is to parse citizen messages during booking of burial or cremation services, extract structured slots, "
-    "and provide a warm, respectful, concise conversational response.\n\n"
-    "Output strictly a JSON object with this schema (no markdown, no backticks, no prose outside JSON):\n"
+    "You are an empathetic, highly capable AI Booking Agent for a Cemetery Management System.\n"
+    "Your goal is to parse citizen messages across the entire booking lifecycle (burial or cremation services), "
+    "extract structured slots and booking references, classify citizen intent, and provide a warm, concise response.\n\n"
+    "Output strictly a JSON object conforming to this schema (no markdown, no backticks, no prose outside JSON):\n"
     "{\n"
-    '  "intent": "CREATE_BOOKING" | "PROVIDE_INFO" | "UPDATE_FIELD" | "CONFIRM_BOOKING" | "REQUEST_RECOMMENDATION" | "UNCLEAR",\n'
+    '  "intent": "CREATE_BOOKING" | "UPDATE_BOOKING" | "CORRECT_BOOKING_DETAILS" | "RESCHEDULE_BOOKING" | "CANCEL_BOOKING" | "CONFIRM_BOOKING" | "CANCEL_DRAFT" | "CHECK_AVAILABILITY" | "SELECT_ALLOCATION" | "CHANGE_ALLOCATION" | "CHECK_BOOKING_STATUS" | "RESUME_BOOKING" | "PROVIDE_INFORMATION" | "UNCLEAR",\n'
+    '  "confidence": 0.95,\n'
     '  "service_type": "burial" | "cremation" | null,\n'
+    '  "booking_reference": string | null,\n'
+    '  "slots": {\n'
+    '    "service_type": "burial" | "cremation" | null,\n'
+    '    "decedent_name": string | null,\n'
+    '    "relationship": string | null,\n'
+    '    "preferred_date": "YYYY-MM-DD" | null,\n'
+    '    "cremation_date": "YYYY-MM-DD" | null,\n'
+    '    "target_date": "YYYY-MM-DD" | null,\n'
+    '    "booking_reference": string | null,\n'
+    '    "lot_identifier": string | integer | null,\n'
+    '    "lot_id": integer | null,\n'
+    '    "section": string | null,\n'
+    '    "block": string | null,\n'
+    '    "preferred_columbarium": string | null,\n'
+    '    "correction_field": string | null,\n'
+    '    "corrected_value": string | null,\n'
+    '    "notes": string | null\n'
+    '  },\n'
     '  "extracted_fields": {\n'
     '    "decedent_name": string | null,\n'
     '    "relationship": string | null,\n'
@@ -889,121 +908,287 @@ BOOKING_AGENT_SYSTEM_PROMPT = (
     '    "lot_id": integer | null,\n'
     '    "preferred_columbarium": string | null,\n'
     '    "notes": string | null\n'
-    "  },\n"
+    '  },\n'
     '  "reply": string\n'
     "}\n\n"
     "Intent Definitions:\n"
-    "- CREATE_BOOKING: Citizen wants to book or start a new booking.\n"
-    "- PROVIDE_INFO: Citizen provides details (names, dates, relationships, preferences).\n"
-    "- UPDATE_FIELD: Citizen explicitly asks to change or correct previously stated information.\n"
-    "- CONFIRM_BOOKING: Citizen affirms or confirms ready booking (e.g. 'yes proceed', 'confirm this', 'looks good').\n"
-    "- REQUEST_RECOMMENDATION: Citizen asks for guidance or recommendation on lot selection/options.\n"
-    "- UNCLEAR: Greeting, ambiguous query, or irrelevant statement.\n\n"
-    "Extraction Rules:\n"
-    "- service_type: set to 'burial' or 'cremation' if explicitly mentioned or clear from context. Otherwise keep existing service_type from draft_context.\n"
-    "- Dates MUST be normalized to 'YYYY-MM-DD'. If relative dates like 'tomorrow', 'next Friday', or 'in 2 weeks' are used, compute against today's date provided in context.\n"
-    "- If a slot is not mentioned, omit it or set it to null.\n"
-    "- reply: 1 to 2 polite sentences acknowledging understood information and asking for the next required missing field or summarizing ready state.\n"
+    "- CREATE_BOOKING: Citizen wants to start/arrange a new booking.\n"
+    "- UPDATE_BOOKING: Citizen wants to update an existing booking.\n"
+    "- CORRECT_BOOKING_DETAILS: Citizen modifies or corrects details in draft or booking (e.g. name typo, new preferred date for draft like 'Actually change the preferred date to 2026-11-20').\n"
+    "- RESCHEDULE_BOOKING: Citizen wants to change or postpone an existing committed booking's date or time.\n"
+    "- CANCEL_BOOKING: Citizen requests to cancel, withdraw, or terminate a booking/reservation.\n"
+    "- CONFIRM_BOOKING: Citizen explicitly confirms, agrees, or finalizes booking (e.g. 'Yes, please confirm this booking now', 'Confirm it', 'Looks good, proceed').\n"
+    "- CANCEL_DRAFT: Citizen cancels, aborts, or discards the active booking draft.\n"
+    "- CHECK_AVAILABILITY: Citizen asks if specific dates, times, or lots are free/available.\n"
+    "- SELECT_ALLOCATION: Citizen chooses a burial lot or columbarium niche.\n"
+    "- CHANGE_ALLOCATION: Citizen asks to switch to another lot, section, or columbarium.\n"
+    "- CHECK_BOOKING_STATUS: Citizen asks for the current status, approval, or schedule of a booking.\n"
+    "- RESUME_BOOKING: Citizen wants to continue an unfinished booking draft.\n"
+    "- PROVIDE_INFORMATION: Citizen provides information or answering details.\n"
+    "- UNCLEAR: Greeting, ambiguous query, or off-topic statement.\n\n"
+    "Extraction & Normalization Rules:\n"
+    "- Booking References: Recognize references like BUR-14, CREM-8, DFT-5, Booking #14, Schedule 22. Standardize to canonical format (e.g. BUR-14, CREM-8) and set booking_reference.\n"
+    "- Dates: Normalize ALL dates to YYYY-MM-DD. For relative dates like 'tomorrow', 'in 2 weeks', or 'next Friday', compute against today's date provided in context.\n"
+    "- Rescheduling vs Draft Editing: If citizen is in an active draft and changes date, set preferred_date/cremation_date and intent CORRECT_BOOKING_DETAILS. For committed bookings, set target_date and intent RESCHEDULE_BOOKING.\n"
+    "- Corrections: If citizen corrects a field (e.g. 'spelled Kevin's surname incorrectly. It should be Mando'), set correction_field (e.g. 'decedent_name') and corrected_value (e.g. 'Mando').\n"
+    "- Multi-slot Extraction: Extract ALL details mentioned in the message (service, name, relation, dates, lot, section) rather than discarding them.\n"
+    "- Missing slots should be omitted or null. Never invent IDs or bookings.\n"
+    "- reply: Polite, supportive acknowledgment of understood intent and extracted details.\n"
 )
 
 
-def _extract_booking_deterministic(message: str, draft_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def _extract_booking_deterministic(
+    message: str,
+    draft_context: Optional[Dict[str, Any]] = None,
+    user_bookings: Optional[List[Dict[str, Any]]] = None
+) -> Dict[str, Any]:
     """Rule-based fallback when LLM providers are unreachable or unconfigured."""
     msg_lower = (message or '').lower().strip()
     draft = draft_context or {}
     existing_service = draft.get('service_type')
     existing_data = draft.get('extracted_data') or {}
+    bookings = user_bookings or []
 
-    # 1. Determine service type
+    # 1. Booking Reference Extraction
+    booking_reference = None
+    ref_match = re.search(
+        r'\b(BUR-\d+|CREM-\d+|DFT-\d+|Draft\s*#?\s*(\d+)|Booking\s*#?\s*(\d+)|Schedule\s*#?\s*(\d+)|Reservation\s*#?\s*(\d+))\b',
+        message,
+        flags=re.IGNORECASE
+    )
+    if ref_match:
+        matched_str = ref_match.group(1).strip()
+        upper_match = matched_str.upper()
+        if upper_match.startswith('BUR-') or upper_match.startswith('CREM-') or upper_match.startswith('DFT-'):
+            booking_reference = upper_match
+        elif re.match(r'^draft\s*#?\s*(\d+)$', matched_str, flags=re.IGNORECASE):
+            num = re.match(r'^draft\s*#?\s*(\d+)$', matched_str, flags=re.IGNORECASE).group(1)
+            booking_reference = f"DFT-{num}"
+        elif re.match(r'^schedule\s*#?\s*(\d+)$', matched_str, flags=re.IGNORECASE):
+            num = re.match(r'^schedule\s*#?\s*(\d+)$', matched_str, flags=re.IGNORECASE).group(1)
+            booking_reference = f"BUR-{num}"
+        elif re.match(r'^(?:booking|reservation)\s*#?\s*(\d+)$', matched_str, flags=re.IGNORECASE):
+            num = re.match(r'^(?:booking|reservation)\s*#?\s*(\d+)$', matched_str, flags=re.IGNORECASE).group(1)
+            # Match against user bookings if reference exists
+            matched_ref = None
+            for b in bookings:
+                ref = str(b.get('reference') or '')
+                if ref.endswith(f"-{num}") or str(b.get('booking_id')) == num:
+                    matched_ref = ref
+                    break
+            booking_reference = matched_ref or f"BUR-{num}"
+
+    # 2. Determine service type
     service_type = existing_service
     if any(term in msg_lower for term in ['cremat', 'urn', 'columbarium', 'crematorium']):
         service_type = 'cremation'
     elif any(term in msg_lower for term in ['burial', 'interment', 'grave', 'plot', 'lot', 'casket']):
         service_type = 'burial'
     elif not service_type:
-        service_type = 'burial'
+        # Check if booking_reference hints at service type
+        if booking_reference and booking_reference.startswith('CREM-'):
+            service_type = 'cremation'
+        else:
+            service_type = 'burial'
 
-    # 2. Determine intent
+    # 3. Determine intent
     intent = 'PROVIDE_INFO'
-    if any(phrase in msg_lower for phrase in ['confirm', 'proceed', 'looks good', 'ready to confirm', 'finalize', 'approve', 'yes confirm']):
+    confidence = 0.95
+
+    if any(phrase in msg_lower for phrase in ['cancel', 'withdraw', 'drop booking', 'cancel my booking', 'cancel reservation', 'cancel the booking']):
+        intent = 'CANCEL_BOOKING'
+    elif any(phrase in msg_lower for phrase in ['reschedule', 'move the burial', 'move my burial', 'move the booking', 'move my booking', 'move the cremation', 'postpone', 'shift date', 'move from', 'change date to', 'reschedule to']):
+        intent = 'RESCHEDULE_BOOKING'
+    elif any(phrase in msg_lower for phrase in ['spelled', 'misspelled', 'spelling', 'typo', 'incorrect', 'surname is actually', 'name is actually', 'should be', 'last name is']):
+        intent = 'CORRECT_BOOKING_DETAILS'
+    elif any(phrase in msg_lower for phrase in ['change my booking', 'update my booking', 'modify my booking', 'edit my booking']):
+        intent = 'UPDATE_BOOKING'
+    elif any(phrase in msg_lower for phrase in ['availability', 'available', 'is it free', 'is there space', 'open slots', 'any available']):
+        intent = 'CHECK_AVAILABILITY'
+    elif any(phrase in msg_lower for phrase in ['status', 'check status', 'what is the status', 'is my booking confirmed', 'has it been approved', 'has my booking been']):
+        intent = 'CHECK_BOOKING_STATUS'
+    elif any(phrase in msg_lower for phrase in ['switch lot', 'different lot', 'change lot', 'change columbarium']):
+        intent = 'CHANGE_ALLOCATION'
+    elif any(phrase in msg_lower for phrase in ['select lot', 'choose lot', 'assign lot', 'pick lot', 'take lot', 'i want lot', 'lot id', 'lot #']):
+        intent = 'SELECT_ALLOCATION'
+    elif any(phrase in msg_lower for phrase in ['resume', 'continue my', 'pick up where']):
+        intent = 'RESUME_BOOKING'
+    elif any(phrase in msg_lower for phrase in ['confirm', 'proceed', 'looks good', 'ready to confirm', 'finalize', 'approve', 'yes confirm']):
         intent = 'CONFIRM_BOOKING'
-    elif any(phrase in msg_lower for phrase in ['change', 'correct', 'update', 'instead of', 'mistake', 'actually']):
-        intent = 'UPDATE_FIELD'
     elif any(phrase in msg_lower for phrase in ['recommend', 'suggest', 'which lot', 'what lot', 'help me choose']):
         intent = 'REQUEST_RECOMMENDATION'
-    elif any(phrase in msg_lower for phrase in ['book', 'schedule', 'reserve', 'i want to book', 'start booking']) and not draft.get('draft_id'):
+    elif any(phrase in msg_lower for phrase in ['book', 'schedule', 'reserve', 'i want to book', 'arrange a burial', 'arrange a cremation', 'start booking']) and not draft.get('draft_id'):
         intent = 'CREATE_BOOKING'
 
-    extracted: Dict[str, Any] = {}
+    slots: Dict[str, Any] = {
+        'service_type': service_type,
+        'decedent_name': None,
+        'relationship': None,
+        'preferred_date': None,
+        'cremation_date': None,
+        'target_date': None,
+        'booking_reference': booking_reference,
+        'lot_identifier': None,
+        'lot_id': None,
+        'section': None,
+        'block': None,
+        'preferred_columbarium': None,
+        'correction_field': None,
+        'corrected_value': None,
+        'notes': None
+    }
 
-    # Extract date pattern (YYYY-MM-DD or MM/DD/YYYY or DD/MM/YYYY)
+    # 4. Extract Date patterns
+    date_val = None
     iso_date_match = re.search(r'\b(20\d{2}-\d{2}-\d{2})\b', message)
     if iso_date_match:
         date_val = iso_date_match.group(1)
-        if service_type == 'cremation':
-            extracted['cremation_date'] = date_val
-        else:
-            extracted['preferred_date'] = date_val
-    elif 'tomorrow' in msg_lower:
-        tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
-        if service_type == 'cremation':
-            extracted['cremation_date'] = tomorrow
-        else:
-            extracted['preferred_date'] = tomorrow
+    else:
+        # Natural language date: e.g. "September 20", "September 20th", "Sept 25, 2026"
+        month_map = {
+            'january': 1, 'jan': 1, 'february': 2, 'feb': 2, 'march': 3, 'mar': 3,
+            'april': 4, 'apr': 4, 'may': 5, 'june': 6, 'jun': 6, 'july': 7, 'jul': 7,
+            'august': 8, 'aug': 8, 'september': 9, 'sept': 9, 'sep': 9, 'october': 10, 'oct': 10,
+            'november': 11, 'nov': 11, 'december': 12, 'dec': 12
+        }
+        nl_date_match = re.search(
+            r'\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*,?\s*(20\d{2}))?\b',
+            msg_lower
+        )
+        if nl_date_match:
+            m_str = nl_date_match.group(1)
+            day = int(nl_date_match.group(2))
+            year = int(nl_date_match.group(3)) if nl_date_match.group(3) else datetime.now().year
+            month = month_map.get(m_str, 1)
+            try:
+                date_val = f"{year:04d}-{month:02d}-{day:02d}"
+            except Exception:
+                pass
+        elif 'tomorrow' in msg_lower:
+            date_val = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        elif 'in 2 weeks' in msg_lower:
+            date_val = (datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d')
+        elif 'in 3 weeks' in msg_lower:
+            date_val = (datetime.now() + timedelta(days=21)).strftime('%Y-%m-%d')
+        elif 'next month' in msg_lower:
+            date_val = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
 
-    # Extract lot ID
+    if date_val:
+        if service_type == 'cremation':
+            slots['cremation_date'] = date_val
+        else:
+            slots['preferred_date'] = date_val
+        if intent in ('RESCHEDULE_BOOKING', 'UPDATE_BOOKING'):
+            slots['target_date'] = date_val
+
+    # 5. Extract Lot ID / Allocation
     lot_match = re.search(r'\blot\s*(?:id|#|number)?\s*:?\s*(\d+)\b', msg_lower)
     if lot_match:
         try:
-            extracted['lot_id'] = int(lot_match.group(1))
+            lot_num = int(lot_match.group(1))
+            slots['lot_id'] = lot_num
+            slots['lot_identifier'] = lot_num
         except ValueError:
             pass
 
-    # Extract relationship
+    sec_match = re.search(r'\bsection\s+([A-Za-z0-9]+)\b', msg_lower)
+    if sec_match:
+        slots['section'] = sec_match.group(1).upper()
+
+    col_match = re.search(r'\bcolumbarium\s*(?:vault|building|section)?\s*:?\s*([A-Za-z0-9\s]+)\b', message, flags=re.IGNORECASE)
+    if col_match:
+        slots['preferred_columbarium'] = col_match.group(1).strip()
+
+    # 6. Extract Relationship
     rel_match = re.search(r'\bmy\s+(father|mother|brother|sister|son|daughter|husband|wife|friend|relative|grandfather|grandmother|parent|spouse)\b', msg_lower)
     if rel_match:
-        extracted['relationship'] = rel_match.group(1).capitalize()
+        slots['relationship'] = rel_match.group(1).capitalize()
 
-    # Extract decedent name
-    name_match = re.search(r'(?:decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s]{2,40})', message)
-    if name_match:
-        candidate_name = name_match.group(1).strip()
-        candidate_name = re.sub(r'\s+(?:my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$', '', candidate_name, flags=re.IGNORECASE).strip()
-        candidate_name = re.sub(r'\s+(?:on|at|in)\s+.*$', '', candidate_name, flags=re.IGNORECASE).strip()
-        if len(candidate_name) >= 2:
-            extracted['decedent_name'] = candidate_name
+    # 7. Extract Decedent Name & Correction Details
+    if intent == 'CORRECT_BOOKING_DETAILS':
+        # "I spelled Kevin's surname incorrectly. It should be Mando."
+        slots['correction_field'] = 'decedent_name'
+        cor_match = re.search(r'(?:should be|it is|actually|surname is|name is)\s+([A-Z][a-zA-Z\.\s]{1,30})', message)
+        if cor_match:
+            slots['corrected_value'] = cor_match.group(1).strip().rstrip('.')
+            slots['decedent_name'] = slots['corrected_value']
+    else:
+        name_match = re.search(r'(?:decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s]{2,40})', message)
+        if name_match:
+            candidate_name = name_match.group(1).strip()
+            # Clean off trailing clauses
+            candidate_name = re.sub(r'\s+(?:my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$', '', candidate_name, flags=re.IGNORECASE).strip()
+            candidate_name = re.sub(r'\s+(?:on|at|in|prefer|preferably|date|burial|cremation).*$', '', candidate_name, flags=re.IGNORECASE).strip()
+            if len(candidate_name) >= 2:
+                slots['decedent_name'] = candidate_name
 
-    # 3. Formulate conversational reply
-    if intent == 'CONFIRM_BOOKING':
+    # 8. Backward-compatible extracted_fields map
+    extracted_fields = {
+        'service_type': slots['service_type'],
+        'decedent_name': slots['decedent_name'],
+        'relationship': slots['relationship'],
+        'preferred_date': slots['preferred_date'],
+        'cremation_date': slots['cremation_date'],
+        'lot_id': slots['lot_id'],
+        'preferred_columbarium': slots['preferred_columbarium'],
+        'notes': slots['notes']
+    }
+    extracted_fields = {k: v for k, v in extracted_fields.items() if v not in (None, '')}
+
+    # 9. Formulate conversational reply
+    if intent == 'CANCEL_BOOKING':
+        ref_text = f" for **{booking_reference}**" if booking_reference else ""
+        reply = f"I have received your request to cancel your reservation{ref_text}. I am verifying your booking details."
+    elif intent == 'RESCHEDULE_BOOKING':
+        date_text = f" to **{date_val}**" if date_val else ""
+        ref_text = f" for **{booking_reference}**" if booking_reference else ""
+        reply = f"I have noted your request to move your booking{ref_text}{date_text}. Verifying availability and booking context."
+    elif intent == 'CORRECT_BOOKING_DETAILS':
+        reply = f"Thank you for the correction. I have updated the booking information accordingly."
+    elif intent == 'CHECK_BOOKING_STATUS':
+        ref_text = f" for **{booking_reference}**" if booking_reference else ""
+        reply = f"Checking the current status of your booking{ref_text}."
+    elif intent == 'CHECK_AVAILABILITY':
+        reply = "Let me check availability for the requested service and date."
+    elif intent == 'CONFIRM_BOOKING':
         reply = "I have recorded your confirmation. Please review the booking details so we can proceed."
     elif intent == 'REQUEST_RECOMMENDATION':
         reply = "I would be happy to help recommend an available lot. You can select your preferred section or budget."
-    elif 'decedent_name' not in extracted and not existing_data.get('decedent_name'):
+    elif 'decedent_name' not in extracted_fields and not existing_data.get('decedent_name'):
         reply = "Thank you. Could you please provide the full name of the deceased?"
-    elif service_type == 'cremation' and 'cremation_date' not in extracted and not existing_data.get('cremation_date'):
+    elif service_type == 'cremation' and 'cremation_date' not in extracted_fields and not existing_data.get('cremation_date'):
         reply = "Understood. What date would you like to schedule the cremation service?"
-    elif service_type == 'burial' and 'preferred_date' not in extracted and not existing_data.get('preferred_date'):
+    elif service_type == 'burial' and 'preferred_date' not in extracted_fields and not existing_data.get('preferred_date'):
         reply = "Understood. What date would you prefer for the burial service?"
-    elif service_type == 'burial' and 'lot_id' not in extracted and not existing_data.get('lot_id'):
+    elif service_type == 'burial' and 'lot_id' not in extracted_fields and not existing_data.get('lot_id'):
         reply = "Thank you. Now we just need to select an available burial lot."
     else:
-        reply = "I have updated your booking details. Let me know if you would like to make any changes or proceed."
+        reply = "I have updated your booking details. Let me know if you would like to make any adjustments."
 
     return {
         'intent': intent,
+        'confidence': confidence,
         'service_type': service_type,
-        'extracted_fields': extracted,
+        'booking_reference': booking_reference,
+        'slots': slots,
+        'extracted_fields': extracted_fields,
         'reply': reply
     }
 
 
-def _extract_booking_agent(message: str, draft_context: Dict[str, Any], conversation_context: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _extract_booking_agent(
+    message: str,
+    draft_context: Dict[str, Any],
+    conversation_context: List[Dict[str, Any]],
+    user_bookings: Optional[List[Dict[str, Any]]] = None
+) -> Dict[str, Any]:
     today_str = datetime.now().strftime('%Y-%m-%d, %A')
     user_input_payload = {
         'today': today_str,
         'message': message,
         'draft_context': draft_context,
-        'recent_conversation': conversation_context[-4:] if conversation_context else []
+        'recent_conversation': conversation_context[-4:] if conversation_context else [],
+        'user_bookings': user_bookings or []
     }
 
     try:
@@ -1019,19 +1204,55 @@ def _extract_booking_agent(message: str, draft_context: Dict[str, Any], conversa
         if raw_response:
             parsed = json.loads(raw_response)
             if isinstance(parsed, dict) and 'intent' in parsed:
-                extracted = parsed.get('extracted_fields')
-                if not isinstance(extracted, dict):
-                    extracted = {}
+                raw_intent = parsed.get('intent', 'PROVIDE_INFO')
+                # Normalize legacy intent mapping
+                if raw_intent == 'PROVIDE_INFO':
+                    raw_intent = 'PROVIDE_INFORMATION'
+                elif raw_intent == 'UPDATE_FIELD':
+                    raw_intent = 'CORRECT_BOOKING_DETAILS'
+
+                raw_slots = parsed.get('slots') if isinstance(parsed.get('slots'), dict) else {}
+                raw_extracted = parsed.get('extracted_fields') if isinstance(parsed.get('extracted_fields'), dict) else {}
+
+                # Combine slots with extracted_fields fallback
+                merged_slots = {
+                    'service_type': raw_slots.get('service_type') or parsed.get('service_type'),
+                    'decedent_name': raw_slots.get('decedent_name') or raw_extracted.get('decedent_name'),
+                    'relationship': raw_slots.get('relationship') or raw_extracted.get('relationship'),
+                    'preferred_date': raw_slots.get('preferred_date') or raw_extracted.get('preferred_date'),
+                    'cremation_date': raw_slots.get('cremation_date') or raw_extracted.get('cremation_date'),
+                    'target_date': raw_slots.get('target_date'),
+                    'booking_reference': raw_slots.get('booking_reference') or parsed.get('booking_reference'),
+                    'lot_identifier': raw_slots.get('lot_identifier') or raw_slots.get('lot_id') or raw_extracted.get('lot_id'),
+                    'lot_id': raw_slots.get('lot_id') or raw_extracted.get('lot_id'),
+                    'section': raw_slots.get('section'),
+                    'block': raw_slots.get('block'),
+                    'preferred_columbarium': raw_slots.get('preferred_columbarium') or raw_extracted.get('preferred_columbarium'),
+                    'correction_field': raw_slots.get('correction_field'),
+                    'corrected_value': raw_slots.get('corrected_value'),
+                    'notes': raw_slots.get('notes') or raw_extracted.get('notes')
+                }
+
+                # Clean extracted_fields
+                cleaned_extracted = {k: v for k, v in raw_extracted.items() if v not in (None, '')}
+                if not cleaned_extracted:
+                    for k in ('decedent_name', 'relationship', 'preferred_date', 'cremation_date', 'lot_id', 'preferred_columbarium'):
+                        if merged_slots.get(k) not in (None, ''):
+                            cleaned_extracted[k] = merged_slots[k]
+
                 return {
-                    'intent': parsed.get('intent', 'PROVIDE_INFO'),
+                    'intent': raw_intent,
+                    'confidence': float(parsed.get('confidence', 0.95)),
                     'service_type': parsed.get('service_type'),
-                    'extracted_fields': {k: v for k, v in extracted.items() if v not in (None, '')},
-                    'reply': parsed.get('reply') or 'I have noted your booking details.'
+                    'booking_reference': merged_slots.get('booking_reference'),
+                    'slots': merged_slots,
+                    'extracted_fields': cleaned_extracted,
+                    'reply': parsed.get('reply') or 'I have noted your booking request.'
                 }
     except Exception:
         pass
 
-    return _extract_booking_deterministic(message, draft_context)
+    return _extract_booking_deterministic(message, draft_context, user_bookings)
 
 
 @app.post('/api/booking-agent/extract')
@@ -1041,6 +1262,7 @@ def extract_booking_agent_endpoint():
         message = (payload.get('message') or '').strip()
         draft_context = payload.get('draft_context') or {}
         conversation_context = payload.get('conversation_context') or []
+        user_bookings = payload.get('user_bookings') or []
 
         if not message:
             return jsonify({
@@ -1049,18 +1271,23 @@ def extract_booking_agent_endpoint():
                 'result': None
             }), 400
 
-        result = _extract_booking_agent(message, draft_context, conversation_context)
+        result = _extract_booking_agent(message, draft_context, conversation_context, user_bookings)
         return jsonify({
             'success': True,
             'result': result
         })
     except Exception as exc:
-        fallback = _extract_booking_deterministic(message if 'message' in locals() else '', draft_context if 'draft_context' in locals() else {})
+        fallback = _extract_booking_deterministic(
+            message if 'message' in locals() else '',
+            draft_context if 'draft_context' in locals() else {},
+            user_bookings if 'user_bookings' in locals() else []
+        )
         return jsonify({
             'success': True,
             'result': fallback,
             'fallback': True
         })
+
 
 
 # Full Automation, Admin-First: the AI Intelligence Layer's one addition for

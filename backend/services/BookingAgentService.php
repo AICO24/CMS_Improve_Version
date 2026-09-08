@@ -26,10 +26,20 @@ class BookingAgentService {
     private DecedentRequest $decedentRequestModel;
     private Cremation $cremationModel;
 
-    // Supported Intents for BMS-3
+    // Supported Intents for BMS-3 and BMS-5 (Unified Booking Automation)
     public const INTENT_CREATE_BOOKING          = 'CREATE_BOOKING';
     public const INTENT_PROVIDE_INFO            = 'PROVIDE_INFO';
+    public const INTENT_PROVIDE_INFORMATION     = 'PROVIDE_INFORMATION';
     public const INTENT_UPDATE_FIELD            = 'UPDATE_FIELD';
+    public const INTENT_UPDATE_BOOKING          = 'UPDATE_BOOKING';
+    public const INTENT_CORRECT_BOOKING_DETAILS = 'CORRECT_BOOKING_DETAILS';
+    public const INTENT_RESCHEDULE_BOOKING      = 'RESCHEDULE_BOOKING';
+    public const INTENT_CANCEL_BOOKING          = 'CANCEL_BOOKING';
+    public const INTENT_CHECK_AVAILABILITY      = 'CHECK_AVAILABILITY';
+    public const INTENT_SELECT_ALLOCATION       = 'SELECT_ALLOCATION';
+    public const INTENT_CHANGE_ALLOCATION       = 'CHANGE_ALLOCATION';
+    public const INTENT_CHECK_BOOKING_STATUS    = 'CHECK_BOOKING_STATUS';
+    public const INTENT_RESUME_BOOKING          = 'RESUME_BOOKING';
     public const INTENT_REQUEST_RECOMMENDATION  = 'REQUEST_RECOMMENDATION';
     public const INTENT_CONFIRM_BOOKING         = 'CONFIRM_BOOKING';
     public const INTENT_UNCLEAR                 = 'UNCLEAR';
@@ -37,7 +47,17 @@ class BookingAgentService {
     public const SUPPORTED_INTENTS = [
         self::INTENT_CREATE_BOOKING,
         self::INTENT_PROVIDE_INFO,
+        self::INTENT_PROVIDE_INFORMATION,
         self::INTENT_UPDATE_FIELD,
+        self::INTENT_UPDATE_BOOKING,
+        self::INTENT_CORRECT_BOOKING_DETAILS,
+        self::INTENT_RESCHEDULE_BOOKING,
+        self::INTENT_CANCEL_BOOKING,
+        self::INTENT_CHECK_AVAILABILITY,
+        self::INTENT_SELECT_ALLOCATION,
+        self::INTENT_CHANGE_ALLOCATION,
+        self::INTENT_CHECK_BOOKING_STATUS,
+        self::INTENT_RESUME_BOOKING,
         self::INTENT_REQUEST_RECOMMENDATION,
         self::INTENT_CONFIRM_BOOKING,
         self::INTENT_UNCLEAR,
@@ -262,6 +282,230 @@ class BookingAgentService {
     }
 
     /**
+     * Deterministic Booking Context Resolution Layer (Batch 1).
+     *
+     * Resolves whether the user's intent refers to an explicit booking reference,
+     * an active committed booking, an active draft, or is ambiguous/not found.
+     *
+     * Resolution Priorities:
+     * Priority 1: Explicit Booking Reference (e.g. BUR-14, CREM-8, DFT-5) -> match & validate ownership
+     * Priority 2: Explicit Service Type + Unique Candidate -> match single active booking for service
+     * Priority 3: Single Active Booking -> match unique active/pending booking across services
+     * Priority 4: Active Draft -> match existing draft for updates/intake
+     * Priority 5: Ambiguous -> multiple possible candidates; return AMBIGUOUS with candidate references
+     *
+     * @param int         $userId
+     * @param string      $intent
+     * @param string|null $extractedReference
+     * @param array|null  $activeDraft
+     * @param array       $activeBookings
+     * @param string|null $serviceType
+     * @return array Standardized resolution payload
+     */
+    public function resolveBookingContext(
+        int $userId,
+        string $intent,
+        ?string $extractedReference = null,
+        ?array $activeDraft = null,
+        array $activeBookings = [],
+        ?string $serviceType = null
+    ): array {
+        // Priority 1: Explicit Booking Reference
+        if ($extractedReference !== null && trim($extractedReference) !== '') {
+            $cleanRef = strtoupper(trim($extractedReference));
+
+            // Normalize formats: "SCHEDULE 14" -> "BUR-14", "DRAFT 12" -> "DFT-12", "BOOKING 14" -> match
+            if (preg_match('/^SCHEDULE\s*#?\s*(\d+)$/i', $cleanRef, $m)) {
+                $cleanRef = 'BUR-' . $m[1];
+            } elseif (preg_match('/^DRAFT\s*#?\s*(\d+)$/i', $cleanRef, $m)) {
+                $cleanRef = 'DFT-' . $m[1];
+            } elseif (preg_match('/^(?:BOOKING|RESERVATION)\s*#?\s*(\d+)$/i', $cleanRef, $m)) {
+                $num = $m[1];
+                $matchedRef = null;
+                foreach ($activeBookings as $b) {
+                    $bRef = strtoupper(trim((string) ($b['reference'] ?? '')));
+                    if ($bRef === "BUR-{$num}" || $bRef === "CREM-{$num}" || (int) ($b['booking_id'] ?? 0) === (int) $num) {
+                        $matchedRef = $bRef;
+                        break;
+                    }
+                }
+                $cleanRef = $matchedRef ?: "BUR-{$num}";
+            }
+
+            // Check if matches committed booking owned by user
+            foreach ($activeBookings as $b) {
+                $bRef = strtoupper(trim((string) ($b['reference'] ?? '')));
+                if ($bRef === $cleanRef) {
+                    return [
+                        'status'         => 'RESOLVED',
+                        'type'           => 'COMMITTED_BOOKING',
+                        'booking_id'     => (int) ($b['booking_id'] ?? 0),
+                        'reference'      => $b['reference'] ?? $cleanRef,
+                        'service_type'   => $b['service_type'] ?? null,
+                        'current_status' => $b['status'] ?? null,
+                        'record'         => $b,
+                    ];
+                }
+            }
+
+            // Check if matches active draft
+            if ($activeDraft && !empty($activeDraft['draft_id'])) {
+                $dId = (int) $activeDraft['draft_id'];
+                if ($cleanRef === "DFT-{$dId}" || $cleanRef === "DRAFT-{$dId}" || $cleanRef === (string) $dId) {
+                    return [
+                        'status'         => 'RESOLVED',
+                        'type'           => 'DRAFT',
+                        'draft_id'       => $dId,
+                        'reference'      => 'DFT-' . $dId,
+                        'service_type'   => $activeDraft['service_type'] ?? 'burial',
+                        'current_status' => $activeDraft['status'] ?? 'DRAFT_STARTED',
+                        'record'         => $activeDraft,
+                    ];
+                }
+            }
+
+            // Reference was explicitly specified by user but does NOT belong to active bookings or drafts
+            return [
+                'status'    => 'NOT_FOUND',
+                'type'      => 'NONE',
+                'reference' => $cleanRef,
+                'reason'    => "No active booking found matching reference '{$cleanRef}' for your account.",
+            ];
+        }
+
+        // Filter eligible non-terminal committed bookings
+        $eligibleStatuses = ['Pending', 'Confirmed', 'Scheduled'];
+        $eligibleBookings = array_values(array_filter($activeBookings, function ($b) use ($eligibleStatuses) {
+            return in_array($b['status'] ?? '', $eligibleStatuses, true);
+        }));
+
+        $isActionOnCommitted = in_array($intent, [
+            self::INTENT_RESCHEDULE_BOOKING,
+            self::INTENT_CANCEL_BOOKING,
+            self::INTENT_UPDATE_BOOKING,
+            self::INTENT_CHECK_BOOKING_STATUS,
+        ], true);
+
+        // Priority 2: Explicit Service Type + Unique Candidate
+        if ($serviceType !== null && in_array(strtolower($serviceType), ['burial', 'cremation'], true) && $isActionOnCommitted) {
+            $serviceCandidates = array_values(array_filter($eligibleBookings, function ($b) use ($serviceType) {
+                return strtolower($b['service_type'] ?? '') === strtolower($serviceType);
+            }));
+
+            if (count($serviceCandidates) === 1) {
+                $matched = $serviceCandidates[0];
+                return [
+                    'status'         => 'RESOLVED',
+                    'type'           => 'COMMITTED_BOOKING',
+                    'booking_id'     => (int) ($matched['booking_id'] ?? 0),
+                    'reference'      => $matched['reference'],
+                    'service_type'   => $matched['service_type'],
+                    'current_status' => $matched['status'],
+                    'record'         => $matched,
+                ];
+            }
+
+            if (count($serviceCandidates) > 1) {
+                $candidates = array_map(function ($b) {
+                    return [
+                        'reference'     => $b['reference'],
+                        'service_type'  => $b['service_type'],
+                        'schedule_date' => $b['schedule_date'] ?? null,
+                        'decedent_name' => $b['decedent_name'] ?? null,
+                        'status'        => $b['status'] ?? null,
+                    ];
+                }, $serviceCandidates);
+
+                return [
+                    'status'     => 'AMBIGUOUS',
+                    'type'       => 'MULTIPLE_CANDIDATES',
+                    'candidates' => $candidates,
+                    'message'    => "You have multiple active " . strtolower($serviceType) . " bookings (" . implode(', ', array_column($candidates, 'reference')) . "). Please specify which booking reference you are referring to.",
+                ];
+            }
+        }
+
+        // Priority 3: Single Active Booking (Across services)
+        if ($isActionOnCommitted) {
+            if (count($eligibleBookings) === 1) {
+                $matched = $eligibleBookings[0];
+                return [
+                    'status'         => 'RESOLVED',
+                    'type'           => 'COMMITTED_BOOKING',
+                    'booking_id'     => (int) ($matched['booking_id'] ?? 0),
+                    'reference'      => $matched['reference'],
+                    'service_type'   => $matched['service_type'],
+                    'current_status' => $matched['status'],
+                    'record'         => $matched,
+                ];
+            }
+
+            if (count($eligibleBookings) > 1) {
+                $candidates = array_map(function ($b) {
+                    return [
+                        'reference'     => $b['reference'],
+                        'service_type'  => $b['service_type'],
+                        'schedule_date' => $b['schedule_date'] ?? null,
+                        'decedent_name' => $b['decedent_name'] ?? null,
+                        'status'        => $b['status'] ?? null,
+                    ];
+                }, $eligibleBookings);
+
+                return [
+                    'status'     => 'AMBIGUOUS',
+                    'type'       => 'MULTIPLE_CANDIDATES',
+                    'candidates' => $candidates,
+                    'message'    => "You currently have multiple active bookings (" . implode(', ', array_column($candidates, 'reference')) . "). Which one would you like to " . ($intent === self::INTENT_CANCEL_BOOKING ? 'cancel' : ($intent === self::INTENT_RESCHEDULE_BOOKING ? 'reschedule' : 'update')) . "?",
+                ];
+            }
+        }
+
+        // Priority 4: Active Draft
+        $isDraftIntake = in_array($intent, [
+            self::INTENT_CREATE_BOOKING,
+            self::INTENT_PROVIDE_INFO,
+            self::INTENT_PROVIDE_INFORMATION,
+            self::INTENT_UPDATE_FIELD,
+            self::INTENT_CORRECT_BOOKING_DETAILS,
+            self::INTENT_REQUEST_RECOMMENDATION,
+            self::INTENT_CONFIRM_BOOKING,
+            self::INTENT_SELECT_ALLOCATION,
+            self::INTENT_CHANGE_ALLOCATION,
+            self::INTENT_RESUME_BOOKING,
+        ], true) || empty($eligibleBookings);
+
+        if ($isDraftIntake) {
+            if ($activeDraft && !empty($activeDraft['draft_id']) && !BookingDraft::isTerminalState($activeDraft['status'] ?? '')) {
+                return [
+                    'status'         => 'DRAFT',
+                    'type'           => 'DRAFT',
+                    'draft_id'       => (int) $activeDraft['draft_id'],
+                    'reference'      => 'DFT-' . $activeDraft['draft_id'],
+                    'service_type'   => $activeDraft['service_type'] ?? ($serviceType ?? 'burial'),
+                    'current_status' => $activeDraft['status'] ?? 'DRAFT_STARTED',
+                    'record'         => $activeDraft,
+                ];
+            }
+
+            if ($intent === self::INTENT_CREATE_BOOKING || empty($eligibleBookings)) {
+                return [
+                    'status'       => 'NO_ACTIVE_CONTEXT',
+                    'type'         => 'NEW_DRAFT',
+                    'service_type' => $serviceType ?? 'burial',
+                    'message'      => 'No active draft found; ready to initiate new booking.',
+                ];
+            }
+        }
+
+        // Priority 5: Default No Active Context
+        return [
+            'status'  => 'NO_ACTIVE_CONTEXT',
+            'type'    => 'NONE',
+            'message' => 'No active booking or draft found matching the request.',
+        ];
+    }
+
+    /**
      * Process a Deterministic Structured Input Payload.
      * Main application orchestrator for BMS-3.
      * 
@@ -279,6 +523,11 @@ class BookingAgentService {
         ?string $username = null
     ): array {
         $intent = $payload['intent'] ?? self::INTENT_PROVIDE_INFO;
+        if ($intent === self::INTENT_PROVIDE_INFORMATION) {
+            $intent = self::INTENT_PROVIDE_INFO;
+        } elseif ($intent === self::INTENT_CORRECT_BOOKING_DETAILS) {
+            $intent = self::INTENT_UPDATE_FIELD;
+        }
         if (!in_array($intent, self::SUPPORTED_INTENTS, true)) {
             $intent = self::INTENT_UNCLEAR;
         }

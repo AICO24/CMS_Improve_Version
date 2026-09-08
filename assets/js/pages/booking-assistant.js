@@ -482,6 +482,8 @@
         state.missingFields = Array.isArray(data.missing_fields) ? data.missing_fields : [];
         state.isReadyForReview = Boolean(data.is_ready_for_review);
         state.decedentMatch = data.decedent_match || null;
+        state.contextResolution = data.context_resolution || null;
+        state.lastIntent = data.intent || null;
 
         // Fetch lot details if lot_id is present
         if (state.extractedData.lot_id && (!state.selectedLotDetails || state.selectedLotDetails.lot_id !== state.extractedData.lot_id)) {
