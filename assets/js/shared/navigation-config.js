@@ -113,10 +113,10 @@
             route: 'my-bookings.html',
             allowedRoles: ['admin', 'staff', 'user'],
             showInSidebar: true,
-            sidebarGroup: { admin: 'Operations', staff: 'Operations', user: 'Services' },
+            sidebarGroup: { admin: 'Operations', staff: 'Operations', user: 'Records' },
             label: 'My Bookings',
             icon: 'fa-calendar-check',
-            navigationOrder: 17,
+            navigationOrder: 30,
         },
         {
             route: 'reserve-burial-slot.html',
@@ -192,7 +192,7 @@
             sidebarGroup: 'Records',
             label: 'My Records',
             icon: 'fa-folder-open',
-            navigationOrder: 30,
+            navigationOrder: 31,
         },
 
         // ==================== FINANCE ====================
