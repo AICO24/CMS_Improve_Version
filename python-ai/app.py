@@ -997,9 +997,9 @@ def _extract_booking_deterministic(
 
     if any(phrase in msg_lower for phrase in ['cancel', 'withdraw', 'drop booking', 'cancel my booking', 'cancel reservation', 'cancel the booking']):
         intent = 'CANCEL_BOOKING'
-    elif any(phrase in msg_lower for phrase in ['reschedule', 'move the burial', 'move my burial', 'move the booking', 'move my booking', 'move the cremation', 'postpone', 'shift date', 'move from', 'change date to', 'reschedule to']):
+    elif any(phrase in msg_lower for phrase in ['reschedule', 'move the burial', 'move my burial', 'move the booking', 'move my booking', 'move the cremation', 'postpone', 'shift date', 'move from', 'change date to', 'reschedule to', 'change my booking date', 'change the booking date', 'change booking date']):
         intent = 'RESCHEDULE_BOOKING'
-    elif any(phrase in msg_lower for phrase in ['spelled', 'misspelled', 'spelling', 'typo', 'incorrect', 'surname is actually', 'name is actually', 'should be', 'last name is']):
+    elif any(phrase in msg_lower for phrase in ['spelled', 'misspelled', 'spelling', 'typo', 'incorrect', 'surname is actually', 'name is actually', 'should be', 'last name is', 'dapat', 'mali ang spelling', 'mali ang pangalan', 'correct my information', 'correct the information', 'the relationship should be', 'it should be', 'palitan ang']):
         intent = 'CORRECT_BOOKING_DETAILS'
     elif any(phrase in msg_lower for phrase in ['change my booking', 'update my booking', 'modify my booking', 'edit my booking']):
         intent = 'UPDATE_BOOKING'
@@ -1106,12 +1106,42 @@ def _extract_booking_deterministic(
 
     # 7. Extract Decedent Name & Correction Details
     if intent == 'CORRECT_BOOKING_DETAILS':
-        # "I spelled Kevin's surname incorrectly. It should be Mando."
-        slots['correction_field'] = 'decedent_name'
-        cor_match = re.search(r'(?:should be|it is|actually|surname is|name is)\s+([A-Z][a-zA-Z\.\s]{1,30})', message)
-        if cor_match:
-            slots['corrected_value'] = cor_match.group(1).strip().rstrip('.')
-            slots['decedent_name'] = slots['corrected_value']
+        # Check for relationship correction
+        rel_cor_match = re.search(r'\b(?:relationship\s+should\s+be|it\s+should\s+be|should\s+be|relasyon\s+ay)\s+(daughter|son|father|mother|brother|sister|spouse|wife|husband|relative|friend)\b', msg_lower)
+        if not rel_cor_match and any(w in msg_lower for w in ['daughter', 'son', 'father', 'mother', 'brother', 'sister']) and any(w in msg_lower for w in ['should be', 'dapat', 'instead']):
+            rel_cor_match = re.search(r'\b(daughter|son|father|mother|brother|sister|spouse|wife|husband|relative|friend)\b', msg_lower)
+
+        if rel_cor_match:
+            slots['correction_field'] = 'relationship'
+            slots['corrected_value'] = rel_cor_match.group(1).capitalize()
+            slots['relationship'] = slots['corrected_value']
+        else:
+            # Check for Tagalog dapat: "Kevin Mando dapat."
+            dapat_match = re.search(r'([A-Z][a-zA-Z\.\s]{1,35})\s+dapat\b', message)
+            if dapat_match:
+                slots['correction_field'] = 'decedent_name'
+                slots['corrected_value'] = dapat_match.group(1).strip()
+                slots['decedent_name'] = slots['corrected_value']
+            else:
+                # "I spelled Kevin's surname incorrectly. It should be Mando."
+                cor_match = re.search(r'(?:should be|it is|actually|surname is|name is)\s+([A-Z][a-zA-Z\.\s]{1,30})', message)
+                if cor_match:
+                    slots['correction_field'] = 'decedent_name'
+                    slots['corrected_value'] = cor_match.group(1).strip().rstrip('.')
+                    slots['decedent_name'] = slots['corrected_value']
+                elif 'contact' in msg_lower or 'phone' in msg_lower:
+                    phone_match = re.search(r'(\+?[0-9\s\-]{7,15})', message)
+                    if phone_match:
+                        slots['correction_field'] = 'contact_number'
+                        slots['corrected_value'] = phone_match.group(1).strip()
+                elif 'notes' in msg_lower or 'remarks' in msg_lower:
+                    notes_match = re.search(r'(?:notes|remarks)\s*(?:should be|is|to|:)?\s*(.+)$', message, re.IGNORECASE)
+                    if notes_match:
+                        slots['correction_field'] = 'notes'
+                        slots['corrected_value'] = notes_match.group(1).strip()
+                elif any(phrase in msg_lower for phrase in ['correct my information', 'correct the information', 'change something', 'wrong info']):
+                    slots['correction_field'] = None
+                    slots['corrected_value'] = None
     else:
         name_match = re.search(r'(?:decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s]{2,40})', message)
         if name_match:

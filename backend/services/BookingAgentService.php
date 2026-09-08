@@ -16,6 +16,7 @@ require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../models/Schedule.php';
 require_once __DIR__ . '/../models/DecedentRequest.php';
 require_once __DIR__ . '/../models/Cremation.php';
+require_once __DIR__ . '/BookingActionRegistry.php';
 
 class BookingAgentService {
     private BookingDraft $draftModel;
@@ -25,6 +26,7 @@ class BookingAgentService {
     private Schedule $scheduleModel;
     private DecedentRequest $decedentRequestModel;
     private Cremation $cremationModel;
+    private BookingActionRegistry $actionRegistry;
 
     // Supported Intents for BMS-3 and BMS-5 (Unified Booking Automation)
     public const INTENT_CREATE_BOOKING          = 'CREATE_BOOKING';
@@ -74,7 +76,8 @@ class BookingAgentService {
         ?AuditLog $auditLogModel = null,
         ?Schedule $scheduleModel = null,
         ?DecedentRequest $decedentRequestModel = null,
-        ?Cremation $cremationModel = null
+        ?Cremation $cremationModel = null,
+        ?BookingActionRegistry $actionRegistry = null
     ) {
         $this->draftModel = $draftModel ?? new BookingDraft();
         $this->decedentModel = $decedentModel ?? new Decedent();
@@ -83,6 +86,11 @@ class BookingAgentService {
         $this->scheduleModel = $scheduleModel ?? new Schedule();
         $this->decedentRequestModel = $decedentRequestModel ?? new DecedentRequest();
         $this->cremationModel = $cremationModel ?? new Cremation();
+        $this->actionRegistry = $actionRegistry ?? new BookingActionRegistry();
+    }
+
+    public function getActionRegistry(): BookingActionRegistry {
+        return $this->actionRegistry;
     }
 
     /**

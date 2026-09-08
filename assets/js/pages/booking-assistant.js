@@ -484,6 +484,15 @@
         state.decedentMatch = data.decedent_match || null;
         state.contextResolution = data.context_resolution || null;
         state.lastIntent = data.intent || null;
+        state.lastAction = data.action || null;
+
+        if (data.action && data.action.target_type === 'DRAFT' && Array.isArray(data.changes)) {
+            data.changes.forEach(ch => {
+                if (ch && ch.field) {
+                    state.extractedData[ch.field] = ch.new_value;
+                }
+            });
+        }
 
         // Fetch lot details if lot_id is present
         if (state.extractedData.lot_id && (!state.selectedLotDetails || state.selectedLotDetails.lot_id !== state.extractedData.lot_id)) {
