@@ -179,7 +179,9 @@ const PAGE_ROLE_ACCESS = (typeof window !== 'undefined' && window.CMS_NAVIGATION
         'dashboard_admin.html': ['admin'],
         'dashboard_staff.html': ['staff'],
         'dashboard_user.html': ['user'],
-        'book-a-service.html': ['user'],
+        'book-a-service.html': ['admin', 'staff', 'user'],
+        'booking-assistant.html': ['admin', 'staff', 'user'],
+        'my-bookings.html': ['admin', 'staff', 'user'],
         'lot-management.html': ['admin', 'staff'],
         'burial-scheduling.html': ['admin', 'staff'],
         'manage-reservations.html': ['admin', 'staff'],
@@ -364,18 +366,18 @@ const ROLE_SIDEBAR_LINKS = {
         { group: 'Services', items: [
             ['book-a-service.html', 'fa-handshake', 'Book a Service'],
             ['booking-assistant.html', 'fa-robot', 'Booking Assistant'],
-            ['my-bookings.html', 'fa-calendar-check', 'My Bookings'],
         ] },
         { group: 'Records', items: [
+            ['my-bookings.html', 'fa-calendar-check', 'My Bookings'],
             ['my-records.html', 'fa-folder-open', 'My Records'],
         ] },
         { group: 'Finance', items: [
             ['payments.html', 'fa-credit-card', 'Payments'],
             ['payment-history.html', 'fa-receipt', 'Payment History'],
         ] },
-        { group: 'System', items: [
-            ['settings.html', 'fa-gear', 'Settings'],
+        { group: 'Account', items: [
             ['profile.html', 'fa-id-card', 'Profile'],
+            ['settings.html', 'fa-gear', 'Settings'],
         ] },
     ],
 };
