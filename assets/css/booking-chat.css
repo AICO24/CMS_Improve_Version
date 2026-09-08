@@ -727,6 +727,12 @@
     background: #ffffff;
     border-top: 1px solid #f1f5f9;
     flex-shrink: 0;
+    position: relative;
+    z-index: 4;
+}
+
+.chat-prompt-suggestions:empty {
+    display: none;
 }
 
 .prompt-chip {
@@ -759,6 +765,13 @@
 
 .prompt-chip:active {
     transform: translateY(0);
+}
+
+.prompt-chip:disabled,
+.prompt-chip.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 /* ---------- PREFERENCE STATUS RIBBON ---------- */
@@ -818,6 +831,9 @@
     border-top: 1px solid #e2e8f0;
     background: #ffffff;
     align-items: center;
+    position: relative;
+    z-index: 5;
+    margin: 0;
 }
 
 .chat-input-wrapper {
@@ -861,6 +877,18 @@
     opacity: 0.7;
 }
 
+.chat-input-wrapper input[type="text"].chat-input-cue {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18) !important;
+    animation: inputCuePulse 0.4s ease;
+}
+
+@keyframes inputCuePulse {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
 .chat-send-btn {
     background: #2c5e47;
     color: #ffffff;
@@ -876,6 +904,8 @@
     font-size: 1rem;
     transition: all 0.18s ease;
     box-shadow: 0 2px 6px rgba(44, 94, 71, 0.2);
+    position: relative;
+    z-index: 2;
 }
 
 .chat-send-btn:hover:not(:disabled) {
@@ -892,6 +922,8 @@
     background: #cbd5e1;
     cursor: not-allowed;
     box-shadow: none;
+    opacity: 0.7;
+    pointer-events: auto;
 }
 
 .chat-actions {
@@ -1180,6 +1212,15 @@
 }
 
 @media (max-width: 960px) {
+    .main-content {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+    }
+    .content-area {
+        overflow: visible;
+        min-height: auto;
+    }
     .ai-chat-layout {
         flex-direction: column;
     }
@@ -1201,6 +1242,9 @@
     }
     .blueprint-ai-tips {
         display: none;
+    }
+    .ai-chat-main {
+        min-height: 520px;
     }
 }
 

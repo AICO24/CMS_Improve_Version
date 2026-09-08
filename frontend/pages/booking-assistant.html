@@ -149,15 +149,15 @@
                         </div>
 
                         <!-- Chat input controls -->
-                        <div class="chat-input-row">
+                        <form id="chatComposerForm" class="chat-input-row" autocomplete="off">
                             <div class="chat-input-wrapper">
                                 <i class="fas fa-comment-dots chat-input-icon"></i>
                                 <input type="text" id="userInputMsg" placeholder="Type your details (e.g., 'Burial for my father Juan Santos on Nov 20')..." autocomplete="off" />
                             </div>
-                            <button type="button" class="chat-send-btn" id="btnSendMessage" title="Send message">
+                            <button type="submit" class="chat-send-btn" id="btnSendMessage" title="Send message" disabled>
                                 <i class="fas fa-paper-plane"></i>
                             </button>
-                        </div>
+                        </form>
                     </div>
 
                     <!-- Right Pane: Live Booking Blueprint HUD -->

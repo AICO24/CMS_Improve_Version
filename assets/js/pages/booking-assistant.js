@@ -28,7 +28,7 @@
     };
 
     // UI Elements
-    let chatThread, userInputMsg, btnSendMessage, btnRestartDraft, promptSuggestions;
+    let chatComposerForm, chatThread, userInputMsg, btnSendMessage, btnRestartDraft, promptSuggestions;
     let blueprintStatusBadge, hudServiceVal, hudDecedentVal, hudAllocationVal, hudReviewVal;
     let hudServiceBadge, hudServiceDesc, hudDecedentName, hudRelationship, hudDate, hudAllocationLabel, hudAllocationDetails, hudLotActionBox, btnOpenLotPicker;
     let btnEditDecedent, btnEditSchedule, hudMissingAlert, hudMissingList, hudMatchCard, hudMatchText;
@@ -37,11 +37,21 @@
     let fieldEditModal, btnCloseFieldEdit, btnCancelFieldEdit, fieldEditForm, fieldEditTitle, fieldEditLabel, fieldEditInput, fieldEditHint;
 
     let activeEditField = null;
+    let isInitialized = false;
+    let cooldownTimer = null;
 
     /**
      * Initialization entry point
      */
     async function init() {
+        if (isInitialized) return;
+        isInitialized = true;
+
+        // Synchronous binding first: guarantees buttons are wired immediately upon DOM load
+        cacheDOMElements();
+        bindEvents();
+        updateSendButtonState();
+
         try {
             if (typeof requireRole === 'function') {
                 const user = await requireRole(['admin', 'staff', 'user']);
@@ -54,8 +64,6 @@
             await loadCurrentUser();
         }
 
-        cacheDOMElements();
-        bindEvents();
         await initializeSession();
     }
 
@@ -63,6 +71,7 @@
      * Cache all interactive DOM elements
      */
     function cacheDOMElements() {
+        chatComposerForm = document.getElementById('chatComposerForm');
         chatThread = document.getElementById('chatThread');
         userInputMsg = document.getElementById('userInputMsg');
         btnSendMessage = document.getElementById('btnSendMessage');
@@ -116,35 +125,61 @@
      * Bind DOM event listeners
      */
     function bindEvents() {
-        btnSendMessage.addEventListener('click', onSendMessage);
-        userInputMsg.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                onSendMessage();
-            }
-        });
+        // Authoritative form submission: handles Send click and Enter key uniformly
+        if (chatComposerForm) {
+            chatComposerForm.addEventListener('submit', onComposerSubmit);
+        } else if (btnSendMessage) {
+            btnSendMessage.addEventListener('click', onSendMessage);
+        }
 
-        btnRestartDraft.addEventListener('click', onRestartDraft);
-        btnConfirmBooking.addEventListener('click', onConfirmBooking);
+        if (userInputMsg) {
+            userInputMsg.addEventListener('input', updateSendButtonState);
+            userInputMsg.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    if (!chatComposerForm) {
+                        e.preventDefault();
+                        onSendMessage();
+                    }
+                }
+            });
+        }
 
-        btnOpenLotPicker.addEventListener('click', openLotPicker);
-        btnCloseLotPicker.addEventListener('click', closeLotPicker);
-        lotSearchFilter.addEventListener('input', filterLots);
-        lotSectionFilter.addEventListener('change', filterLots);
+        if (btnRestartDraft) btnRestartDraft.addEventListener('click', onRestartDraft);
+        if (btnConfirmBooking) btnConfirmBooking.addEventListener('click', onConfirmBooking);
 
-        btnEditDecedent.addEventListener('click', () => openFieldEditor('decedent_name'));
-        btnEditSchedule.addEventListener('click', () => openFieldEditor(state.serviceType === 'cremation' ? 'cremation_date' : 'preferred_date'));
+        if (btnOpenLotPicker) btnOpenLotPicker.addEventListener('click', openLotPicker);
+        if (btnCloseLotPicker) btnCloseLotPicker.addEventListener('click', closeLotPicker);
+        if (lotSearchFilter) lotSearchFilter.addEventListener('input', filterLots);
+        if (lotSectionFilter) lotSectionFilter.addEventListener('change', filterLots);
 
-        btnCloseFieldEdit.addEventListener('click', closeFieldEditor);
-        btnCancelFieldEdit.addEventListener('click', closeFieldEditor);
-        fieldEditForm.addEventListener('submit', onSubmitFieldEdit);
+        if (btnEditDecedent) btnEditDecedent.addEventListener('click', () => openFieldEditor('decedent_name'));
+        if (btnEditSchedule) btnEditSchedule.addEventListener('click', () => openFieldEditor(state.serviceType === 'cremation' ? 'cremation_date' : 'preferred_date'));
+
+        if (btnCloseFieldEdit) btnCloseFieldEdit.addEventListener('click', closeFieldEditor);
+        if (btnCancelFieldEdit) btnCancelFieldEdit.addEventListener('click', closeFieldEditor);
+        if (fieldEditForm) fieldEditForm.addEventListener('submit', onSubmitFieldEdit);
 
         // Close modals on backdrop click
-        lotPickerModal.addEventListener('click', (e) => {
-            if (e.target === lotPickerModal) closeLotPicker();
-        });
-        fieldEditModal.addEventListener('click', (e) => {
-            if (e.target === fieldEditModal) closeFieldEditor();
+        if (lotPickerModal) {
+            lotPickerModal.addEventListener('click', (e) => {
+                if (e.target === lotPickerModal) closeLotPicker();
+            });
+        }
+        if (fieldEditModal) {
+            fieldEditModal.addEventListener('click', (e) => {
+                if (e.target === fieldEditModal) closeFieldEditor();
+            });
+        }
+
+        // Accessibility: Dismiss modals with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' || e.key === 'Esc') {
+                if (lotPickerModal && lotPickerModal.style.display === 'flex') {
+                    closeLotPicker();
+                } else if (fieldEditModal && fieldEditModal.style.display === 'flex') {
+                    closeFieldEditor();
+                }
+            }
         });
 
         // Shell & Navigation controls (Batch A)
@@ -160,6 +195,19 @@
         if (logoutBtn && typeof api !== 'undefined' && typeof api.logout === 'function') {
             logoutBtn.addEventListener('click', () => api.logout());
         }
+    }
+
+    /**
+     * Synchronize Send button disabled state with input content & loading lifecycle
+     */
+    function updateSendButtonState() {
+        if (!btnSendMessage) return;
+        if (state.isLoading) {
+            btnSendMessage.disabled = true;
+            return;
+        }
+        const text = (userInputMsg && userInputMsg.value) ? userInputMsg.value.trim() : '';
+        btnSendMessage.disabled = text.length === 0;
     }
 
     /**
@@ -254,21 +302,57 @@
      * Quick service selector handler
      */
     async function selectService(serviceType) {
+        if (state.isLoading) return;
         state.serviceType = serviceType;
         appendUserMessage(`I want to arrange a ${serviceType} service.`);
         await sendChatTurn(`I want to arrange a ${serviceType} service.`);
     }
 
     /**
-     * Handle user sending a message
+     * Authoritative form submit handler (prevents page reload)
+     */
+    async function onComposerSubmit(e) {
+        if (e && typeof e.preventDefault === 'function') {
+            e.preventDefault();
+        }
+        await onSendMessage();
+    }
+
+    /**
+     * Handle user sending a message with validation cues & concurrency lock
      */
     async function onSendMessage() {
-        const text = userInputMsg.value.trim();
-        if (!text || state.isLoading) return;
+        if (state.isLoading) return;
 
+        const text = userInputMsg ? userInputMsg.value.trim() : '';
+        if (!text) {
+            if (userInputMsg) {
+                userInputMsg.focus();
+                userInputMsg.classList.add('chat-input-cue');
+                setTimeout(() => {
+                    if (userInputMsg) userInputMsg.classList.remove('chat-input-cue');
+                }, 600);
+            }
+            updateSendButtonState();
+            return;
+        }
+
+        // Lock loading immediately before async dispatch to prevent duplicate clicks
+        setLoading(true);
+        const originalText = userInputMsg.value;
         userInputMsg.value = '';
+        updateSendButtonState();
+
         appendUserMessage(text);
-        await sendChatTurn(text);
+        try {
+            await sendChatTurn(text);
+        } catch (err) {
+            // Restore draft text on catastrophic failure
+            if (userInputMsg && !userInputMsg.value) {
+                userInputMsg.value = originalText;
+                updateSendButtonState();
+            }
+        }
     }
 
     /**
@@ -312,20 +396,47 @@
 
                 renderPromptChips();
             } else {
-                appendAssistantMessage(res.error || 'I encountered an issue processing your request. Please try again.');
+                appendAssistantMessage(res?.error || 'I encountered an issue processing your request. Please try again.');
             }
         } catch (err) {
             removeTypingIndicator(typingEl);
-            if (err.status === 429) {
-                appendAssistantMessage('⚠️ You are sending messages too quickly. Please wait a few moments before trying again.');
+            const isRateLimit = err && (err.status === 429 || String(err.message).includes('429') || String(err.message).toLowerCase().includes('rate limit'));
+            if (isRateLimit) {
+                appendAssistantMessage('⚠️ You are sending messages too quickly. Please wait 5 seconds before trying again.');
                 if (typeof showToast === 'function') showToast('Rate limit reached. Please wait a moment.', 'warning');
+                startRateLimitCooldown(5);
             } else {
-                appendAssistantMessage('⚠️ Connection error. Please check your network and try again.');
+                appendAssistantMessage('⚠️ Connection error: ' + (err?.message || 'Please check your network and try again.'));
             }
         } finally {
             setLoading(false);
-            userInputMsg.focus();
+            updateSendButtonState();
+            if (userInputMsg) userInputMsg.focus();
         }
+    }
+
+    /**
+     * Temporary countdown cooldown for HTTP 429 rate limit
+     */
+    function startRateLimitCooldown(seconds) {
+        if (cooldownTimer) clearInterval(cooldownTimer);
+        let remaining = seconds;
+        setLoading(true);
+        if (btnSendMessage) {
+            btnSendMessage.disabled = true;
+            btnSendMessage.innerHTML = `<span style="font-size:0.75rem;">${remaining}s</span>`;
+        }
+        cooldownTimer = setInterval(() => {
+            remaining--;
+            if (remaining > 0 && btnSendMessage) {
+                btnSendMessage.innerHTML = `<span style="font-size:0.75rem;">${remaining}s</span>`;
+            } else {
+                clearInterval(cooldownTimer);
+                cooldownTimer = null;
+                setLoading(false);
+                updateSendButtonState();
+            }
+        }, 1000);
     }
 
     /**
@@ -563,18 +674,25 @@
         const span = document.createElement('span');
         span.className = 'prompt-chip';
         span.textContent = text;
-        span.addEventListener('click', handler);
+        span.addEventListener('click', (e) => {
+            if (state.isLoading) return;
+            handler(e);
+        });
         return span;
     }
 
     function sendQuickInput(prefix) {
+        if (state.isLoading) return;
         userInputMsg.value = prefix;
         userInputMsg.focus();
+        updateSendButtonState();
     }
 
     function sendQuickDate(relativeOffset) {
+        if (state.isLoading) return;
         const target = computeFutureDate(relativeOffset);
         userInputMsg.value = `Preferred date: ${target}`;
+        updateSendButtonState();
         onSendMessage();
     }
 
@@ -625,6 +743,7 @@
      * Lot Picker Modal Workflow
      */
     async function openLotPicker() {
+        document.body.style.overflow = 'hidden';
         lotPickerModal.style.display = 'flex';
         lotSearchFilter.value = '';
         lotPickerSpinner.style.display = 'block';
@@ -647,6 +766,8 @@
 
     function closeLotPicker() {
         lotPickerModal.style.display = 'none';
+        document.body.style.overflow = '';
+        if (userInputMsg) userInputMsg.focus();
     }
 
     function populateSectionFilter(lots) {
@@ -724,6 +845,7 @@
      */
     function openFieldEditor(fieldName) {
         activeEditField = fieldName;
+        document.body.style.overflow = 'hidden';
         fieldEditModal.style.display = 'flex';
 
         const isDate = fieldName.includes('date');
@@ -749,7 +871,9 @@
 
     function closeFieldEditor() {
         fieldEditModal.style.display = 'none';
+        document.body.style.overflow = '';
         activeEditField = null;
+        if (userInputMsg) userInputMsg.focus();
     }
 
     async function onSubmitFieldEdit(e) {
@@ -820,11 +944,9 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px dashed #cbd5e1;padding-bottom:12px;margin-bottom:12px;">
                     <div>
                         <span style="font-size:0.75rem;font-weight:700;color:#2c5e47;text-transform:uppercase;">Official Booking Voucher</span>
-                        <h3 style="margin:2px 0 0 0;font-size:1.15rem;color:#0f172a;">Draft #${state.draftId}</h3>
                         <h3 style="margin:2px 0 0 0;font-size:1.15rem;color:#0f172a;">${scheduleRef}</h3>
                     </div>
                     <span class="score-badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:4px 10px;font-size:0.8rem;">
-                        <i class="fas fa-clock"></i> Awaiting Review
                         <i class="fas fa-${isCommitted ? 'check-double' : 'clock'}"></i> ${isCommitted ? 'Pending Admin Review' : 'Awaiting Review'}
                     </span>
                 </div>
@@ -847,7 +969,6 @@
                     </div>
                 </div>
                 <div style="margin-top:14px;padding-top:10px;border-top:1px solid #f1f5f9;font-size:0.78rem;color:#64748b;line-height:1.4;">
-                    <i class="fas fa-shield-alt text-success"></i> Your booking details are recorded. Our administrative staff will verify decedent documentation and finalize formal record creation upon submission.
                     <i class="fas fa-shield-alt text-success"></i> Your booking details are recorded in our official scheduling system. Administrative staff will verify documents and review your schedule.
                 </div>
             </div>
@@ -929,11 +1050,16 @@
 
     function setLoading(loading) {
         state.isLoading = loading;
-        btnSendMessage.disabled = loading;
-        if (loading) {
-            btnSendMessage.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        } else {
-            btnSendMessage.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        if (btnSendMessage) {
+            btnSendMessage.disabled = loading;
+            if (loading) {
+                btnSendMessage.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            } else {
+                btnSendMessage.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            }
+        }
+        if (!loading) {
+            updateSendButtonState();
         }
     }
 
