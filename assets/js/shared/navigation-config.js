@@ -453,20 +453,8 @@
                 return;
             }
 
-            // Single-item group: render directly open without accordion chevron to avoid unnecessary dropdown clicks
-            if (section.items.length === 1) {
-                htmlChunks.push(
-                    '<div class="nav-group is-static open">' +
-                        '<div class="nav-group-header static"><span>' + section.group + '</span></div>' +
-                        '<div class="nav-group-body">' +
-                            renderLink(section.items[0]) +
-                        '</div>' +
-                    '</div>'
-                );
-                return;
-            }
-            // Module pages: auto-open ONLY the group containing the active page
-            // Dashboard pages: all groups remain closed
+            // Module pages: auto-open ONLY the parent group containing the active page
+            // Dashboard pages: ALL groups remain completely closed
             const containsActive = !isDashboard && section.items.some(function(it) {
                 return it.route === activeRoute;
             });
