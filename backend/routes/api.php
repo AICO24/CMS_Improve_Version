@@ -1795,5 +1795,44 @@ if ($path === 'bookings/mine' && $requestMethod === 'GET') {
     exit;
 }
 
+// BMS-10 / Batch 3: Action-bound confirmation for pending operational actions
+if (preg_match('/^booking-agent\/pending-actions\/(\d+)\/confirm$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $input = readRequestBody();
+    $result = $bookingAgentController->confirmPendingAction((int) $matches[1], $input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^booking-agent\/pending-actions\/(\d+)\/reject$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $bookingAgentController->rejectPendingAction((int) $matches[1], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if ($path === 'booking-agent/pending-actions/active' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $bookingAgentController->getActivePendingAction($user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if ($path === 'booking-agent/allocations/available' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $bookingAgentController->getAvailableAllocations($_GET, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 http_response_code(404);
 echo json_encode(['error' => 'Endpoint not found']);
+

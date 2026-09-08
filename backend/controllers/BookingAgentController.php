@@ -138,6 +138,71 @@ class BookingAgentController {
             return ['success' => false, 'error' => 'Message cannot be empty', 'code' => 400];
         }
 
+        $msgLower = strtolower($message);
+        $isAffirmative = (bool) preg_match('/^(yes|proceed|confirm|opo|sure|go ahead|yes please|yes proceed|confirm change|confirm reschedule|confirm cancellation)$/i', $msgLower);
+        $isNegative = (bool) preg_match('/^(no|cancel that|keep booking|huwag|stop|never mind|nevermind|keep it|don\'t proceed|do not proceed|keep my booking)$/i', $msgLower);
+
+        if ($isAffirmative || $isNegative) {
+            $pendingActionModel = new BookingPendingAction();
+            $activePending = $pendingActionModel->findAllActiveByUser($userId);
+            if (!empty($activePending)) {
+                if ($isNegative) {
+                    $actionToReject = $activePending[0];
+                    $rejectRes = $this->agentService->getActionRegistry()->rejectPendingAction((int) $actionToReject['id'], $user);
+                    return [
+                        'success'            => true,
+                        'reply'              => $rejectRes['reply'] ?? 'Action cancelled. Your booking remains unchanged.',
+                        'intent'             => 'REJECT_PENDING_ACTION',
+                        'intent_confidence'  => 1.0,
+                        'context_resolution' => null,
+                        'action'             => [
+                            'requested'   => $actionToReject['action_type'],
+                            'status'      => BookingActionRegistry::STATUS_REJECTED,
+                            'target_type' => 'COMMITTED_BOOKING',
+                            'target_id'   => $actionToReject['booking_id'],
+                            'pending_id'  => $actionToReject['id']
+                        ],
+                        'code'               => 200
+                    ];
+                }
+
+                if ($isAffirmative) {
+                    $confirmRes = $this->agentService->getActionRegistry()->confirmConversationalPendingAction(
+                        $userId,
+                        $user,
+                        $message,
+                        null
+                    );
+
+                    if (!empty($confirmRes['success'])) {
+                        return [
+                            'success'            => true,
+                            'reply'              => $confirmRes['reply'] ?? 'Action completed successfully.',
+                            'intent'             => 'CONFIRM_PENDING_ACTION',
+                            'intent_confidence'  => 1.0,
+                            'context_resolution' => null,
+                            'action'             => [
+                                'status'     => BookingActionRegistry::STATUS_EXECUTED,
+                                'pending_id' => $confirmRes['pending_action_id'] ?? null,
+                            ],
+                            'action_result'      => $confirmRes,
+                            'code'               => 200
+                        ];
+                    } else {
+                        return [
+                            'success'            => false,
+                            'reply'              => $confirmRes['reply'] ?? ($confirmRes['error'] ?? 'Could not confirm action.'),
+                            'intent'             => 'CONFIRM_PENDING_ACTION',
+                            'intent_confidence'  => 1.0,
+                            'action_status'      => $confirmRes['action_status'] ?? 'FAILED',
+                            'error'              => $confirmRes['error'] ?? null,
+                            'code'               => $confirmRes['code'] ?? 400
+                        ];
+                    }
+                }
+            }
+        }
+
         $draftId = !empty($data['draft_id']) ? (int) $data['draft_id'] : null;
         $serviceTypeInput = !empty($data['service_type']) ? (string) $data['service_type'] : null;
         $conversationContext = is_array($data['conversation_context'] ?? null) ? $data['conversation_context'] : [];
@@ -217,17 +282,19 @@ class BookingAgentController {
             default        => $rawIntent,
         };
 
-        // Authoritative backend intent normalization: do not blindly trust generic PROVIDE_INFO
+        // Authoritative backend intent normalization: specific destructive/operational actions take precedence
         $msgLower = strtolower($message);
-        if (
+        if (preg_match('/\b(change lot|different lot|switch lot|move lot|transfer lot|reassign lot|change allocation)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_CHANGE_ALLOCATION;
+        } elseif (preg_match('/\b(cancel|withdraw|drop booking|cancel my booking|cancel reservation)\b/i', $msgLower) && !preg_match('/\b(cancel that|cancel action|no cancel)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_CANCEL_BOOKING;
+        } elseif (preg_match('/\b(reschedule|move the burial|move my burial|move the booking|move my booking|move the cremation|postpone|shift date|move from|change date to|reschedule to|change my booking date|change the booking date)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_RESCHEDULE_BOOKING;
+        } elseif (
             in_array($intent, [BookingAgentService::INTENT_PROVIDE_INFORMATION, BookingAgentService::INTENT_PROVIDE_INFO, BookingAgentService::INTENT_UNCLEAR], true)
             || empty($intent)
         ) {
-            if (preg_match('/\b(cancel|withdraw|drop booking|cancel my booking|cancel reservation)\b/i', $msgLower)) {
-                $intent = BookingAgentService::INTENT_CANCEL_BOOKING;
-            } elseif (preg_match('/\b(reschedule|move the burial|move my burial|move the booking|move my booking|move the cremation|postpone|shift date|move from|change date to|reschedule to|change my booking date|change the booking date)\b/i', $msgLower)) {
-                $intent = BookingAgentService::INTENT_RESCHEDULE_BOOKING;
-            } elseif (preg_match('/\b(spelled|misspelled|spelling|typo|incorrect|surname is actually|name is actually|should be|last name is|dapat|mali ang|correct my information|correct the information|it should be|the relationship should be)\b/i', $msgLower)) {
+            if (preg_match('/\b(spelled|misspelled|spelling|typo|incorrect|surname is actually|name is actually|should be|last name is|dapat|mali ang|correct my information|correct the information|it should be|the relationship should be)\b/i', $msgLower)) {
                 $intent = BookingAgentService::INTENT_CORRECT_BOOKING_DETAILS;
             } elseif (preg_match('/\b(change my booking|update my booking|modify my booking|edit my booking|change the relationship|change the name|change the notes|change the contact)\b/i', $msgLower)) {
                 $intent = BookingAgentService::INTENT_UPDATE_BOOKING;
@@ -252,13 +319,16 @@ class BookingAgentController {
         );
 
         // 5. Execute or Route Actions via Action Registry
-        $isCorrectionOrUpdate = in_array($intent, [
+        $isActionIntent = in_array($intent, [
             BookingAgentService::INTENT_CORRECT_BOOKING_DETAILS,
             BookingAgentService::INTENT_UPDATE_BOOKING,
             BookingAgentService::INTENT_UPDATE_FIELD,
+            BookingAgentService::INTENT_RESCHEDULE_BOOKING,
+            BookingAgentService::INTENT_CANCEL_BOOKING,
+            BookingAgentService::INTENT_CHANGE_ALLOCATION,
         ], true);
 
-        if ($isCorrectionOrUpdate) {
+        if ($isActionIntent) {
             $actionResult = $this->agentService->getActionRegistry()->dispatchAction(
                 $userId,
                 $username,
@@ -316,6 +386,8 @@ class BookingAgentController {
                 'intent_confidence'    => $confidence,
                 'context_resolution'   => $contextResolution,
                 'action'               => $actionResult['action'] ?? null,
+                'pending_action'       => $actionResult['pending_action'] ?? null,
+                'available_lots'       => $actionResult['available_lots'] ?? [],
                 'changes'              => $actionResult['changes'] ?? [],
                 'deferred_intent'      => $actionResult['deferred_intent'] ?? null,
                 'deferred_field'       => $actionResult['deferred_field'] ?? null,
@@ -329,14 +401,8 @@ class BookingAgentController {
             ];
         }
 
-        // Check if intent is a specialized action targeting a committed booking (deferred to later batches)
-        $isCommittedSpecializedAction = in_array($intent, [
-            BookingAgentService::INTENT_RESCHEDULE_BOOKING,
-            BookingAgentService::INTENT_CANCEL_BOOKING,
-            BookingAgentService::INTENT_CHECK_BOOKING_STATUS,
-        ], true) && $contextResolution['type'] !== 'DRAFT';
-
-        if ($isCommittedSpecializedAction) {
+        // Informational intent: CHECK_BOOKING_STATUS
+        if ($intent === BookingAgentService::INTENT_CHECK_BOOKING_STATUS && ($contextResolution['type'] ?? '') !== 'DRAFT') {
             if ($contextResolution['status'] === 'AMBIGUOUS') {
                 $replyMessage = $contextResolution['message'];
             } elseif ($contextResolution['status'] === 'NOT_FOUND') {
@@ -344,19 +410,12 @@ class BookingAgentController {
             } elseif ($contextResolution['status'] === 'RESOLVED') {
                 $ref = $contextResolution['reference'];
                 $curStatus = $contextResolution['current_status'] ?? 'Active';
-                if ($intent === BookingAgentService::INTENT_RESCHEDULE_BOOKING) {
-                    $targetDate = $slots['target_date'] ?? $slots['preferred_date'] ?? $slots['cremation_date'] ?? 'the requested date';
-                    $replyMessage = "I have identified your booking {$ref} ({$curStatus}). You requested to reschedule to {$targetDate}. (Action deferred to specialized scheduling batch).";
-                } elseif ($intent === BookingAgentService::INTENT_CANCEL_BOOKING) {
-                    $replyMessage = "I have identified your booking {$ref} ({$curStatus}). You requested to cancel this reservation. (Action deferred to specialized cancellation batch).";
-                } elseif ($intent === BookingAgentService::INTENT_CHECK_BOOKING_STATUS) {
-                    $rec = $contextResolution['record'] ?? [];
-                    $decName = !empty($rec['decedent_name']) ? " for {$rec['decedent_name']}" : "";
-                    $dateStr = !empty($rec['schedule_date']) ? " scheduled on {$rec['schedule_date']}" : "";
-                    $replyMessage = "Your booking {$ref}{$decName} is currently {$curStatus}{$dateStr}.";
-                }
+                $rec = $contextResolution['record'] ?? [];
+                $decName = !empty($rec['decedent_name']) ? " for {$rec['decedent_name']}" : "";
+                $dateStr = !empty($rec['schedule_date']) ? " scheduled on {$rec['schedule_date']}" : "";
+                $replyMessage = "Your booking {$ref}{$decName} is currently {$curStatus}{$dateStr}.";
             } elseif ($contextResolution['status'] === 'NO_ACTIVE_CONTEXT') {
-                $replyMessage = "You do not have any active bookings to " . strtolower(str_replace('_', ' ', $intent)) . ".";
+                $replyMessage = "You do not have any active bookings to check.";
             }
 
             return [
@@ -367,7 +426,7 @@ class BookingAgentController {
                 'context_resolution'   => $contextResolution,
                 'action'               => [
                     'requested'   => $intent,
-                    'status'      => BookingActionRegistry::STATUS_DEFERRED,
+                    'status'      => 'INFORMATIONAL',
                     'target_type' => $contextResolution['type'] ?? 'COMMITTED_BOOKING',
                     'target_id'   => $contextResolution['booking_id'] ?? null,
                     'reference'   => $contextResolution['reference'] ?? null,
@@ -1006,5 +1065,70 @@ class BookingAgentController {
                 'code'    => 500
             ];
         }
+    }
+
+    /**
+     * POST /api/booking-agent/pending-actions/{id}/confirm
+     * Action-bound confirmation endpoint with execution-time revalidation.
+     */
+    public function confirmPendingAction(int $actionId, array $input, $user): array {
+        $token = (string) ($input['token'] ?? $input['confirmation_token'] ?? '');
+        if ($token === '') {
+            return ['success' => false, 'error' => 'Confirmation token is required.', 'code' => 400];
+        }
+
+        $result = $this->agentService->getActionRegistry()->confirmPendingAction($actionId, $token, $user);
+        return array_merge(['code' => $result['code'] ?? 200], $result);
+    }
+
+    /**
+     * POST /api/booking-agent/pending-actions/{id}/reject
+     * Explicitly reject a pending action.
+     */
+    public function rejectPendingAction(int $actionId, $user): array {
+        $result = $this->agentService->getActionRegistry()->rejectPendingAction($actionId, $user);
+        return array_merge(['code' => $result['code'] ?? 200], $result);
+    }
+
+    /**
+     * GET /api/booking-agent/pending-actions/active
+     * List active pending actions for the authenticated user.
+     */
+    public function getActivePendingAction($user): array {
+        [$userId] = $this->resolveUserContext($user);
+        if ($userId <= 0) {
+            return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
+        }
+
+        $model = new BookingPendingAction();
+        $actions = $model->findAllActiveByUser($userId);
+        return [
+            'success'         => true,
+            'pending_actions' => $actions,
+            'code'            => 200
+        ];
+    }
+
+    /**
+     * GET /api/booking-agent/allocations/available
+     * Query available lots for allocation swap.
+     */
+    public function getAvailableAllocations(array $query, $user): array {
+        [$userId] = $this->resolveUserContext($user);
+        if ($userId <= 0) {
+            return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
+        }
+
+        $sectionId = !empty($query['section_id']) ? (int) $query['section_id'] : null;
+        $limit = !empty($query['limit']) ? (int) $query['limit'] : 10;
+
+        $allocationService = new BookingAllocationService();
+        $lots = $allocationService->getEligibleAvailableLots($sectionId, $limit);
+
+        return [
+            'success' => true,
+            'lots'    => $lots,
+            'code'    => 200
+        ];
     }
 }

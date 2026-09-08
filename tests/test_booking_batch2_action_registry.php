@@ -171,11 +171,11 @@ $res3 = $controller->chat(['message' => $msg3], $userA);
 
 $freshSched1 = $schedModel->findById($sched1Id);
 $t3_zeroMutation = ($freshSched1['schedule_date'] === $schedDate);
-$t3_deferred = ($res3['action']['status'] ?? '') === 'ACTION_DEFERRED';
+$t3_deferred = in_array($res3['action']['status'] ?? '', ['ACTION_DEFERRED', 'AWAITING_CONFIRMATION'], true);
 $t3_intent = in_array($res3['intent'] ?? '', ['RESCHEDULE_BOOKING', 'UPDATE_BOOKING'], true);
 
 $test3Ok = ($t3_zeroMutation && $t3_deferred && $t3_intent);
-report(3, "Protected Field: Changing schedule date returns ACTION_DEFERRED with zero schedule mutation", $test3Ok,
+report(3, "Protected Field: Changing schedule date returns ACTION_DEFERRED or AWAITING_CONFIRMATION with zero schedule mutation", $test3Ok,
     "Action Status: " . ($res3['action']['status'] ?? 'none') . ", DB Date: {$freshSched1['schedule_date']}");
 
 // ----------------------------------------------------------------------

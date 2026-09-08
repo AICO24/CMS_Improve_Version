@@ -24,7 +24,8 @@
         selectedLotDetails: null,
         isLoading: false,
         availableLots: [],
-        filteredLots: []
+        filteredLots: [],
+        pendingAction: null
     };
 
     // UI Elements
@@ -401,6 +402,10 @@
             if (res && res.success) {
                 applyAuthoritativeState(res);
 
+                if (res.pending_action) {
+                    state.pendingAction = res.pending_action;
+                }
+
                 // Assistant reply
                 if (res.reply) {
                     appendAssistantMessage(res.reply);
@@ -416,7 +421,17 @@
                     appendAssistantMessage(`Please choose an available burial lot from our cemetery map or browse our available lots list.`);
                 }
 
-                renderPromptChips();
+                if (res.pending_action) {
+                    renderPendingActionChips(res.pending_action);
+                } else if (Array.isArray(res.available_lots) && res.available_lots.length > 0) {
+                    const lotChips = res.available_lots.map(l => ({
+                        text: `📍 Lot #${l.lot_number} (${l.section_name})`,
+                        action: () => sendChatTurn(`Reassign to Lot #${l.lot_number}`)
+                    }));
+                    renderPromptChips(lotChips);
+                } else {
+                    renderPromptChips();
+                }
             } else {
                 appendAssistantMessage(res?.error || 'I encountered an issue processing your request. Please try again.');
             }
@@ -485,6 +500,9 @@
         state.contextResolution = data.context_resolution || null;
         state.lastIntent = data.intent || null;
         state.lastAction = data.action || null;
+        if (data.pending_action !== undefined) {
+            state.pendingAction = data.pending_action;
+        }
 
         if (data.action && data.action.target_type === 'DRAFT' && Array.isArray(data.changes)) {
             data.changes.forEach(ch => {
@@ -679,6 +697,11 @@
             return;
         }
 
+        if (state.pendingAction && state.pendingAction.status === 'AWAITING_CONFIRMATION') {
+            renderPendingActionChips(state.pendingAction);
+            return;
+        }
+
         const chips = [];
 
         if (state.status === 'COMMITTED' || state.status === 'AWAITING_CONFIRM') {
@@ -710,6 +733,79 @@
             const btn = createChip(chip.text, chip.action);
             promptSuggestions.appendChild(btn);
         });
+    }
+
+    function renderPendingActionChips(pendingAction) {
+        promptSuggestions.innerHTML = '';
+        const chips = [
+            {
+                text: '✅ Yes, Proceed',
+                action: () => confirmPendingAction(pendingAction)
+            },
+            {
+                text: '❌ No, Keep Booking',
+                action: () => rejectPendingAction(pendingAction)
+            }
+        ];
+        chips.forEach(chip => {
+            const btn = createChip(chip.text, chip.action);
+            btn.style.fontWeight = '600';
+            promptSuggestions.appendChild(btn);
+        });
+    }
+
+    async function confirmPendingAction(pendingAction) {
+        if (!pendingAction || state.isLoading) return;
+        setLoading(true);
+        const typingEl = appendTypingIndicator();
+        try {
+            const res = await api.request(`booking-agent/pending-actions/${pendingAction.id}/confirm`, {
+                method: 'POST',
+                body: {
+                    token: pendingAction.confirmation_token,
+                    action_type: pendingAction.action_type,
+                    booking_id: pendingAction.booking_id
+                }
+            });
+            removeTypingIndicator(typingEl);
+            if (res && res.success) {
+                state.pendingAction = null;
+                appendAssistantMessage(`✅ ${res.reply || 'Action confirmed and executed successfully.'}`);
+                if (typeof showToast === 'function') showToast('Booking updated successfully!', 'success');
+                updateBlueprintHUD();
+                renderPromptChips();
+            } else {
+                appendAssistantMessage(`⚠️ ${res?.error || 'Could not execute the confirmed action.'}`);
+                renderPromptChips();
+            }
+        } catch (err) {
+            removeTypingIndicator(typingEl);
+            appendAssistantMessage(`⚠️ Failed to confirm action: ${err?.message || 'Please try again.'}`);
+            renderPromptChips();
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function rejectPendingAction(pendingAction) {
+        if (!pendingAction || state.isLoading) return;
+        setLoading(true);
+        const typingEl = appendTypingIndicator();
+        try {
+            const res = await api.request(`booking-agent/pending-actions/${pendingAction.id}/reject`, {
+                method: 'POST'
+            });
+            removeTypingIndicator(typingEl);
+            state.pendingAction = null;
+            appendAssistantMessage(`Action cancelled. Your booking remains unchanged.`);
+            renderPromptChips();
+        } catch (err) {
+            removeTypingIndicator(typingEl);
+            appendAssistantMessage(`⚠️ Failed to reject action: ${err?.message || 'Please try again.'}`);
+            renderPromptChips();
+        } finally {
+            setLoading(false);
+        }
     }
 
     function createChip(text, handler) {

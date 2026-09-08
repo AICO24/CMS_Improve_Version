@@ -2,21 +2,32 @@
 /**
  * BookingActionRegistry
  * 
- * Controlled Action Registry for Booking Automation V2 (Batch 2).
+ * Controlled Action Registry for Booking Automation V2 (Batches 2 & 3).
  * 
  * Responsibilities:
  * 1. Defines allowed actions, field mutability matrix, and state guards.
  * 2. Normalizes semantic/natural language field references to canonical columns.
  * 3. Enforces execution-time ownership authorization and lifecycle status checks.
- * 4. Executes mutations inside atomic database transactions.
- * 5. Provides idempotency guards preventing redundant writes and duplicate audit entries.
- * 6. Generates standardized audit logs with source = 'AI_BOOKING_ASSISTANT'.
- * 7. Returns structured action results and human-friendly response messages.
+ * 4. Staging orchestrator for operational actions (Reschedule, Cancel, Allocation Change).
+ * 5. Action-bound confirmation gate with cryptographic tokens and payload hashes.
+ * 6. Execution-time revalidation: re-fetches rows, re-checks conflict, locks rows.
+ * 7. Delegates domain mutations to dedicated domain services (BookingRescheduleService,
+ *    BookingCancellationService, BookingAllocationService).
+ * 8. Provides idempotency guards preventing redundant writes and duplicate audit entries.
+ * 9. Emits standardized audit logs with source = 'AI_BOOKING_ASSISTANT'.
+ * 10. Returns structured action results and human-friendly response messages.
  */
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../models/BookingDraft.php';
+require_once __DIR__ . '/../models/BookingPendingAction.php';
+require_once __DIR__ . '/../models/Schedule.php';
+require_once __DIR__ . '/../models/Cremation.php';
+require_once __DIR__ . '/../models/Lot.php';
+require_once __DIR__ . '/BookingRescheduleService.php';
+require_once __DIR__ . '/BookingCancellationService.php';
+require_once __DIR__ . '/BookingAllocationService.php';
 
 class BookingActionRegistry {
     // Action Identifiers
@@ -24,6 +35,9 @@ class BookingActionRegistry {
     public const ACTION_CORRECT_DRAFT_FIELD   = 'CORRECT_DRAFT_FIELD';
     public const ACTION_UPDATE_BOOKING_FIELD  = 'UPDATE_BOOKING_FIELD';
     public const ACTION_CORRECT_BOOKING_FIELD = 'CORRECT_BOOKING_FIELD';
+    public const ACTION_RESCHEDULE_BOOKING    = 'RESCHEDULE_BOOKING';
+    public const ACTION_CANCEL_BOOKING        = 'CANCEL_BOOKING';
+    public const ACTION_CHANGE_ALLOCATION     = 'CHANGE_ALLOCATION';
 
     // Execution Statuses
     public const STATUS_EXECUTED                   = 'EXECUTED';
@@ -34,6 +48,15 @@ class BookingActionRegistry {
     public const STATUS_UNAUTHORIZED               = 'UNAUTHORIZED';
     public const STATUS_NOT_FOUND                  = 'NOT_FOUND';
     public const STATUS_INVALID_FIELD              = 'INVALID_FIELD';
+    public const STATUS_AWAITING_CONFIRMATION      = 'AWAITING_CONFIRMATION';
+    public const STATUS_CONFIRMED                  = 'CONFIRMED';
+    public const STATUS_EXECUTING                  = 'EXECUTING';
+    public const STATUS_FAILED                     = 'FAILED';
+    public const STATUS_REJECTED                   = 'REJECTED';
+    public const STATUS_EXPIRED                    = 'EXPIRED';
+    public const STATUS_SUPERSEDED                 = 'SUPERSEDED';
+    public const STATUS_ALREADY_EXECUTED           = 'ACTION_ALREADY_EXECUTED';
+    public const STATUS_IN_PROGRESS                = 'ACTION_IN_PROGRESS';
 
     // Field Mutability Categories
     public const CATEGORY_A_SAFE_FIELDS = [
@@ -73,19 +96,45 @@ class BookingActionRegistry {
 
     private PDO $db;
     private AuditLog $auditLogModel;
+    private BookingPendingAction $pendingActionModel;
+    private BookingRescheduleService $rescheduleService;
+    private BookingCancellationService $cancellationService;
+    private BookingAllocationService $allocationService;
 
-    public function __construct(?PDO $db = null, ?AuditLog $auditLogModel = null) {
+    public function __construct(
+        ?PDO $db = null,
+        ?AuditLog $auditLogModel = null,
+        ?BookingPendingAction $pendingActionModel = null,
+        ?BookingRescheduleService $rescheduleService = null,
+        ?BookingCancellationService $cancellationService = null,
+        ?BookingAllocationService $allocationService = null
+    ) {
         $this->db = $db ?? Database::getInstance()->getConnection();
         $this->auditLogModel = $auditLogModel ?? new AuditLog();
+        $this->pendingActionModel = $pendingActionModel ?? new BookingPendingAction($this->db);
+        $this->rescheduleService = $rescheduleService ?? new BookingRescheduleService($this->db, null, null, null, $this->auditLogModel);
+        $this->cancellationService = $cancellationService ?? new BookingCancellationService($this->db, null, null, null, null, $this->auditLogModel);
+        $this->allocationService = $allocationService ?? new BookingAllocationService($this->db, null, null, $this->auditLogModel);
+    }
+
+    public function getPendingActionModel(): BookingPendingAction {
+        return $this->pendingActionModel;
+    }
+
+    public function getRescheduleService(): BookingRescheduleService {
+        return $this->rescheduleService;
+    }
+
+    public function getCancellationService(): BookingCancellationService {
+        return $this->cancellationService;
+    }
+
+    public function getAllocationService(): BookingAllocationService {
+        return $this->allocationService;
     }
 
     /**
      * Normalize natural language / AI field names to canonical database column names.
-     *
-     * @param string|null $rawField
-     * @param string      $message
-     * @param array       $slots
-     * @return array [canonical_field, category, is_ambiguous]
      */
     public function normalizeField(?string $rawField, string $message = '', array $slots = []): array {
         $msgLower = strtolower(trim($message));
@@ -121,7 +170,7 @@ class BookingActionRegistry {
         if (
             $fieldHint === 'relationship'
             || preg_match('/\b(relationship|relasyon)\b/i', $msgLower)
-            || preg_match('/\b(daughter|son|father|mother|brother|sister|spouse|wife|husband)\b/i', $msgLower)
+            || preg_match('/\b(daughter|son|father|mother|brother|sister|spouse|wife|husband|niece|nephew|aunt|uncle)\b/i', $msgLower)
         ) {
             return [
                 'canonical_field' => 'relationship',
@@ -176,7 +225,7 @@ class BookingActionRegistry {
             ];
         }
 
-        // If generic correction without specific field (e.g. "Correct my information")
+        // If generic correction without specific field
         return [
             'canonical_field' => null,
             'category'        => null,
@@ -185,53 +234,52 @@ class BookingActionRegistry {
     }
 
     /**
-     * Extract the replacement value for a canonical field from slots or user message.
-     *
-     * @param string $canonicalField
-     * @param array  $slots
-     * @param string $message
-     * @return mixed|null
+     * Extract replacement value for a canonical field.
      */
     public function extractReplacementValue(string $canonicalField, array $slots = [], string $message = '') {
-        // Direct slot value check
         if (!empty($slots['corrected_value'])) {
             return trim((string) $slots['corrected_value']);
         }
-        if (!empty($slots[$canonicalField])) {
-            return is_string($slots[$canonicalField]) ? trim($slots[$canonicalField]) : $slots[$canonicalField];
-        }
 
-        // Regex heuristics based on field type
         switch ($canonicalField) {
             case 'relationship':
-                if (preg_match('/\b(?:should be|it is|change to|to)\s+(son|daughter|father|mother|brother|sister|spouse|wife|husband|relative|friend)\b/i', $message, $m)) {
-                    return ucfirst(strtolower($m[1]));
+                if (!empty($slots['relationship'])) {
+                    return trim((string) $slots['relationship']);
                 }
-                if (preg_match('/\b(son|daughter|father|mother|brother|sister|spouse|wife|husband)\b/i', $message, $m)) {
+                if (preg_match('/\b(daughter|son|father|mother|brother|sister|spouse|wife|husband|niece|nephew|aunt|uncle|granddaughter|grandson)\b/i', $message, $m)) {
                     return ucfirst(strtolower($m[1]));
                 }
                 break;
 
             case 'decedent_name':
-                // "Kevin Mando dapat." or "It should be Kevin Mando"
-                if (preg_match('/([A-Z][a-zA-Z\.\s]{1,40})\s+dapat\b/i', $message, $m)) {
-                    return trim($m[1]);
+                if (!empty($slots['decedent_name'])) {
+                    return trim((string) $slots['decedent_name']);
                 }
-                if (preg_match('/\b(?:should be|it is|actually|surname is|name is|to)\s+([A-Z][a-zA-Z\.\s]{1,40})/i', $message, $m)) {
+                if (preg_match('/^(.+?)\s+dapat(?:\.|\b)/iu', $message, $m)) {
                     $cand = trim($m[1]);
-                    $cand = preg_replace('/\s+(?:not|instead|and|burial|cremation).*$/i', '', $cand);
-                    return trim($cand);
+                    if (str_word_count($cand) >= 1 && strlen($cand) >= 3) {
+                        return $cand;
+                    }
                 }
-                break;
-
-            case 'notes':
-                if (preg_match('/\b(?:notes|remarks)\s*(?:should be|is|to|:)?\s*(.+)$/i', $message, $m)) {
+                if (preg_match('/\b(?:name is actually|should be|name is|surname is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i', $message, $m)) {
                     return trim($m[1]);
                 }
                 break;
 
             case 'contact_number':
-                if (preg_match('/(\+?[0-9\s\-]{7,15})/', $message, $m)) {
+                if (!empty($slots['contact_number'])) {
+                    return trim((string) $slots['contact_number']);
+                }
+                if (preg_match('/(\+?63\d{10}|09\d{9})/', $message, $m)) {
+                    return $m[1];
+                }
+                break;
+
+            case 'notes':
+                if (!empty($slots['notes'])) {
+                    return trim((string) $slots['notes']);
+                }
+                if (preg_match('/\b(?:note|notes|remarks?):\s*(.+)$/i', $message, $m)) {
                     return trim($m[1]);
                 }
                 break;
@@ -241,15 +289,7 @@ class BookingActionRegistry {
     }
 
     /**
-     * Dispatch and execute an action safely within the registry.
-     *
-     * @param int         $userId Authenticated user ID
-     * @param string|null $username Authenticated username
-     * @param string      $intent Extracted intent
-     * @param array       $contextResolution Resolved context from Batch 1
-     * @param array       $slots Extracted slots
-     * @param string      $message Original user message
-     * @return array Structured action result
+     * Main dispatch entry point.
      */
     public function dispatchAction(
         int $userId,
@@ -259,7 +299,6 @@ class BookingActionRegistry {
         array $slots,
         string $message
     ): array {
-        // 1. Verify Context Resolution
         $contextStatus = $contextResolution['status'] ?? 'NO_ACTIVE_CONTEXT';
         $targetType = $contextResolution['type'] ?? null;
 
@@ -291,7 +330,20 @@ class BookingActionRegistry {
             ];
         }
 
-        // 2. Field Normalization
+        // Route Batch 3 Intent Actions
+        if ($intent === self::ACTION_RESCHEDULE_BOOKING) {
+            return $this->stageRescheduleAction($userId, $username, $contextResolution, $slots, $message);
+        }
+
+        if ($intent === self::ACTION_CANCEL_BOOKING) {
+            return $this->stageCancelAction($userId, $username, $contextResolution, $slots, $message);
+        }
+
+        if ($intent === self::ACTION_CHANGE_ALLOCATION) {
+            return $this->stageAllocationChangeAction($userId, $username, $contextResolution, $slots, $message);
+        }
+
+        // Generic Field Update & Correction (Batch 2)
         $rawField = $slots['correction_field'] ?? ($slots['field'] ?? null);
         $norm = $this->normalizeField($rawField, $message, $slots);
 
@@ -342,7 +394,7 @@ class BookingActionRegistry {
             ];
         }
 
-        // 3. Dispatch based on Target Type
+        // Dispatch Category A Field Updates
         if ($targetType === 'DRAFT' || $contextStatus === 'DRAFT') {
             $draftId = (int) ($contextResolution['draft_id'] ?? 0);
             return $this->executeDraftFieldUpdate(
@@ -351,426 +403,881 @@ class BookingActionRegistry {
                 $draftId,
                 $canonicalField,
                 $replacementValue,
-                $intent
+                $contextResolution
             );
         }
 
-        if ($targetType === 'COMMITTED_BOOKING') {
-            $bookingId = (int) ($contextResolution['booking_id'] ?? 0);
-            $serviceType = $contextResolution['service_type'] ?? 'burial';
-            $reference = $contextResolution['reference'] ?? "BUR-{$bookingId}";
+        return $this->executeCommittedBookingFieldUpdate(
+            $userId,
+            $username,
+            $contextResolution,
+            $canonicalField,
+            $replacementValue,
+            $slots
+        );
+    }
 
-            return $this->executeCommittedBookingFieldUpdate(
-                $userId,
-                $username,
-                $bookingId,
-                $serviceType,
-                $reference,
-                $canonicalField,
-                $replacementValue,
-                $intent
-            );
+    // =========================================================================
+    // BATCH 3 — TRANSACTIONAL ACTION STAGING
+    // =========================================================================
+
+    /**
+     * Stage RESCHEDULE_BOOKING action.
+     */
+    public function stageRescheduleAction(
+        int $userId,
+        ?string $username,
+        array $contextResolution,
+        array $slots,
+        string $message
+    ): array {
+        $targetType = $contextResolution['type'] ?? 'COMMITTED_BOOKING';
+
+        // Draft Reschedule: update draft directly
+        if ($targetType === 'DRAFT') {
+            $draftId = (int) ($contextResolution['draft_id'] ?? 0);
+            $targetDate = $slots['target_date'] ?? $slots['preferred_date'] ?? $slots['cremation_date'] ?? null;
+            if (!$targetDate && preg_match('/\b(20\d{2}-\d{2}-\d{2})\b/', $message, $m)) {
+                $targetDate = $m[1];
+            }
+            if (!$targetDate) {
+                return [
+                    'action_status' => self::STATUS_CLARIFICATION_REQUIRED,
+                    'reply'         => 'What date would you like to set for your booking draft?',
+                    'action'        => null,
+                    'changes'       => []
+                ];
+            }
+
+            $dateField = (($contextResolution['service_type'] ?? '') === 'cremation') ? 'cremation_date' : 'preferred_date';
+            return $this->executeDraftFieldUpdate($userId, $username, $draftId, $dateField, $targetDate, $contextResolution);
         }
+
+        // Committed Booking Reschedule
+        $bookingId = (int) ($contextResolution['booking_id'] ?? 0);
+        $serviceType = strtolower($contextResolution['service_type'] ?? 'burial');
+        $reference = $contextResolution['reference'] ?? "BUR-{$bookingId}";
+        $rec = $contextResolution['record'] ?? [];
+        $currentStatus = $contextResolution['current_status'] ?? ($rec['status'] ?? 'Pending');
+
+        // Check terminal state
+        if (in_array(strtolower($currentStatus), self::IMMUTABLE_COMMITTED_STATES, true)) {
+            return [
+                'action_status' => self::STATUS_NOT_ALLOWED_FOR_STATE,
+                'reply'         => "Booking {$reference} is currently {$currentStatus} and cannot be rescheduled.",
+                'action'        => [
+                    'requested'   => self::ACTION_RESCHEDULE_BOOKING,
+                    'status'      => self::STATUS_NOT_ALLOWED_FOR_STATE,
+                    'target_type' => 'COMMITTED_BOOKING',
+                    'target_id'   => $bookingId,
+                    'reference'   => $reference
+                ],
+                'changes'       => []
+            ];
+        }
+
+        // Extract target date
+        $targetDate = $slots['target_date'] ?? $slots['preferred_date'] ?? $slots['cremation_date'] ?? null;
+        if (!$targetDate && preg_match('/\b(20\d{2}-\d{2}-\d{2})\b/', $message, $m)) {
+            $targetDate = $m[1];
+        }
+        if (!$targetDate) {
+            return [
+                'action_status' => self::STATUS_CLARIFICATION_REQUIRED,
+                'reply'         => "What date would you like to move booking {$reference} to?",
+                'action'        => null,
+                'changes'       => []
+            ];
+        }
+
+        // Validate date
+        $val = $this->rescheduleService->validateScheduleDate($targetDate, $serviceType);
+        if (!$val['valid']) {
+            return [
+                'action_status' => self::STATUS_CLARIFICATION_REQUIRED,
+                'reply'         => $val['error'],
+                'action'        => null,
+                'changes'       => []
+            ];
+        }
+        $normalizedDate = $val['date'];
+        $targetTime = $slots['schedule_time'] ?? ($rec['schedule_time'] ?? null);
+
+        // Check idempotency
+        $currentDate = $rec['schedule_date'] ?? null;
+        if ($currentDate === $normalizedDate && (string)($rec['schedule_time'] ?? '') === (string)($targetTime ?? '')) {
+            return [
+                'action_status' => self::STATUS_NO_CHANGE,
+                'reply'         => "Booking {$reference} is already scheduled for {$normalizedDate}.",
+                'action'        => [
+                    'requested'   => self::ACTION_RESCHEDULE_BOOKING,
+                    'status'      => self::STATUS_NO_CHANGE,
+                    'target_type' => 'COMMITTED_BOOKING',
+                    'target_id'   => $bookingId,
+                    'reference'   => $reference
+                ],
+                'changes'       => []
+            ];
+        }
+
+        // Staging preliminary conflict check
+        if ($serviceType === 'burial' && !empty($rec['lot_id'])) {
+            $conflict = (new Schedule())->checkConflict((int)$rec['lot_id'], $normalizedDate, $targetTime);
+            if ($conflict) {
+                return [
+                    'action_status' => self::STATUS_NOT_ALLOWED_FOR_STATE,
+                    'reply'         => "The requested date {$normalizedDate} is not available for this lot. Please select another date.",
+                    'action'        => null,
+                    'changes'       => []
+                ];
+            }
+        }
+
+        $payload = [
+            'action_type'       => self::ACTION_RESCHEDULE_BOOKING,
+            'booking_type'      => $serviceType,
+            'booking_id'        => $bookingId,
+            'booking_reference' => $reference,
+            'old_date'          => $currentDate,
+            'new_date'          => $normalizedDate,
+            'old_time'          => $rec['schedule_time'] ?? null,
+            'new_time'          => $targetTime,
+        ];
+
+        // Create pending action (supersedes any existing awaiting actions for this booking)
+        $pending = $this->pendingActionModel->createPendingAction(
+            $userId,
+            $serviceType,
+            $bookingId,
+            self::ACTION_RESCHEDULE_BOOKING,
+            $payload
+        );
+
+        $oldDateStr = $currentDate ? date('F j, Y', strtotime($currentDate)) : 'the current date';
+        $newDateStr = date('F j, Y', strtotime($normalizedDate));
+        $reply = "I found your {$serviceType} booking {$reference}. You want to move it from {$oldDateStr} to {$newDateStr}. Would you like me to proceed?";
 
         return [
-            'action_status' => self::STATUS_NOT_FOUND,
-            'reply'         => 'Unable to resolve the target booking context for this update.',
-            'action'        => null,
-            'changes'       => []
+            'action_status'     => self::STATUS_AWAITING_CONFIRMATION,
+            'intent'            => self::ACTION_RESCHEDULE_BOOKING,
+            'booking_reference' => $reference,
+            'reply'             => $reply,
+            'pending_action'    => $pending,
+            'action'            => [
+                'requested'   => self::ACTION_RESCHEDULE_BOOKING,
+                'status'      => self::STATUS_AWAITING_CONFIRMATION,
+                'target_type' => 'COMMITTED_BOOKING',
+                'target_id'   => $bookingId,
+                'reference'   => $reference,
+                'pending_id'  => $pending['id'],
+            ],
+            'changes'           => []
         ];
     }
 
     /**
-     * Execute a Safe Field Update on an Active Draft.
-     *
-     * @param int         $userId
-     * @param string|null $username
-     * @param int         $draftId
-     * @param string      $field
-     * @param mixed       $newValue
-     * @param string      $intent
-     * @return array
+     * Stage CANCEL_BOOKING action.
      */
-    public function executeDraftFieldUpdate(
+    public function stageCancelAction(
+        int $userId,
+        ?string $username,
+        array $contextResolution,
+        array $slots,
+        string $message
+    ): array {
+        $targetType = $contextResolution['type'] ?? 'COMMITTED_BOOKING';
+
+        // Draft Cancellation: cancel draft directly
+        if ($targetType === 'DRAFT') {
+            $draftId = (int) ($contextResolution['draft_id'] ?? 0);
+            $draftModel = new BookingDraft();
+            $draftModel->transitionStatus($draftId, BookingDraft::STATUS_CANCELLED);
+            return [
+                'action_status' => self::STATUS_EXECUTED,
+                'reply'         => "Your active booking draft (#{$draftId}) has been cancelled.",
+                'action'        => [
+                    'requested'   => self::ACTION_CANCEL_BOOKING,
+                    'status'      => self::STATUS_EXECUTED,
+                    'target_type' => 'DRAFT',
+                    'target_id'   => $draftId
+                ],
+                'changes'       => [['field' => 'status', 'old_value' => 'DRAFT', 'new_value' => 'CANCELLED']]
+            ];
+        }
+
+        // Committed Booking Cancellation
+        $bookingId = (int) ($contextResolution['booking_id'] ?? 0);
+        $serviceType = strtolower($contextResolution['service_type'] ?? 'burial');
+        $reference = $contextResolution['reference'] ?? "BUR-{$bookingId}";
+        $rec = $contextResolution['record'] ?? [];
+        $currentStatus = $contextResolution['current_status'] ?? ($rec['status'] ?? 'Pending');
+
+        // Check if already cancelled (idempotency)
+        if (strtolower($currentStatus) === 'cancelled') {
+            return [
+                'action_status' => self::STATUS_NO_CHANGE,
+                'reply'         => "Booking {$reference} has already been cancelled.",
+                'action'        => [
+                    'requested'   => self::ACTION_CANCEL_BOOKING,
+                    'status'      => self::STATUS_NO_CHANGE,
+                    'target_type' => 'COMMITTED_BOOKING',
+                    'target_id'   => $bookingId,
+                    'reference'   => $reference
+                ],
+                'changes'       => []
+            ];
+        }
+
+        // Check if completed (immutable)
+        if (strtolower($currentStatus) === 'completed') {
+            return [
+                'action_status' => self::STATUS_NOT_ALLOWED_FOR_STATE,
+                'reply'         => "Booking {$reference} is marked Completed and cannot be cancelled.",
+                'action'        => [
+                    'requested'   => self::ACTION_CANCEL_BOOKING,
+                    'status'      => self::STATUS_NOT_ALLOWED_FOR_STATE,
+                    'target_type' => 'COMMITTED_BOOKING',
+                    'target_id'   => $bookingId,
+                    'reference'   => $reference
+                ],
+                'changes'       => []
+            ];
+        }
+
+        $hasVerifiedPayment = $this->cancellationService->hasVerifiedPayment($serviceType, $bookingId);
+
+        $payload = [
+            'action_type'            => self::ACTION_CANCEL_BOOKING,
+            'booking_type'           => $serviceType,
+            'booking_id'             => $bookingId,
+            'booking_reference'      => $reference,
+            'previous_status'        => $currentStatus,
+            'refund_review_required' => $hasVerifiedPayment,
+        ];
+
+        $pending = $this->pendingActionModel->createPendingAction(
+            $userId,
+            $serviceType,
+            $bookingId,
+            self::ACTION_CANCEL_BOOKING,
+            $payload
+        );
+
+        $dateStr = !empty($rec['schedule_date']) ? " scheduled for " . date('F j, Y', strtotime($rec['schedule_date'])) : "";
+        $reply = "I found {$reference}{$dateStr}. Cancelling it may release the reserved schedule/resource. Do you want me to cancel this booking?";
+        if ($hasVerifiedPayment) {
+            $reply .= " (Note: This booking has a verified payment on file; cancellation preserves financial records and requires billing refund review).";
+        }
+
+        return [
+            'action_status'     => self::STATUS_AWAITING_CONFIRMATION,
+            'intent'            => self::ACTION_CANCEL_BOOKING,
+            'booking_reference' => $reference,
+            'reply'             => $reply,
+            'pending_action'    => $pending,
+            'action'            => [
+                'requested'   => self::ACTION_CANCEL_BOOKING,
+                'status'      => self::STATUS_AWAITING_CONFIRMATION,
+                'target_type' => 'COMMITTED_BOOKING',
+                'target_id'   => $bookingId,
+                'reference'   => $reference,
+                'pending_id'  => $pending['id'],
+            ],
+            'changes'           => []
+        ];
+    }
+
+    /**
+     * Stage CHANGE_ALLOCATION action.
+     */
+    public function stageAllocationChangeAction(
+        int $userId,
+        ?string $username,
+        array $contextResolution,
+        array $slots,
+        string $message
+    ): array {
+        $targetType = $contextResolution['type'] ?? 'COMMITTED_BOOKING';
+
+        if ($targetType === 'DRAFT') {
+            return [
+                'action_status' => self::STATUS_CLARIFICATION_REQUIRED,
+                'reply'         => "Please use the cemetery map or lot picker to select a lot for your booking draft.",
+                'action'        => null,
+                'changes'       => []
+            ];
+        }
+
+        $bookingId = (int) ($contextResolution['booking_id'] ?? 0);
+        $serviceType = strtolower($contextResolution['service_type'] ?? 'burial');
+        $reference = $contextResolution['reference'] ?? "BUR-{$bookingId}";
+        $rec = $contextResolution['record'] ?? [];
+        $currentStatus = $contextResolution['current_status'] ?? ($rec['status'] ?? 'Pending');
+
+        if ($serviceType !== 'burial') {
+            return [
+                'action_status' => self::STATUS_DEFERRED,
+                'reply'         => "Niche reallocations for cremation bookings must be coordinated directly with administration.",
+                'action'        => null,
+                'changes'       => []
+            ];
+        }
+
+        if (in_array(strtolower($currentStatus), self::IMMUTABLE_COMMITTED_STATES, true)) {
+            return [
+                'action_status' => self::STATUS_NOT_ALLOWED_FOR_STATE,
+                'reply'         => "Booking {$reference} is currently {$currentStatus} and cannot have its allocation changed.",
+                'action'        => null,
+                'changes'       => []
+            ];
+        }
+
+        // Check if user requested a specific lot
+        $newLotId = !empty($slots['lot_id']) ? (int) $slots['lot_id'] : null;
+        if (!$newLotId) {
+            if (preg_match_all('/\b(?:to\s+)?lot\s*(?:#|no\.?)?\s*([a-z0-9\-_]+)\b/i', $message, $matches)) {
+                foreach ($matches[1] as $candidate) {
+                    $cand = trim($candidate);
+                    if (in_array(strtolower($cand), ['for', 'to', 'the', 'my', 'allocation', 'change', 'booking', 'reservation', 'a', 'an'], true)) {
+                        continue;
+                    }
+                    // 1. Check against v_available_lots by lot_number
+                    $stmt = $this->db->prepare("SELECT lot_id FROM v_available_lots WHERE lot_number = ? LIMIT 1");
+                    $stmt->execute([$cand]);
+                    $foundId = (int) $stmt->fetchColumn();
+                    if ($foundId > 0) {
+                        $newLotId = $foundId;
+                        break;
+                    }
+                    // 2. Check against v_available_lots by lot_id
+                    if (is_numeric($cand)) {
+                        $stmt = $this->db->prepare("SELECT lot_id FROM v_available_lots WHERE lot_id = ? LIMIT 1");
+                        $stmt->execute([(int) $cand]);
+                        $foundId = (int) $stmt->fetchColumn();
+                        if ($foundId > 0) {
+                            $newLotId = $foundId;
+                            break;
+                        }
+                    }
+                    // 3. Fallback check against lots table
+                    $stmt = $this->db->prepare("SELECT lot_id FROM lots WHERE lot_number = ? LIMIT 1");
+                    $stmt->execute([$cand]);
+                    $foundId = (int) $stmt->fetchColumn();
+                    if ($foundId > 0) {
+                        $newLotId = $foundId;
+                        break;
+                    }
+                    if (is_numeric($cand)) {
+                        $newLotId = (int) $cand;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Validate target lot
+        $targetLot = $newLotId ? $this->allocationService->findAvailableLotById($newLotId) : null;
+
+        // If no specific lot provided, query available lots from v_available_lots and prompt
+        if (!$newLotId || !$targetLot) {
+            $availableLots = $this->allocationService->getEligibleAvailableLots(null, 5);
+            $optionsStr = [];
+            foreach ($availableLots as $al) {
+                $optionsStr[] = "Lot {$al['lot_number']} ({$al['section_name']}, Block {$al['block_name']})";
+            }
+            $lotsList = !empty($optionsStr) ? implode(', ', $optionsStr) : "contact administration";
+            return [
+                'action_status'  => self::STATUS_CLARIFICATION_REQUIRED,
+                'reply'          => "Which lot would you like to reassign {$reference} to? Available options include: {$lotsList}.",
+                'available_lots' => $availableLots,
+                'action'         => null,
+                'changes'        => []
+            ];
+        }
+
+        $oldLotId = (int) ($rec['lot_id'] ?? 0);
+        if ($oldLotId === $newLotId) {
+            return [
+                'action_status' => self::STATUS_NO_CHANGE,
+                'reply'         => "Booking {$reference} is already allocated to Lot #{$newLotId}.",
+                'action'        => null,
+                'changes'       => []
+            ];
+        }
+
+        $payload = [
+            'action_type'       => self::ACTION_CHANGE_ALLOCATION,
+            'booking_type'      => 'burial',
+            'booking_id'        => $bookingId,
+            'booking_reference' => $reference,
+            'old_lot_id'        => $oldLotId,
+            'new_lot_id'        => $newLotId,
+            'new_lot_number'    => $targetLot['lot_number'],
+        ];
+
+        $pending = $this->pendingActionModel->createPendingAction(
+            $userId,
+            'burial',
+            $bookingId,
+            self::ACTION_CHANGE_ALLOCATION,
+            $payload
+        );
+
+        $reply = "I found booking {$reference}. You want to reassign it to Lot #{$targetLot['lot_number']} ({$targetLot['section_name']}). Would you like me to proceed?";
+
+        return [
+            'action_status'     => self::STATUS_AWAITING_CONFIRMATION,
+            'intent'            => self::ACTION_CHANGE_ALLOCATION,
+            'booking_reference' => $reference,
+            'reply'             => $reply,
+            'pending_action'    => $pending,
+            'action'            => [
+                'requested'   => self::ACTION_CHANGE_ALLOCATION,
+                'status'      => self::STATUS_AWAITING_CONFIRMATION,
+                'target_type' => 'COMMITTED_BOOKING',
+                'target_id'   => $bookingId,
+                'reference'   => $reference,
+                'pending_id'  => $pending['id'],
+            ],
+            'changes'           => []
+        ];
+    }
+
+    // =========================================================================
+    // BATCH 3 — EXECUTION-TIME REVALIDATION & CONFIRMATION GATE
+    // =========================================================================
+
+    /**
+     * Action-bound Confirmation Route with Execution-Time Revalidation.
+     */
+    public function confirmPendingAction(int $pendingActionId, string $confirmationToken, $actor): array {
+        $userId = is_array($actor) ? (int) ($actor['user_id'] ?? 0) : (int) $actor;
+
+        try {
+            return Database::getInstance()->transaction(function () use ($pendingActionId, $confirmationToken, $actor, $userId) {
+                // 1. Lock pending action row
+                $pending = $this->pendingActionModel->lockForUpdate($pendingActionId);
+                if (!$pending) {
+                    return ['success' => false, 'error' => 'Pending action not found', 'code' => 404];
+                }
+
+                // 2. Ownership check
+                if ((int) $pending['user_id'] !== $userId) {
+                    return ['success' => false, 'error' => 'You are not authorized to confirm this action', 'code' => 403];
+                }
+
+                // 3. Status checks
+                if ($pending['status'] === self::STATUS_EXECUTED) {
+                    return [
+                        'success'       => true,
+                        'action_status' => self::STATUS_ALREADY_EXECUTED,
+                        'no_change'     => true,
+                        'message'       => 'This action has already been executed.',
+                        'code'          => 200
+                    ];
+                }
+
+                if ($pending['status'] === self::STATUS_EXECUTING) {
+                    return [
+                        'success'       => false,
+                        'action_status' => self::STATUS_IN_PROGRESS,
+                        'error'         => 'This action is currently being executed by another process.',
+                        'code'          => 409
+                    ];
+                }
+
+                if ($pending['status'] === self::STATUS_SUPERSEDED) {
+                    return [
+                        'success'       => false,
+                        'action_status' => self::STATUS_SUPERSEDED,
+                        'error'         => 'This action has been superseded by a newer request and can no longer be executed.',
+                        'code'          => 409
+                    ];
+                }
+
+                if ($pending['status'] === self::STATUS_EXPIRED || !empty($pending['is_expired']) || strtotime($pending['expires_at']) <= time()) {
+                    $this->pendingActionModel->markExpired($pendingActionId);
+                    return [
+                        'success'       => false,
+                        'action_status' => self::STATUS_EXPIRED,
+                        'error'         => 'This action confirmation has expired. Please make a new request.',
+                        'code'          => 410
+                    ];
+                }
+
+                if ($pending['status'] !== self::STATUS_AWAITING_CONFIRMATION) {
+                    return [
+                        'success'       => false,
+                        'action_status' => $pending['status'],
+                        'error'         => "Invalid action status: {$pending['status']}",
+                        'code'          => 400
+                    ];
+                }
+
+                // 4. Token verification
+                if (!hash_equals($pending['confirmation_token'], $confirmationToken)) {
+                    return ['success' => false, 'error' => 'Invalid confirmation token.', 'code' => 400];
+                }
+
+                // 5. Payload hash integrity verification
+                $payload = $pending['payload'];
+                $computedHash = BookingPendingAction::computePayloadHash($payload);
+                if (!hash_equals($pending['payload_hash'], $computedHash)) {
+                    return ['success' => false, 'error' => 'Action payload hash mismatch. Action has been tampered with.', 'code' => 400];
+                }
+
+                // 6. Transition to CONFIRMED -> EXECUTING
+                $this->pendingActionModel->markConfirmed($pendingActionId);
+                $this->pendingActionModel->markExecuting($pendingActionId);
+
+                // 7. Execution-Time Revalidation & Domain Service Dispatch
+                $actionType = $pending['action_type'];
+                $bookingType = $pending['booking_type'];
+                $bookingId = (int) $pending['booking_id'];
+                $domainResult = null;
+
+                if ($actionType === self::ACTION_RESCHEDULE_BOOKING) {
+                    $newDate = $payload['new_date'] ?? null;
+                    $newTime = $payload['new_time'] ?? null;
+                    if ($bookingType === 'burial') {
+                        $domainResult = $this->rescheduleService->rescheduleBurialSchedule($bookingId, $newDate, $newTime, $actor);
+                    } else {
+                        $domainResult = $this->rescheduleService->rescheduleCremationRecord($bookingId, $newDate, $actor);
+                    }
+                } elseif ($actionType === self::ACTION_CANCEL_BOOKING) {
+                    if ($bookingType === 'burial') {
+                        $domainResult = $this->cancellationService->cancelBurialSchedule($bookingId, $actor, 'Cancelled via AI Assistant');
+                    } else {
+                        $domainResult = $this->cancellationService->cancelCremationRecord($bookingId, $actor, 'Cancelled via AI Assistant');
+                    }
+                } elseif ($actionType === self::ACTION_CHANGE_ALLOCATION) {
+                    $newLotId = (int) ($payload['new_lot_id'] ?? 0);
+                    $domainResult = $this->allocationService->swapBurialLot($bookingId, $newLotId, $actor);
+                } else {
+                    $domainResult = ['success' => false, 'error' => "Unsupported action type {$actionType}", 'code' => 400];
+                }
+
+                // 8. Handle Domain Outcome
+                if (empty($domainResult['success'])) {
+                    $this->pendingActionModel->markFailed($pendingActionId);
+                    return [
+                        'success'       => false,
+                        'action_status' => self::STATUS_FAILED,
+                        'error'         => $domainResult['error'] ?? 'Domain execution failed',
+                        'code'          => $domainResult['code'] ?? 500
+                    ];
+                }
+
+                // 9. Mark permanently EXECUTED
+                $this->pendingActionModel->markExecuted($pendingActionId);
+
+                return array_merge([
+                    'success'           => true,
+                    'action_status'     => self::STATUS_EXECUTED,
+                    'pending_action_id' => $pendingActionId,
+                    'action_type'       => $actionType,
+                    'reply'             => $domainResult['message'] ?? 'Action completed successfully.',
+                    'code'              => 200
+                ], $domainResult);
+            });
+        } catch (Throwable $t) {
+            return ['success' => false, 'error' => 'Confirmation execution failed: ' . $t->getMessage(), 'code' => 500];
+        }
+    }
+
+    /**
+     * Explicitly reject a pending action.
+     */
+    public function rejectPendingAction(int $pendingActionId, $actor): array {
+        $userId = is_array($actor) ? (int) ($actor['user_id'] ?? 0) : (int) $actor;
+
+        $pending = $this->pendingActionModel->findById($pendingActionId);
+        if (!$pending) {
+            return ['success' => false, 'error' => 'Pending action not found', 'code' => 404];
+        }
+
+        if ((int) $pending['user_id'] !== $userId) {
+            return ['success' => false, 'error' => 'Unauthorized', 'code' => 403];
+        }
+
+        if ($pending['status'] !== self::STATUS_AWAITING_CONFIRMATION) {
+            return ['success' => false, 'error' => 'Action cannot be rejected in current status: ' . $pending['status'], 'code' => 400];
+        }
+
+        $this->pendingActionModel->markRejected($pendingActionId);
+
+        return [
+            'success'       => true,
+            'action_status' => self::STATUS_REJECTED,
+            'reply'         => 'Action cancelled. Your booking remains unchanged.',
+            'code'          => 200
+        ];
+    }
+
+    /**
+     * Conversational Affirmative Fallback ("Yes", "Proceed", "Confirm").
+     * Enforces all 5 strict safety criteria before confirming.
+     */
+    public function confirmConversationalPendingAction(int $userId, $actor, string $message, ?array $activeBookingContext = null): array {
+        // Query all active pending actions for user
+        $activeActions = $this->pendingActionModel->findAllActiveByUser($userId);
+
+        if (empty($activeActions)) {
+            return [
+                'success'       => false,
+                'action_status' => self::STATUS_NOT_FOUND,
+                'reply'         => "You don't have any pending action awaiting confirmation.",
+                'code'          => 404
+            ];
+        }
+
+        // Criterion 1: Exactly ONE eligible pending action exists
+        if (count($activeActions) > 1) {
+            return [
+                'success'       => false,
+                'action_status' => self::STATUS_CLARIFICATION_REQUIRED,
+                'reply'         => "You have multiple pending actions awaiting confirmation. Please use the confirm button on the specific action you wish to execute.",
+                'code'          => 409
+            ];
+        }
+
+        $pending = $activeActions[0];
+
+        // Criterion 2: Belongs to active booking context (if context is present)
+        if ($activeBookingContext && !empty($activeBookingContext['booking_id'])) {
+            if ((int) $pending['booking_id'] !== (int) $activeBookingContext['booking_id']) {
+                return [
+                    'success'       => false,
+                    'action_status' => self::STATUS_CLARIFICATION_REQUIRED,
+                    'reply'         => "The pending action belongs to booking {$pending['booking_type']} #{$pending['booking_id']}. Please confirm if you wish to apply changes to that booking.",
+                    'code'          => 409
+                ];
+            }
+        }
+
+        // Execute primary action-bound confirmation
+        return $this->confirmPendingAction((int) $pending['id'], $pending['confirmation_token'], $actor);
+    }
+
+    // =========================================================================
+    // BATCH 2 — SAFE METADATA EDITING
+    // =========================================================================
+
+    private function executeDraftFieldUpdate(
         int $userId,
         ?string $username,
         int $draftId,
-        string $field,
-        $newValue,
-        string $intent
+        string $canonicalField,
+        $replacementValue,
+        array $contextResolution
     ): array {
-        $actionName = ($intent === 'CORRECT_BOOKING_DETAILS') ? self::ACTION_CORRECT_DRAFT_FIELD : self::ACTION_UPDATE_DRAFT_FIELD;
-
-        // Authorize Draft Ownership
-        $draftModel = new BookingDraft($this->db);
-        $draft = $draftModel->findById($draftId);
-
-        if (!$draft || (int)$draft['user_id'] !== $userId) {
+        $draftModel = new BookingDraft();
+        try {
+            $draft = $draftModel->requireOwnership($draftId, $userId);
+        } catch (BookingDraftException $e) {
             return [
-                'action_status' => self::STATUS_UNAUTHORIZED,
-                'reply'         => 'You are not authorized to modify this draft.',
-                'action'        => [
-                    'requested'   => $actionName,
-                    'status'      => self::STATUS_UNAUTHORIZED,
-                    'target_type' => 'DRAFT',
-                    'target_id'   => $draftId
-                ],
+                'action_status' => self::STATUS_NOT_FOUND,
+                'reply'         => $e->getMessage(),
+                'action'        => null,
                 'changes'       => []
             ];
         }
 
-        // Terminal State Check for Draft
-        if (BookingDraft::isTerminalState($draft['status'])) {
-            return [
-                'action_status' => self::STATUS_NOT_ALLOWED_FOR_STATE,
-                'reply'         => "This draft is in terminal status ({$draft['status']}) and cannot be edited.",
-                'action'        => [
-                    'requested'   => $actionName,
-                    'status'      => self::STATUS_NOT_ALLOWED_FOR_STATE,
-                    'target_type' => 'DRAFT',
-                    'target_id'   => $draftId
-                ],
-                'changes'       => []
-            ];
-        }
+        $extractedData = !empty($draft['extracted_data']) ? json_decode($draft['extracted_data'], true) : [];
+        $oldValue = $extractedData[$canonicalField] ?? null;
 
-        $existingData = !empty($draft['extracted_data']) ? json_decode($draft['extracted_data'], true) : [];
-        $oldValue = $existingData[$field] ?? null;
-
-        // Idempotency Check: if identical, return NO_CHANGE
-        if ((string)$oldValue === (string)$newValue) {
+        if ((string) $oldValue === (string) $replacementValue) {
             return [
                 'action_status' => self::STATUS_NO_CHANGE,
-                'reply'         => "That {$field} is already set to '{$newValue}'.",
+                'draft_id'      => $draftId,
+                'reply'         => "The {$canonicalField} is already set to '{$replacementValue}'.",
                 'action'        => [
-                    'requested'   => $actionName,
+                    'requested'   => self::ACTION_UPDATE_DRAFT_FIELD,
                     'status'      => self::STATUS_NO_CHANGE,
                     'target_type' => 'DRAFT',
                     'target_id'   => $draftId
                 ],
-                'changes'       => [],
-                'draft_id'      => $draftId
+                'changes'       => []
             ];
         }
 
-        // Mutate Draft Extracted Data
-        $existingData[$field] = $newValue;
-        $draftModel->updateExtractedData($draftId, [$field => $newValue]);
+        $draftModel->updateExtractedData($draftId, [$canonicalField => $replacementValue]);
 
-        // Audit Log
-        $this->auditLogModel->log(
-            'draft.field_updated',
-            $userId,
-            $username,
-            'BookingDraft',
-            $draftId,
-            [
-                'field'      => $field,
-                'old_value'  => $oldValue,
-                'new_value'  => $newValue,
-                'source'     => 'AI_BOOKING_ASSISTANT',
-                'action'     => $actionName
-            ]
-        );
-
-        $friendlyField = str_replace('_', ' ', $field);
         return [
             'action_status' => self::STATUS_EXECUTED,
-            'reply'         => "Done. I have updated the {$friendlyField} to '{$newValue}'.",
+            'draft_id'      => $draftId,
+            'reply'         => "Updated " . str_replace('_', ' ', $canonicalField) . " to '{$replacementValue}'.",
             'action'        => [
-                'requested'   => $actionName,
+                'requested'   => self::ACTION_UPDATE_DRAFT_FIELD,
                 'status'      => self::STATUS_EXECUTED,
                 'target_type' => 'DRAFT',
                 'target_id'   => $draftId
             ],
             'changes'       => [
                 [
-                    'field'     => $field,
+                    'field'     => $canonicalField,
                     'old_value' => $oldValue,
-                    'new_value' => $newValue
+                    'new_value' => $replacementValue
                 ]
-            ],
-            'draft_id'      => $draftId,
-            'updated_data'  => $existingData
+            ]
         ];
     }
 
-    /**
-     * Execute a Safe Field Update on an Authorized Committed Booking.
-     *
-     * @param int         $userId
-     * @param string|null $username
-     * @param int         $bookingId
-     * @param string      $serviceType
-     * @param string      $reference
-     * @param string      $field
-     * @param mixed       $newValue
-     * @param string      $intent
-     * @return array
-     */
-    public function executeCommittedBookingFieldUpdate(
+    private function executeCommittedBookingFieldUpdate(
         int $userId,
         ?string $username,
-        int $bookingId,
-        string $serviceType,
-        string $reference,
-        string $field,
-        $newValue,
-        string $intent
+        array $contextResolution,
+        string $canonicalField,
+        $replacementValue,
+        array $slots
     ): array {
-        $actionName = ($intent === 'CORRECT_BOOKING_DETAILS') ? self::ACTION_CORRECT_BOOKING_FIELD : self::ACTION_UPDATE_BOOKING_FIELD;
-        $isBurial = ($serviceType === 'burial');
+        $bookingId = (int) ($contextResolution['booking_id'] ?? 0);
+        $serviceType = $contextResolution['service_type'] ?? 'burial';
+        $reference = $contextResolution['reference'] ?? "BUR-{$bookingId}";
+        $rec = $contextResolution['record'] ?? [];
+        $currentStatus = $contextResolution['current_status'] ?? ($rec['status'] ?? 'Pending');
 
-        // Execute Inside Atomic Transaction
-        return Database::getInstance()->transaction(function () use (
-            $userId, $username, $bookingId, $serviceType, $reference, $field, $newValue, $actionName, $isBurial
-        ) {
-            // 1. Load and Lock Target Record with FOR UPDATE
-            $table = $isBurial ? 'burial_schedules' : 'cremation_records';
-            $pkCol = $isBurial ? 'schedule_id' : 'cremation_id';
-
-            $stmt = $this->db->prepare("SELECT * FROM {$table} WHERE {$pkCol} = ? FOR UPDATE");
-            $stmt->execute([$bookingId]);
-            $record = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$record) {
-                return [
-                    'action_status' => self::STATUS_NOT_FOUND,
-                    'reply'         => "Booking record {$reference} was not found.",
-                    'action'        => [
-                        'requested'   => $actionName,
-                        'status'      => self::STATUS_NOT_FOUND,
-                        'target_type' => 'COMMITTED_BOOKING',
-                        'target_id'   => $bookingId,
-                        'reference'   => $reference
-                    ],
-                    'changes'       => []
-                ];
-            }
-
-            // 2. Authorize Ownership
-            if ((int)$record['created_by'] !== $userId) {
-                return [
-                    'action_status' => self::STATUS_UNAUTHORIZED,
-                    'reply'         => "You are not authorized to edit booking {$reference}.",
-                    'action'        => [
-                        'requested'   => $actionName,
-                        'status'      => self::STATUS_UNAUTHORIZED,
-                        'target_type' => 'COMMITTED_BOOKING',
-                        'target_id'   => $bookingId,
-                        'reference'   => $reference
-                    ],
-                    'changes'       => []
-                ];
-            }
-
-            // 3. State Guard Validation
-            $curStatus = strtolower(trim((string)$record['status']));
-            if (in_array($curStatus, self::IMMUTABLE_COMMITTED_STATES, true)) {
-                return [
-                    'action_status' => self::STATUS_NOT_ALLOWED_FOR_STATE,
-                    'reply'         => "This booking ({$reference}) can no longer be edited because it is in '{$record['status']}' status.",
-                    'action'        => [
-                        'requested'   => $actionName,
-                        'status'      => self::STATUS_NOT_ALLOWED_FOR_STATE,
-                        'target_type' => 'COMMITTED_BOOKING',
-                        'target_id'   => $bookingId,
-                        'reference'   => $reference
-                    ],
-                    'changes'       => []
-                ];
-            }
-
-            if (!in_array($curStatus, self::ALLOWED_COMMITTED_STATES, true)) {
-                return [
-                    'action_status' => self::STATUS_NOT_ALLOWED_FOR_STATE,
-                    'reply'         => "Booking {$reference} is currently '{$record['status']}' and cannot be modified.",
-                    'action'        => [
-                        'requested'   => $actionName,
-                        'status'      => self::STATUS_NOT_ALLOWED_FOR_STATE,
-                        'target_type' => 'COMMITTED_BOOKING',
-                        'target_id'   => $bookingId,
-                        'reference'   => $reference
-                    ],
-                    'changes'       => []
-                ];
-            }
-
-            // 4. Determine Old Value & Apply Mutation based on Field Location
-            $oldValue = null;
-            $decedentRequestId = !empty($record['decedent_request_id']) ? (int)$record['decedent_request_id'] : null;
-            $deceasedId = !empty($record['deceased_id']) ? (int)$record['deceased_id'] : null;
-
-            if ($field === 'relationship') {
-                if ($decedentRequestId) {
-                    $dStmt = $this->db->prepare("SELECT relationship FROM decedent_requests WHERE request_id = ? FOR UPDATE");
-                    $dStmt->execute([$decedentRequestId]);
-                    $oldValue = $dStmt->fetchColumn() ?: null;
-
-                    // Idempotency check
-                    if ((string)$oldValue === (string)$newValue) {
-                        return [
-                            'action_status' => self::STATUS_NO_CHANGE,
-                            'reply'         => "The relationship for booking {$reference} is already set to '{$newValue}'.",
-                            'action'        => [
-                                'requested'   => $actionName,
-                                'status'      => self::STATUS_NO_CHANGE,
-                                'target_type' => 'COMMITTED_BOOKING',
-                                'target_id'   => $bookingId,
-                                'reference'   => $reference
-                            ],
-                            'changes'       => []
-                        ];
-                    }
-
-                    $upd = $this->db->prepare("UPDATE decedent_requests SET relationship = ? WHERE request_id = ?");
-                    $upd->execute([$newValue, $decedentRequestId]);
-                } else {
-                    // Formal record doesn't have relationship column; store note in schedule
-                    $oldValue = $record['notes'] ?? '';
-                    $newNotes = trim(($record['notes'] ? $record['notes'] . " | " : "") . "Relationship: {$newValue}");
-                    $upd = $this->db->prepare("UPDATE {$table} SET notes = ? WHERE {$pkCol} = ?");
-                    $upd->execute([$newNotes, $bookingId]);
-                }
-            } elseif ($field === 'decedent_name') {
-                if ($decedentRequestId) {
-                    $dStmt = $this->db->prepare("SELECT full_name FROM decedent_requests WHERE request_id = ? FOR UPDATE");
-                    $dStmt->execute([$decedentRequestId]);
-                    $oldValue = $dStmt->fetchColumn() ?: null;
-
-                    if ((string)$oldValue === (string)$newValue) {
-                        return [
-                            'action_status' => self::STATUS_NO_CHANGE,
-                            'reply'         => "The decedent name for booking {$reference} is already set to '{$newValue}'.",
-                            'action'        => [
-                                'requested'   => $actionName,
-                                'status'      => self::STATUS_NO_CHANGE,
-                                'target_type' => 'COMMITTED_BOOKING',
-                                'target_id'   => $bookingId,
-                                'reference'   => $reference
-                            ],
-                            'changes'       => []
-                        ];
-                    }
-
-                    $upd = $this->db->prepare("UPDATE decedent_requests SET full_name = ? WHERE request_id = ?");
-                    $upd->execute([$newValue, $decedentRequestId]);
-                } elseif ($deceasedId) {
-                    $dStmt = $this->db->prepare("SELECT first_name, last_name FROM decedent_records WHERE decedent_id = ? FOR UPDATE");
-                    $dStmt->execute([$deceasedId]);
-                    $decRow = $dStmt->fetch(PDO::FETCH_ASSOC);
-                    $oldValue = trim(($decRow['first_name'] ?? '') . ' ' . ($decRow['last_name'] ?? ''));
-
-                    if ((string)$oldValue === (string)$newValue) {
-                        return [
-                            'action_status' => self::STATUS_NO_CHANGE,
-                            'reply'         => "The decedent name for booking {$reference} is already set to '{$newValue}'.",
-                            'action'        => [
-                                'requested'   => $actionName,
-                                'status'      => self::STATUS_NO_CHANGE,
-                                'target_type' => 'COMMITTED_BOOKING',
-                                'target_id'   => $bookingId,
-                                'reference'   => $reference
-                            ],
-                            'changes'       => []
-                        ];
-                    }
-
-                    // Split into first_name and last_name
-                    $parts = preg_split('/\s+/', trim((string)$newValue), 2);
-                    $firstName = $parts[0] ?? $newValue;
-                    $lastName = $parts[1] ?? '';
-
-                    $upd = $this->db->prepare("UPDATE decedent_records SET first_name = ?, last_name = ? WHERE decedent_id = ?");
-                    $upd->execute([$firstName, $lastName, $deceasedId]);
-                }
-            } elseif ($field === 'notes') {
-                $oldValue = $record['notes'] ?? null;
-                if ((string)$oldValue === (string)$newValue) {
-                    return [
-                        'action_status' => self::STATUS_NO_CHANGE,
-                        'reply'         => "The notes for booking {$reference} are already up to date.",
-                        'action'        => [
-                            'requested'   => $actionName,
-                            'status'      => self::STATUS_NO_CHANGE,
-                            'target_type' => 'COMMITTED_BOOKING',
-                            'target_id'   => $bookingId,
-                            'reference'   => $reference
-                        ],
-                        'changes'       => []
-                    ];
-                }
-
-                $upd = $this->db->prepare("UPDATE {$table} SET notes = ? WHERE {$pkCol} = ?");
-                $upd->execute([$newValue, $bookingId]);
-            } elseif ($field === 'contact_number') {
-                if ($deceasedId) {
-                    $dStmt = $this->db->prepare("SELECT contact_number FROM decedent_records WHERE decedent_id = ? FOR UPDATE");
-                    $dStmt->execute([$deceasedId]);
-                    $oldValue = $dStmt->fetchColumn() ?: null;
-
-                    if ((string)$oldValue === (string)$newValue) {
-                        return [
-                            'action_status' => self::STATUS_NO_CHANGE,
-                            'reply'         => "The contact number for booking {$reference} is already set to '{$newValue}'.",
-                            'action'        => [
-                                'requested'   => $actionName,
-                                'status'      => self::STATUS_NO_CHANGE,
-                                'target_type' => 'COMMITTED_BOOKING',
-                                'target_id'   => $bookingId,
-                                'reference'   => $reference
-                            ],
-                            'changes'       => []
-                        ];
-                    }
-
-                    $upd = $this->db->prepare("UPDATE decedent_records SET contact_number = ? WHERE decedent_id = ?");
-                    $upd->execute([$newValue, $deceasedId]);
-                } else {
-                    $oldValue = $record['notes'] ?? '';
-                    $newNotes = trim(($record['notes'] ? $record['notes'] . " | " : "") . "Contact: {$newValue}");
-                    $upd = $this->db->prepare("UPDATE {$table} SET notes = ? WHERE {$pkCol} = ?");
-                    $upd->execute([$newNotes, $bookingId]);
-                }
-            }
-
-            // 5. Immutable Audit Trail
-            $entityType = $isBurial ? 'burial_schedule' : 'cremation_record';
-            $this->auditLogModel->log(
-                'booking.field_updated',
-                $userId,
-                $username,
-                $entityType,
-                $bookingId,
-                [
-                    'booking_reference' => $reference,
-                    'field'             => $field,
-                    'old_value'         => $oldValue,
-                    'new_value'         => $newValue,
-                    'source'            => 'AI_BOOKING_ASSISTANT',
-                    'action'            => $actionName
-                ]
-            );
-
-            $friendlyField = str_replace('_', ' ', $field);
+        if (in_array(strtolower($currentStatus), self::IMMUTABLE_COMMITTED_STATES, true)) {
             return [
-                'action_status' => self::STATUS_EXECUTED,
-                'reply'         => "Done. I have updated the {$friendlyField} to '{$newValue}' for your booking {$reference}.",
+                'action_status' => self::STATUS_NOT_ALLOWED_FOR_STATE,
+                'reply'         => "Booking {$reference} is {$currentStatus} and cannot be modified.",
                 'action'        => [
-                    'requested'   => $actionName,
-                    'status'      => self::STATUS_EXECUTED,
+                    'requested'   => self::ACTION_CORRECT_BOOKING_FIELD,
+                    'status'      => self::STATUS_NOT_ALLOWED_FOR_STATE,
                     'target_type' => 'COMMITTED_BOOKING',
                     'target_id'   => $bookingId,
                     'reference'   => $reference
                 ],
-                'changes'       => [
-                    [
-                        'field'     => $field,
-                        'old_value' => $oldValue,
-                        'new_value' => $newValue
-                    ]
-                ]
+                'changes'       => []
             ];
-        });
+        }
+
+        try {
+            return Database::getInstance()->transaction(function () use ($userId, $username, $bookingId, $serviceType, $reference, $canonicalField, $replacementValue) {
+                if ($serviceType === 'burial') {
+                    $stmt = $this->db->prepare("SELECT * FROM burial_schedules WHERE schedule_id = ? FOR UPDATE");
+                    $stmt->execute([$bookingId]);
+                    $lockedBooking = $stmt->fetch();
+                } else {
+                    $stmt = $this->db->prepare("SELECT * FROM cremation_records WHERE cremation_id = ? FOR UPDATE");
+                    $stmt->execute([$bookingId]);
+                    $lockedBooking = $stmt->fetch();
+                }
+
+                if (!$lockedBooking) {
+                    return [
+                        'action_status' => self::STATUS_NOT_FOUND,
+                        'reply'         => "Booking {$reference} could not be located.",
+                        'action'        => null,
+                        'changes'       => []
+                    ];
+                }
+
+                $oldValue = null;
+                $updated = false;
+
+                if (in_array($canonicalField, ['decedent_name', 'relationship', 'contact_number'], true)) {
+                    $decReqId = (int) ($lockedBooking['decedent_request_id'] ?? 0);
+                    if ($decReqId > 0) {
+                        $drStmt = $this->db->prepare("SELECT * FROM decedent_requests WHERE request_id = ? FOR UPDATE");
+                        $drStmt->execute([$decReqId]);
+                        $lockedDecReq = $drStmt->fetch();
+
+                        if ($lockedDecReq) {
+                            $targetCol = ($canonicalField === 'decedent_name') ? 'full_name' : $canonicalField;
+                            $oldValue = $lockedDecReq[$targetCol] ?? null;
+
+                            if ((string) $oldValue === (string) $replacementValue) {
+                                return [
+                                    'action_status' => self::STATUS_NO_CHANGE,
+                                    'reply'         => "The {$canonicalField} is already set to '{$replacementValue}'.",
+                                    'action'        => [
+                                        'requested'   => self::ACTION_CORRECT_BOOKING_FIELD,
+                                        'status'      => self::STATUS_NO_CHANGE,
+                                        'target_type' => 'COMMITTED_BOOKING',
+                                        'target_id'   => $bookingId,
+                                        'reference'   => $reference
+                                    ],
+                                    'changes'       => []
+                                ];
+                            }
+
+                            $updDr = $this->db->prepare("UPDATE decedent_requests SET {$targetCol} = ? WHERE request_id = ?");
+                            $updated = $updDr->execute([$replacementValue, $decReqId]);
+                        }
+                    }
+                } elseif ($canonicalField === 'notes') {
+                    $oldValue = $lockedBooking['notes'] ?? null;
+                    if ((string) $oldValue === (string) $replacementValue) {
+                        return [
+                            'action_status' => self::STATUS_NO_CHANGE,
+                            'reply'         => "The notes are already set to '{$replacementValue}'.",
+                            'action'        => [
+                                'requested'   => self::ACTION_CORRECT_BOOKING_FIELD,
+                                'status'      => self::STATUS_NO_CHANGE,
+                                'target_type' => 'COMMITTED_BOOKING',
+                                'target_id'   => $bookingId,
+                                'reference'   => $reference
+                            ],
+                            'changes'       => []
+                        ];
+                    }
+
+                    $targetTable = ($serviceType === 'burial') ? 'burial_schedules' : 'cremation_records';
+                    $idCol = ($serviceType === 'burial') ? 'schedule_id' : 'cremation_id';
+                    $updNote = $this->db->prepare("UPDATE {$targetTable} SET notes = ? WHERE {$idCol} = ?");
+                    $updated = $updNote->execute([$replacementValue, $bookingId]);
+                }
+
+                if (!$updated) {
+                    return [
+                        'action_status' => self::STATUS_NO_CHANGE,
+                        'reply'         => "Could not update {$canonicalField} on booking {$reference}.",
+                        'action'        => null,
+                        'changes'       => []
+                    ];
+                }
+
+                $this->auditLogModel->log(
+                    'booking.field_updated',
+                    $userId,
+                    $username,
+                    ($serviceType === 'burial') ? 'Schedule' : 'Cremation',
+                    $bookingId,
+                    [
+                        'field'     => $canonicalField,
+                        'old_value' => $oldValue,
+                        'new_value' => $replacementValue,
+                        'source'    => 'AI_BOOKING_ASSISTANT'
+                    ]
+                );
+
+                return [
+                    'action_status' => self::STATUS_EXECUTED,
+                    'reply'         => "Updated {$canonicalField} to '{$replacementValue}' for booking {$reference}.",
+                    'action'        => [
+                        'requested'   => self::ACTION_CORRECT_BOOKING_FIELD,
+                        'status'      => self::STATUS_EXECUTED,
+                        'target_type' => 'COMMITTED_BOOKING',
+                        'target_id'   => $bookingId,
+                        'reference'   => $reference
+                    ],
+                    'changes'       => [
+                        [
+                            'field'     => $canonicalField,
+                            'old_value' => $oldValue,
+                            'new_value' => $replacementValue
+                        ]
+                    ]
+                ];
+            });
+        } catch (Throwable $t) {
+            return [
+                'action_status' => self::STATUS_NO_CHANGE,
+                'reply'         => "Transaction failed: " . $t->getMessage(),
+                'action'        => null,
+                'changes'       => []
+            ];
+        }
     }
 }

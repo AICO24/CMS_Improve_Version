@@ -346,6 +346,8 @@ class Lot {
         'relocation.completed::Available' => self::FROM_STATUSES_UNRESTRICTED,
         'relocation.completed::Occupied' => ['Reserved'],
         'payment.verified::Reserved' => ['Available'],
+        'booking.allocation_changed::Available' => ['Available', 'Reserved'],
+        'booking.allocation_changed::Reserved' => ['Available'],
     ];
 
     // lot.admin_override's newStatus is whatever the admin picked, so it
