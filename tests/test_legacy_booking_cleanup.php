@@ -156,27 +156,27 @@ assertCondition(
 // -------------------------------------------------------------
 // TEST 8: Admin operational reservation management remains functional
 // -------------------------------------------------------------
-$adminBurialSched = preg_match("/route:\s*'burial-scheduling\.html'[^}]+allowedRoles:\s*\[[^\]]*'admin'[^\]]*\][^}]+showInSidebar:\s*true/s", $navConfig);
 $adminManageRes = preg_match("/route:\s*'manage-reservations\.html'[^}]+allowedRoles:\s*\[[^\]]*'admin'[^\]]*\][^}]+showInSidebar:\s*true/s", $navConfig);
 $adminManageCrem = preg_match("/route:\s*'manage-cremations\.html'[^}]+allowedRoles:\s*\[[^\]]*'admin'[^\]]*\][^}]+showInSidebar:\s*true/s", $navConfig);
+$adminBookingAssistant = preg_match("/route:\s*'booking-assistant\.html'[^}]+allowedRoles:\s*\[[^\]]*'admin'[^\]]*\][^}]+showInSidebar:\s*true/s", $navConfig);
 
 assertCondition(
     "TEST 8: Admin operational reservation management remains functional",
-    $adminBurialSched && $adminManageRes && $adminManageCrem,
-    "burial-scheduling, manage-reservations, and manage-cremations must be showInSidebar: true for admin"
+    $adminManageRes && $adminManageCrem && $adminBookingAssistant,
+    "manage-reservations, manage-cremations, and booking-assistant must be showInSidebar: true for admin"
 );
 
 // -------------------------------------------------------------
 // TEST 9: Staff operational workflows remain functional
 // -------------------------------------------------------------
-$staffBurialSched = preg_match("/route:\s*'burial-scheduling\.html'[^}]+allowedRoles:\s*\[[^\]]*'staff'[^\]]*\][^}]+showInSidebar:\s*true/s", $navConfig);
 $staffManageRes = preg_match("/route:\s*'manage-reservations\.html'[^}]+allowedRoles:\s*\[[^\]]*'staff'[^\]]*\][^}]+showInSidebar:\s*true/s", $navConfig);
 $staffManageCrem = preg_match("/route:\s*'manage-cremations\.html'[^}]+allowedRoles:\s*\[[^\]]*'staff'[^\]]*\][^}]+showInSidebar:\s*true/s", $navConfig);
+$staffBookingAssistant = preg_match("/route:\s*'booking-assistant\.html'[^}]+allowedRoles:\s*\[[^\]]*'staff'[^\]]*\][^}]+showInSidebar:\s*true/s", $navConfig);
 
 assertCondition(
     "TEST 9: Staff operational workflows remain functional",
-    $staffBurialSched && $staffManageRes && $staffManageCrem,
-    "burial-scheduling, manage-reservations, and manage-cremations must be showInSidebar: true for staff"
+    $staffManageRes && $staffManageCrem && $staffBookingAssistant,
+    "manage-reservations, manage-cremations, and booking-assistant must be showInSidebar: true for staff"
 );
 
 // -------------------------------------------------------------

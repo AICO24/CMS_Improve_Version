@@ -298,9 +298,10 @@ const ROLE_SIDEBAR_LINKS = {
     admin: [
         { item: ['dashboard_admin.html', 'fa-gauge-high', 'Dashboard'] },
         { group: 'Operations', items: [
-            ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
-            ['burial-scheduling.html', 'fa-monument', 'Burial Scheduling'],
+            ['book-a-service.html', 'fa-handshake', 'Book a Service'],
+            ['booking-assistant.html', 'fa-robot', 'Booking Assistant'],
             ['manage-reservations.html', 'fa-calendar-check', 'Manage Reservations'],
+            ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
         ] },
         { group: 'Records', items: [
             ['decedent-records.html', 'fa-folder-open', 'Decedent Records'],
@@ -330,7 +331,8 @@ const ROLE_SIDEBAR_LINKS = {
     staff: [
         { item: ['dashboard_staff.html', 'fa-gauge-high', 'Dashboard'] },
         { group: 'Operations', items: [
-            ['burial-scheduling.html', 'fa-monument', 'Burial Scheduling'],
+            ['book-a-service.html', 'fa-handshake', 'Book a Service'],
+            ['booking-assistant.html', 'fa-robot', 'Booking Assistant'],
             ['manage-reservations.html', 'fa-calendar-check', 'Manage Reservations'],
             ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
         ] },

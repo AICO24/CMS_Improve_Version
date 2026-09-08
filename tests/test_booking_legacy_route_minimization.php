@@ -65,14 +65,16 @@ assertCondition(
 // -------------------------------------------------------------
 $myReservationsHtml = file_get_contents($rootDir . '/frontend/pages/my-reservations.html');
 $myCremationsHtml = file_get_contents($rootDir . '/frontend/pages/my-cremations.html');
+$burialSchedHtml = file_get_contents($rootDir . '/frontend/pages/burial-scheduling.html');
 
 $noTablesInMyRes = strpos($myReservationsHtml, '<table') === false && strpos($myReservationsHtml, 'reservationsTable') === false;
 $noTablesInMyCrem = strpos($myCremationsHtml, '<table') === false && strpos($myCremationsHtml, 'cremationsTable') === false;
+$noWizardInBurialSched = strpos($burialSchedHtml, 'booking-wizard.js') === false && strpos($burialSchedHtml, 'id="wizardContainerMount"') === false;
 
 assertCondition(
     "TEST 2: Legacy history pages do not contain duplicate full booking table implementations",
-    $noTablesInMyRes && $noTablesInMyCrem,
-    "Legacy history pages (my-reservations.html and my-cremations.html) must not contain <table> structures or table IDs"
+    $noTablesInMyRes && $noTablesInMyCrem && $noWizardInBurialSched,
+    "Legacy history pages (my-reservations, my-cremations, burial-scheduling) must not contain duplicate tables or wizard markup"
 );
 
 // -------------------------------------------------------------
@@ -100,10 +102,14 @@ $cremRedirects = (strpos($myCremationsHtml, 'my-bookings.html?type=cremation') !
                  (strpos($myCremationsHtml, 'http-equiv="refresh"') !== false) &&
                  (strpos($myCremationsHtml, 'window.location.replace') !== false);
 
+$burialSchedRedirects = (strpos($burialSchedHtml, 'booking-assistant.html?service=burial') !== false) &&
+                        (strpos($burialSchedHtml, 'http-equiv="refresh"') !== false) &&
+                        (strpos($burialSchedHtml, 'window.location.replace') !== false);
+
 assertCondition(
     "TEST 4: Legacy history pages redirect or provide minimal compatibility behavior",
-    $resRedirects && $cremRedirects,
-    "my-reservations.html and my-cremations.html must provide meta refresh and window.location.replace redirects"
+    $resRedirects && $cremRedirects && $burialSchedRedirects,
+    "my-reservations.html, my-cremations.html, and burial-scheduling.html must provide meta refresh and window.location.replace redirects"
 );
 
 // -------------------------------------------------------------
@@ -114,9 +120,11 @@ $htmlPages = glob($rootDir . '/frontend/pages/*.html');
 
 $legacyResHidden = preg_match("/route:\s*'my-reservations\.html'[^}]+showInSidebar:\s*false/s", $navConfig);
 $legacyCremHidden = preg_match("/route:\s*'my-cremations\.html'[^}]+showInSidebar:\s*false/s", $navConfig);
+$legacyBurialSchedHidden = preg_match("/route:\s*'burial-scheduling\.html'[^}]+showInSidebar:\s*false/s", $navConfig);
 
 $legacyResNavLinksFound = [];
 $legacyCremNavLinksFound = [];
+$legacyBurialSchedNavLinksFound = [];
 
 foreach ($htmlPages as $file) {
     $content = file_get_contents($file);
@@ -128,12 +136,15 @@ foreach ($htmlPages as $file) {
         if (strpos($sidebarMatch[0], 'href="my-cremations.html"') !== false) {
             $legacyCremNavLinksFound[] = basename($file);
         }
+        if (strpos($sidebarMatch[0], 'href="burial-scheduling.html"') !== false) {
+            $legacyBurialSchedNavLinksFound[] = basename($file);
+        }
     }
 }
 
 assertCondition(
     "TEST 5: No primary navigation points to legacy history pages",
-    $legacyResHidden && $legacyCremHidden && empty($legacyResNavLinksFound) && empty($legacyCremNavLinksFound),
+    $legacyResHidden && $legacyCremHidden && $legacyBurialSchedHidden && empty($legacyResNavLinksFound) && empty($legacyCremNavLinksFound) && empty($legacyBurialSchedNavLinksFound),
     "Primary navigation must not expose legacy history pages in navigation-config.js or static sidebar markup"
 );
 
@@ -185,6 +196,7 @@ assertCondition(
 // -------------------------------------------------------------
 $myResJsExists = file_exists($rootDir . '/assets/js/pages/my-reservations.js');
 $myCremJsExists = file_exists($rootDir . '/assets/js/pages/my-cremations.js');
+$bookingWizardJsExists = file_exists($rootDir . '/assets/js/shared/booking-wizard.js');
 
 $orphanedJsRefs = [];
 foreach ($htmlPages as $file) {
@@ -195,12 +207,15 @@ foreach ($htmlPages as $file) {
     if (strpos($content, 'my-cremations.js') !== false) {
         $orphanedJsRefs[] = basename($file) . " references my-cremations.js";
     }
+    if (strpos($content, 'booking-wizard.js') !== false) {
+        $orphanedJsRefs[] = basename($file) . " references booking-wizard.js";
+    }
 }
 
 assertCondition(
     "TEST 9: Removed JavaScript files have zero orphaned references",
-    !$myResJsExists && !$myCremJsExists && empty($orphanedJsRefs),
-    "my-reservations.js and my-cremations.js must be deleted with 0 script tags remaining in HTML files"
+    !$myResJsExists && !$myCremJsExists && !$bookingWizardJsExists && empty($orphanedJsRefs),
+    "my-reservations.js, my-cremations.js, and booking-wizard.js must be deleted with 0 script tags remaining in HTML files"
 );
 
 // -------------------------------------------------------------

@@ -3,139 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Burial Scheduling (AI) | Cemetery Management</title>
+    <meta http-equiv="refresh" content="0; url=booking-assistant.html?service=burial">
+    <title>Redirecting to Booking Assistant | Cemetery Management System</title>
+    <link rel="canonical" href="booking-assistant.html?service=burial">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="../../assets/css/tokens.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/typography.css">
-    <link rel="stylesheet" href="../../assets/css/spacing.css">
-    <link rel="stylesheet" href="../../assets/css/shadows.css">
-    <link rel="stylesheet" href="../../assets/css/animations.css">
     <link rel="stylesheet" href="../../assets/css/base.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/components/buttons.css">
-    <link rel="stylesheet" href="../../assets/css/components/cards.css">
-    <link rel="stylesheet" href="../../assets/css/components/forms.css">
-    <link rel="stylesheet" href="../../assets/css/components/tables.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/components/modals.css">
-    <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/booking-chat.css?v=2">
-
-    <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
+    <script>
+        // Legacy Burial Scheduling Redirect -> Unified Booking Assistant
+        (function() {
+            var search = window.location.search;
+            var target = 'booking-assistant.html?service=burial';
+            if (search) {
+                var params = new URLSearchParams(search);
+                params.delete('service');
+                var remaining = params.toString();
+                if (remaining) target += '&' + remaining;
+            }
+            window.location.replace(target);
+        })();
+    </script>
 </head>
-<body class="dashboard-body">
-<script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
-    <div class="dashboard-container">
-        <!-- STATIC SIDEBAR (same as admin dashboard) -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
-                <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
-            </div>
-                                                <div class="sidebar-nav">
-                    <a href="dashboard_staff.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Operations</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="burial-scheduling.html" class="nav-item active"><i class="fas fa-monument icon"></i> <span>Burial Scheduling</span></a>
-                    <a href="manage-reservations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Reservations</span></a>
-                    <a href="manage-cremations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Cremations</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Cemetery Records</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="lot-management.html" class="nav-item"><i class="fas fa-map-location-dot icon"></i> <span>Lot Management</span></a>
-                    <a href="decedent-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>Decedent Records</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Finance</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>System</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="exceptions.html" class="nav-item"><i class="fas fa-triangle-exclamation icon"></i> <span>System Exceptions</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Account</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
-                    <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
-                    </div>
-                </div>
-            </div>
-            <div class="sidebar-footer">
-                <div class="user-chip">
-                    <i class="fas fa-user"></i>
-                    <div><span id="sidebarUserName">Admin User</span><small id="sidebarUserRole">Administrator</small></div>
-                </div>
-            </div>
-        </aside>
-
-        <main class="main-content">
-            <div class="top-bar">
-                <div class="top-left">
-                    <label class="hamburger">
-                        <input type="checkbox" id="toggleSidebar">
-                        <svg viewBox="0 0 32 32">
-                            <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
-                            <path class="line" d="M7 16H27"></path>
-                        </svg>
-                    </label>
-                    <h3 id="pageTitle">Burial Scheduling (AI)</h3>
-                </div>
-                <div class="user-info">
-                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
-                    <div class="notification-icon" id="notificationIcon">
-                        <i class="fas fa-bell"></i>
-                        <span class="notification-badge" id="notificationBadge">0</span>
-                    </div>
-                    <div class="profile">
-                        <div class="profile-avatar" id="userAvatar"><i class="fas fa-user-tie"></i></div>
-                        <div class="profile-text">
-                            <div class="user-name" id="userName">Admin User</div>
-                            <div class="user-role" id="userRole">Administrator</div>
-                        </div>
-                    </div>
-                    <button class="Btn logout-btn" id="logoutBtn">
-                        <div class="sign"><i class="fas fa-sign-out-alt"></i></div>
-                        <div class="text">Logout</div>
-                    </button>
-                </div>
-            </div>
-                <div class="content-area" id="wizardContainerMount"></div>
-        </main>
+<body style="font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f8fafc; color: #1e293b; padding: 20px;">
+    <div style="max-width: 520px; width: 100%; text-align: center; padding: 32px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+        <h2 style="margin-top: 0; margin-bottom: 12px; font-size: 1.4rem; color: #0f172a;">Redirecting to Unified Booking Assistant</h2>
+        <p style="font-size: 0.95rem; color: #64748b; line-height: 1.5; margin-bottom: 20px;">
+            Burial scheduling has been consolidated into the <strong>Unified Booking Assistant</strong>. You are being redirected automatically.
+        </p>
+        <p style="font-size: 0.9rem; color: #64748b; margin: 0;">
+            If you are not redirected automatically, <a href="booking-assistant.html?service=burial" style="color: #2563eb; font-weight: 600; text-decoration: underline;">click here to continue to Booking Assistant</a>.
+        </p>
     </div>
-
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
-    <script src="../../assets/js/shared/button-loading.js"></script>
-    <script src="../../assets/js/shared/lot-chat-assistant.js"></script>
-    <script src="../../assets/js/shared/booking-wizard.js"></script>
     <script src="../../assets/js/pages/burial-scheduling.js"></script>
-    <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
-    <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
 </body>
 </html>

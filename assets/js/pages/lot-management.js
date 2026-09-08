@@ -524,7 +524,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const btnPayment = document.getElementById('btnProceedPayment');
                     if (btnReserve) {
                         btnReserve.onclick = () => {
-                            window.location.href = `burial-scheduling.html?lot_id=${lot.lot_id}&lot_number=${encodeURIComponent(lot.lot_number)}`;
+                            window.location.href = `booking-assistant.html?service=burial&lot_id=${lot.lot_id}&lot_number=${encodeURIComponent(lot.lot_number)}`;
                         };
                     }
                     if (btnPayment) {

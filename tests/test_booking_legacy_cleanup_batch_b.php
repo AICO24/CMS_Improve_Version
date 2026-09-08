@@ -69,28 +69,28 @@ assertCondition(
 // -------------------------------------------------------------
 // TEST 3: Admin Operational Modules Preserved in Navigation
 // -------------------------------------------------------------
-$adminBurialScheduling = preg_match("/route:\s*'burial-scheduling\.html'.*?allowedRoles:\s*\[[^\]]*'admin'[^\]]*\].*?showInSidebar:\s*true/s", $navConfigContent);
-$adminManageReservations = preg_match("/route:\s*'manage-reservations\.html'.*?allowedRoles:\s*\[[^\]]*'admin'[^\]]*\].*?showInSidebar:\s*true/s", $navConfigContent);
-$adminManageCremations = preg_match("/route:\s*'manage-cremations\.html'.*?allowedRoles:\s*\[[^\]]*'admin'[^\]]*\].*?showInSidebar:\s*true/s", $navConfigContent);
-$adminCremationManagement = preg_match("/route:\s*'cremation-management\.html'.*?allowedRoles:\s*\[[^\]]*'admin'[^\]]*\].*?showInSidebar:\s*true/s", $navConfigContent);
+$adminManageReservations = preg_match("/route:\s*'manage-reservations\.html'.*?allowedRoles:\s*\[[^\]]*'admin'[^\\]]*\].*?showInSidebar:\s*true/s", $navConfigContent);
+$adminManageCremations = preg_match("/route:\s*'manage-cremations\.html'.*?allowedRoles:\s*\[[^\]]*'admin'[^\\]]*\].*?showInSidebar:\s*true/s", $navConfigContent);
+$adminCremationManagement = preg_match("/route:\s*'cremation-management\.html'.*?allowedRoles:\s*\[[^\]]*'admin'[^\\]]*\].*?showInSidebar:\s*true/s", $navConfigContent);
+$adminBookingAssistant = preg_match("/route:\s*'booking-assistant\.html'.*?allowedRoles:\s*\[[^\]]*'admin'[^\\]]*\].*?showInSidebar:\s*true/s", $navConfigContent);
 
 assertCondition(
     "TEST 3: Admin operational modules are preserved in navigation configuration",
-    $adminBurialScheduling && $adminManageReservations && $adminManageCremations && $adminCremationManagement,
-    "Expected burial-scheduling, manage-reservations, manage-cremations, and cremation-management for admin"
+    $adminManageReservations && $adminManageCremations && $adminCremationManagement && $adminBookingAssistant,
+    "Expected booking-assistant, manage-reservations, manage-cremations, and cremation-management for admin"
 );
 
 // -------------------------------------------------------------
 // TEST 4: Staff Operational Modules Preserved in Navigation
 // -------------------------------------------------------------
-$staffBurialScheduling = preg_match("/route:\s*'burial-scheduling\.html'.*?allowedRoles:\s*\[[^\]]*'staff'[^\]]*\].*?showInSidebar:\s*true/s", $navConfigContent);
-$staffManageReservations = preg_match("/route:\s*'manage-reservations\.html'.*?allowedRoles:\s*\[[^\]]*'staff'[^\]]*\].*?showInSidebar:\s*true/s", $navConfigContent);
-$staffManageCremations = preg_match("/route:\s*'manage-cremations\.html'.*?allowedRoles:\s*\[[^\]]*'staff'[^\]]*\].*?showInSidebar:\s*true/s", $navConfigContent);
+$staffManageReservations = preg_match("/route:\s*'manage-reservations\.html'.*?allowedRoles:\s*\[[^\]]*'staff'[^\\]]*\].*?showInSidebar:\s*true/s", $navConfigContent);
+$staffManageCremations = preg_match("/route:\s*'manage-cremations\.html'.*?allowedRoles:\s*\[[^\]]*'staff'[^\\]]*\].*?showInSidebar:\s*true/s", $navConfigContent);
+$staffBookingAssistant = preg_match("/route:\s*'booking-assistant\.html'.*?allowedRoles:\s*\[[^\]]*'staff'[^\\]]*\].*?showInSidebar:\s*true/s", $navConfigContent);
 
 assertCondition(
     "TEST 4: Staff operational modules are preserved in navigation configuration",
-    $staffBurialScheduling && $staffManageReservations && $staffManageCremations,
-    "Expected burial-scheduling, manage-reservations, and manage-cremations for staff"
+    $staffManageReservations && $staffManageCremations && $staffBookingAssistant,
+    "Expected booking-assistant, manage-reservations, and manage-cremations for staff"
 );
 
 // -------------------------------------------------------------

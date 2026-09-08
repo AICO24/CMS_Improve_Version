@@ -47,7 +47,7 @@
         {
             route: 'burial-scheduling.html',
             allowedRoles: ['admin', 'staff'],
-            showInSidebar: true,
+            showInSidebar: false,
             sidebarGroup: 'Operations',
             label: 'Burial Scheduling',
             icon: 'fa-monument',

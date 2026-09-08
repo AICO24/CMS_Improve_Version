@@ -178,13 +178,14 @@ $legacyBurialInSidebar = preg_match("/route:\s*'reserve-burial-slot\.html'[^}]+s
 $legacyCremationInSidebar = preg_match("/route:\s*'reserve-cremation\.html'[^}]+showInSidebar:\s*true/s", $navConfig);
 $legacyMyReservationsInSidebar = preg_match("/route:\s*'my-reservations\.html'[^}]+showInSidebar:\s*true/s", $navConfig);
 $legacyMyCremationsInSidebar = preg_match("/route:\s*'my-cremations\.html'[^}]+showInSidebar:\s*true/s", $navConfig);
+$legacyBurialSchedulingInSidebar = preg_match("/route:\s*'burial-scheduling\.html'[^}]+showInSidebar:\s*true/s", $navConfig);
 
-$noDuplicates = !$legacyBurialInSidebar && !$legacyCremationInSidebar && !$legacyMyReservationsInSidebar && !$legacyMyCremationsInSidebar;
+$noDuplicates = !$legacyBurialInSidebar && !$legacyCremationInSidebar && !$legacyMyReservationsInSidebar && !$legacyMyCremationsInSidebar && !$legacyBurialSchedulingInSidebar;
 
 assertCondition(
     "TEST 8: No duplicate primary booking navigation entries exist",
     $noDuplicates,
-    "Legacy routes (reserve-burial-slot, reserve-cremation, my-reservations, my-cremations) must have showInSidebar: false"
+    "Legacy routes (reserve-burial-slot, reserve-cremation, my-reservations, my-cremations, burial-scheduling) must have showInSidebar: false"
 );
 
 // -------------------------------------------------------------
@@ -194,13 +195,14 @@ $legacyBurialAllowed = preg_match("/route:\s*'reserve-burial-slot\.html'[^}]+all
 $legacyCremationAllowed = preg_match("/route:\s*'reserve-cremation\.html'[^}]+allowedRoles:\s*\[[^\]]*'user'[^\]]*\]/s", $navConfig);
 $legacyMyResAllowed = preg_match("/route:\s*'my-reservations\.html'[^}]+allowedRoles:\s*\[[^\]]*'user'[^\]]*\]/s", $navConfig);
 $legacyMyCremAllowed = preg_match("/route:\s*'my-cremations\.html'[^}]+allowedRoles:\s*\[[^\]]*'user'[^\]]*\]/s", $navConfig);
+$legacyBurialSchedAllowed = preg_match("/route:\s*'burial-scheduling\.html'[^}]+allowedRoles:\s*\[[^\]]*'admin'[^\]]*\]/s", $navConfig);
 
-$legacyCompatible = $legacyBurialAllowed && $legacyCremationAllowed && $legacyMyResAllowed && $legacyMyCremAllowed;
+$legacyCompatible = $legacyBurialAllowed && $legacyCremationAllowed && $legacyMyResAllowed && $legacyMyCremAllowed && $legacyBurialSchedAllowed;
 
 assertCondition(
     "TEST 9: Legacy booking routes remain compatible without unnecessary primary navigation exposure",
     $legacyCompatible,
-    "Expected legacy routes to remain authorized for user while hidden from sidebar"
+    "Expected legacy routes to remain authorized while hidden from sidebar"
 );
 
 // -------------------------------------------------------------
