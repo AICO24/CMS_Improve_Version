@@ -39,6 +39,7 @@
     let activeEditField = null;
     let isInitialized = false;
     let cooldownTimer = null;
+    let isCooldownActive = false;
 
     /**
      * Initialization entry point
@@ -202,7 +203,7 @@
      */
     function updateSendButtonState() {
         if (!btnSendMessage) return;
-        if (state.isLoading) {
+        if (state.isLoading || isCooldownActive) {
             btnSendMessage.disabled = true;
             return;
         }
@@ -322,7 +323,7 @@
      * Handle user sending a message with validation cues & concurrency lock
      */
     async function onSendMessage() {
-        if (state.isLoading) return;
+        if (state.isLoading || isCooldownActive) return;
 
         const text = userInputMsg ? userInputMsg.value.trim() : '';
         if (!text) {
@@ -409,8 +410,11 @@
                 appendAssistantMessage('⚠️ Connection error: ' + (err?.message || 'Please check your network and try again.'));
             }
         } finally {
-            setLoading(false);
-            updateSendButtonState();
+            // Do NOT unlock loading if rate limit cooldown is actively holding the button
+            if (!isCooldownActive) {
+                setLoading(false);
+                updateSendButtonState();
+            }
             if (userInputMsg) userInputMsg.focus();
         }
     }
@@ -419,7 +423,11 @@
      * Temporary countdown cooldown for HTTP 429 rate limit
      */
     function startRateLimitCooldown(seconds) {
-        if (cooldownTimer) clearInterval(cooldownTimer);
+        if (cooldownTimer) {
+            clearInterval(cooldownTimer);
+            cooldownTimer = null;
+        }
+        isCooldownActive = true;
         let remaining = seconds;
         setLoading(true);
         if (btnSendMessage) {
@@ -433,6 +441,7 @@
             } else {
                 clearInterval(cooldownTimer);
                 cooldownTimer = null;
+                isCooldownActive = false;
                 setLoading(false);
                 updateSendButtonState();
             }
@@ -988,6 +997,12 @@
         if (!confirm('Are you sure you want to discard your current booking progress and start a fresh session?')) {
             return;
         }
+
+        if (cooldownTimer) {
+            clearInterval(cooldownTimer);
+            cooldownTimer = null;
+        }
+        isCooldownActive = false;
 
         if (state.draftId) {
             try {

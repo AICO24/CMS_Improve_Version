@@ -126,15 +126,209 @@ assertCondition(
 );
 
 // -------------------------------------------------------------
-// TEST 7: Guaranteed Send Button Recovery on Error (finally Block)
+// TEST 7: HTTP 429 Cooldown Lifecycle & Non-Premature Unlock Guard
 // -------------------------------------------------------------
-$hasFinallyRecovery = (bool) preg_match('/finally\s*\{[^}]*setLoading\(false\);[^}]*updateSendButtonState\(\);/s', $jsContent);
-$hasRateLimitCooldown = (bool) preg_match('/function startRateLimitCooldown\(seconds\)/', $jsContent);
+// Validates the logical lifecycle ordering:
+// 1. Cooldown state declaration (isCooldownActive).
+// 2. sendChatTurn finally block guards setLoading(false) & updateSendButtonState()
+//    behind if (!isCooldownActive), preventing premature cancellation.
+// 3. startRateLimitCooldown sets isCooldownActive = true, and only resets it + unlocks
+//    when countdown reaches zero.
+// 4. updateSendButtonState and onSendMessage enforce the cooldown lock.
+// 5. Automated Node.js logical lifecycle simulation: verifies that immediately after 429
+//    and finally execution, the button remains disabled, user input is blocked, and
+//    only after timer completion does clean unlock occur.
+// Note: This automated test validates control flow structure and logic state transitions.
+// It does NOT verify live browser DOM rendering or visual repainting.
+
+// 7.1: Static Control-Flow Verification
+$hasCooldownVar = (bool) preg_match('/let\s+isCooldownActive\s*=\s*false;/', $jsContent);
+$hasGuardedFinally = (bool) preg_match('/finally\s*\{.*?if\s*\(!isCooldownActive\)\s*\{[^}]*setLoading\(false\);[^}]*updateSendButtonState\(\);/s', $jsContent);
+$hasCooldownActivation = (bool) preg_match('/function\s+startRateLimitCooldown\(seconds\)\s*\{.*?isCooldownActive\s*=\s*true;.*?setLoading\(true\);/s', $jsContent);
+$hasCooldownCompletion = (bool) preg_match('/isCooldownActive\s*=\s*false;\s*setLoading\(false\);.*?updateSendButtonState\(\);/s', $jsContent);
+$hasSendBtnCooldownGuard = (bool) preg_match('/if\s*\((state\.isLoading\s*\|\|\s*isCooldownActive|isCooldownActive\s*\|\|\s*state\.isLoading)\)\s*\{[^}]*btnSendMessage\.disabled\s*=\s*true;\s*return;/s', $jsContent);
+$hasOnSendCooldownGuard = (bool) preg_match('/async function onSendMessage\(\)\s*\{[^}]*if\s*\((state\.isLoading\s*\|\|\s*isCooldownActive|isCooldownActive\s*\|\|\s*state\.isLoading)\)\s*return;/s', $jsContent);
+
+$staticLifecyclePassed = $hasCooldownVar && $hasGuardedFinally && $hasCooldownActivation && $hasCooldownCompletion && $hasSendBtnCooldownGuard && $hasOnSendCooldownGuard;
 
 assertCondition(
-    "TEST 7: Async lifecycle guarantees button recovery in finally block with 429 cooldown",
-    $hasFinallyRecovery && $hasRateLimitCooldown,
-    "Expected setLoading(false) and updateSendButtonState() inside finally block, plus startRateLimitCooldown"
+    "TEST 7A: Cooldown control flow guards finally block from premature unlock (Static Control Flow)",
+    $staticLifecyclePassed,
+    "Expected isCooldownActive flag, guarded finally { if (!isCooldownActive) ... }, and cooldown-guarded handlers"
+);
+
+// 7.2: Automated Logic Lifecycle Simulation (Headless Node.js Execution)
+$nodeSimulationPassed = false;
+$nodeSimulationDetails = 'Node.js runtime not available or execution failed';
+
+$nodeScript = <<<'NODESCRIPT'
+const fs = require('fs');
+const vm = require('vm');
+
+let jsCode = fs.readFileSync('assets/js/pages/booking-assistant.js', 'utf8');
+const probeTarget = "document.addEventListener('DOMContentLoaded', init);";
+const probeInjection = "window.__testProbe = { sendChatTurn, startRateLimitCooldown, updateSendButtonState, onSendMessage, getState: () => state, getIsCooldownActive: () => isCooldownActive, cacheDOMElements }; " + probeTarget;
+jsCode = jsCode.replace(probeTarget, probeInjection);
+
+const mockElements = {
+    chatComposerForm: { addEventListener: () => {} },
+    chatThread: { appendChild: () => {}, innerHTML: '', scrollTop: 0, scrollHeight: 0 },
+    userInputMsg: { value: '', addEventListener: () => {}, focus: () => {}, classList: { add: () => {}, remove: () => {} } },
+    btnSendMessage: { disabled: false, innerHTML: '' },
+    btnRestartDraft: { addEventListener: () => {} },
+    promptSuggestions: { innerHTML: '', appendChild: () => {} },
+    blueprintStatusBadge: { textContent: '', className: '' },
+    hudServiceVal: { textContent: '' },
+    hudDecedentVal: { textContent: '' },
+    hudAllocationVal: { textContent: '' },
+    hudReviewVal: { textContent: '' },
+    hudServiceBadge: { textContent: '', style: {} },
+    hudServiceDesc: { textContent: '' },
+    hudDecedentName: { innerHTML: '' },
+    hudRelationship: { innerHTML: '' },
+    hudDate: { innerHTML: '' },
+    hudAllocationLabel: { textContent: '' },
+    hudAllocationDetails: { textContent: '' },
+    hudLotActionBox: { style: {} },
+    btnOpenLotPicker: { addEventListener: () => {} },
+    btnEditDecedent: { addEventListener: () => {} },
+    btnEditSchedule: { addEventListener: () => {} },
+    hudMissingAlert: { style: {} },
+    hudMissingList: { innerHTML: '' },
+    hudMatchCard: { style: {} },
+    hudMatchText: { textContent: '' },
+    btnConfirmBooking: { addEventListener: () => {} },
+    lotPickerModal: { style: {}, addEventListener: () => {} },
+    btnCloseLotPicker: { addEventListener: () => {} },
+    lotSearchFilter: { value: '', addEventListener: () => {} },
+    lotSectionFilter: { addEventListener: () => {} },
+    lotPickerSpinner: { style: {} },
+    lotGridContainer: { innerHTML: '' },
+    lotPickerEmpty: { style: {} },
+    fieldEditModal: { style: {} },
+    btnCloseFieldEdit: { addEventListener: () => {} },
+    btnCancelFieldEdit: { addEventListener: () => {} },
+    fieldEditForm: { addEventListener: () => {} },
+    fieldEditTitle: { textContent: '' },
+    fieldEditLabel: { textContent: '' },
+    fieldEditInput: { type: '', value: '', focus: () => {}, removeAttribute: () => {} },
+    fieldEditHint: { textContent: '' }
+};
+
+let apiCalls = [];
+let intervalCb = null;
+const customSetInterval = (fn, ms) => { intervalCb = fn; return 999; };
+const customClearInterval = () => { intervalCb = null; };
+
+const sandbox = {
+    document: {
+        getElementById: (id) => mockElements[id] || null,
+        addEventListener: () => {},
+        createElement: () => ({ className: '', innerHTML: '', textContent: '', appendChild: () => {} }),
+        body: { style: {} }
+    },
+    window: { location: { search: '' } },
+    URLSearchParams: class { get() { return null; } },
+    console: { log: () => {}, warn: () => {}, error: () => {} },
+    setInterval: customSetInterval,
+    clearInterval: customClearInterval,
+    setTimeout: setTimeout,
+    clearTimeout: clearTimeout,
+    api: {
+        request: async (endpoint) => {
+            apiCalls.push(endpoint);
+            if (endpoint === 'booking-agent/chat') {
+                const err = new Error('Too Many Requests');
+                err.status = 429;
+                err.retryAfter = 5;
+                throw err;
+            }
+            return { success: true };
+        }
+    }
+};
+
+vm.createContext(sandbox);
+vm.runInContext(jsCode, sandbox);
+
+async function run() {
+    const probe = sandbox.window.__testProbe;
+    probe.cacheDOMElements();
+
+    // 1. Input has text; button should be enabled initially
+    mockElements.userInputMsg.value = 'Book service';
+    probe.updateSendButtonState();
+    if (mockElements.btnSendMessage.disabled !== false) {
+        throw new Error('Initial send button should be enabled');
+    }
+
+    // 2. Dispatch turn that throws 429
+    await probe.sendChatTurn('Book service');
+
+    // 3. Immediately after finally block executes:
+    // If the premature unlock bug exists, btnSendMessage.disabled would be false here!
+    if (probe.getIsCooldownActive() !== true) {
+        throw new Error('isCooldownActive must be true immediately after 429 catch');
+    }
+    if (mockElements.btnSendMessage.disabled !== true) {
+        throw new Error('REGRESSION: finally block prematurely unlocked button during active cooldown');
+    }
+
+    // 4. Try to re-enable button by typing during active cooldown
+    mockElements.userInputMsg.value = 'Another attempt';
+    probe.updateSendButtonState();
+    if (mockElements.btnSendMessage.disabled !== true) {
+        throw new Error('updateSendButtonState allowed button to unlock while cooldown was active');
+    }
+
+    // 5. Try to call onSendMessage during active cooldown
+    const callsBefore = apiCalls.length;
+    await probe.onSendMessage();
+    if (apiCalls.length !== callsBefore) {
+        throw new Error('onSendMessage permitted submission during active cooldown');
+    }
+
+    // 6. Simulate timer ticking down to 0
+    if (!intervalCb) throw new Error('Cooldown timer interval was not registered');
+    intervalCb(); // 4s
+    intervalCb(); // 3s
+    intervalCb(); // 2s
+    intervalCb(); // 1s
+    intervalCb(); // 0s -> completion branch
+
+    // 7. Verify clean unlock after countdown reaches zero
+    if (probe.getIsCooldownActive() !== false) {
+        throw new Error('isCooldownActive must be false after countdown completes');
+    }
+    if (mockElements.btnSendMessage.disabled !== false) {
+        throw new Error('btnSendMessage should be restored to enabled state after countdown ends');
+    }
+
+    process.stdout.write('LIFECYCLE_SIMULATION_OK');
+}
+run().catch(e => {
+    process.stderr.write(e.message);
+    process.exit(1);
+});
+NODESCRIPT;
+
+$tempScript = $rootDir . '/scratch_cooldown_test.js';
+file_put_contents($tempScript, $nodeScript);
+$nodeOutput = shell_exec("node \"{$tempScript}\" 2>&1");
+if (file_exists($tempScript)) {
+    unlink($tempScript);
+}
+
+if (strpos($nodeOutput, 'LIFECYCLE_SIMULATION_OK') !== false) {
+    $nodeSimulationPassed = true;
+} else {
+    $nodeSimulationDetails = trim($nodeOutput);
+}
+
+assertCondition(
+    "TEST 7B: 429 cooldown lifecycle simulation prevents premature finally reset & restores button on expiry (Automated Logic)",
+    $nodeSimulationPassed,
+    "Simulation failed: " . $nodeSimulationDetails
 );
 
 // -------------------------------------------------------------
