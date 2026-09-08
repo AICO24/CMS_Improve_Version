@@ -38,6 +38,7 @@ class BookingAgentService {
     public const INTENT_RESCHEDULE_BOOKING      = 'RESCHEDULE_BOOKING';
     public const INTENT_CANCEL_BOOKING          = 'CANCEL_BOOKING';
     public const INTENT_CHECK_AVAILABILITY      = 'CHECK_AVAILABILITY';
+    public const INTENT_EXPLAIN_MISSING_REQUIREMENTS = 'EXPLAIN_MISSING_REQUIREMENTS';
     public const INTENT_SELECT_ALLOCATION       = 'SELECT_ALLOCATION';
     public const INTENT_CHANGE_ALLOCATION       = 'CHANGE_ALLOCATION';
     public const INTENT_CHECK_BOOKING_STATUS    = 'CHECK_BOOKING_STATUS';
@@ -56,6 +57,7 @@ class BookingAgentService {
         self::INTENT_RESCHEDULE_BOOKING,
         self::INTENT_CANCEL_BOOKING,
         self::INTENT_CHECK_AVAILABILITY,
+        self::INTENT_EXPLAIN_MISSING_REQUIREMENTS,
         self::INTENT_SELECT_ALLOCATION,
         self::INTENT_CHANGE_ALLOCATION,
         self::INTENT_CHECK_BOOKING_STATUS,
@@ -69,6 +71,8 @@ class BookingAgentService {
     public const REQUIRED_BURIAL_FIELDS    = ['service_type', 'decedent_name', 'preferred_date', 'lot_id'];
     public const REQUIRED_CREMATION_FIELDS = ['service_type', 'decedent_name', 'cremation_date'];
 
+    private ?BookingAvailabilityService $availabilityService = null;
+
     public function __construct(
         ?BookingDraft $draftModel = null,
         ?Decedent $decedentModel = null,
@@ -77,7 +81,8 @@ class BookingAgentService {
         ?Schedule $scheduleModel = null,
         ?DecedentRequest $decedentRequestModel = null,
         ?Cremation $cremationModel = null,
-        ?BookingActionRegistry $actionRegistry = null
+        ?BookingActionRegistry $actionRegistry = null,
+        ?BookingAvailabilityService $availabilityService = null
     ) {
         $this->draftModel = $draftModel ?? new BookingDraft();
         $this->decedentModel = $decedentModel ?? new Decedent();
@@ -87,10 +92,25 @@ class BookingAgentService {
         $this->decedentRequestModel = $decedentRequestModel ?? new DecedentRequest();
         $this->cremationModel = $cremationModel ?? new Cremation();
         $this->actionRegistry = $actionRegistry ?? new BookingActionRegistry();
+        $this->availabilityService = $availabilityService;
     }
 
     public function getActionRegistry(): BookingActionRegistry {
         return $this->actionRegistry;
+    }
+
+    public function getAvailabilityService(): BookingAvailabilityService {
+        if ($this->availabilityService === null) {
+            require_once __DIR__ . '/BookingAvailabilityService.php';
+            $this->availabilityService = new BookingAvailabilityService(
+                null,
+                $this->scheduleModel,
+                $this->lotModel,
+                $this->cremationModel,
+                $this
+            );
+        }
+        return $this->availabilityService;
     }
 
     /**

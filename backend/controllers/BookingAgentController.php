@@ -284,12 +284,16 @@ class BookingAgentController {
 
         // Authoritative backend intent normalization: specific destructive/operational actions take precedence
         $msgLower = strtolower($message);
-        if (preg_match('/\b(change lot|different lot|switch lot|move lot|transfer lot|reassign lot|change allocation)\b/i', $msgLower)) {
+        if (preg_match('/\b(ano pa kulang|ano pa kailangan|may kulang pa ba|ano pa ang kailangan|ano pa requirements|kulang pa ba|anong kulang|ano pang kailangan|what is missing|what\'s missing|what else do i need|what information is missing|what information is needed|what do i still need|what am i missing)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_EXPLAIN_MISSING_REQUIREMENTS;
+        } elseif (preg_match('/\b(change lot|different lot|switch lot|move lot|transfer lot|reassign lot|change allocation)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_CHANGE_ALLOCATION;
         } elseif (preg_match('/\b(cancel|withdraw|drop booking|cancel my booking|cancel reservation)\b/i', $msgLower) && !preg_match('/\b(cancel that|cancel action|no cancel)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_CANCEL_BOOKING;
         } elseif (preg_match('/\b(reschedule|move the burial|move my burial|move the booking|move my booking|move the cremation|postpone|shift date|move from|change date to|reschedule to|change my booking date|change the booking date)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_RESCHEDULE_BOOKING;
+        } elseif (preg_match('/\b(may available ba|available ba ang|available ba sa|may slot pa ba|may slot pa|may bakante pa ba|may bakante pa|may bakante|pwede pa ba sa|pwede pa ba)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_CHECK_AVAILABILITY;
         } elseif (
             in_array($intent, [BookingAgentService::INTENT_PROVIDE_INFORMATION, BookingAgentService::INTENT_PROVIDE_INFO, BookingAgentService::INTENT_UNCLEAR], true)
             || empty($intent)
@@ -441,6 +445,227 @@ class BookingAgentController {
             ];
         }
 
+        // Purely Advisory intent: EXPLAIN_MISSING_REQUIREMENTS (Batch 4)
+        if ($intent === BookingAgentService::INTENT_EXPLAIN_MISSING_REQUIREMENTS) {
+            $availService = $this->agentService->getAvailabilityService();
+            $explanation = $availService->explainMissingRequirements($currentDraft);
+
+            return [
+                'success'               => true,
+                'intent'                => $intent,
+                'intent_confidence'     => $confidence,
+                'advisory'              => true,
+                'has_active_draft'      => $explanation['has_active_draft'],
+                'code'                  => $explanation['code'],
+                'draft_id'              => $explanation['draft_id'] ?? null,
+                'draft_status'          => $explanation['draft_status'] ?? null,
+                'service_type'          => $explanation['service_type'] ?? null,
+                'missing_fields'        => $explanation['missing_fields'],
+                'missing_requirements'  => $explanation['missing_fields'],
+                'completed_fields'      => $explanation['completed_fields'],
+                'next_recommended_step' => $explanation['next_recommended_step'],
+                'checklist'             => $explanation['checklist'] ?? null,
+                'reply'                 => $explanation['reply'],
+                'context_resolution'    => $contextResolution,
+                'slots'                 => $slots,
+                'booking_reference'     => $extractedReference,
+            ];
+        }
+
+        // Purely Advisory intent: RESUME_BOOKING (Batch 4)
+        if ($intent === BookingAgentService::INTENT_RESUME_BOOKING) {
+            $availService = $this->agentService->getAvailabilityService();
+            if ($currentDraft) {
+                $guidance = $availService->getResumptionGuidance($currentDraft);
+                return [
+                    'success'               => true,
+                    'intent'                => $intent,
+                    'intent_confidence'     => $confidence,
+                    'advisory'              => true,
+                    'has_active_draft'      => true,
+                    'code'                  => 'DRAFT_RESUMED',
+                    'draft_id'              => (int) $currentDraft['draft_id'],
+                    'draft_status'          => $currentDraft['status'],
+                    'service_type'          => $currentDraft['service_type'],
+                    'completed_fields'      => $guidance['completed_fields'],
+                    'missing_fields'        => $guidance['missing_fields'],
+                    'missing_requirements'  => $guidance['missing_fields'],
+                    'next_recommended_step' => $guidance['next_recommended_step'],
+                    'next_action'           => $guidance['next_action'],
+                    'reply'                 => $guidance['reply'],
+                    'context_resolution'    => $contextResolution,
+                    'slots'                 => $slots,
+                    'booking_reference'     => $extractedReference,
+                ];
+            } else {
+                return [
+                    'success'               => true,
+                    'intent'                => $intent,
+                    'intent_confidence'     => $confidence,
+                    'advisory'              => true,
+                    'has_active_draft'      => false,
+                    'code'                  => BookingAvailabilityService::CODE_NO_ACTIVE_DRAFT,
+                    'missing_fields'        => [],
+                    'missing_requirements'  => [],
+                    'completed_fields'      => [],
+                    'next_recommended_step' => 'CREATE_BOOKING',
+                    'reply'                 => "Wala kayong aktibong booking draft sa ngayon. Maaari tayong magsimula ng bagong booking.",
+                    'context_resolution'    => $contextResolution,
+                    'slots'                 => $slots,
+                    'booking_reference'     => $extractedReference,
+                ];
+            }
+        }
+
+        // Purely Advisory intent: CHECK_AVAILABILITY (Batch 4)
+        if ($intent === BookingAgentService::INTENT_CHECK_AVAILABILITY) {
+            $availService = $this->agentService->getAvailabilityService();
+            $targetService = $serviceTypeExtracted ?: ($currentDraft['service_type'] ?? 'burial');
+
+            // 1. Resolve date
+            $targetDate = $slots['preferred_date'] ?? ($slots['cremation_date'] ?? ($slots['target_date'] ?? null));
+            if (!$targetDate && preg_match('/\b(20\d{2}-\d{2}-\d{2})\b/', $message, $dm)) {
+                $targetDate = $dm[1];
+            }
+
+            // 2. Resolve lot identifier
+            $lotIdent = $slots['lot_identifier'] ?? ($slots['lot_id'] ?? null);
+            if (!$lotIdent && preg_match('/\blot\s*(?:id|#|number)?\s*:?\s*([A-Za-z0-9\-_]+)\b/i', $message, $lm)) {
+                $lotIdent = trim($lm[1]);
+            }
+            $sectionHint = $slots['section'] ?? null;
+
+            // 3. Columbarium niche inquiry
+            if ($targetService === 'cremation' && (str_contains($msgLower, 'niche') || str_contains($msgLower, 'columbarium') || !empty($slots['preferred_columbarium']))) {
+                $nicheRes = $availService->getCremationNicheGuidance($slots['preferred_columbarium'] ?? null);
+                return [
+                    'success'            => true,
+                    'intent'             => $intent,
+                    'intent_confidence'  => $confidence,
+                    'advisory'           => true,
+                    'code'               => $nicheRes['code'],
+                    'availability'       => $nicheRes,
+                    'alternative_dates'  => [],
+                    'alternatives'       => [],
+                    'alternative_lots'   => [],
+                    'reply'              => $nicheRes['message'],
+                    'context_resolution' => $contextResolution,
+                    'slots'              => $slots,
+                    'booking_reference'  => $extractedReference,
+                ];
+            }
+
+            // 4. Specific Lot Query
+            if (!empty($lotIdent)) {
+                $lotRes = $availService->resolveLotIdentifier((string) $lotIdent, $sectionHint);
+
+                if ($lotRes['status'] === BookingAvailabilityService::CODE_CLARIFICATION_REQUIRED) {
+                    return [
+                        'success'            => true,
+                        'intent'             => $intent,
+                        'intent_confidence'  => $confidence,
+                        'advisory'           => true,
+                        'code'               => BookingAvailabilityService::CODE_CLARIFICATION_REQUIRED,
+                        'availability'       => [
+                            'available'   => false,
+                            'code'        => BookingAvailabilityService::CODE_CLARIFICATION_REQUIRED,
+                            'reason_code' => BookingAvailabilityService::CODE_CLARIFICATION_REQUIRED,
+                            'message'     => $lotRes['message']
+                        ],
+                        'alternative_dates'  => [],
+                        'alternatives'       => [],
+                        'alternative_lots'   => [],
+                        'reply'              => $lotRes['message'],
+                        'context_resolution' => $contextResolution,
+                        'slots'              => $slots,
+                        'booking_reference'  => $extractedReference,
+                    ];
+                }
+
+                if ($lotRes['status'] === 'NOT_FOUND') {
+                    $notFoundMsg = "Hindi mahanap ang lot '{$lotIdent}' sa talaan ng sementeryo.";
+                    return [
+                        'success'            => true,
+                        'intent'             => $intent,
+                        'intent_confidence'  => $confidence,
+                        'advisory'           => true,
+                        'code'               => BookingAvailabilityService::CODE_LOT_NOT_FOUND,
+                        'availability'       => [
+                            'available'   => false,
+                            'code'        => BookingAvailabilityService::CODE_LOT_NOT_FOUND,
+                            'reason_code' => BookingAvailabilityService::CODE_LOT_NOT_FOUND,
+                            'message'     => $notFoundMsg
+                        ],
+                        'alternative_dates'  => [],
+                        'alternatives'       => [],
+                        'alternative_lots'   => $availService->findAlternativeLots(null, $sectionHint),
+                        'reply'              => $notFoundMsg,
+                        'context_resolution' => $contextResolution,
+                        'slots'              => $slots,
+                        'booking_reference'  => $extractedReference,
+                    ];
+                }
+
+                $resolvedLot = $lotRes['lot'];
+                $checkDate = $targetDate ?: date('Y-m-d', strtotime('+1 day'));
+                $slotRes = $availService->checkSlotAvailability(
+                    (int) $resolvedLot['lot_id'],
+                    $checkDate,
+                    $slots['schedule_time'] ?? null,
+                    $targetService
+                );
+
+                $altDates = [];
+                $altLots = [];
+                if (!$slotRes['available']) {
+                    $altDates = $availService->findAlternativeDates($targetService, $checkDate, (int) $resolvedLot['lot_id']);
+                    $altLots = $availService->findAlternativeLots((int) $resolvedLot['lot_id'], $resolvedLot['section_name']);
+                }
+
+                return [
+                    'success'            => true,
+                    'intent'             => $intent,
+                    'intent_confidence'  => $confidence,
+                    'advisory'           => true,
+                    'code'               => $slotRes['code'],
+                    'availability'       => $slotRes,
+                    'alternative_dates'  => $altDates,
+                    'alternatives'       => $altDates,
+                    'alternative_lots'   => $altLots,
+                    'reply'              => $slotRes['message'],
+                    'context_resolution' => $contextResolution,
+                    'slots'              => $slots,
+                    'booking_reference'  => $extractedReference,
+                ];
+            }
+
+            // 5. General Date Query (no specific lot provided)
+            $checkDate = $targetDate ?: date('Y-m-d', strtotime('+1 day'));
+            $genRes = $availService->checkGeneralDateAvailability($checkDate, $targetService);
+
+            $altDates = [];
+            if (!$genRes['available']) {
+                $altDates = $availService->findAlternativeDates($targetService, $checkDate);
+            }
+            $altLots = !empty($genRes['sample_lots']) ? $genRes['sample_lots'] : [];
+
+            return [
+                'success'            => true,
+                'intent'             => $intent,
+                'intent_confidence'  => $confidence,
+                'advisory'           => true,
+                'code'               => $genRes['code'],
+                'availability'       => $genRes,
+                'alternative_dates'  => $altDates,
+                'alternatives'       => $altDates,
+                'alternative_lots'   => $altLots,
+                'reply'              => $genRes['message'],
+                'context_resolution' => $contextResolution,
+                'slots'              => $slots,
+                'booking_reference'  => $extractedReference,
+            ];
+        }
+
         // 6. Authoritatively Update Draft via BookingAgentService for intake/draft interactions
         $processPayload = [
             'intent'           => $intent,
@@ -531,7 +756,9 @@ class BookingAgentController {
         $intent = BookingAgentService::INTENT_PROVIDE_INFORMATION;
         $confidence = 0.95;
 
-        if (preg_match('/\b(cancel|withdraw|drop booking|cancel my booking|cancel reservation)\b/i', $msgLower)) {
+        if (preg_match('/\b(ano pa kulang|ano pa kailangan|may kulang pa ba|ano pa ang kailangan|ano pa requirements|kulang pa ba|anong kulang|ano pang kailangan|what is missing|what\'s missing|what else do i need|what information is missing|what information is needed|what do i still need|what am i missing)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_EXPLAIN_MISSING_REQUIREMENTS;
+        } elseif (preg_match('/\b(cancel|withdraw|drop booking|cancel my booking|cancel reservation)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_CANCEL_BOOKING;
         } elseif (preg_match('/\b(reschedule|move the burial|move my burial|move the booking|move my booking|move the cremation|postpone|shift date|move from|change date to|reschedule to|change my booking date|change the booking date)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_RESCHEDULE_BOOKING;
@@ -539,7 +766,7 @@ class BookingAgentController {
             $intent = BookingAgentService::INTENT_CORRECT_BOOKING_DETAILS;
         } elseif (preg_match('/\b(change my booking|update my booking|modify my booking|edit my booking|change the relationship|change the name|change the notes|change the contact)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_UPDATE_BOOKING;
-        } elseif (preg_match('/\b(availability|available|is it free|is there space|open slots|any available)\b/i', $msgLower)) {
+        } elseif (preg_match('/\b(may available ba|available ba ang|available ba sa|available ba|may slot pa ba|may slot pa|may bakante pa ba|may bakante pa|may bakante|pwede pa ba sa|pwede pa ba|is available|do you have available|check availability|availability|available|is it free|is there space|open slots|any available)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_CHECK_AVAILABILITY;
         } elseif (preg_match('/\b(status|check status|what is the status|is my booking confirmed|has it been approved)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_CHECK_BOOKING_STATUS;
@@ -547,7 +774,7 @@ class BookingAgentController {
             $intent = BookingAgentService::INTENT_CHANGE_ALLOCATION;
         } elseif (preg_match('/\b(select lot|choose lot|assign lot|pick lot|take lot|i want lot)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_SELECT_ALLOCATION;
-        } elseif (preg_match('/\b(resume|continue my|pick up where)\b/i', $msgLower)) {
+        } elseif (preg_match('/\b(resume|continue my|pick up where|saan na ako|ano na status ng draft|status ng booking ko|anong susunod)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_RESUME_BOOKING;
         } elseif (preg_match('/\b(confirm|proceed|looks good|ready to confirm|finalize|yes confirm)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_CONFIRM_BOOKING;
@@ -611,13 +838,20 @@ class BookingAgentController {
             }
         }
 
-        if (preg_match('/\blot\s*(?:id|#|number)?\s*:?\s*(\d+)\b/i', $message, $m)) {
-            $slots['lot_id'] = (int) $m[1];
-            $slots['lot_identifier'] = (int) $m[1];
+        // Lot extraction (numeric ID or alphanumeric like A-14, A2-03)
+        if (preg_match('/\blot\s*(?:id|#|number)?\s*:?\s*([A-Za-z0-9\-_]+)\b/i', $message, $m)) {
+            $slots['lot_identifier'] = trim($m[1]);
+            if (is_numeric($slots['lot_identifier'])) {
+                $slots['lot_id'] = (int) $slots['lot_identifier'];
+            }
+        } elseif (preg_match('/\b([A-Z]\d?[-_]\d+)\b/i', $message, $m)) {
+            $slots['lot_identifier'] = trim($m[1]);
         }
 
         if (preg_match('/\bsection\s+([A-Za-z0-9]+)\b/i', $message, $m)) {
             $slots['section'] = strtoupper($m[1]);
+        } elseif (preg_match('/^([A-Za-z])[-_]/', (string) ($slots['lot_identifier'] ?? ''), $sm)) {
+            $slots['section'] = strtoupper($sm[1]);
         }
 
         if (preg_match('/\bmy\s+(father|mother|brother|sister|son|daughter|husband|wife|friend|relative|grandfather|grandmother|parent|spouse)\b/i', $message, $m)) {

@@ -421,8 +421,33 @@
                     appendAssistantMessage(`Please choose an available burial lot from our cemetery map or browse our available lots list.`);
                 }
 
+                // Availability Results rendering (Batch 4)
+                if (res.availability) {
+                    renderAvailabilityCard(res.availability);
+                }
+
+                // Missing Requirements checklist rendering (Batch 4)
+                if (res.checklist && res.has_active_draft) {
+                    renderChecklistCard(res.checklist);
+                }
+
+                const altDates = res.alternative_dates || res.alternatives || res.recovery?.alternative_dates || [];
+                const altLots = res.alternative_lots || res.recovery?.alternative_lots || [];
+
                 if (res.pending_action) {
                     renderPendingActionChips(res.pending_action);
+                } else if (altDates.length > 0) {
+                    const dateChips = altDates.map(d => ({
+                        text: `📅 ${formatDateLabel(d)}`,
+                        action: () => sendChatTurn(`Available ba sa ${d}?`)
+                    }));
+                    renderPromptChips(dateChips);
+                } else if (altLots.length > 0) {
+                    const lotChips = altLots.map(l => ({
+                        text: `📍 Lot #${l.lot_number} (${l.section_name})`,
+                        action: () => sendChatTurn(`Available ba ang Lot #${l.lot_number}?`)
+                    }));
+                    renderPromptChips(lotChips);
                 } else if (Array.isArray(res.available_lots) && res.available_lots.length > 0) {
                     const lotChips = res.available_lots.map(l => ({
                         text: `📍 Lot #${l.lot_number} (${l.section_name})`,
@@ -752,6 +777,93 @@
             btn.style.fontWeight = '600';
             promptSuggestions.appendChild(btn);
         });
+    }
+
+    function renderAvailabilityCard(avail) {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'chat-message assistant availability-card';
+        let badgeClass = 'success';
+        let badgeIcon = 'check-circle';
+        let badgeText = 'Available';
+
+        if (!avail.available) {
+            if (avail.code === 'DATE_RESTRICTED_MONDAY' || avail.reason_code === 'DATE_RESTRICTED_MONDAY') {
+                badgeClass = 'warning';
+                badgeIcon = 'exclamation-triangle';
+                badgeText = 'Monday Closure';
+            } else if (avail.code === 'DATE_RESTRICTED_PAST' || avail.reason_code === 'DATE_RESTRICTED_PAST') {
+                badgeClass = 'warning';
+                badgeIcon = 'history';
+                badgeText = 'Past Date';
+            } else if (avail.code === 'CLARIFICATION_REQUIRED' || avail.reason_code === 'CLARIFICATION_REQUIRED') {
+                badgeClass = 'warning';
+                badgeIcon = 'question-circle';
+                badgeText = 'Clarification Needed';
+            } else {
+                badgeClass = 'danger';
+                badgeIcon = 'times-circle';
+                badgeText = 'Slot Conflict';
+            }
+        }
+
+        let detailsHtml = '';
+        if (avail.date) detailsHtml += `<div><strong>Date:</strong> ${formatDateLabel(avail.date)}</div>`;
+        if (avail.lot_number) detailsHtml += `<div><strong>Lot:</strong> ${avail.lot_number} (${avail.section_name || ''})</div>`;
+        if (avail.service_type) detailsHtml += `<div><strong>Service:</strong> ${avail.service_type.toUpperCase()}</div>`;
+        if (avail.available_lot_count !== undefined) detailsHtml += `<div><strong>Available Lots:</strong> ${avail.available_lot_count}</div>`;
+
+        cardDiv.innerHTML = `
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 12px; margin-top: 4px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-weight: 600; font-size: 0.95rem;"><i class="fas fa-calendar-check"></i> Availability Intelligence</span>
+                    <span class="badge badge-${badgeClass}"><i class="fas fa-${badgeIcon}"></i> ${badgeText}</span>
+                </div>
+                <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.5;">
+                    ${detailsHtml}
+                </div>
+                <div style="margin-top: 6px; font-size: 0.75rem; color: #94a3b8; font-style: italic;">
+                    Advisory query only — no reservation created.
+                </div>
+            </div>
+        `;
+        chatThread.appendChild(cardDiv);
+        scrollChatToBottom();
+    }
+
+    function renderChecklistCard(checklist) {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'chat-message assistant checklist-card';
+        const fieldLabels = {
+            decedent_name: 'Pangalan ng Yumao (Decedent Name)',
+            relationship: 'Relasyon sa Yumao (Relationship)',
+            preferred_date: 'Petsa ng Libing (Burial Date)',
+            cremation_date: 'Petsa ng Cremation (Cremation Date)',
+            lot_id: 'Napiling Burial Lot (Lot Selection)',
+            service_type: 'Uri ng Serbisyo (Service Type)'
+        };
+        let compList = (checklist.completed || []).map(f => {
+            const lbl = fieldLabels[f] || f.replace(/_/g, ' ');
+            return `<div style="color: #4ade80; margin-bottom: 3px;"><i class="fas fa-check-circle"></i> ${lbl}</div>`;
+        }).join('');
+        let missList = (checklist.missing || []).map(f => {
+            const lbl = fieldLabels[f] || f.replace(/_/g, ' ');
+            return `<div style="color: #f87171; margin-bottom: 3px;"><i class="far fa-circle"></i> ${lbl}</div>`;
+        }).join('');
+
+        cardDiv.innerHTML = `
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 12px; margin-top: 4px;">
+                <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 8px;">
+                    <i class="fas fa-tasks"></i> Booking Progress Checklist
+                </div>
+                <div style="font-size: 0.85rem; line-height: 1.5;">
+                    ${compList}
+                    ${missList}
+                </div>
+                ${checklist.next_recommended_step ? `<div style="margin-top: 8px; font-size: 0.85rem; color: #38bdf8;"><strong>Next Step:</strong> ${checklist.next_recommended_step.replace(/_/g, ' ')}</div>` : ''}
+            </div>
+        `;
+        chatThread.appendChild(cardDiv);
+        scrollChatToBottom();
     }
 
     async function confirmPendingAction(pendingAction) {

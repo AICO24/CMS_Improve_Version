@@ -28,6 +28,7 @@ require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/BookingRescheduleService.php';
 require_once __DIR__ . '/BookingCancellationService.php';
 require_once __DIR__ . '/BookingAllocationService.php';
+require_once __DIR__ . '/BookingAvailabilityService.php';
 
 class BookingActionRegistry {
     // Action Identifiers
@@ -100,6 +101,7 @@ class BookingActionRegistry {
     private BookingRescheduleService $rescheduleService;
     private BookingCancellationService $cancellationService;
     private BookingAllocationService $allocationService;
+    private ?BookingAvailabilityService $availabilityService = null;
 
     public function __construct(
         ?PDO $db = null,
@@ -107,7 +109,8 @@ class BookingActionRegistry {
         ?BookingPendingAction $pendingActionModel = null,
         ?BookingRescheduleService $rescheduleService = null,
         ?BookingCancellationService $cancellationService = null,
-        ?BookingAllocationService $allocationService = null
+        ?BookingAllocationService $allocationService = null,
+        ?BookingAvailabilityService $availabilityService = null
     ) {
         $this->db = $db ?? Database::getInstance()->getConnection();
         $this->auditLogModel = $auditLogModel ?? new AuditLog();
@@ -115,6 +118,7 @@ class BookingActionRegistry {
         $this->rescheduleService = $rescheduleService ?? new BookingRescheduleService($this->db, null, null, null, $this->auditLogModel);
         $this->cancellationService = $cancellationService ?? new BookingCancellationService($this->db, null, null, null, null, $this->auditLogModel);
         $this->allocationService = $allocationService ?? new BookingAllocationService($this->db, null, null, $this->auditLogModel);
+        $this->availabilityService = $availabilityService;
     }
 
     public function getPendingActionModel(): BookingPendingAction {
@@ -131,6 +135,13 @@ class BookingActionRegistry {
 
     public function getAllocationService(): BookingAllocationService {
         return $this->allocationService;
+    }
+
+    public function getAvailabilityService(): BookingAvailabilityService {
+        if ($this->availabilityService === null) {
+            $this->availabilityService = new BookingAvailabilityService($this->db);
+        }
+        return $this->availabilityService;
     }
 
     /**
@@ -524,11 +535,22 @@ class BookingActionRegistry {
         if ($serviceType === 'burial' && !empty($rec['lot_id'])) {
             $conflict = (new Schedule())->checkConflict((int)$rec['lot_id'], $normalizedDate, $targetTime);
             if ($conflict) {
+                $altDates = $this->getAvailabilityService()->findAlternativeDates(
+                    'burial',
+                    $normalizedDate,
+                    (int)$rec['lot_id'],
+                    $targetTime
+                );
                 return [
-                    'action_status' => self::STATUS_NOT_ALLOWED_FOR_STATE,
-                    'reply'         => "The requested date {$normalizedDate} is not available for this lot. Please select another date.",
-                    'action'        => null,
-                    'changes'       => []
+                    'action_status'     => self::STATUS_NOT_ALLOWED_FOR_STATE,
+                    'code'              => BookingAvailabilityService::CODE_SLOT_CONFLICT,
+                    'reply'             => "The requested date {$normalizedDate} is not available for this lot. Please select another date.",
+                    'action'            => null,
+                    'changes'           => [],
+                    'recovery'          => [
+                        'alternative_dates' => $altDates
+                    ],
+                    'alternative_dates' => $altDates
                 ];
             }
         }
@@ -960,12 +982,44 @@ class BookingActionRegistry {
                 // 8. Handle Domain Outcome
                 if (empty($domainResult['success'])) {
                     $this->pendingActionModel->markFailed($pendingActionId);
-                    return [
+                    $errorCode = $domainResult['code'] ?? 500;
+                    $errorMsg = $domainResult['error'] ?? 'Domain execution failed';
+                    $recovery = null;
+
+                    // If slot or lot conflict occurred at execution time
+                    if ($errorCode === 409 || str_contains(strtolower($errorMsg), 'already booked') || str_contains(strtolower($errorMsg), 'conflict')) {
+                        if ($actionType === self::ACTION_RESCHEDULE_BOOKING) {
+                            $altDates = $this->getAvailabilityService()->findAlternativeDates(
+                                $bookingType,
+                                $payload['new_date'] ?? date('Y-m-d'),
+                                !empty($payload['lot_id']) ? (int) $payload['lot_id'] : null,
+                                $payload['new_time'] ?? null
+                            );
+                            $recovery = ['alternative_dates' => $altDates];
+                        } elseif ($actionType === self::ACTION_CHANGE_ALLOCATION) {
+                            $altLots = $this->getAvailabilityService()->findAlternativeLots(
+                                (int) ($payload['new_lot_id'] ?? 0)
+                            );
+                            $recovery = ['alternative_lots' => $altLots];
+                        }
+                    }
+
+                    $failResp = [
                         'success'       => false,
                         'action_status' => self::STATUS_FAILED,
-                        'error'         => $domainResult['error'] ?? 'Domain execution failed',
-                        'code'          => $domainResult['code'] ?? 500
+                        'code'          => ($errorCode === 409) ? BookingAvailabilityService::CODE_SLOT_CONFLICT : $errorCode,
+                        'error'         => $errorMsg
                     ];
+                    if ($recovery !== null) {
+                        $failResp['recovery'] = $recovery;
+                        if (!empty($recovery['alternative_dates'])) {
+                            $failResp['alternative_dates'] = $recovery['alternative_dates'];
+                        }
+                        if (!empty($recovery['alternative_lots'])) {
+                            $failResp['alternative_lots'] = $recovery['alternative_lots'];
+                        }
+                    }
+                    return $failResp;
                 }
 
                 // 9. Mark permanently EXECUTED

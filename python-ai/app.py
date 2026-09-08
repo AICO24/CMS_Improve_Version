@@ -879,7 +879,7 @@ BOOKING_AGENT_SYSTEM_PROMPT = (
     "extract structured slots and booking references, classify citizen intent, and provide a warm, concise response.\n\n"
     "Output strictly a JSON object conforming to this schema (no markdown, no backticks, no prose outside JSON):\n"
     "{\n"
-    '  "intent": "CREATE_BOOKING" | "UPDATE_BOOKING" | "CORRECT_BOOKING_DETAILS" | "RESCHEDULE_BOOKING" | "CANCEL_BOOKING" | "CONFIRM_BOOKING" | "CANCEL_DRAFT" | "CHECK_AVAILABILITY" | "SELECT_ALLOCATION" | "CHANGE_ALLOCATION" | "CHECK_BOOKING_STATUS" | "RESUME_BOOKING" | "PROVIDE_INFORMATION" | "UNCLEAR",\n'
+    '  "intent": "CREATE_BOOKING" | "UPDATE_BOOKING" | "CORRECT_BOOKING_DETAILS" | "RESCHEDULE_BOOKING" | "CANCEL_BOOKING" | "CONFIRM_BOOKING" | "CANCEL_DRAFT" | "CHECK_AVAILABILITY" | "EXPLAIN_MISSING_REQUIREMENTS" | "SELECT_ALLOCATION" | "CHANGE_ALLOCATION" | "CHECK_BOOKING_STATUS" | "RESUME_BOOKING" | "PROVIDE_INFORMATION" | "UNCLEAR",\n'
     '  "confidence": 0.95,\n'
     '  "service_type": "burial" | "cremation" | null,\n'
     '  "booking_reference": string | null,\n'
@@ -920,6 +920,7 @@ BOOKING_AGENT_SYSTEM_PROMPT = (
     "- CONFIRM_BOOKING: Citizen explicitly confirms, agrees, or finalizes booking (e.g. 'Yes, please confirm this booking now', 'Confirm it', 'Looks good, proceed').\n"
     "- CANCEL_DRAFT: Citizen cancels, aborts, or discards the active booking draft.\n"
     "- CHECK_AVAILABILITY: Citizen asks if specific dates, times, or lots are free/available.\n"
+    "- EXPLAIN_MISSING_REQUIREMENTS: Citizen asks what information, documents, or steps are still missing or needed to complete their booking (e.g. 'Ano pa kulang?', 'What is missing?', 'Ano pa kailangan?').\n"
     "- SELECT_ALLOCATION: Citizen chooses a burial lot or columbarium niche.\n"
     "- CHANGE_ALLOCATION: Citizen asks to switch to another lot, section, or columbarium.\n"
     "- CHECK_BOOKING_STATUS: Citizen asks for the current status, approval, or schedule of a booking.\n"
@@ -995,7 +996,9 @@ def _extract_booking_deterministic(
     intent = 'PROVIDE_INFO'
     confidence = 0.95
 
-    if any(phrase in msg_lower for phrase in ['cancel', 'withdraw', 'drop booking', 'cancel my booking', 'cancel reservation', 'cancel the booking']):
+    if any(phrase in msg_lower for phrase in ['ano pa kulang', 'ano pa kailangan', 'may kulang pa ba', 'ano pa ang kailangan', 'ano pa requirements', 'kulang pa ba', 'anong kulang', 'ano pang kailangan', 'what is missing', "what's missing", 'what else do i need', 'what information is missing', 'what information is needed', 'what do i still need', 'what am i missing']):
+        intent = 'EXPLAIN_MISSING_REQUIREMENTS'
+    elif any(phrase in msg_lower for phrase in ['cancel', 'withdraw', 'drop booking', 'cancel my booking', 'cancel reservation', 'cancel the booking']):
         intent = 'CANCEL_BOOKING'
     elif any(phrase in msg_lower for phrase in ['reschedule', 'move the burial', 'move my burial', 'move the booking', 'move my booking', 'move the cremation', 'postpone', 'shift date', 'move from', 'change date to', 'reschedule to', 'change my booking date', 'change the booking date', 'change booking date']):
         intent = 'RESCHEDULE_BOOKING'
@@ -1003,7 +1006,7 @@ def _extract_booking_deterministic(
         intent = 'CORRECT_BOOKING_DETAILS'
     elif any(phrase in msg_lower for phrase in ['change my booking', 'update my booking', 'modify my booking', 'edit my booking']):
         intent = 'UPDATE_BOOKING'
-    elif any(phrase in msg_lower for phrase in ['availability', 'available', 'is it free', 'is there space', 'open slots', 'any available']):
+    elif any(phrase in msg_lower for phrase in ['availability', 'available', 'is it free', 'is there space', 'open slots', 'any available', 'may available', 'available ba', 'may slot', 'may bakante', 'pwede pa ba', 'is available', 'do you have available']):
         intent = 'CHECK_AVAILABILITY'
     elif any(phrase in msg_lower for phrase in ['status', 'check status', 'what is the status', 'is my booking confirmed', 'has it been approved', 'has my booking been']):
         intent = 'CHECK_BOOKING_STATUS'
@@ -1082,18 +1085,22 @@ def _extract_booking_deterministic(
             slots['target_date'] = date_val
 
     # 5. Extract Lot ID / Allocation
-    lot_match = re.search(r'\blot\s*(?:id|#|number)?\s*:?\s*(\d+)\b', msg_lower)
+    lot_match = re.search(r'\blot\s*(?:id|#|number)?\s*:?\s*([A-Za-z0-9\-_]+)\b', msg_lower)
     if lot_match:
-        try:
-            lot_num = int(lot_match.group(1))
-            slots['lot_id'] = lot_num
-            slots['lot_identifier'] = lot_num
-        except ValueError:
-            pass
+        val = lot_match.group(1).strip()
+        slots['lot_identifier'] = val
+        if val.isdigit():
+            slots['lot_id'] = int(val)
+    else:
+        alphanumeric_lot = re.search(r'\b([A-Za-z]\d?[-_]\d+)\b', message)
+        if alphanumeric_lot:
+            slots['lot_identifier'] = alphanumeric_lot.group(1).strip()
 
     sec_match = re.search(r'\bsection\s+([A-Za-z0-9]+)\b', msg_lower)
     if sec_match:
         slots['section'] = sec_match.group(1).upper()
+    elif slots.get('lot_identifier') and re.match(r'^([A-Za-z])[-_]', str(slots['lot_identifier'])):
+        slots['section'] = str(slots['lot_identifier'])[0].upper()
 
     col_match = re.search(r'\bcolumbarium\s*(?:vault|building|section)?\s*:?\s*([A-Za-z0-9\s]+)\b', message, flags=re.IGNORECASE)
     if col_match:
@@ -1180,6 +1187,8 @@ def _extract_booking_deterministic(
         reply = f"Checking the current status of your booking{ref_text}."
     elif intent == 'CHECK_AVAILABILITY':
         reply = "Let me check availability for the requested service and date."
+    elif intent == 'EXPLAIN_MISSING_REQUIREMENTS':
+        reply = "Here is the checklist of requirements for your booking."
     elif intent == 'CONFIRM_BOOKING':
         reply = "I have recorded your confirmation. Please review the booking details so we can proceed."
     elif intent == 'REQUEST_RECOMMENDATION':
