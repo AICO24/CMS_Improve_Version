@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="../../assets/css/components/buttons.css">
     <link rel="stylesheet" href="../../assets/css/components/cards.css">
     <link rel="stylesheet" href="../../assets/css/components/tables.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/toast.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
@@ -282,6 +283,20 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Unified Booking Details Modal -->
+                    <div class="modal" id="bookingDetailModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="bookingDetailTitle">
+                        <div class="modal-content modal--md">
+                            <button type="button" class="close-view" id="closeDetailModal" aria-label="Close">&times;</button>
+                            <div class="modal-header" id="bookingDetailTitle">Booking Details</div>
+                            <div class="modal-body" id="bookingDetailBody">
+                                <p>Loading booking details...</p>
+                            </div>
+                            <div class="modal-footer" id="bookingDetailFooter">
+                                <button type="button" class="btn-secondary" id="closeDetailModalBtn">Close</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -290,6 +305,7 @@
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/shared/toast.js"></script>
+    <script src="../../assets/js/shared/confirm-modal.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
     <script src="../../assets/js/pages/my-bookings.js"></script>

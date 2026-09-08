@@ -13,6 +13,11 @@
     const statBurials = document.getElementById('statBurials');
     const statCremations = document.getElementById('statCremations');
     const statDrafts = document.getElementById('statDrafts');
+    const bookingDetailModal = document.getElementById('bookingDetailModal');
+    const bookingDetailBody = document.getElementById('bookingDetailBody');
+    const bookingDetailFooter = document.getElementById('bookingDetailFooter');
+    const closeDetailModal = document.getElementById('closeDetailModal');
+    const closeDetailModalBtn = document.getElementById('closeDetailModalBtn');
 
     let currentBookings = [];
 
@@ -63,6 +68,36 @@
         if (logoutBtn && typeof api !== 'undefined' && typeof api.logout === 'function') {
             logoutBtn.addEventListener('click', () => api.logout());
         }
+
+        if (bookingsTableBody) {
+            bookingsTableBody.addEventListener('click', (e) => {
+                const btn = e.target.closest('.btn-view-details');
+                if (btn) {
+                    const idx = Number(btn.getAttribute('data-index'));
+                    const item = currentBookings[idx];
+                    if (item) {
+                        openBookingDetails(item);
+                    }
+                }
+            });
+        }
+
+        if (closeDetailModal) {
+            closeDetailModal.addEventListener('click', closeDetails);
+        }
+        if (closeDetailModalBtn) {
+            closeDetailModalBtn.addEventListener('click', closeDetails);
+        }
+        if (bookingDetailModal) {
+            bookingDetailModal.addEventListener('click', (e) => {
+                if (e.target === bookingDetailModal) closeDetails();
+            });
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && bookingDetailModal && bookingDetailModal.style.display !== 'none') {
+                closeDetails();
+            }
+        });
     }
 
     async function checkActiveDrafts() {
@@ -143,7 +178,7 @@
         }
 
         bookingsTableBody.innerHTML = '';
-        items.forEach(item => {
+        items.forEach((item, index) => {
             const tr = document.createElement('tr');
             tr.style.borderBottom = '1px solid #f1f5f9';
 
@@ -155,16 +190,16 @@
             if (isDraft) {
                 typeBadge = `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:0.75rem;background:#fef3c7;color:#92400e;font-weight:600;"><i class="fas fa-pen-to-square"></i> Draft (${serviceType ? capitalize(serviceType) : 'Service'})</span>`;
             } else if (serviceType === 'burial') {
-                typeBadge = `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:0.75rem;background:#e0f2fe;color:#0369a1;font-weight:600;"><i class="fas fa-monument"></i> Burial</span>`;
+                typeBadge = '<span style="display:inline-flex;align-items:center;gap:4px;color:#166534;font-weight:600;"><i class="fas fa-monument"></i> Burial</span>';
             } else if (serviceType === 'cremation') {
-                typeBadge = `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:0.75rem;background:#fae8ff;color:#86198f;font-weight:600;"><i class="fas fa-fire"></i> Cremation</span>`;
+                typeBadge = '<span style="display:inline-flex;align-items:center;gap:4px;color:#6b21a8;font-weight:600;"><i class="fas fa-fire"></i> Cremation</span>';
             } else {
-                typeBadge = `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:0.75rem;background:#f1f5f9;color:#475569;font-weight:600;">${escapeHtml(item.source_kind)}</span>`;
+                typeBadge = `<span style="display:inline-flex;align-items:center;gap:4px;color:#475569;font-weight:600;">${escapeHtml(item.source_kind)}</span>`;
             }
 
             // Status Badge
             const statusUpper = (item.status || 'PENDING').toUpperCase();
-            let badgeColor = '#64748b';
+            let badgeColor = '#475569';
             let badgeBg = '#f1f5f9';
             if (['CONFIRMED', 'SCHEDULED', 'COMPLETED', 'APPROVED'].includes(statusUpper)) {
                 badgeColor = '#059669';
@@ -197,8 +232,7 @@
                 const draftId = item.draft_id || item.source_id;
                 actionHtml = `<a href="booking-assistant.html?draft_id=${draftId}" class="btn-primary" style="font-size:0.8rem;padding:4px 10px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-play"></i> Resume</a>`;
             } else {
-                const viewUrl = serviceType === 'burial' ? 'my-reservations.html' : 'my-cremations.html';
-                actionHtml = `<a href="${viewUrl}" class="btn-secondary" style="font-size:0.8rem;padding:4px 10px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-eye"></i> Details</a>`;
+                actionHtml = `<button type="button" class="btn-secondary btn-view-details" data-index="${index}" style="font-size:0.8rem;padding:4px 10px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><i class="fas fa-eye"></i> Details</button>`;
             }
 
             tr.innerHTML = `
@@ -212,6 +246,154 @@
             `;
             bookingsTableBody.appendChild(tr);
         });
+    }
+
+    function closeDetails() {
+        if (bookingDetailModal) {
+            bookingDetailModal.style.display = 'none';
+        }
+    }
+
+    async function openBookingDetails(item) {
+        if (!bookingDetailModal || !bookingDetailBody) return;
+        bookingDetailModal.style.display = 'flex';
+        bookingDetailBody.innerHTML = '<p style="text-align:center;padding:24px;color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Loading booking details...</p>';
+
+        const serviceType = String(item.service_type || '').toLowerCase();
+        const isDraft = Number(item.is_draft) === 1 || item.source_kind === 'DRAFT';
+        const sourceId = item.source_id;
+
+        try {
+            let fullData = null;
+            if (!isDraft && sourceId) {
+                const endpoint = serviceType === 'burial' ? `schedules/${sourceId}` : `cremations/${sourceId}`;
+                fullData = await api.request(endpoint, { method: 'GET' }).catch(() => null);
+            }
+
+            const record = (fullData && fullData.data) ? fullData.data : (fullData || item);
+            const statusUpper = String(record.status || item.status || '').toUpperCase();
+            const canCancel = ['PENDING', 'DRAFT'].includes(statusUpper);
+
+            const displayDate = record.schedule_date || record.cremation_date || item.booking_date || 'TBD';
+            const displayTime = record.schedule_time || '';
+            const paymentStatus = record.payment_status || 'Pending Verification';
+            const paymentAmount = record.payment_amount ? `₱${Number(record.payment_amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : 'N/A';
+            const notes = record.notes || 'None';
+
+            bookingDetailBody.innerHTML = `
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid #e2e8f0;">
+                        <div>
+                            <span style="font-size:0.75rem;text-transform:uppercase;color:#64748b;font-weight:700;">Reference</span>
+                            <div style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#0f172a;">${escapeHtml(item.booking_reference || '-')}</div>
+                        </div>
+                        <div>
+                            <span style="display:inline-block;padding:4px 10px;border-radius:6px;font-size:0.8rem;font-weight:700;text-transform:uppercase;background:${serviceType === 'burial' ? '#dcfce7;color:#166534;' : '#f3e8ff;color:#6b21a8;'}">
+                                <i class="fas ${serviceType === 'burial' ? 'fa-monument' : 'fa-fire'}"></i> ${escapeHtml(serviceType || 'Service')}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div>
+                            <label style="font-size:0.75rem;color:#64748b;font-weight:600;display:block;">Decedent</label>
+                            <strong style="color:#1e293b;font-size:0.95rem;">${escapeHtml(item.decedent_name || 'Pending Formal Record')}</strong>
+                        </div>
+                        <div>
+                            <label style="font-size:0.75rem;color:#64748b;font-weight:600;display:block;">Current Status</label>
+                            <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.8rem;font-weight:600;background:#f1f5f9;color:#334155;">
+                                ${escapeHtml(formatBookingStatus(record.status || item.status, isDraft))}
+                            </span>
+                        </div>
+                        <div>
+                            <label style="font-size:0.75rem;color:#64748b;font-weight:600;display:block;">Scheduled Date / Time</label>
+                            <span style="color:#1e293b;font-size:0.9rem;">${escapeHtml(displayDate)} ${escapeHtml(displayTime)}</span>
+                        </div>
+                        <div>
+                            <label style="font-size:0.75rem;color:#64748b;font-weight:600;display:block;">Allocation</label>
+                            <span style="color:#1e293b;font-size:0.9rem;">${escapeHtml(item.allocation || 'Standard')}</span>
+                        </div>
+                    </div>
+
+                    <div style="background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0;">
+                        <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:#475569;margin-bottom:6px;">Payment Information</div>
+                        <div style="display:flex;justify-content:space-between;font-size:0.9rem;">
+                            <span>Status: <strong>${escapeHtml(paymentStatus)}</strong></span>
+                            <span>Amount: <strong>${escapeHtml(paymentAmount)}</strong></span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="font-size:0.75rem;color:#64748b;font-weight:600;display:block;">Notes & Special Instructions</label>
+                        <p style="font-size:0.85rem;color:#475569;margin:4px 0 0 0;">${escapeHtml(notes)}</p>
+                    </div>
+                </div>
+            `;
+
+            if (bookingDetailFooter) {
+                let footerHtml = '<button type="button" class="btn-secondary" id="closeDetailModalBtnInner">Close</button>';
+                if (canCancel) {
+                    footerHtml = `
+                        <button type="button" class="btn-danger" id="cancelBookingBtn" style="background:#ef4444;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;">
+                            <i class="fas fa-ban"></i> Cancel Booking
+                        </button>
+                        ${footerHtml}
+                    `;
+                }
+                bookingDetailFooter.innerHTML = footerHtml;
+
+                document.getElementById('closeDetailModalBtnInner')?.addEventListener('click', closeDetails);
+
+                const cancelBtn = document.getElementById('cancelBookingBtn');
+                if (cancelBtn) {
+                    cancelBtn.addEventListener('click', async () => {
+                        const confirmed = typeof confirmDialog === 'function'
+                            ? await confirmDialog({
+                                title: 'Cancel this booking?',
+                                message: 'This will cancel your pending reservation and release any reserved lots or slots. This action cannot be undone.',
+                                confirmLabel: 'Yes, cancel booking',
+                                cancelLabel: 'Keep booking',
+                                danger: true
+                            })
+                            : confirm('Cancel this booking? This cannot be undone.');
+
+                        if (!confirmed) return;
+
+                        try {
+                            cancelBtn.disabled = true;
+                            cancelBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cancelling...';
+                            const endpoint = isDraft
+                                ? `booking-agent/drafts/${item.draft_id || item.source_id}/cancel`
+                                : (serviceType === 'burial' ? `schedules/${sourceId}` : `cremations/${sourceId}`);
+                            const method = isDraft ? 'POST' : 'DELETE';
+                            const cancelRes = await api.request(endpoint, { method });
+
+                            if (cancelRes && (cancelRes.success !== false)) {
+                                if (typeof showToast === 'function') {
+                                    showToast('Booking cancelled successfully', 'success');
+                                }
+                                closeDetails();
+                                await loadUnifiedBookings();
+                            } else {
+                                throw new Error(cancelRes.error || 'Failed to cancel booking');
+                            }
+                        } catch (err) {
+                            console.error('Cancellation error:', err);
+                            if (typeof showToast === 'function') {
+                                showToast(err.message || 'Unable to cancel booking', 'error');
+                            } else {
+                                alert(err.message || 'Unable to cancel booking');
+                            }
+                            cancelBtn.disabled = false;
+                            cancelBtn.innerHTML = '<i class="fas fa-ban"></i> Cancel Booking';
+                        }
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Failed to open booking details:', error);
+            bookingDetailBody.innerHTML = `<p style="color:#ef4444;text-align:center;padding:16px;">Unable to load booking details: ${escapeHtml(error.message || 'Error')}</p>`;
+        }
     }
 
     function formatBookingStatus(status, isDraft) {
