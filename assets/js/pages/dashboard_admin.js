@@ -205,13 +205,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!Array.isArray(payments) || payments.length === 0) {
             payments = await api.request('payments', { method: 'GET' });
         }
-        // Batch N4 (adviser feedback 2026-08-18): this card used to make its
-        // own separate schedules/recommend call (with no preferences, so
-        // effectively an arbitrary "top" pick) to show a standalone
-        // "Suggested Lot" tile — redundant with the real, interactive AI
-        // recommendation already in the booking chatbot. Removed in favor
-        // of a plain CTA into that chatbot (see dashboard_admin.html) —
-        // one recommendation surface instead of two.
+        // Operational Queues: The obsolete citizen lot recommendation card was
+        // replaced with the admin Operational Queues card in dashboard_admin.html.
+        // No orphaned schedules/recommend or AI burial assistant calls remain.
         const summary = occupancy.summary || {};
         const totalLots = Number(summary.total) || 0;
         const availableLots = Number(summary.available) || 0;
