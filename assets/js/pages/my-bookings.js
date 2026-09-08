@@ -31,6 +31,35 @@
             console.warn('Role verification bypassed:', e);
         }
 
+        // URL query parameter support for pre-filtering (e.g. ?type=burial or ?type=cremation from legacy redirects)
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const typeParam = urlParams.get('type');
+            if (typeParam && bookingTypeFilter) {
+                const normalizedType = typeParam.toLowerCase().trim();
+                const validTypes = Array.from(bookingTypeFilter.options).map(opt => opt.value);
+                if (validTypes.includes(normalizedType)) {
+                    bookingTypeFilter.value = normalizedType;
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to parse URL query params:', e);
+        }
+
+        // BATCH AI-4 (Citizen Unified Booking Scope): AI Assistant mount for citizen bookings & schedules.
+        // Scoped strictly to module: 'Schedule', which queries the authenticated citizen's bookings server-side.
+        if (typeof initAiAssistant === 'function' && document.getElementById('aiAssistantMount')) {
+            initAiAssistant({
+                mountSelector: '#aiAssistantMount',
+                context: { scope: 'module', module: 'Schedule' },
+                greeting: "Hello! I'm your AI assistant for your bookings. How can I help you today?",
+                suggestions: [
+                    { icon: 'fa-calendar-check', label: 'My bookings', question: 'What is the status of my bookings right now?' },
+                    { icon: 'fa-clock-rotate-left', label: 'Anything pending?', question: 'Do I have any pending bookings, and what do they need?' },
+                ],
+            });
+        }
+
         setupEventListeners();
 
         await Promise.all([
@@ -139,7 +168,7 @@
             const params = new URLSearchParams();
             if (filterVal === 'draft') {
                 params.append('source_kind', 'DRAFT');
-            } else if (filterVal) {
+            } else if (filterVal && filterVal !== 'all') {
                 params.append('service_type', filterVal);
             }
 

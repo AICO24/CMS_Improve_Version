@@ -70,13 +70,13 @@ if "askAssistant($payload, $user = null)" not in ai_controller:
 if "citizens may only use context.scope" not in ai_controller:
     errors.append("AI-4 regression: AiController::askAssistant() is missing its citizen scope='module'-only restriction")
 
-my_reservations_js = read('assets/js/pages/my-reservations.js')
-if "module: 'Schedule'" not in my_reservations_js:
-    errors.append('AI-4 regression: my-reservations.js is missing its citizen-scoped assistant mount')
+my_bookings_js = read('assets/js/pages/my-bookings.js')
+if "module: 'Schedule'" not in my_bookings_js:
+    errors.append('AI-4 regression: my-bookings.js is missing its citizen-scoped assistant mount')
 payment_history_js = read('assets/js/pages/payment-history.js')
 if "module: 'Payment'" not in payment_history_js:
     errors.append('AI-4 regression: payment-history.js is missing its citizen-scoped assistant mount')
-for html_file in ['frontend/pages/my-reservations.html', 'frontend/pages/payment-history.html']:
+for html_file in ['frontend/pages/my-bookings.html', 'frontend/pages/payment-history.html']:
     html_text = read(html_file)
     if 'id="aiAssistantMount"' not in html_text:
         errors.append(f'AI-4 regression: {html_file} is missing the #aiAssistantMount div')
