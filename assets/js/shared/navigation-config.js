@@ -113,7 +113,7 @@
             route: 'my-bookings.html',
             allowedRoles: ['admin', 'staff', 'user'],
             showInSidebar: true,
-            sidebarGroup: { admin: 'Operations', staff: 'Operations', user: 'Records' },
+            sidebarGroup: { admin: null, staff: null, user: 'Records' },
             label: 'My Bookings',
             icon: 'fa-calendar-check',
             navigationOrder: 30,
