@@ -3,232 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Cremations | Cemetery Management</title>
+    <meta http-equiv="refresh" content="0; url=my-bookings.html?type=cremation">
+    <title>Redirecting to My Bookings | Cemetery Management System</title>
+    <link rel="canonical" href="my-bookings.html?type=cremation">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="../../assets/css/tokens.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/typography.css">
-    <link rel="stylesheet" href="../../assets/css/spacing.css">
-    <link rel="stylesheet" href="../../assets/css/shadows.css">
-    <link rel="stylesheet" href="../../assets/css/animations.css">
     <link rel="stylesheet" href="../../assets/css/base.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/components/buttons.css">
-    <link rel="stylesheet" href="../../assets/css/components/cards.css">
-    <link rel="stylesheet" href="../../assets/css/components/forms.css">
-    <link rel="stylesheet" href="../../assets/css/components/tables.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/components/modals.css">
-    <link rel="stylesheet" href="../../assets/css/components/toast.css">
-    <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/dashboard_user.css">
-    <link rel="stylesheet" href="../../assets/css/user-management.css">
-    <link rel="stylesheet" href="../../assets/css/components/search-input.css">
-    <link rel="stylesheet" href="../../assets/css/my-reservations.css">
-    <link rel="stylesheet" href="../../assets/css/shared/ai-assistant-widget.css">
-
-    <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
+    <script>
+        // Legacy Citizen Cremation Bookings Redirect -> Unified Bookings (BMS-9)
+        (function() {
+            var search = window.location.search;
+            var target = 'my-bookings.html?type=cremation';
+            if (search) {
+                var params = new URLSearchParams(search);
+                params.delete('type');
+                var remaining = params.toString();
+                if (remaining) target += '&' + remaining;
+            }
+            window.location.replace(target);
+        })();
+    </script>
 </head>
-<body class="dashboard-body">
-<script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
-    <div class="dashboard-container">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
-                <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
-            </div>
-                                                <div class="sidebar-nav">
-                    <a href="dashboard_user.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Services</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="book-a-service.html" class="nav-item"><i class="fas fa-handshake icon"></i> <span>Book a Service</span></a>
-                    <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Records</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="my-bookings.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>My Bookings</span></a>
-                    <a href="my-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>My Records</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Finance</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
-                    <a href="payment-history.html" class="nav-item"><i class="fas fa-receipt icon"></i> <span>Payment History</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Account</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
-                    <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
-                    </div>
-                </div>
-            </div>
-            <div class="sidebar-footer">
-                <div class="user-chip">
-                    <i class="fas fa-user-circle"></i>
-                    <div><span id="sidebarUserName">Client</span><small id="sidebarUserRole">Client</small></div>
-                </div>
-            </div>
-        </aside>
-
-        <main class="main-content">
-            <div class="top-bar">
-                <div class="top-left">
-                    <label class="hamburger">
-                        <input type="checkbox" id="toggleSidebar">
-                        <svg viewBox="0 0 32 32">
-                            <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
-                            <path class="line" d="M7 16H27"></path>
-                        </svg>
-                    </label>
-                    <h3 id="pageTitle">My Cremations</h3>
-                    <div id="aiAssistantMount"></div>
-                </div>
-                <div class="user-info">
-                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
-                    <div class="notification-icon" id="notificationIcon">
-                        <i class="fas fa-bell"></i>
-                        <span class="notification-badge" id="notificationBadge">0</span>
-                    </div>
-                    <div class="profile">
-                        <div class="profile-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
-                        <div class="profile-text">
-                            <div class="user-name" id="userName">Client</div>
-                            <div class="user-role" id="userRole">Client</div>
-                        </div>
-                    </div>
-                    <button class="Btn logout-btn" id="logoutBtn">
-                        <div class="sign"><i class="fas fa-sign-out-alt"></i></div>
-                        <div class="text">Logout</div>
-                    </button>
-                </div>
-            </div>
-                <div class="content-area">
-                <div class="card" style="background:#f0fdf4;border:1px solid #bbf7d0;margin-bottom:16px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <i class="fas fa-circle-info" style="color:#15803d;font-size:1.4rem;"></i>
-                        <div>
-                            <strong style="color:#166534;font-size:0.95rem;display:block;">Booking history is now unified</strong>
-                            <span style="color:#15803d;font-size:0.85rem;">View all burial bookings, cremation bookings, and active drafts in one place with complete details and status updates.</span>
-                        </div>
-                    </div>
-                    <a href="my-bookings.html" class="btn-primary" style="text-decoration:none;font-size:0.85rem;padding:6px 14px;white-space:nowrap;">Go to My Bookings &rarr;</a>
-                </div>
-                <div class="card">
-                    <div class="toolbar-row">
-                        <div class="toolbar-action-row">
-                            <div class="toolbar-section-label">
-                                <i class="fas fa-filter"></i>
-                                <span>Filters</span>
-                            </div>
-                        </div>
-                        <div class="toolbar-main-row">
-                            <div class="toolbar-filters">
-                                <div class="search-field">
-                                    <input type="text" id="searchQuery" class="search-field__input" placeholder=" ">
-                                    <label for="searchQuery" class="search-field__label">Search by columbarium or decedent</label>
-                                    <span class="search-field__icon" aria-hidden="true">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
-                                    </span>
-                                </div>
-                                <label class="status-select-field" for="statusFilter">
-                                    <span>Status</span>
-                                    <select id="statusFilter" aria-label="Filter by status">
-                                    <option value="">All statuses</option>
-                                    <option value="Pending">Pending</option>
-                                    <option value="Scheduled">Scheduled</option>
-                                    <option value="Completed">Completed</option>
-                                    <option value="Cancelled">Cancelled</option>
-                                    </select>
-                                </label>
-                                <button class="btn-secondary" id="clearFilters">Clear</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
-
-                    <div class="table-container">
-                        <table class="data-table" id="cremationsTable">
-                            <thead>
-                                <tr>
-                                    <th>Request</th>
-                                    <th>Columbarium</th>
-                                    <th>Niche</th>
-                                    <th>Cremation Date</th>
-                                    <th>Status</th>
-                                    <th>Decedent</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="cremationsBody">
-                                <tr><td colspan="7">Loading cremation requests...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Cremation module audit, Batch F: citizen-facing progress
-                         tracker (Submitted / Payment / Scheduled / Completed),
-                         opened via each row's new View button. -->
-                    <div class="modal" id="cremationDetailModal">
-                        <div class="modal-content modal--md">
-                            <button type="button" class="close-view" id="closeDetailModal" aria-label="Close">&times;</button>
-                            <div class="modal-header">Cremation Request Details</div>
-                            <div class="modal-body" id="cremationDetailBody">
-                                <p>Loading...</p>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn-secondary" id="closeDetailModalBtn">Close</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="pagination-controls" id="paginationControls">
-                        <span class="pagination-info" id="paginationInfo"></span>
-                        <div class="pagination-actions">
-                            <form class="pagination-jump" id="paginationJumpForm">
-                                <label for="pageJumpInput">Jump to page</label>
-                                <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Enter page number">
-                                <button class="btn-secondary" id="pageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
-                            </form>
-                            <span class="pagination-divider" aria-hidden="true"></span>
-                            <button class="btn-secondary" id="prevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
-                            <button class="btn-secondary" id="nextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
+<body style="font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f8fafc; color: #1e293b; padding: 20px;">
+    <div style="max-width: 520px; width: 100%; text-align: center; padding: 32px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+        <h2 style="margin-top: 0; margin-bottom: 12px; font-size: 1.4rem; color: #0f172a;">Redirecting to Unified Bookings</h2>
+        <p style="font-size: 0.95rem; color: #64748b; line-height: 1.5; margin-bottom: 20px;">
+            Cremation bookings have been consolidated into the unified <strong>My Bookings</strong> dashboard. You are being redirected automatically.
+        </p>
+        <p style="font-size: 0.9rem; color: #64748b; margin: 0;">
+            If you are not redirected automatically, <a href="my-bookings.html?type=cremation" style="color: #2563eb; font-weight: 600; text-decoration: underline;">click here to continue to My Bookings</a>.
+        </p>
     </div>
-
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
-    <script src="../../assets/js/shared/button-loading.js"></script>
-    <script src="../../assets/js/shared/pagination.js"></script>
-    <script src="../../assets/js/shared/toast.js"></script>
-    <script src="../../assets/js/shared/confirm-modal.js"></script>
-    <script src="../../assets/js/shared/reservation-ui.js"></script>
-    <script src="../../assets/js/shared/ai-assistant-widget.js"></script>
-    <script src="../../assets/js/pages/my-cremations.js"></script>
-    <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
-    <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
 </body>
 </html>
