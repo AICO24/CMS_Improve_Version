@@ -1,11 +1,18 @@
 <?php
+require_once __DIR__ . '/../config/database.php';
+
 class AIService {
     private $baseUrl;
     private $timeout;
+    private $cacheDir;
 
     public function __construct($baseUrl = 'http://127.0.0.1:5000') {
         $this->baseUrl = rtrim($baseUrl, '/');
         $this->timeout = 30;
+        $this->cacheDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cms_cache';
+        if (!is_dir($this->cacheDir)) {
+            @mkdir($this->cacheDir, 0777, true);
+        }
     }
 
     public function healthCheck() {
@@ -29,7 +36,25 @@ class AIService {
     }
 
     public function getForecast($months = 6) {
-        return $this->request('/api/forecast?months=' . (int) $months);
+        $months = max(1, (int) $months);
+        $cached = $this->readCachedForecast($months);
+        if ($cached) {
+            return $cached;
+        }
+
+        $res = $this->request('/api/forecast?months=' . $months);
+        if (is_array($res) && empty($res['error']) && (!isset($res['code']) || $res['code'] === 200)) {
+            $this->writeCachedForecast($months, $res);
+            return $res;
+        }
+
+        $fallback = $this->forecastFallback($months);
+        if (!empty($fallback['success'])) {
+            $this->writeCachedForecast($months, $fallback);
+            return $fallback;
+        }
+
+        return $res;
     }
 
     public function getNarration($payload) {
@@ -149,5 +174,184 @@ class AIService {
 
         $decoded = json_decode($response, true);
         return is_array($decoded) ? $decoded : ['error' => 'Invalid response', 'code' => 502];
+    }
+
+    public function forecastFallback(int $months): array {
+        try {
+            $db = Database::getInstance()->getConnection();
+            $historicalRows = $db->query(
+                "SELECT DATE_FORMAT(schedule_date, '%Y-%m') AS month, COUNT(*) AS burials
+                 FROM burial_schedules
+                 WHERE status IN ('Confirmed', 'Completed')
+                   AND schedule_date >= DATE_SUB(CURDATE(), INTERVAL 24 MONTH)
+                 GROUP BY DATE_FORMAT(schedule_date, '%Y-%m')
+                 ORDER BY month ASC"
+            )->fetchAll(PDO::FETCH_ASSOC);
+
+            $historicalMap = [];
+            foreach ($historicalRows as $row) {
+                $historicalMap[$row['month']] = (int) $row['burials'];
+            }
+
+            $currentMonth = new DateTimeImmutable('first day of this month');
+            $historical = [];
+            for ($offset = -23; $offset <= 0; $offset++) {
+                $date = $this->addMonths($currentMonth, $offset);
+                $label = $date->format('Y-m');
+                $value = $historicalMap[$label] ?? 0;
+                $historical[] = ['month' => $label, 'burials' => (int) $value];
+            }
+
+            $values = array_map(static fn($entry) => (int) $entry['burials'], $historical);
+            $trend = 'stable';
+            if (count($values) >= 2) {
+                $first = $values[0];
+                $last = $values[count($values) - 1];
+                if ($last > $first) {
+                    $trend = 'increasing';
+                } elseif ($last < $first) {
+                    $trend = 'decreasing';
+                }
+            }
+
+            $capacitySql = "SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'Occupied' THEN 1 ELSE 0 END) AS occupied
+                            FROM lots";
+            $capacityRow = $db->query($capacitySql)->fetch(PDO::FETCH_ASSOC) ?: [];
+            $capacity = [
+                'total' => (int) ($capacityRow['total'] ?? 0),
+                'occupied' => (int) ($capacityRow['occupied'] ?? 0),
+                'available' => max(0, (int) ($capacityRow['total'] ?? 0) - (int) ($capacityRow['occupied'] ?? 0)),
+            ];
+
+            $reclaimableSql = "SELECT DATE_FORMAT(end_date, '%Y-%m') AS month, COUNT(*) AS reclaimable
+                              FROM expiration_records
+                              WHERE renewed = 'no'
+                                AND end_date >= CURDATE()
+                                AND end_date <= DATE_ADD(CURDATE(), INTERVAL :months MONTH)
+                              GROUP BY month";
+            $reclaimableStmt = $db->prepare($reclaimableSql);
+            $reclaimableStmt->bindValue(':months', $months, PDO::PARAM_INT);
+            $reclaimableStmt->execute();
+            $reclaimableRows = $reclaimableStmt->fetchAll(PDO::FETCH_ASSOC);
+            $reclaimableByMonth = [];
+            foreach ($reclaimableRows as $row) {
+                $reclaimableByMonth[$row['month']] = (int) $row['reclaimable'];
+            }
+
+            $forecast = [];
+            $cumulative = 0;
+            $lookbackWindow = min(3, count($values));
+            $baseAverage = $lookbackWindow > 0 ? array_sum(array_slice($values, -$lookbackWindow)) / $lookbackWindow : 0;
+
+            for ($index = 1; $index <= $months; $index++) {
+                $monthDate = $this->addMonths($currentMonth, $index);
+                $label = $monthDate->format('Y-m');
+                $predicted = max(0, (int) round($baseAverage));
+                if (count($values) >= 2) {
+                    $delta = end($values) - $values[0];
+                    $growthBias = $delta / max(1, count($values) - 1);
+                    $predicted = max(0, (int) round($baseAverage + ($growthBias * 0.5)));
+                }
+
+                $cumulative += $predicted;
+                $reclaimable = $reclaimableByMonth[$label] ?? 0;
+                $projectedOccupied = $capacity['occupied'] + $cumulative - $reclaimable;
+                $projectedAvailable = $capacity['total'] > 0 ? max(0, $capacity['total'] - $projectedOccupied) : max(0, $projectedOccupied);
+                $occupancyRate = $capacity['total'] > 0 ? max(0, min(1, $projectedOccupied / $capacity['total'])) : 0;
+
+                if ($occupancyRate >= 0.95) {
+                    $capacityStatus = 'critical';
+                } elseif ($occupancyRate >= 0.80) {
+                    $capacityStatus = 'warning';
+                } else {
+                    $capacityStatus = 'ok';
+                }
+
+                $forecast[] = [
+                    'month' => $label,
+                    'predicted_burials' => $predicted,
+                    'cumulative' => $cumulative,
+                    'reclaimable' => $reclaimable,
+                    'projected_available' => $projectedAvailable,
+                    'projected_occupied' => $projectedOccupied,
+                    'occupancy_rate' => round($occupancyRate, 4),
+                    'capacity_status' => $capacityStatus,
+                ];
+            }
+
+            $capacityAlert = null;
+            foreach ($forecast as $entry) {
+                if ($entry['capacity_status'] !== 'ok') {
+                    $capacityAlert = [
+                        'month' => $entry['month'],
+                        'status' => $entry['capacity_status'],
+                        'occupancy_rate' => $entry['occupancy_rate'],
+                    ];
+                    break;
+                }
+            }
+
+            return [
+                'success' => true,
+                'source' => 'local_fallback',
+                'historical' => $historical,
+                'forecast' => $forecast,
+                'trend' => $trend,
+                'capacity' => $capacity,
+                'capacity_alert' => $capacityAlert,
+            ];
+        } catch (Throwable $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'forecast' => [],
+                'fallback' => true,
+            ];
+        }
+    }
+
+    private function readCachedForecast(int $months) {
+        $path = $this->getForecastCachePath($months);
+        if (!is_file($path)) {
+            return null;
+        }
+
+        $content = @file_get_contents($path);
+        if ($content === false) {
+            return null;
+        }
+
+        $payload = json_decode($content, true);
+        if (!is_array($payload) || !isset($payload['expires_at'], $payload['data'])) {
+            return null;
+        }
+
+        if ((int) $payload['expires_at'] < time()) {
+            @unlink($path);
+            return null;
+        }
+
+        return $payload['data'];
+    }
+
+    private function writeCachedForecast(int $months, array $data): void {
+        $path = $this->getForecastCachePath($months);
+        $payload = [
+            'expires_at' => time() + 300,
+            'data' => $data,
+        ];
+
+        @file_put_contents($path, json_encode($payload), LOCK_EX);
+    }
+
+    private function getForecastCachePath(int $months): string {
+        return $this->cacheDir . DIRECTORY_SEPARATOR . 'forecast_' . $months . '.json';
+    }
+
+    private function addMonths(DateTimeImmutable $date, int $months): DateTimeImmutable {
+        $monthIndex = ($date->format('Y') * 12) + ((int) $date->format('n') - 1) + $months;
+        $year = intdiv($monthIndex, 12);
+        $month = ($monthIndex % 12) + 1;
+        return DateTimeImmutable::createFromFormat('Y-n-j H:i:s', sprintf('%d-%d-1 00:00:00', $year, $month));
     }
 }

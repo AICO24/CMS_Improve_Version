@@ -1117,6 +1117,10 @@ class PaymentController {
         return $this->paymentModel->getRevenueByMonth($year);
     }
 
+    public function revenueByYear($filters = []) {
+        return $this->paymentModel->getRevenueByYear($filters);
+    }
+
     public function revenueBreakdown($filters = []) {
         return $this->paymentModel->getRevenueBreakdown($filters);
     }

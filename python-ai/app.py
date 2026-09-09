@@ -1827,6 +1827,13 @@ def _get_reclaimable_by_month(months: int) -> Dict[str, int]:
     return {row['month']: int(row['reclaimable']) for row in rows if row.get('month')}
 
 
+def _add_months(base_date: datetime, months: int) -> datetime:
+    month_index = (base_date.year * 12 + (base_date.month - 1)) + months
+    year = month_index // 12
+    month = (month_index % 12) + 1
+    return base_date.replace(year=year, month=month, day=1)
+
+
 @app.get('/api/forecast')
 def forecast_burials():
     try:
@@ -1850,11 +1857,11 @@ def forecast_burials():
         except Exception:
             raw_rows = []
 
+        current_month = datetime.now().replace(day=1)
         if raw_rows:
             monthly_series = []
-            end_date = datetime.now().replace(day=1)
-            for offset in range(23, -1, -1):
-                month_date = (end_date - timedelta(days=30 * offset)).replace(day=1)
+            for offset in range(-23, 1):
+                month_date = _add_months(current_month, offset)
                 label = month_date.strftime('%Y-%m')
                 monthly_series.append((label, 0))
             monthly_map = {row['month']: int(row['burials']) for row in raw_rows if row.get('month')}
@@ -1876,7 +1883,7 @@ def forecast_burials():
             for index, value in enumerate(forecast_values):
                 cumulative += int(value)
                 forecast_payload.append({
-                    'month': (datetime.now().replace(day=1) + timedelta(days=30 * (index + 1))).strftime('%Y-%m'),
+                    'month': _add_months(current_month, index + 1).strftime('%Y-%m'),
                     'predicted_burials': int(value),
                     'cumulative': cumulative,
                 })
@@ -1891,7 +1898,7 @@ def forecast_burials():
             for index, value in enumerate(forecast_values):
                 cumulative += int(value)
                 forecast_payload.append({
-                    'month': (datetime.now().replace(day=1) + timedelta(days=30 * (index + 1))).strftime('%Y-%m'),
+                    'month': _add_months(current_month, index + 1).strftime('%Y-%m'),
                     'predicted_burials': int(value),
                     'cumulative': cumulative,
                 })

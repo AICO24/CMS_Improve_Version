@@ -904,6 +904,15 @@ if ($path === 'payments/revenue-by-month' && $requestMethod === 'GET') {
     exit;
 }
 
+if ($path === 'payments/revenue-by-year' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $filters = [];
+    if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
+    if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
+    echo json_encode($paymentController->revenueByYear($filters));
+    exit;
+}
+
 if ($path === 'payments/revenue-breakdown' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $filters = [];
@@ -1018,6 +1027,15 @@ if ($path === 'audit-logs' && $requestMethod === 'GET') {
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
     $limit = $_GET['limit'] ?? 100;
     $offset = $_GET['offset'] ?? 0;
+
+    if (!empty($_GET['summary']) && $_GET['summary'] === 'true') {
+        echo json_encode([
+            'summary' => $auditLogModel->getSummaryStats($filters),
+            'logs' => $auditLogModel->findAll($filters, $limit, $offset),
+        ]);
+        exit;
+    }
+
     echo json_encode($auditLogModel->findAll($filters, $limit, $offset));
     exit;
 }
@@ -1115,6 +1133,16 @@ if ($path === 'users' && $requestMethod === 'POST') {
     exit;
 }
 
+if ($path === 'users/bulk' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin']);
+    $input = readRequestBody();
+    $result = $userController->bulkAction($input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 if (preg_match('/^users\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
     $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
@@ -1154,11 +1182,23 @@ if ($path === 'reports/revenue' && $requestMethod === 'GET') {
     exit;
 }
 
-if ($path === 'reports/expiration' && $requestMethod === 'GET') {
+if ($path === 'reports/recent-payments' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $pagination = [];
     if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
     if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
-    echo json_encode($reportController->expiration($pagination));
+    echo json_encode($reportController->recentPayments($pagination));
+    exit;
+}
+
+if ($path === 'reports/expiration' && $requestMethod === 'GET') {
+    $pagination = [];
+    $filters = [];
+    if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
+    if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
+    if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
+    if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
+    echo json_encode($reportController->expiration($pagination, $filters));
     exit;
 }
 

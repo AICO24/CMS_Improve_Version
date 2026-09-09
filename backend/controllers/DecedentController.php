@@ -304,7 +304,20 @@ class DecedentController {
         }
         $stats = $this->decedentModel->getStats($ownerId);
         if (!$stats) {
-            return ['total' => 0, 'burials' => 0, 'cremations' => 0, 'avg_age' => 0, 'needs_attention' => 0];
+            return [
+                'total' => 0,
+                'burials' => 0,
+                'cremations' => 0,
+                'avg_age' => 0,
+                'needs_attention' => 0,
+                'age_groups' => [
+                    ['label' => '0-17', 'value' => 0],
+                    ['label' => '18-35', 'value' => 0],
+                    ['label' => '36-55', 'value' => 0],
+                    ['label' => '56-75', 'value' => 0],
+                    ['label' => '75+', 'value' => 0],
+                ],
+            ];
         }
 
         $stats['burials'] = (int) ($stats['burials'] ?? 0);
@@ -312,6 +325,13 @@ class DecedentController {
         $stats['total'] = (int) ($stats['total'] ?? 0);
         $stats['avg_age'] = isset($stats['avg_age']) ? (int) $stats['avg_age'] : 0;
         $stats['needs_attention'] = (int) ($stats['needs_attention'] ?? 0);
+        $stats['age_groups'] = [
+            ['label' => '0-17', 'value' => (int) ($stats['age_0_17'] ?? 0)],
+            ['label' => '18-35', 'value' => (int) ($stats['age_18_35'] ?? 0)],
+            ['label' => '36-55', 'value' => (int) ($stats['age_36_55'] ?? 0)],
+            ['label' => '56-75', 'value' => (int) ($stats['age_56_75'] ?? 0)],
+            ['label' => '75+', 'value' => (int) ($stats['age_75_plus'] ?? 0)],
+        ];
 
         return $stats;
     }

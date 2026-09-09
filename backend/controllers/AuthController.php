@@ -100,6 +100,8 @@ class AuthController {
             'Login successful'
         );
 
+        $rememberMe = filter_var($data['remember_me'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
         $payload = [
             'user_id' => $user['user_id'],
             'username' => $user['username'],
@@ -111,7 +113,10 @@ class AuthController {
             'session_version' => (int) ($user['session_version'] ?? 1),
         ];
         try {
-            $token = JWTConfig::encode($payload);
+            $expiry = $rememberMe
+                ? (int) EnvironmentService::get('JWT_REMEMBER_EXPIRY', 2592000)
+                : (int) EnvironmentService::get('JWT_EXPIRY', 28800);
+            $token = JWTConfig::encode($payload, $expiry);
         } catch (Exception $e) {
             return ['error' => 'JWT configuration error', 'code' => 500];
         }
@@ -119,6 +124,8 @@ class AuthController {
         return [
             'success' => true,
             'token' => $token,
+            'expires_in' => $expiry,
+            'remembered' => $rememberMe,
             'user' => [
                 'user_id' => $user['user_id'],
                 'username' => $user['username'],
@@ -157,11 +164,21 @@ class AuthController {
         }
 
         // Anonymous registration is limited to normal users only.
+        $data['full_name'] = trim((string) ($data['full_name'] ?? ''));
+        $data['email'] = strtolower(trim((string) ($data['email'] ?? '')));
+        $data['username'] = trim((string) ($data['username'] ?? ''));
+        $data['contact_number'] = trim((string) ($data['contact_number'] ?? ''));
+        $data['address'] = trim((string) ($data['address'] ?? ''));
+
         $required = ['full_name', 'email', 'password', 'confirm_password'];
         foreach ($required as $field) {
             if (empty($data[$field])) {
                 return ['error' => "Field '$field' is required", 'code' => 400];
             }
+        }
+
+        if (strlen($data['full_name']) < 2 || strlen($data['full_name']) > 120) {
+            return ['error' => 'Full name must be 2 to 120 characters', 'code' => 400];
         }
 
         // AUTH-009 (Auth audit, Batch AUTH-2): register.js's own email check
@@ -172,12 +189,20 @@ class AuthController {
             return ['error' => 'A valid email address is required', 'code' => 400];
         }
 
+        if ($data['username'] !== '' && !preg_match('/^[a-zA-Z0-9._-]{3,40}$/', $data['username'])) {
+            return ['error' => 'Username must be 3 to 40 characters and use only letters, numbers, dots, underscores, or hyphens', 'code' => 400];
+        }
+
+        if ($data['contact_number'] !== '' && !preg_match('/^[0-9+() -]{7,20}$/', $data['contact_number'])) {
+            return ['error' => 'Contact number format is invalid', 'code' => 400];
+        }
+
         if ($data['password'] !== $data['confirm_password']) {
             return ['error' => 'Password confirmation does not match', 'code' => 400];
         }
 
-        if (strlen($data['password']) < 6) {
-            return ['error' => 'Password must be at least 6 characters', 'code' => 400];
+        if (strlen($data['password']) < 8) {
+            return ['error' => 'Password must be at least 8 characters', 'code' => 400];
         }
 
         if ($this->userModel->findByEmail($data['email'])) {

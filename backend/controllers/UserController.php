@@ -155,9 +155,9 @@ class UserController {
         }
 
         $changes = [];
-        $compareFields = ['username', 'full_name', 'email', 'role_id', 'is_active'];
+        $compareFields = ['username', 'full_name', 'email', 'contact_number', 'address', 'role_id', 'is_active'];
         foreach ($compareFields as $field) {
-            if (isset($data[$field]) && $data[$field] != $existing[$field]) {
+            if (array_key_exists($field, $data) && $data[$field] != $existing[$field]) {
                 $changes[$field] = ['from' => $existing[$field], 'to' => $data[$field]];
             }
         }
@@ -218,6 +218,112 @@ class UserController {
         return ['error' => 'Failed to delete user', 'code' => 500];
     }
 
+    public function bulkAction($payload, $actor = null) {
+        $action = strtolower((string) ($payload['action'] ?? ''));
+        $userIds = $payload['user_ids'] ?? [];
+
+        if (!in_array($action, ['activate', 'deactivate', 'delete'], true)) {
+            return ['error' => 'Invalid bulk action', 'code' => 400];
+        }
+
+        $ids = array_values(array_unique(array_filter(array_map('intval', (array) $userIds))));
+        if (empty($ids)) {
+            return ['error' => 'No user IDs were selected', 'code' => 400];
+        }
+
+        $adminRoleId = $this->userModel->getRoleIdByTitle('admin');
+        $activeAdmins = $this->userModel->findAll(['role' => 'admin', 'is_active' => 1]);
+        $activeAdminIds = array_map(function ($user) { return (int) $user['user_id']; }, $activeAdmins);
+
+        if ($action === 'deactivate') {
+            foreach ($ids as $id) {
+                $user = $this->userModel->findById($id);
+                if (!$user) {
+                    return ['error' => 'One or more users could not be found', 'code' => 404];
+                }
+                $willRemoveAdmin = $adminRoleId !== null
+                    && (int) $user['role_id'] === $adminRoleId
+                    && (int) $user['is_active'] === 1;
+                if ($willRemoveAdmin && count(array_diff($activeAdminIds, [$id])) === 0) {
+                    return ['error' => 'Cannot deactivate the last active administrator account', 'code' => 403];
+                }
+            }
+        }
+
+        if ($action === 'delete') {
+            foreach ($ids as $id) {
+                $user = $this->userModel->findById($id);
+                if (!$user) {
+                    return ['error' => 'One or more users could not be found', 'code' => 404];
+                }
+                $isActiveAdmin = $adminRoleId !== null
+                    && (int) $user['role_id'] === $adminRoleId
+                    && (int) $user['is_active'] === 1;
+                if ($isActiveAdmin && count(array_diff($activeAdminIds, [$id])) === 0) {
+                    return ['error' => 'Cannot delete the last active administrator account', 'code' => 403];
+                }
+            }
+        }
+
+        $conn = Database::getInstance()->getConnection();
+
+        if ($action === 'activate' || $action === 'deactivate') {
+            $inClause = implode(',', array_fill(0, count($ids), '?'));
+            $newState = $action === 'activate' ? 1 : 0;
+            $sql = "UPDATE users SET is_active = ? WHERE user_id IN ($inClause)";
+            $params = [$newState, ...$ids];
+            $stmt = $conn->prepare($sql);
+            $updated = $stmt->execute($params);
+            if ($updated) {
+                foreach ($ids as $id) {
+                    $user = $this->userModel->findById($id);
+                    $this->auditLogModel->log(
+                        $action === 'activate' ? 'Users activated' : 'Users deactivated',
+                        $actor['user_id'] ?? null,
+                        $actor['username'] ?? null,
+                        'User',
+                        $id,
+                        ['target_user' => $user['username'] ?? null, 'is_active' => $newState]
+                    );
+                }
+                return ['success' => true, 'message' => 'Bulk update completed'];
+            }
+            return ['error' => 'Failed to update selected users', 'code' => 500];
+        }
+
+        if ($action === 'delete') {
+            $userSnapshots = [];
+            foreach ($ids as $id) {
+                $user = $this->userModel->findById($id);
+                if ($user) {
+                    $userSnapshots[$id] = $user;
+                }
+            }
+
+            $inClause = implode(',', array_fill(0, count($ids), '?'));
+            $sql = "DELETE FROM users WHERE user_id IN ($inClause)";
+            $stmt = $conn->prepare($sql);
+            $deleted = $stmt->execute($ids);
+            if ($deleted) {
+                foreach ($ids as $id) {
+                    $user = $userSnapshots[$id] ?? null;
+                    $this->auditLogModel->log(
+                        'Users deleted',
+                        $actor['user_id'] ?? null,
+                        $actor['username'] ?? null,
+                        'User',
+                        $id,
+                        ['deleted_username' => $user['username'] ?? null, 'deleted_email' => $user['email'] ?? null]
+                    );
+                }
+                return ['success' => true, 'message' => 'Bulk delete completed'];
+            }
+            return ['error' => 'Failed to delete selected users', 'code' => 500];
+        }
+
+        return ['error' => 'Unsupported bulk action', 'code' => 400];
+    }
+
     // Counts active admins other than $excludeUserId, so callers can check
     // whether removing/demoting/deactivating that one user would leave zero.
     private function activeAdminCount($excludeUserId) {
@@ -255,6 +361,8 @@ class UserController {
             'username' => $user['username'],
             'full_name' => $user['full_name'],
             'email' => $user['email'],
+            'contact_number' => $user['contact_number'] ?? null,
+            'address' => $user['address'] ?? null,
             'role_id' => (int) $user['role_id'],
             'role' => $role,
             'role_title' => $roleTitle,
