@@ -104,12 +104,12 @@ if (count($availableLots) < 3) {
     // If not enough available lots, ensure at least 3 exist
     $sectionId = (int) $db->query("SELECT section_id FROM sections LIMIT 1")->fetchColumn() ?: 1;
     $blockId = (int) $db->query("SELECT block_id FROM blocks LIMIT 1")->fetchColumn() ?: 1;
-    $lotTypeId = (int) $db->query("SELECT lot_type_id FROM lot_types LIMIT 1")->fetchColumn() ?: 1;
+    $lotTypeId = (int) $db->query("SELECT type_id FROM lot_types LIMIT 1")->fetchColumn() ?: 1;
     for ($i = 1; $i <= 3; $i++) {
         $db->prepare("
-            INSERT INTO lots (section_id, block_id, lot_type_id, lot_number, status)
-            VALUES (?, ?, ?, ?, 'Available')
-        ")->execute([$sectionId, $blockId, $lotTypeId, 'B3-LOT-' . uniqid()]);
+            INSERT INTO lots (block_id, lot_type_id, lot_number, status, price)
+            VALUES (?, ?, ?, 'Available', 5000.00)
+        ")->execute([$blockId, $lotTypeId, 'B3-LOT-' . uniqid()]);
     }
     $availableLots = $db->query("SELECT lot_id, lot_number, status FROM lots WHERE status = 'Available' LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
 }

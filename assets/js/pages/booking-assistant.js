@@ -515,16 +515,33 @@
     function applyAuthoritativeState(data) {
         if (!data) return;
 
+        const isNewDraft = Boolean(data.draft_id && state.draftId && data.draft_id !== state.draftId);
         state.draftId = data.draft_id || state.draftId;
         state.serviceType = data.service_type || state.serviceType;
         state.status = data.status || state.status;
-        state.extractedData = data.extracted_data || {};
-        state.missingFields = Array.isArray(data.missing_fields) ? data.missing_fields : [];
-        state.isReadyForReview = Boolean(data.is_ready_for_review);
-        state.decedentMatch = data.decedent_match || null;
-        state.contextResolution = data.context_resolution || null;
-        state.lastIntent = data.intent || null;
-        state.lastAction = data.action || null;
+
+        // Non-destructive merge: incoming fields augment or update existing extractedData, never wipe to empty
+        if (isNewDraft) {
+            state.extractedData = (data.extracted_data && typeof data.extracted_data === 'object') ? Object.assign({}, data.extracted_data) : {};
+        } else if (data.extracted_data && typeof data.extracted_data === 'object' && Object.keys(data.extracted_data).length > 0) {
+            state.extractedData = Object.assign({}, state.extractedData, data.extracted_data);
+        }
+
+        if (Array.isArray(data.missing_fields)) {
+            state.missingFields = data.missing_fields;
+        } else if (Array.isArray(data.missing_requirements)) {
+            state.missingFields = data.missing_requirements;
+        }
+
+        if (data.is_ready_for_review !== undefined) {
+            state.isReadyForReview = Boolean(data.is_ready_for_review);
+        }
+        if (data.decedent_match !== undefined) {
+            state.decedentMatch = data.decedent_match || null;
+        }
+        state.contextResolution = data.context_resolution || state.contextResolution;
+        state.lastIntent = data.intent || state.lastIntent;
+        state.lastAction = data.action || state.lastAction;
         if (data.pending_action !== undefined) {
             state.pendingAction = data.pending_action;
         }
@@ -588,8 +605,17 @@
         hudDecedentVal.textContent = dName || 'Pending';
 
         // Schedule & Allocation Card
-        const dateVal = isCremation ? state.extractedData.cremation_date : state.extractedData.preferred_date;
-        hudDate.innerHTML = dateVal ? `<strong>${formatDate(dateVal)}</strong>` : '<span class="text-muted">Pending</span>';
+        const dateVal = isCremation ? state.extractedData.cremation_date : (state.extractedData.preferred_date || state.extractedData.schedule_date);
+        const timeVal = state.extractedData.preferred_time || state.extractedData.schedule_time;
+        let scheduleDisplay = '';
+        if (dateVal && timeVal) {
+            scheduleDisplay = `<strong>${formatDate(dateVal)}</strong> <span class="badge badge-light" style="font-size:0.8rem; margin-left:4px;"><i class="fas fa-clock"></i> ${formatTime(timeVal)}</span>`;
+        } else if (dateVal) {
+            scheduleDisplay = `<strong>${formatDate(dateVal)}</strong>`;
+        } else {
+            scheduleDisplay = '<span class="text-muted">Pending</span>';
+        }
+        hudDate.innerHTML = scheduleDisplay;
 
         if (isCremation) {
             hudAllocationLabel.textContent = 'Columbarium:';
@@ -1381,6 +1407,24 @@
             return dateStr;
         } catch {
             return dateStr;
+        }
+    }
+
+    function formatTime(timeStr) {
+        if (!timeStr) return '';
+        try {
+            const parts = timeStr.split(':');
+            if (parts.length >= 2) {
+                let hours = parseInt(parts[0], 10);
+                const minutes = parts[1];
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12;
+                return `${hours}:${minutes} ${ampm}`;
+            }
+            return timeStr;
+        } catch {
+            return timeStr;
         }
     }
 
