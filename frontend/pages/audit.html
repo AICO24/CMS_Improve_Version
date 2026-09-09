@@ -153,7 +153,42 @@
                     </button>
                 </div>
             </div>
-                <div class="content-area">
+            <div class="content-area">
+                <div class="audit-summary-row">
+                    <div class="audit-summary-card accent-blue">
+                        <div class="summary-topline">
+                            <span>Total events</span>
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <div class="summary-value" id="auditSummaryTotal">0</div>
+                        <div class="summary-meta">Recorded in current view</div>
+                    </div>
+                    <div class="audit-summary-card accent-red">
+                        <div class="summary-topline">
+                            <span>Security alerts</span>
+                            <i class="fas fa-shield-halved"></i>
+                        </div>
+                        <div class="summary-value" id="auditSummaryAlerts">0</div>
+                        <div class="summary-meta" id="auditSummaryAlertsMeta">Critical or flagged activity</div>
+                    </div>
+                    <div class="audit-summary-card accent-teal">
+                        <div class="summary-topline">
+                            <span>Users active</span>
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="summary-value" id="auditSummaryUsers">0</div>
+                        <div class="summary-meta">Unique users in last 24h</div>
+                    </div>
+                    <div class="audit-summary-card accent-navy">
+                        <div class="summary-topline">
+                            <span>Last 24h</span>
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="summary-value" id="auditSummaryRecent">0</div>
+                        <div class="summary-meta">Recent activity volume</div>
+                    </div>
+                </div>
+
                 <div class="toolbar-row">
                     <div class="toolbar-filters">
                         <div class="search-field">
@@ -171,9 +206,12 @@
                             <label for="filterDateTo">To</label>
                             <input type="date" id="filterDateTo">
                         </div>
-                        <button class="btn-secondary" id="refreshAuditBtn"><i class="fas fa-sync-alt"></i> Refresh Logs</button>
+                        <button class="btn-secondary" id="refreshAuditBtn"><i class="fas fa-sync-alt"></i><span>Refresh Logs</span></button>
+                        <button class="btn-secondary" id="exportAuditBtn" type="button"><i class="fas fa-file-export"></i><span>Export CSV</span></button>
                     </div>
                 </div>
+
+                <p class="section-label"><i class="fas fa-history"></i> Audit Trail</p>
 
                 <div class="table-container">
                     <table class="data-table">
@@ -207,6 +245,12 @@
                     </div>
                 </div>
             </div>
+
+            <footer class="audit-footer">
+                <div class="audit-footer__bottom">
+                    <span class="audit-footer__text">© 2026 Cemetery Management System. All rights reserved.</span>
+                </div>
+            </footer>
         </main>
     </div>
 

@@ -152,10 +152,26 @@
             </div>
                 <div class="content-area">
                 <div class="stats-row user-stats-row">
-                    <div class="stat-card"><div class="stat-title">Total Users</div><div class="stat-value" id="totalUsers">0</div><div class="stat-sub">All accounts</div></div>
-                    <div class="stat-card"><div class="stat-title">Administrators</div><div class="stat-value" id="adminCount">0</div><div class="stat-sub">Active admins</div></div>
-                    <div class="stat-card"><div class="stat-title">Staff</div><div class="stat-value" id="staffCount">0</div><div class="stat-sub">Active staff</div></div>
-                    <div class="stat-card"><div class="stat-title">Deactivated</div><div class="stat-value" id="inactiveCount">0</div><div class="stat-sub">Disabled accounts</div></div>
+                    <div class="stat-card accent-blue">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-users"></i></span> Total Users</div>
+                        <div class="stat-value" id="totalUsers">0</div>
+                        <div class="stat-sub" id="totalUsersMeta">Total accounts</div>
+                    </div>
+                    <div class="stat-card accent-amber">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-user-shield"></i></span> Administrators</div>
+                        <div class="stat-value" id="adminCount">0</div>
+                        <div class="stat-sub" id="adminCountMeta">Admin accounts</div>
+                    </div>
+                    <div class="stat-card accent-teal">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-user-tie"></i></span> Staff</div>
+                        <div class="stat-value" id="staffCount">0</div>
+                        <div class="stat-sub" id="staffCountMeta">Staff accounts</div>
+                    </div>
+                    <div class="stat-card accent-red">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-user-slash"></i></span> Deactivated</div>
+                        <div class="stat-value" id="inactiveCount">0</div>
+                        <div class="stat-sub" id="inactiveCountMeta">Inactive accounts</div>
+                    </div>
                 </div>
 
                 <div class="toolbar-row">
@@ -167,56 +183,89 @@
                     </div>
                     <div class="toolbar-main-row">
                         <div class="toolbar-filters">
-                            <div class="search-field">
+                            <div class="search-field search-field--with-action">
                                 <input type="text" id="searchQuery" class="search-field__input" placeholder=" ">
                                 <label for="searchQuery" class="search-field__label">Search username, name, email</label>
                                 <span class="search-field__icon" aria-hidden="true">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
                                 </span>
                             </div>
+                            <button class="btn-secondary search-button" id="searchUsersBtn" type="button"><i class="fas fa-magnifying-glass"></i><span>Search</span></button>
                             <label class="status-select-field" for="filterRole">
                                 <span>Role</span>
-                                <select id="filterRole" aria-label="Role">
-                                <option value="">All roles</option>
-                                <option value="admin">Administrator</option>
-                                <option value="staff">Staff</option>
+                                <select id="filterRole">
+                                    <option value="">All roles</option>
+                                    <option value="admin">Administrator</option>
+                                    <option value="staff">Staff</option>
                                 </select>
                             </label>
                             <label class="status-select-field" for="filterActive">
                                 <span>Status</span>
-                                <select id="filterActive" aria-label="Account status">
-                                <option value="">All status</option>
-                                <option value="1">Active</option>
-                                <option value="0">Inactive</option>
+                                <select id="filterActive">
+                                    <option value="">All status</option>
+                                    <option value="1">Active</option>
+                                    <option value="0">Inactive</option>
                                 </select>
                             </label>
-                            <button class="btn-secondary" id="clearFilters">Clear</button>
+                            <button class="btn-secondary" id="clearFilters"><i class="fas fa-rotate-left"></i><span>Clear</span></button>
                         </div>
                         <div class="toolbar-actions-panel">
-                            <button class="btn-add" id="openAddUser"><span class="btn-txt"><i class="fas fa-plus"></i> Add User</span></button>
+                            <span class="toolbar-actions-label">User actions</span>
+                            <div class="toolbar-actions">
+                                <button class="btn-secondary btn-action-pill btn-record-payment" id="openAddUser"><i class="fas fa-plus"></i><span>Add User</span></button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
+                <div class="bulk-toolbar" aria-live="polite">
+                    <div class="bulk-toolbar__meta">
+                        <span class="bulk-toolbar__label">Bulk actions</span>
+                        <span class="bulk-toolbar__count" id="bulkSelectedCount">No users selected</span>
+                    </div>
+                    <div class="bulk-toolbar__actions">
+                        <button class="btn-secondary btn-action-pill" id="bulkActivateBtn" type="button" disabled><i class="fas fa-toggle-on"></i><span>Activate</span></button>
+                        <button class="btn-secondary btn-action-pill" id="bulkDeactivateBtn" type="button" disabled><i class="fas fa-toggle-off"></i><span>Deactivate</span></button>
+                        <button class="btn-secondary btn-action-pill is-danger" id="bulkDeleteBtn" type="button" disabled><i class="fas fa-trash"></i><span>Delete</span></button>
+                    </div>
+                </div>
+
+                <p class="section-label"><i class="fas fa-users"></i> User Records</p>
 
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
                             <tr>
+                                <th class="table-select-col"><input type="checkbox" id="selectAllUsers" aria-label="Select all users"></th>
                                 <th>Username</th>
                                 <th>Full Name</th>
                                 <th>Email</th>
                                 <th>Role</th>
                                 <th>Status</th>
+                                <th>Created</th>
                                 <th>Last Login</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
-                            <tr><td colspan="7">Loading users...</td></tr>
+                            <tr><td colspan="9">Loading users...</td></tr>
                         </tbody>
                     </table>
+                </div>
+
+                <div class="dashboard-insights single-panel">
+                    <div class="insight-panel">
+                        <div class="insight-header">
+                            <div>
+                                <span class="eyebrow">Operations</span>
+                                <h4>Recent activity</h4>
+                            </div>
+                            <button class="btn-secondary btn-action-pill" type="button" id="refreshActivityBtn"><i class="fas fa-rotate-right"></i><span>Refresh</span></button>
+                        </div>
+                        <ul class="activity-list" id="userActivityList">
+                            <li class="activity-item is-loading">Loading recent activity...</li>
+                        </ul>
+                    </div>
                 </div>
 
                 <div class="pagination-controls" id="paginationControls">
@@ -233,22 +282,89 @@
                     </div>
                 </div>
             </div>
+
+            <footer class="user-management-footer">
+                <div class="user-management-footer__bottom">
+                    <span class="user-management-footer__text">© 2026 Cemetery Management System. All rights reserved.</span>
+                </div>
+            </footer>
         </main>
     </div>
 
     <div id="userModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="modal-content">
-            <button type="button" class="close" aria-label="Close">&times;</button>
-            <h3 id="modalTitle">Add User</h3>
-            <form id="userForm">
+        <div class="modal-content user-modal-content">
+            <div class="modal-scroll-controls" aria-label="Modal scroll controls">
+                <button type="button" class="modal-scroll-btn modal-scroll-btn--up" data-scroll-dir="up" aria-label="Scroll up"><i class="fas fa-chevron-up"></i></button>
+                <button type="button" class="modal-scroll-btn modal-scroll-btn--down" data-scroll-dir="down" aria-label="Scroll down"><i class="fas fa-chevron-down"></i></button>
+            </div>
+            <div class="modal-heading">
+                <div class="modal-heading-icon"><i class="fas fa-user-plus"></i></div>
+                <div>
+                    <h3 id="modalTitle">Add User</h3>
+                    <p id="modalSubtitle">Create a new account and assign access.</p>
+                </div>
+            </div>
+
+            <form id="userForm" class="user-form">
                 <input type="hidden" id="userId">
-                <div class="form-group"><label>Username</label><input type="text" id="username" required></div>
-                <div class="form-group"><label>Full Name</label><input type="text" id="fullName" required></div>
-                <div class="form-group"><label>Email</label><input type="email" id="email" required></div>
-                <div class="form-group"><label>Role</label><select id="role" required><option value="admin">Administrator</option><option value="staff">Staff</option></select></div>
-                <div class="form-group"><label>Password</label><input type="password" id="password"></div>
-                <div class="form-group"><label>Active</label><select id="isActive"><option value="1">Active</option><option value="0">Inactive</option></select></div>
-                <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span></button>
+
+                <div class="user-form-grid">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" placeholder="Enter username" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fullName">Full Name</label>
+                        <input type="text" id="fullName" placeholder="Enter full name" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" placeholder="Enter email address" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contactNumber">Contact Number</label>
+                        <input type="tel" id="contactNumber" placeholder="e.g. +63 912 345 6789">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="role">Role</label>
+                        <div class="select-shell">
+                            <select id="role" required>
+                                <option value="admin">Administrator</option>
+                                <option value="staff" selected>Staff</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="address">Address</label>
+                        <textarea id="address" rows="3" placeholder="Street / barangay / city"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" placeholder="Enter password" autocomplete="new-password">
+                        <small class="field-hint">Required for new users. Leave blank for existing user updates.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="isActive">Account Status</label>
+                        <div class="select-shell">
+                            <select id="isActive">
+                                <option value="1">Active</option>
+                                <option value="0">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancelUserForm"><i class="fas fa-xmark"></i><span>Cancel</span></button>
+                    <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Add</span></button>
+                </div>
             </form>
         </div>
     </div>

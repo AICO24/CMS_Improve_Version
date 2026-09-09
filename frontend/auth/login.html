@@ -15,6 +15,28 @@
     <link rel="stylesheet" href="../../assets/css/components/buttons.css">
     <link rel="stylesheet" href="../../assets/css/auth/login.css">
     <script src="https://cdn.lordicon.com/lordicon.js"></script>
+    <script>
+        (function() {
+            try {
+                const token = localStorage.getItem('jwt_token');
+                const session = JSON.parse(localStorage.getItem('user_session') || 'null');
+                if (token && session && session.role) {
+                    const role = String(session.role).toLowerCase();
+                    const target = role === 'admin'
+                        ? '../pages/dashboard_admin.html'
+                        : role === 'staff'
+                            ? '../pages/dashboard_staff.html'
+                            : '../pages/dashboard_user.html';
+                    window.location.replace(target);
+                    return;
+                }
+            } catch (error) {
+                localStorage.removeItem('jwt_token');
+                localStorage.removeItem('user_session');
+                localStorage.removeItem('cemetery_session');
+            }
+        })();
+    </script>
 </head>
 <body>
 
@@ -58,13 +80,13 @@
 
                 <div id="alert" class="alert" role="alert" aria-live="polite"></div>
 
-                <form id="loginForm" action="javascript:void(0);">
+                <form id="loginForm" method="post" autocomplete="on">
                     <!-- Username -->
                     <div class="input-field">
                         <label for="username">Username or Email</label>
                         <div class="input-wrapper">
                             <span class="input-icon"><i class="fas fa-user"></i></span>
-                            <input type="text" id="username" placeholder="Enter your username or email" autocomplete="username" required aria-describedby="usernameError">
+                            <input type="text" id="username" name="username" placeholder="Enter your username or email" autocomplete="username" required aria-describedby="usernameError">
                         </div>
                         <div class="error-message" id="usernameError" role="alert"></div>
                     </div>
@@ -74,7 +96,7 @@
                         <label for="password">Password</label>
                         <div class="input-wrapper">
                             <span class="input-icon"><i class="fas fa-lock"></i></span>
-                            <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" required aria-describedby="passwordError">
+                            <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" required aria-describedby="passwordError">
                             <button type="button" class="toggle-password" data-target="password" onclick="togglePassword('password')" aria-label="Show password">
                                 <i class="fas fa-eye"></i>
                             </button>
@@ -84,7 +106,7 @@
 
                     <div class="form-options">
                         <label class="remember-me">
-                            <input type="checkbox" id="rememberMe">
+                            <input type="checkbox" id="rememberMe" name="remember_me" value="1">
                             <span class="checkmark"></span>
                             Remember me
                         </label>

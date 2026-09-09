@@ -7,31 +7,40 @@ document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         const fullName = document.getElementById('full_name').value.trim();
-        const email = document.getElementById('email').value.trim();
+        const email = document.getElementById('email').value.trim().toLowerCase();
         const username = document.getElementById('username').value.trim();
         const contact = document.getElementById('contact_number').value.trim();
         const address = document.getElementById('address').value.trim();
         const password = document.getElementById('password').value;
         const confirm = document.getElementById('confirm_password').value;
 
-        document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+        clearErrors();
+        alertBox.className = 'alert';
         alertBox.classList.remove('show');
 
         let isValid = true;
-        if (!fullName) {
-            document.getElementById('fullNameError').textContent = 'Full name required';
+        if (fullName.length < 2 || fullName.length > 120) {
+            document.getElementById('fullNameError').textContent = 'Full name must be 2 to 120 characters';
             isValid = false;
         }
-        if (!email || !email.includes('@')) {
-            document.getElementById('emailError').textContent = 'Valid email required';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            document.getElementById('emailError').textContent = 'Enter a valid email address';
+            isValid = false;
+        }
+        if (username && !/^[a-zA-Z0-9._-]{3,40}$/.test(username)) {
+            document.getElementById('usernameError').textContent = 'Use 3-40 letters, numbers, dots, underscores, or hyphens';
+            isValid = false;
+        }
+        if (contact && !/^[0-9+() -]{7,20}$/.test(contact)) {
+            document.getElementById('contactError').textContent = 'Enter a valid contact number';
             isValid = false;
         }
         if (password !== confirm) {
             document.getElementById('confirmError').textContent = 'Passwords do not match';
             isValid = false;
         }
-        if (password.length < 6) {
-            document.getElementById('confirmError').textContent = 'Password must be at least 6 characters';
+        if (password.length < 8) {
+            document.getElementById('passwordError').textContent = 'Password must be at least 8 characters';
             isValid = false;
         }
 

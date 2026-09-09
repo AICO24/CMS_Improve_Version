@@ -53,14 +53,14 @@
 
                 <div id="alert" class="alert" role="alert" aria-live="polite"></div>
 
-                <form id="registerForm" action="javascript:void(0);">
+                <form id="registerForm" method="post" autocomplete="on">
                     <div class="form-grid">
                         <!-- Full Name -->
                         <div class="input-field">
                             <label for="full_name">Full Name</label>
                             <div class="input-wrapper">
                                 <span class="input-icon"><i class="fas fa-user"></i></span>
-                                <input type="text" id="full_name" placeholder="Enter full name" required aria-describedby="fullNameError">
+                                <input type="text" id="full_name" name="full_name" placeholder="Enter full name" autocomplete="name" required aria-describedby="fullNameError">
                             </div>
                             <div class="error-message" id="fullNameError" role="alert"></div>
                         </div>
@@ -70,17 +70,17 @@
                             <label for="email">Email Address</label>
                             <div class="input-wrapper">
                                 <span class="input-icon"><i class="fas fa-envelope"></i></span>
-                                <input type="email" id="email" placeholder="Enter email address" required aria-describedby="emailError">
+                                <input type="email" id="email" name="email" placeholder="Enter email address" autocomplete="email" required aria-describedby="emailError">
                             </div>
                             <div class="error-message" id="emailError" role="alert"></div>
                         </div>
 
-                        <!-- Username (optional) -->
+                        <!-- Username -->
                         <div class="input-field">
                             <label for="username">Username <span class="label-hint">(optional)</span></label>
                             <div class="input-wrapper">
                                 <span class="input-icon"><i class="fas fa-user-circle"></i></span>
-                                <input type="text" id="username" placeholder="Choose a username" aria-describedby="usernameError">
+                                <input type="text" id="username" name="username" placeholder="Choose a username" autocomplete="username" aria-describedby="usernameError">
                             </div>
                             <div class="error-message" id="usernameError" role="alert"></div>
                         </div>
@@ -90,17 +90,17 @@
                             <label for="contact_number">Contact Number</label>
                             <div class="input-wrapper">
                                 <span class="input-icon"><i class="fas fa-phone"></i></span>
-                                <input type="text" id="contact_number" placeholder="Enter contact number" aria-describedby="contactError">
+                                <input type="tel" id="contact_number" name="contact_number" placeholder="Enter contact number" autocomplete="tel" aria-describedby="contactError">
                             </div>
                             <div class="error-message" id="contactError" role="alert"></div>
                         </div>
 
-                        <!-- Address (full width) -->
-                        <div class="input-field input-field--full">
+                        <!-- Address -->
+                        <div class="input-field full-width">
                             <label for="address">Address</label>
                             <div class="input-wrapper">
                                 <span class="input-icon"><i class="fas fa-map-marker-alt"></i></span>
-                                <input type="text" id="address" placeholder="Enter address" aria-describedby="addressError">
+                                <input type="text" id="address" name="address" placeholder="Enter address" autocomplete="street-address" aria-describedby="addressError">
                             </div>
                             <div class="error-message" id="addressError" role="alert"></div>
                         </div>
@@ -110,7 +110,7 @@
                             <label for="password">Password</label>
                             <div class="input-wrapper">
                                 <span class="input-icon"><i class="fas fa-lock"></i></span>
-                                <input type="password" id="password" placeholder="Create a password" required aria-describedby="passwordError">
+                                <input type="password" id="password" name="new-password" placeholder="Create a password" autocomplete="new-password" required aria-describedby="passwordError">
                                 <button type="button" class="toggle-password" data-target="password" onclick="togglePassword('password')" aria-label="Show password">
                                     <i class="fas fa-eye"></i>
                                 </button>
@@ -123,7 +123,7 @@
                             <label for="confirm_password">Confirm Password</label>
                             <div class="input-wrapper">
                                 <span class="input-icon"><i class="fas fa-shield-alt"></i></span>
-                                <input type="password" id="confirm_password" placeholder="Confirm your password" required aria-describedby="confirmError">
+                                <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm your password" autocomplete="new-password" required aria-describedby="confirmError">
                                 <button type="button" class="toggle-password" data-target="confirm_password" onclick="togglePassword('confirm_password')" aria-label="Show password">
                                     <i class="fas fa-eye"></i>
                                 </button>

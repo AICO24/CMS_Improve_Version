@@ -5,6 +5,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (!form) return;
 
+    const usernameInput = document.getElementById('username');
+    const rememberMeInput = document.getElementById('rememberMe');
+    const rememberedLogin = JSON.parse(localStorage.getItem('remembered_login') || 'null');
+
+    if (rememberedLogin && rememberedLogin.username && usernameInput) {
+        usernameInput.value = rememberedLogin.username;
+        if (rememberMeInput) rememberMeInput.checked = true;
+    }
+
     // Shown only after a successful login (see the success branch below),
     // never on a failed attempt. Keeps the submit button disabled/loading
     // for the same duration so there's no gap where a second submit slips
@@ -22,8 +31,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
-        const username = document.getElementById('username').value.trim();
+        const username = usernameInput ? usernameInput.value.trim() : document.getElementById('username').value.trim();
         const password = document.getElementById('password').value;
+        const rememberMe = rememberMeInput ? rememberMeInput.checked : false;
 
         document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
         alertBox.classList.remove('show');
@@ -45,8 +55,15 @@ document.addEventListener('DOMContentLoaded', function() {
         setButtonLoading(submitBtn, true);
 
         try {
-            const result = await api.login(username, password);
+            const result = await api.login(username, password, null, rememberMe);
             if (result.success) {
+                if (rememberMe) {
+                    localStorage.setItem('remembered_login', JSON.stringify({ username }));
+                } else {
+                    localStorage.removeItem('remembered_login');
+                }
+                result.user.remembered = Boolean(result.remembered);
+                result.user.expires_in = result.expires_in || null;
                 localStorage.setItem('user_session', JSON.stringify(result.user));
                 localStorage.setItem('cemetery_session', JSON.stringify(result.user));
                 alertBox.textContent = 'Login successful! Redirecting...';
