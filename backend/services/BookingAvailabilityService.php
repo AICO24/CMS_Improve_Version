@@ -173,6 +173,23 @@ class BookingAvailabilityService {
             ];
         }
 
+        // Authoritative lot status check: if lot itself is not Available (e.g. Occupied or Reserved)
+        if ($lotRecord['status'] !== 'Available') {
+            return [
+                'available'    => false,
+                'reason_code'  => self::CODE_SLOT_CONFLICT,
+                'code'         => self::CODE_SLOT_CONFLICT,
+                'lot_id'       => $lotId,
+                'lot_number'   => $lotRecord['lot_number'],
+                'section_name' => $lotRecord['section_name'],
+                'date'         => $formattedDate,
+                'time'         => $time,
+                'service_type' => $serviceType,
+                'advisory'     => true,
+                'message'      => "Lot {$lotRecord['lot_number']} is currently {$lotRecord['status']} and cannot be booked."
+            ];
+        }
+
         // Authoritative conflict check via Schedule::checkConflict
         $hasConflict = $this->scheduleModel->checkConflict($lotId, $formattedDate, $time);
 

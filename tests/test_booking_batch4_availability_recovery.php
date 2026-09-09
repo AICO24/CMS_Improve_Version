@@ -396,14 +396,12 @@ report(21, "Availability inquiry does not reserve any resource", $test21Pass);
 // ----------------------------------------------------------------------
 // Inquiring about one of the alternative dates
 $firstAlt = $altDates[0] ?? date('Y-m-d', strtotime('+3 days'));
+$beforeSchedCount = (int) $db->query("SELECT COUNT(*) FROM burial_schedules WHERE created_by = {$userAId}")->fetchColumn();
 $chatAltSelect = $agentController->chat([
     'message' => "Available ba sa {$firstAlt}?"
 ], $userA);
-// Check that no new schedule row was committed
-$stmtCountSched = $db->prepare("SELECT COUNT(*) FROM burial_schedules WHERE schedule_date = ? AND created_by = ?");
-$stmtCountSched->execute([$firstAlt, $userAId]);
-$schedCount = (int) $stmtCountSched->fetchColumn();
-$test22Pass = ($schedCount === 0);
+$afterSchedCount = (int) $db->query("SELECT COUNT(*) FROM burial_schedules WHERE created_by = {$userAId}")->fetchColumn();
+$test22Pass = ($beforeSchedCount === $afterSchedCount);
 report(22, "Selecting alternative date does not auto-commit", $test22Pass);
 
 // ----------------------------------------------------------------------

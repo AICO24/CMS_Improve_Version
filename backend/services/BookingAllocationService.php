@@ -160,15 +160,20 @@ class BookingAllocationService {
                 $schedTime = $lockedSchedule['schedule_time'] ?? null;
                 $currentSchedStatus = $lockedSchedule['status'];
 
-                // Step B: Lock old lot row
-                $oldLotStmt = $this->db->prepare("SELECT * FROM lots WHERE lot_id = ? FOR UPDATE");
-                $oldLotStmt->execute([$oldLotId]);
-                $lockedOldLot = $oldLotStmt->fetch();
+                // Step B & C: Lock both lots in deterministic numerical order (lower ID first) to eliminate deadlocks
+                $firstLotId = min($oldLotId, $newLotId);
+                $secondLotId = max($oldLotId, $newLotId);
 
-                // Step C: Lock new lot row
-                $newLotStmt = $this->db->prepare("SELECT * FROM lots WHERE lot_id = ? FOR UPDATE");
-                $newLotStmt->execute([$newLotId]);
-                $lockedNewLot = $newLotStmt->fetch();
+                $lotLockStmt = $this->db->prepare("SELECT * FROM lots WHERE lot_id = ? FOR UPDATE");
+
+                $lotLockStmt->execute([$firstLotId]);
+                $firstLocked = $lotLockStmt->fetch();
+
+                $lotLockStmt->execute([$secondLotId]);
+                $secondLocked = $lotLockStmt->fetch();
+
+                $lockedOldLot = ($firstLotId === $oldLotId) ? $firstLocked : $secondLocked;
+                $lockedNewLot = ($firstLotId === $newLotId) ? $firstLocked : $secondLocked;
 
                 if (!$lockedNewLot) {
                     return ['success' => false, 'error' => 'Selected lot does not exist', 'code' => 404];

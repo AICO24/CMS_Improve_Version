@@ -872,11 +872,24 @@ class BookingActionRegistry {
     /**
      * Action-bound Confirmation Route with Execution-Time Revalidation.
      */
-    public function confirmPendingAction(int $pendingActionId, string $confirmationToken, $actor): array {
+    public function confirmPendingAction(
+        int $pendingActionId,
+        string $confirmationToken,
+        $actor,
+        ?int $expectedBookingId = null,
+        ?string $expectedActionType = null
+    ): array {
         $userId = is_array($actor) ? (int) ($actor['user_id'] ?? 0) : (int) $actor;
 
         try {
-            return Database::getInstance()->transaction(function () use ($pendingActionId, $confirmationToken, $actor, $userId) {
+            return Database::getInstance()->transaction(function () use (
+                $pendingActionId,
+                $confirmationToken,
+                $actor,
+                $userId,
+                $expectedBookingId,
+                $expectedActionType
+            ) {
                 // 1. Lock pending action row
                 $pending = $this->pendingActionModel->lockForUpdate($pendingActionId);
                 if (!$pending) {
@@ -917,6 +930,16 @@ class BookingActionRegistry {
                     ];
                 }
 
+                // F-04: Explicit REJECTED state handling
+                if ($pending['status'] === self::STATUS_REJECTED) {
+                    return [
+                        'success'       => false,
+                        'action_status' => self::STATUS_REJECTED,
+                        'error'         => 'This action has been rejected and cannot be executed.',
+                        'code'          => 400
+                    ];
+                }
+
                 if ($pending['status'] === self::STATUS_EXPIRED || !empty($pending['is_expired']) || strtotime($pending['expires_at']) <= time()) {
                     $this->pendingActionModel->markExpired($pendingActionId);
                     return [
@@ -946,6 +969,25 @@ class BookingActionRegistry {
                 $computedHash = BookingPendingAction::computePayloadHash($payload);
                 if (!hash_equals($pending['payload_hash'], $computedHash)) {
                     return ['success' => false, 'error' => 'Action payload hash mismatch. Action has been tampered with.', 'code' => 400];
+                }
+
+                // F-03: Caller-asserted defense-in-depth parameter validations
+                if ($expectedBookingId !== null && (int) $pending['booking_id'] !== (int) $expectedBookingId) {
+                    return [
+                        'success'       => false,
+                        'action_status' => self::STATUS_FAILED,
+                        'error'         => "Booking ID assertion mismatch: expected {$expectedBookingId}, action belongs to {$pending['booking_id']}.",
+                        'code'          => 400
+                    ];
+                }
+
+                if ($expectedActionType !== null && $pending['action_type'] !== $expectedActionType) {
+                    return [
+                        'success'       => false,
+                        'action_status' => self::STATUS_FAILED,
+                        'error'         => "Action type assertion mismatch: expected {$expectedActionType}, action is {$pending['action_type']}.",
+                        'code'          => 400
+                    ];
                 }
 
                 // 6. Transition to CONFIRMED -> EXECUTING

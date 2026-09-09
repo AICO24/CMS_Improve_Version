@@ -1311,7 +1311,16 @@ class BookingAgentController {
             return ['success' => false, 'error' => 'Confirmation token is required.', 'code' => 400];
         }
 
-        $result = $this->agentService->getActionRegistry()->confirmPendingAction($actionId, $token, $user);
+        $expectedBookingId = isset($input['booking_id']) ? (int) $input['booking_id'] : (isset($input['expected_booking_id']) ? (int) $input['expected_booking_id'] : null);
+        $expectedActionType = isset($input['action_type']) ? (string) $input['action_type'] : (isset($input['expected_action_type']) ? (string) $input['expected_action_type'] : null);
+
+        $result = $this->agentService->getActionRegistry()->confirmPendingAction(
+            $actionId,
+            $token,
+            $user,
+            $expectedBookingId,
+            $expectedActionType
+        );
         return array_merge(['code' => $result['code'] ?? 200], $result);
     }
 

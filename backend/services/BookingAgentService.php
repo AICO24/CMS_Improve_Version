@@ -407,6 +407,46 @@ class BookingAgentService {
             return in_array($b['status'] ?? '', $eligibleStatuses, true);
         }));
 
+        $hasActiveDraft = ($activeDraft && !empty($activeDraft['draft_id']) && !BookingDraft::isTerminalState($activeDraft['status'] ?? ''));
+        $hasCommittedBookings = !empty($eligibleBookings);
+
+        // F-02: Draft vs Committed Booking Ambiguity Protection
+        // If user has both an active unfinalized draft AND active committed booking(s),
+        // a generic edit/update request without explicit reference must NOT silently guess.
+        if ($hasActiveDraft && $hasCommittedBookings && ($extractedReference === null || trim((string)$extractedReference) === '')) {
+            $isAmbiguousUpdate = in_array($intent, [
+                self::INTENT_UPDATE_BOOKING,
+                self::INTENT_CORRECT_BOOKING_DETAILS,
+                self::INTENT_UPDATE_FIELD,
+            ], true);
+
+            if ($isAmbiguousUpdate) {
+                $committedRefs = array_column($eligibleBookings, 'reference');
+                $draftRef = 'DFT-' . $activeDraft['draft_id'];
+                return [
+                    'status'     => 'AMBIGUOUS',
+                    'type'       => 'DRAFT_COMMITTED_AMBIGUITY',
+                    'message'    => "You have an active draft ({$draftRef}) and active booking (" . implode(', ', $committedRefs) . "). Please specify whether you wish to update your draft or your existing booking.",
+                    'candidates' => array_merge([
+                        [
+                            'reference'    => $draftRef,
+                            'type'         => 'DRAFT',
+                            'service_type' => $activeDraft['service_type'] ?? 'burial',
+                            'status'       => $activeDraft['status'] ?? 'DRAFT_STARTED',
+                        ]
+                    ], array_map(function ($b) {
+                        return [
+                            'reference'     => $b['reference'],
+                            'type'          => 'COMMITTED_BOOKING',
+                            'service_type'  => $b['service_type'],
+                            'schedule_date' => $b['schedule_date'] ?? null,
+                            'status'        => $b['status'] ?? null,
+                        ];
+                    }, $eligibleBookings))
+                ];
+            }
+        }
+
         $isActionOnCommitted = in_array($intent, [
             self::INTENT_RESCHEDULE_BOOKING,
             self::INTENT_CANCEL_BOOKING,
