@@ -17,6 +17,7 @@ require_once __DIR__ . '/../models/Schedule.php';
 require_once __DIR__ . '/../models/DecedentRequest.php';
 require_once __DIR__ . '/../models/Cremation.php';
 require_once __DIR__ . '/BookingActionRegistry.php';
+require_once __DIR__ . '/BookingDateResolver.php';
 
 class BookingAgentService {
     private BookingDraft $draftModel;
@@ -654,6 +655,14 @@ class BookingAgentService {
         // Sanitize incoming fields: preserve valid data, omit nulls unless explicitly correcting
         $sanitizedIncoming = [];
         foreach ($incomingFields as $k => $v) {
+            // Guard cemetery business rules on dates (e.g. past dates, Monday burials)
+            if (($k === 'preferred_date' || $k === 'cremation_date') && !empty($v)) {
+                $valRes = BookingDateResolver::validate((string)$v, $currentServiceType === 'burial');
+                if (!$valRes['valid']) {
+                    continue;
+                }
+            }
+
             if ($intent === self::INTENT_UPDATE_FIELD) {
                 // Corrections may explicitly set or clear fields
                 $sanitizedIncoming[$k] = is_string($v) ? trim($v) : $v;

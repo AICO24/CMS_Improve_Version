@@ -712,6 +712,15 @@ class BookingAgentController {
                 $username
             );
 
+            // Dynamically enrich turn reply based on authoritative draft state
+            $replyMessage = $this->enrichTurnReply(
+                $replyMessage,
+                $serviceOutcome,
+                $message,
+                $slots,
+                $serviceTypeExtracted
+            );
+
             return array_merge([
                 'success'              => true,
                 'reply'                => $replyMessage,
@@ -787,7 +796,7 @@ class BookingAgentController {
         $intent = BookingAgentService::INTENT_PROVIDE_INFORMATION;
         $confidence = 0.95;
 
-        if (preg_match('/\b(ano pa kulang|ano pa kailangan|may kulang pa ba|ano pa ang kailangan|ano pa requirements|kulang pa ba|anong kulang|ano pang kailangan|what is missing|what\'s missing|what else do i need|what information is missing|what information is needed|what do i still need|what am i missing)\b/i', $msgLower)) {
+        if (preg_match('/\b(ano\s+pa\s*(?:po\s*)?(?:ang\s*)?kulang|ano\s+pa\s*(?:po\s*)?kailangan|may\s+kulang\s+pa\s*(?:po\s*)?ba|ano\s+pa\s*(?:po\s*)?requirements|anong\s+kulang|ano\s+pang\s+kailangan|what\s+is\s+missing|what\'s\s+missing|what\s+else\s+do\s+i\s+need|what\s+information\s+is\s+missing|what\s+information\s+is\s+needed|what\s+do\s+i\s+still\s+need|what\s+am\s+i\s+missing)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_EXPLAIN_MISSING_REQUIREMENTS;
         } elseif (preg_match('/\b(cancel|withdraw|drop booking|cancel my booking|cancel reservation)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_CANCEL_BOOKING;
@@ -840,13 +849,16 @@ class BookingAgentController {
         $timeVal = $extractedDateTime['time'];
 
         if ($dateVal) {
-            if ($serviceType === 'cremation') {
-                $slots['cremation_date'] = $dateVal;
-            } else {
-                $slots['preferred_date'] = $dateVal;
-            }
-            if ($intent === BookingAgentService::INTENT_RESCHEDULE_BOOKING || $intent === BookingAgentService::INTENT_UPDATE_BOOKING) {
-                $slots['target_date'] = $dateVal;
+            $valRes = BookingDateResolver::validate($dateVal, $serviceType === 'burial');
+            if ($valRes['valid']) {
+                if ($serviceType === 'cremation') {
+                    $slots['cremation_date'] = $dateVal;
+                } else {
+                    $slots['preferred_date'] = $dateVal;
+                }
+                if ($intent === BookingAgentService::INTENT_RESCHEDULE_BOOKING || $intent === BookingAgentService::INTENT_UPDATE_BOOKING) {
+                    $slots['target_date'] = $dateVal;
+                }
             }
         }
         if ($timeVal) {
@@ -871,12 +883,23 @@ class BookingAgentController {
 
         if (preg_match('/\bmy\s+(father|mother|brother|sister|son|daughter|husband|wife|friend|relative|grandfather|grandmother|parent|spouse)\b/i', $message, $m)) {
             $slots['relationship'] = ucfirst(strtolower($m[1]));
+        } elseif (preg_match('/\b(tatay|nanay|ina|ama|kapatid|asawa|lolo|lola|anak)\b/i', $message, $m)) {
+            $tagRelMap = [
+                'tatay' => 'Father', 'ama' => 'Father',
+                'nanay' => 'Mother', 'ina' => 'Mother',
+                'kapatid' => 'Sibling',
+                'asawa' => 'Spouse',
+                'lolo' => 'Grandfather',
+                'lola' => 'Grandmother',
+                'anak' => 'Child'
+            ];
+            $slots['relationship'] = $tagRelMap[strtolower($m[1])] ?? 'Relative';
         }
 
         if ($intent === BookingAgentService::INTENT_CORRECT_BOOKING_DETAILS || $intent === BookingAgentService::INTENT_UPDATE_BOOKING) {
             // A. Relationship
             if (
-                preg_match('/\b(?:relationship|relasyon)\s*(?:should be|is|to|:)?\s*(daughter|son|father|mother|brother|sister|spouse|wife|husband|relative|friend)\b/i', $message, $rm)
+                preg_match('/\b(?:relationship|relasyon)\s*(?:should be|is|to|:)?\s*(daughter|son|father|mother|brother|sister|spouse|wife|husband|relative|friend|tatay|nanay|ina|ama|kapatid|asawa)\b/i', $message, $rm)
                 || preg_match('/\b(?:should be|it is|to)\s+(daughter|son|father|mother|brother|sister|spouse|wife|husband)\b/i', $message, $rm)
                 || (preg_match('/\b(daughter|son|father|mother|brother|sister)\b/i', $message, $rm) && preg_match('/\b(relationship|relasyon|instead|not)\b/i', $message))
             ) {
@@ -914,15 +937,21 @@ class BookingAgentController {
             $isSupplyingDateOrLot = (bool) preg_match('/\b(date|schedule|time|lot|section|columbarium|niche|sunday|monday|tuesday|wednesday|thursday|friday|saturday|tomorrow|week|month)\b/i', $message);
 
             if (!$existingName || !$isSupplyingDateOrLot) {
-                if (preg_match('/(?:decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s]{2,40})/i', $message, $m)) {
+                if (preg_match('/(?:para\s+(?:po\s+)?kay|kay|si|pangalan\s+(?:po\s+)?(?:ay|ni)?|decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s]{2,40})/i', $message, $m)) {
                     $cand = trim($m[1]);
-                    $cand = preg_replace('/\s+(?:my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$/i', '', $cand);
+                    $cand = preg_replace('/\s+(?:nanay|tatay|ina|ama|kapatid|asawa|lolo|lola|po|siya|ko|my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$/i', '', $cand);
                     $cand = preg_replace('/\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$/i', '', $cand);
                     $cand = trim($cand, " \t\n\r\0\x0B:.,");
 
                     // Stop words check: candidate name cannot be a cemetery domain keyword
                     $domainKeywords = ['burial', 'cremation', 'service', 'schedule', 'date', 'reservation', 'lot', 'plot', 'grave', 'columbarium', 'niche'];
                     if (strlen($cand) >= 2 && !in_array(strtolower($cand), $domainKeywords, true)) {
+                        $slots['decedent_name'] = $cand;
+                    }
+                } elseif (empty($existingName) && preg_match('/\b([A-Z][a-z]{1,20}(?:\s+[A-Z][a-z]{1,20}){1,3})\b/', $message, $dm)) {
+                    $cand = trim($dm[1]);
+                    $domainKeywords = ['burial', 'cremation', 'service', 'schedule', 'date', 'reservation', 'lot', 'plot', 'grave', 'columbarium', 'niche'];
+                    if (!in_array(strtolower($cand), $domainKeywords, true) && !preg_match('/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december)\b/i', $cand)) {
                         $slots['decedent_name'] = $cand;
                     }
                 }
@@ -947,6 +976,7 @@ class BookingAgentController {
         $activeDecName = $slots['decedent_name'] ?? ($existingData['decedent_name'] ?? null);
         $activeDate = $slots['preferred_date'] ?? ($slots['cremation_date'] ?? ($existingData['preferred_date'] ?? ($existingData['cremation_date'] ?? null)));
         $activeLot = $slots['lot_id'] ?? ($existingData['lot_id'] ?? null);
+        $isTag = $this->isTagalog($message);
 
         if ($dateVal) {
             $valRes = BookingDateResolver::validate($dateVal, $serviceType === 'burial');
@@ -955,31 +985,103 @@ class BookingAgentController {
             } else {
                 $dateFormatted = date('l, F j, Y', strtotime($dateVal));
                 $timeFormatted = $timeVal ? " at " . date('g:i A', strtotime($timeVal)) : "";
-                $reply = "Understood. I have set your preferred " . ($serviceType === 'cremation' ? "cremation" : "burial") . " date to **{$dateFormatted}**{$timeFormatted}.";
-                if (empty($activeDecName)) {
-                    $reply .= " Who is this arrangement for (the decedent's full name)?";
-                } elseif ($serviceType === 'burial' && empty($activeLot)) {
-                    $reply .= " Please select an available burial lot next.";
+                if ($isTag) {
+                    $reply = "Naitakda ko na po ang petsa ng " . ($serviceType === 'cremation' ? "cremation" : "libing") . " sa **{$dateFormatted}**{$timeFormatted}.";
+                    if (empty($activeDecName)) {
+                        $reply .= " Sino po ang buong pangalan ng yumao (decedent)?";
+                    } elseif ($serviceType === 'burial' && empty($activeLot)) {
+                        $reply .= " Maaari na po tayong pumili ng available burial lot para makumpleto ang booking.";
+                    } else {
+                        $reply .= " Kumpleto na po ang mga detalye sa inyong Live Blueprint! Pakisuri po at sabihin ang **'Confirm'** kung handa na.";
+                    }
+                } else {
+                    $reply = "Understood. I have set your preferred " . ($serviceType === 'cremation' ? "cremation" : "burial") . " date to **{$dateFormatted}**{$timeFormatted}.";
+                    if (empty($activeDecName)) {
+                        $reply .= " Who is this arrangement for (the decedent's full name)?";
+                    } elseif ($serviceType === 'burial' && empty($activeLot)) {
+                        $reply .= " Please select an available burial lot next.";
+                    } else {
+                        $reply .= " All details are complete in your Live Blueprint! Say **'Confirm'** when you are ready to finalize.";
+                    }
                 }
             }
         } elseif ($timeVal && !$dateVal) {
             $timeFormatted = date('g:i A', strtotime($timeVal));
-            $reply = "Got it. I have noted your preferred time as **{$timeFormatted}**.";
-            if (empty($activeDate)) {
-                $reply .= " What date would you prefer for the service?";
+            if ($isTag) {
+                $reply = "Naitala ko na po ang oras bilang **{$timeFormatted}**.";
+                if (empty($activeDate)) {
+                    $reply .= " Kailan po ang nais ninyong petsa ng serbisyo?";
+                }
+            } else {
+                $reply = "Got it. I have noted your preferred time as **{$timeFormatted}**.";
+                if (empty($activeDate)) {
+                    $reply .= " What date would you prefer for the service?";
+                }
             }
         } elseif (!empty($slots['decedent_name'])) {
-            $reply = "Thank you. I have recorded the decedent's name as **{$slots['decedent_name']}**.";
-            if (empty($activeDate)) {
-                $reply .= " What date would you prefer for the " . ($serviceType === 'cremation' ? "cremation" : "burial") . " service?";
+            if ($isTag) {
+                $reply = "Salamat po. Naitala ko na ang pangalan ng yumao bilang **{$slots['decedent_name']}**.";
+                if (empty($activeDate)) {
+                    $reply .= " Kailan po ninyo nais isagawa ang " . ($serviceType === 'cremation' ? "cremation" : "libing") . "? (Martes hanggang Linggo po ang available schedules, sarado tuwing Lunes para sa maintenance).";
+                } elseif ($serviceType === 'burial' && empty($activeLot)) {
+                    $reply .= " Maaari na po tayong pumili ng available burial lot.";
+                } else {
+                    $reply .= " Kumpleto na po ang mga detalye sa inyong Live Blueprint sa kanan! Sabihin lamang ang **'Confirm'** upang maipasa.";
+                }
+            } else {
+                $reply = "Thank you. I have recorded the decedent's name as **{$slots['decedent_name']}**.";
+                if (empty($activeDate)) {
+                    $reply .= " What date would you prefer for the " . ($serviceType === 'cremation' ? "cremation" : "burial") . " service? (Services run Tuesday to Sunday; closed Mondays for maintenance).";
+                } elseif ($serviceType === 'burial' && empty($activeLot)) {
+                    $reply .= " Please select an available burial lot next.";
+                } else {
+                    $reply .= " All details are complete in your Live Blueprint! Type **'Confirm'** to finalize.";
+                }
             }
         } elseif (!empty($slots['relationship'])) {
-            $reply = "I have updated the relationship to **{$slots['relationship']}**.";
+            $reply = $isTag
+                ? "Na-update ko na po ang relasyon sa yumao bilang **{$slots['relationship']}**."
+                : "I have updated the relationship to **{$slots['relationship']}**.";
         } elseif (!empty($slots['lot_id']) || !empty($slots['lot_identifier'])) {
             $lotDesc = $slots['lot_id'] ? "Lot #{$slots['lot_id']}" : "Lot {$slots['lot_identifier']}";
-            $reply = "I have selected **{$lotDesc}** for your reservation.";
+            if ($isTag) {
+                $reply = "Napili na po ang **{$lotDesc}** para sa inyong reservation.";
+                if (empty($activeDecName)) {
+                    $reply .= " Sino po ang buong pangalan ng yumao?";
+                } elseif (empty($activeDate)) {
+                    $reply .= " Kailan po ang nais ninyong petsa ng serbisyo?";
+                } else {
+                    $reply .= " Kumpleto na po ang lahat ng kailangan sa inyong Live Blueprint sa kanan! Pakisuri po at sabihin lamang ang **'Confirm'** upang maipasa.";
+                }
+            } else {
+                $reply = "I have selected **{$lotDesc}** for your reservation.";
+                if (empty($activeDecName)) {
+                    $reply .= " Who is this arrangement for (the decedent's full name)?";
+                } elseif (empty($activeDate)) {
+                    $reply .= " What date would you prefer for the service?";
+                } else {
+                    $reply .= " All required details are now complete in your Live Blueprint on the right! Please review and type **'Confirm'** to finalize.";
+                }
+            }
         } else {
-            $reply = "I have noted your booking request. Let me know if you would like to make any adjustments.";
+            // General booking initiation or inquiry turn without specific slots
+            if (empty($activeDecName)) {
+                $reply = $isTag
+                    ? "Nakikiramay po kami sa inyong pamilya. Ako po ang tutulong sa inyo sa pag-aayos ng booking. Maaari po bang malaman ang buong pangalan ng yumao (decedent)?"
+                    : "We extend our deepest condolences. I am here to assist you with your booking. Could you please provide the full name of the deceased (decedent)?";
+            } elseif (empty($activeDate)) {
+                $reply = $isTag
+                    ? "Naitala na po si **{$activeDecName}**. Kailan po ninyo nais isagawa ang serbisyo? (Martes hanggang Linggo po ang schedule, sarado tuwing Lunes para sa maintenance)."
+                    : "I have noted **{$activeDecName}**. What date would you prefer for the service? (Services are available Tuesday through Sunday).";
+            } elseif ($serviceType === 'burial' && empty($activeLot)) {
+                $reply = $isTag
+                    ? "Naitakda na po ang petsa. Ang susunod po nating hakbang ay ang pagpili ng available burial lot. May napili na po ba kayong lot number?"
+                    : "Your schedule is noted. Next, please select an available burial lot to complete your booking.";
+            } else {
+                $reply = $isTag
+                    ? "Kumpleto na po ang mga detalye sa inyong Live Blueprint sa kanan! Sabihin lamang ang **'Confirm'** upang maipasa ang inyong reservation."
+                    : "All details are complete in your Live Blueprint on the right! Please review and type **'Confirm'** to finalize your reservation.";
+            }
         }
 
         return [
@@ -1440,5 +1542,64 @@ class BookingAgentController {
             'lots'    => $lots,
             'code'    => 200
         ];
+    }
+
+    /**
+     * Detect if user text is in Filipino / Tagalog / Taglish.
+     */
+    private function isTagalog(string $text): bool {
+        return (bool) preg_match('/\b(po|opo|para|kay|sa|gusto|libing|ano|kailan|tatay|nanay|kapatid|asawa|lolo|lola|sino|paano|salamat|mali|dapat|namin|natin|ako|ko|mo|siya|bawal|paki|pili|anong|araw|oras)\b/i', $text);
+    }
+
+    /**
+     * Enrich turn replies with dynamic next-step conversational guidance.
+     */
+    private function enrichTurnReply(string $reply, array $serviceOutcome, string $userMessage, array $slots, ?string $serviceType): string {
+        $isTag = $this->isTagalog($userMessage);
+        $isReady = !empty($serviceOutcome['is_ready_for_review']);
+        $missingFields = $serviceOutcome['missing_fields'] ?? [];
+
+        if ($isReady) {
+            if (stripos($reply, 'confirm') === false && stripos($reply, 'kumpirma') === false) {
+                $suffix = $isTag
+                    ? "\n\nKumpleto na po ang lahat ng kailangan sa inyong Live Blueprint sa kanan! Pakisuri po ang mga detalye, at kapag handa na, sabihin lamang ang **'Confirm'** o i-click ang Confirm Booking button upang opisyal na maipasa ang inyong reservation."
+                    : "\n\nAll required booking details are now complete in your Live Blueprint on the right! Please review the summary, and type **'Confirm'** or click Confirm Booking to finalize your reservation.";
+                return $reply . $suffix;
+            }
+            return $reply;
+        }
+
+        // If the reply is a generic template response or doesn't guide the user, add explicit next-step guidance
+        $isGeneric = (
+            $reply === "I have updated your booking details."
+            || $reply === "I have noted your booking request. Let me know if you would like to make any adjustments."
+            || $reply === "I have noted your booking request."
+            || (strpos($reply, '?') === false && stripos($reply, 'select') === false && stripos($reply, 'pili') === false && stripos($reply, 'sino') === false && stripos($reply, 'kailan') === false && stripos($reply, 'who') === false && stripos($reply, 'date') === false)
+        );
+
+        if ($isGeneric && !empty($missingFields)) {
+            $nextField = $missingFields[0];
+            $st = $serviceType ?: ($serviceOutcome['service_type'] ?? 'burial');
+            if ($nextField === 'decedent_name') {
+                return $isTag
+                    ? "Nakikiramay po kami sa inyong pamilya. Ako po ang tutulong sa inyo sa pag-aayos ng serbisyo. Sino po ang buong pangalan ng yumao (decedent)?"
+                    : "We extend our deepest condolences. I am here to assist you with your booking. Could you please provide the full name of the deceased (decedent)?";
+            } elseif ($nextField === 'preferred_date' || $nextField === 'cremation_date') {
+                $serviceLabel = ($st === 'cremation') ? 'cremation' : ($isTag ? 'libing' : 'burial');
+                return $isTag
+                    ? "Kailan po ninyo nais isagawa ang {$serviceLabel}? (Maaari po kayong pumili mula Martes hanggang Linggo; sarado po tuwing Lunes para sa maintenance ng sementeryo)."
+                    : "What date would you prefer for the {$serviceLabel} service? (Services are available Tuesday through Sunday; Mondays are closed for cemetery maintenance).";
+            } elseif ($nextField === 'lot_id') {
+                return $isTag
+                    ? "Naitakda na po ang petsa. Maaari na po tayong pumili ng available burial lot para makumpleto ang booking. May napili na po ba kayong lot number?"
+                    : "Your schedule is set. Next, please select an available burial lot to complete your booking. Do you have a specific lot number in mind?";
+            } elseif ($nextField === 'preferred_columbarium') {
+                return $isTag
+                    ? "Pakipili po ang inyong nais na columbarium facility o niche."
+                    : "Please select your preferred columbarium facility or niche.";
+            }
+        }
+
+        return $reply;
     }
 }

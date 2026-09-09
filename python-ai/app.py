@@ -934,7 +934,15 @@ BOOKING_AGENT_SYSTEM_PROMPT = (
     "- Corrections: If citizen corrects a field (e.g. 'spelled Kevin's surname incorrectly. It should be Mando'), set correction_field (e.g. 'decedent_name') and corrected_value (e.g. 'Mando').\n"
     "- Multi-slot Extraction: Extract ALL details mentioned in the message (service, name, relation, dates, lot, section) rather than discarding them.\n"
     "- Missing slots should be omitted or null. Never invent IDs or bookings.\n"
-    "- reply: Polite, supportive acknowledgment of understood intent and extracted details.\n"
+    "- Conversational & Guidance Rules for 'reply':\n"
+    "  * Tone: Empathetic, respectful, and comforting to grieving families.\n"
+    "  * Language Mirroring: If citizen writes in Filipino/Taglish, reply in polite, warm Filipino/Taglish using 'po' / 'opo'. If they write in English, reply in compassionate, clear English.\n"
+    "  * Step-by-Step Dynamic Guidance:\n"
+    "    1. Starting a booking / Missing Decedent: Acknowledge service, express condolences, and politely ask for the decedent's full name.\n"
+    "    2. Decedent provided / Missing Date: Acknowledge the decedent, and ask for preferred date & time, noting cemetery services run Tuesday to Sunday (Mondays are closed for maintenance).\n"
+    "    3. Date provided / Missing Lot: Acknowledge the schedule, and guide the citizen to select an available burial lot or offer assistance.\n"
+    "    4. All Details Complete: Inform the citizen that their Live Blueprint on the right is ready, and invite them to review and say 'Confirm' to finalize.\n"
+    "  * Never output empty or generic responses like 'I have noted your booking request' without providing the immediate next step.\n"
 )
 
 
@@ -1220,37 +1228,55 @@ def _extract_booking_deterministic(
     }
     extracted_fields = {k: v for k, v in extracted_fields.items() if v not in (None, '')}
 
-    # 9. Formulate conversational reply
+    # 9. Formulate conversational reply with dynamic next-step guidance
+    is_tagalog = bool(re.search(r'\b(po|opo|para|kay|sa|gusto|libing|ano|kailan|tatay|nanay|kapatid|asawa|lolo|lola|sino|paano|salamat|mali|dapat|namin|natin|ako|ko|mo|siya|bawal|paki|pili|anong|araw|oras)\b', message, re.IGNORECASE))
+    active_decedent = extracted_fields.get('decedent_name') or existing_data.get('decedent_name')
+    active_date = extracted_fields.get('preferred_date') or extracted_fields.get('cremation_date') or existing_data.get('preferred_date') or existing_data.get('cremation_date')
+    active_lot = extracted_fields.get('lot_id') or existing_data.get('lot_id')
+
     if intent == 'CANCEL_BOOKING':
         ref_text = f" for **{booking_reference}**" if booking_reference else ""
-        reply = f"I have received your request to cancel your reservation{ref_text}. I am verifying your booking details."
+        reply = (f"Natanggap ko po ang inyong hiling na kanselahin ang booking{ref_text}. Bineberipika ko po ang mga detalye."
+                 if is_tagalog else f"I have received your request to cancel your reservation{ref_text}. I am verifying your booking details.")
     elif intent == 'RESCHEDULE_BOOKING':
         date_text = f" to **{date_val}**" if date_val else ""
         ref_text = f" for **{booking_reference}**" if booking_reference else ""
-        reply = f"I have noted your request to move your booking{ref_text}{date_text}. Verifying availability and booking context."
+        reply = (f"Naitala ko po ang inyong hiling na ilipat ang booking{ref_text}{date_text}. Sinusuri ko po ang availability."
+                 if is_tagalog else f"I have noted your request to move your booking{ref_text}{date_text}. Verifying availability and booking context.")
     elif intent == 'CORRECT_BOOKING_DETAILS':
-        reply = f"Thank you for the correction. I have updated the booking information accordingly."
+        reply = ("Salamat po sa pagwawasto. Na-update ko na po ang impormasyon sa inyong booking."
+                 if is_tagalog else "Thank you for the correction. I have updated the booking information accordingly.")
     elif intent == 'CHECK_BOOKING_STATUS':
         ref_text = f" for **{booking_reference}**" if booking_reference else ""
-        reply = f"Checking the current status of your booking{ref_text}."
+        reply = (f"Sinusuri ko po ang kasalukuyang status ng inyong booking{ref_text}."
+                 if is_tagalog else f"Checking the current status of your booking{ref_text}.")
     elif intent == 'CHECK_AVAILABILITY':
-        reply = "Let me check availability for the requested service and date."
+        reply = ("Iche-check ko po ang availability para sa inyong napiling serbisyo at petsa."
+                 if is_tagalog else "Let me check availability for the requested service and date.")
     elif intent == 'EXPLAIN_MISSING_REQUIREMENTS':
-        reply = "Here is the checklist of requirements for your booking."
+        reply = ("Narito po ang checklist ng mga kailangan para sa inyong booking."
+                 if is_tagalog else "Here is the checklist of requirements for your booking.")
     elif intent == 'CONFIRM_BOOKING':
-        reply = "I have recorded your confirmation. Please review the booking details so we can proceed."
+        reply = ("Naitala ko na po ang inyong kumpirmasyon. Pakisuri po ang detalye bago natin ito isapinal."
+                 if is_tagalog else "I have recorded your confirmation. Please review the booking details so we can proceed.")
     elif intent == 'REQUEST_RECOMMENDATION':
-        reply = "I would be happy to help recommend an available lot. You can select your preferred section or budget."
-    elif 'decedent_name' not in extracted_fields and not existing_data.get('decedent_name'):
-        reply = "Thank you. Could you please provide the full name of the deceased?"
-    elif service_type == 'cremation' and 'cremation_date' not in extracted_fields and not existing_data.get('cremation_date'):
-        reply = "Understood. What date would you like to schedule the cremation service?"
-    elif service_type == 'burial' and 'preferred_date' not in extracted_fields and not existing_data.get('preferred_date'):
-        reply = "Understood. What date would you prefer for the burial service?"
-    elif service_type == 'burial' and 'lot_id' not in extracted_fields and not existing_data.get('lot_id'):
-        reply = "Thank you. Now we just need to select an available burial lot."
+        reply = ("Ikinagagalak ko po kayong tulungan sa pagpili ng available na burial lot o niche."
+                 if is_tagalog else "I would be happy to help recommend an available lot. You can select your preferred section or budget.")
+    elif not active_decedent:
+        reply = ("Nakikiramay po kami sa inyong pamilya. Ako po ang tutulong sa inyo sa pag-aayos ng serbisyo. Maaari po bang malaman ang buong pangalan ng yumao (decedent)?"
+                 if is_tagalog else "We extend our deepest condolences. I am here to assist you with your booking. Could you please provide the full name of the deceased (decedent)?")
+    elif service_type == 'cremation' and not active_date:
+        reply = (f"Salamat po. Kailan po ninyo nais isagawa ang cremation para kay **{active_decedent}**?"
+                 if is_tagalog else f"Thank you. What date would you like to schedule the cremation service for **{active_decedent}**?")
+    elif service_type == 'burial' and not active_date:
+        reply = (f"Salamat po. Kailan po ninyo nais isagawa ang libing para kay **{active_decedent}**? (Maaari po kayong pumili mula Martes hanggang Linggo, tuwing Lunes po ay sarado para sa maintenance)."
+                 if is_tagalog else f"Thank you. What date would you prefer for the burial service for **{active_decedent}**? (Services are available Tuesday through Sunday; Mondays are closed for maintenance).")
+    elif service_type == 'burial' and not active_lot:
+        reply = ("Naitakda na po ang petsa. Ang susunod po nating hakbang ay ang pagpili ng available burial lot. Mayroon po ba kayong napiling lot number, o nais ninyong magrekomenda ako?"
+                 if is_tagalog else "Your schedule is set. Next, please select an available burial lot to complete your booking. Let me know if you have a specific lot number in mind, or if you would like a recommendation.")
     else:
-        reply = "I have updated your booking details. Let me know if you would like to make any adjustments."
+        reply = ("Kumpleto na po ang lahat ng kailangan sa inyong Live Blueprint sa kanan! Pakisuri po ang mga detalye, at sabihin lamang ang **'Confirm'** o i-click ang Confirm Booking button upang opisyal na maipasa ang inyong reservation."
+                 if is_tagalog else "All required details are now complete in your Live Blueprint on the right! Please review the summary, and type **'Confirm'** or click Confirm Booking to finalize your reservation.")
 
     return {
         'intent': intent,
