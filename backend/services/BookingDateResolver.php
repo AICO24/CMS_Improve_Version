@@ -242,4 +242,8 @@ class BookingDateResolver {
 
         return ['valid' => true, 'error' => null];
     }
+
+    public static function validateBookingDate(string $dateStr, bool $isBurial = true, ?int $ref = null): array {
+        return self::validate($dateStr, $isBurial, $ref);
+    }
 }

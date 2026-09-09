@@ -29,6 +29,7 @@ require_once __DIR__ . '/BookingRescheduleService.php';
 require_once __DIR__ . '/BookingCancellationService.php';
 require_once __DIR__ . '/BookingAllocationService.php';
 require_once __DIR__ . '/BookingAvailabilityService.php';
+require_once __DIR__ . '/BookingDateResolver.php';
 
 class BookingActionRegistry {
     // Action Identifiers
@@ -147,15 +148,27 @@ class BookingActionRegistry {
     /**
      * Normalize natural language / AI field names to canonical database column names.
      */
-    public function normalizeField(?string $rawField, string $message = '', array $slots = []): array {
+    public function normalizeField(?string $rawField, string $message = '', array $slots = [], ?string $targetType = null, ?string $serviceType = null): array {
         $msgLower = strtolower(trim($message));
         $fieldHint = strtolower(trim((string) ($rawField ?? ($slots['correction_field'] ?? ''))));
 
-        // 1. Check for Category B Deferred Fields first
+        $isDraft = ($targetType === 'DRAFT');
+
+        // 1. Check Date Fields
         if (
-            in_array($fieldHint, ['schedule_date', 'preferred_date', 'cremation_date', 'target_date'], true)
-            || preg_match('/\b(reschedule|move|postpone|change date|schedule to|move to|change my booking date|booking date)\b/i', $msgLower)
+            in_array($fieldHint, ['schedule_date', 'preferred_date', 'cremation_date', 'target_date', 'date'], true)
+            || preg_match('/\b(reschedule|move|postpone|change date|schedule to|move to|change my booking date|change the date|booking date|burial date|cremation date)\b/i', $msgLower)
         ) {
+            if ($isDraft) {
+                $canonicalDate = (strtolower((string)$serviceType) === 'cremation') ? 'cremation_date' : 'preferred_date';
+                return [
+                    'canonical_field' => $canonicalDate,
+                    'category'        => 'CATEGORY_A',
+                    'is_ambiguous'    => false,
+                    'deferred_intent' => null
+                ];
+            }
+
             return [
                 'canonical_field' => 'schedule_date',
                 'category'        => 'CATEGORY_B',
@@ -164,10 +177,20 @@ class BookingActionRegistry {
             ];
         }
 
+        // 2. Check Lot / Allocation Fields
         if (
             in_array($fieldHint, ['lot', 'lot_id', 'niche', 'columbarium', 'section', 'block'], true)
-            || preg_match('/\b(change lot|different lot|switch lot|move lot|transfer lot)\b/i', $msgLower)
+            || preg_match('/\b(change lot|different lot|switch lot|move lot|transfer lot|select lot|choose lot)\b/i', $msgLower)
         ) {
+            if ($isDraft) {
+                return [
+                    'canonical_field' => 'lot_id',
+                    'category'        => 'CATEGORY_A',
+                    'is_ambiguous'    => false,
+                    'deferred_intent' => null
+                ];
+            }
+
             return [
                 'canonical_field' => 'lot_id',
                 'category'        => 'CATEGORY_B',
@@ -176,7 +199,7 @@ class BookingActionRegistry {
             ];
         }
 
-        // 2. Category A: Safe Immediate Fields
+        // 3. Category A: Safe Immediate Fields
         // A. Relationship
         if (
             $fieldHint === 'relationship'
@@ -228,7 +251,7 @@ class BookingActionRegistry {
         }
 
         // Explicit slot detection fallback
-        if (!empty($fieldHint) && in_array($fieldHint, self::CATEGORY_A_SAFE_FIELDS, true)) {
+        if (!empty($fieldHint) && (in_array($fieldHint, self::CATEGORY_A_SAFE_FIELDS, true) || ($isDraft && in_array($fieldHint, ['preferred_date', 'cremation_date', 'lot_id'], true)))) {
             return [
                 'canonical_field' => $fieldHint,
                 'category'        => 'CATEGORY_A',
@@ -253,6 +276,54 @@ class BookingActionRegistry {
         }
 
         switch ($canonicalField) {
+            case 'preferred_date':
+            case 'cremation_date':
+            case 'schedule_date':
+            case 'target_date':
+                if (!empty($slots['target_date'])) {
+                    return trim((string)$slots['target_date']);
+                }
+                if (!empty($slots['preferred_date'])) {
+                    return trim((string)$slots['preferred_date']);
+                }
+                if (!empty($slots['cremation_date'])) {
+                    return trim((string)$slots['cremation_date']);
+                }
+                if (!empty($slots['schedule_date'])) {
+                    return trim((string)$slots['schedule_date']);
+                }
+                $extracted = BookingDateResolver::extractDate($message);
+                if ($extracted) {
+                    return $extracted;
+                }
+                if (preg_match('/\b(20\d{2}-\d{2}-\d{2})\b/', $message, $m)) {
+                    return $m[1];
+                }
+                break;
+
+            case 'lot_id':
+                if (!empty($slots['lot_id'])) {
+                    return (int)$slots['lot_id'];
+                }
+                if (preg_match('/\b(?:lot\s+to|to\s+lot|lot)\s*(?:#|no\.?)?\s*([a-z0-9\-_]+)\b/i', $message, $m)) {
+                    $cand = trim($m[1]);
+                    if (!in_array(strtolower($cand), ['for', 'to', 'the', 'my', 'allocation', 'change', 'booking', 'reservation', 'a', 'an'], true)) {
+                        if (is_numeric($cand)) {
+                            return (int)$cand;
+                        }
+                        $stmt = $this->db->prepare("SELECT lot_id FROM lots WHERE lot_number = ? LIMIT 1");
+                        $stmt->execute([$cand]);
+                        $foundId = (int)$stmt->fetchColumn();
+                        if ($foundId > 0) {
+                            return $foundId;
+                        }
+                    }
+                }
+                if (preg_match('/^(\d+)\s+dapat(?:\.|\b)/iu', $message, $m)) {
+                    return (int)$m[1];
+                }
+                break;
+
             case 'relationship':
                 if (!empty($slots['relationship'])) {
                     return trim((string) $slots['relationship']);
@@ -356,7 +427,7 @@ class BookingActionRegistry {
 
         // Generic Field Update & Correction (Batch 2)
         $rawField = $slots['correction_field'] ?? ($slots['field'] ?? null);
-        $norm = $this->normalizeField($rawField, $message, $slots);
+        $norm = $this->normalizeField($rawField, $message, $slots, $targetType, $contextResolution['service_type'] ?? null);
 
         // Check if Category B (Deferred to specialized batch actions)
         if ($norm['category'] === 'CATEGORY_B') {
@@ -408,6 +479,19 @@ class BookingActionRegistry {
         // Dispatch Category A Field Updates
         if ($targetType === 'DRAFT' || $contextStatus === 'DRAFT') {
             $draftId = (int) ($contextResolution['draft_id'] ?? 0);
+            if (in_array($canonicalField, ['preferred_date', 'cremation_date'], true)) {
+                $serviceType = strtolower($contextResolution['service_type'] ?? 'burial');
+                $isBurial = ($serviceType !== 'cremation');
+                $dateVal = BookingDateResolver::validateBookingDate($replacementValue, $isBurial);
+                if (!$dateVal['valid']) {
+                    return [
+                        'action_status' => self::STATUS_CLARIFICATION_REQUIRED,
+                        'reply'         => $dateVal['error'],
+                        'action'        => null,
+                        'changes'       => []
+                    ];
+                }
+            }
             return $this->executeDraftFieldUpdate(
                 $userId,
                 $username,
@@ -448,6 +532,9 @@ class BookingActionRegistry {
         if ($targetType === 'DRAFT') {
             $draftId = (int) ($contextResolution['draft_id'] ?? 0);
             $targetDate = $slots['target_date'] ?? $slots['preferred_date'] ?? $slots['cremation_date'] ?? null;
+            if (!$targetDate) {
+                $targetDate = BookingDateResolver::extractDate($message);
+            }
             if (!$targetDate && preg_match('/\b(20\d{2}-\d{2}-\d{2})\b/', $message, $m)) {
                 $targetDate = $m[1];
             }
@@ -460,7 +547,19 @@ class BookingActionRegistry {
                 ];
             }
 
-            $dateField = (($contextResolution['service_type'] ?? '') === 'cremation') ? 'cremation_date' : 'preferred_date';
+            $serviceType = strtolower($contextResolution['service_type'] ?? 'burial');
+            $isBurial = ($serviceType !== 'cremation');
+            $dateVal = BookingDateResolver::validateBookingDate($targetDate, $isBurial);
+            if (!$dateVal['valid']) {
+                return [
+                    'action_status' => self::STATUS_CLARIFICATION_REQUIRED,
+                    'reply'         => $dateVal['error'],
+                    'action'        => null,
+                    'changes'       => []
+                ];
+            }
+
+            $dateField = ($serviceType === 'cremation') ? 'cremation_date' : 'preferred_date';
             return $this->executeDraftFieldUpdate($userId, $username, $draftId, $dateField, $targetDate, $contextResolution);
         }
 
@@ -489,6 +588,9 @@ class BookingActionRegistry {
 
         // Extract target date
         $targetDate = $slots['target_date'] ?? $slots['preferred_date'] ?? $slots['cremation_date'] ?? null;
+        if (!$targetDate) {
+            $targetDate = BookingDateResolver::extractDate($message);
+        }
         if (!$targetDate && preg_match('/\b(20\d{2}-\d{2}-\d{2})\b/', $message, $m)) {
             $targetDate = $m[1];
         }
@@ -722,9 +824,21 @@ class BookingActionRegistry {
         $targetType = $contextResolution['type'] ?? 'COMMITTED_BOOKING';
 
         if ($targetType === 'DRAFT') {
+            $draftId = (int) ($contextResolution['draft_id'] ?? 0);
+            $newLotId = !empty($slots['lot_id']) ? (int) $slots['lot_id'] : null;
+            if (!$newLotId) {
+                $newLotId = $this->extractReplacementValue('lot_id', $slots, $message);
+            }
+            if ($newLotId && $newLotId > 0) {
+                $stmt = $this->db->prepare("SELECT lot_id FROM lots WHERE lot_id = ? LIMIT 1");
+                $stmt->execute([(int)$newLotId]);
+                if ($stmt->fetchColumn()) {
+                    return $this->executeDraftFieldUpdate($userId, $username, $draftId, 'lot_id', (int)$newLotId, $contextResolution);
+                }
+            }
             return [
                 'action_status' => self::STATUS_CLARIFICATION_REQUIRED,
-                'reply'         => "Please use the cemetery map or lot picker to select a lot for your booking draft.",
+                'reply'         => "Please specify which available lot number you would like to select for your booking draft.",
                 'action'        => null,
                 'changes'       => []
             ];
@@ -757,7 +871,7 @@ class BookingActionRegistry {
         // Check if user requested a specific lot
         $newLotId = !empty($slots['lot_id']) ? (int) $slots['lot_id'] : null;
         if (!$newLotId) {
-            if (preg_match_all('/\b(?:to\s+)?lot\s*(?:#|no\.?)?\s*([a-z0-9\-_]+)\b/i', $message, $matches)) {
+            if (preg_match_all('/\b(?:lot\s+to|to\s+lot|lot)\s*(?:#|no\.?)?\s*([a-z0-9\-_]+)\b/i', $message, $matches)) {
                 foreach ($matches[1] as $candidate) {
                     $cand = trim($candidate);
                     if (in_array(strtolower($cand), ['for', 'to', 'the', 'my', 'allocation', 'change', 'booking', 'reservation', 'a', 'an'], true)) {

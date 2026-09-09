@@ -418,6 +418,8 @@ class BookingAgentService {
                 self::INTENT_UPDATE_BOOKING,
                 self::INTENT_CORRECT_BOOKING_DETAILS,
                 self::INTENT_UPDATE_FIELD,
+                self::INTENT_RESCHEDULE_BOOKING,
+                self::INTENT_CHANGE_ALLOCATION,
             ], true);
 
             if ($isAmbiguousUpdate) {

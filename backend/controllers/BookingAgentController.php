@@ -384,6 +384,22 @@ class BookingAgentController {
                 }
             }
 
+            $activeExtractedData = [];
+            $activeMissingFields = [];
+            if (!empty($currentDraft)) {
+                $freshDraft = null;
+                if (!empty($currentDraft['draft_id'])) {
+                    $freshDraft = $this->draftModel->findById((int)$currentDraft['draft_id']);
+                }
+                $draftRef = $freshDraft ?: $currentDraft;
+                $activeExtractedData = !empty($draftRef['extracted_data'])
+                    ? (is_string($draftRef['extracted_data']) ? json_decode($draftRef['extracted_data'], true) : $draftRef['extracted_data'])
+                    : [];
+                $activeMissingFields = !empty($draftRef['missing_fields'])
+                    ? (is_string($draftRef['missing_fields']) ? json_decode($draftRef['missing_fields'], true) : $draftRef['missing_fields'])
+                    : [];
+            }
+
             return [
                 'success'              => !in_array($actionResult['action_status'], [BookingActionRegistry::STATUS_UNAUTHORIZED, BookingActionRegistry::STATUS_NOT_FOUND], true),
                 'reply'                => $actionResult['reply'],
@@ -401,7 +417,9 @@ class BookingAgentController {
                 'draft_id'             => $draftId ?: ($currentDraft['draft_id'] ?? null),
                 'service_type'         => $serviceTypeExtracted,
                 'status'               => $currentDraft['status'] ?? 'INTAKE',
-                'missing_requirements' => [],
+                'extracted_data'       => $activeExtractedData,
+                'missing_fields'       => $activeMissingFields,
+                'missing_requirements' => $activeMissingFields,
                 'code'                 => 200,
             ];
         }
@@ -451,6 +469,13 @@ class BookingAgentController {
             $availService = $this->agentService->getAvailabilityService();
             $explanation = $availService->explainMissingRequirements($currentDraft);
 
+            $activeExtractedData = [];
+            if (!empty($currentDraft)) {
+                $activeExtractedData = !empty($currentDraft['extracted_data'])
+                    ? (is_string($currentDraft['extracted_data']) ? json_decode($currentDraft['extracted_data'], true) : $currentDraft['extracted_data'])
+                    : [];
+            }
+
             return [
                 'success'               => true,
                 'intent'                => $intent,
@@ -461,6 +486,7 @@ class BookingAgentController {
                 'draft_id'              => $explanation['draft_id'] ?? null,
                 'draft_status'          => $explanation['draft_status'] ?? null,
                 'service_type'          => $explanation['service_type'] ?? null,
+                'extracted_data'        => $activeExtractedData,
                 'missing_fields'        => $explanation['missing_fields'],
                 'missing_requirements'  => $explanation['missing_fields'],
                 'completed_fields'      => $explanation['completed_fields'],
@@ -478,6 +504,9 @@ class BookingAgentController {
             $availService = $this->agentService->getAvailabilityService();
             if ($currentDraft) {
                 $guidance = $availService->getResumptionGuidance($currentDraft);
+                $activeExtractedData = !empty($currentDraft['extracted_data'])
+                    ? (is_string($currentDraft['extracted_data']) ? json_decode($currentDraft['extracted_data'], true) : $currentDraft['extracted_data'])
+                    : [];
                 return [
                     'success'               => true,
                     'intent'                => $intent,
@@ -488,6 +517,7 @@ class BookingAgentController {
                     'draft_id'              => (int) $currentDraft['draft_id'],
                     'draft_status'          => $currentDraft['status'],
                     'service_type'          => $currentDraft['service_type'],
+                    'extracted_data'        => $activeExtractedData,
                     'completed_fields'      => $guidance['completed_fields'],
                     'missing_fields'        => $guidance['missing_fields'],
                     'missing_requirements'  => $guidance['missing_fields'],
