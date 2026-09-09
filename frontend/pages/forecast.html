@@ -150,23 +150,85 @@
                     </button>
                 </div>
             </div>
-                <div class="content-area">
-                <h3>Capacity Forecasting</h3>
+            <div class="content-area">
                 <div id="serviceBanner" class="service-banner"></div>
                 <div id="capacityBanner" class="service-banner"></div>
-                <div class="forecast-controls">
-                    <label>Forecast Period: <select id="forecastMonths"><option value="3">3 Months</option><option value="6" selected>6 Months</option><option value="12">12 Months</option></select></label>
-                    <button class="btn" id="generateForecast"><i class="fas fa-chart-line"></i> Generate Forecast</button>
+                <div class="stats-row forecast-stats">
+                    <div class="stat-card accent-green">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-house-user"></i></span> Current Occupancy</div>
+                        <div class="stat-value" id="currentOccupancy">0</div>
+                        <div class="stat-sub">Occupied lots today</div>
+                    </div>
+                    <div class="stat-card accent-amber">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-chart-line"></i></span> Projected Burials</div>
+                        <div class="stat-value" id="predictedOccupancy">0</div>
+                        <div class="stat-sub">Expected in selected period</div>
+                    </div>
+                    <div class="stat-card accent-teal">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-expand"></i></span> Projected Available</div>
+                        <div class="stat-value" id="availableFuture">0</div>
+                        <div class="stat-sub">Open lots after projection</div>
+                    </div>
+                    <div class="stat-card accent-navy">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-arrow-trend-up"></i></span> Demand Trend</div>
+                        <div class="stat-value" id="trendStatus">—</div>
+                        <div class="stat-sub">Usage trajectory</div>
+                    </div>
                 </div>
-                <div class="stats-row">
-                    <div class="stat-card"><div class="stat-title">Current Occupancy</div><div class="stat-value" id="currentOccupancy">0</div></div>
-                    <div class="stat-card"><div class="stat-title">Predicted (6 months)</div><div class="stat-value" id="predictedOccupancy">0</div></div>
-                    <div class="stat-card"><div class="stat-title">Available in 6 months</div><div class="stat-value" id="availableFuture">0</div></div>
-                    <div class="stat-card"><div class="stat-title">Trend</div><div class="stat-value" id="trendStatus">—</div></div>
+
+                <div class="forecast-toolbar">
+                    <div class="toolbar-card period-card">
+                        <div class="toolbar-card__label">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Forecast Period</span>
+                        </div>
+                        <label class="select-shell" for="forecastMonths">
+                            <select id="forecastMonths">
+                                <option value="3">3 Months</option>
+                                <option value="6" selected>6 Months</option>
+                                <option value="12">12 Months</option>
+                            </select>
+                            <i class="fas fa-chevron-down"></i>
+                        </label>
+                    </div>
+
+                    <div class="toolbar-card status-card">
+                        <div class="toolbar-meta">
+                            <span class="toolbar-meta__label">Data source</span>
+                            <strong id="forecastSourceStatus">Checking...</strong>
+                        </div>
+                        <button class="btn-secondary btn-action-pill btn-record-payment action-card-btn" id="generateForecast">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Generate Forecast</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="card"><h4>Historical & Forecasted Burials</h4><canvas id="forecastChart" height="250"></canvas></div>
-                <div class="card"><h4>Forecast Details</h4><div id="forecastDetails" class="table-container"></div></div>
+
+                <p class="section-label"><i class="fas fa-chart-line"></i> Capacity Analysis</p>
+                <div class="chart-card chart-card--focus">
+                    <div class="chart-card__header">
+                        <span class="chart-card__title">Historical &amp; Forecasted Burials</span>
+                        <span class="chart-card__badge">Trend</span>
+                    </div>
+                    <div class="chart-frame chart-frame--lg">
+                        <canvas id="forecastChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card table-container">
+                    <div class="chart-card__header">
+                        <span class="chart-card__title">Forecast Details</span>
+                        <span class="chart-card__badge">Projection</span>
+                    </div>
+                    <div id="forecastDetails" class="table-container"></div>
+                </div>
             </div>
+
+            <footer class="forecast-footer">
+                <div class="forecast-footer__bottom">
+                    <span class="forecast-footer__text">© 2026 Cemetery Management System. All rights reserved.</span>
+                </div>
+            </footer>
         </main>
     </div>
 

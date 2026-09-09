@@ -3,6 +3,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (!user) return;
 
     let chartInstance = null;
+    let activeForecastRequestId = 0;
+    let isForecastLoading = false;
+
+    const CACHE_KEY_PREFIX = 'cms_forecast_cache_';
+    const CACHE_TTL_MS = 5 * 60 * 1000;
+
+    const generateBtn = document.getElementById('generateForecast');
+    const sourceStatusEl = document.getElementById('forecastSourceStatus');
 
     document.getElementById('logoutBtn').addEventListener('click', () => api.logout());
 
@@ -12,6 +20,47 @@ document.addEventListener('DOMContentLoaded', async function() {
         toggleBtn.addEventListener('change', () => {
             sidebar.classList.toggle('collapsed');
         });
+    }
+
+    function setForecastSourceStatus(text, type = 'neutral') {
+        if (!sourceStatusEl) return;
+        sourceStatusEl.textContent = text;
+        sourceStatusEl.className = `status-pill status-${type}`;
+    }
+
+    function setGenerateButtonLoading(loading) {
+        if (!generateBtn) return;
+        generateBtn.disabled = loading;
+        generateBtn.innerHTML = loading
+            ? '<i class="fas fa-spinner fa-spin"></i><span>Generating...</span>'
+            : '<i class="fas fa-chart-line"></i><span>Generate Forecast</span>';
+    }
+
+    function readCachedForecast(months) {
+        try {
+            const raw = localStorage.getItem(`${CACHE_KEY_PREFIX}${months}`);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || !parsed.timestamp || !parsed.data) return null;
+            if (Date.now() - parsed.timestamp > CACHE_TTL_MS) {
+                localStorage.removeItem(`${CACHE_KEY_PREFIX}${months}`);
+                return null;
+            }
+            return parsed.data;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function writeCachedForecast(months, data) {
+        try {
+            localStorage.setItem(`${CACHE_KEY_PREFIX}${months}`, JSON.stringify({
+                timestamp: Date.now(),
+                data
+            }));
+        } catch (_) {
+            // Storage quota or disabled
+        }
     }
 
     async function updateNotificationBadge() {
@@ -50,12 +99,14 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function showBanner(id, level, message) {
         const el = document.getElementById(id);
+        if (!el) return;
         el.textContent = message;
         el.className = `service-banner visible ${level}`;
     }
 
     function hideBanner(id) {
         const el = document.getElementById(id);
+        if (!el) return;
         el.textContent = '';
         el.className = 'service-banner';
     }
@@ -72,66 +123,179 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('forecastDetails').innerHTML = '';
     }
 
+    function renderForecastPayload(forecast, occupancy) {
+        if (forecast.fallback) {
+            resetStats();
+            setForecastSourceStatus('Fallback Active', 'warning');
+            showBanner('serviceBanner', 'danger', `AI forecasting service is unavailable${forecast.message ? ': ' + forecast.message : ''}. Start the python-ai service and try again.`);
+            return false;
+        }
+
+        setForecastSourceStatus(forecast.is_cached ? 'Cached' : 'Live Engine', 'success');
+
+        document.getElementById('currentOccupancy').innerText = (occupancy.occupied || 0).toLocaleString();
+        const lastEntry = forecast.forecast?.[forecast.forecast.length - 1] || null;
+        const predicted = lastEntry?.cumulative || 0;
+        document.getElementById('predictedOccupancy').innerText = predicted.toLocaleString();
+        const availableFuture = lastEntry ? lastEntry.projected_available : Math.max(0, (occupancy.total || 0) - predicted);
+        document.getElementById('availableFuture').innerText = availableFuture.toLocaleString();
+        document.getElementById('trendStatus').innerHTML = trendBadge(forecast.trend);
+
+        if (forecast.capacity_alert) {
+            const level = forecast.capacity_alert.status === 'critical' ? 'danger' : 'warning';
+            const percent = Math.round((forecast.capacity_alert.occupancy_rate || 0) * 100);
+            showBanner('capacityBanner', level, `Projected occupancy is expected to reach ${forecast.capacity_alert.status.toUpperCase()} level (${percent}%) by ${forecast.capacity_alert.month}.`);
+        }
+
+        const canvas = document.getElementById('forecastChart');
+        if (!canvas) return true;
+        const ctx = canvas.getContext('2d');
+        const historical = forecast.historical || [];
+        const future = forecast.forecast || [];
+        const labels = [...historical.map(item => item.month), ...future.map(item => item.month)];
+        const historicalData = historical.map(item => item.burials);
+        const futureData = future.map(item => item.predicted_burials);
+        const combined = [...historicalData, ...futureData];
+        const futureStart = historicalData.length;
+
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Historical',
+                        data: combined.map((value, index) => index < futureStart ? value : null),
+                        borderColor: '#0f766e',
+                        backgroundColor: 'rgba(15, 118, 110, 0.12)',
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: '#0f766e',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1.5,
+                        tension: 0.38,
+                        fill: false
+                    },
+                    {
+                        label: 'Forecast',
+                        data: combined.map((value, index) => index >= futureStart ? value : null),
+                        borderColor: '#d97706',
+                        backgroundColor: 'rgba(217, 119, 6, 0.10)',
+                        borderWidth: 3,
+                        borderDash: [6, 6],
+                        pointRadius: 4,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: '#d97706',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1.5,
+                        tension: 0.38,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 10,
+                            boxHeight: 10,
+                            color: '#2b3658',
+                            font: { size: 11, weight: '600' }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        padding: 10,
+                        displayColors: true,
+                        callbacks: {
+                            label: (context) => `${context.dataset.label}: ${context.parsed.y}`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            maxRotation: 0,
+                            autoSkip: false,
+                            color: '#475569',
+                            font: { size: 11 }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(44, 94, 71, 0.10)' },
+                        ticks: {
+                            precision: 0,
+                            color: '#475569',
+                            font: { size: 11 }
+                        }
+                    }
+                }
+            }
+        });
+
+        document.getElementById('forecastDetails').innerHTML = `
+            <table class="data-table">
+                <thead><tr><th>Month</th><th>Predicted Burials</th><th>Cumulative</th><th>Reclaimable</th><th>Projected Available</th><th>Capacity Status</th></tr></thead>
+                <tbody>${future.map(item => `<tr><td>${item.month}</td><td>${item.predicted_burials}</td><td>${item.cumulative}</td><td>${item.reclaimable ?? 0}</td><td>${item.projected_available ?? '-'}</td><td>${capacityBadge(item.capacity_status)}</td></tr>`).join('')}</tbody>
+            </table>
+        `;
+
+        return true;
+    }
+
     async function renderForecast(months) {
+        if (isForecastLoading) return;
+
+        const requestId = ++activeForecastRequestId;
+        isForecastLoading = true;
         hideBanner('serviceBanner');
         hideBanner('capacityBanner');
+        setGenerateButtonLoading(true);
+
+        const cachedForecast = readCachedForecast(months);
+        if (cachedForecast) {
+            setForecastSourceStatus('Using cached data', 'neutral');
+            try {
+                const occupancy = await fetchOccupancy();
+                if (requestId !== activeForecastRequestId) return;
+                renderForecastPayload(cachedForecast, occupancy);
+            } catch (error) {
+                if (requestId !== activeForecastRequestId) return;
+                console.warn('Cached forecast render failed, continuing with live fetch:', error);
+            }
+        }
+
         try {
             const [forecast, occupancy] = await Promise.all([fetchForecast(months), fetchOccupancy()]);
-
-            if (forecast.fallback) {
-                resetStats();
-                showBanner('serviceBanner', 'danger', `AI forecasting service is unavailable${forecast.message ? ': ' + forecast.message : ''}. Start the python-ai service and try again.`);
-                return;
+            if (requestId !== activeForecastRequestId) return;
+            if (!forecast.fallback) {
+                writeCachedForecast(months, forecast);
             }
-
-            document.getElementById('currentOccupancy').innerText = occupancy.occupied || 0;
-            const lastEntry = forecast.forecast?.[forecast.forecast.length - 1] || null;
-            const predicted = lastEntry?.cumulative || 0;
-            document.getElementById('predictedOccupancy').innerText = predicted;
-            const availableFuture = lastEntry ? lastEntry.projected_available : Math.max(0, (occupancy.total || 0) - predicted);
-            document.getElementById('availableFuture').innerText = availableFuture;
-            document.getElementById('trendStatus').innerHTML = trendBadge(forecast.trend);
-
-            if (forecast.capacity_alert) {
-                const level = forecast.capacity_alert.status === 'critical' ? 'danger' : 'warning';
-                const percent = Math.round((forecast.capacity_alert.occupancy_rate || 0) * 100);
-                showBanner('capacityBanner', level, `Projected occupancy is expected to reach ${forecast.capacity_alert.status.toUpperCase()} level (${percent}%) by ${forecast.capacity_alert.month}.`);
-            }
-
-            const ctx = document.getElementById('forecastChart').getContext('2d');
-            const historical = forecast.historical || [];
-            const future = forecast.forecast || [];
-            const labels = [...historical.map(item => item.month), ...future.map(item => item.month)];
-            const historicalData = historical.map(item => item.burials);
-            const futureData = future.map(item => item.predicted_burials);
-            const combined = [...historicalData, ...futureData];
-            const futureStart = historicalData.length;
-
-            if (chartInstance) {
-                chartInstance.destroy();
-            }
-
-            chartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [
-                        { label: 'Historical', data: combined.map((value, index) => index < futureStart ? value : null), borderColor: '#2c5e47', fill: false },
-                        { label: 'Forecast', data: combined.map((value, index) => index >= futureStart ? value : null), borderColor: '#d4a373', borderDash: [5, 5], fill: false }
-                    ]
-                },
-                options: { plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } }
-            });
-
-            document.getElementById('forecastDetails').innerHTML = `
-                <table class="data-table">
-                    <thead><tr><th>Month</th><th>Predicted Burials</th><th>Cumulative</th><th>Reclaimable</th><th>Projected Available</th><th>Capacity Status</th></tr></thead>
-                    <tbody>${future.map(item => `<tr><td>${item.month}</td><td>${item.predicted_burials}</td><td>${item.cumulative}</td><td>${item.reclaimable ?? 0}</td><td>${item.projected_available ?? '-'}</td><td>${capacityBadge(item.capacity_status)}</td></tr>`).join('')}</tbody>
-                </table>
-            `;
+            renderForecastPayload(forecast, occupancy);
         } catch (error) {
+            if (requestId !== activeForecastRequestId) return;
             resetStats();
+            setForecastSourceStatus('Unavailable', 'danger');
             showBanner('serviceBanner', 'danger', 'Failed to generate forecast: ' + error.message);
+        } finally {
+            if (requestId === activeForecastRequestId) {
+                isForecastLoading = false;
+                setGenerateButtonLoading(false);
+            }
         }
     }
 
@@ -141,6 +305,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     document.getElementById('forecastMonths').value = '6';
+    setForecastSourceStatus('Checking...', 'neutral');
     await renderForecast(6);
     updateNotificationBadge();
     setInterval(updateNotificationBadge, 30000);

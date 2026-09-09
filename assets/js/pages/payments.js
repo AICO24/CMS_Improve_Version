@@ -556,8 +556,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         referenceIdInput.dispatchEvent(new Event('input', { bubbles: true }));
         currentReferenceKind = kind;
         if (label) {
-            referenceSelectedLabel.textContent = `Selected: ${label}`;
-            referenceSelectedLabel.style.display = 'block';
+            const selectedTextEl = document.getElementById('referenceSelectedText');
+            if (selectedTextEl) {
+                selectedTextEl.textContent = `Selected: ${label}`;
+            } else {
+                referenceSelectedLabel.textContent = `Selected: ${label}`;
+            }
+            referenceSelectedLabel.style.display = 'flex';
         } else {
             referenceSelectedLabel.style.display = 'none';
         }
@@ -570,6 +575,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         referenceSelectedLabel.style.display = 'none';
         referenceIdInput.value = '';
         currentReferenceKind = null;
+        const selectedTextEl = document.getElementById('referenceSelectedText');
+        if (selectedTextEl) selectedTextEl.textContent = 'Selected:';
+    }
+
+    const clearRefBtn = document.getElementById('clearReferenceSelectionBtn');
+    if (clearRefBtn) {
+        clearRefBtn.addEventListener('click', () => {
+            clearReferenceSelection();
+            expectedAmountForCurrentReference = null;
+            if (expectedAmountHint) expectedAmountHint.style.display = 'none';
+            if (amountMismatchWarning) amountMismatchWarning.style.display = 'none';
+        });
     }
 
     function renderReferenceResults(items) {
@@ -656,6 +673,32 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     transactionTypeSelect.addEventListener('change', updateReferenceModeForType);
 
+    const paymentModalContent = document.querySelector('#paymentModal .payment-form-modal');
+    const modalScrollButtons = document.querySelectorAll('#paymentModal .modal-scroll-btn');
+
+    function updateModalScrollButtons() {
+        if (!paymentModalContent) return;
+        const maxScroll = paymentModalContent.scrollHeight - paymentModalContent.clientHeight;
+        const atTop = paymentModalContent.scrollTop <= 6;
+        const atBottom = paymentModalContent.scrollTop >= maxScroll - 6;
+
+        modalScrollButtons.forEach((button) => {
+            const direction = button.dataset.scrollDir;
+            const shouldDisable = direction === 'up' ? atTop : atBottom;
+            button.disabled = shouldDisable;
+        });
+    }
+
+    modalScrollButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            if (!paymentModalContent) return;
+            const direction = button.dataset.scrollDir === 'up' ? -1 : 1;
+            paymentModalContent.scrollBy({ top: direction * 180, behavior: 'smooth' });
+        });
+    });
+
+    paymentModalContent?.addEventListener('scroll', updateModalScrollButtons);
+
     function openAddModal() {
         document.getElementById('modalTitle').innerText = 'Record Payment';
         document.getElementById('paymentForm').reset();
@@ -666,6 +709,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         amountMismatchWarning.style.display = 'none';
         updateReferenceModeForType();
         document.getElementById('paymentModal').style.display = 'flex';
+        requestAnimationFrame(updateModalScrollButtons);
     }
 
     document.getElementById('paymentForm').addEventListener('submit', async function(e) {
@@ -697,29 +741,47 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         const saveBtn = e.target.querySelector('button[type="submit"]');
-        await withButtonLoading(saveBtn, async () => {
-            try {
-                const options = { body: formData };
-                const result = id
-                    ? await api.request(`payments/${id}`, { method: 'PUT', ...options })
-                    : await api.request('payments', { method: 'POST', ...options });
+        document.body.classList.add('btn-submitting');
+        try {
+            await withButtonLoading(saveBtn, async () => {
+                try {
+                    const options = { body: formData };
+                    const result = id
+                        ? await api.request(`payments/${id}`, { method: 'PUT', ...options })
+                        : await api.request('payments', { method: 'POST', ...options });
 
-                if (result.success) {
-                    document.getElementById('paymentModal').style.display = 'none';
-                    pagination.reset();
-                    await refreshAll();
-                } else {
-                    alert(result.error || 'Failed to save payment');
+                    if (result.success) {
+                        document.getElementById('paymentModal').style.display = 'none';
+                        pagination.reset();
+                        await refreshAll();
+                    } else {
+                        alert(result.error || 'Failed to save payment');
+                    }
+                } catch (error) {
+                    alert('Error: ' + error.message);
                 }
-            } catch (error) {
-                alert('Error: ' + error.message);
-            }
-        });
+            });
+        } finally {
+            document.body.classList.remove('btn-submitting');
+        }
     });
 
     document.getElementById('openAddPayment').addEventListener('click', openAddModal);
-    document.querySelector('#paymentModal .close').addEventListener('click', () => document.getElementById('paymentModal').style.display = 'none');
-    document.querySelector('#viewModal .close-view').addEventListener('click', () => document.getElementById('viewModal').style.display = 'none');
+    document.querySelector('#paymentModal .close')?.addEventListener('click', () => document.getElementById('paymentModal').style.display = 'none');
+    document.querySelector('#viewModal .close-view')?.addEventListener('click', () => document.getElementById('viewModal').style.display = 'none');
+
+    const cancelPaymentBtn = document.getElementById('cancelPaymentBtn');
+    if (cancelPaymentBtn) {
+        cancelPaymentBtn.addEventListener('click', () => {
+            const form = document.getElementById('paymentForm');
+            if (form) form.reset();
+            clearReferenceSelection();
+            expectedAmountForCurrentReference = null;
+            if (expectedAmountHint) expectedAmountHint.style.display = 'none';
+            if (amountMismatchWarning) amountMismatchWarning.style.display = 'none';
+            document.getElementById('paymentModal').style.display = 'none';
+        });
+    }
 
     window.addEventListener('click', (e) => {
         if (e.target === document.getElementById('paymentModal')) document.getElementById('paymentModal').style.display = 'none';

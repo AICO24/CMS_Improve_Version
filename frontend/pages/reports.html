@@ -152,113 +152,533 @@
                 </div>
             </div>
                 <div class="content-area">
+
+                <!-- ── Stat cards — always at top, toggled by JS ──────── -->
+                <div id="occupancyStats" class="report-stats active">
+                    <div class="stat-card">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-layer-group"></i></span> Total Lots</div>
+                        <div class="stat-value" id="occTotal">0</div>
+                        <div class="stat-sub">All cemetery lots</div>
+                    </div>
+                    <div class="stat-card accent-red">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-circle-dot"></i></span> Occupied</div>
+                        <div class="stat-value" id="occOccupied">0</div>
+                        <div class="stat-sub">Currently in use</div>
+                    </div>
+                    <div class="stat-card accent-teal">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-circle-check"></i></span> Available</div>
+                        <div class="stat-value" id="occAvailable">0</div>
+                        <div class="stat-sub">Open for assignment</div>
+                    </div>
+                    <div class="stat-card accent-purple">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-bookmark"></i></span> Reserved Space</div>
+                        <div class="stat-value" id="occRate">0</div>
+                        <div class="stat-sub">Hold inventory / reserved lots</div>
+                    </div>
+                </div>
+
+                <div id="revenueStats" class="report-stats">
+                    <div class="stat-card">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-peso-sign"></i></span> Total Revenue</div>
+                        <div class="stat-value" id="revTotal">₱0</div>
+                        <div class="stat-sub" id="revTotalSub">Year to date</div>
+                    </div>
+                    <div class="stat-card accent-red">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-receipt"></i></span> Transactions</div>
+                        <div class="stat-value" id="revCount">0</div>
+                        <div class="stat-sub" id="revCountSub">Current year</div>
+                    </div>
+                    <div class="stat-card accent-teal">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-clock"></i></span> Pending Verification</div>
+                        <div class="stat-value" id="revPendingCount">0</div>
+                        <div class="stat-sub" id="revPendingAmount">₱0</div>
+                    </div>
+                    <div class="stat-card accent-purple">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-circle-check"></i></span> Verified Payments</div>
+                        <div class="stat-value" id="revVerifiedCount">0</div>
+                        <div class="stat-sub" id="revVerifiedAmount">₱0</div>
+                    </div>
+                </div>
+
+                <div id="reservationsStats" class="report-stats">
+                    <div class="stat-card">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-calendar-days"></i></span> Total Reservations</div>
+                        <div class="stat-value" id="resTotal">0</div>
+                        <div class="stat-sub">All scheduled bookings</div>
+                    </div>
+                    <div class="stat-card accent-teal">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-circle-check"></i></span> Confirmed</div>
+                        <div class="stat-value" id="resConfirmed">0</div>
+                        <div class="stat-sub">Ready to proceed</div>
+                    </div>
+                    <div class="stat-card accent-amber">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-clock"></i></span> Pending</div>
+                        <div class="stat-value" id="resPending">0</div>
+                        <div class="stat-sub">Awaiting action</div>
+                    </div>
+                    <div class="stat-card accent-red">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-circle-xmark"></i></span> Cancelled</div>
+                        <div class="stat-value" id="resCancelled">0</div>
+                        <div class="stat-sub">Cancelled requests</div>
+                    </div>
+                </div>
+
+                <div id="demographicsStats" class="report-stats">
+                    <div class="stat-card accent-blue">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-users"></i></span> Total Decedents</div>
+                        <div class="stat-value" id="demoTotal">0</div>
+                        <div class="stat-sub">All recorded cases</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-monument"></i></span> Burials</div>
+                        <div class="stat-value" id="demoBurials">0</div>
+                        <div class="stat-sub">Ground interments</div>
+                    </div>
+                    <div class="stat-card accent-amber">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-fire"></i></span> Cremations</div>
+                        <div class="stat-value" id="demoCremations">0</div>
+                        <div class="stat-sub">Ash handling cases</div>
+                    </div>
+                    <div class="stat-card accent-navy">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-cake-candles"></i></span> Avg. Age at Death</div>
+                        <div class="stat-value" id="demoAvgAge">0</div>
+                        <div class="stat-sub">Years on average</div>
+                    </div>
+                </div>
+
+                <div id="expirationStats" class="report-stats">
+                    <div class="stat-card accent-amber">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span> Expiring Soon (30 days)</div>
+                        <div class="stat-value" id="expExpiring">0</div>
+                        <div class="stat-sub">Lease ending within 30 days</div>
+                    </div>
+                    <div class="stat-card accent-red">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-hourglass-end"></i></span> Expired</div>
+                        <div class="stat-value" id="expExpired">0</div>
+                        <div class="stat-sub">Already expired or overdue</div>
+                    </div>
+                    <div class="stat-card accent-purple">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-arrows-rotate"></i></span> Renewal Due</div>
+                        <div class="stat-value" id="expRenewalDue">0</div>
+                        <div class="stat-sub">Renewals awaiting action</div>
+                    </div>
+                    <div class="stat-card accent-teal">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-magnifying-glass"></i></span> Pending Review</div>
+                        <div class="stat-value" id="expPendingReview">0</div>
+                        <div class="stat-sub">Items still needing follow-up</div>
+                    </div>
+                </div>
+
+                <!-- ── Tab bar ────────────────────────────────────────── -->
                 <div class="report-tabs">
-                    <div>
-                        <button class="tab-btn active" data-tab="occupancy">Occupancy</button>
-                        <button class="tab-btn" data-tab="revenue">Revenue</button>
-                        <button class="tab-btn" data-tab="reservations">Reservations</button>
-                        <button class="tab-btn" data-tab="demographics">Demographics</button>
-                        <button class="tab-btn" data-tab="expiration">Expiration</button>
+                    <div class="report-tabs-shell">
+                        <button type="button" class="tab-scroll tab-scroll--prev" aria-label="Scroll tabs left">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <div class="report-tabs-scroll-track" id="reportTabsTrack">
+                            <div class="tab-buttons-row">
+                                <button class="tab-btn active" data-tab="occupancy">
+                                    <i class="fas fa-chart-pie"></i> Occupancy
+                                </button>
+                                <button class="tab-btn" data-tab="revenue">
+                                    <i class="fas fa-peso-sign"></i> Revenue
+                                </button>
+                                <button class="tab-btn" data-tab="reservations">
+                                    <i class="fas fa-calendar-check"></i> Reservations
+                                </button>
+                                <button class="tab-btn" data-tab="demographics">
+                                    <i class="fas fa-users"></i> Demographics
+                                </button>
+                                <button class="tab-btn" data-tab="expiration">
+                                    <i class="fas fa-hourglass-end"></i> Expiration
+                                </button>
+                            </div>
+                        </div>
+                        <button type="button" class="tab-scroll tab-scroll--next" aria-label="Scroll tabs right">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
                     </div>
                     <div class="report-tabs-actions">
-                        <div class="dl-toggle dl-toggle--pdf">
-                            <label class="dl-toggle__label">
-                                <input type="checkbox" class="dl-toggle__input" id="exportPdfBtn" aria-label="Export report to PDF">
-                                <span class="dl-toggle__circle">
-                                    <i class="fas fa-file-pdf dl-toggle__icon"></i>
-                                    <div class="dl-toggle__square"></div>
-                                </span>
-                                <span class="dl-toggle__title">Download</span>
-                                <span class="dl-toggle__title dl-toggle__title--done">Open</span>
-                            </label>
-                        </div>
-                        <div class="dl-toggle dl-toggle--excel">
-                            <label class="dl-toggle__label">
-                                <input type="checkbox" class="dl-toggle__input" id="exportExcelBtn" aria-label="Export report to Excel">
-                                <span class="dl-toggle__circle">
-                                    <i class="fas fa-file-excel dl-toggle__icon"></i>
-                                    <div class="dl-toggle__square"></div>
-                                </span>
-                                <span class="dl-toggle__title">Download</span>
-                                <span class="dl-toggle__title dl-toggle__title--done">Saved</span>
-                            </label>
+                        <div class="toolbar-actions-panel report-actions-panel">
+                            <span class="toolbar-actions-label">Report actions</span>
+                            <div class="toolbar-actions" aria-label="Report actions">
+                                <button type="button" class="btn-secondary btn-action-pill report-export-button report-export-button--pdf" id="exportPdfBtn" title="Generate PDF report">
+                                    <i class="fas fa-file-pdf"></i>
+                                    <span>Generate PDF</span>
+                                </button>
+                                <button type="button" class="btn-secondary btn-action-pill report-export-button report-export-button--excel" id="exportExcelBtn" title="Generate Excel report">
+                                    <i class="fas fa-file-excel"></i>
+                                    <span>Generate Excel</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
+                <!-- ── Tab chart content ──────────────────────────────── -->
                 <div id="reportExportContainer">
+
                     <div id="occupancyTab" class="report-content active">
-                        <div class="stats-row">
-                            <div class="stat-card"><div class="stat-title">Total Lots</div><div class="stat-value" id="occTotal">0</div></div>
-                            <div class="stat-card"><div class="stat-title">Occupied</div><div class="stat-value" id="occOccupied">0</div></div>
-                            <div class="stat-card"><div class="stat-title">Available</div><div class="stat-value" id="occAvailable">0</div></div>
-                            <div class="stat-card"><div class="stat-title">Occupancy Rate</div><div class="stat-value" id="occRate">0%</div></div>
+                        <p class="section-label"><i class="fas fa-chart-bar"></i> Occupancy Breakdown</p>
+                        <div class="occupancy-analysis-grid">
+                            <div class="chart-card chart-card--compact occupancy-card">
+                                <div class="chart-card__header">
+                                    <span class="chart-card__title">By Section</span>
+                                    <span class="chart-card__badge">Bar</span>
+                                </div>
+                                <div class="chart-frame chart-frame--sm">
+                                    <canvas id="occupancyChart"></canvas>
+                                </div>
+                                <div class="insight-list" id="sectionInsights"></div>
+                            </div>
+                            <div class="chart-card chart-card--compact occupancy-card">
+                                <div class="chart-card__header">
+                                    <span class="chart-card__title">By Lot Type</span>
+                                    <span class="chart-card__badge">Bar</span>
+                                </div>
+                                <div class="chart-frame chart-frame--sm">
+                                    <canvas id="occupancyByTypeChart"></canvas>
+                                </div>
+                                <div class="insight-list" id="lotTypeInsights"></div>
+                            </div>
+
+                        <div class="chart-card chart-card--compact occupancy-card occupancy-card--wide">
+                            <div class="chart-card__header">
+                                <span class="chart-card__title">By Block</span>
+                                <span class="chart-card__badge">Bar</span>
+                            </div>
+                            <div class="chart-frame chart-frame--block">
+                                <canvas id="occupancyByBlockChart"></canvas>
+                            </div>
+                            <div class="insight-list" id="blockInsights"></div>
                         </div>
-                        <div class="card"><h4>Occupancy by Section</h4><canvas id="occupancyChart" height="200"></canvas></div>
-                        <div class="card"><h4>Occupancy by Block</h4><canvas id="occupancyByBlockChart" height="200"></canvas></div>
-                        <div class="card"><h4>Occupancy by Lot Type</h4><canvas id="occupancyByTypeChart" height="200"></canvas></div>
-                        <div class="card"><h4>Historical Occupancy Trend (12 months)</h4><canvas id="occupancyTrendChart" height="200"></canvas><p class="muted small" id="occupancyTrendNote" style="margin-top:8px;"></p></div>
+                        <div class="chart-card chart-card--focus occupancy-card occupancy-card--wide occupancy-card--forecast">
+                            <div class="chart-card__header">
+                                <span class="chart-card__title">Historical Occupancy Trend — 12 Months</span>
+                                <span class="chart-card__badge">Line</span>
+                            </div>
+                            <div class="chart-frame chart-frame--md">
+                                <canvas id="occupancyTrendChart"></canvas>
+                            </div>
+                            <p class="trend-note" id="occupancyTrendNote"></p>
+                            <div class="forecast-strip" id="occupancyForecast"></div>
+                        </div>
+                        </div>
                     </div>
 
                     <div id="revenueTab" class="report-content">
                         <div class="filter-bar">
-                            <label>From: <input type="date" id="revDateFrom"></label>
-                            <label>To: <input type="date" id="revDateTo"></label>
-                            <button class="btn-filter" id="applyRevenueFilter">Apply Filter</button>
+                            <span class="filter-bar__label"><i class="fas fa-filter"></i> Filters</span>
+                            <label class="date-filter-field">
+                                <span>From</span>
+                                <input type="date" id="revDateFrom" aria-label="From date">
+                            </label>
+                            <label class="date-filter-field">
+                                <span>To</span>
+                                <input type="date" id="revDateTo" aria-label="To date">
+                            </label>
+                            <button class="btn-filter" id="applyRevenueFilter">Apply</button>
+                            <button class="btn-secondary" id="clearRevenueFilter"><i class="fas fa-rotate-left"></i><span>Clear</span></button>
                         </div>
-                        <div class="stats-row">
-                            <div class="stat-card"><div class="stat-title">Total Revenue</div><div class="stat-value" id="revTotal">₱0</div></div>
-                            <div class="stat-card"><div class="stat-title">Transactions</div><div class="stat-value" id="revCount">0</div></div>
-                            <div class="stat-card"><div class="stat-title">Pending Verification</div><div class="stat-value" id="revPendingCount">0</div><div class="stat-sub" id="revPendingAmount">₱0</div></div>
+                        <p class="section-label"><i class="fas fa-chart-line"></i> Revenue Analysis</p>
+                        <div class="revenue-line-grid">
+                            <div class="chart-card chart-card--focus">
+                                <div class="chart-card__header">
+                                    <span class="chart-card__title">Revenue by Month</span>
+                                    <span class="chart-card__badge">Line</span>
+                                </div>
+                                <div class="chart-frame chart-frame--md">
+                                    <canvas id="revenueChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card chart-card--focus">
+                                <div class="chart-card__header">
+                                    <span class="chart-card__title">Revenue by Year</span>
+                                    <span class="chart-card__badge">Line</span>
+                                </div>
+                                <div class="chart-frame chart-frame--md">
+                                    <canvas id="revenueYearChart"></canvas>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card"><h4>Revenue by Month</h4><canvas id="revenueChart" height="200"></canvas></div>
-                        <div class="card"><h4>Revenue Breakdown by Transaction Type</h4><canvas id="revenueBreakdownChart" height="200"></canvas></div>
-                        <div class="card"><h4>Revenue by Verification Status</h4><canvas id="verificationBreakdownChart" height="200"></canvas></div>
-                        <div class="card"><h4>Revenue by Payment Method</h4><canvas id="revenueByMethodChart" height="200"></canvas></div>
+                        <div class="chart-grid-2">
+                            <div class="chart-card">
+                                <div class="chart-card__header">
+                                    <span class="chart-card__title">By Transaction Type</span>
+                                    <span class="chart-card__badge">Doughnut</span>
+                                </div>
+                                <div class="chart-frame chart-frame--md">
+                                    <canvas id="revenueBreakdownChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                <div class="chart-card__header">
+                                    <span class="chart-card__title">By Verification Status</span>
+                                    <span class="chart-card__badge">Doughnut</span>
+                                </div>
+                                <div class="chart-frame chart-frame--md">
+                                    <canvas id="verificationBreakdownChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chart-card chart-card--focus">
+                            <div class="chart-card__header">
+                                <span class="chart-card__title">Revenue by Payment Method</span>
+                                <span class="chart-card__badge">Bar</span>
+                            </div>
+                            <div class="chart-frame chart-frame--revenue-method">
+                                <canvas id="revenueByMethodChart"></canvas>
+                            </div>
+                        </div>
+                        <p class="section-label"><i class="fas fa-table-list"></i> Recent Transactions</p>
+                        <div class="chart-card table-container">
+                            <div class="chart-card__header">
+                                <span class="chart-card__title">Recent Transactions</span>
+                                <span class="chart-card__badge">Table</span>
+                            </div>
+                            <div class="table-wrap">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Txn ID</th>
+                                            <th>Date</th>
+                                            <th>Amount</th>
+                                            <th>Method</th>
+                                            <th>Verification</th>
+                                            <th>Payer / Received by</th>
+                                            <th>Receipt #</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recentPaymentsTableBody">
+                                        <tr><td colspan="7">Loading...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="reservationsTab" class="report-content">
-                        <div class="stats-row">
-                            <div class="stat-card"><div class="stat-title">Total Reservations</div><div class="stat-value" id="resTotal">0</div></div>
-                            <div class="stat-card"><div class="stat-title">Pending</div><div class="stat-value" id="resPending">0</div></div>
-                            <div class="stat-card"><div class="stat-title">Confirmed</div><div class="stat-value" id="resConfirmed">0</div></div>
-                            <div class="stat-card"><div class="stat-title">Completed</div><div class="stat-value" id="resCompleted">0</div></div>
-                            <div class="stat-card"><div class="stat-title">Cancelled</div><div class="stat-value" id="resCancelled">0</div></div>
+                        <p class="section-label"><i class="fas fa-chart-column"></i> Reservation Analysis</p>
+                        <div class="chart-grid-2">
+                            <div class="chart-card chart-card--focus">
+                                <div class="chart-card__header">
+                                    <span class="chart-card__title">Status Mix</span>
+                                    <span class="chart-card__badge">Doughnut</span>
+                                </div>
+                                <div class="chart-frame chart-frame--md">
+                                    <canvas id="reservationStatusChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card chart-card--focus">
+                                <div class="chart-card__header">
+                                    <span class="chart-card__title">Reservations by Month</span>
+                                    <span class="chart-card__badge">Line</span>
+                                </div>
+                                <div class="chart-frame chart-frame--md">
+                                    <canvas id="reservationsChart"></canvas>
+                                </div>
+                            </div>
                         </div>
-                        <div class="stats-row">
-                            <div class="stat-card"><div class="stat-title">Confirmation Rate</div><div class="stat-value" id="resConfirmationRate">0%</div><div class="stat-sub">Of decided reservations</div></div>
-                            <div class="stat-card"><div class="stat-title">Cancellation Rate</div><div class="stat-value" id="resCancellationRate">0%</div><div class="stat-sub">Of decided reservations</div></div>
+                        <div class="chart-card chart-card--focus reservations-table-card">
+                            <div class="chart-card__header">
+                                <span class="chart-card__title">Pending Approval Queue</span>
+                                <span class="chart-card__badge">Action</span>
+                            </div>
+                            <div class="table-wrap">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Reservation</th>
+                                            <th>Lot</th>
+                                            <th>Applicant</th>
+                                            <th>Requested date</th>
+                                            <th>Days pending</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="reservationActionTableBody"></tbody>
+                                </table>
+                            </div>
                         </div>
-                        <div class="card"><h4>Reservations by Month</h4><canvas id="reservationsChart" height="200"></canvas></div>
+                        <div class="insight-list reservations-insights" id="reservationInsights"></div>
                     </div>
 
                     <div id="demographicsTab" class="report-content">
-                        <div class="stats-row">
-                            <div class="stat-card"><div class="stat-title">Total Decedents</div><div class="stat-value" id="demoTotal">0</div></div>
-                            <div class="stat-card"><div class="stat-title">Burials</div><div class="stat-value" id="demoBurials">0</div></div>
-                            <div class="stat-card"><div class="stat-title">Cremations</div><div class="stat-value" id="demoCremations">0</div></div>
-                            <div class="stat-card"><div class="stat-title">Average Age at Death</div><div class="stat-value" id="demoAvgAge">0</div></div>
+                        <p class="section-label"><i class="fas fa-chart-pie"></i> Demographics Analysis</p>
+                        <div class="chart-grid-2 demographics-grid">
+                            <div class="chart-card chart-card--focus">
+                                <div class="chart-card__header">
+                                    <span class="chart-card__title">Burial vs. Cremation</span>
+                                    <span class="chart-card__badge">Doughnut</span>
+                                </div>
+                                <div class="chart-frame chart-frame--md">
+                                    <canvas id="demographicsChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card chart-card--focus">
+                                <div class="chart-card__header">
+                                    <span class="chart-card__title">Age Distribution</span>
+                                    <span class="chart-card__badge">Bar</span>
+                                </div>
+                                <div class="chart-frame chart-frame--md">
+                                    <canvas id="ageDistributionChart"></canvas>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card"><h4>Burial vs. Cremation</h4><canvas id="demographicsChart" height="200"></canvas></div>
+                        <div class="chart-card chart-card--focus demographics-table-card">
+                            <div class="chart-card__header">
+                                <span class="chart-card__title">Age Group Breakdown</span>
+                                <span class="chart-card__badge">Table</span>
+                            </div>
+                            <div class="table-wrap">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Age group</th>
+                                            <th>Total</th>
+                                            <th>Share</th>
+                                            <th>Profile</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="demographicsTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="insight-list demographics-insights" id="demographicsInsights"></div>
                     </div>
 
                     <div id="expirationTab" class="report-content">
-                        <div class="stats-row">
-                            <div class="stat-card"><div class="stat-title">Expiring Soon (30 days)</div><div class="stat-value" id="expExpiring">0</div></div>
-                            <div class="stat-card"><div class="stat-title">Expired</div><div class="stat-value" id="expExpired">0</div></div>
+                        <div class="filter-bar expiration-filter-bar">
+                            <span class="filter-bar__label"><i class="fas fa-filter"></i> Filters</span>
+                            <label class="date-filter-field filter-dropdown-field">
+                                <span>View</span>
+                                <select id="expirationPresetFilter" aria-label="Expiration quick filters">
+                                    <option value="all">All dates</option>
+                                    <option value="next30">Next 30 days</option>
+                                    <option value="next90">Next 90 days</option>
+                                    <option value="thisMonth">This month</option>
+                                    <option value="pastDue">Past due</option>
+                                </select>
+                            </label>
+                            <label class="date-filter-field">
+                                <span>From</span>
+                                <input type="date" id="expirationDateFrom" aria-label="Expiration from date">
+                            </label>
+                            <label class="date-filter-field">
+                                <span>To</span>
+                                <input type="date" id="expirationDateTo" aria-label="Expiration to date">
+                            </label>
+                            <button class="btn-filter" id="applyExpirationFilter">Apply</button>
+                            <button class="btn-secondary" id="clearExpirationFilter"><i class="fas fa-rotate-left"></i><span>Clear</span></button>
                         </div>
-                        <div class="table-container"><h4>Expiring Lots</h4><table class="data-table"><thead><tr><th>Lot #</th><th>Section</th><th>Block</th><th>Lease End</th><th>Status</th></tr></thead><tbody id="expiringTableBody"><tr><td colspan="5">Loading...</td></tr></tbody></table></div>
-                        <div class="table-container"><h4>Expired Lots</h4><table class="data-table"><thead><tr><th>Lot #</th><th>Section</th><th>Block</th><th>Lease End</th><th>Status</th></tr></thead><tbody id="expiredTableBody"><tr><td colspan="5">Loading...</td></tr></tbody></table></div>
+                        <p class="section-label"><i class="fas fa-table-list"></i> Expiration Details</p>
+                        <div class="chart-grid-2 expiration-insight-grid">
+                            <div class="chart-card chart-card--focus">
+                                <div class="chart-card__header">
+                                    <span class="chart-card__title">Expiration Status Distribution</span>
+                                    <span class="chart-card__badge">Doughnut</span>
+                                </div>
+                                <div class="chart-frame chart-frame--md">
+                                    <canvas id="expirationStatusChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card chart-card--focus">
+                                <div class="chart-card__header">
+                                    <span class="chart-card__title">Expiry Trend</span>
+                                    <span class="chart-card__badge">Line</span>
+                                </div>
+                                <div class="chart-frame chart-frame--md">
+                                    <canvas id="expirationTrendChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chart-grid-2">
+                            <div class="chart-card table-container expiration-table-card">
+                                <div class="chart-card__header">
+                                    <span class="chart-card__title">Expiring Lots</span>
+                                    <span class="chart-card__badge">Within 30 days</span>
+                                </div>
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Lot #</th>
+                                            <th>Section</th>
+                                            <th>Block</th>
+                                            <th>Lease End</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="expiringTableBody">
+                                        <tr><td colspan="5">Loading...</td></tr>
+                                    </tbody>
+                                </table>
+                                <div class="pagination-controls" id="expiringPaginationControls">
+                                    <span class="pagination-info" id="expiringPaginationInfo">Page 1</span>
+                                    <div class="pagination-actions">
+                                        <form class="pagination-jump" id="expiringPaginationJumpForm">
+                                            <label for="expiringPageJumpInput">Jump to page</label>
+                                            <input type="number" id="expiringPageJumpInput" min="1" step="1" placeholder="Enter page number">
+                                            <button class="btn-secondary" id="expiringPageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
+                                        </form>
+                                        <span class="pagination-divider" aria-hidden="true"></span>
+                                        <button class="btn-secondary" id="expiringPrevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
+                                        <button class="btn-secondary" id="expiringNextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chart-card table-container expiration-table-card">
+                                <div class="chart-card__header">
+                                    <span class="chart-card__title">Expired Lots</span>
+                                    <span class="chart-card__badge">Past due</span>
+                                </div>
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Lot #</th>
+                                            <th>Section</th>
+                                            <th>Block</th>
+                                            <th>Lease End</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="expiredTableBody">
+                                        <tr><td colspan="5">Loading...</td></tr>
+                                    </tbody>
+                                </table>
+                                <div class="pagination-controls" id="expiredPaginationControls">
+                                    <span class="pagination-info" id="expiredPaginationInfo">Page 1</span>
+                                    <div class="pagination-actions">
+                                        <form class="pagination-jump" id="expiredPaginationJumpForm">
+                                            <label for="expiredPageJumpInput">Jump to page</label>
+                                            <input type="number" id="expiredPageJumpInput" min="1" step="1" placeholder="Enter page number">
+                                            <button class="btn-secondary" id="expiredPageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
+                                        </form>
+                                        <span class="pagination-divider" aria-hidden="true"></span>
+                                        <button class="btn-secondary" id="expiredPrevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
+                                        <button class="btn-secondary" id="expiredNextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+                </div><!-- /reportExportContainer -->
+            </div><!-- /content-area -->
+
+            <footer class="reports-footer">
+                <div class="reports-footer__bottom">
+                    <span class="reports-footer__text">© 2026 Cemetery Management System. All rights reserved.</span>
                 </div>
-            </div>
-        </main>
+            </footer>
+                </main>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
+    <script src="../../assets/js/shared/button-loading.js"></script>
+    <script src="../../assets/js/shared/pagination.js"></script>
     <script src="../../assets/js/pages/reports.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
