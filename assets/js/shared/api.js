@@ -93,13 +93,14 @@ class ApiClient {
         return data;
     }
 
-    async login(username, password, role = null) {
+    async login(username, password, role = null, rememberMe = false) {
         // allow calling code to pass either an email or a username in the first argument
         const payload = {};
         if (username && username.includes('@')) payload.email = username;
         else payload.username = username;
         payload.password = password;
         if (role) payload.role = role;
+        payload.remember_me = Boolean(rememberMe);
 
         const result = await this.request('auth/login', {
             method: 'POST',

@@ -1,71 +1,63 @@
-/* Reports module styles */
+/* Reports module — page-specific styles.
+   Layout shell, sidebar, hamburger, logout-btn: dashboard.css.
+   Color tokens: tokens.css. */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+/* ── Background — matches payments page ─────────────────────── */
 .dashboard-body {
-    background: #f4f7fa;
-    font-family: 'Inter', sans-serif;
-    color: #243736;
+    background:
+        radial-gradient(circle at 14% 8%, rgba(44, 94, 71, 0.10), transparent 28%),
+        radial-gradient(circle at 88% 18%, rgba(37, 99, 235, 0.08), transparent 24%),
+        linear-gradient(180deg, #f6faf7 0%, #f4f7fa 42%, #eef3f7 100%);
 }
 
-.dashboard-container {
-    display: flex;
-    min-height: 100vh;
-}
-
-/* Sidebar sizing/position now comes solely from the shared responsive
-   shell in dashboard.css (Phase 8 audit fix) — this page's own copy was
-   unconditional and was partially defeating dashboard.css's 1024px
-   tablet breakpoint (this page's own 760px mobile rescue rule already
-   covered the phone-width case). */
-
-.sidebar-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-
-.sidebar-nav {
-    padding: 10px 12px;
+.main-content {
+    position: relative;
+    isolation: isolate;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    flex: 1;
+    background:
+        radial-gradient(circle at 12% 6%, rgba(44, 94, 71, 0.20), transparent 32%),
+        radial-gradient(circle at 88% 14%, rgba(37, 99, 235, 0.14), transparent 28%),
+        linear-gradient(180deg, #eef8f1 0%, #f4f7fa 44%, #eaf0f4 100%);
 }
 
-.nav-item,
-.nav-item * {
-    text-decoration: none !important;
+.main-content::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background:
+        radial-gradient(circle at 20% 28%, rgba(122, 167, 122, 0.34), transparent 24%),
+        radial-gradient(circle at 78% 42%, rgba(43, 54, 88, 0.16), transparent 26%),
+        linear-gradient(135deg, rgba(44, 94, 71, 0.14), rgba(37, 99, 235, 0.09) 45%, rgba(244, 247, 250, 0));
 }
 
-.nav-item {
-    padding: 12px 14px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    border-radius: 10px;
-    color: #d6def3;
+.top-bar,
+.content-area {
+    position: relative;
+    z-index: 1;
 }
 
-.nav-item:hover {
-    background: rgba(255,255,255,0.05);
-    transform: translateX(3px);
-}
-
-.nav-item.active {
-    background: #7aa77a;
-    color: #06321a;
-}
-
-/* margin-left/transition now come from the shared dashboard.css (Phase 8) */
-.main-content {
-    min-height: 100vh;
-}
-
+/* ── Top bar — glassmorphic, matches payments ────────────────── */
 .top-bar {
-    background: #fff;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(234, 243, 238, 0.74)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.12), rgba(37, 99, 235, 0.07));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     padding: 16px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    box-shadow: 0 1px 4px rgba(15,23,42,0.06);
+    border: 1px solid rgba(255, 255, 255, 0.62);
+    border-left: none;
+    border-right: none;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
 }
 
 .top-left {
@@ -74,58 +66,295 @@
     align-items: center;
 }
 
-/* .hamburger and its SVG icon states now come from assets/css/dashboard.css (Batch 6) -- the previous per-page copy had .hamburger input { display: none; }, which made the toggle unreachable by keyboard */
-
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 16px;
+.top-left h3 {
+    color: var(--color-primary-800);
+    font-weight: 800;
+    letter-spacing: 0;
 }
 
-.profile-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
+.content-area {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex: 1 0 auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.content-area > * {
+    width: 100%;
+    max-width: 100%;
+}
+
+.reports-footer {
+    position: relative;
+    z-index: 1;
+    margin-top: 20px;
+    padding: 0 24px 22px;
+    background: transparent;
+}
+
+.reports-footer__bottom {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #eef3f7;
-    color: #2b3658;
+    gap: 18px;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.73rem;
+    letter-spacing: 0.02em;
 }
 
-
-.content-area {
-    padding: 24px;
+.reports-footer__bottom::before,
+.reports-footer__bottom::after {
+    content: "";
+    display: block;
+    width: 140px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(100, 116, 139, 0), rgba(100, 116, 139, 0.8), rgba(100, 116, 139, 0));
+    position: relative;
 }
 
+.reports-footer__text {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #64748b;
+}
+
+.reports-footer__text::before,
+.reports-footer__text::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(100, 116, 139, 0.65);
+    display: inline-block;
+}
+
+/* ── Tab bar — glassmorphic toolbar style ────────────────────── */
 .report-tabs {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 24px;
+    gap: 14px;
+    flex-wrap: nowrap;
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 2px;
+    padding: 12px 14px;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(234, 243, 238, 0.88)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.10), rgba(37, 99, 235, 0.06));
+    border: 1px solid rgba(44, 94, 71, 0.14);
+    border-left: 6px solid var(--color-primary-500);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
+}
+
+.report-tabs-shell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+}
+
+.report-tabs-scroll-track {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px;
+    border: 1px solid rgba(44, 94, 71, 0.10);
+    border-radius: 16px;
+    background: rgba(248, 250, 252, 0.84);
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+    -ms-overflow-style: none;
+}
+
+.report-tabs-scroll-track::-webkit-scrollbar {
+    display: none;
+}
+
+.tab-buttons-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    min-width: max-content;
+    width: max-content;
+    max-width: 100%;
+    padding: 2px 2px 0;
+}
+
+.tab-scroll {
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(44, 94, 71, 0.18);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.82);
+    color: var(--color-primary-700);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+    cursor: pointer;
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, opacity 160ms ease;
+}
+
+.tab-scroll:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: rgba(44, 94, 71, 0.3);
+    box-shadow: 0 12px 20px rgba(15, 23, 42, 0.08);
+}
+
+.tab-scroll:disabled {
+    opacity: 0.35;
+    cursor: default;
 }
 
 .report-tabs-actions {
     display: flex;
     gap: 10px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    align-items: center;
+    margin-left: auto;
+    flex: 0 0 auto;
+}
+
+.report-actions-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 7px;
+    min-width: 0;
+    min-height: 64px;
+    padding-left: 14px;
+    border-left: 1px solid rgba(44, 94, 71, 0.12);
+}
+
+.toolbar-actions-label {
+    color: var(--color-text-muted);
+    font-size: 0.68rem;
+    font-weight: var(--fw-bold);
+    line-height: 1;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    padding-left: 2px;
+}
+
+.toolbar-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+.report-export-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 42px;
+    min-width: 150px;
+    padding: 0 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(44, 94, 71, 0.22);
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--color-primary-700);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+    font-size: 0.84rem;
+    font-weight: var(--fw-bold);
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background var(--duration-base) var(--easing-standard),
+        border-color var(--duration-base) var(--easing-standard),
+        color var(--duration-base) var(--easing-standard),
+        transform var(--duration-fast) var(--easing-standard),
+        box-shadow var(--duration-base) var(--easing-standard);
+}
+
+.report-export-button:hover {
+    background: rgba(209, 250, 229, 0.96);
+    border-color: rgba(15, 118, 110, 0.32);
+    color: #0f766e;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.report-export-button:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+.report-export-button:disabled {
+    cursor: wait;
+    opacity: 0.72;
+    transform: none;
+}
+
+.report-export-button i {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.report-export-button--pdf i {
+    color: var(--color-danger-strong);
+}
+
+.report-export-button--excel i {
+    color: #0f766e;
 }
 
 .tab-btn {
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    color: var(--color-text);
-    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 132px;
+    border: 1.5px solid rgba(44, 94, 71, 0.16);
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--color-primary-700);
+    border-radius: 12px;
     padding: 10px 16px;
+    font-size: 0.84rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: background var(--duration-base) var(--easing-standard),
-                color var(--duration-base) var(--easing-standard);
+    transition: background 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, filter 160ms ease;
+    white-space: nowrap;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 3px 10px rgba(15, 23, 42, 0.03);
+}
+
+.tab-btn i {
+    font-size: 0.78rem;
+    opacity: 0.9;
 }
 
 .tab-btn:hover {
-    background: var(--color-neutral-100);
+    background: rgba(44, 94, 71, 0.06);
+    border-color: rgba(44, 94, 71, 0.28);
+    color: var(--color-primary-800);
+    transform: translateY(-1px);
 }
 
 .tab-btn:focus-visible {
@@ -134,100 +363,1077 @@
 }
 
 .tab-btn.active {
-    background: #2b3658;
+    background: linear-gradient(135deg, #2b3658 0%, #1e293b 100%);
     color: #fff;
     border-color: transparent;
+    box-shadow: 0 10px 22px rgba(43, 54, 88, 0.2);
+    filter: saturate(1.08);
 }
 
+/* ── Tab content visibility ──────────────────────────────────── */
 .report-content {
     display: none;
 }
 
 .report-content.active {
-    display: block;
-}
-
-/* .stats-row / .stat-card / .stat-title / .stat-value now come from
-   assets/css/dashboard.css so this module's stat cards match every other module. */
-
-.filter-bar {
     display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    margin-bottom: 24px;
+    flex-direction: column;
+    gap: 18px;
 }
 
-.filter-bar label,
-.filter-bar input {
-    display: inline-flex;
+/* ── Stat cards grid (lives above the tab bar) ──────────── */
+.report-stats {
+    display: none;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    align-items: stretch;
+}
+
+.report-stats.active {
+    display: grid;
+}
+
+.report-stats>.stat-card {
+    position: relative;
+    min-height: 124px;
+    height: 100%;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    border: 1px solid rgba(22, 50, 41, 0.20);
+    border-left: 8px solid #163229;
+    background: linear-gradient(135deg, #2c5e47 0%, #3b7055 100%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    border-radius: var(--radius-lg);
+    contain: layout;
+    animation: statFloat 7s ease-in-out infinite alternate;
+    transition: transform 220ms cubic-bezier(0.2, 0, 0.2, 1),
+        box-shadow 220ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.report-stats>.stat-card::before {
+    content: "";
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    right: -40px;
+    top: -30px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.22), rgba(255,255,255,0) 70%);
+    pointer-events: none;
+}
+
+.report-stats>.stat-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 52%);
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+.report-stats>.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
+}
+
+.report-stats>.stat-card .stat-title,
+.report-stats>.stat-card .stat-value,
+.report-stats>.stat-card .stat-sub {
+    position: relative;
+    z-index: 1;
+}
+
+.report-stats>.stat-card .stat-title {
+    display: flex;
     align-items: center;
     gap: 10px;
+    width: 100%;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.76rem;
+    line-height: 1.25;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
-.filter-bar input {
-    padding: 10px 14px;
-    border-radius: 14px;
-    border: 1px solid var(--color-border);
+.report-stats>.stat-card .stat-title .card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    margin-left: auto;
+    order: 2;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    font-size: 13px;
 }
 
-/* .btn-filter now comes from assets/css/components/buttons.css (Batch 5) */
+.report-stats>.stat-card .stat-value {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    color: #fff;
+    font-size: clamp(1.25rem, 1.4vw, 1.55rem);
+    font-weight: 700;
+    line-height: 1.2;
+    text-shadow: 0 1px 1px rgba(15, 23, 42, 0.16);
+}
 
-/* .card's own background/radius/shadow/padding override is gone (Phase
-   5c) — it hardcoded #fff with no dark-mode coverage of its own, which
-   broke every chart card on this page (10+ instances across 5 tabs)
-   under the theme toggle. components/cards.css's canonical, token-driven
-   .card now applies directly instead. */
-.card h4 {
+.report-stats>.stat-card .stat-sub {
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.78rem;
+    line-height: 1.3;
+    min-height: 18px;
+}
+
+/* Color variants per card accent */
+.report-stats>.stat-card.accent-blue {
+    border-left-color: #1d4ed8;
+    background: linear-gradient(135deg, #2563eb 0%, #4f7fdc 100%);
+}
+
+.report-stats>.stat-card.accent-amber {
+    border-left-color: #92400e;
+    background: linear-gradient(135deg, #b45309 0%, #d08a28 100%);
+}
+
+.report-stats>.stat-card.accent-red {
+    border-left-color: #991b1b;
+    background: linear-gradient(135deg, #dc2626 0%, #e85757 100%);
+}
+
+.report-stats>.stat-card.accent-purple {
+    border-left-color: #5b21b6;
+    background: linear-gradient(135deg, #7c3aed 0%, #9d6fe3 100%);
+}
+
+.report-stats>.stat-card.accent-teal {
+    border-left-color: #0f766e;
+    background: linear-gradient(135deg, #0d9488 0%, #2fb5aa 100%);
+}
+
+.report-stats>.stat-card.accent-navy {
+    border-left-color: #2b3658;
+    background: linear-gradient(135deg, #2b3658 0%, #465376 100%);
+}
+
+
+
+/* ── Section divider label ───────────────────────────────────── */
+.section-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary-700);
+    margin: 4px 0;
+}
+
+.section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(44, 94, 71, 0.14);
+}
+
+/* ── Chart cards — glassmorphic panels ───────────────────────── */
+.chart-card {
+    position: relative;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 247, 243, 0.92)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.08), rgba(37, 99, 235, 0.05));
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-left: 6px solid var(--color-primary-500);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+    padding: 14px 16px 12px;
+    min-width: 0;
+    animation: cardEnter 650ms ease both;
+    transition: transform 220ms ease, box-shadow 220ms ease;
+    will-change: transform, box-shadow;
+}
+
+.chart-card::before {
+    content: "";
+    position: absolute;
+    inset: -30% auto auto -20%;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(15, 118, 110, 0.10), rgba(15, 118, 110, 0) 68%);
+    pointer-events: none;
+}
+
+.chart-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 34px rgba(15, 23, 42, 0.12);
+}
+
+.chart-card--compact {
+    min-height: 360px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chart-card--focus,
+.occupancy-card {
+    border-left: 5px solid var(--color-primary-500);
+    background:
+        linear-gradient(180deg, rgba(244, 250, 247, 0.98), rgba(255, 255, 255, 0.95)),
+        linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(37, 99, 235, 0.06));
+}
+
+.occupancy-card--wide {
+    grid-column: auto;
+}
+
+.occupancy-card--forecast {
+    border-left: 5px solid var(--color-primary-500);
+    min-height: 430px;
+    background:
+        linear-gradient(180deg, rgba(244, 250, 247, 0.98), rgba(255, 255, 255, 0.95)),
+        linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(37, 99, 235, 0.06));
+}
+
+.chart-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.chart-card__title {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--color-primary-800);
+    line-height: 1.3;
+}
+
+.chart-card__badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    background: rgba(44, 94, 71, 0.10);
+    color: var(--color-primary-700);
+}
+
+/* Two-column chart grid */
+.chart-grid-1,
+.chart-grid-2,
+.revenue-line-grid,
+.occupancy-analysis-grid,
+.demographics-grid {
+    display: grid;
+    gap: 18px;
+    align-items: stretch;
+}
+
+.chart-grid-1,
+.demographics-grid {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.chart-grid-2,
+.revenue-line-grid,
+.occupancy-analysis-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.demographics-grid,
+.occupancy-analysis-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#demographicsTab .demographics-grid {
+    align-items: stretch;
+}
+
+#demographicsTab .demographics-grid .chart-card {
+    min-height: 392px;
+    display: flex;
+    flex-direction: column;
+}
+
+#demographicsTab .demographics-grid .chart-frame--md {
+    height: 290px;
+    flex: 1 1 auto;
+}
+
+#demographicsTab .demographics-trend-grid {
+    margin-top: 18px;
+}
+
+#demographicsTab .demographics-table-card,
+#reservationsTab .reservations-table-card {
+    margin-top: 18px;
+}
+
+#demographicsTab .table-wrap,
+#reservationsTab .table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(44, 94, 71, 0.10);
+    background: rgba(255, 255, 255, 0.72);
+}
+
+#demographicsTab .data-table,
+#reservationsTab .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 540px;
+    text-align: left;
+}
+
+#demographicsTab .data-table th,
+#demographicsTab .data-table td,
+#reservationsTab .data-table th,
+#reservationsTab .data-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(44, 94, 71, 0.08);
+    font-size: 0.86rem;
+}
+
+#demographicsTab .data-table thead th,
+#reservationsTab .data-table thead th {
+    background: rgba(15, 118, 110, 0.05);
+    color: var(--color-primary-800);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+#demographicsTab .data-table tbody tr:hover,
+#reservationsTab .data-table tbody tr:hover {
+    background: rgba(15, 118, 110, 0.03);
+}
+
+.reservations-insights {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 18px;
+}
+
+.revenue-line-grid .chart-card--focus,
+.chart-grid-1 .chart-card--focus {
+    min-height: 430px;
+    background:
+        linear-gradient(180deg, rgba(244, 250, 247, 0.98), rgba(255, 255, 255, 0.95)),
+        linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(37, 99, 235, 0.06));
+    border-left: 5px solid var(--color-primary-500);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.chart-frame {
+    position: relative;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 248, 246, 0.88));
+    border: 1px solid rgba(44, 94, 71, 0.10);
+    padding: 8px;
+}
+
+.chart-frame canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.chart-frame--sm {
+    height: 240px;
+    flex: 0 0 240px;
+}
+
+.chart-frame--md {
+    height: 300px;
+}
+
+.chart-frame--lg {
+    height: 340px;
+}
+
+.chart-frame--short {
+    height: 280px;
+}
+
+.chart-frame--revenue-method {
+    height: 320px;
+}
+
+.chart-frame--block {
+    height: 300px;
+    flex: 0 0 300px;
+}
+
+.chart-frame--trend {
+    height: 280px;
+    flex: 0 0 280px;
+}
+
+.insight-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(44, 94, 71, 0.12);
+    max-height: none;
+    overflow: visible;
+}
+
+.demographics-insights {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 18px;
+}
+
+.demographics-insights .insight-item {
+    min-height: 50px;
+    padding: 10px 12px;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+}
+
+.demographics-insights .insight-item span {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.demographics-insights .insight-item strong {
+    font-size: 0.82rem;
+    text-align: left;
+}
+
+.insight-item,
+.forecast-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 36px;
+    padding: 8px 10px;
+    border: 1px solid rgba(44, 94, 71, 0.14);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.insight-item span,
+.forecast-item span,
+.forecast-item small {
+    color: var(--color-text-muted);
+    font-size: 0.72rem;
+    line-height: 1.3;
+}
+
+.insight-item strong,
+.forecast-item strong {
+    color: var(--color-primary-800);
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.forecast-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.forecast-item {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 4px;
+}
+
+.forecast-item strong {
+    text-align: left;
+    font-size: 0.82rem;
+}
+
+.risk-low {
+    border-color: rgba(15, 118, 110, 0.28);
+    background: rgba(220, 252, 231, 0.92);
+}
+
+.risk-moderate {
+    border-color: rgba(180, 83, 9, 0.30);
+    background: rgba(254, 243, 199, 0.92);
+}
+
+.risk-high,
+.risk-critical {
+    border-color: rgba(220, 38, 38, 0.30);
+    background: rgba(254, 242, 242, 0.92);
+}
+
+/* Apply risk color styling when used on insight/forecast items */
+.insight-item.risk-low,
+.forecast-item.risk-low {
+    border-color: rgba(15, 118, 110, 0.28);
+    background: rgba(220, 252, 231, 0.95);
+}
+
+.insight-item.risk-moderate,
+.forecast-item.risk-moderate {
+    border-color: rgba(180, 83, 9, 0.30);
+    background: rgba(255, 249, 230, 0.95);
+}
+
+.insight-item.risk-high,
+.insight-item.risk-critical,
+.forecast-item.risk-high,
+.forecast-item.risk-critical {
+    border-color: rgba(220, 38, 38, 0.30);
+    background: rgba(255, 241, 241, 0.96);
+}
+
+/* Emphasize the value text color to match the risk */
+.insight-item.risk-low strong,
+.forecast-item.risk-low strong {
+    color: #0f766e;
+}
+
+.insight-item.risk-moderate strong,
+.forecast-item.risk-moderate strong {
+    color: #b45309;
+}
+
+.insight-item.risk-high strong,
+.insight-item.risk-critical strong,
+.forecast-item.risk-high strong,
+.forecast-item.risk-critical strong {
+    color: #b91c1c;
+}
+
+/* Status badges used in tables and lists */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.status-badge.status-warning,
+.status-badge.status-pending {
+    background: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.18);
+    color: #312e00;
+}
+
+.status-badge.status-danger {
+    background: #ef4444;
+    border-color: rgba(239, 68, 68, 0.18);
+}
+
+.status-badge.status-success {
+    background: #10b981;
+    border-color: rgba(16, 185, 129, 0.18);
+}
+
+.status-badge.status-info,
+.status-badge.status-completed {
+    background: #2563eb;
+    border-color: rgba(37, 99, 235, 0.18);
+}
+
+/* Small utility: color indicator dot for quick glance */
+.analysis-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06) inset;
+}
+
+.analysis-dot.low {
+    background: #10b981;
+}
+
+.analysis-dot.moderate {
+    background: #f59e0b;
+}
+
+.analysis-dot.high {
+    background: #ef4444;
+}
+
+.analysis-dot.critical {
+    background: #991b1b;
+}
+
+/* ── Filter bar — matches payments toolbar style ─────────────── */
+.filter-bar {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 18px;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(234, 243, 238, 0.84)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.10), rgba(37, 99, 235, 0.06));
+    border: 1px solid rgba(44, 94, 71, 0.14);
+    border-left: 6px solid var(--color-primary-500);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
+}
+
+.filter-bar__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-primary-700);
+    white-space: nowrap;
+    align-self: center;
+}
+
+.filter-bar__label i {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
+}
+
+.date-filter-field {
+    min-width: 132px;
+    padding: 4px 12px 5px;
+    border: 1px solid rgba(44, 94, 71, 0.18);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+    height: 46px;
+    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.filter-dropdown-field {
+    min-width: 168px;
+}
+
+.date-filter-field span {
+    color: var(--color-primary-700);
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.date-filter-field input[type="date"],
+.date-filter-field select {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.875rem;
+    font-family: 'Inter', sans-serif;
+    color: var(--color-text);
+    padding: 0;
+}
+
+.date-filter-field select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--color-primary-700) 50%),
+        linear-gradient(135deg, var(--color-primary-700) 50%, transparent 50%);
+    background-position:
+        calc(100% - 14px) calc(50% - 2px),
+        calc(100% - 9px) calc(50% - 2px);
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 22px;
+}
+
+.date-filter-field:focus-within {
+    border-color: rgba(44, 94, 71, 0.34);
+    box-shadow: 0 0 0 3px rgba(45, 106, 78, 0.10);
+}
+
+.date-filter-field:hover {
+    border-color: rgba(44, 94, 71, 0.28);
+    transform: translateY(-1px);
+}
+
+/* ── Trend note ──────────────────────────────────────────────── */
+.trend-note {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--color-primary-700);
+    font-style: italic;
+    opacity: 0.75;
+}
+
+/* ── Expiration tables ───────────────────────────────────────── */
+#expirationTab .chart-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 560px;
+    align-items: stretch;
+    gap: 18px;
+}
+
+#expirationTab .expiration-insight-grid {
+    grid-auto-rows: auto;
+    margin-bottom: 18px;
+    align-items: stretch;
+}
+
+#expirationTab .expiration-insight-grid .chart-card {
+    min-height: 372px;
+    display: flex;
+    flex-direction: column;
+}
+
+#expirationTab .expiration-insight-grid .chart-card__header {
+    margin-bottom: 8px;
+}
+
+#expirationTab .expiration-insight-grid .chart-frame--md {
+    height: 280px;
+    flex: 1 1 auto;
+}
+
+#expirationTab .expiration-table-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 560px;
+    height: 560px;
+    overflow: hidden;
+}
+
+#expirationTab .table-container {
+    overflow: hidden;
+}
+
+#expirationTab .table-container .chart-card__header {
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.98);
+    padding-bottom: 8px;
+}
+
+#expirationTab .chart-card__title {
+    font-size: 0.92rem;
+}
+
+#expirationTab .chart-card__badge {
+    font-size: 0.67rem;
+    padding: 3px 8px;
+}
+
+#expirationTab .data-table {
+    min-width: 0;
+    width: 100%;
+    table-layout: fixed;
+    margin-bottom: 0;
+    display: table;
+}
+
+#expirationTab .data-table tbody {
+    display: block;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+#expirationTab .data-table thead,
+#expirationTab .data-table tbody tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+#expirationTab .expiration-filter-bar {
     margin-bottom: 18px;
 }
 
-/* .data-table base styling now comes from assets/css/components/tables.css (Batch 5); min-width kept as page-specific */
-.data-table {
-    min-width: 760px;
+#expirationTab .pagination-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding: 12px 14px 14px;
+    border: 1px solid rgba(44, 94, 71, 0.10);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    background: linear-gradient(180deg, rgba(245, 249, 247, 0.92), rgba(255, 255, 255, 0.8));
+    box-shadow: inset 0 1px 0 rgba(44, 94, 71, 0.06);
+    width: 100%;
 }
 
-/* .data-table th/td styling now comes from assets/css/components/tables.css (Batch 5) */
+#expirationTab .pagination-controls,
+#expirationTab .active-filter-chips {
+    width: 100%;
+}
 
-/* .status-badge base (shape/padding/size) AND its state colors
-   (.status-warning/-danger/-success) now come entirely from
-   dashboard.css's canonical, token-driven version — this file's own
-   copy was a byte-for-byte value match in light mode, so removing it
-   changes nothing there, but it was also hardcoded with no dark-mode
-   coverage of its own (same bug shape as .card above), so the Expiring/
-   Expired badges on this page's Expiration tab were light-mode-only
-   regardless of the theme toggle. */
+#expirationTab .pagination-info {
+    color: #556872;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
 
-/* .table-container / .table-scroll now come from assets/css/components/tables.css (Batch 5) */
+#expirationTab .pagination-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
 
-/* .muted's own color override is gone — components/cards.css already
-   defines a token-driven .muted, this was a redundant duplicate (same
-   #64748b/var(--color-text-muted) value in light mode) blocking its
-   dark-mode coverage on this page specifically. */
+#expirationTab .pagination-actions > .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    min-width: 72px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: var(--fw-bold);
+    line-height: 1;
+    white-space: nowrap;
+}
 
-/* .activity-row/.activity-block removed — confirmed via grep that
-   reports.html has no markup using either class; dead CSS, likely
-   copy-pasted from another module's stylesheet and never wired up here. */
+#expirationTab .pagination-divider {
+    width: 1px;
+    height: 26px;
+    background: rgba(44, 94, 71, 0.16);
+    display: inline-block;
+}
 
-@media (max-width: 1080px) {
-    .stats-row {
+#expirationTab .pagination-jump {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+#expirationTab .pagination-jump label {
+    color: var(--color-primary-700);
+    font-size: 0.75rem;
+    font-weight: var(--fw-bold);
+    white-space: nowrap;
+}
+
+#expirationTab .pagination-jump input {
+    width: 140px;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid rgba(44, 94, 71, 0.18);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--color-neutral-800);
+    font-size: 0.8rem;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+#expirationTab .pagination-jump input:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 2px rgba(44, 94, 71, 0.12), 0 6px 12px rgba(15, 23, 42, 0.06);
+}
+
+#expirationTab .pagination-jump button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    min-width: 62px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: var(--fw-bold);
+}
+
+.data-table {
+    min-width: 600px;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+@keyframes statFloat {
+    0% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-2px);
+    }
+    100% {
+        transform: translateY(0px);
+    }
+}
+
+@keyframes cardEnter {
+    0% {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+    .report-stats {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
-@media (max-width: 760px) {
-    .main-content {
+@media (max-width: 1080px) {
+    .report-tabs {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .report-tabs-shell,
+    .report-tabs-actions {
+        width: 100%;
+        flex: 1 1 auto;
+    }
+
+    .report-tabs-actions {
         margin-left: 0;
+        justify-content: stretch;
     }
-    .content-area {
-        padding: 16px;
+
+    .report-actions-panel {
+        width: 100%;
+        padding-left: 0;
+        border-left: none;
+        border-top: 1px solid rgba(44, 94, 71, 0.12);
+        padding-top: 10px;
     }
-    .stats-row {
+
+    .toolbar-actions {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: stretch;
+    }
+
+    .report-export-button {
+        flex: 1 1 180px;
+        min-width: 0;
+    }
+
+    .chart-grid-2,
+    .revenue-line-grid,
+    .occupancy-analysis-grid {
         grid-template-columns: 1fr;
     }
+
+    .content-area {
+        padding: 18px;
+    }
+}
+
+@media (max-width: 768px) {
+    .report-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .report-tabs {
+        padding: 12px 14px;
+    }
+
+    .report-tabs-shell {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .report-tabs-scroll-track {
+        width: 100%;
+    }
+
+    .tab-btn {
+        min-width: 118px;
+        padding: 9px 12px;
+        font-size: 0.8rem;
+    }
+
+    .toolbar-actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .report-export-button {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .forecast-strip {
+        grid-template-columns: 1fr;
+    }
+
+    .demographics-insights {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .chart-frame--sm {
+        height: 220px;
+    }
+
     .data-table {
         min-width: 100%;
     }
 }
 
+@media (max-width: 480px) {
+    .report-stats {
+        grid-template-columns: 1fr;
+    }
 
-/* .logout-btn/.Btn (+ .sign/.text sliding animation) now come from assets/css/dashboard.css (Batch 10) */
+    .demographics-insights {
+        grid-template-columns: 1fr;
+    }
+
+    .content-area {
+        padding: 14px;
+    }
+}

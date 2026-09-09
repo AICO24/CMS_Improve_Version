@@ -41,7 +41,13 @@ function createPagination({ prevBtn, nextBtn, infoEl, jumpForm, jumpInput, jumpB
         if (infoEl) {
             if (typeof meta.total === 'number') {
                 const label = meta.total === 1 ? itemLabel : `${itemLabel}s`;
-                infoEl.textContent = `Page ${page} of ${pages} • ${meta.total} ${label}`;
+                const shown = typeof meta.shown === 'number' ? meta.shown : meta.total;
+                const shownLabel = shown === 1 ? itemLabel : `${itemLabel}s`;
+                if (shown < meta.total) {
+                    infoEl.textContent = `Page ${page} of ${pages} • showing ${shown} of ${meta.total} ${label}`;
+                } else {
+                    infoEl.textContent = `Page ${page} of ${pages} • ${meta.total} ${label}`;
+                }
             } else {
                 infoEl.textContent = `Page ${page}`;
             }
