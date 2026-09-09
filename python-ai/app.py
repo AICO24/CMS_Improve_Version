@@ -1038,7 +1038,8 @@ def _extract_booking_deterministic(
         'preferred_columbarium': None,
         'correction_field': None,
         'corrected_value': None,
-        'notes': None
+        'notes': None,
+        'preferred_time': None
     }
 
     # 4. Extract Date patterns
@@ -1073,8 +1074,26 @@ def _extract_booking_deterministic(
             date_val = (datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d')
         elif 'in 3 weeks' in msg_lower:
             date_val = (datetime.now() + timedelta(days=21)).strftime('%Y-%m-%d')
+        elif 'in 1 week' in msg_lower or 'next week' in msg_lower:
+            date_val = (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
+        elif 'in 1 month' in msg_lower:
+            date_val = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
         elif 'next month' in msg_lower:
             date_val = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
+        else:
+            # Weekday parsing: "this Sunday", "next Sunday", "Sunday", "Friday", "this Friday"
+            weekdays = {'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3, 'friday': 4, 'saturday': 5, 'sunday': 6}
+            wm = re.search(r'\b(?:(this|next|coming)\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b', msg_lower)
+            if wm:
+                modifier = (wm.group(1) or '').lower().strip()
+                target_dow = weekdays[wm.group(2).lower().strip()]
+                current_dow = datetime.now().weekday()  # 0=Mon ... 6=Sun
+                days_ahead = (target_dow - current_dow) % 7
+                if days_ahead == 0:
+                    days_ahead = 7
+                if modifier == 'next' and days_ahead < 7:
+                    days_ahead += 7
+                date_val = (datetime.now() + timedelta(days=days_ahead)).strftime('%Y-%m-%d')
 
     if date_val:
         if service_type == 'cremation':
@@ -1083,6 +1102,29 @@ def _extract_booking_deterministic(
             slots['preferred_date'] = date_val
         if intent in ('RESCHEDULE_BOOKING', 'UPDATE_BOOKING'):
             slots['target_date'] = date_val
+
+    # 4b. Extract Time patterns
+    time_val = None
+    time_match = re.search(r'\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b', message, re.IGNORECASE)
+    if time_match:
+        hours = int(time_match.group(1))
+        minutes = int(time_match.group(2)) if time_match.group(2) else 0
+        meridiem = time_match.group(3).lower()
+        if 1 <= hours <= 12 and 0 <= minutes <= 59:
+            if meridiem == 'pm' and hours < 12:
+                hours += 12
+            elif meridiem == 'am' and hours == 12:
+                hours = 0
+            time_val = f"{hours:02d}:{minutes:02d}:00"
+            slots['preferred_time'] = time_val
+    else:
+        iso_time = re.search(r'\b([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\b', message)
+        if iso_time:
+            hours = int(iso_time.group(1))
+            minutes = int(iso_time.group(2))
+            seconds = int(iso_time.group(3)) if iso_time.group(3) else 0
+            time_val = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+            slots['preferred_time'] = time_val
 
     # 5. Extract Lot ID / Allocation
     lot_match = re.search(r'\blot\s*(?:id|#|number)?\s*:?\s*([A-Za-z0-9\-_]+)\b', msg_lower)
@@ -1150,14 +1192,19 @@ def _extract_booking_deterministic(
                     slots['correction_field'] = None
                     slots['corrected_value'] = None
     else:
-        name_match = re.search(r'(?:decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s]{2,40})', message)
-        if name_match:
-            candidate_name = name_match.group(1).strip()
-            # Clean off trailing clauses
-            candidate_name = re.sub(r'\s+(?:my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$', '', candidate_name, flags=re.IGNORECASE).strip()
-            candidate_name = re.sub(r'\s+(?:on|at|in|prefer|preferably|date|burial|cremation).*$', '', candidate_name, flags=re.IGNORECASE).strip()
-            if len(candidate_name) >= 2:
-                slots['decedent_name'] = candidate_name
+        existing_name = existing_data.get('decedent_name')
+        is_supplying_date_or_lot = bool(re.search(r'\b(date|schedule|time|lot|section|columbarium|niche|sunday|monday|tuesday|wednesday|thursday|friday|saturday|tomorrow|week|month)\b', msg_lower))
+        if not existing_name or not is_supplying_date_or_lot:
+            name_match = re.search(r'(?:decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s]{2,40})', message)
+            if name_match:
+                candidate_name = name_match.group(1).strip()
+                # Clean off trailing clauses
+                candidate_name = re.sub(r'\s+(?:my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$', '', candidate_name, flags=re.IGNORECASE).strip()
+                candidate_name = re.sub(r'\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$', '', candidate_name, flags=re.IGNORECASE).strip()
+                candidate_name = candidate_name.strip(" \t\n\r:.,")
+                domain_keywords = {'burial', 'cremation', 'service', 'schedule', 'date', 'reservation', 'lot', 'plot', 'grave', 'columbarium', 'niche'}
+                if len(candidate_name) >= 2 and candidate_name.lower() not in domain_keywords:
+                    slots['decedent_name'] = candidate_name
 
     # 8. Backward-compatible extracted_fields map
     extracted_fields = {
@@ -1166,6 +1213,7 @@ def _extract_booking_deterministic(
         'relationship': slots['relationship'],
         'preferred_date': slots['preferred_date'],
         'cremation_date': slots['cremation_date'],
+        'preferred_time': slots.get('preferred_time'),
         'lot_id': slots['lot_id'],
         'preferred_columbarium': slots['preferred_columbarium'],
         'notes': slots['notes']

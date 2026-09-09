@@ -22,3 +22,5 @@ if (!defined('UPLOADS_ROOT')) {
 if (!defined('LOGS_ROOT')) {
     define('LOGS_ROOT', STORAGE_ROOT . '/logs');
 }
+
+date_default_timezone_set('Asia/Manila');

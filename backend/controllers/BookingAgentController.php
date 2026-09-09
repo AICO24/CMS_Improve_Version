@@ -13,6 +13,7 @@
  */
 
 require_once __DIR__ . '/../services/BookingAgentService.php';
+require_once __DIR__ . '/../services/BookingDateResolver.php';
 require_once __DIR__ . '/../services/AIService.php';
 require_once __DIR__ . '/../models/BookingDraft.php';
 require_once __DIR__ . '/../models/UnifiedBooking.php';
@@ -800,32 +801,13 @@ class BookingAgentController {
             'correction_field'      => null,
             'corrected_value'       => null,
             'notes'                 => null,
+            'preferred_time'        => null,
         ];
 
-        // Date extraction (ISO or natural)
-        $dateVal = null;
-        if (preg_match('/\b(20\d{2}-\d{2}-\d{2})\b/', $message, $m)) {
-            $dateVal = $m[1];
-        } else {
-            $monthMap = [
-                'january' => 1, 'jan' => 1, 'february' => 2, 'feb' => 2, 'march' => 3, 'mar' => 3,
-                'april' => 4, 'apr' => 4, 'may' => 5, 'june' => 6, 'jun' => 6, 'july' => 7, 'jul' => 7,
-                'august' => 8, 'aug' => 8, 'september' => 9, 'sept' => 9, 'sep' => 9, 'october' => 10, 'oct' => 10,
-                'november' => 11, 'nov' => 11, 'december' => 12, 'dec' => 12
-            ];
-            if (preg_match('/\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*,?\s*(20\d{2}))?\b/i', $msgLower, $nm)) {
-                $mNum = $monthMap[strtolower($nm[1])] ?? 1;
-                $dNum = (int) $nm[2];
-                $yNum = !empty($nm[3]) ? (int) $nm[3] : (int) date('Y');
-                $dateVal = sprintf('%04d-%02d-%02d', $yNum, $mNum, $dNum);
-            } elseif (str_contains($msgLower, 'tomorrow')) {
-                $dateVal = date('Y-m-d', strtotime('+1 day'));
-            } elseif (str_contains($msgLower, 'in 2 weeks')) {
-                $dateVal = date('Y-m-d', strtotime('+14 days'));
-            } elseif (str_contains($msgLower, 'in 3 weeks')) {
-                $dateVal = date('Y-m-d', strtotime('+21 days'));
-            }
-        }
+        // Date & Time extraction via BookingDateResolver
+        $extractedDateTime = BookingDateResolver::extract($message);
+        $dateVal = $extractedDateTime['date'];
+        $timeVal = $extractedDateTime['time'];
 
         if ($dateVal) {
             if ($serviceType === 'cremation') {
@@ -836,6 +818,9 @@ class BookingAgentController {
             if ($intent === BookingAgentService::INTENT_RESCHEDULE_BOOKING || $intent === BookingAgentService::INTENT_UPDATE_BOOKING) {
                 $slots['target_date'] = $dateVal;
             }
+        }
+        if ($timeVal) {
+            $slots['preferred_time'] = $timeVal;
         }
 
         // Lot extraction (numeric ID or alphanumeric like A-14, A2-03)
@@ -893,12 +878,23 @@ class BookingAgentController {
                 $slots['corrected_value'] = trim($cm[1]);
             }
         } else {
-            if (preg_match('/(?:decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s]{2,40})/i', $message, $m)) {
-                $cand = trim($m[1]);
-                $cand = preg_replace('/\s+(?:my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$/i', '', $cand);
-                $cand = preg_replace('/\s+(?:on|at|in|prefer|preferably|date|burial|cremation).*$/i', '', $cand);
-                if (strlen($cand) >= 2) {
-                    $slots['decedent_name'] = $cand;
+            // Guard: Do not re-extract decedent name if draft already has a valid decedent name,
+            // or if the message is clearly providing date, time, or lot information.
+            $existingName = $draftContext['extracted_data']['decedent_name'] ?? null;
+            $isSupplyingDateOrLot = (bool) preg_match('/\b(date|schedule|time|lot|section|columbarium|niche|sunday|monday|tuesday|wednesday|thursday|friday|saturday|tomorrow|week|month)\b/i', $message);
+
+            if (!$existingName || !$isSupplyingDateOrLot) {
+                if (preg_match('/(?:decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s]{2,40})/i', $message, $m)) {
+                    $cand = trim($m[1]);
+                    $cand = preg_replace('/\s+(?:my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$/i', '', $cand);
+                    $cand = preg_replace('/\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$/i', '', $cand);
+                    $cand = trim($cand, " \t\n\r\0\x0B:.,");
+
+                    // Stop words check: candidate name cannot be a cemetery domain keyword
+                    $domainKeywords = ['burial', 'cremation', 'service', 'schedule', 'date', 'reservation', 'lot', 'plot', 'grave', 'columbarium', 'niche'];
+                    if (strlen($cand) >= 2 && !in_array(strtolower($cand), $domainKeywords, true)) {
+                        $slots['decedent_name'] = $cand;
+                    }
                 }
             }
         }
@@ -909,11 +905,52 @@ class BookingAgentController {
             'relationship'          => $slots['relationship'],
             'preferred_date'        => $slots['preferred_date'],
             'cremation_date'        => $slots['cremation_date'],
+            'preferred_time'        => $slots['preferred_time'] ?? null,
             'lot_id'                => $slots['lot_id'],
             'preferred_columbarium' => $slots['preferred_columbarium'],
             'notes'                 => $slots['notes']
         ];
         $extractedFields = array_filter($extractedFields, fn($v) => $v !== null && $v !== '');
+
+        // Dynamic context-aware conversational reply
+        $existingData = $draftContext['extracted_data'] ?? [];
+        $activeDecName = $slots['decedent_name'] ?? ($existingData['decedent_name'] ?? null);
+        $activeDate = $slots['preferred_date'] ?? ($slots['cremation_date'] ?? ($existingData['preferred_date'] ?? ($existingData['cremation_date'] ?? null)));
+        $activeLot = $slots['lot_id'] ?? ($existingData['lot_id'] ?? null);
+
+        if ($dateVal) {
+            $valRes = BookingDateResolver::validate($dateVal, $serviceType === 'burial');
+            if (!$valRes['valid']) {
+                $reply = "⚠️ " . $valRes['error'];
+            } else {
+                $dateFormatted = date('l, F j, Y', strtotime($dateVal));
+                $timeFormatted = $timeVal ? " at " . date('g:i A', strtotime($timeVal)) : "";
+                $reply = "Understood. I have set your preferred " . ($serviceType === 'cremation' ? "cremation" : "burial") . " date to **{$dateFormatted}**{$timeFormatted}.";
+                if (empty($activeDecName)) {
+                    $reply .= " Who is this arrangement for (the decedent's full name)?";
+                } elseif ($serviceType === 'burial' && empty($activeLot)) {
+                    $reply .= " Please select an available burial lot next.";
+                }
+            }
+        } elseif ($timeVal && !$dateVal) {
+            $timeFormatted = date('g:i A', strtotime($timeVal));
+            $reply = "Got it. I have noted your preferred time as **{$timeFormatted}**.";
+            if (empty($activeDate)) {
+                $reply .= " What date would you prefer for the service?";
+            }
+        } elseif (!empty($slots['decedent_name'])) {
+            $reply = "Thank you. I have recorded the decedent's name as **{$slots['decedent_name']}**.";
+            if (empty($activeDate)) {
+                $reply .= " What date would you prefer for the " . ($serviceType === 'cremation' ? "cremation" : "burial") . " service?";
+            }
+        } elseif (!empty($slots['relationship'])) {
+            $reply = "I have updated the relationship to **{$slots['relationship']}**.";
+        } elseif (!empty($slots['lot_id']) || !empty($slots['lot_identifier'])) {
+            $lotDesc = $slots['lot_id'] ? "Lot #{$slots['lot_id']}" : "Lot {$slots['lot_identifier']}";
+            $reply = "I have selected **{$lotDesc}** for your reservation.";
+        } else {
+            $reply = "I have noted your booking request. Let me know if you would like to make any adjustments.";
+        }
 
         return [
             'intent'            => $intent,
@@ -922,7 +959,7 @@ class BookingAgentController {
             'booking_reference' => $bookingReference,
             'slots'             => $slots,
             'extracted_fields'  => $extractedFields,
-            'reply'             => "I have noted your booking request. Let me know if you would like to make any adjustments."
+            'reply'             => $reply
         ];
     }
 
