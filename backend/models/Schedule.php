@@ -521,7 +521,22 @@ class Schedule {
         ");
         $monthStmt->execute([$year]);
 
+        $statusMonthStmt = $this->db->prepare("
+            SELECT MONTH(schedule_date) AS month,
+                   SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) AS pending,
+                   SUM(CASE WHEN status = 'Confirmed' THEN 1 ELSE 0 END) AS confirmed,
+                   SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) AS completed,
+                   SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled
+            FROM burial_schedules
+            WHERE YEAR(schedule_date) = ?
+            GROUP BY MONTH(schedule_date)
+            ORDER BY MONTH(schedule_date)
+        ");
+        $statusMonthStmt->execute([$year]);
+
         return [
+            'domain' => 'reservations',
+            'source' => 'burial_schedules',
             'total' => $total,
             'pending' => $pending,
             'confirmed' => $confirmed,
@@ -530,6 +545,7 @@ class Schedule {
             'confirmation_rate' => $confirmationRate,
             'cancellation_rate' => $cancellationRate,
             'by_month' => $monthStmt->fetchAll(),
+            'by_month_status' => $statusMonthStmt->fetchAll(),
         ];
     }
 

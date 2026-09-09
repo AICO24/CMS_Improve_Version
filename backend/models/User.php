@@ -250,6 +250,14 @@ class User {
             $fields[] = 'email = ?';
             $params[] = $data['email'];
         }
+        if (array_key_exists('contact_number', $data)) {
+            $fields[] = 'contact_number = ?';
+            $params[] = $data['contact_number'];
+        }
+        if (array_key_exists('address', $data)) {
+            $fields[] = 'address = ?';
+            $params[] = $data['address'];
+        }
         if (isset($data['role_id'])) {
             $fields[] = 'role_id = ?';
             $params[] = (int) $data['role_id'];

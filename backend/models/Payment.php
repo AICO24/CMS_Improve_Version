@@ -240,6 +240,23 @@ class Payment {
         return $stmt->fetchAll();
     }
 
+    public function getRevenueByYear($filters = []) {
+        $sql = "SELECT YEAR(payment_date) AS year, SUM(amount) AS total FROM payments WHERE 1=1";
+        $params = [];
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND payment_date >= ?";
+            $params[] = $filters['date_from'];
+        }
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND payment_date <= ?";
+            $params[] = $filters['date_to'];
+        }
+        $sql .= " GROUP BY YEAR(payment_date) ORDER BY YEAR(payment_date) ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
     public function getRevenueBreakdown($filters = []) {
         $sql = "SELECT transaction_type, SUM(amount) AS total, COUNT(*) AS count FROM payments WHERE 1=1";
         $params = [];

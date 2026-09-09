@@ -39,22 +39,24 @@ class OccupancySnapshot {
         }
     }
 
-    // Cemetery-wide trend: sums every section per snapshot_date over the last
-    // $months, for a historical occupancy line chart.
+    // Cemetery-wide trend: aggregate the last $months by calendar month so the
+    // chart always shows a stable 12-month view even when the snapshot table has
+    // only sparse daily entries.
     public function getTrend($months = 12) {
+        $months = max(1, (int) $months);
         $stmt = $this->db->prepare("
-            SELECT snapshot_date,
+            SELECT DATE_FORMAT(snapshot_date, '%Y-%m-01') AS month_start,
                    SUM(total) AS total,
                    SUM(occupied) AS occupied,
                    SUM(available) AS available,
                    SUM(reserved) AS reserved,
                    SUM(expired) AS expired
             FROM occupancy_snapshots
-            WHERE snapshot_date >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
-            GROUP BY snapshot_date
-            ORDER BY snapshot_date ASC
+            WHERE snapshot_date >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? MONTH), '%Y-%m-01')
+            GROUP BY DATE_FORMAT(snapshot_date, '%Y-%m')
+            ORDER BY month_start ASC
         ");
-        $stmt->execute([(int) $months]);
+        $stmt->execute([$months]);
         return $stmt->fetchAll();
     }
 }

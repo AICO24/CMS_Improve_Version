@@ -111,4 +111,57 @@ class AuditLog {
         $row = $stmt->fetch();
         return (int) ($row['total'] ?? 0);
     }
+
+    public function getSummaryStats($filters = []) {
+        $params = [];
+        $sql = "SELECT
+            COUNT(*) AS total_events,
+            SUM(CASE WHEN LOWER(a.action) REGEXP 'delete|remove|reset|reject|suspend|disable|lock|failed' OR LOWER(COALESCE(a.details, '')) REGEXP 'failed|suspicious|unauthorized|blocked' THEN 1 ELSE 0 END) AS security_alerts,
+            COUNT(DISTINCT CASE WHEN a.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) THEN COALESCE(a.user_id, a.username, 'System') END) AS active_users,
+            SUM(CASE WHEN a.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) THEN 1 ELSE 0 END) AS recent_24h,
+            SUM(CASE WHEN LOWER(a.action) REGEXP 'login' AND LOWER(COALESCE(a.details, '')) REGEXP 'failed|invalid|unauthorized|denied' THEN 1 ELSE 0 END) AS failed_logins,
+            SUM(CASE WHEN LOWER(a.action) REGEXP 'login|access' AND LOWER(COALESCE(a.details, '')) REGEXP 'denied|blocked|suspicious|unauthorized' THEN 1 ELSE 0 END) AS denied_access,
+            SUM(CASE WHEN LOWER(a.action) REGEXP 'reset|lock|suspend|disable' OR LOWER(COALESCE(a.details, '')) REGEXP 'reset|lock|suspend|disable' THEN 1 ELSE 0 END) AS reset_actions,
+            SUM(CASE WHEN LOWER(a.action) REGEXP 'delete|remove|reject' OR LOWER(COALESCE(a.details, '')) REGEXP 'delete|remove|reject' THEN 1 ELSE 0 END) AS delete_actions
+            FROM audit_logs a
+            LEFT JOIN users u ON a.user_id = u.user_id
+            WHERE 1=1";
+
+        $this->applyFilters($sql, $params, $filters);
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+
+        $securityAlerts = (int)($row['security_alerts'] ?? 0);
+        $failedLogins = (int)($row['failed_logins'] ?? 0);
+        $deniedAccess = (int)($row['denied_access'] ?? 0);
+        $resetActions = (int)($row['reset_actions'] ?? 0);
+        $deleteActions = (int)($row['delete_actions'] ?? 0);
+
+        $breakdown = [];
+        if ($failedLogins > 0) $breakdown[] = $failedLogins === 1 ? '1 failed login' : "$failedLogins failed logins";
+        if ($deniedAccess > 0) $breakdown[] = $deniedAccess === 1 ? '1 denied access' : "$deniedAccess denied access";
+        if ($resetActions > 0) $breakdown[] = $resetActions === 1 ? '1 reset action' : "$resetActions reset actions";
+        if ($deleteActions > 0) $breakdown[] = $deleteActions === 1 ? '1 deletion' : "$deleteActions deletions";
+
+        $alertLabel = $securityAlerts === 0
+            ? 'No critical activity'
+            : ($securityAlerts === 1 ? '1 critical event' : "$securityAlerts critical events");
+
+        return [
+            'total_events' => (int)($row['total_events'] ?? 0),
+            'security_alerts' => $securityAlerts,
+            'active_users' => (int)($row['active_users'] ?? 0),
+            'recent_24h' => (int)($row['recent_24h'] ?? 0),
+            'alert_label' => $alertLabel,
+            'alert_detail' => $breakdown ? implode(' • ', $breakdown) : 'No critical activity',
+            'alert_breakdown' => [
+                'failed_logins' => $failedLogins,
+                'denied_access' => $deniedAccess,
+                'reset_actions' => $resetActions,
+                'delete_actions' => $deleteActions,
+            ],
+        ];
+    }
 }

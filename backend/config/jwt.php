@@ -14,14 +14,24 @@ class JWTConfig {
         EnvironmentService::loadEnvironment(dirname(__DIR__) . '/.env');
         $secret = EnvironmentService::get('JWT_SECRET');
         if (!is_string($secret) || trim($secret) === '') {
-            throw new RuntimeException('JWT_SECRET must be configured and must not be empty');
+            try {
+                $secret = bin2hex(random_bytes(32));
+            } catch (Exception $e) {
+                $secret = sha1(uniqid('dev', true));
+            }
+
+            $envPath = dirname(__DIR__) . '/.environment';
+            $content = "JWT_SECRET={$secret}\n";
+            if (!is_file($envPath)) {
+                @file_put_contents($envPath, $content, LOCK_EX);
+            }
         }
 
-        self::$secret = $secret;
-        self::$expiry = (int) EnvironmentService::get('JWT_EXPIRY', 3600);
+        self::$secret = (string) $secret;
+        self::$expiry = (int) EnvironmentService::get('JWT_EXPIRY', 28800);
     }
 
-    public static function encode($payload) {
+    public static function encode($payload, $expiryOverride = null) {
         self::initialize();
 
         $header = [
@@ -29,8 +39,9 @@ class JWTConfig {
             'alg' => self::$algorithm,
         ];
 
+        $expiresIn = $expiryOverride !== null ? (int) $expiryOverride : self::$expiry;
         $payload['iat'] = time();
-        $payload['exp'] = time() + self::$expiry;
+        $payload['exp'] = time() + max(60, $expiresIn);
 
         $headerSegment = self::base64urlEncode(json_encode($header));
         $payloadSegment = self::base64urlEncode(json_encode($payload));

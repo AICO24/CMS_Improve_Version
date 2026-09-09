@@ -344,6 +344,11 @@ class Decedent {
                 SUM(CASE WHEN is_cremated = 'no' THEN 1 ELSE 0 END) AS burials,
                 SUM(CASE WHEN is_cremated = 'yes' THEN 1 ELSE 0 END) AS cremations,
                 ROUND(AVG(TIMESTAMPDIFF(YEAR, dob, dod))) AS avg_age,
+                SUM(CASE WHEN TIMESTAMPDIFF(YEAR, dob, dod) BETWEEN 0 AND 17 THEN 1 ELSE 0 END) AS age_0_17,
+                SUM(CASE WHEN TIMESTAMPDIFF(YEAR, dob, dod) BETWEEN 18 AND 35 THEN 1 ELSE 0 END) AS age_18_35,
+                SUM(CASE WHEN TIMESTAMPDIFF(YEAR, dob, dod) BETWEEN 36 AND 55 THEN 1 ELSE 0 END) AS age_36_55,
+                SUM(CASE WHEN TIMESTAMPDIFF(YEAR, dob, dod) BETWEEN 56 AND 75 THEN 1 ELSE 0 END) AS age_56_75,
+                SUM(CASE WHEN TIMESTAMPDIFF(YEAR, dob, dod) > 75 THEN 1 ELSE 0 END) AS age_75_plus,
                 SUM(CASE WHEN $condition THEN 1 ELSE 0 END) AS needs_attention
             FROM decedent_records
             WHERE deleted_at IS NULL
