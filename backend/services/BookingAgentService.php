@@ -46,6 +46,7 @@ class BookingAgentService {
     public const INTENT_RESUME_BOOKING          = 'RESUME_BOOKING';
     public const INTENT_REQUEST_RECOMMENDATION  = 'REQUEST_RECOMMENDATION';
     public const INTENT_CONFIRM_BOOKING         = 'CONFIRM_BOOKING';
+    public const INTENT_GENERAL_INQUIRY         = 'GENERAL_INQUIRY';
     public const INTENT_UNCLEAR                 = 'UNCLEAR';
 
     public const SUPPORTED_INTENTS = [
@@ -65,6 +66,7 @@ class BookingAgentService {
         self::INTENT_RESUME_BOOKING,
         self::INTENT_REQUEST_RECOMMENDATION,
         self::INTENT_CONFIRM_BOOKING,
+        self::INTENT_GENERAL_INQUIRY,
         self::INTENT_UNCLEAR,
     ];
 

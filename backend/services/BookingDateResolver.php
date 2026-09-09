@@ -74,11 +74,11 @@ class BookingDateResolver {
             }
         }
 
-        // 2. Relative Days: "today", "tomorrow", "day after tomorrow"
-        if (preg_match('/\bday after tomorrow\b/i', $msgLower)) {
+        // 2. Relative Days: "today", "tomorrow", "day after tomorrow", "bukas", "samakalawa"
+        if (preg_match('/\bday after tomorrow\b|\bsamakalawa\b|\bsa makalawa\b/i', $msgLower)) {
             return date('Y-m-d', strtotime('+2 days', $ref));
         }
-        if (preg_match('/\btomorrow\b/i', $msgLower)) {
+        if (preg_match('/\btomorrow\b|\bbukas\b/i', $msgLower)) {
             return date('Y-m-d', strtotime('+1 day', $ref));
         }
 
@@ -108,11 +108,29 @@ class BookingDateResolver {
             }
         }
 
-        // 4. Weekday with optional qualifier: "this Sunday", "next Sunday", "Sunday", "coming Friday", "Friday"
-        $weekdayPattern = '\b(?:(this|next|coming)\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b';
+        // 4. Weekday with optional qualifier: "this Sunday", "next Sunday", "Sunday", "coming Friday", "Friday", "darating na Biyernes"
+        $weekdayPattern = '\b(?:(this|next|coming|darating\s+na|susunod\s+na|ngayong)\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday|linggo|lunes|martes|miyerkoles|miyerkules|huwebes|hwebes|biyernes|sabado)\b';
         if (preg_match('/' . $weekdayPattern . '/i', $msgLower, $wm)) {
-            $modifier = !empty($wm[1]) ? strtolower(trim($wm[1])) : null;
-            $dayName = strtolower(trim($wm[2]));
+            $rawMod = !empty($wm[1]) ? strtolower(trim($wm[1])) : null;
+            $modifier = match ($rawMod) {
+                'darating na', 'coming' => 'coming',
+                'susunod na', 'next'     => 'next',
+                'ngayong', 'this'        => 'this',
+                default                  => $rawMod
+            };
+            $rawDay = strtolower(trim($wm[2]));
+            $tagalogMap = [
+                'linggo'      => 'sunday',
+                'lunes'       => 'monday',
+                'martes'      => 'tuesday',
+                'miyerkoles'  => 'wednesday',
+                'miyerkules'  => 'wednesday',
+                'huwebes'     => 'thursday',
+                'hwebes'      => 'thursday',
+                'biyernes'    => 'friday',
+                'sabado'      => 'saturday',
+            ];
+            $dayName = $tagalogMap[$rawDay] ?? $rawDay;
             return self::resolveWeekday($dayName, $modifier, $ref);
         }
 

@@ -76,6 +76,7 @@ $db->exec("
     DELETE FROM booking_pending_actions WHERE user_id IN (SELECT user_id FROM users WHERE username LIKE 'batch4_test_%');
     DELETE FROM booking_drafts WHERE user_id IN (SELECT user_id FROM users WHERE username LIKE 'batch4_test_%');
     DELETE FROM users WHERE username IN ('batch4_test_user_a', 'batch4_test_user_b');
+    UPDATE lots SET status = 'Available' WHERE lot_id IN (1, 2, 5, 6, 9, 10, 12);
 ");
 
 $db->prepare("

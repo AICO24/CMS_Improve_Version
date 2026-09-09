@@ -283,10 +283,28 @@ class BookingAgentController {
             default        => $rawIntent,
         };
 
-        // Authoritative backend intent normalization: specific destructive/operational actions take precedence
         $msgLower = strtolower($message);
-        if (preg_match('/\b(ano pa kulang|ano pa kailangan|may kulang pa ba|ano pa ang kailangan|ano pa requirements|kulang pa ba|anong kulang|ano pang kailangan|what is missing|what\'s missing|what else do i need|what information is missing|what information is needed|what do i still need|what am i missing)\b/i', $msgLower)) {
+
+        // If intent was classified as CORRECT_BOOKING_DETAILS, but message is simply providing missing fields
+        // without any correction keywords, normalize to PROVIDE_INFORMATION
+        if ($intent === BookingAgentService::INTENT_CORRECT_BOOKING_DETAILS) {
+            $hasCorrectionKeywords = (bool) preg_match('/\b(spelled|misspelled|spelling|typo|incorrect|surname is actually|name is actually|should be|last name is|dapat|mali ang|correct my|palitan|change my|update my|edit my|modify my)\b/i', $msgLower);
+            if (!$hasCorrectionKeywords && empty($slots['correction_field'])) {
+                $intent = BookingAgentService::INTENT_PROVIDE_INFORMATION;
+            }
+        }
+
+        // Authoritative backend intent normalization: specific destructive/operational actions take precedence
+        if (preg_match('/\b(ano\s+pa\s*(?:po\s*)?(?:ang\s*)?kulang|ano\s+pa\s*(?:po\s*)?kailangan|may\s+kulang\s+pa\s*(?:po\s*)?ba|ano\s+pa\s*(?:po\s*)?requirements|anong\s+kulang|ano\s+pang\s+kailangan|what\s+is\s+missing|what\'s\s+missing|what\s+else\s+do\s+i\s+need|what\s+information\s+is\s+missing|what\s+information\s+is\s+needed|what\s+do\s+i\s+still\s+need|what\s+am\s+i\s+missing)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_EXPLAIN_MISSING_REQUIREMENTS;
+        } elseif (preg_match('/\b(documentary\s+requirements|requirements\s+(?:para|for)|mga\s+dokumento|mga\s+kailangan\s+dalhin|death\s+certificate\s+requirements)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
+        } elseif (preg_match('/\b(visiting|operating|oras\s+(?:ng\s+)?(?:pag)?bisita|anong\s+oras|kailan\s+(?:po\s+)?(?:ba\s+)?bukas|bukas\s+(?:po\s+)?ba|anong\s+oras\s+(?:po\s+)?pwede|visiting\s+schedule|office\s+hours|oras\s+(?:ng\s+)?opisina|open\s+hours|schedule\s+ng\s+bisita)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
+        } elseif (preg_match('/\b(saan\s+(?:po\s+)?(?:ba\s+)?(?:located|matatagpuan|ang\s+sementeryo|ang\s+opisina)|location|address|where\s+are\s+you\s+located|where\s+is\s+the\s+cemetery|how\s+to\s+get\s+there)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
+        } elseif (preg_match('/\b(magkano|presyo|how\s+much|bayad|mode\s+of\s+payment|payment\s+method|installment|fees|price)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
         } elseif (preg_match('/\b(change lot|different lot|switch lot|move lot|transfer lot|reassign lot|change allocation)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_CHANGE_ALLOCATION;
         } elseif (preg_match('/\b(cancel|withdraw|drop booking|cancel my booking|cancel reservation)\b/i', $msgLower) && !preg_match('/\b(cancel that|cancel action|no cancel)\b/i', $msgLower)) {
@@ -295,6 +313,8 @@ class BookingAgentController {
             $intent = BookingAgentService::INTENT_RESCHEDULE_BOOKING;
         } elseif (preg_match('/\b(may available ba|available ba ang|available ba sa|may slot pa ba|may slot pa|may bakante pa ba|may bakante pa|may bakante|pwede pa ba sa|pwede pa ba)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_CHECK_AVAILABILITY;
+        } elseif (preg_match('/\b(resume|continue my|pick up where|saan na ako|ano na status ng draft|status ng booking ko|anong susunod)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_RESUME_BOOKING;
         } elseif (
             in_array($intent, [BookingAgentService::INTENT_PROVIDE_INFORMATION, BookingAgentService::INTENT_PROVIDE_INFO, BookingAgentService::INTENT_UNCLEAR], true)
             || empty($intent)
@@ -303,15 +323,77 @@ class BookingAgentController {
                 $intent = BookingAgentService::INTENT_CORRECT_BOOKING_DETAILS;
             } elseif (preg_match('/\b(change my booking|update my booking|modify my booking|edit my booking|change the relationship|change the name|change the notes|change the contact)\b/i', $msgLower)) {
                 $intent = BookingAgentService::INTENT_UPDATE_BOOKING;
+            } elseif (preg_match('/\b(visiting|operating|oras\s+(?:ng\s+)?(?:pag)?bisita|anong\s+oras|kailan\s+(?:po\s+)?(?:ba\s+)?bukas|bukas\s+(?:po\s+)?ba|anong\s+oras\s+(?:po\s+)?pwede|visiting\s+schedule|office\s+hours|oras\s+(?:ng\s+)?opisina|open\s+hours|schedule\s+ng\s+bisita)\b/i', $msgLower)) {
+                $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
+            } elseif (preg_match('/\b(saan\s+(?:po\s+)?(?:ba\s+)?(?:located|matatagpuan|ang\s+sementeryo|ang\s+opisina)|location|address|where\s+are\s+you\s+located|where\s+is\s+the\s+cemetery|how\s+to\s+get\s+there)\b/i', $msgLower)) {
+                $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
+            } elseif (preg_match('/\b(magkano|presyo|how\s+much|bayad|mode\s+of\s+payment|payment\s+method|installment|fees|price)\b/i', $msgLower)) {
+                $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
+            } elseif (preg_match('/\b(requirements|kailangan\s+dalhin|dokumento|death\s+certificate|burial\s+permit|permits?)\b/i', $msgLower)
+                && !preg_match('/\b(ano\s+pa\s*(?:po\s*)?(?:ang\s*)?kulang|kulang\s+pa|what\s+is\s+missing|what\s+am\s+i\s+missing)\b/i', $msgLower)) {
+                $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
+            } elseif (preg_match('/\b(serbisyo|services|services\s+offered|anong\s+(?:po\s+)?inooffer|what\s+services|services\s+overview)\b/i', $msgLower)) {
+                $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
+            } elseif (preg_match('/^(?:hi|hello|hey|kamusta|kumusta|magandang\s+(?:araw|umaga|hapon|gabi)|good\s+(?:morning|afternoon|evening|day))(?:\s+po)?[\s!\.]*$/i', trim($message))) {
+                $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
             }
         }
 
         $confidence = (float) ($extractedResult['confidence'] ?? 0.95);
         $slots = is_array($extractedResult['slots'] ?? null) ? $extractedResult['slots'] : [];
         $extractedFields = is_array($extractedResult['extracted_fields'] ?? null) ? $extractedResult['extracted_fields'] : [];
+
+        // Synchronize extractedFields from slots if missing
+        foreach (['service_type', 'decedent_name', 'relationship', 'preferred_date', 'cremation_date', 'preferred_time', 'lot_id', 'preferred_columbarium', 'notes'] as $fKey) {
+            if (empty($extractedFields[$fKey]) && !empty($slots[$fKey])) {
+                $extractedFields[$fKey] = $slots[$fKey];
+            }
+        }
+
+        // Safety fallback: if decedent_name is still null, extract from message
+        if (empty($slots['decedent_name']) && empty($extractedFields['decedent_name']) && empty($draftContext['extracted_data']['decedent_name'])) {
+            if (preg_match('/(?:para\s+(?:po\s+)?kay|kay|si|pangalan\s+(?:po\s+)?(?:ay|ni)?|decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s]{2,40})/i', $message, $nm)) {
+                $cName = trim($nm[1]);
+                $cName = preg_replace('/^(?:nanay|tatay|ina|ama|kapatid|kuya|ate|asawa|lolo|lola)\s+/i', '', $cName);
+                $cName = preg_replace('/\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$/i', '', $cName);
+                $cName = trim($cName, " \t\n\r\0\x0B:.,");
+                if (strlen($cName) >= 2 && !in_array(strtolower($cName), ['burial', 'cremation', 'service', 'schedule', 'date', 'reservation'], true)) {
+                    $slots['decedent_name'] = $cName;
+                    $extractedFields['decedent_name'] = $cName;
+                }
+            }
+        }
+
         $extractedReference = $extractedResult['booking_reference'] ?? ($slots['booking_reference'] ?? null);
         $serviceTypeExtracted = $extractedResult['service_type'] ?? ($slots['service_type'] ?? ($draftContext['service_type'] ?? $serviceTypeInput));
+
         $replyMessage = $extractedResult['reply'] ?? "I have updated your booking details.";
+        $dateWarning = null;
+
+        // Date extraction and business rules validation
+        $dateExtract = BookingDateResolver::extract($message);
+        if (!empty($dateExtract['date'])) {
+            $valRes = BookingDateResolver::validate($dateExtract['date'], $serviceTypeExtracted === 'burial');
+            if (!$valRes['valid']) {
+                $dateWarning = "⚠️ " . $valRes['error'];
+            } elseif (empty($slots['preferred_date']) && empty($slots['cremation_date']) && empty($extractedFields['preferred_date']) && empty($extractedFields['cremation_date'])) {
+                if ($serviceTypeExtracted === 'cremation') {
+                    $slots['cremation_date'] = $dateExtract['date'];
+                    $extractedFields['cremation_date'] = $dateExtract['date'];
+                } else {
+                    $slots['preferred_date'] = $dateExtract['date'];
+                    $extractedFields['preferred_date'] = $dateExtract['date'];
+                }
+            }
+        }
+        if (!empty($dateExtract['time'])) {
+            $slots['preferred_time'] = $dateExtract['time'];
+            $extractedFields['preferred_time'] = $dateExtract['time'];
+        }
+
+        if ($dateWarning) {
+            $replyMessage = $dateWarning;
+        }
 
         // 4. Deterministic Context Resolution Layer
         $contextResolution = $this->agentService->resolveBookingContext(
@@ -697,6 +779,19 @@ class BookingAgentController {
             ];
         }
 
+        // Purely Advisory intent: GENERAL_INQUIRY (Phase 5 - General Q&A, FAQ & Chit-Chat)
+        if ($intent === BookingAgentService::INTENT_GENERAL_INQUIRY) {
+            return $this->handleGeneralInquiry(
+                $message,
+                $currentDraft,
+                $replyMessage,
+                $confidence,
+                $contextResolution,
+                $slots,
+                $extractedReference
+            );
+        }
+
         // 6. Authoritatively Update Draft via BookingAgentService for intake/draft interactions
         $processPayload = [
             'intent'           => $intent,
@@ -822,6 +917,18 @@ class BookingAgentController {
             $intent = BookingAgentService::INTENT_REQUEST_RECOMMENDATION;
         } elseif (preg_match('/\b(book|schedule|reserve|i want to book|arrange a burial|arrange a cremation|start booking)\b/i', $msgLower) && empty($draftContext['draft_id'])) {
             $intent = BookingAgentService::INTENT_CREATE_BOOKING;
+        } elseif (preg_match('/\b(visiting|operating|oras\s+(?:ng\s+)?(?:pag)?bisita|anong\s+oras|kailan\s+(?:po\s+)?(?:ba\s+)?bukas|bukas\s+(?:po\s+)?ba|anong\s+oras\s+(?:po\s+)?pwede|visiting\s+schedule|office\s+hours|oras\s+(?:ng\s+)?opisina|open\s+hours|schedule\s+ng\s+bisita)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
+        } elseif (preg_match('/\b(saan\s+(?:po\s+)?(?:ba\s+)?(?:located|matatagpuan|ang\s+sementeryo|ang\s+opisina)|location|address|where\s+are\s+you\s+located|where\s+is\s+the\s+cemetery|how\s+to\s+get\s+there)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
+        } elseif (preg_match('/\b(magkano|presyo|how\s+much|bayad|mode\s+of\s+payment|payment\s+method|installment|fees|price)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
+        } elseif (preg_match('/\b(requirements|kailangan\s+dalhin|dokumento|death\s+certificate|burial\s+permit|permits?)\b/i', $msgLower) && !preg_match('/\b(ano\s+pa\s*(?:po\s*)?(?:ang\s*)?kulang|kulang\s+pa|what\s+is\s+missing|what\s+am\s+i\s+missing)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
+        } elseif (preg_match('/\b(serbisyo|services|services\s+offered|anong\s+(?:po\s+)?inooffer|what\s+services|services\s+overview)\b/i', $msgLower)) {
+            $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
+        } elseif (preg_match('/^(?:hi|hello|hey|kamusta|kumusta|magandang\s+(?:araw|umaga|hapon|gabi)|good\s+(?:morning|afternoon|evening|day))(?:\s+po)?[\s!\.]*$/i', trim($message))) {
+            $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
         }
 
         $slots = [
@@ -939,6 +1046,7 @@ class BookingAgentController {
             if (!$existingName || !$isSupplyingDateOrLot) {
                 if (preg_match('/(?:para\s+(?:po\s+)?kay|kay|si|pangalan\s+(?:po\s+)?(?:ay|ni)?|decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s]{2,40})/i', $message, $m)) {
                     $cand = trim($m[1]);
+                    $cand = preg_replace('/^(?:nanay|tatay|ina|ama|kapatid|kuya|ate|asawa|lolo|lola)\s+/i', '', $cand);
                     $cand = preg_replace('/\s+(?:nanay|tatay|ina|ama|kapatid|asawa|lolo|lola|po|siya|ko|my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$/i', '', $cand);
                     $cand = preg_replace('/\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$/i', '', $cand);
                     $cand = trim($cand, " \t\n\r\0\x0B:.,");
@@ -973,12 +1081,21 @@ class BookingAgentController {
 
         // Dynamic context-aware conversational reply
         $existingData = $draftContext['extracted_data'] ?? [];
+        if ($intent === BookingAgentService::INTENT_GENERAL_INQUIRY && !empty($existingData)) {
+            foreach ($existingData as $k => $v) {
+                if (!isset($extractedFields[$k]) && $v !== null && $v !== '') {
+                    $extractedFields[$k] = $v;
+                }
+            }
+        }
         $activeDecName = $slots['decedent_name'] ?? ($existingData['decedent_name'] ?? null);
         $activeDate = $slots['preferred_date'] ?? ($slots['cremation_date'] ?? ($existingData['preferred_date'] ?? ($existingData['cremation_date'] ?? null)));
         $activeLot = $slots['lot_id'] ?? ($existingData['lot_id'] ?? null);
         $isTag = $this->isTagalog($message);
 
-        if ($dateVal) {
+        if ($intent === BookingAgentService::INTENT_GENERAL_INQUIRY) {
+            $reply = $this->resolveFaqAnswer($msgLower, $isTag);
+        } elseif ($dateVal) {
             $valRes = BookingDateResolver::validate($dateVal, $serviceType === 'burial');
             if (!$valRes['valid']) {
                 $reply = "⚠️ " . $valRes['error'];
@@ -1559,6 +1676,10 @@ class BookingAgentController {
         $isReady = !empty($serviceOutcome['is_ready_for_review']);
         $missingFields = $serviceOutcome['missing_fields'] ?? [];
 
+        if (str_starts_with($reply, '⚠️') || stripos($reply, 'Monday booking is not allowed') !== false) {
+            return $reply;
+        }
+
         if ($isReady) {
             if (stripos($reply, 'confirm') === false && stripos($reply, 'kumpirma') === false) {
                 $suffix = $isTag
@@ -1569,9 +1690,30 @@ class BookingAgentController {
             return $reply;
         }
 
-        // If the reply is a generic template response or doesn't guide the user, add explicit next-step guidance
+        $hasDecedent = !in_array('decedent_name', $missingFields, true);
+        $replyStillAsksDecedent = (
+            stripos($reply, 'pangalan ng yumao') !== false
+            || stripos($reply, 'name of the deceased') !== false
+            || stripos($reply, 'full name of your loved one') !== false
+            || stripos($reply, 'who is this arrangement for') !== false
+            || stripos($reply, 'malaman ang buong pangalan') !== false
+        );
+
+        // If decedent name is missing on initiation, guarantee compassionate condolence prefix
+        if (!$hasDecedent) {
+            $hasCondolence = (stripos($reply, 'nakikiramay') !== false || stripos($reply, 'condolence') !== false || stripos($reply, 'condolences') !== false);
+            if (!$hasCondolence) {
+                $condolencePrefix = $isTag
+                    ? "Nakikiramay po kami sa inyong pamilya. "
+                    : "We extend our deepest condolences for your loss. ";
+                $reply = $condolencePrefix . $reply;
+            }
+        }
+
+        // If the reply is a generic template response, doesn't guide the user, or still asks for decedent when decedent was captured
         $isGeneric = (
-            $reply === "I have updated your booking details."
+            ($hasDecedent && $replyStillAsksDecedent)
+            || $reply === "I have updated your booking details."
             || $reply === "I have noted your booking request. Let me know if you would like to make any adjustments."
             || $reply === "I have noted your booking request."
             || (strpos($reply, '?') === false && stripos($reply, 'select') === false && stripos($reply, 'pili') === false && stripos($reply, 'sino') === false && stripos($reply, 'kailan') === false && stripos($reply, 'who') === false && stripos($reply, 'date') === false)
@@ -1601,5 +1743,143 @@ class BookingAgentController {
         }
 
         return $reply;
+    }
+
+    /**
+     * Handle general cemetery inquiries, FAQs, and chit-chat turns without disrupting draft context.
+     */
+    private function handleGeneralInquiry(
+        string $message,
+        ?array $currentDraft,
+        string $replyMessage,
+        float $confidence,
+        array $contextResolution,
+        array $slots,
+        ?string $extractedReference
+    ): array {
+        $msgLower = strtolower(trim($message));
+        $isTag = $this->isTagalog($message);
+
+        // Check if replyMessage is default/generic; if so, resolve from ai_knowledge or deterministic FAQ rules
+        $isGeneric = empty($replyMessage)
+            || str_contains($replyMessage, 'updated your booking')
+            || str_contains($replyMessage, 'noted your booking request')
+            || str_contains($replyMessage, 'Nakikiramay')
+            || str_contains($replyMessage, 'condolences');
+        if ($isGeneric) {
+            $replyMessage = $this->resolveFaqAnswer($msgLower, $isTag);
+        }
+
+        $activeExtractedData = [];
+        $activeMissingFields = [];
+        $serviceType = $currentDraft['service_type'] ?? null;
+        if (!empty($currentDraft)) {
+            $freshDraft = null;
+            if (!empty($currentDraft['draft_id'])) {
+                $freshDraft = $this->draftModel->findById((int)$currentDraft['draft_id']);
+            }
+            $draftRef = $freshDraft ?: $currentDraft;
+            $activeExtractedData = !empty($draftRef['extracted_data'])
+                ? (is_string($draftRef['extracted_data']) ? json_decode($draftRef['extracted_data'], true) : $draftRef['extracted_data'])
+                : [];
+            $activeMissingFields = !empty($draftRef['missing_fields'])
+                ? (is_string($draftRef['missing_fields']) ? json_decode($draftRef['missing_fields'], true) : $draftRef['missing_fields'])
+                : [];
+        }
+
+        // Smart conversational segue: If the citizen has an active draft, gently append guidance to continue
+        if (!empty($currentDraft) && !empty($activeExtractedData['decedent_name'])) {
+            $decName = $activeExtractedData['decedent_name'];
+            $segue = $isTag
+                ? "\n\nNais po ba ninyong ipagpatuloy ang pag-aayos ng booking para kay **{$decName}**?"
+                : "\n\nWould you like to continue arranging the booking for **{$decName}**?";
+            if (!str_contains($replyMessage, $decName)) {
+                $replyMessage .= $segue;
+            }
+        } elseif (!empty($currentDraft) && !empty($currentDraft['draft_id'])) {
+            $segue = $isTag
+                ? "\n\nNais po ba ninyong ipagpatuloy ang inyong booking reservation?"
+                : "\n\nWould you like to continue your booking reservation?";
+            if (!str_contains($replyMessage, 'ipagpatuloy') && !str_contains($replyMessage, 'continue')) {
+                $replyMessage .= $segue;
+            }
+        }
+
+        return [
+            'success'              => true,
+            'intent'               => BookingAgentService::INTENT_GENERAL_INQUIRY,
+            'intent_confidence'    => $confidence,
+            'advisory'             => true,
+            'is_faq'               => true,
+            'reply'                => $replyMessage,
+            'draft_id'             => !empty($currentDraft['draft_id']) ? (int) $currentDraft['draft_id'] : null,
+            'draft_status'         => $currentDraft['status'] ?? null,
+            'service_type'         => $serviceType,
+            'extracted_data'       => $activeExtractedData,
+            'missing_fields'       => $activeMissingFields,
+            'missing_requirements' => $activeMissingFields,
+            'context_resolution'   => $contextResolution,
+            'slots'                => $slots,
+            'booking_reference'    => $extractedReference,
+            'code'                 => 200,
+        ];
+    }
+
+    /**
+     * Resolve FAQ response from ai_knowledge table or bilingual defaults.
+     */
+    private function resolveFaqAnswer(string $msgLower, bool $isTag): string {
+        $topicKey = null;
+        if (preg_match('/\b(visiting|operating|oras\s*(?:po\s*)?(?:ng\s+)?(?:pag)?bisita|anong\s+oras|kailan\s*(?:po\s*)?(?:ba\s*)?bukas|bukas\s*(?:po\s*)?ba|anong\s+oras\s*(?:po\s*)?pwede|visiting\s+schedule|office\s+hours|oras\s*(?:ng\s*)?opisina|open\s+hours|schedule\s+ng\s+bisita)\b/i', $msgLower)) {
+            $topicKey = 'visiting_hours';
+        } elseif (preg_match('/\b(saan|location|address|saan matatagpuan|saan ang sementeryo|saan ang opisina|where are you located|where is the cemetery|how to get there)\b/i', $msgLower)) {
+            $topicKey = 'cemetery_location';
+        } elseif (preg_match('/\b(magkano|presyo|fees|how much|bayad|payment|mode of payment|gcash|installment|price)\b/i', $msgLower)) {
+            $topicKey = (str_contains($msgLower, 'payment') || str_contains($msgLower, 'bayad') || str_contains($msgLower, 'gcash')) ? 'payment_instructions' : 'fees_and_pricing';
+        } elseif (preg_match('/\b(requirements|kailangan dalhin|dokumento|death certificate|permit)\b/i', $msgLower)) {
+            $topicKey = 'required_documents';
+        } elseif (preg_match('/\b(serbisyo|services|inooffer)\b/i', $msgLower)) {
+            $topicKey = 'services_overview';
+        }
+
+        if ($topicKey) {
+            try {
+                $db = Database::getInstance()->getConnection();
+                $stmt = $db->prepare("SELECT content FROM ai_knowledge WHERE topic = ? LIMIT 1");
+                $stmt->execute([$topicKey]);
+                $row = $stmt->fetch();
+                if (!empty($row['content'])) {
+                    return trim($row['content']);
+                }
+            } catch (Throwable $t) {
+                // Fallback to static answers
+            }
+        }
+
+        if ($topicKey === 'visiting_hours') {
+            return $isTag
+                ? "Ang sementeryo po ay bukas araw-araw mula 6:00 AM hanggang 6:00 PM para sa mga bisita. Ang administrative office naman po ay bukas mula Lunes hanggang Biyernes, 8:00 AM hanggang 5:00 PM para sa mga transaksyon."
+                : "The cemetery grounds are open daily from 6:00 AM to 6:00 PM for visitors. The administrative office is open Monday to Friday, 8:00 AM to 5:00 PM for transactions.";
+        } elseif ($topicKey === 'cemetery_location') {
+            return $isTag
+                ? "Ang aming tanggapan at sementeryo ay matatagpuan sa Main Memorial Park grounds malapit sa Main Gate. Maaari po kayong sumangguni sa aming Administrative Office para sa personal na tulong."
+                : "Our cemetery grounds and administrative office are located at the Main Memorial Park grounds near the Main Gate.";
+        } elseif ($topicKey === 'fees_and_pricing' || $topicKey === 'payment_instructions') {
+            return $isTag
+                ? "Ang mga bayarin ay nakadepende sa napiling serbisyo (Traditional Burial o Cremation) at uri ng lote/niche. Tumatanggap po kami ng Cash, GCash, Bank Transfer, at Major Credit Cards sa aming Administrative Office cashier."
+                : "Fees depend on the chosen service (Burial or Cremation) and lot/niche selection. We accept Cash, GCash, Bank Transfer, and major Credit Cards at our Administrative Office cashier.";
+        } elseif ($topicKey === 'required_documents') {
+            return $isTag
+                ? "Narito po ang mga pangunahing requirements: 1) Certified True Copy ng Death Certificate, 2) Burial Permit mula sa City Health Office/LGU, 3) Valid ID ng Claimant/Next-of-Kin, at 4) Deed of Sale o Lot Title (kung may umiiral na lote)."
+                : "Required documents are: 1) Certified True Copy of Death Certificate, 2) Burial Permit from the City Health Office/LGU, 3) Valid Government ID of Next-of-Kin/Claimant, and 4) Deed of Sale or Lot Title (if using an existing lot).";
+        } elseif ($topicKey === 'services_overview') {
+            return $isTag
+                ? "Nag-aalok po kami ng Traditional Ground Burial, Cremation Services, at Columbarium Niches, kasama ang perpetual care at maintenance ng parke."
+                : "We provide Traditional Ground Burial, Cremation Services, and Columbarium Niches, with perpetual park care and maintenance.";
+        }
+
+        return $isTag
+            ? "Magandang araw po! Ako po ang inyong AI Booking Assistant sa sementeryo. Paano ko po kayo matutulungan sa inyong booking o katanungan ngayon?"
+            : "Good day! I am your Cemetery AI Booking Assistant. How may I assist you with your booking or inquiries today?";
     }
 }

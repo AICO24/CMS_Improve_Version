@@ -879,7 +879,7 @@ BOOKING_AGENT_SYSTEM_PROMPT = (
     "extract structured slots and booking references, classify citizen intent, and provide a warm, concise response.\n\n"
     "Output strictly a JSON object conforming to this schema (no markdown, no backticks, no prose outside JSON):\n"
     "{\n"
-    '  "intent": "CREATE_BOOKING" | "UPDATE_BOOKING" | "CORRECT_BOOKING_DETAILS" | "RESCHEDULE_BOOKING" | "CANCEL_BOOKING" | "CONFIRM_BOOKING" | "CANCEL_DRAFT" | "CHECK_AVAILABILITY" | "EXPLAIN_MISSING_REQUIREMENTS" | "SELECT_ALLOCATION" | "CHANGE_ALLOCATION" | "CHECK_BOOKING_STATUS" | "RESUME_BOOKING" | "PROVIDE_INFORMATION" | "UNCLEAR",\n'
+    '  "intent": "CREATE_BOOKING" | "UPDATE_BOOKING" | "CORRECT_BOOKING_DETAILS" | "RESCHEDULE_BOOKING" | "CANCEL_BOOKING" | "CONFIRM_BOOKING" | "CANCEL_DRAFT" | "CHECK_AVAILABILITY" | "EXPLAIN_MISSING_REQUIREMENTS" | "SELECT_ALLOCATION" | "CHANGE_ALLOCATION" | "CHECK_BOOKING_STATUS" | "RESUME_BOOKING" | "PROVIDE_INFORMATION" | "GENERAL_INQUIRY" | "UNCLEAR",\n'
     '  "confidence": 0.95,\n'
     '  "service_type": "burial" | "cremation" | null,\n'
     '  "booking_reference": string | null,\n'
@@ -926,7 +926,8 @@ BOOKING_AGENT_SYSTEM_PROMPT = (
     "- CHECK_BOOKING_STATUS: Citizen asks for the current status, approval, or schedule of a booking.\n"
     "- RESUME_BOOKING: Citizen wants to continue an unfinished booking draft.\n"
     "- PROVIDE_INFORMATION: Citizen provides information or answering details.\n"
-    "- UNCLEAR: Greeting, ambiguous query, or off-topic statement.\n\n"
+    "- GENERAL_INQUIRY: Citizen asks general informational questions about the cemetery, visiting/office hours, policies, pricing, payment methods, required documents, or sends greetings/chitchat (e.g. 'Ano visiting hours ninyo?', 'Magkano lot?', 'Hello po'). Answer directly using the Cemetery Knowledge Base.\n"
+    "- UNCLEAR: Ambiguous query or off-topic statement.\n\n"
     "Extraction & Normalization Rules:\n"
     "- Booking References: Recognize references like BUR-14, CREM-8, DFT-5, Booking #14, Schedule 22. Standardize to canonical format (e.g. BUR-14, CREM-8) and set booking_reference.\n"
     "- Dates: Normalize ALL dates to YYYY-MM-DD. For relative dates like 'tomorrow', 'in 2 weeks', or 'next Friday', compute against today's date provided in context.\n"
@@ -937,6 +938,7 @@ BOOKING_AGENT_SYSTEM_PROMPT = (
     "- Conversational & Guidance Rules for 'reply':\n"
     "  * Tone: Empathetic, respectful, and comforting to grieving families.\n"
     "  * Language Mirroring: If citizen writes in Filipino/Taglish, reply in polite, warm Filipino/Taglish using 'po' / 'opo'. If they write in English, reply in compassionate, clear English.\n"
+    "  * General Inquiries & FAQs: If the citizen asks an informational or FAQ question, answer accurately and compassionately using the knowledge entries provided. If they have an active booking draft, answer their question first, then add a polite segue offering to resume their booking draft.\n"
     "  * Step-by-Step Dynamic Guidance:\n"
     "    1. Starting a booking / Missing Decedent: Acknowledge service, express condolences, and politely ask for the decedent's full name.\n"
     "    2. Decedent provided / Missing Date: Acknowledge the decedent, and ask for preferred date & time, noting cemetery services run Tuesday to Sunday (Mondays are closed for maintenance).\n"
@@ -1028,6 +1030,18 @@ def _extract_booking_deterministic(
         intent = 'CONFIRM_BOOKING'
     elif any(phrase in msg_lower for phrase in ['recommend', 'suggest', 'which lot', 'what lot', 'help me choose']):
         intent = 'REQUEST_RECOMMENDATION'
+    elif any(phrase in msg_lower for phrase in ['visiting hours', 'operating hours', 'oras ng bisita', 'oras ng pagbisita', 'anong oras bukas', 'kailan bukas', 'bukas ba', 'anong oras pwede', 'visiting schedule', 'office hours', 'oras ng opisina', 'open hours', 'schedule ng bisita']):
+        intent = 'GENERAL_INQUIRY'
+    elif any(phrase in msg_lower for phrase in ['saan located', 'saan ang sementeryo', 'saan ang opisina', 'saan matatagpuan', 'location', 'address', 'where are you located', 'where is the cemetery', 'how to get there']):
+        intent = 'GENERAL_INQUIRY'
+    elif any(phrase in msg_lower for phrase in ['magkano', 'presyo', 'fees', 'how much', 'bayad', 'payment method', 'mode of payment', 'payment', 'gcash', 'installment', 'price']):
+        intent = 'GENERAL_INQUIRY'
+    elif any(phrase in msg_lower for phrase in ['ano ang requirements', 'anong requirements', 'mga kailangan dalhin', 'mga dokumento', 'documentary requirements', 'what are the requirements', 'requirements for burial', 'requirements for cremation', 'death certificate requirements']):
+        intent = 'GENERAL_INQUIRY'
+    elif any(phrase in msg_lower for phrase in ['ano ang mga serbisyo', 'mga serbisyo', 'services offered', 'services ninyo', 'anong inooffer', 'what services', 'services overview']):
+        intent = 'GENERAL_INQUIRY'
+    elif re.match(r'^(?:hi|hello|hey|kamusta|kumusta|magandang\s+(?:araw|umaga|hapon|gabi)|good\s+(?:morning|afternoon|evening|day))[\s!\.]*$', message.strip(), re.IGNORECASE):
+        intent = 'GENERAL_INQUIRY'
     elif any(phrase in msg_lower for phrase in ['book', 'schedule', 'reserve', 'i want to book', 'arrange a burial', 'arrange a cremation', 'start booking']) and not draft.get('draft_id'):
         intent = 'CREATE_BOOKING'
 
@@ -1089,11 +1103,15 @@ def _extract_booking_deterministic(
         elif 'next month' in msg_lower:
             date_val = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
         else:
-            # Weekday parsing: "this Sunday", "next Sunday", "Sunday", "Friday", "this Friday"
-            weekdays = {'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3, 'friday': 4, 'saturday': 5, 'sunday': 6}
-            wm = re.search(r'\b(?:(this|next|coming)\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b', msg_lower)
+            # Weekday parsing: "this Sunday", "next Sunday", "Sunday", "Friday", "darating na Biyernes"
+            weekdays = {
+                'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3, 'friday': 4, 'saturday': 5, 'sunday': 6,
+                'lunes': 0, 'martes': 1, 'miyerkoles': 2, 'miyerkules': 2, 'huwebes': 3, 'hwebes': 3, 'biyernes': 4, 'sabado': 5, 'linggo': 6
+            }
+            wm = re.search(r'\b(?:(this|next|coming|darating\s+na|susunod\s+na|ngayong)\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday|linggo|lunes|martes|miyerkoles|miyerkules|huwebes|hwebes|biyernes|sabado)\b', msg_lower)
             if wm:
-                modifier = (wm.group(1) or '').lower().strip()
+                raw_mod = (wm.group(1) or '').lower().strip()
+                modifier = 'next' if raw_mod in ('next', 'susunod na') else ('coming' if raw_mod in ('coming', 'darating na') else raw_mod)
                 target_dow = weekdays[wm.group(2).lower().strip()]
                 current_dow = datetime.now().weekday()  # 0=Mon ... 6=Sun
                 days_ahead = (target_dow - current_dow) % 7
@@ -1160,6 +1178,18 @@ def _extract_booking_deterministic(
     rel_match = re.search(r'\bmy\s+(father|mother|brother|sister|son|daughter|husband|wife|friend|relative|grandfather|grandmother|parent|spouse)\b', msg_lower)
     if rel_match:
         slots['relationship'] = rel_match.group(1).capitalize()
+    else:
+        tagalog_rel_map = {
+            'nanay': 'Mother', 'ina': 'Mother', 'mama': 'Mother',
+            'tatay': 'Father', 'ama': 'Father', 'papa': 'Father',
+            'kapatid': 'Sibling', 'kuya': 'Brother', 'ate': 'Sister',
+            'asawa': 'Spouse', 'anak': 'Child',
+            'lolo': 'Grandfather', 'lola': 'Grandmother'
+        }
+        for tag_rel, mapped_rel in tagalog_rel_map.items():
+            if re.search(rf'\b(?:para\s+(?:po\s+)?kay\s+|kay\s+|aking\s+|ko\s+)?{tag_rel}\b', msg_lower):
+                slots['relationship'] = mapped_rel
+                break
 
     # 7. Extract Decedent Name & Correction Details
     if intent == 'CORRECT_BOOKING_DETAILS':
@@ -1203,9 +1233,11 @@ def _extract_booking_deterministic(
         existing_name = existing_data.get('decedent_name')
         is_supplying_date_or_lot = bool(re.search(r'\b(date|schedule|time|lot|section|columbarium|niche|sunday|monday|tuesday|wednesday|thursday|friday|saturday|tomorrow|week|month)\b', msg_lower))
         if not existing_name or not is_supplying_date_or_lot:
-            name_match = re.search(r'(?:decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s]{2,40})', message)
+            name_match = re.search(r'(?:(?:para\s+(?:po\s+)?kay|kay|si|pangalan\s+(?:po\s+)?(?:ay|ni)?|decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?))\s+([A-Z][a-zA-Z\.\s]{2,40})', message)
             if name_match:
                 candidate_name = name_match.group(1).strip()
+                # Strip leading kinship prefixes like "Nanay Gloria Romero" -> "Gloria Romero"
+                candidate_name = re.sub(r'^(?:nanay|tatay|ina|ama|kuya|ate|lolo|lola|asawa)\s+', '', candidate_name, flags=re.IGNORECASE).strip()
                 # Clean off trailing clauses
                 candidate_name = re.sub(r'\s+(?:my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$', '', candidate_name, flags=re.IGNORECASE).strip()
                 candidate_name = re.sub(r'\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$', '', candidate_name, flags=re.IGNORECASE).strip()
@@ -1227,6 +1259,10 @@ def _extract_booking_deterministic(
         'notes': slots['notes']
     }
     extracted_fields = {k: v for k, v in extracted_fields.items() if v not in (None, '')}
+    if intent == 'GENERAL_INQUIRY' and existing_data:
+        for k, v in existing_data.items():
+            if k not in extracted_fields and v not in (None, ''):
+                extracted_fields[k] = v
 
     # 9. Formulate conversational reply with dynamic next-step guidance
     is_tagalog = bool(re.search(r'\b(po|opo|para|kay|sa|gusto|libing|ano|kailan|tatay|nanay|kapatid|asawa|lolo|lola|sino|paano|salamat|mali|dapat|namin|natin|ako|ko|mo|siya|bawal|paki|pili|anong|araw|oras)\b', message, re.IGNORECASE))
@@ -1234,7 +1270,26 @@ def _extract_booking_deterministic(
     active_date = extracted_fields.get('preferred_date') or extracted_fields.get('cremation_date') or existing_data.get('preferred_date') or existing_data.get('cremation_date')
     active_lot = extracted_fields.get('lot_id') or existing_data.get('lot_id')
 
-    if intent == 'CANCEL_BOOKING':
+    if intent == 'GENERAL_INQUIRY':
+        if any(w in msg_lower for w in ['visiting', 'operating', 'oras ng bisita', 'anong oras bukas', 'kailan bukas', 'bukas ba', 'open hours', 'schedule ng bisita']):
+            reply = ("Ang sementeryo po ay bukas araw-araw mula 6:00 AM hanggang 6:00 PM para sa mga bisita. Ang administrative office naman po ay bukas mula Lunes hanggang Biyernes, 8:00 AM hanggang 5:00 PM."
+                     if is_tagalog else "The cemetery grounds are open daily from 6:00 AM to 6:00 PM for visitors. The administrative office is open Monday to Friday, 8:00 AM to 5:00 PM.")
+        elif any(w in msg_lower for w in ['saan', 'location', 'address', 'saan matatagpuan', 'saan ang sementeryo', 'saan ang opisina', 'where are you located', 'where is the cemetery']):
+            reply = ("Ang aming sementeryo at administrative office ay matatagpuan sa Main Memorial Park grounds malapit sa Main Gate."
+                     if is_tagalog else "Our cemetery grounds and administrative office are located at the Main Memorial Park grounds near the Main Gate.")
+        elif any(w in msg_lower for w in ['magkano', 'presyo', 'fees', 'how much', 'bayad', 'payment', 'gcash', 'installment', 'price']):
+            reply = ("Ang mga bayarin ay nakadepende sa serbisyo (Traditional Burial o Cremation) at napiling lote o columbarium niche. Tumatanggap po kami ng Cash, GCash, Bank Transfer, at Credit Cards sa aming Administrative Office cashier."
+                     if is_tagalog else "Fees vary depending on whether you choose traditional burial or cremation, and your preferred lot or niche. We accept Cash, GCash, Bank Transfer, and major Credit Cards at our Administrative Office cashier.")
+        elif any(w in msg_lower for w in ['requirements', 'kailangan dalhin', 'dokumento', 'death certificate', 'permit']):
+            reply = ("Narito po ang mga kailangan: 1) Certified True Copy ng Death Certificate, 2) Burial Permit mula sa LGU/City Health Office, 3) Valid ID ng Claimant/Next-of-Kin, at 4) Deed of Sale o Lot Title (kung may umiiral na lote)."
+                     if is_tagalog else "Required documents are: 1) Certified True Copy of Death Certificate, 2) Burial Permit from the LGU/City Health Office, 3) Valid ID of Next-of-Kin/Claimant, and 4) Deed of Sale or Lot Title (if using an existing lot).")
+        elif any(w in msg_lower for w in ['serbisyo', 'services', 'inooffer']):
+            reply = ("Nag-aalok po kami ng Traditional Ground Burial, Cremation Services, at Columbarium Niches, kasama ang perpetual maintenance at care ng parke."
+                     if is_tagalog else "We offer Traditional Ground Burial, Cremation Services, and Columbarium Niches, complete with perpetual park care and maintenance.")
+        else:
+            reply = ("Magandang araw po! Ako po ang AI Booking Assistant ng sementeryo. Paano ko po kayo matutulungan sa inyong booking o katanungan ngayon?"
+                     if is_tagalog else "Good day! I am your Cemetery AI Booking Assistant. How may I assist you with your booking or inquiries today?")
+    elif intent == 'CANCEL_BOOKING':
         ref_text = f" for **{booking_reference}**" if booking_reference else ""
         reply = (f"Natanggap ko po ang inyong hiling na kanselahin ang booking{ref_text}. Bineberipika ko po ang mga detalye."
                  if is_tagalog else f"I have received your request to cancel your reservation{ref_text}. I am verifying your booking details.")
@@ -1296,12 +1351,14 @@ def _extract_booking_agent(
     user_bookings: Optional[List[Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
     today_str = datetime.now().strftime('%Y-%m-%d, %A')
+    knowledge_base = _fetch_knowledge_base()
     user_input_payload = {
         'today': today_str,
         'message': message,
         'draft_context': draft_context,
         'recent_conversation': conversation_context[-4:] if conversation_context else [],
-        'user_bookings': user_bookings or []
+        'user_bookings': user_bookings or [],
+        'knowledge_base': knowledge_base
     }
 
     try:
