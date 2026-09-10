@@ -456,6 +456,9 @@ class RefundService {
                         'severity' => 'critical',
                         'context' => [
                             'refund_id' => $refundId,
+                            'payment_id' => $paymentId,
+                            'gateway_payment_id' => $payment['gateway_payment_id'] ?? null,
+                            'idempotency_key' => $cleanIdempotencyKey,
                             'amount' => $amountFormatted,
                             'status_code' => $statusCode,
                         ],

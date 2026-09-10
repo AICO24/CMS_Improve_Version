@@ -10,6 +10,7 @@ require_once __DIR__ . '/../models/Cremation.php';
 require_once __DIR__ . '/../models/Relocation.php';
 require_once __DIR__ . '/../models/ExpirationRecord.php';
 require_once __DIR__ . '/../models/SystemException.php';
+require_once __DIR__ . '/../models/Refund.php';
 require_once __DIR__ . '/../services/AutomationEngine.php';
 require_once __DIR__ . '/../services/EnvironmentService.php';
 require_once __DIR__ . '/../services/PayMongoService.php';
@@ -1542,6 +1543,13 @@ class PaymentController {
             $webhookCurrency = strtoupper((string) $csAttrs['currency']);
         }
 
+        // Batch 7 (B7-B): If currency is omitted from the webhook envelope, PayMongo's
+        // Hosted Checkout resource contract establishes PHP. Apply safe PHP default only
+        // when absent, without weakening validation (explicit non-PHP currencies are preserved).
+        if ($webhookCurrency === null) {
+            $webhookCurrency = 'PHP';
+        }
+
         // 9. Atomic database transaction with row-level concurrency protection
         $shouldTriggerAutomation = false;
         $paymentForAutomation = null;
@@ -1696,8 +1704,8 @@ class PaymentController {
                 ];
             }
 
-            // Authoritative amount validation
-            $cmsAmountCents = (int) round(((float) $payment['amount']) * 100);
+            // Authoritative amount validation — Batch 7 (B7-A): Exact integer centavos without float arithmetic
+            $cmsAmountCents = Refund::toCentavos($payment['amount']);
             if ($webhookAmountCents === null || $webhookAmountCents !== $cmsAmountCents) {
                 $this->systemExceptionModel->raise([
                     'event' => 'payment.webhook_amount_mismatch',

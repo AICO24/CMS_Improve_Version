@@ -270,4 +270,38 @@ class Refund {
         $stmt = $this->db->prepare($sql);
         return $stmt->execute($params);
     }
+
+    /**
+     * Batch 7: Identifies stale/ambiguous refund records that require manual investigation.
+     *
+     * Finds refunds that are in Pending or Processing state, have no gateway_refund_id,
+     * and were created at or before the threshold time ($olderThanMinutes ago).
+     *
+     * This helper is strictly READ-ONLY:
+     * - Does NOT modify refund status
+     * - Does NOT call PayMongo
+     * - Does NOT cancel bookings or alter lots/schedules
+     * - Does NOT automatically retry refunds
+     *
+     * @param int $olderThanMinutes Age threshold in minutes (default 30)
+     * @return array List of stale refund records with associated payment details
+     */
+    public function findStalePendingGatewayRefunds(int $olderThanMinutes = 30): array {
+        $minutes = max(0, $olderThanMinutes);
+        $thresholdTime = date('Y-m-d H:i:s', time() - ($minutes * 60));
+
+        $stmt = $this->db->prepare("
+            SELECT r.*, p.gateway_payment_id, p.receipt_number, p.verification_status,
+                   u.full_name AS requested_by_name
+            FROM refunds r
+            LEFT JOIN payments p ON r.payment_id = p.payment_id
+            LEFT JOIN users u ON r.requested_by = u.user_id
+            WHERE r.status IN ('Pending', 'Processing')
+              AND r.gateway_refund_id IS NULL
+              AND r.created_at <= ?
+            ORDER BY r.created_at ASC, r.refund_id ASC
+        ");
+        $stmt->execute([$thresholdTime]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
