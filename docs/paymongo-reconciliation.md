@@ -1,183 +1,238 @@
-# PayMongo Payment & Refund Reconciliation / Consistency Foundation (Batch 7)
+# PayMongo Payment & Refund Reconciliation / Consistency & Safe Recovery (Batches 7 & 8)
 
 ## 1. Overview & Scope Clarification
 
-Batch 7 establishes the foundation for monetary precision, consistency validation, and ambiguous record observability across the PayMongo payment and refund lifecycle in the CodeRebels Cemetery Management System (CMS).
+Batch 7 established the foundation for monetary precision, consistency validation, and ambiguous record observability.
+**Batch 8 implements the safe, operator-driven Payment Reconciliation & Safe Recovery engine** for the CodeRebels Cemetery Management System (CMS).
 
-### Important Architectural Distinction
-It is critical to distinguish between three distinct operational concepts:
-1. **Webhook Synchronization (Batches 4 & 6)**: Real-time, event-driven state updates delivered by PayMongo and validated against cryptographic signatures and integer-centavo monetary rules.
-2. **Stale Record Detection / Observability (Batch 7)**: Safe, read-only inspection methods (`findStalePendingGatewayRefunds`) that surface ambiguous or unconfirmed transaction records without altering database state or issuing automated gateway requests.
-3. **Full Gateway Reconciliation (Deferred)**: Automated two-way ledger comparison, periodic polling, transaction mismatch remediation, and settlement matching. **Full automated reconciliation is intentionally deferred** and is NOT implemented in Batch 7.
-
----
-
-## 2. Current Payment State Authority
-
-Payment states in CMS are server-authoritative and follow a strict, unidirectional lifecycle:
-- **Pending**: Initial state upon payment creation or checkout session initiation. Browser redirection to the checkout page is NEVER authoritative proof of payment.
-- **Verified**: Authoritatively confirmed solely via cryptographically verified PayMongo webhooks (`checkout_session.payment.paid`) or authorized manual administrative verification with receipt tracking.
-- **Rejected**: Payment rejected by administrative review or failed during offline validation.
-
-The CMS database is the single source of truth for payment status. Client applications and redirects cannot alter payment status.
+### Core Architectural Distinctions
+1. **Webhook Synchronization (Batches 4 & 6)**: Real-time, asynchronous, event-driven state updates delivered by PayMongo and validated against cryptographic signatures and integer-centavo monetary rules.
+2. **Stale Record Detection / Observability (Batches 7 & 8)**: Safe, read-only inspection methods (`Payment::findStalePendingGatewayPayments()` and `Refund::findStalePendingGatewayRefunds()`) that surface ambiguous or unconfirmed transaction records without altering database state or issuing automated gateway requests.
+3. **Operator-Driven Safe Reconciliation (Batch 8)**: An **Admin-only, two-step workflow (Check → Authorized Apply)** that enables authorized administrators to safely synchronize CMS records with authoritative PayMongo state when webhooks were missed, delayed, or dropped.
+4. **Automated Background Polling / Cron (Deferred)**: **Background cron, Redis, queues, Celery, or automated daemons are intentionally deferred**. CMS does NOT run automatic background polling or heuristic reconciliation. All reconciliation is synchronous and operator-initiated.
 
 ---
 
-## 3. Current Refund State Authority
+## 2. Why Reconciliation Exists & Missed Webhook Scenarios
 
-Refund records in the `refunds` table follow a controlled state machine:
-- **Pending**: The refund has been recorded by CMS and is queued for submission to PayMongo.
-- **Processing**: The refund request was dispatched to PayMongo and is either awaiting an asynchronous webhook confirmation or encountered an ambiguous network/gateway response (timeout, 5xx, or network failure).
-- **Succeeded (Terminal)**: PayMongo authoritatively confirmed the refund succeeded via a signed webhook (`refund.succeeded` or `payment.refunded`).
-- **Failed (Terminal)**: The refund was definitively rejected by PayMongo (4xx client error) or failed gateway processing.
+In a real-world payment gateway integration, webhooks can fail or be missed due to:
+- Transient network partition between PayMongo and the CMS server.
+- Temporary CMS server downtime or deployment restart during webhook delivery.
+- DNS resolution failures or edge firewall blocking.
+- Exhaustion of PayMongo webhook delivery retry attempts before CMS server recovery.
 
-Terminal states (`Succeeded` and `Failed`) are immutable; once reached, CMS strictly blocks regressions back to `Pending` or `Processing`.
+Without reconciliation:
+- A citizen completes payment on PayMongo Hosted Checkout, but CMS remains in `Pending`, blocking lot reservation or schedule confirmation.
+- An administrator initiates a refund that times out during transit; the refund remains in `Processing` even though PayMongo succeeded in issuing the refund.
 
----
-
-## 4. Payment-to-Refund Relationship
-
-- **One-to-Many**: A single CMS payment may have zero, one, or multiple partial refund records.
-- **Foreign Key Constraint**: Every refund record enforces `FOREIGN KEY (payment_id) REFERENCES payments(payment_id) ON DELETE RESTRICT`.
-- **Authoritative Balance Allocation**: The total refundable amount of a payment is strictly bounded:
-  $$\sum (\text{Pending Cents} + \text{Processing Cents} + \text{Succeeded Cents}) \le \text{Payment Original Cents}$$
-  Failed refunds release their allocated amount back into the remaining refundable balance.
+Batch 8 provides a secure, audited mechanism for administrators to resolve these discrepancies safely.
 
 ---
 
-## 5. Webhook Idempotency
+## 3. The Two-Step Reconciliation Model (Check → Evidence → Apply)
 
-Both payment and refund webhooks guarantee exactly-once processing semantics through the `webhook_events` table:
-- Every event is identified by an authoritative event identifier (`event_id`):
-  - For generic envelopes: PayMongo Event ID (`evt_...`).
-  - For Hosted Checkout payment webhooks: PayMongo Checkout Session ID (`cs_...`).
-  - For refund webhooks lacking an `evt_...`: Documented deterministic fallback key `fallback:refund:{ref_id}:{event_type}:{status}`.
-- Concurrency protection: `SELECT * FROM webhook_events WHERE event_id = ? FOR UPDATE`.
-- Duplicate deliveries return `HTTP 200 OK` with status `duplicate` without re-executing state transitions, business automations, or duplicate audit log entries.
+Reconciliation strictly follows a two-step, operator-driven lifecycle:
 
----
+### Step 1: Read-Only Check (`GET /api/payments/{id}/reconcile-check` and `GET /api/refunds/{id}/reconcile-check`)
+- Inspects the internal CMS payment or refund record.
+- Extracts the stored gateway identifier (`gateway_checkout_session_id` or `gateway_refund_id`).
+- Queries PayMongo directly server-to-server (`GET /v1/checkout_sessions/{id}` or `GET /v1/refunds/{id}`).
+- Evaluates authoritative evidence (centavos, currency, livemode, gateway status).
+- Returns a structured, public-safe evidence payload indicating `eligible: true/false`, CMS state, gateway state, and any mismatch reasons.
+- **ZERO MUTATION**: Does not alter CMS payment or refund state, does not trigger automation, and does not notify end users.
 
-## 6. Out-of-Order Webhook Protection
-
-Asynchronous webhooks can arrive out of order due to network retries or transient gateway delays:
-- CMS rejects state regressions:
-  - `Succeeded` cannot regress to `Pending`, `Processing`, or `Failed`.
-  - `Failed` cannot regress to `Pending` or `Processing`.
-  - `Processing` cannot regress to `Pending`.
-- When an out-of-order webhook arrives attempting an illegal regression:
-  - The webhook event is recorded in `webhook_events` with `processing_result = 'invalid_state_regression'`.
-  - A `SystemException` is raised with severity `warning` or `critical`.
-  - `HTTP 200 OK` is returned to acknowledge receipt to PayMongo without corrupting CMS data.
-
----
-
-## 7. Exact-Centavo Handling (No Float Arithmetic)
-
-Binary floating-point arithmetic introduces rounding inaccuracies (e.g. `1000.10 * 100` evaluating to `100009.99999999999` in IEEE 754). Batch 7 mandates exact integer-centavo conversions:
-- Implemented via `Refund::toCentavos($amount)`:
-  - Parses pesos and cents as discrete string components.
-  - Computes `(pesos * 100) + cents` strictly using integer arithmetic.
-  - Example: `1000.10 PHP` is parsed exactly to `100010` centavos.
-- Applied in:
-  - `PaymentController::handleWebhook()`: Authoritative payment amount comparison `$cmsAmountCents = Refund::toCentavos($payment['amount'])`.
-  - `RefundService::processRefund()`: All balance checks and gateway payload creations.
-  - `RefundService::synchronizeWebhookRefund()`: Validations against webhook centavo figures.
+### Step 2: Authoritative Apply (`POST /api/payments/{id}/reconcile-apply` and `POST /api/refunds/{id}/reconcile-apply`)
+- **NEVER TRUSTS CLIENT EVIDENCE**: The backend ignores any browser-supplied evidence or gateway parameters.
+- Acquires an exclusive database row lock (`SELECT ... FOR UPDATE`).
+- Re-queries PayMongo fresh to confirm current gateway state.
+- Revalidates exact integer centavos, currency, livemode, and gateway status.
+- Re-reads current CMS state under row lock to confirm payment is still `Pending` or refund is still in an allowable non-terminal state.
+- Performs atomic state transition (e.g., `Payment::verifyIfPending()`).
+- Persists authentic gateway resource IDs (`pay_...` or `ref_...`).
+- Logs a comprehensive, immutable audit log entry in `audit_logs`.
+- Triggers downstream post-commit automation exactly once (for payments: lot status synchronization and burial schedule confirmation).
 
 ---
 
-## 8. Currency Validation & Safe Fallback Contract
+## 4. Admin-Only Authorization
 
-PayMongo Hosted Checkout for CMS operates strictly in Philippine Pesos (`PHP`).
-In Batch 7, currency validation adheres to the following rules:
-1. **Explicit Currency Check**: Any explicit non-PHP currency in the webhook (e.g. `USD`, `EUR`) is immediately rejected, logs a `payment.webhook_currency_mismatch` `SystemException`, and leaves the payment in `Pending`.
-2. **CMS Payment Currency Match**: The webhook currency must match the CMS payment currency (`payments.currency`).
-3. **Safe Envelope Default**: If currency attributes are omitted from the webhook envelope (e.g. older PayMongo payload structures), but the checkout session is valid and CMS expects `PHP`, CMS defaults the extracted webhook currency to `'PHP'` to match PayMongo's regional hosted checkout contract, avoiding false rejections without weakening validation against explicit mismatches.
+Reconciliation routes are strictly restricted to administrators:
+- `GET  /api/payments/stale-gateway` -> Admin only (`AuthMiddleware::requireRole(['admin'])`)
+- `GET  /api/payments/{id}/reconcile-check` -> Admin only
+- `POST /api/payments/{id}/reconcile-apply` -> Admin only
+- `GET  /api/refunds/{id}/reconcile-check` -> Admin only
+- `POST /api/refunds/{id}/reconcile-apply` -> Admin only
 
----
-
-## 9. Concurrent Refund Protection
-
-To prevent race conditions when two administrators or processes attempt simultaneous refunds against the same payment:
-- `RefundService::processRefund()` executes within an atomic database transaction.
-- Locks the target payment row via `SELECT ... FROM payments WHERE payment_id = ? FOR UPDATE`.
-- Re-evaluates `calculateRemainingRefundableCents($paymentId, $payment['amount'])` under the active row lock.
-- If concurrent requests exceed the remaining balance, the second request fails closed with `HTTP 400 Bad Request` and no funds or gateway calls are duplicated.
+Staff and Citizen (User) roles attempting to access reconciliation endpoints receive `403 Forbidden`. Endpoints never expose secret API keys, webhook secrets, or raw HTTP authorization headers.
 
 ---
 
-## 10. Ambiguous Gateway Refund Scenario
+## 5. Server-Side Evidence Revalidation
 
-When initiating a refund via PayMongo API (`POST /refunds`):
-1. CMS creates a `Pending` refund record.
-2. The HTTP request to PayMongo is dispatched.
-3. If the gateway times out, returns HTTP 5xx, or disconnects (cURL error 28 / status 0):
-   - **No Assumption of Failure**: PayMongo may have successfully debited and refunded the customer despite the broken response.
-   - **No Assumption of Success**: PayMongo may have dropped the request before processing.
-   - **Preserved in Processing**: CMS updates the refund to `Processing` with `gateway_refund_id = NULL` and records notes.
-   - **Contextual Exception Raised**: A `SystemException` (`payment.refund_gateway_timeout`) is raised containing `payment_id`, `refund_id`, `gateway_payment_id`, and `idempotency_key`.
-   - **No Arbitrary String Scraping**: CMS does NOT attempt speculative regex matching of error strings to guess gateway refund IDs.
+When an administrator submits an APPLY request:
+1. CMS does NOT trust payload attributes (amounts, transaction IDs, statuses) submitted by the browser.
+2. The server independently issues a fresh HTTP call to PayMongo using the stored gateway session/refund ID.
+3. The server compares:
+   - **Exact Centavos**: CMS amount converted via `Refund::toCentavos()` must equal gateway amount in integer centavos.
+   - **Currency**: Must be `PHP` and match CMS currency.
+   - **Livemode**: Gateway livemode boolean must match configured `PAYMONGO_ENV` (`test` vs `live`).
+   - **Gateway Status**: Gateway status must be `paid` for payments, or `succeeded`/`failed` for refunds.
+   - **Identity**: Remote resource ID must match expected session or payment correlation.
 
----
-
-## 11. Stale Refund Detection (Read-Only Observability)
-
-To observe ambiguous refunds that were left in `Processing` or `Pending` without gateway confirmation:
-- Method: `Refund::findStalePendingGatewayRefunds(int $olderThanMinutes = 30): array`.
-- **Query Criteria**:
-  - `status IN ('Pending', 'Processing')`
-  - `gateway_refund_id IS NULL`
-  - `created_at <= threshold` (default 30 minutes ago)
-- **Data Returned**: Refund attributes joined with payment details (`gateway_payment_id`, `receipt_number`, `verification_status`) and requesting user name.
-- **Strict Guardrails**:
-  - Read-only: Makes ZERO database mutations.
-  - Zero gateway calls: Does NOT contact PayMongo.
-  - Zero business side-effects: Does NOT alter bookings, lots, or schedules.
-  - No background runners: Operates on-demand when invoked.
+If any check fails, the apply operation is rejected with `HTTP 422 Unprocessable Entity`, no state transition occurs, and a warning is logged in `system_exceptions`.
 
 ---
 
-## 12. Current Missed-Webhook Limitation
+## 6. Payment Reconciliation Flow
 
-If PayMongo fails to deliver a webhook (due to external outage, network disruption, or DNS failure) or CMS is temporarily unreachable:
-- CMS payment remains in `Pending`.
-- CMS refund remains in `Processing`.
-- Because automated background reconciliation is deferred, CMS will not automatically discover that PayMongo moved money unless a webhook is redelivered or manual investigation is conducted.
-
----
-
-## 13. Gateway-vs-CMS Reconciliation Limitations
-
-Batch 7 does NOT implement automated gateway synchronization:
-- CMS does not periodically pull PayMongo transaction listings.
-- CMS does not cross-reference bank settlements against CMS payments.
-- Discrepancies between PayMongo's portal and CMS records require manual inspection via the provided audit logs and exception traces.
-
----
-
-## 14. Manual Investigation & Recovery Considerations
-
-When a stale ambiguous refund or unmatched webhook is identified:
-1. Staff consults the `system_exceptions` table for the event (`payment.refund_gateway_timeout`, `payment.webhook_unmatched`).
-2. Staff uses the logged `gateway_payment_id` (`pay_...`) and `idempotency_key` (`cms_refund_{id}`) to search the PayMongo Dashboard.
-3. If the refund exists in PayMongo:
-   - Identify the PayMongo refund resource ID (`ref_...`).
-   - If a webhook was missed, trigger redelivery from PayMongo, or apply administrative state updates via verified procedures.
-4. If no refund exists in PayMongo:
-   - The transaction never executed at the gateway; staff may mark the refund as `Failed`, which automatically releases the allocated centavos back to the payment's refundable balance.
-
----
-
-## 15. Why Automated Polling & Auto-Correction Are Deferred
-
-Automated background polling, cron workers, and automated state correction were intentionally excluded from Batch 7 for critical architectural reasons:
-1. **Safety Over Speculation**: Automatically flipping payment or refund statuses without human verification risks unauthorized booking confirmations or incorrect balance adjustments.
-2. **Infrastructure Simplicity**: Introducing Redis, cron queues, or background daemons creates operational complexity and deployment fragility on standard hosting environments (e.g. Laragon/WAMP).
-3. **Financial Audit Trail**: All financial movements must have deterministic, auditable justifications rather than heuristic automated corrections.
+```text
+Admin clicks "Reconcile Payment"
+               ↓
+GET /api/payments/{id}/reconcile-check
+               ↓
+Load CMS payment record
+Query PayMongo GET /v1/checkout_sessions/{session_id}
+Verify status === 'paid', extract pay_..., compare centavos & currency
+Return structured evidence (eligible = true/false)
+               ↓
+Admin reviews evidence and clicks "Apply Reconciliation"
+               ↓
+POST /api/payments/{id}/reconcile-apply
+               ↓
+Begin DB Transaction
+SELECT * FROM payments WHERE payment_id = ? FOR UPDATE
+Check if already Verified -> if so, return already_reconciled (idempotent no-op)
+Fresh PayMongo query + full revalidation
+Payment::verifyIfPending($id, 'Verified', $adminId, $timestamp)
+Persist gateway_payment_id and gateway_status
+Log AuditLog ('reconcile_payment')
+Create Admin Notification
+Commit Transaction
+               ↓
+Outside transaction: triggerPostVerificationAutomation()
+  → Sync lot status to 'Reserved'
+  → Confirm burial schedule if applicable
+```
 
 ---
 
-## 16. Sandbox / Test-Only Considerations
+## 7. Refund Reconciliation Flow
 
-- All implementations are tested exclusively against PayMongo test credentials (`sk_test_...`, `whsec_test_...`).
-- Mode validation strictly enforces that test webhooks (`livemode = false`) are rejected if CMS is ever configured for livemode, and vice-versa.
-- Real PayMongo credentials and secret keys must never be committed to source control or logged in plain text.
+```text
+Admin clicks "Reconcile Refund"
+               ↓
+GET /api/refunds/{id}/reconcile-check
+               ↓
+Load CMS refund record
+If gateway_refund_id is NULL:
+  → eligible = false, requires_manual_investigation = true (FAIL CLOSED)
+If gateway_refund_id exists:
+  → Query PayMongo GET /v1/refunds/{id}
+  → Verify payment_id match, exact centavos, currency, livemode
+  → Read actual gateway status ('succeeded' -> 'Succeeded', 'failed' -> 'Failed')
+  → Return structured evidence
+               ↓
+Admin reviews evidence and clicks "Apply Reconciliation"
+               ↓
+POST /api/refunds/{id}/reconcile-apply
+               ↓
+Begin DB Transaction
+SELECT * FROM refunds WHERE refund_id = ? FOR UPDATE
+Check terminal states:
+  → If Succeeded or Failed: return already_reconciled (no regression)
+Fresh PayMongo query + full revalidation
+Apply allowed transition:
+  → Processing → Succeeded (preserves exact centavos, sets processed_at)
+  → Processing → Failed (releases balance back to refundable pool)
+Log AuditLog ('reconcile_refund')
+Create Admin Notification
+Commit Transaction
+```
+
+---
+
+## 8. Ambiguous Refund Handling (Zero Heuristic Guessing)
+
+If a CMS refund has `gateway_refund_id = NULL` (e.g. following a network timeout during initial creation):
+- **Heuristic matching by amount and timestamp is strictly prohibited.**
+- CMS does NOT attempt to guess or attach a remote `ref_...` based on amount, date, or customer heuristics.
+- The check returns:
+  ```json
+  {
+    "eligible": false,
+    "requires_manual_investigation": true,
+    "mismatches": [
+      "No gateway refund ID exists on CMS refund record. Heuristic matching by amount and timestamp is strictly prohibited; manual investigation in PayMongo dashboard is required."
+    ]
+  }
+  ```
+- Reconciliation apply fails closed with `HTTP 422`.
+- CMS never creates a second refund or guesses identifiers.
+
+---
+
+## 9. Stale Record Detection (Read-Only Observability)
+
+To allow administrators to identify stalled or forgotten gateway transactions:
+- `GET /api/payments/stale-gateway?older_than_minutes=60`
+- **Stale Payments**: Identifies payments in `Pending` with a valid `gateway_checkout_session_id` created more than $N$ minutes ago.
+- **Stale Refunds**: Identifies refunds in `Processing` or `Pending` created more than $N$ minutes ago (both those with and without gateway refund IDs).
+- **Strictly Read-Only**: Stale queries execute `SELECT` statements only, make zero gateway calls, and make zero state changes.
+
+---
+
+## 10. Webhook vs Reconciliation Race Handling & Terminal State Protection
+
+Concurrent operations (e.g. an administrator reconciles a payment at the exact moment PayMongo delivers a delayed webhook):
+1. **Row-Level Locking**: Both reconciliation apply and webhook handlers use `FOR UPDATE` on payments and refunds.
+2. **Atomic Transitions**: `Payment::verifyIfPending()` uses `WHERE payment_id = ? AND verification_status = 'Pending'`. If the webhook already verified the row, reconciliation loses the race cleanly, recognizes the payment is already verified, and returns `already_reconciled` without duplicating state changes or automations.
+3. **Immutable Terminal States**:
+   - `Verified` payments can never regress to `Pending` or `Rejected`.
+   - `Succeeded` refunds can never regress to `Processing` or `Failed`.
+   - `Failed` refunds can never regress to `Processing` or `Succeeded`.
+
+---
+
+## 11. Audit Logging & System Exceptions
+
+Every successful reconciliation creates an immutable audit record in `audit_logs`:
+- Action: `reconcile_payment` or `reconcile_refund`
+- Entity: `Payment` or `Refund`
+- Details include:
+  - `reconciliation_type`: `payment` or `refund`
+  - `payment_id` / `refund_id`
+  - `previous_status` and `resulting_status`
+  - `gateway_resource_id` (`pay_...` or `ref_...`)
+  - `gateway_status`
+  - `amount_centavos` and `currency`
+  - `livemode`
+  - `operator_admin_id`
+  - `evidence_validation_result`
+  - `timestamp`
+
+Rejected reconciliation attempts raise an event in `system_exceptions` (`payment.reconciliation_rejected` or `payment.refund_reconciliation_rejected`) for forensic review.
+
+---
+
+## 12. Manual Operator Recovery Procedure
+
+When an administrator observes a stale record:
+1. Review `/api/payments/stale-gateway` to identify stale records.
+2. Run `GET /api/payments/{id}/reconcile-check` to fetch live PayMongo evidence.
+3. If evidence is `eligible: true`:
+   - Inspect the mismatch list (should be empty).
+   - Click "Apply Reconciliation" (`POST /api/payments/{id}/reconcile-apply`).
+   - Confirm payment transitions to `Verified` and lot reservation is updated.
+4. If evidence is `eligible: false`:
+   - Inspect the specific mismatch reasons (e.g. `awaiting_payment_method`, amount mismatch, currency mismatch).
+   - If the payment was abandoned by the user on the Hosted Checkout page, leave it in `Pending` or mark `Rejected` through standard payment administration.
+   - If a refund has `requires_manual_investigation: true`, log into the PayMongo Dashboard, locate the payment ID, determine whether a refund was created, and follow manual reconciliation protocol.
+
+---
+
+## 13. Infrastructure & Deployment Boundaries
+
+- **No Background Daemons**: No Redis, no queues, no workers, no cron jobs, and no scheduled background polling.
+- **No Database Migrations**: Batch 8 utilizes existing database schemas (`payments`, `refunds`, `audit_logs`, `system_exceptions`, `notifications`).
+- **Synchronous & Operator-Driven**: All reconciliation logic executes strictly within incoming HTTP request lifecycles.
+- **Sandbox Testing**: Tested strictly against PayMongo test credentials (`sk_test_...`) and mocked responses. Real financial transactions are never initiated during automated testing.

@@ -278,6 +278,39 @@ class Payment {
         return $row ?: null;
     }
 
+    /**
+     * Batch 8: Identifies stale Pending gateway payment records that missed their webhook confirmation.
+     *
+     * Finds payments that are in Pending verification_status, have a stored Hosted Checkout
+     * session ID, and were created at or before the threshold time ($olderThanMinutes ago).
+     *
+     * This method is strictly READ-ONLY:
+     * - Does NOT modify payment state
+     * - Does NOT contact PayMongo
+     * - Does NOT trigger automations or alter bookings/lots
+     *
+     * @param int $olderThanMinutes Age threshold in minutes (default 60)
+     * @return array List of stale payment records with correlation details
+     */
+    public function findStalePendingGatewayPayments(int $olderThanMinutes = 60): array {
+        $minutes = max(0, $olderThanMinutes);
+        $thresholdTime = date('Y-m-d H:i:s', time() - ($minutes * 60));
+
+        $sql = "
+            SELECT p.*, u.full_name AS received_by_name
+            FROM payments p
+            LEFT JOIN users u ON p.received_by = u.user_id
+            WHERE p.verification_status = 'Pending'
+              AND p.gateway_checkout_session_id IS NOT NULL
+              AND p.gateway_checkout_session_id != ''
+              AND p.created_at <= ?
+            ORDER BY p.created_at ASC, p.payment_id ASC
+        ";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$thresholdTime]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function getRevenue($filters = []) {
         $sql = "SELECT SUM(amount) AS total, COUNT(*) AS count FROM payments WHERE 1=1";
         $params = [];

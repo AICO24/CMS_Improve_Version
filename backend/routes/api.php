@@ -18,6 +18,7 @@ require_once __DIR__ . '/../controllers/SystemExceptionController.php';
 require_once __DIR__ . '/../controllers/BookingAgentController.php';
 require_once __DIR__ . '/../middleware/Auth.php';
 require_once __DIR__ . '/../services/RateLimiter.php';
+require_once __DIR__ . '/../services/ReconciliationService.php';
 
 $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $requestUri = $_SERVER['REQUEST_URI'] ?? '';
@@ -824,6 +825,7 @@ if (preg_match('/^relocations\/(\d+)$/', $path, $matches) && $requestMethod === 
 }
 
 $paymentController = new PaymentController();
+$reconciliationService = new ReconciliationService();
 
 if ($path === 'payments/mine' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
@@ -861,6 +863,16 @@ if ($path === 'payments/expected-amount' && $requestMethod === 'GET') {
     $referenceId = $_GET['reference_id'] ?? null;
     $referenceKind = $_GET['reference_kind'] ?? null;
     echo json_encode($paymentController->resolveExpectedAmount($transactionType, $referenceId, $referenceKind));
+    exit;
+}
+
+if ($path === 'payments/stale-gateway' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin']);
+    $olderThan = isset($_GET['older_than_minutes']) ? (int) $_GET['older_than_minutes'] : 60;
+    $result = $reconciliationService->getStaleGatewayRecords($olderThan);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
     exit;
 }
 
@@ -907,6 +919,42 @@ if (preg_match('/^payments\/(\d+)\/verify$/', $path, $matches) && $requestMethod
     $input = readRequestBody();
     $status = $input['verification_status'] ?? null;
     $result = $paymentController->verify($matches[1], $status, $user['user_id']);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^payments\/(\d+)\/reconcile-check$/', $path, $matches) && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin']);
+    $result = $reconciliationService->checkPayment((int) $matches[1]);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^payments\/(\d+)\/reconcile-apply$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin']);
+    $result = $reconciliationService->applyPayment((int) $matches[1], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^refunds\/(\d+)\/reconcile-check$/', $path, $matches) && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin']);
+    $result = $reconciliationService->checkRefund((int) $matches[1]);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^refunds\/(\d+)\/reconcile-apply$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin']);
+    $result = $reconciliationService->applyRefund((int) $matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);

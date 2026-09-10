@@ -1824,29 +1824,36 @@ class PaymentController {
 
         // 10. Automation Engine & Notification triggered strictly AFTER successful commit
         if ($shouldTriggerAutomation && !empty($paymentForAutomation)) {
-            $payment = $paymentForAutomation;
-            if ($payment['transaction_type'] === 'Lot Purchase') {
-                $this->syncLotStatusForVerifiedPurchase($payment, null);
-                $this->autoConfirmScheduleForVerifiedPurchase($payment, null);
-            } elseif ($payment['transaction_type'] === 'Cremation') {
-                $this->autoConfirmCremationForVerifiedPayment($payment, null);
-                $this->autoUpdateCremationForVerifiedPayment($payment, null);
-            }
-
-            if (!empty($payment['received_by'])) {
-                $userModel = new User();
-                $user = $userModel->findById($payment['received_by']);
-                if (!empty($user['email'])) {
-                    $this->sendEmail(
-                        $user['email'],
-                        'Payment Verified',
-                        'Your payment of PHP ' . number_format((float) $payment['amount'], 2) . ' for receipt ' . ($payment['receipt_number'] ?? '') . ' has been verified.'
-                    );
-                }
-            }
+            $this->triggerPostVerificationAutomation($paymentForAutomation, null);
         }
 
         return $transactionResult;
+    }
+
+    /**
+     * Batch 8: Centralized trigger for post-verification automations (Lot reservation, Schedule confirmation, etc.)
+     * Used by both Webhook Receiver (Batch 4) and ReconciliationService (Batch 8).
+     */
+    public function triggerPostVerificationAutomation(array $payment, ?int $adminId = null): void {
+        if ($payment['transaction_type'] === 'Lot Purchase') {
+            $this->syncLotStatusForVerifiedPurchase($payment, $adminId);
+            $this->autoConfirmScheduleForVerifiedPurchase($payment, $adminId);
+        } elseif ($payment['transaction_type'] === 'Cremation') {
+            $this->autoConfirmCremationForVerifiedPayment($payment, $adminId);
+            $this->autoUpdateCremationForVerifiedPayment($payment, $adminId);
+        }
+
+        if (!empty($payment['received_by'])) {
+            $userModel = new User();
+            $user = $userModel->findById($payment['received_by']);
+            if (!empty($user['email'])) {
+                $this->sendEmail(
+                    $user['email'],
+                    'Payment Verified',
+                    'Your payment of PHP ' . number_format((float) $payment['amount'], 2) . ' for receipt ' . ($payment['receipt_number'] ?? '') . ' has been verified.'
+                );
+            }
+        }
     }
 
     /**

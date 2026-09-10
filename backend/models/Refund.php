@@ -272,10 +272,17 @@ class Refund {
     }
 
     /**
-     * Batch 7: Identifies stale/ambiguous refund records that require manual investigation.
+     * Batch 7 & 8: Identifies stale/ambiguous refund records that require manual investigation or reconciliation.
      *
-     * Finds refunds that are in Pending or Processing state, have no gateway_refund_id,
-     * and were created at or before the threshold time ($olderThanMinutes ago).
+     * Finds refunds that are in Pending or Processing state and were created at or before
+     * the threshold time ($olderThanMinutes ago).
+     *
+     * Batch 7 mode ($includeWithGatewayId = false):
+     * - Only refunds with gateway_refund_id IS NULL (ambiguous gateway response).
+     *
+     * Batch 8 extended mode ($includeWithGatewayId = true):
+     * 1. Pending/Processing refunds with no gateway refund ID
+     * 2. Processing refunds with an existing gateway refund ID that have remained Processing beyond the stale threshold
      *
      * This helper is strictly READ-ONLY:
      * - Does NOT modify refund status
@@ -283,12 +290,17 @@ class Refund {
      * - Does NOT cancel bookings or alter lots/schedules
      * - Does NOT automatically retry refunds
      *
-     * @param int $olderThanMinutes Age threshold in minutes (default 30)
+     * @param int  $olderThanMinutes     Age threshold in minutes (default 30)
+     * @param bool $includeWithGatewayId Whether to also include Processing refunds with an existing gateway ID
      * @return array List of stale refund records with associated payment details
      */
-    public function findStalePendingGatewayRefunds(int $olderThanMinutes = 30): array {
+    public function findStalePendingGatewayRefunds(int $olderThanMinutes = 30, bool $includeWithGatewayId = false): array {
         $minutes = max(0, $olderThanMinutes);
         $thresholdTime = date('Y-m-d H:i:s', time() - ($minutes * 60));
+
+        $statusCondition = $includeWithGatewayId
+            ? "((r.status IN ('Pending', 'Processing') AND r.gateway_refund_id IS NULL) OR (r.status = 'Processing' AND r.gateway_refund_id IS NOT NULL))"
+            : "(r.status IN ('Pending', 'Processing') AND r.gateway_refund_id IS NULL)";
 
         $stmt = $this->db->prepare("
             SELECT r.*, p.gateway_payment_id, p.receipt_number, p.verification_status,
@@ -296,8 +308,7 @@ class Refund {
             FROM refunds r
             LEFT JOIN payments p ON r.payment_id = p.payment_id
             LEFT JOIN users u ON r.requested_by = u.user_id
-            WHERE r.status IN ('Pending', 'Processing')
-              AND r.gateway_refund_id IS NULL
+            WHERE {$statusCondition}
               AND r.created_at <= ?
             ORDER BY r.created_at ASC, r.refund_id ASC
         ");

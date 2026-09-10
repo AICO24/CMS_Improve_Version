@@ -197,6 +197,20 @@ class PayMongoService {
     }
 
     /**
+     * Retrieve an existing PayMongo Payment by ID (Batch 8).
+     *
+     * @param string $paymentId PayMongo payment ID (pay_...)
+     * @return array Normalized response array
+     */
+    public function getPayment($paymentId) {
+        $cleanId = trim((string) $paymentId);
+        if ($cleanId === '') {
+            return ['success' => false, 'status' => 0, 'code' => 0, 'error' => 'Payment ID is required'];
+        }
+        return $this->request('GET', 'payments/' . urlencode($cleanId));
+    }
+
+    /**
      * Generates an idempotency key the PayMongo API requires for safe retries.
      * Foundation for Batch 3+; each retry of the same logical operation should
      * reuse the SAME key (callers decide reuse via a stored value, e.g.
