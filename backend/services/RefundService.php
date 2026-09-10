@@ -475,4 +475,520 @@ class RefundService {
 
         return $phase3Result;
     }
+
+    /**
+     * Batch 6: Authoritative PayMongo refund webhook state synchronization.
+     *
+     * Validates incoming gateway data (exact integer centavos, currency, livemode,
+     * associated payment ID), checks idempotency via webhook_events, enforces
+     * terminal state protection and invalid regression guards, and executes a short
+     * database transaction for internal state reconciliation.
+     *
+     * @param array $eventDetails Normalized event parameters:
+     *                            - event_id: string (evt_... or fallback:refund:...)
+     *                            - is_fallback_event_id: bool
+     *                            - event_type: string (payment.refunded, payment.refund.updated, refund.succeeded)
+     *                            - livemode: bool
+     *                            - gateway_refund_id: string (ref_...)
+     *                            - gateway_status: string (pending, processing, succeeded, failed)
+     *                            - amount_cents: int (exact integer centavos)
+     *                            - currency: string (PHP)
+     *                            - gateway_payment_id: ?string (pay_...)
+     *                            - reason: ?string
+     *                            - notes: ?string
+     * @return array Normalized response array with 'code' HTTP status
+     */
+    public function synchronizeWebhookRefund(array $eventDetails): array {
+        $gatewayRefundId = trim((string) ($eventDetails['gateway_refund_id'] ?? ''));
+        if ($gatewayRefundId === '') {
+            return ['error' => 'Missing gateway refund ID', 'code' => 400];
+        }
+
+        $amountCents = isset($eventDetails['amount_cents']) ? (int) $eventDetails['amount_cents'] : 0;
+        if ($amountCents <= 0) {
+            return ['error' => 'Invalid or non-positive refund amount', 'code' => 400];
+        }
+
+        $eventId = trim((string) ($eventDetails['event_id'] ?? ''));
+        if ($eventId === '') {
+            return ['error' => 'Missing event ID or fallback key', 'code' => 400];
+        }
+
+        $eventType = trim((string) ($eventDetails['event_type'] ?? ''));
+        $supportedEvents = ['payment.refunded', 'payment.refund.updated', 'refund.succeeded'];
+        if (!in_array($eventType, $supportedEvents, true)) {
+            $db = Database::getInstance()->getConnection();
+            $updStmt = $db->prepare("
+                INSERT INTO webhook_events (event_id, event_type, livemode, received_at, processed, processing_result)
+                VALUES (?, ?, ?, NOW(), 1, 'ignored_unsupported_event_type')
+                ON DUPLICATE KEY UPDATE processed = 1, processing_result = 'ignored_unsupported_event_type'
+            ");
+            $updStmt->execute([$eventId, $eventType, !empty($eventDetails['livemode']) ? 1 : 0]);
+
+            return [
+                'success' => true,
+                'status' => 'ignored',
+                'message' => 'Event type safely ignored',
+                'event_type' => $eventType,
+                'code' => 200,
+            ];
+        }
+
+        // 1. Currency validation (PHP required)
+        $currency = strtoupper(trim((string) ($eventDetails['currency'] ?? 'PHP')));
+        if ($currency !== 'PHP') {
+            $this->systemExceptionModel->raise([
+                'event' => 'payment.refund_webhook_currency_mismatch',
+                'entity_type' => 'Refund',
+                'entity_id' => 0,
+                'reason' => sprintf('Currency mismatch: webhook currency is %s, but CMS expects PHP', $currency),
+                'severity' => 'critical',
+                'context' => [
+                    'event_id' => $eventId,
+                    'gateway_refund_id' => $gatewayRefundId,
+                    'currency' => $currency,
+                ],
+            ]);
+
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("
+                INSERT INTO webhook_events (event_id, event_type, livemode, received_at, processed, processing_result)
+                VALUES (?, ?, ?, NOW(), 1, 'currency_mismatch')
+                ON DUPLICATE KEY UPDATE processed = 1, processing_result = 'currency_mismatch'
+            ");
+            $stmt->execute([$eventId, $eventType, !empty($eventDetails['livemode']) ? 1 : 0]);
+
+            return [
+                'success' => true,
+                'status' => 'mismatch',
+                'message' => 'Currency mismatch',
+                'code' => 200,
+            ];
+        }
+
+        // 2. Livemode validation against CMS environment
+        $cmsMode = $this->payMongoService->getMode();
+        if ($cmsMode === 'unconfigured') {
+            $env = strtolower(trim((string) EnvironmentService::get('PAYMONGO_ENV', '')));
+            $cmsMode = ($env === 'live' || $env === 'production') ? 'live' : 'test';
+        }
+        $expectedLivemode = ($cmsMode === 'live');
+        $livemode = !empty($eventDetails['livemode']);
+
+        if ($livemode !== $expectedLivemode) {
+            $this->systemExceptionModel->raise([
+                'event' => 'payment.refund_webhook_environment_mismatch',
+                'entity_type' => 'Refund',
+                'entity_id' => 0,
+                'reason' => sprintf('Livemode mismatch: webhook livemode is %s, but CMS is in %s mode', $livemode ? 'true' : 'false', $cmsMode),
+                'severity' => 'critical',
+                'context' => [
+                    'event_id' => $eventId,
+                    'gateway_refund_id' => $gatewayRefundId,
+                    'webhook_livemode' => $livemode,
+                    'cms_mode' => $cmsMode,
+                ],
+            ]);
+
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("
+                INSERT INTO webhook_events (event_id, event_type, livemode, received_at, processed, processing_result)
+                VALUES (?, ?, ?, NOW(), 1, 'environment_mismatch')
+                ON DUPLICATE KEY UPDATE processed = 1, processing_result = 'environment_mismatch'
+            ");
+            $stmt->execute([$eventId, $eventType, $livemode ? 1 : 0]);
+
+            return [
+                'success' => true,
+                'status' => 'mismatch',
+                'message' => 'Environment mode mismatch',
+                'code' => 200,
+            ];
+        }
+
+        // 3. Short Database Transaction: Idempotency check, row-lock, state validation & sync
+        $statusMap = [
+            'pending' => Refund::STATUS_PENDING,
+            'processing' => Refund::STATUS_PROCESSING,
+            'succeeded' => Refund::STATUS_SUCCEEDED,
+            'failed' => Refund::STATUS_FAILED,
+        ];
+        $rawStatusKey = strtolower(trim((string) ($eventDetails['gateway_status'] ?? '')));
+        $targetStatus = $statusMap[$rawStatusKey] ?? null;
+        if ($targetStatus === null) {
+            if ($eventType === 'refund.succeeded' || $eventType === 'payment.refunded') {
+                $targetStatus = Refund::STATUS_SUCCEEDED;
+            } else {
+                $db = Database::getInstance()->getConnection();
+                $upd = $db->prepare("
+                    INSERT INTO webhook_events (event_id, event_type, livemode, received_at, processed, processing_result)
+                    VALUES (?, ?, ?, NOW(), 1, 'invalid_gateway_status')
+                    ON DUPLICATE KEY UPDATE processed = 1, processing_result = 'invalid_gateway_status'
+                ");
+                $upd->execute([$eventId, $eventType, $livemode ? 1 : 0]);
+
+                return [
+                    'success' => true,
+                    'status' => 'ignored',
+                    'message' => 'Unrecognized gateway refund status: ' . $rawStatusKey,
+                    'code' => 200,
+                ];
+            }
+        }
+
+        $gatewayPaymentId = !empty($eventDetails['gateway_payment_id']) ? trim((string) $eventDetails['gateway_payment_id']) : null;
+        $isFallbackEventId = !empty($eventDetails['is_fallback_event_id']);
+        $incomingNotes = !empty($eventDetails['notes']) ? trim((string) $eventDetails['notes']) : null;
+
+        $syncResult = Database::getInstance()->transaction(function () use (
+            $eventId,
+            $eventType,
+            $livemode,
+            $isFallbackEventId,
+            $gatewayRefundId,
+            $gatewayPaymentId,
+            $amountCents,
+            $currency,
+            $targetStatus,
+            $incomingNotes
+        ) {
+            $db = Database::getInstance()->getConnection();
+
+            // Check & row-lock webhook_events idempotency record
+            $checkStmt = $db->prepare("SELECT * FROM webhook_events WHERE event_id = ? FOR UPDATE");
+            $checkStmt->execute([$eventId]);
+            $existingEvent = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($existingEvent && (int) $existingEvent['processed'] === 1) {
+                return [
+                    'success' => true,
+                    'status' => 'duplicate',
+                    'message' => 'Event already processed',
+                    'event_id' => $eventId,
+                    'code' => 200,
+                ];
+            }
+
+            if (!$existingEvent) {
+                try {
+                    $insStmt = $db->prepare("
+                        INSERT INTO webhook_events (event_id, event_type, livemode, received_at, processed, processing_result)
+                        VALUES (?, ?, ?, NOW(), 0, 'processing')
+                    ");
+                    $insStmt->execute([$eventId, $eventType, $livemode ? 1 : 0]);
+                } catch (PDOException $e) {
+                    if ($e->getCode() == 23000 || ($e->errorInfo[1] ?? 0) === 1062 || strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                        return [
+                            'success' => true,
+                            'status' => 'duplicate',
+                            'message' => 'Event already processed',
+                            'event_id' => $eventId,
+                            'code' => 200,
+                        ];
+                    }
+                    throw $e;
+                }
+            }
+
+            // Row-lock target CMS refund record
+            $stmtRef = $db->prepare("
+                SELECT r.*, p.gateway_payment_id AS payment_gateway_id, p.receipt_number
+                FROM refunds r
+                LEFT JOIN payments p ON r.payment_id = p.payment_id
+                WHERE r.gateway_refund_id = ?
+                FOR UPDATE
+            ");
+            $stmtRef->execute([$gatewayRefundId]);
+            $cmsRefund = $stmtRef->fetch(PDO::FETCH_ASSOC);
+
+            if (!$cmsRefund) {
+                $this->systemExceptionModel->raise([
+                    'event' => 'payment.refund_webhook_unmatched',
+                    'entity_type' => 'Refund',
+                    'entity_id' => 0,
+                    'reason' => 'No CMS refund matched gateway refund ID: ' . $gatewayRefundId,
+                    'severity' => 'critical',
+                    'context' => [
+                        'event_id' => $eventId,
+                        'gateway_refund_id' => $gatewayRefundId,
+                        'event_type' => $eventType,
+                    ],
+                ]);
+
+                $upd = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'unmatched_refund' WHERE event_id = ?");
+                $upd->execute([$eventId]);
+
+                return [
+                    'success' => true,
+                    'status' => 'unmatched',
+                    'message' => 'No matching CMS refund found',
+                    'gateway_refund_id' => $gatewayRefundId,
+                    'code' => 200,
+                ];
+            }
+
+            $refundId = (int) $cmsRefund['refund_id'];
+
+            // Validate associated payment ID
+            $expectedPaymentGatewayId = trim((string) ($cmsRefund['payment_gateway_id'] ?? ''));
+            if ($gatewayPaymentId !== null && $expectedPaymentGatewayId !== '' && $gatewayPaymentId !== $expectedPaymentGatewayId) {
+                $this->systemExceptionModel->raise([
+                    'event' => 'payment.refund_webhook_payment_mismatch',
+                    'entity_type' => 'Refund',
+                    'entity_id' => $refundId,
+                    'reason' => sprintf('Associated payment ID mismatch: webhook payment_id (%s) does not match CMS payment gateway ID (%s)', $gatewayPaymentId, $expectedPaymentGatewayId),
+                    'severity' => 'critical',
+                    'context' => [
+                        'event_id' => $eventId,
+                        'refund_id' => $refundId,
+                        'webhook_payment_id' => $gatewayPaymentId,
+                        'cms_payment_id' => $expectedPaymentGatewayId,
+                    ],
+                ]);
+
+                $upd = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'payment_mismatch' WHERE event_id = ?");
+                $upd->execute([$eventId]);
+
+                return [
+                    'success' => true,
+                    'status' => 'mismatch',
+                    'message' => 'Payment ID mismatch',
+                    'code' => 200,
+                ];
+            }
+
+            // Validate exact integer centavos amount
+            $cmsRefundCents = Refund::toCentavos($cmsRefund['amount']);
+            if ($amountCents !== $cmsRefundCents) {
+                $this->systemExceptionModel->raise([
+                    'event' => 'payment.refund_webhook_amount_mismatch',
+                    'entity_type' => 'Refund',
+                    'entity_id' => $refundId,
+                    'reason' => sprintf('Refund amount mismatch: webhook amount (%d cents) does not match CMS refund amount (%d cents)', $amountCents, $cmsRefundCents),
+                    'severity' => 'critical',
+                    'context' => [
+                        'event_id' => $eventId,
+                        'refund_id' => $refundId,
+                        'webhook_amount_cents' => $amountCents,
+                        'cms_amount_cents' => $cmsRefundCents,
+                    ],
+                ]);
+
+                $upd = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'amount_mismatch' WHERE event_id = ?");
+                $upd->execute([$eventId]);
+
+                return [
+                    'success' => true,
+                    'status' => 'mismatch',
+                    'message' => 'Amount mismatch',
+                    'code' => 200,
+                ];
+            }
+
+            // Validate currency matches CMS refund currency
+            $cmsRefundCurrency = strtoupper((string) ($cmsRefund['currency'] ?? 'PHP'));
+            if ($currency !== $cmsRefundCurrency) {
+                $this->systemExceptionModel->raise([
+                    'event' => 'payment.refund_webhook_currency_mismatch',
+                    'entity_type' => 'Refund',
+                    'entity_id' => $refundId,
+                    'reason' => sprintf('Refund currency mismatch: webhook currency (%s) does not match CMS refund currency (%s)', $currency, $cmsRefundCurrency),
+                    'severity' => 'critical',
+                    'context' => [
+                        'event_id' => $eventId,
+                        'refund_id' => $refundId,
+                        'webhook_currency' => $currency,
+                        'cms_currency' => $cmsRefundCurrency,
+                    ],
+                ]);
+
+                $upd = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'currency_mismatch' WHERE event_id = ?");
+                $upd->execute([$eventId]);
+
+                return [
+                    'success' => true,
+                    'status' => 'mismatch',
+                    'message' => 'Currency mismatch',
+                    'code' => 200,
+                ];
+            }
+
+            // Safe state machine enforcement
+            $currentStatus = $cmsRefund['status'];
+
+            // Rule 1: Identical status is an idempotent no-op
+            if ($currentStatus === $targetStatus) {
+                $upd = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'already_in_state' WHERE event_id = ?");
+                $upd->execute([$eventId]);
+
+                return [
+                    'success' => true,
+                    'status' => 'no_change',
+                    'message' => 'Refund is already in status ' . $targetStatus,
+                    'refund_id' => $refundId,
+                    'current_status' => $currentStatus,
+                    'code' => 200,
+                ];
+            }
+
+            // Rule 2: Succeeded is terminal — cannot regress to any other state
+            if ($currentStatus === Refund::STATUS_SUCCEEDED) {
+                $this->systemExceptionModel->raise([
+                    'event' => 'payment.refund_invalid_state_regression',
+                    'entity_type' => 'Refund',
+                    'entity_id' => $refundId,
+                    'reason' => sprintf('Invalid refund state regression rejected: Succeeded cannot regress to %s', $targetStatus),
+                    'severity' => 'warning',
+                    'context' => [
+                        'event_id' => $eventId,
+                        'refund_id' => $refundId,
+                        'current_status' => $currentStatus,
+                        'attempted_status' => $targetStatus,
+                    ],
+                ]);
+
+                $upd = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'invalid_state_regression' WHERE event_id = ?");
+                $upd->execute([$eventId]);
+
+                return [
+                    'success' => true,
+                    'status' => 'ignored',
+                    'message' => 'Invalid state regression: Succeeded is terminal',
+                    'refund_id' => $refundId,
+                    'current_status' => $currentStatus,
+                    'code' => 200,
+                ];
+            }
+
+            // Rule 3: Failed is terminal — cannot regress to Pending or Processing
+            if ($currentStatus === Refund::STATUS_FAILED && ($targetStatus === Refund::STATUS_PENDING || $targetStatus === Refund::STATUS_PROCESSING)) {
+                $this->systemExceptionModel->raise([
+                    'event' => 'payment.refund_invalid_state_regression',
+                    'entity_type' => 'Refund',
+                    'entity_id' => $refundId,
+                    'reason' => sprintf('Invalid refund state regression rejected: Failed cannot regress to %s', $targetStatus),
+                    'severity' => 'warning',
+                    'context' => [
+                        'event_id' => $eventId,
+                        'refund_id' => $refundId,
+                        'current_status' => $currentStatus,
+                        'attempted_status' => $targetStatus,
+                    ],
+                ]);
+
+                $upd = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'invalid_state_regression' WHERE event_id = ?");
+                $upd->execute([$eventId]);
+
+                return [
+                    'success' => true,
+                    'status' => 'ignored',
+                    'message' => 'Invalid state regression: Failed cannot regress',
+                    'refund_id' => $refundId,
+                    'current_status' => $currentStatus,
+                    'code' => 200,
+                ];
+            }
+
+            // Rule 4: Processing cannot regress to Pending
+            if ($currentStatus === Refund::STATUS_PROCESSING && $targetStatus === Refund::STATUS_PENDING) {
+                $this->systemExceptionModel->raise([
+                    'event' => 'payment.refund_invalid_state_regression',
+                    'entity_type' => 'Refund',
+                    'entity_id' => $refundId,
+                    'reason' => 'Invalid refund state regression rejected: Processing cannot regress to Pending',
+                    'severity' => 'warning',
+                    'context' => [
+                        'event_id' => $eventId,
+                        'refund_id' => $refundId,
+                        'current_status' => $currentStatus,
+                        'attempted_status' => $targetStatus,
+                    ],
+                ]);
+
+                $upd = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'invalid_state_regression' WHERE event_id = ?");
+                $upd->execute([$eventId]);
+
+                return [
+                    'success' => true,
+                    'status' => 'ignored',
+                    'message' => 'Invalid state regression: Processing cannot regress to Pending',
+                    'refund_id' => $refundId,
+                    'current_status' => $currentStatus,
+                    'code' => 200,
+                ];
+            }
+
+            // Rule 5: Valid transition (Pending->Processing, Pending->Succeeded, Pending->Failed, Processing->Succeeded, Processing->Failed)
+            $processedAt = in_array($targetStatus, [Refund::STATUS_SUCCEEDED, Refund::STATUS_FAILED], true)
+                ? date('Y-m-d H:i:s')
+                : ($cmsRefund['processed_at'] ?? null);
+
+            $notes = $cmsRefund['notes'];
+            if (!empty($incomingNotes)) {
+                $notes = ($notes ? $notes . ' | ' : '') . 'Webhook: ' . substr($incomingNotes, 0, 200);
+            }
+
+            $this->refundModel->updateStatus($refundId, $targetStatus, $gatewayRefundId, $processedAt, $notes);
+
+            // Audit logging
+            $this->auditLogModel->log(
+                'Payment refund status synchronized',
+                null,
+                null,
+                'Refund',
+                $refundId,
+                [
+                    'old_status' => $currentStatus,
+                    'new_status' => $targetStatus,
+                    'refund_id' => $refundId,
+                    'payment_id' => (int) $cmsRefund['payment_id'],
+                    'gateway_refund_id' => $gatewayRefundId,
+                    'event_id' => $eventId,
+                    'is_fallback_event_id' => $isFallbackEventId,
+                    'amount' => (float) Refund::toPesos($amountCents),
+                    'currency' => $currency,
+                    'source' => 'paymongo_refund_webhook',
+                ]
+            );
+
+            // Notification for requesting user if set
+            if (!empty($cmsRefund['requested_by'])) {
+                $this->notificationModel->create([
+                    'title' => 'Refund Status Updated',
+                    'message' => sprintf(
+                        'Refund #%d of PHP %s for receipt %s has been updated to %s via PayMongo.',
+                        $refundId,
+                        Refund::toPesos($amountCents),
+                        $cmsRefund['receipt_number'] ?? '',
+                        $targetStatus
+                    ),
+                    'notification_type' => 'Payment',
+                    'user_id' => (int) $cmsRefund['requested_by'],
+                    'is_read' => 0,
+                ]);
+            }
+
+            $upd = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'synchronized' WHERE event_id = ?");
+            $upd->execute([$eventId]);
+
+            return [
+                'success' => true,
+                'status' => 'synchronized',
+                'refund_id' => $refundId,
+                'old_status' => $currentStatus,
+                'new_status' => $targetStatus,
+                'gateway_refund_id' => $gatewayRefundId,
+                'event_id' => $eventId,
+                'is_fallback_event_id' => $isFallbackEventId,
+                'code' => 200,
+            ];
+        });
+
+        if (!is_array($syncResult)) {
+            return ['error' => 'Database transaction failed during refund synchronization', 'code' => 500];
+        }
+
+        return $syncResult;
+    }
 }
+

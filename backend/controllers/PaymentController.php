@@ -1448,6 +1448,11 @@ class PaymentController {
         }
         $livemode = !empty($eventData['livemode'] ?? ($eventData['attributes']['livemode'] ?? false));
 
+        // Batch 6: If this is a refund event, route to handleRefundWebhook
+        if (in_array($eventType, ['payment.refunded', 'payment.refund.updated', 'refund.succeeded'], true)) {
+            return $this->handleRefundWebhook($rawBody, $signatureHeader);
+        }
+
         // Checkout Session object extraction:
         // Hosted Checkout: $eventData['data'] is the checkout session object
         // Generic envelope: $eventData['attributes']['data'] is the checkout session object
@@ -1837,10 +1842,186 @@ class PaymentController {
     }
 
     /**
+     * Batch 6: Handles incoming PayMongo refund webhook notifications.
+     * Synchronizes refund state asynchronously from PayMongo events:
+     * - payment.refunded
+     * - payment.refund.updated
+     * - refund.succeeded
+     *
+     * @param string|null $rawBody The raw HTTP request body string
+     * @param string|null $signatureHeader The Paymongo-Signature header value
+     * @return array Response payload with HTTP status code in 'code'
+     */
+    public function handleRefundWebhook(?string $rawBody = null, ?string $signatureHeader = null): array {
+        // 1. Capture raw request body
+        if ($rawBody === null) {
+            $rawBody = file_get_contents('php://input');
+        }
+        if ($rawBody === false || $rawBody === '') {
+            return ['error' => 'Empty request body', 'code' => 400];
+        }
+
+        // 2. Capture signature header
+        if ($signatureHeader === null) {
+            $signatureHeader = $_SERVER['HTTP_PAYMONGO_SIGNATURE'] ?? '';
+            if ($signatureHeader === '' && function_exists('getallheaders')) {
+                $headers = getallheaders();
+                foreach ($headers as $k => $v) {
+                    if (strcasecmp($k, 'Paymongo-Signature') === 0) {
+                        $signatureHeader = $v;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (trim((string) $signatureHeader) === '') {
+            return ['error' => 'Missing Paymongo-Signature header', 'code' => 401];
+        }
+
+        // 3. Load webhook secret
+        EnvironmentService::loadEnvironment();
+        $webhookSecret = trim((string) EnvironmentService::get('PAYMONGO_WEBHOOK_SECRET', ''));
+        if ($webhookSecret === '') {
+            return ['error' => 'Webhook signing secret not configured', 'code' => 401];
+        }
+
+        // 4. Verify HMAC-SHA256 signature
+        if (!$this->verifyWebhookSignature($rawBody, $signatureHeader, $webhookSecret)) {
+            return ['error' => 'Invalid webhook signature', 'code' => 401];
+        }
+
+        // 5. Decode JSON payload
+        $payload = json_decode($rawBody, true);
+        if (!is_array($payload) || empty($payload['data'])) {
+            return ['error' => 'Malformed or invalid JSON payload', 'code' => 400];
+        }
+
+        $eventData = $payload['data'];
+
+        // 6. Extract Event Type
+        $rawType = $eventData['type'] ?? ($payload['event_type'] ?? null);
+        if ($rawType === 'event' && !empty($eventData['attributes']['type'])) {
+            $eventType = $eventData['attributes']['type'];
+        } else {
+            $eventType = (!empty($rawType) && $rawType !== 'event') ? $rawType : ($eventData['attributes']['type'] ?? $rawType);
+        }
+
+        if (empty($eventType)) {
+            return ['error' => 'Missing required event type in webhook payload', 'code' => 400];
+        }
+
+        // 7. Extract Livemode
+        $livemode = !empty($eventData['livemode'] ?? ($eventData['attributes']['livemode'] ?? false));
+
+        // 8. Extract Refund Resource Object
+        // Handles:
+        //  - Standard event envelope: $eventData['attributes']['data']
+        //  - Direct / flat envelope: $eventData['data']
+        //  - Payment resource containing refunds array: $resource['attributes']['refunds']
+        $resource = $eventData['attributes']['data'] ?? ($eventData['data'] ?? []);
+        $refundObj = null;
+
+        if (is_array($resource)) {
+            $resType = $resource['type'] ?? '';
+            $resId = (string) ($resource['id'] ?? '');
+
+            if ($resType === 'refund' || strpos($resId, 'ref_') === 0) {
+                $refundObj = $resource;
+            } elseif ($resType === 'payment' || strpos($resId, 'pay_') === 0) {
+                $refundsList = $resource['attributes']['refunds'] ?? [];
+                if (!empty($refundsList) && is_array($refundsList)) {
+                    $refundObj = end($refundsList);
+                }
+            }
+        }
+
+        // Fallback: If $eventData itself is the refund resource
+        if ($refundObj === null && isset($eventData['id']) && strpos((string)$eventData['id'], 'ref_') === 0) {
+            $refundObj = $eventData;
+        }
+
+        $refundAttrs = is_array($refundObj) ? ($refundObj['attributes'] ?? []) : [];
+        $gatewayRefundId = is_array($refundObj) ? ($refundObj['id'] ?? null) : null;
+
+        if (empty($gatewayRefundId) || strpos((string)$gatewayRefundId, 'ref_') !== 0) {
+            return ['error' => 'Missing or invalid refund resource ID', 'code' => 400];
+        }
+
+        // 9. Authoritative Event ID vs Refund Resource ID
+        // REAL PayMongo Event ID starts with evt_...
+        $rawEventId = $eventData['id'] ?? ($payload['id'] ?? null);
+        $rawStatus = strtolower((string) ($refundAttrs['status'] ?? ''));
+        if ($rawStatus === '' && ($eventType === 'refund.succeeded' || $eventType === 'payment.refunded')) {
+            $rawStatus = 'succeeded';
+        }
+
+        if (!empty($rawEventId) && strpos((string)$rawEventId, 'evt_') === 0) {
+            $eventId = (string) $rawEventId;
+            $isFallbackEventId = false;
+        } else {
+            // Documented fallback idempotency key
+            $eventId = 'fallback:refund:' . $gatewayRefundId . ':' . $eventType . ':' . ($rawStatus !== '' ? $rawStatus : 'unknown');
+            $isFallbackEventId = true;
+        }
+
+        // 10. Event type filtering: supported refund events
+        $supportedEvents = ['payment.refunded', 'payment.refund.updated', 'refund.succeeded'];
+        if (!in_array($eventType, $supportedEvents, true)) {
+            $db = Database::getInstance()->getConnection();
+            $updStmt = $db->prepare("
+                INSERT INTO webhook_events (event_id, event_type, livemode, received_at, processed, processing_result)
+                VALUES (?, ?, ?, NOW(), 1, 'ignored_unsupported_event_type')
+                ON DUPLICATE KEY UPDATE processed = 1, processing_result = 'ignored_unsupported_event_type'
+            ");
+            $updStmt->execute([$eventId, (string)$eventType, $livemode ? 1 : 0]);
+
+            return [
+                'success' => true,
+                'status' => 'ignored',
+                'message' => 'Event type safely ignored',
+                'event_type' => $eventType,
+                'code' => 200,
+            ];
+        }
+
+        // 11. Extract refund attributes
+        if (!isset($refundAttrs['amount']) || !is_numeric($refundAttrs['amount'])) {
+            return ['error' => 'Missing or invalid refund amount in webhook payload', 'code' => 400];
+        }
+        $amountCents = (int) $refundAttrs['amount'];
+        if ($amountCents <= 0) {
+            return ['error' => 'Refund amount must be positive integer centavos', 'code' => 400];
+        }
+
+        $currency = strtoupper((string) ($refundAttrs['currency'] ?? 'PHP'));
+        $gatewayPaymentId = !empty($refundAttrs['payment_id']) ? (string) $refundAttrs['payment_id'] : null;
+        $reason = $refundAttrs['reason'] ?? null;
+        $notes = $refundAttrs['notes'] ?? null;
+
+        $eventDetails = [
+            'event_id' => $eventId,
+            'is_fallback_event_id' => $isFallbackEventId,
+            'event_type' => $eventType,
+            'livemode' => $livemode,
+            'gateway_refund_id' => $gatewayRefundId,
+            'gateway_status' => $rawStatus,
+            'amount_cents' => $amountCents,
+            'currency' => $currency,
+            'gateway_payment_id' => $gatewayPaymentId,
+            'reason' => $reason,
+            'notes' => $notes,
+        ];
+
+        $refundService = $this->getRefundService();
+        return $refundService->synchronizeWebhookRefund($eventDetails);
+    }
+
+    /**
      * Batch 4: Verifies PayMongo webhook signatures.
      * Supports standard PayMongo header (t=...,te=...,li=...) as well as direct HMAC.
      */
-    private function verifyWebhookSignature(string $rawBody, string $signatureHeader, string $secret): bool {
+    public function verifyWebhookSignature(string $rawBody, string $signatureHeader, string $secret): bool {
         if ($secret === '' || trim($signatureHeader) === '') {
             return false;
         }
