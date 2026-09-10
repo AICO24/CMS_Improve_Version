@@ -1430,57 +1430,53 @@ class PaymentController {
         }
 
         $eventData = $payload['data'];
-        $eventId = $eventData['id'] ?? null;
-        $eventType = $eventData['attributes']['type'] ?? ($eventData['type'] ?? null);
-        $livemode = !empty($eventData['attributes']['livemode'] ?? ($eventData['livemode'] ?? false));
 
-        if (empty($eventId) || empty($eventType)) {
+        // 6. Extract event envelope fields defensively:
+        // Handles REAL PayMongo Hosted Checkout payload:
+        //   payload.data.type = "checkout_session.payment.paid"
+        //   payload.data.data = checkout session object (with id = "cs_...")
+        //   payload.data.livemode = true/false
+        // Also handles generic event envelope:
+        //   payload.data.id = "evt_..."
+        //   payload.data.attributes.type = "checkout_session.payment.paid"
+        //   payload.data.attributes.data = checkout session object
+        $rawType = $eventData['type'] ?? ($payload['event_type'] ?? null);
+        if ($rawType === 'event' && !empty($eventData['attributes']['type'])) {
+            $eventType = $eventData['attributes']['type'];
+        } else {
+            $eventType = (!empty($rawType) && $rawType !== 'event') ? $rawType : ($eventData['attributes']['type'] ?? $rawType);
+        }
+        $livemode = !empty($eventData['livemode'] ?? ($eventData['attributes']['livemode'] ?? false));
+
+        // Checkout Session object extraction:
+        // Hosted Checkout: $eventData['data'] is the checkout session object
+        // Generic envelope: $eventData['attributes']['data'] is the checkout session object
+        $csObj = $eventData['data'] ?? ($eventData['attributes']['data'] ?? []);
+        $csId = $csObj['id'] ?? ($eventData['id'] ?? null);
+
+        // Required event fields check:
+        // For checkout_session.payment.paid, the Checkout Session ID ($csId) is mandatory.
+        if (empty($eventType) || (empty($csId) && empty($eventData['id']))) {
             return ['error' => 'Missing required event fields', 'code' => 400];
         }
 
-        $db = Database::getInstance()->getConnection();
-
-        // 6. Idempotency check via webhook_events table
-        $stmt = $db->prepare("SELECT * FROM webhook_events WHERE event_id = ? LIMIT 1");
-        $stmt->execute([$eventId]);
-        $existingEvent = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($existingEvent) {
-            // Duplicate event: Idempotent no-op
-            return [
-                'success' => true,
-                'status' => 'duplicate',
-                'message' => 'Event already processed',
-                'event_id' => $eventId,
-                'code' => 200,
-            ];
-        }
-
-        // Record incoming event to establish idempotency barrier
-        try {
-            $insertStmt = $db->prepare("
-                INSERT INTO webhook_events (event_id, event_type, livemode, received_at, processed, processing_result)
-                VALUES (?, ?, ?, NOW(), 0, 'received')
-            ");
-            $insertStmt->execute([$eventId, $eventType, $livemode ? 1 : 0]);
-        } catch (PDOException $e) {
-            // Handle duplicate key collision if concurrent requests insert same event_id
-            if ($e->getCode() == 23000 || strpos($e->getMessage(), 'Duplicate entry') !== false) {
-                return [
-                    'success' => true,
-                    'status' => 'duplicate',
-                    'message' => 'Event already processed',
-                    'event_id' => $eventId,
-                    'code' => 200,
-                ];
-            }
-            throw $e;
-        }
+        // Authoritative Event ID extraction:
+        // If PayMongo exposes a genuine evt_... event ID (as in generic event envelopes), use it.
+        // In current Hosted Checkout webhooks, PayMongo does not expose an evt_... event ID.
+        // We do NOT fabricate an evt_... ID; the Checkout Session ID ($csId) serves as the unique
+        // idempotency key for this checkout payment event.
+        $rawEventId = $eventData['id'] ?? ($payload['id'] ?? null);
+        $idempotencyKey = (!empty($rawEventId) && strpos((string)$rawEventId, 'evt_') === 0) ? $rawEventId : $csId;
 
         // 7. Event type filtering: primary supported event is checkout_session.payment.paid
         if ($eventType !== 'checkout_session.payment.paid') {
-            $updStmt = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = ? WHERE event_id = ?");
-            $updStmt->execute(['ignored_unsupported_event_type', $eventId]);
+            $db = Database::getInstance()->getConnection();
+            $updStmt = $db->prepare("
+                INSERT INTO webhook_events (event_id, event_type, livemode, received_at, processed, processing_result)
+                VALUES (?, ?, ?, NOW(), 1, ?)
+                ON DUPLICATE KEY UPDATE processed = 1, processing_result = VALUES(processing_result)
+            ");
+            $updStmt->execute([$idempotencyKey, $eventType, $livemode ? 1 : 0, 'ignored_unsupported_event_type']);
 
             return [
                 'success' => true,
@@ -1492,8 +1488,6 @@ class PaymentController {
         }
 
         // 8. Extract checkout session and payment data defensively
-        $csObj = $eventData['attributes']['data'] ?? ($eventData['data'] ?? []);
-        $csId = $csObj['id'] ?? null;
         $csAttrs = $csObj['attributes'] ?? [];
         $csStatus = $csAttrs['status'] ?? null;
         $referenceNumber = $csAttrs['reference_number'] ?? null;
@@ -1502,15 +1496,31 @@ class PaymentController {
         $piAttrs = $paymentIntent['attributes'] ?? [];
 
         $paymentsList = $csAttrs['payments'] ?? ($piAttrs['payments'] ?? []);
-        $firstPayment = !empty($paymentsList[0]) ? $paymentsList[0] : null;
 
-        $gatewayPaymentId = $firstPayment['id'] ?? null;
-        $gatewayPaymentStatus = $firstPayment['attributes']['status'] ?? ($piAttrs['status'] ?? ($csStatus ?? 'paid'));
+        // Item 14: Inspect payment array carefully. Select successful payment (paid/succeeded),
+        // rather than blindly assuming payments[0].
+        $selectedPayment = null;
+        if (!empty($paymentsList) && is_array($paymentsList)) {
+            foreach ($paymentsList as $p) {
+                $pStatus = strtolower((string) ($p['attributes']['status'] ?? ''));
+                if ($pStatus === 'paid' || $pStatus === 'succeeded') {
+                    $selectedPayment = $p;
+                    break;
+                }
+            }
+            if ($selectedPayment === null) {
+                $selectedPayment = $paymentsList[0] ?? null;
+            }
+        }
 
-        // Amount in integer centavos
+        $gatewayPaymentId = $selectedPayment['id'] ?? null;
+        $gatewayPaymentStatus = $selectedPayment['attributes']['status'] ?? ($piAttrs['status'] ?? ($csStatus ?? 'paid'));
+
+        // Amount in integer centavos:
+        // Under Batch 3 without pass-on fees, payment amount matches authoritative CMS payable amount.
         $webhookAmountCents = null;
-        if (isset($firstPayment['attributes']['amount'])) {
-            $webhookAmountCents = (int) $firstPayment['attributes']['amount'];
+        if (isset($selectedPayment['attributes']['amount'])) {
+            $webhookAmountCents = (int) $selectedPayment['attributes']['amount'];
         } elseif (isset($piAttrs['amount'])) {
             $webhookAmountCents = (int) $piAttrs['amount'];
         } elseif (isset($csAttrs['amount'])) {
@@ -1519,190 +1529,232 @@ class PaymentController {
 
         // Currency
         $webhookCurrency = null;
-        if (isset($firstPayment['attributes']['currency'])) {
-            $webhookCurrency = strtoupper((string) $firstPayment['attributes']['currency']);
+        if (isset($selectedPayment['attributes']['currency'])) {
+            $webhookCurrency = strtoupper((string) $selectedPayment['attributes']['currency']);
         } elseif (isset($piAttrs['currency'])) {
             $webhookCurrency = strtoupper((string) $piAttrs['currency']);
         } elseif (isset($csAttrs['currency'])) {
             $webhookCurrency = strtoupper((string) $csAttrs['currency']);
         }
 
-        // 9. Payment matching: primary match via gateway_checkout_session_id
-        $payment = null;
-        if (!empty($csId)) {
-            $payment = $this->paymentModel->findByCheckoutSessionId($csId);
-        }
-
-        if (!$payment) {
-            $this->systemExceptionModel->raise([
-                'event' => 'payment.webhook_unmatched',
-                'entity_type' => 'Payment',
-                'entity_id' => 0,
-                'reason' => 'No CMS payment matched Checkout Session ID: ' . ($csId ?? 'none'),
-                'severity' => 'critical',
-                'context' => [
-                    'event_id' => $eventId,
-                    'checkout_session_id' => $csId,
-                    'reference_number' => $referenceNumber,
-                ],
-            ]);
-
-            $updStmt = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = ? WHERE event_id = ?");
-            $updStmt->execute(['unmatched_payment', $eventId]);
-
-            return [
-                'success' => true,
-                'status' => 'unmatched',
-                'message' => 'No matching CMS payment found',
-                'code' => 200,
-            ];
-        }
-
-        $paymentId = (int) $payment['payment_id'];
-
-        // 10. Environment / Livemode consistency validation
-        $payMongoService = new PayMongoService();
-        $cmsMode = $payMongoService->getMode();
-        if ($cmsMode === 'unconfigured') {
-            $env = strtolower(trim((string) EnvironmentService::get('PAYMONGO_ENV', '')));
-            $cmsMode = ($env === 'live' || $env === 'production') ? 'live' : 'test';
-        }
-        $expectedLivemode = ($cmsMode === 'live');
-
-        if ($livemode !== $expectedLivemode) {
-            $this->systemExceptionModel->raise([
-                'event' => 'payment.webhook_environment_mismatch',
-                'entity_type' => 'Payment',
-                'entity_id' => $paymentId,
-                'reason' => sprintf('Livemode mismatch: webhook livemode is %s, but CMS is in %s mode', $livemode ? 'true' : 'false', $cmsMode),
-                'severity' => 'critical',
-                'context' => [
-                    'event_id' => $eventId,
-                    'webhook_livemode' => $livemode,
-                    'cms_mode' => $cmsMode,
-                    'payment_id' => $paymentId,
-                ],
-            ]);
-
-            $updStmt = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = ? WHERE event_id = ?");
-            $updStmt->execute(['environment_mismatch', $eventId]);
-
-            return [
-                'success' => true,
-                'status' => 'mismatch',
-                'message' => 'Environment mode mismatch',
-                'code' => 200,
-            ];
-        }
-
-        // 11. Currency validation
-        $paymentCurrency = strtoupper((string) ($payment['currency'] ?? 'PHP'));
-        if ($webhookCurrency !== 'PHP' || $webhookCurrency !== $paymentCurrency) {
-            $this->systemExceptionModel->raise([
-                'event' => 'payment.webhook_currency_mismatch',
-                'entity_type' => 'Payment',
-                'entity_id' => $paymentId,
-                'reason' => sprintf('Currency mismatch: webhook currency is %s, but CMS expects %s (PHP required)', $webhookCurrency ?? 'null', $paymentCurrency),
-                'severity' => 'critical',
-                'context' => [
-                    'event_id' => $eventId,
-                    'webhook_currency' => $webhookCurrency,
-                    'payment_currency' => $paymentCurrency,
-                    'payment_id' => $paymentId,
-                ],
-            ]);
-
-            $updStmt = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = ? WHERE event_id = ?");
-            $updStmt->execute(['currency_mismatch', $eventId]);
-
-            return [
-                'success' => true,
-                'status' => 'mismatch',
-                'message' => 'Currency mismatch',
-                'code' => 200,
-            ];
-        }
-
-        // 12. Authoritative amount validation
-        $cmsAmountCents = (int) round(((float) $payment['amount']) * 100);
-        if ($webhookAmountCents === null || $webhookAmountCents !== $cmsAmountCents) {
-            $this->systemExceptionModel->raise([
-                'event' => 'payment.webhook_amount_mismatch',
-                'entity_type' => 'Payment',
-                'entity_id' => $paymentId,
-                'reason' => sprintf('Amount mismatch: webhook amount (%s cents) does not match CMS authoritative amount (%d cents)', var_export($webhookAmountCents, true), $cmsAmountCents),
-                'severity' => 'critical',
-                'context' => [
-                    'event_id' => $eventId,
-                    'webhook_amount_cents' => $webhookAmountCents,
-                    'cms_amount_cents' => $cmsAmountCents,
-                    'payment_id' => $paymentId,
-                ],
-            ]);
-
-            $updStmt = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = ? WHERE event_id = ?");
-            $updStmt->execute(['amount_mismatch', $eventId]);
-
-            return [
-                'success' => true,
-                'status' => 'mismatch',
-                'message' => 'Amount mismatch',
-                'code' => 200,
-            ];
-        }
-
-        // 13. Payment status validation
-        $validStatuses = ['paid', 'succeeded'];
-        $statusMatches = in_array(strtolower((string) $gatewayPaymentStatus), $validStatuses, true)
-                      || in_array(strtolower((string) $csStatus), $validStatuses, true);
-
-        if (!$statusMatches) {
-            $this->systemExceptionModel->raise([
-                'event' => 'payment.webhook_invalid_status',
-                'entity_type' => 'Payment',
-                'entity_id' => $paymentId,
-                'reason' => 'PayMongo payment status is not paid/succeeded: ' . ($gatewayPaymentStatus ?? 'unknown'),
-                'severity' => 'warning',
-                'context' => [
-                    'event_id' => $eventId,
-                    'gateway_status' => $gatewayPaymentStatus,
-                    'checkout_status' => $csStatus,
-                    'payment_id' => $paymentId,
-                ],
-            ]);
-
-            $updStmt = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = ? WHERE event_id = ?");
-            $updStmt->execute(['invalid_gateway_status', $eventId]);
-
-            return [
-                'success' => true,
-                'status' => 'ignored',
-                'message' => 'Payment status is not successful',
-                'code' => 200,
-            ];
-        }
-
-        // 14. Atomic database processing
+        // 9. Atomic database transaction with row-level concurrency protection
         $shouldTriggerAutomation = false;
-        $claimed = false;
+        $paymentForAutomation = null;
 
-        $transactionSuccess = Database::getInstance()->transaction(function () use (
-            $paymentId,
+        $transactionResult = Database::getInstance()->transaction(function () use (
+            $idempotencyKey,
+            $eventType,
+            $livemode,
+            $csId,
             $gatewayPaymentId,
             $gatewayPaymentStatus,
-            $eventId,
-            $payment,
+            $webhookAmountCents,
+            $webhookCurrency,
+            $referenceNumber,
+            $csStatus,
             &$shouldTriggerAutomation,
-            &$claimed
+            &$paymentForAutomation
         ) {
             $db = Database::getInstance()->getConnection();
-            $verifiedAt = date('Y-m-d H:i:s');
+
+            // Item 10: Concurrency & Idempotency check with row-lock protection
+            $checkStmt = $db->prepare("SELECT * FROM webhook_events WHERE event_id = ? FOR UPDATE");
+            $checkStmt->execute([$idempotencyKey]);
+            $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($existing && (int)$existing['processed'] === 1) {
+                // Idempotent duplicate: already processed
+                return [
+                    'success' => true,
+                    'status' => 'duplicate',
+                    'message' => 'Event already processed',
+                    'event_id' => $idempotencyKey,
+                    'code' => 200,
+                ];
+            }
+
+            if (!$existing) {
+                try {
+                    $insertStmt = $db->prepare("
+                        INSERT INTO webhook_events (event_id, event_type, livemode, received_at, processed, processing_result)
+                        VALUES (?, ?, ?, NOW(), 0, 'processing')
+                    ");
+                    $insertStmt->execute([$idempotencyKey, $eventType, $livemode ? 1 : 0]);
+                } catch (PDOException $e) {
+                    if ($e->getCode() == 23000 || ($e->errorInfo[1] ?? 0) === 1062 || strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                        return [
+                            'success' => true,
+                            'status' => 'duplicate',
+                            'message' => 'Event already processed',
+                            'event_id' => $idempotencyKey,
+                            'code' => 200,
+                        ];
+                    }
+                    throw $e;
+                }
+            }
+
+            // Payment matching: authoritative correlation via findByCheckoutSessionId
+            $payment = null;
+            if (!empty($csId)) {
+                $payment = $this->paymentModel->findByCheckoutSessionId($csId);
+            }
+
+            if (!$payment) {
+                $this->systemExceptionModel->raise([
+                    'event' => 'payment.webhook_unmatched',
+                    'entity_type' => 'Payment',
+                    'entity_id' => 0,
+                    'reason' => 'No CMS payment matched Checkout Session ID: ' . ($csId ?? 'none'),
+                    'severity' => 'critical',
+                    'context' => [
+                        'event_id' => $idempotencyKey,
+                        'checkout_session_id' => $csId,
+                        'reference_number' => $referenceNumber,
+                    ],
+                ]);
+
+                $updStmt = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'unmatched_payment' WHERE event_id = ?");
+                $updStmt->execute([$idempotencyKey]);
+
+                return [
+                    'success' => true,
+                    'status' => 'unmatched',
+                    'message' => 'No matching CMS payment found',
+                    'code' => 200,
+                ];
+            }
+
+            $paymentId = (int) $payment['payment_id'];
+            $paymentForAutomation = $payment;
+
+            // Livemode consistency validation
+            $payMongoService = new PayMongoService();
+            $cmsMode = $payMongoService->getMode();
+            if ($cmsMode === 'unconfigured') {
+                $env = strtolower(trim((string) EnvironmentService::get('PAYMONGO_ENV', '')));
+                $cmsMode = ($env === 'live' || $env === 'production') ? 'live' : 'test';
+            }
+            $expectedLivemode = ($cmsMode === 'live');
+
+            if ($livemode !== $expectedLivemode) {
+                $this->systemExceptionModel->raise([
+                    'event' => 'payment.webhook_environment_mismatch',
+                    'entity_type' => 'Payment',
+                    'entity_id' => $paymentId,
+                    'reason' => sprintf('Livemode mismatch: webhook livemode is %s, but CMS is in %s mode', $livemode ? 'true' : 'false', $cmsMode),
+                    'severity' => 'critical',
+                    'context' => [
+                        'event_id' => $idempotencyKey,
+                        'webhook_livemode' => $livemode,
+                        'cms_mode' => $cmsMode,
+                        'payment_id' => $paymentId,
+                    ],
+                ]);
+
+                $updStmt = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'environment_mismatch' WHERE event_id = ?");
+                $updStmt->execute([$idempotencyKey]);
+
+                return [
+                    'success' => true,
+                    'status' => 'mismatch',
+                    'message' => 'Environment mode mismatch',
+                    'code' => 200,
+                ];
+            }
+
+            // Currency validation
+            $paymentCurrency = strtoupper((string) ($payment['currency'] ?? 'PHP'));
+            if ($webhookCurrency !== 'PHP' || $webhookCurrency !== $paymentCurrency) {
+                $this->systemExceptionModel->raise([
+                    'event' => 'payment.webhook_currency_mismatch',
+                    'entity_type' => 'Payment',
+                    'entity_id' => $paymentId,
+                    'reason' => sprintf('Currency mismatch: webhook currency is %s, but CMS expects %s (PHP required)', $webhookCurrency ?? 'null', $paymentCurrency),
+                    'severity' => 'critical',
+                    'context' => [
+                        'event_id' => $idempotencyKey,
+                        'webhook_currency' => $webhookCurrency,
+                        'payment_currency' => $paymentCurrency,
+                        'payment_id' => $paymentId,
+                    ],
+                ]);
+
+                $updStmt = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'currency_mismatch' WHERE event_id = ?");
+                $updStmt->execute([$idempotencyKey]);
+
+                return [
+                    'success' => true,
+                    'status' => 'mismatch',
+                    'message' => 'Currency mismatch',
+                    'code' => 200,
+                ];
+            }
+
+            // Authoritative amount validation
+            $cmsAmountCents = (int) round(((float) $payment['amount']) * 100);
+            if ($webhookAmountCents === null || $webhookAmountCents !== $cmsAmountCents) {
+                $this->systemExceptionModel->raise([
+                    'event' => 'payment.webhook_amount_mismatch',
+                    'entity_type' => 'Payment',
+                    'entity_id' => $paymentId,
+                    'reason' => sprintf('Amount mismatch: webhook amount (%s cents) does not match CMS authoritative amount (%d cents)', var_export($webhookAmountCents, true), $cmsAmountCents),
+                    'severity' => 'critical',
+                    'context' => [
+                        'event_id' => $idempotencyKey,
+                        'webhook_amount_cents' => $webhookAmountCents,
+                        'cms_amount_cents' => $cmsAmountCents,
+                        'payment_id' => $paymentId,
+                    ],
+                ]);
+
+                $updStmt = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'amount_mismatch' WHERE event_id = ?");
+                $updStmt->execute([$idempotencyKey]);
+
+                return [
+                    'success' => true,
+                    'status' => 'mismatch',
+                    'message' => 'Amount mismatch',
+                    'code' => 200,
+                ];
+            }
+
+            // Payment status validation
+            $validStatuses = ['paid', 'succeeded'];
+            $statusMatches = in_array(strtolower((string) $gatewayPaymentStatus), $validStatuses, true)
+                          || in_array(strtolower((string) $csStatus), $validStatuses, true);
+
+            if (!$statusMatches) {
+                $this->systemExceptionModel->raise([
+                    'event' => 'payment.webhook_invalid_status',
+                    'entity_type' => 'Payment',
+                    'entity_id' => $paymentId,
+                    'reason' => 'PayMongo payment status is not paid/succeeded: ' . ($gatewayPaymentStatus ?? 'unknown'),
+                    'severity' => 'warning',
+                    'context' => [
+                        'event_id' => $idempotencyKey,
+                        'gateway_status' => $gatewayPaymentStatus,
+                        'checkout_status' => $csStatus,
+                        'payment_id' => $paymentId,
+                    ],
+                ]);
+
+                $updStmt = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'invalid_gateway_status' WHERE event_id = ?");
+                $updStmt->execute([$idempotencyKey]);
+
+                return [
+                    'success' => true,
+                    'status' => 'ignored',
+                    'message' => 'Payment status is not successful',
+                    'code' => 200,
+                ];
+            }
 
             // Atomic Pending-state guard
+            $verifiedAt = date('Y-m-d H:i:s');
             $claimed = $this->paymentModel->verifyIfPending($paymentId, 'Verified', null, $verifiedAt);
 
             if ($claimed) {
-                // Persist gateway payment id and gateway status only when claimed
                 if (!empty($gatewayPaymentId)) {
                     $this->paymentModel->setGatewayPaymentId($paymentId, $gatewayPaymentId, $gatewayPaymentStatus);
                 } else {
@@ -1722,7 +1774,8 @@ class PaymentController {
                         'status' => 'Verified',
                         'receipt_number' => $payment['receipt_number'] ?? null,
                         'source' => 'paymongo_webhook',
-                        'event_id' => $eventId,
+                        'event_id' => $idempotencyKey,
+                        'checkout_session_id' => $csId,
                         'gateway_payment_id' => $gatewayPaymentId,
                     ]
                 );
@@ -1736,23 +1789,29 @@ class PaymentController {
                     'is_read' => 0,
                 ]);
 
-                $stmt = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = ? WHERE event_id = ?");
-                $stmt->execute(['verified', $eventId]);
+                $updStmt = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'verified' WHERE event_id = ?");
+                $updStmt->execute([$idempotencyKey]);
             } else {
-                // Payment was already verified/reviewed
-                $stmt = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = ? WHERE event_id = ?");
-                $stmt->execute(['already_reviewed', $eventId]);
+                $updStmt = $db->prepare("UPDATE webhook_events SET processed = 1, processing_result = 'already_reviewed' WHERE event_id = ?");
+                $updStmt->execute([$idempotencyKey]);
             }
 
-            return true;
+            return [
+                'success' => true,
+                'status' => $claimed ? 'verified' : 'already_reviewed',
+                'payment_id' => $paymentId,
+                'event_id' => $idempotencyKey,
+                'code' => 200,
+            ];
         });
 
-        if (!$transactionSuccess) {
+        if (!is_array($transactionResult)) {
             return ['error' => 'Database transaction failed', 'code' => 500];
         }
 
-        // 15. Automation Engine & Email triggered strictly AFTER successful commit
-        if ($shouldTriggerAutomation) {
+        // 10. Automation Engine & Notification triggered strictly AFTER successful commit
+        if ($shouldTriggerAutomation && !empty($paymentForAutomation)) {
+            $payment = $paymentForAutomation;
             if ($payment['transaction_type'] === 'Lot Purchase') {
                 $this->syncLotStatusForVerifiedPurchase($payment, null);
                 $this->autoConfirmScheduleForVerifiedPurchase($payment, null);
@@ -1774,13 +1833,7 @@ class PaymentController {
             }
         }
 
-        return [
-            'success' => true,
-            'status' => $claimed ? 'verified' : 'already_reviewed',
-            'payment_id' => $paymentId,
-            'event_id' => $eventId,
-            'code' => 200,
-        ];
+        return $transactionResult;
     }
 
     /**
@@ -1794,13 +1847,7 @@ class PaymentController {
 
         $trimmedHeader = trim($signatureHeader);
 
-        // 1. Direct HMAC match
-        $directHash = hash_hmac('sha256', $rawBody, $secret);
-        if (hash_equals($directHash, $trimmedHeader)) {
-            return true;
-        }
-
-        // 2. Parse PayMongo comma-separated format: t=<timestamp>,te=<test_sig>,li=<live_sig>
+        // 1. Parse PayMongo comma-separated format: t=<timestamp>,te=<test_sig>,li=<live_sig>
         $parts = explode(',', $trimmedHeader);
         $parsed = [];
         foreach ($parts as $part) {
@@ -1818,19 +1865,25 @@ class PaymentController {
             $timePayload = $timestamp . '.' . $rawBody;
             $computedTimeHash = hash_hmac('sha256', $timePayload, $secret);
 
-            if ($testSig !== null && hash_equals($computedTimeHash, $testSig)) {
+            if (!empty($testSig) && hash_equals($computedTimeHash, $testSig)) {
                 return true;
             }
-            if ($liveSig !== null && hash_equals($computedTimeHash, $liveSig)) {
+            if (!empty($liveSig) && hash_equals($computedTimeHash, $liveSig)) {
                 return true;
             }
         }
 
-        // Direct check against parsed te or li
-        if ($testSig !== null && hash_equals($directHash, $testSig)) {
+        // Direct check against parsed te or li (when sent without timestamp)
+        if (!empty($testSig) && hash_equals(hash_hmac('sha256', $rawBody, $secret), $testSig)) {
             return true;
         }
-        if ($liveSig !== null && hash_equals($directHash, $liveSig)) {
+        if (!empty($liveSig) && hash_equals(hash_hmac('sha256', $rawBody, $secret), $liveSig)) {
+            return true;
+        }
+
+        // 2. Direct HMAC match fallback (for backward-compatibility with tests / raw signatures)
+        $directHash = hash_hmac('sha256', $rawBody, $secret);
+        if (hash_equals($directHash, $trimmedHeader)) {
             return true;
         }
 
