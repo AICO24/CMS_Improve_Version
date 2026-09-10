@@ -895,6 +895,12 @@ if (preg_match('/^payments\/(\d+)\/verify$/', $path, $matches) && $requestMethod
 if (preg_match('/^payments\/(\d+)\/refund$/', $path, $matches) && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
+    if (!isset($input['idempotency_key'])) {
+        $headerKey = $_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? ($_SERVER['HTTP_X_IDEMPOTENCY_KEY'] ?? null);
+        if ($headerKey) {
+            $input['idempotency_key'] = trim($headerKey);
+        }
+    }
     $result = $paymentController->refund((int) $matches[1], $input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);

@@ -4,6 +4,7 @@
 CREATE TABLE IF NOT EXISTS `refunds` (
     `refund_id`          INT NOT NULL AUTO_INCREMENT,
     `payment_id`         INT NOT NULL,
+    `idempotency_key`    VARCHAR(100) NULL DEFAULT NULL,
     `gateway_refund_id`  VARCHAR(100) NULL DEFAULT NULL,
     `gateway_provider`   VARCHAR(20) NOT NULL DEFAULT 'paymongo',
     `amount`             DECIMAL(12,2) NOT NULL,
@@ -16,6 +17,7 @@ CREATE TABLE IF NOT EXISTS `refunds` (
     `updated_at`         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `processed_at`       DATETIME NULL DEFAULT NULL,
     PRIMARY KEY (`refund_id`),
+    UNIQUE KEY `uq_refund_idempotency_key` (`idempotency_key`),
     UNIQUE KEY `uq_refund_gateway_refund_id` (`gateway_refund_id`),
     KEY `idx_refund_payment_id` (`payment_id`),
     KEY `idx_refund_status` (`status`),

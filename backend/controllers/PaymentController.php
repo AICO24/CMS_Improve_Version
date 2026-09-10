@@ -1926,11 +1926,14 @@ class PaymentController {
             return ['error' => 'amount is required and must be a valid number', 'code' => 400];
         }
 
-        $amount = (float) $data['amount'];
+        $amount = $data['amount'];
         $reason = !empty($data['reason']) ? trim((string) $data['reason']) : 'requested_by_customer';
         $notes = !empty($data['notes']) ? trim((string) $data['notes']) : null;
+        $idempotencyKey = !empty($data['idempotency_key'])
+            ? trim((string) $data['idempotency_key'])
+            : (!empty($_SERVER['HTTP_IDEMPOTENCY_KEY']) ? trim((string) $_SERVER['HTTP_IDEMPOTENCY_KEY']) : null);
 
         $refundService = $this->getRefundService();
-        return $refundService->processRefund($paymentId, $amount, $reason, $notes, $user);
+        return $refundService->processRefund($paymentId, $amount, $reason, $notes, $user, $idempotencyKey);
     }
 }

@@ -10,8 +10,10 @@ require_once __DIR__ . '/../services/PayMongoService.php';
 /**
  * RefundService
  *
- * Batch 5: Encapsulates server-side refund eligibility, decoupled two-phase
- * database transactions, deterministic PayMongo idempotency, and audit logging.
+ * Batch 5 (Remediated): Encapsulates server-side refund eligibility, decoupled two-phase
+ * database transactions, exact integer centavo calculations, and two-tier idempotency:
+ *   Tier 1: Request-level idempotency (via refunds.idempotency_key) to deduplicate CMS requests.
+ *   Tier 2: PayMongo-level idempotency (cms_refund_{refundId}) for gateway call retries.
  */
 class RefundService {
     private $paymentModel;
@@ -40,14 +42,22 @@ class RefundService {
     /**
      * Processes a full or partial refund for a verified PayMongo payment.
      *
-     * @param int   $paymentId Target CMS payment ID
-     * @param float $amount    Requested refund amount in PHP
-     * @param string $reason   duplicate|fraudulent|requested_by_customer|others
-     * @param string|null $notes Optional internal notes
-     * @param array $user      Authenticated user identity (admin or staff)
+     * @param int             $paymentId      Target CMS payment ID
+     * @param int|float|string $amount        Requested refund amount
+     * @param string          $reason         duplicate|fraudulent|requested_by_customer|others
+     * @param string|null     $notes          Optional internal notes
+     * @param array           $user           Authenticated user identity (admin or staff)
+     * @param string|null     $idempotencyKey Optional request-level idempotency key
      * @return array Normalized response array
      */
-    public function processRefund(int $paymentId, float $amount, string $reason = 'requested_by_customer', ?string $notes = null, array $user = []): array {
+    public function processRefund(
+        int $paymentId,
+        $amount,
+        string $reason = 'requested_by_customer',
+        ?string $notes = null,
+        array $user = [],
+        ?string $idempotencyKey = null
+    ): array {
         // 1. Validate environment configuration
         if (!$this->payMongoService->isConfigured()) {
             return [
@@ -66,16 +76,22 @@ class RefundService {
             ];
         }
 
-        // 3. Validate positive numeric amount
-        $amount = round($amount, 2);
-        if ($amount <= 0.0) {
+        // 3. Exact centavo conversion and validation (NO float arithmetic)
+        if (!is_numeric($amount)) {
+            return [
+                'error' => 'Refund amount must be a valid positive number',
+                'code' => 400,
+            ];
+        }
+
+        $amountCents = Refund::toCentavos($amount);
+        if ($amountCents <= 0) {
             return [
                 'error' => 'Refund amount must be greater than zero',
                 'code' => 400,
             ];
         }
 
-        $amountCents = (int) round($amount * 100);
         if ($amountCents < 100) {
             return [
                 'error' => 'Minimum refundable amount is PHP 1.00 (100 centavos)',
@@ -83,15 +99,46 @@ class RefundService {
             ];
         }
 
+        $cleanIdempotencyKey = !empty($idempotencyKey) ? trim((string) $idempotencyKey) : null;
+
+        // 4. Request-level Idempotency Check (Tier 1): Return existing operation if key was already processed
+        if ($cleanIdempotencyKey !== null) {
+            $existingRefund = $this->refundModel->findByIdempotencyKey($cleanIdempotencyKey);
+            if ($existingRefund) {
+                return [
+                    'success' => ($existingRefund['status'] !== Refund::STATUS_FAILED),
+                    'reused' => true,
+                    'refund_id' => (int) $existingRefund['refund_id'],
+                    'payment_id' => (int) $existingRefund['payment_id'],
+                    'amount' => (float) $existingRefund['amount'],
+                    'currency' => $existingRefund['currency'],
+                    'status' => $existingRefund['status'],
+                    'gateway_refund_id' => $existingRefund['gateway_refund_id'],
+                    'reason' => $existingRefund['reason'],
+                    'processed_at' => $existingRefund['processed_at'],
+                    'idempotency_key' => $existingRefund['idempotency_key'],
+                    'code' => 200,
+                ];
+            }
+        }
+
         $userId = !empty($user['user_id']) ? (int) $user['user_id'] : null;
         $username = $user['username'] ?? null;
 
         // ------------------------------------------------------------------
         // Phase 1: Short DB transaction with row-lock to check eligibility,
-        // compute remaining balance, and persist the initial Pending record.
+        // compute remaining balance in exact centavos, and persist the initial
+        // Pending record with its request idempotency key.
         // The external network call is NEVER executed inside this transaction.
         // ------------------------------------------------------------------
-        $phase1Result = Database::getInstance()->transaction(function () use ($paymentId, $amount, $cleanReason, $notes, $userId) {
+        $phase1Result = Database::getInstance()->transaction(function () use (
+            $paymentId,
+            $amountCents,
+            $cleanReason,
+            $notes,
+            $userId,
+            $cleanIdempotencyKey
+        ) {
             $db = Database::getInstance()->getConnection();
 
             // Row-lock target payment
@@ -141,47 +188,77 @@ class RefundService {
 
             // Concurrency Lock: Lock all active refunds for this payment
             $stmtRef = $db->prepare("
-                SELECT COALESCE(SUM(amount), 0) AS total_allocated
+                SELECT amount
                 FROM refunds
                 WHERE payment_id = ?
                   AND status IN ('Pending', 'Processing', 'Succeeded')
                 FOR UPDATE
             ");
             $stmtRef->execute([$paymentId]);
-            $rowRef = $stmtRef->fetch(PDO::FETCH_ASSOC);
-            $totalAllocated = round((float) ($rowRef['total_allocated'] ?? 0), 2);
+            $activeRows = $stmtRef->fetchAll(PDO::FETCH_ASSOC);
 
-            $originalAmount = round((float) $payment['amount'], 2);
-            $remainingRefundable = round(max(0.0, $originalAmount - $totalAllocated), 2);
+            // Exact integer centavo arithmetic
+            $allocatedCents = 0;
+            foreach ($activeRows as $r) {
+                $allocatedCents += Refund::toCentavos($r['amount']);
+            }
 
-            if ($remainingRefundable <= 0.0) {
+            $originalCents = Refund::toCentavos($payment['amount']);
+            $remainingCents = max(0, $originalCents - $allocatedCents);
+
+            if ($remainingCents <= 0) {
                 return [
                     'error' => 'Payment has already been fully refunded',
                     'code' => 400,
                 ];
             }
 
-            if ($amount > $remainingRefundable) {
+            if ($amountCents > $remainingCents) {
                 return [
                     'error' => sprintf(
-                        'Refund amount (PHP %.2f) exceeds remaining refundable balance (PHP %.2f)',
-                        $amount,
-                        $remainingRefundable
+                        'Refund amount (PHP %s) exceeds remaining refundable balance (PHP %s)',
+                        Refund::toPesos($amountCents),
+                        Refund::toPesos($remainingCents)
                     ),
                     'code' => 400,
                 ];
             }
 
-            // Create initial Pending refund record
-            $refundId = $this->refundModel->create([
-                'payment_id' => $paymentId,
-                'amount' => $amount,
-                'currency' => 'PHP',
-                'status' => Refund::STATUS_PENDING,
-                'reason' => $cleanReason,
-                'notes' => $notes,
-                'requested_by' => $userId,
-            ]);
+            // Create initial Pending refund record with request idempotency key
+            try {
+                $refundId = $this->refundModel->create([
+                    'payment_id' => $paymentId,
+                    'idempotency_key' => $cleanIdempotencyKey,
+                    'amount' => Refund::toPesos($amountCents),
+                    'currency' => 'PHP',
+                    'status' => Refund::STATUS_PENDING,
+                    'reason' => $cleanReason,
+                    'notes' => $notes,
+                    'requested_by' => $userId,
+                ]);
+            } catch (PDOException $e) {
+                // Catch concurrent duplicate insertion on unique idempotency_key
+                if ($cleanIdempotencyKey !== null && ($e->getCode() == 23000 || ($e->errorInfo[1] ?? 0) === 1062 || strpos($e->getMessage(), 'Duplicate entry') !== false)) {
+                    $existing = $this->refundModel->findByIdempotencyKey($cleanIdempotencyKey);
+                    if ($existing) {
+                        return [
+                            'success' => ($existing['status'] !== Refund::STATUS_FAILED),
+                            'reused' => true,
+                            'refund_id' => (int) $existing['refund_id'],
+                            'payment_id' => (int) $existing['payment_id'],
+                            'amount' => (float) $existing['amount'],
+                            'currency' => $existing['currency'],
+                            'status' => $existing['status'],
+                            'gateway_refund_id' => $existing['gateway_refund_id'],
+                            'reason' => $existing['reason'],
+                            'processed_at' => $existing['processed_at'],
+                            'idempotency_key' => $existing['idempotency_key'],
+                            'code' => 200,
+                        ];
+                    }
+                }
+                throw $e;
+            }
 
             if (!$refundId) {
                 return ['error' => 'Failed to initialize refund record', 'code' => 500];
@@ -191,14 +268,15 @@ class RefundService {
                 'success' => true,
                 'payment' => $payment,
                 'refund_id' => $refundId,
-                'amount' => $amount,
+                'amount_cents' => $amountCents,
                 'reason' => $cleanReason,
                 'notes' => $notes,
-                'remaining_after' => round($remainingRefundable - $amount, 2),
+                'remaining_after_cents' => $remainingCents - $amountCents,
             ];
         });
 
-        if (empty($phase1Result['success'])) {
+        // Return immediately if Phase 1 returned error or an existing idempotent refund
+        if (empty($phase1Result['success']) || !empty($phase1Result['reused'])) {
             return $phase1Result;
         }
 
@@ -207,13 +285,13 @@ class RefundService {
 
         // ------------------------------------------------------------------
         // Phase 2: Call PayMongo API outside database transaction.
-        // Idempotency Key format: cms_refund_{internalRefundId}
+        // PayMongo Idempotency Key (Tier 2): cms_refund_{internalRefundId}
         // Guarantees retrying the exact same internal operation sends the SAME key.
         // ------------------------------------------------------------------
-        $idempotencyKey = "cms_refund_{$refundId}";
+        $paymongoIdempotencyKey = "cms_refund_{$refundId}";
 
         $gatewayPayload = [
-            'amount' => $amountCents,
+            'amount' => $amountCents, // Integer centavos
             'payment_id' => $payment['gateway_payment_id'],
             'reason' => $cleanReason,
         ];
@@ -221,7 +299,7 @@ class RefundService {
             $gatewayPayload['notes'] = substr($notes, 0, 255);
         }
 
-        $gatewayResult = $this->payMongoService->createRefund($gatewayPayload, $idempotencyKey);
+        $gatewayResult = $this->payMongoService->createRefund($gatewayPayload, $paymongoIdempotencyKey);
 
         // ------------------------------------------------------------------
         // Phase 3: Short DB transaction to persist gateway response and audit trail.
@@ -230,14 +308,16 @@ class RefundService {
             $refundId,
             $paymentId,
             $payment,
-            $amount,
+            $amountCents,
             $cleanReason,
             $notes,
             $userId,
             $username,
-            $gatewayResult
+            $gatewayResult,
+            $cleanIdempotencyKey
         ) {
             $now = date('Y-m-d H:i:s');
+            $amountFormatted = (float) Refund::toPesos($amountCents);
 
             if ($gatewayResult['success']) {
                 $refundData = $gatewayResult['data'] ?? [];
@@ -259,8 +339,9 @@ class RefundService {
                     $paymentId,
                     [
                         'refund_id' => $refundId,
+                        'idempotency_key' => $cleanIdempotencyKey,
                         'gateway_refund_id' => $gatewayRefundId,
-                        'amount' => $amount,
+                        'amount' => $amountFormatted,
                         'currency' => 'PHP',
                         'reason' => $cleanReason,
                         'status' => $cmsStatus,
@@ -272,9 +353,9 @@ class RefundService {
                 $this->notificationModel->create([
                     'title' => 'Payment Refund Processed',
                     'message' => sprintf(
-                        'Refund #%d of PHP %.2f for payment receipt %s was successfully processed (Status: %s).',
+                        'Refund #%d of PHP %s for payment receipt %s was successfully processed (Status: %s).',
                         $refundId,
-                        $amount,
+                        Refund::toPesos($amountCents),
                         $payment['receipt_number'] ?? '',
                         $cmsStatus
                     ),
@@ -287,7 +368,8 @@ class RefundService {
                     'success' => true,
                     'refund_id' => $refundId,
                     'payment_id' => $paymentId,
-                    'amount' => $amount,
+                    'idempotency_key' => $cleanIdempotencyKey,
+                    'amount' => $amountFormatted,
                     'currency' => 'PHP',
                     'status' => $cmsStatus,
                     'gateway_refund_id' => $gatewayRefundId,
@@ -316,7 +398,8 @@ class RefundService {
                         $paymentId,
                         [
                             'refund_id' => $refundId,
-                            'amount' => $amount,
+                            'idempotency_key' => $cleanIdempotencyKey,
+                            'amount' => $amountFormatted,
                             'error' => $rawError,
                             'gateway_status_code' => $statusCode,
                         ]
@@ -330,7 +413,7 @@ class RefundService {
                         'severity' => 'critical',
                         'context' => [
                             'refund_id' => $refundId,
-                            'amount' => $amount,
+                            'amount' => $amountFormatted,
                             'status_code' => $statusCode,
                         ],
                     ]);
@@ -339,6 +422,7 @@ class RefundService {
                         'success' => false,
                         'error' => $rawError,
                         'refund_id' => $refundId,
+                        'idempotency_key' => $cleanIdempotencyKey,
                         'status' => $cmsStatus,
                         'code' => 400,
                     ];
@@ -357,7 +441,8 @@ class RefundService {
                         $paymentId,
                         [
                             'refund_id' => $refundId,
-                            'amount' => $amount,
+                            'idempotency_key' => $cleanIdempotencyKey,
+                            'amount' => $amountFormatted,
                             'error' => $rawError,
                             'status' => $cmsStatus,
                         ]
@@ -371,7 +456,7 @@ class RefundService {
                         'severity' => 'critical',
                         'context' => [
                             'refund_id' => $refundId,
-                            'amount' => $amount,
+                            'amount' => $amountFormatted,
                             'status_code' => $statusCode,
                         ],
                     ]);
@@ -380,6 +465,7 @@ class RefundService {
                         'success' => false,
                         'error' => 'Gateway request timed out or failed to respond. Refund record preserved in Processing state for reconciliation.',
                         'refund_id' => $refundId,
+                        'idempotency_key' => $cleanIdempotencyKey,
                         'status' => $cmsStatus,
                         'code' => 502,
                     ];

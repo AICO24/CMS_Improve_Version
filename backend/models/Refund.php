@@ -4,7 +4,8 @@ require_once __DIR__ . '/../config/database.php';
 /**
  * Refund Model
  *
- * Batch 5: Manages refund records, active allocation tracking, and status transitions.
+ * Batch 5 (Remediated): Manages refund records, exact integer centavo balance tracking,
+ * request-level idempotency, and status transitions.
  */
 class Refund {
     private $db;
@@ -26,7 +27,51 @@ class Refund {
     }
 
     /**
-     * Creates a new pending refund record.
+     * Converts a monetary amount (int, float, or string) to exact integer centavos.
+     * Does NOT use unsafe binary floating-point multiplication.
+     *
+     * @param int|float|string $amount
+     * @return int Exact integer centavos (e.g. 1000.01 -> 100001)
+     */
+    public static function toCentavos($amount): int {
+        if (is_int($amount)) {
+            return $amount * 100;
+        }
+        if (is_float($amount)) {
+            $str = number_format($amount, 2, '.', '');
+        } else {
+            $str = trim((string) $amount);
+        }
+
+        $isNegative = (strpos($str, '-') === 0);
+        $str = ltrim($str, '+-');
+
+        $parts = explode('.', $str, 2);
+        $pesos = (int) ($parts[0] !== '' ? $parts[0] : 0);
+        $centsStr = isset($parts[1]) ? substr($parts[1], 0, 2) : '00';
+        $cents = (int) str_pad($centsStr, 2, '0', STR_PAD_RIGHT);
+
+        $totalCents = ($pesos * 100) + $cents;
+        return $isNegative ? -$totalCents : $totalCents;
+    }
+
+    /**
+     * Converts integer centavos to formatted 2-decimal PHP string.
+     *
+     * @param int $cents
+     * @return string Formatted monetary value, e.g. "1000.01"
+     */
+    public static function toPesos(int $cents): string {
+        $isNegative = $cents < 0;
+        $absCents = abs($cents);
+        $pesos = intdiv($absCents, 100);
+        $remainder = $absCents % 100;
+        $formatted = sprintf('%d.%02d', $pesos, $remainder);
+        return $isNegative ? '-' . $formatted : $formatted;
+    }
+
+    /**
+     * Creates a new pending refund record with request-level idempotency key.
      *
      * @param array $data
      * @return int|false The new refund_id or false on failure
@@ -37,18 +82,23 @@ class Refund {
             $reason = 'requested_by_customer';
         }
 
+        $amountStr = is_string($data['amount'])
+            ? $data['amount']
+            : self::toPesos(self::toCentavos($data['amount']));
+
         $stmt = $this->db->prepare("
             INSERT INTO refunds (
-                payment_id, gateway_refund_id, gateway_provider, amount, currency,
+                payment_id, idempotency_key, gateway_refund_id, gateway_provider, amount, currency,
                 status, reason, notes, requested_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
         $success = $stmt->execute([
             (int) $data['payment_id'],
+            !empty($data['idempotency_key']) ? trim((string) $data['idempotency_key']) : null,
             $data['gateway_refund_id'] ?? null,
             $data['gateway_provider'] ?? 'paymongo',
-            (float) $data['amount'],
+            $amountStr,
             $data['currency'] ?? 'PHP',
             $data['status'] ?? self::STATUS_PENDING,
             $reason,
@@ -76,6 +126,27 @@ class Refund {
             LIMIT 1
         ");
         $stmt->execute([$refundId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    /**
+     * Finds a refund by its request-level idempotency key.
+     */
+    public function findByIdempotencyKey(string $idempotencyKey) {
+        $cleanKey = trim($idempotencyKey);
+        if ($cleanKey === '') {
+            return null;
+        }
+        $stmt = $this->db->prepare("
+            SELECT r.*, u.full_name AS requested_by_name, p.receipt_number, p.gateway_payment_id
+            FROM refunds r
+            LEFT JOIN users u ON r.requested_by = u.user_id
+            LEFT JOIN payments p ON r.payment_id = p.payment_id
+            WHERE r.idempotency_key = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$cleanKey]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
     }
@@ -113,13 +184,13 @@ class Refund {
     }
 
     /**
-     * Calculates the total amount already allocated/committed to active refunds.
+     * Calculates the total centavos already allocated to active refunds.
      * Active statuses are Pending, Processing, and Succeeded.
-     * Failed refunds release their allocated amount.
+     * Uses exact integer arithmetic.
      */
-    public function calculateAllocatedAmount(int $paymentId, ?int $excludeRefundId = null): float {
+    public function calculateAllocatedCents(int $paymentId, ?int $excludeRefundId = null): int {
         $sql = "
-            SELECT COALESCE(SUM(amount), 0) AS total_allocated
+            SELECT amount
             FROM refunds
             WHERE payment_id = ?
               AND status IN ('Pending', 'Processing', 'Succeeded')
@@ -133,18 +204,38 @@ class Refund {
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return round((float) ($row['total_allocated'] ?? 0), 2);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $totalCents = 0;
+        foreach ($rows as $row) {
+            $totalCents += self::toCentavos($row['amount']);
+        }
+        return $totalCents;
     }
 
     /**
-     * Calculates the remaining refundable balance for a payment based on the
-     * CMS-authoritative original payment amount minus all active refunds.
+     * Calculates the remaining refundable balance in exact integer centavos:
+     * original_cents - (pending_cents + processing_cents + succeeded_cents) = remaining_refundable_cents.
+     */
+    public function calculateRemainingRefundableCents(int $paymentId, $originalAmount, ?int $excludeRefundId = null): int {
+        $originalCents = self::toCentavos($originalAmount);
+        $allocatedCents = $this->calculateAllocatedCents($paymentId, $excludeRefundId);
+        $remainingCents = $originalCents - $allocatedCents;
+        return max(0, $remainingCents);
+    }
+
+    /**
+     * Decimal balance helper (wraps exact centavo calculation).
+     */
+    public function calculateAllocatedAmount(int $paymentId, ?int $excludeRefundId = null): float {
+        return (float) self::toPesos($this->calculateAllocatedCents($paymentId, $excludeRefundId));
+    }
+
+    /**
+     * Decimal balance helper (wraps exact centavo calculation).
      */
     public function calculateRemainingRefundable(int $paymentId, float $originalAmount, ?int $excludeRefundId = null): float {
-        $allocated = $this->calculateAllocatedAmount($paymentId, $excludeRefundId);
-        $remaining = $originalAmount - $allocated;
-        return round(max(0.0, $remaining), 2);
+        return (float) self::toPesos($this->calculateRemainingRefundableCents($paymentId, $originalAmount, $excludeRefundId));
     }
 
     /**

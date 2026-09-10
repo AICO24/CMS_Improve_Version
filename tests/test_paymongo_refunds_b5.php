@@ -97,6 +97,7 @@ $citizenUser = ['user_id' => 3, 'username' => 'citizen_test', 'role' => 'user'];
 $testLot = $db->query("SELECT lot_id, lot_number, price, status FROM lots WHERE price > 100 ORDER BY lot_id ASC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 $lotId = (int) $testLot['lot_id'];
 $lotPrice = (float) $testLot['price'];
+$initialLotStatus = $testLot['status'] ?? 'Available';
 
 // Helper to create test payments
 function createVerifiedPayMongoPayment($paymentModel, $lotId, $amount, $payId = null) {
@@ -176,10 +177,11 @@ $tables = $db->query("SHOW TABLES LIKE 'refunds'")->fetchAll();
 report(2, 'refunds table exists in database', count($tables) === 1);
 
 // ============================================================
+// ============================================================
 // TEST 3: Required columns exist in refunds table
 // ============================================================
 $cols = $db->query("DESCRIBE refunds")->fetchAll(PDO::FETCH_COLUMN);
-$expectedCols = ['refund_id', 'payment_id', 'gateway_refund_id', 'gateway_provider', 'amount', 'currency', 'status', 'reason', 'notes', 'requested_by', 'created_at', 'updated_at', 'processed_at'];
+$expectedCols = ['refund_id', 'payment_id', 'gateway_refund_id', 'gateway_provider', 'amount', 'currency', 'status', 'reason', 'notes', 'requested_by', 'created_at', 'updated_at', 'processed_at', 'idempotency_key'];
 $diff = array_diff($expectedCols, $cols);
 report(3, 'Required columns exist in refunds table', empty($diff), 'Missing: ' . implode(',', $diff));
 
@@ -188,6 +190,12 @@ report(3, 'Required columns exist in refunds table', empty($diff), 'Missing: ' .
 // ============================================================
 $indexes = $db->query("SHOW INDEX FROM refunds WHERE Key_name = 'uq_refund_gateway_refund_id'")->fetchAll();
 report(4, 'Gateway refund ID unique constraint exists', count($indexes) > 0 && (int)$indexes[0]['Non_unique'] === 0);
+
+// ============================================================
+// TEST 4b: Request idempotency key unique constraint exists
+// ============================================================
+$idemIndexes = $db->query("SHOW INDEX FROM refunds WHERE Key_name = 'uq_refund_idempotency_key'")->fetchAll();
+report('4b', 'Request idempotency key unique constraint exists', count($idemIndexes) > 0 && (int)$idemIndexes[0]['Non_unique'] === 0);
 
 // ============================================================
 // TEST 5: Payment foreign key constraint exists
@@ -541,9 +549,174 @@ report(32, 'Refund reasons strictly validated against PayMongo values (rejects i
     "invalid={$res32Invalid['code']} valid={$res32Valid['code']}"
 );
 
+// ============================================================
+// TEST 33: Exact centavo conversion for ₱1.00, ₱100.01, ₱1000.10, ₱1000.50
+// ============================================================
+$m33_1 = Refund::toCentavos(1.00) === 100 && Refund::toCentavos('1.00') === 100 && Refund::toCentavos('1') === 100;
+$m33_100 = Refund::toCentavos(100.01) === 10001 && Refund::toCentavos('100.01') === 10001;
+$m33_1000_10 = Refund::toCentavos(1000.10) === 100010 && Refund::toCentavos('1000.10') === 100010 && Refund::toCentavos('1000.1') === 100010;
+$m33_1000_50 = Refund::toCentavos(1000.50) === 100050 && Refund::toCentavos('1000.50') === 100050 && Refund::toCentavos('1000.5') === 100050;
+$m33_pesos = Refund::toPesos(100) === '1.00'
+    && Refund::toPesos(10001) === '100.01'
+    && Refund::toPesos(100010) === '1000.10'
+    && Refund::toPesos(100050) === '1000.50';
+
+report(33, 'Exact centavo conversion without float drift for ₱1.00, ₱100.01, ₱1000.10, ₱1000.50',
+    $m33_1 && $m33_100 && $m33_1000_10 && $m33_1000_50 && $m33_pesos,
+    "1={$m33_1} 100.01={$m33_100} 1000.10={$m33_1000_10} 1000.50={$m33_1000_50} pesos={$m33_pesos}"
+);
+
+// ============================================================
+// TEST 34: Exact centavo PayMongo payload verification (integer centavos transmitted)
+// ============================================================
+$p34 = createVerifiedPayMongoPayment($paymentModel, $lotId, 2000.00);
+$res34 = $refundServiceWithMock->processRefund($p34['payment_id'], '1000.01', 'requested_by_customer', 'BATCH5_TEST exact cents', $adminUser);
+$remCents34 = $refundModel->calculateRemainingRefundableCents($p34['payment_id'], 2000.00);
+
+report(34, 'PayMongo receives exact integer centavos (100001 for ₱1000.01) and remaining cents is exact (99999)',
+    ($res34['code'] ?? 0) === 200
+    && ($mockService->lastAttributes['amount'] ?? 0) === 100001
+    && is_int($mockService->lastAttributes['amount'] ?? null)
+    && $remCents34 === 99999
+    && $refundModel->calculateRemainingRefundable($p34['payment_id'], 2000.00) == 999.99,
+    'sent=' . var_export($mockService->lastAttributes['amount'] ?? null, true) . ' rem=' . $remCents34
+);
+
+// ============================================================
+// TEST 35: Exact cumulative refunds and centavo precision boundary checks
+// ============================================================
+// On $p34 (balance remaining: 99999 cents / ₱999.99), refund ₱500.10
+$res35a = $refundServiceWithMock->processRefund($p34['payment_id'], '500.10', 'requested_by_customer', 'BATCH5_TEST partial 500.10', $adminUser);
+$lastAmount35a = $mockService->lastAttributes['amount'] ?? 0;
+$remCents35a = $refundModel->calculateRemainingRefundableCents($p34['payment_id'], 2000.00); // 99999 - 50010 = 49989 cents
+
+// Attempt refund exceeding by 1 centavo: 499.90 (49990 cents > 49989 cents)
+$res35b = $refundServiceWithMock->processRefund($p34['payment_id'], '499.90', 'requested_by_customer', 'BATCH5_TEST exceed 1 cent', $adminUser);
+
+// Exact remaining balance refund: 499.89 (49989 cents)
+$res35c = $refundServiceWithMock->processRefund($p34['payment_id'], '499.89', 'requested_by_customer', 'BATCH5_TEST exact zero balance', $adminUser);
+$lastAmount35c = $mockService->lastAttributes['amount'] ?? 0;
+$remCents35c = $refundModel->calculateRemainingRefundableCents($p34['payment_id'], 2000.00); // 0 cents
+
+// Minimum refund 100 centavos attempt when balance is 0
+$res35d = $refundServiceWithMock->processRefund($p34['payment_id'], '1.00', 'requested_by_customer', 'BATCH5_TEST after full', $adminUser);
+
+report(35, 'Cumulative centavo refund precision: 1-centavo overflow rejected, exact zero balance reached',
+    ($res35a['code'] ?? 0) === 200 && $lastAmount35a === 50010
+    && $remCents35a === 49989
+    && ($res35b['code'] ?? 0) === 400
+    && ($res35c['code'] ?? 0) === 200 && $lastAmount35c === 49989
+    && $remCents35c === 0
+    && ($res35d['code'] ?? 0) === 400,
+    "35a={$res35a['code']} remA={$remCents35a} 35b={$res35b['code']} 35c={$res35c['code']} remC={$remCents35c} 35d={$res35d['code']}"
+);
+
+// ============================================================
+// TEST 36: Request Idempotency — Same key reuses existing refund record
+// ============================================================
+$p36 = createVerifiedPayMongoPayment($paymentModel, $lotId, 1000.00);
+$key36 = 'idemp_key_test_' . bin2hex(random_bytes(6));
+$res36First = $refundServiceWithMock->processRefund($p36['payment_id'], 250.00, 'requested_by_customer', 'BATCH5_TEST idemp 1', $adminUser, $key36);
+
+// Second identical request with same idempotency key
+$res36Second = $refundServiceWithMock->processRefund($p36['payment_id'], 250.00, 'requested_by_customer', 'BATCH5_TEST idemp 2', $adminUser, $key36);
+
+// Verify exactly one record exists with this idempotency key
+$recordCount36 = $db->query("SELECT COUNT(*) FROM refunds WHERE idempotency_key = " . $db->quote($key36))->fetchColumn();
+
+report(36, 'Request idempotency: same key returns existing refund record without creating duplicate',
+    ($res36First['code'] ?? 0) === 200
+    && ($res36Second['code'] ?? 0) === 200
+    && ($res36Second['reused'] ?? false) === true
+    && ($res36Second['refund_id'] ?? 0) === ($res36First['refund_id'] ?? -1)
+    && (int) $recordCount36 === 1,
+    "first_id=" . ($res36First['refund_id'] ?? 'null') . " second_id=" . ($res36Second['refund_id'] ?? 'null') . " count={$recordCount36}"
+);
+
+// ============================================================
+// TEST 37: Request Idempotency — Controller and HTTP route support
+// ============================================================
+$key37 = 'idemp_ctrl_test_' . bin2hex(random_bytes(6));
+$res37First = $paymentController->refund($p36['payment_id'], ['amount' => 100.00, 'idempotency_key' => $key37], $adminUser);
+$res37Second = $paymentController->refund($p36['payment_id'], ['amount' => 100.00, 'idempotency_key' => $key37], $adminUser);
+
+report(37, 'PaymentController forwards idempotency_key and returns existing refund on repeat',
+    ($res37First['code'] ?? 0) === 200
+    && ($res37Second['code'] ?? 0) === 200
+    && ($res37Second['reused'] ?? false) === true
+    && ($res37Second['refund_id'] ?? 0) === ($res37First['refund_id'] ?? -1),
+    "first=" . json_encode($res37First) . " second=" . json_encode($res37Second)
+);
+
+// ============================================================
+// TEST 38: Request Idempotency — Different keys create separate legitimate refunds
+// ============================================================
+$key38 = 'idemp_diff_test_' . bin2hex(random_bytes(6));
+$res38 = $refundServiceWithMock->processRefund($p36['payment_id'], 150.00, 'requested_by_customer', 'BATCH5_TEST diff key', $adminUser, $key38);
+
+report(38, 'Different idempotency key creates separate legitimate refund operation',
+    ($res38['code'] ?? 0) === 200
+    && ($res38['reused'] ?? false) === false
+    && ($res38['refund_id'] ?? 0) !== ($res36First['refund_id'] ?? 0),
+    "diff_id=" . ($res38['refund_id'] ?? 'null')
+);
+
+// ============================================================
+// TEST 39: Two-Layer Idempotency separation (Request Key vs PayMongo Gateway Key)
+// ============================================================
+$key39 = 'idemp_layer_test_' . bin2hex(random_bytes(6));
+$res39 = $refundServiceWithMock->processRefund($p36['payment_id'], 50.00, 'requested_by_customer', 'BATCH5_TEST two layers', $adminUser, $key39);
+$savedRefund39 = $refundModel->findById((int) ($res39['refund_id'] ?? 0));
+
+report(39, 'Two-layer idempotency preserved: Layer 1 stored in refunds.idempotency_key, Layer 2 is cms_refund_{id}',
+    ($savedRefund39['idempotency_key'] ?? '') === $key39
+    && ($mockService->lastIdempotencyKey ?? '') === "cms_refund_{$savedRefund39['refund_id']}",
+    "layer1={$savedRefund39['idempotency_key']} layer2={$mockService->lastIdempotencyKey}"
+);
+
+// ============================================================
+// TEST 40: Concurrent Duplicate Protection via DB unique constraint
+// ============================================================
+$p40 = createVerifiedPayMongoPayment($paymentModel, $lotId, 500.00);
+$raceKey = 'idemp_race_' . bin2hex(random_bytes(6));
+// Pre-create the record that won the race
+$winningRefundId = $refundModel->create([
+    'payment_id' => $p40['payment_id'],
+    'gateway_provider' => 'PayMongo',
+    'amount' => 100.00,
+    'currency' => 'PHP',
+    'status' => 'Succeeded',
+    'reason' => 'requested_by_customer',
+    'notes' => 'BATCH5_TEST race winner',
+    'requested_by' => $adminUser['user_id'],
+    'idempotency_key' => $raceKey,
+]);
+
+// Mock Refund model that simulates another thread already committed this key
+$mockRefundModel = new class extends Refund {
+    public $simulatedRaceKey = null;
+    public function create(array $data) {
+        if (!empty($data['idempotency_key']) && $data['idempotency_key'] === $this->simulatedRaceKey) {
+            throw new PDOException("Duplicate entry '{$this->simulatedRaceKey}' for key 'uq_refund_idempotency_key'", 1062);
+        }
+        return parent::create($data);
+    }
+};
+$mockRefundModel->simulatedRaceKey = $raceKey;
+$refundServiceRace = new RefundService(null, $mockRefundModel, $mockService);
+$res40 = $refundServiceRace->processRefund($p40['payment_id'], 100.00, 'requested_by_customer', 'BATCH5_TEST race loser', $adminUser, $raceKey);
+
+report(40, 'Concurrent duplicate insert race condition caught safely and resolves to existing refund',
+    ($res40['code'] ?? 0) === 200
+    && ($res40['reused'] ?? false) === true
+    && ($res40['refund_id'] ?? 0) === (int) $winningRefundId,
+    "res=" . json_encode($res40)
+);
+
 // Cleanup test payments and test refunds (respecting FK)
 $db->exec("DELETE FROM refunds WHERE payment_id IN (SELECT payment_id FROM payments WHERE notes LIKE '%BATCH5_TEST%') OR notes LIKE '%BATCH5_TEST%'");
 $db->exec("DELETE FROM payments WHERE notes LIKE '%BATCH5_TEST%'");
+$db->exec("UPDATE lots SET status = '{$initialLotStatus}' WHERE lot_id = {$lotId}");
 
 echo "\n======================================================\n";
 echo "PayMongo Batch 5 Refund Tests: {$passed} passed, {$failed} failed\n";
