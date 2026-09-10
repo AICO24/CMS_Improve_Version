@@ -234,6 +234,19 @@ class Payment {
     }
 
     /**
+     * Batch 4: Updates gateway_payment_id and gateway_status on a payment record.
+     */
+    public function setGatewayPaymentId($paymentId, $gatewayPaymentId, $gatewayStatus) {
+        $stmt = $this->db->prepare("
+            UPDATE payments
+            SET gateway_payment_id = ?,
+                gateway_status = ?
+            WHERE payment_id = ?
+        ");
+        return $stmt->execute([$gatewayPaymentId, $gatewayStatus, (int) $paymentId]);
+    }
+
+    /**
      * Batch 3: Finds a Pending payment record by transaction type and reference.
      * Optionally filtered by user to verify ownership.
      */

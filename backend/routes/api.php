@@ -215,6 +215,27 @@ if ($path === 'auth/reset-password' && $requestMethod === 'POST') {
     exit;
 }
 
+if ($path === 'payments/webhook' && $requestMethod === 'POST') {
+    require_once __DIR__ . '/../controllers/PaymentController.php';
+    $rawBody = file_get_contents('php://input');
+    $signatureHeader = $_SERVER['HTTP_PAYMONGO_SIGNATURE'] ?? '';
+    if ($signatureHeader === '' && function_exists('getallheaders')) {
+        $headers = getallheaders();
+        foreach ($headers as $k => $v) {
+            if (strcasecmp($k, 'Paymongo-Signature') === 0) {
+                $signatureHeader = $v;
+                break;
+            }
+        }
+    }
+    $paymentController = new PaymentController();
+    $result = $paymentController->handleWebhook($rawBody, $signatureHeader);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 try {
     $user = AuthMiddleware::authenticate();
 } catch (Exception $e) {
