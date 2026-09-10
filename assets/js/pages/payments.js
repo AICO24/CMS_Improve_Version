@@ -669,9 +669,59 @@ document.addEventListener('DOMContentLoaded', async function() {
             referenceSearchWrap.style.display = 'none';
             referenceManualToggle.open = true;
         }
+        const payOnlineBtn = document.getElementById('payOnlineBtn');
+        if (payOnlineBtn) {
+            payOnlineBtn.style.display = transactionTypeSelect.value === 'Lot Purchase' ? 'inline-flex' : 'none';
+        }
     }
 
     transactionTypeSelect.addEventListener('change', updateReferenceModeForType);
+
+    const payOnlineBtn = document.getElementById('payOnlineBtn');
+    if (payOnlineBtn) {
+        payOnlineBtn.addEventListener('click', async () => {
+            const referenceId = referenceIdInput.value.trim();
+            if (!referenceId) {
+                alert('Please select a reservation or lot reference before proceeding to online checkout.');
+                return;
+            }
+            if (transactionTypeSelect.value !== 'Lot Purchase') {
+                alert('PayMongo checkout is currently supported for Lot Purchase only.');
+                return;
+            }
+
+            const paymentId = document.getElementById('paymentId').value.trim();
+            const payload = {
+                transaction_type: 'Lot Purchase',
+                reference_id: referenceId,
+            };
+            if (currentReferenceKind) {
+                payload.reference_kind = currentReferenceKind;
+            }
+            if (paymentId) {
+                payload.payment_id = paymentId;
+            }
+
+            await withButtonLoading(payOnlineBtn, async () => {
+                try {
+                    const result = await api.request('payments/checkout-session', {
+                        method: 'POST',
+                        body: payload,
+                    });
+
+                    if (result && result.checkout_url) {
+                        window.location.href = result.checkout_url;
+                    } else if (result && result.error) {
+                        alert('Checkout notice: ' + result.error);
+                    } else {
+                        alert('Failed to initiate checkout session. Please try again.');
+                    }
+                } catch (err) {
+                    alert('Checkout request failed: ' + (err.message || 'Unknown error'));
+                }
+            });
+        });
+    }
 
     const paymentModalContent = document.querySelector('#paymentModal .payment-form-modal');
     const modalScrollButtons = document.querySelectorAll('#paymentModal .modal-scroll-btn');
@@ -860,6 +910,30 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Auto open payment modal if reservation/lot parameters passed via URL query params
     const urlParams = new URLSearchParams(window.location.search);
+
+    // Batch 3: Handle PayMongo checkout return
+    const checkoutStatus = urlParams.get('checkout_status');
+    if (checkoutStatus) {
+        const alertEl = document.getElementById('checkoutStatusAlert');
+        const paramPaymentId = urlParams.get('payment_id');
+        if (alertEl) {
+            if (checkoutStatus === 'success') {
+                alertEl.className = 'alert-banner alert-success';
+                alertEl.style.display = 'flex';
+                alertEl.innerHTML = `<i class="fas fa-circle-check" style="margin-right: 8px;"></i> <div><strong>Payment submitted to gateway.</strong> Verification is still pending staff review or webhook confirmation. ${paramPaymentId ? '(Payment #' + escapeHtml(paramPaymentId) + ')' : ''}</div>`;
+            } else if (checkoutStatus === 'cancelled') {
+                alertEl.className = 'alert-banner alert-warning';
+                alertEl.style.display = 'flex';
+                alertEl.innerHTML = `<i class="fas fa-triangle-exclamation" style="margin-right: 8px;"></i> <div><strong>Checkout session cancelled.</strong> Your reservation remains pending. You may retry payment at any time.</div>`;
+            }
+        }
+        urlParams.delete('checkout_status');
+        urlParams.delete('payment_id');
+        const newSearch = urlParams.toString();
+        const cleanUrl = window.location.pathname + (newSearch ? '?' + newSearch : '');
+        window.history.replaceState({}, document.title, cleanUrl);
+    }
+
     const urlReservationId = urlParams.get('reservation_id');
     const urlLotId = urlParams.get('lot_id');
     const urlLotNum = urlParams.get('lot_number');

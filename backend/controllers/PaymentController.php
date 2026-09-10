@@ -1132,4 +1132,241 @@ class PaymentController {
     public function revenueByMethod($filters = []) {
         return $this->paymentModel->getRevenueByMethod($filters);
     }
+
+    /**
+     * Batch 3: Creates or retrieves a PayMongo Sandbox Hosted Checkout Session.
+     * Scope: Lot Purchase only. Does NOT verify payment or confirm bookings.
+     *
+     * @param array $data Request payload (reference_id, reference_kind, payment_id, success_url, cancel_url)
+     * @param array $user Authenticated user payload from AuthMiddleware
+     * @return array Response array with HTTP status code in 'code'
+     */
+    public function createCheckoutSession($data, $user) {
+        $userId = (int) ($user['user_id'] ?? 0);
+        $userRole = strtolower(trim((string) ($user['role'] ?? '')));
+
+        if ($userId <= 0) {
+            return ['error' => 'Unauthorized', 'code' => 401];
+        }
+
+        // 1. Transaction type enforcement (Batch 3 strict boundary)
+        $rawType = $data['transaction_type'] ?? 'Lot Purchase';
+        $transactionType = $this->normalizeTransactionType($rawType);
+        if ($transactionType !== 'Lot Purchase') {
+            return [
+                'error' => 'Only Lot Purchase transactions are supported for online checkout. Other transaction types do not have authoritative pricing yet.',
+                'code' => 400,
+            ];
+        }
+
+        // 2. Resolve target payment or reference
+        $paymentId = !empty($data['payment_id']) ? (int) $data['payment_id'] : null;
+        $payment = null;
+
+        if ($paymentId !== null) {
+            $payment = $this->paymentModel->findById($paymentId);
+            if (!$payment) {
+                return ['error' => 'Payment not found', 'code' => 404];
+            }
+            if ($payment['transaction_type'] !== 'Lot Purchase') {
+                return ['error' => 'Only Lot Purchase payments are supported for online checkout', 'code' => 400];
+            }
+            if (($payment['verification_status'] ?? 'Pending') !== 'Pending') {
+                return ['error' => 'Only Pending payments can be processed for checkout', 'code' => 400];
+            }
+            // Ownership check for user role
+            if ($userRole === 'user' && (int) ($payment['received_by'] ?? 0) !== $userId) {
+                return ['error' => 'You may only initiate checkout for your own payment', 'code' => 403];
+            }
+            $referenceId = $payment['reference_id'];
+            $referenceKind = $payment['reference_kind'];
+        } else {
+            $referenceId = $this->normalizeReferenceId($data['reference_id'] ?? null);
+            if ($referenceId === null) {
+                return ['error' => 'reference_id is required', 'code' => 400];
+            }
+            $referenceKind = in_array($data['reference_kind'] ?? null, ['schedule', 'lot'], true) ? $data['reference_kind'] : null;
+
+            // Server-side ownership and reference validation
+            $referenceCheck = $this->validatePaymentReference('Lot Purchase', $referenceId, $userId, $userRole, $referenceKind);
+            if (isset($referenceCheck['error'])) {
+                return $referenceCheck;
+            }
+            $referenceId = $referenceCheck['reference_id'];
+            $referenceKind = $referenceCheck['reference_kind'] ?? null;
+        }
+
+        // 3. Authoritative server-side price resolution
+        require_once __DIR__ . '/../services/PaymentAmountResolver.php';
+        $resolver = new PaymentAmountResolver();
+        $priceResult = $resolver->resolve('Lot Purchase', $referenceId, $referenceKind);
+        if (!($priceResult['resolved'] ?? false)) {
+            return [
+                'error' => $priceResult['reason'] ?? 'Authoritative price resolution failed',
+                'reason_code' => $priceResult['reason_code'] ?? 'resolution_failed',
+                'code' => 400,
+            ];
+        }
+
+        $authoritativeAmount = (float) $priceResult['amount'];
+        $authoritativeCents = (int) $priceResult['amount_cents'];
+        $referenceLabel = $priceResult['reference_label'] ?? ('Lot ' . $referenceId);
+
+        // 4. Locate or create the Pending CMS Payment row
+        if (!$payment) {
+            $payment = $this->paymentModel->findPendingByReference('Lot Purchase', $referenceId, $referenceKind, $userId);
+            if ($payment) {
+                $paymentId = (int) $payment['payment_id'];
+            } else {
+                $paymentId = $this->paymentModel->create([
+                    'transaction_type' => 'Lot Purchase',
+                    'reference_id' => $referenceId,
+                    'reference_kind' => $referenceKind,
+                    'amount' => $authoritativeAmount,
+                    'payment_date' => date('Y-m-d'),
+                    'payment_method' => 'PayMongo',
+                    'receipt_number' => '', // Auto-generates RCPT-{year}-{id}
+                    'notes' => 'PayMongo sandbox checkout initiated',
+                    'received_by' => $userId,
+                    'verification_status' => 'Pending',
+                ]);
+                if (!$paymentId) {
+                    return ['error' => 'Failed to record pending payment record', 'code' => 500];
+                }
+                $payment = $this->paymentModel->findById($paymentId);
+            }
+        }
+
+        // 5. Check for existing active checkout session (Idempotency / Re-entry)
+        require_once __DIR__ . '/../services/PayMongoService.php';
+        $payMongoService = new PayMongoService();
+
+        if (!empty($payment['gateway_checkout_session_id'])) {
+            $existingSessionId = $payment['gateway_checkout_session_id'];
+            if ($payMongoService->isConfigured()) {
+                $sessionCheck = $payMongoService->getCheckoutSession($existingSessionId);
+                if (!empty($sessionCheck['success']) && !empty($sessionCheck['data']['attributes']['checkout_url'])) {
+                    $existingAttrs = $sessionCheck['data']['attributes'];
+                    $sessionStatus = $existingAttrs['status'] ?? 'awaiting_payment_method';
+                    if ($sessionStatus === 'active' || $sessionStatus === 'awaiting_payment_method') {
+                        return [
+                            'success' => true,
+                            'reused' => true,
+                            'payment_id' => $paymentId,
+                            'receipt_number' => $payment['receipt_number'] ?? null,
+                            'checkout_session_id' => $existingSessionId,
+                            'checkout_url' => $existingAttrs['checkout_url'],
+                            'gateway_status' => $sessionStatus,
+                            'amount' => $authoritativeAmount,
+                            'currency' => 'PHP',
+                            'code' => 200,
+                        ];
+                    }
+                }
+            }
+        }
+
+        // 6. Check gateway configuration
+        if (!$payMongoService->isConfigured()) {
+            return [
+                'error' => 'Payment gateway is not configured (missing PAYMONGO_SECRET_KEY)',
+                'configured' => false,
+                'payment_id' => $paymentId,
+                'code' => 503,
+            ];
+        }
+
+        $configValidation = $payMongoService->validateConfig();
+        if (!$configValidation['valid']) {
+            return [
+                'error' => 'Payment gateway misconfigured: ' . implode('; ', $configValidation['errors']),
+                'configured' => false,
+                'payment_id' => $paymentId,
+                'code' => 503,
+            ];
+        }
+
+        // 7. Deterministic idempotency key derived from stable CMS payment identity
+        $idempotencyKey = 'cms_cs_payment_' . $paymentId . '_' . $authoritativeCents;
+
+        // 8. Construct official PayMongo Checkout Session payload
+        $origin = $this->resolveAppOrigin($data);
+        $successUrl = !empty($data['success_url'])
+            ? $data['success_url']
+            : ($origin . '/frontend/pages/payments.html?checkout_status=success&payment_id=' . $paymentId);
+        $cancelUrl = !empty($data['cancel_url'])
+            ? $data['cancel_url']
+            : ($origin . '/frontend/pages/payments.html?checkout_status=cancelled&payment_id=' . $paymentId);
+
+        $receiptNumber = $payment['receipt_number'] ?? ('RCPT-' . date('Y') . '-' . $paymentId);
+        $sessionAttributes = [
+            'line_items' => [
+                [
+                    'name' => 'Lot Purchase - ' . $referenceLabel,
+                    'amount' => $authoritativeCents,
+                    'currency' => 'PHP',
+                    'quantity' => 1,
+                    'description' => 'Payment for ' . $referenceLabel,
+                ],
+            ],
+            'payment_method_types' => ['card', 'gcash', 'paymaya'],
+            'description' => 'Payment for ' . $referenceLabel . ' (' . $receiptNumber . ')',
+            'reference_number' => $receiptNumber,
+            'send_email_receipt' => false,
+            'show_description' => true,
+            'show_line_items' => true,
+            'success_url' => $successUrl,
+            'cancel_url' => $cancelUrl,
+        ];
+
+        // 9. Call PayMongo API
+        $gatewayResult = $payMongoService->createCheckoutSession($sessionAttributes, $idempotencyKey);
+        if (!$gatewayResult['success']) {
+            return [
+                'error' => $gatewayResult['error'] ?? 'Failed to create PayMongo checkout session',
+                'gateway_status_code' => $gatewayResult['status'] ?? 0,
+                'payment_id' => $paymentId,
+                'code' => 502,
+            ];
+        }
+
+        // 10. Persist gateway identifiers and status into payments row
+        $sessionData = $gatewayResult['data'] ?? [];
+        $sessionId = $sessionData['id'] ?? null;
+        $sessionAttrs = $sessionData['attributes'] ?? [];
+        $checkoutUrl = $sessionAttrs['checkout_url'] ?? null;
+        $gatewayStatus = $sessionAttrs['status'] ?? 'awaiting_payment_method';
+        $intentId = $sessionAttrs['payment_intent']['id'] ?? ($sessionAttrs['payment_intent_id'] ?? null);
+
+        $this->paymentModel->setGatewaySession($paymentId, 'paymongo', $sessionId, $intentId, $gatewayStatus);
+
+        // 11. Return safe response (NEVER return secrets)
+        return [
+            'success' => true,
+            'reused' => false,
+            'payment_id' => $paymentId,
+            'receipt_number' => $receiptNumber,
+            'checkout_session_id' => $sessionId,
+            'checkout_url' => $checkoutUrl,
+            'gateway_status' => $gatewayStatus,
+            'amount' => $authoritativeAmount,
+            'currency' => 'PHP',
+            'code' => 200,
+        ];
+    }
+
+    private function resolveAppOrigin($data = []) {
+        if (!empty($data['origin']) && filter_var($data['origin'], FILTER_VALIDATE_URL)) {
+            $parsed = parse_url($data['origin']);
+            if (!empty($parsed['scheme']) && !empty($parsed['host'])) {
+                return rtrim($data['origin'], '/');
+            }
+        }
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
+        $script = $_SERVER['SCRIPT_NAME'] ?? '';
+        $prefix = (strpos($uri, '/CMS') === 0 || strpos($script, '/CMS') === 0) ? '/CMS' : '';
+        return $scheme . '://' . $host . $prefix;
+    }
 }

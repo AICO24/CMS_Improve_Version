@@ -107,7 +107,7 @@ class PayMongoService {
             'amount_unit' => 'centavos', // PayMongo amounts are integer centavos
             'api_base_url' => $this->baseUrl,
             'has_public_key' => trim((string) EnvironmentService::get('PAYMONGO_PUBLIC_KEY', '')) !== '',
-            'checkout_enabled' => false, // Batch 3+ wires checkout creation
+            'checkout_enabled' => $this->isConfigured(),
         ];
     }
 
@@ -134,6 +134,36 @@ class PayMongoService {
             'valid' => empty($errors),
             'errors' => $errors,
         ];
+    }
+
+    /**
+     * Create a PayMongo Hosted Checkout Session (Batch 3).
+     *
+     * @param array       $attributes      Official PayMongo Checkout Session attributes
+     *                                     (line_items, payment_method_types, success_url, cancel_url, etc.)
+     * @param string|null $idempotencyKey  Deterministic idempotency key for safe retries
+     * @return array Normalized response array
+     */
+    public function createCheckoutSession(array $attributes, $idempotencyKey = null) {
+        return $this->request('POST', 'checkout_sessions', [
+            'data' => [
+                'attributes' => $attributes,
+            ],
+        ], $idempotencyKey);
+    }
+
+    /**
+     * Retrieve an existing PayMongo Checkout Session by ID (Batch 3).
+     *
+     * @param string $sessionId PayMongo checkout session ID (cs_...)
+     * @return array Normalized response array
+     */
+    public function getCheckoutSession($sessionId) {
+        $cleanId = trim((string) $sessionId);
+        if ($cleanId === '') {
+            return ['success' => false, 'status' => 0, 'code' => 0, 'error' => 'Checkout session ID is required'];
+        }
+        return $this->request('GET', 'checkout_sessions/' . urlencode($cleanId));
     }
 
     /**

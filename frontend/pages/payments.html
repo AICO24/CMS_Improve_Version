@@ -153,6 +153,7 @@
                 </div>
             </div>
                 <div class="content-area">
+                <div id="checkoutStatusAlert" class="alert-banner" style="display:none; margin-bottom:1rem;" role="alert"></div>
                 <div class="stats-row payment-stats">
                     <div class="stat-card"><div class="stat-title">Total Revenue</div><div class="stat-value" id="totalRevenue">₱0</div><div class="stat-sub">All time</div></div>
                     <div class="stat-card"><div class="stat-title">This Month</div><div class="stat-value" id="monthRevenue">₱0</div><div class="stat-sub">Current month</div></div>
@@ -333,6 +334,7 @@
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" id="cancelPaymentBtn"><i class="fas fa-xmark"></i><span>Cancel</span></button>
+                    <button type="button" class="btn-secondary btn-pay-online" id="payOnlineBtn" style="display:none;" title="Pay online with PayMongo sandbox hosted checkout"><i class="fas fa-credit-card"></i><span>Pay Online (Sandbox)</span></button>
                     <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span></button>
                 </div>
             </form>

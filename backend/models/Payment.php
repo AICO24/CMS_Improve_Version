@@ -217,6 +217,54 @@ class Payment {
         return (int) ($stmt->fetch()['total'] ?? 0) > 0;
     }
 
+    /**
+     * Batch 3: Updates the gateway association columns on a payment record.
+     * Preserves verification_status and all other legacy columns.
+     */
+    public function setGatewaySession($paymentId, $provider, $checkoutSessionId, $paymentIntentId = null, $gatewayStatus = 'awaiting_payment_method') {
+        $stmt = $this->db->prepare("
+            UPDATE payments
+            SET gateway_provider = ?,
+                gateway_checkout_session_id = ?,
+                gateway_payment_intent_id = ?,
+                gateway_status = ?
+            WHERE payment_id = ?
+        ");
+        return $stmt->execute([$provider, $checkoutSessionId, $paymentIntentId, $gatewayStatus, (int) $paymentId]);
+    }
+
+    /**
+     * Batch 3: Finds a Pending payment record by transaction type and reference.
+     * Optionally filtered by user to verify ownership.
+     */
+    public function findPendingByReference($transactionType, $referenceId, $referenceKind = null, $userId = null) {
+        $sql = "SELECT * FROM payments WHERE transaction_type = ? AND reference_id = ? AND verification_status = 'Pending'";
+        $params = [$transactionType, $referenceId];
+        if ($referenceKind !== null) {
+            $sql .= " AND reference_kind = ?";
+            $params[] = $referenceKind;
+        }
+        if ($userId !== null) {
+            $sql .= " AND received_by = ?";
+            $params[] = (int) $userId;
+        }
+        $sql .= " ORDER BY payment_id DESC LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    /**
+     * Batch 3: Finds a payment by its PayMongo Checkout Session ID.
+     */
+    public function findByCheckoutSessionId($checkoutSessionId) {
+        $stmt = $this->db->prepare("SELECT * FROM payments WHERE gateway_checkout_session_id = ? LIMIT 1");
+        $stmt->execute([$checkoutSessionId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
     public function getRevenue($filters = []) {
         $sql = "SELECT SUM(amount) AS total, COUNT(*) AS count FROM payments WHERE 1=1";
         $params = [];

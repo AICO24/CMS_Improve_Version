@@ -822,6 +822,16 @@ if ($path === 'payments/expected-amount' && $requestMethod === 'GET') {
     exit;
 }
 
+if ($path === 'payments/checkout-session' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $input = readRequestBody();
+    $result = $paymentController->createCheckoutSession($input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 if ($path === 'payments' && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $input = readRequestBody();

@@ -32,31 +32,53 @@ operations fail closed; manual/offline payments are unaffected.
   `getConfig()` / internal `secretKey()` call) and requires **zero** code
   changes to core startup.
 
-## How the service is intended to be used (Batch 3+)
+## How Checkout Sessions are Created (Batch 3)
+
+The official PayMongo Checkout Session API requires a `line_items` array (with integer centavos and `currency: PHP`), `payment_method_types`, `success_url`, and `cancel_url`:
 
 ```php
 require_once __DIR__ . '/../services/PayMongoService.php';
 $pay = new PayMongoService();
 
 // Server-side only. Never surfaced to the browser.
-$config = $pay->getConfig();      // public-safe summary (no secrets)
+$config = $pay->getConfig(); // public-safe summary (no secrets)
 
-// Later batches create a Checkout Session like this (NOT implemented yet):
-// $res = $pay->request('POST', 'checkout_sessions', [
-//     'data' => [
-//         'attributes' => [
-//             'amount' => 150000,            // integer centavos, from PaymentAmountResolver
-//             'currency' => 'PHP',
-//             'description' => 'Lot purchase',
-//             'payment_method_types' => ['gcash', 'maya', 'card'],
-//         ],
-//     ],
-// ], $pay->newIdempotencyKey('cms-payment-123'));
+// Batch 3 creates a Checkout Session via official schema:
+$sessionAttributes = [
+    'line_items' => [
+        [
+            'name' => 'Lot Purchase - ' . $referenceLabel,
+            'amount' => $amountCents, // integer centavos from PaymentAmountResolver
+            'currency' => 'PHP',
+            'quantity' => 1,
+            'description' => 'Payment for ' . $referenceLabel,
+        ]
+    ],
+    'payment_method_types' => ['card', 'gcash', 'paymaya'],
+    'description' => 'Payment for ' . $referenceLabel . ' (' . $receiptNumber . ')',
+    'reference_number' => $receiptNumber,
+    'send_email_receipt' => false,
+    'show_description' => true,
+    'show_line_items' => true,
+    'success_url' => $successUrl,
+    'cancel_url' => $cancelUrl,
+];
+
+// Deterministic idempotency key:
+$idempotencyKey = 'cms_cs_payment_' . $paymentId . '_' . $amountCents;
+
+$res = $pay->createCheckoutSession($sessionAttributes, $idempotencyKey);
 ```
 
-`PayMongoService::request()` returns `['success'=>bool, 'status'=>int,
-'data'=>?array, 'error'=>?string]` — same array-return convention as the
-existing `AIService`. Secrets never appear in any returned array.
+### Batch 3 API Endpoint: `POST /api/payments/checkout-session`
+- Authenticated via JWT (`AuthMiddleware::requireRole(['admin', 'staff', 'user'])`).
+- Accepts `reference_id` + optional `reference_kind` (or `payment_id`).
+- Strictly limited to `Lot Purchase`.
+- Server-side ownership validation prevents user A from paying for user B's booking.
+- Reuses existing active checkout sessions on retries/double-clicks.
+- Gateway identifiers (`gateway_provider = 'paymongo'`, `gateway_checkout_session_id`, `gateway_payment_intent_id`, `gateway_status`) are persisted.
+- Payment `verification_status` remains `Pending`. Zero premature confirmations or lot status transitions.
+- Returning from hosted checkout does NOT verify payment. Webhook verification is deferred to Batch 4+.
 
 ## Authoritative payment amounts
 
