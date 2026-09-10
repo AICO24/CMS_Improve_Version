@@ -167,6 +167,36 @@ class PayMongoService {
     }
 
     /**
+     * Create a PayMongo Refund (Batch 5).
+     *
+     * @param array       $attributes      Official PayMongo Refund attributes:
+     *                                     amount (cents), payment_id (pay_...), reason, notes
+     * @param string|null $idempotencyKey  Deterministic idempotency key for safe retries
+     * @return array Normalized response array
+     */
+    public function createRefund(array $attributes, $idempotencyKey = null) {
+        return $this->request('POST', 'refunds', [
+            'data' => [
+                'attributes' => $attributes,
+            ],
+        ], $idempotencyKey);
+    }
+
+    /**
+     * Retrieve an existing PayMongo Refund by ID (Batch 5).
+     *
+     * @param string $refundId PayMongo refund ID (ref_...)
+     * @return array Normalized response array
+     */
+    public function getRefund($refundId) {
+        $cleanId = trim((string) $refundId);
+        if ($cleanId === '') {
+            return ['success' => false, 'status' => 0, 'code' => 0, 'error' => 'Refund ID is required'];
+        }
+        return $this->request('GET', 'refunds/' . urlencode($cleanId));
+    }
+
+    /**
      * Generates an idempotency key the PayMongo API requires for safe retries.
      * Foundation for Batch 3+; each retry of the same logical operation should
      * reuse the SAME key (callers decide reuse via a stored value, e.g.

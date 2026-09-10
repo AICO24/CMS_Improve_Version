@@ -892,6 +892,16 @@ if (preg_match('/^payments\/(\d+)\/verify$/', $path, $matches) && $requestMethod
     exit;
 }
 
+if (preg_match('/^payments\/(\d+)\/refund$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $result = $paymentController->refund((int) $matches[1], $input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 if ($path === 'payments/pending/verify-all' && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireRole(['admin']);
     $result = $paymentController->verifyAllPending('Verified', $user['user_id']);

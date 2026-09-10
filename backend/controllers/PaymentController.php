@@ -1889,4 +1889,48 @@ class PaymentController {
 
         return false;
     }
+
+    private $refundService;
+
+    /**
+     * Batch 5: Allows injecting a RefundService (e.g. during unit testing).
+     */
+    public function setRefundService($refundService): void {
+        $this->refundService = $refundService;
+    }
+
+    private function getRefundService() {
+        if ($this->refundService === null) {
+            require_once __DIR__ . '/../services/RefundService.php';
+            $this->refundService = new RefundService();
+        }
+        return $this->refundService;
+    }
+
+    /**
+     * Batch 5: Initiates a PayMongo refund for a verified payment.
+     * Restricted to admin and staff.
+     *
+     * @param int   $paymentId Target payment ID
+     * @param array $data      Input data: amount, reason, notes
+     * @param array $user      Authenticated user identity
+     * @return array Normalized response array
+     */
+    public function refund(int $paymentId, array $data, array $user): array {
+        $userRole = strtolower(trim((string) ($user['role'] ?? '')));
+        if ($userRole !== 'admin' && $userRole !== 'staff') {
+            return ['error' => 'Unauthorized: Only Admin and Staff can initiate refunds', 'code' => 403];
+        }
+
+        if (!isset($data['amount']) || !is_numeric($data['amount'])) {
+            return ['error' => 'amount is required and must be a valid number', 'code' => 400];
+        }
+
+        $amount = (float) $data['amount'];
+        $reason = !empty($data['reason']) ? trim((string) $data['reason']) : 'requested_by_customer';
+        $notes = !empty($data['notes']) ? trim((string) $data['notes']) : null;
+
+        $refundService = $this->getRefundService();
+        return $refundService->processRefund($paymentId, $amount, $reason, $notes, $user);
+    }
 }
