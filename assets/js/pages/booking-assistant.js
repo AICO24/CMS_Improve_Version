@@ -1205,6 +1205,14 @@
                     ? `${serviceLabel} scheduled successfully! Reference ID #${state.committedRecordId}`
                     : 'Reservation draft confirmed!';
                 if (typeof showToast === 'function') showToast(successMsg, 'success');
+
+                if (res.checkout_url) {
+                    if (typeof showToast === 'function') {
+                        showToast('Secure checkout is ready. Redirecting to PayMongo...', 'info');
+                    }
+                    window.location.assign(res.checkout_url);
+                    return;
+                }
             } else {
                 appendAssistantMessage(res.error || 'Failed to confirm reservation.');
                 if (typeof showToast === 'function') showToast(res.error || 'Failed to confirm', 'error');

@@ -18,6 +18,7 @@ require_once __DIR__ . '/../models/DecedentRequest.php';
 require_once __DIR__ . '/../models/Cremation.php';
 require_once __DIR__ . '/BookingActionRegistry.php';
 require_once __DIR__ . '/BookingDateResolver.php';
+require_once __DIR__ . '/../controllers/PaymentController.php';
 
 class BookingAgentService {
     private BookingDraft $draftModel;
@@ -1118,6 +1119,45 @@ class BookingAgentService {
                     'message'             => 'Burial reservation successfully finalized and scheduled.'
                 ];
             });
+
+            $paymentController = new PaymentController();
+            $paymentUser = is_array($user) ? $user : ['user_id' => $userId, 'role' => $userRole];
+            if (!isset($paymentUser['role'])) {
+                $paymentUser['role'] = $userRole;
+            }
+
+            if (!empty($outcome['success']) && !empty($outcome['schedule_id'])) {
+                $checkoutResult = $paymentController->createCheckoutSession([
+                    'transaction_type' => 'Lot Purchase',
+                    'reference_id' => (int) $outcome['schedule_id'],
+                    'reference_kind' => 'schedule',
+                ], $paymentUser);
+
+                if (!empty($checkoutResult['payment_id'])) {
+                    $outcome['payment_id'] = (int) $checkoutResult['payment_id'];
+                }
+                if (!empty($checkoutResult['checkout_session_id'])) {
+                    $outcome['checkout_session_id'] = $checkoutResult['checkout_session_id'];
+                }
+                if (!empty($checkoutResult['checkout_url'])) {
+                    $outcome['checkout_url'] = $checkoutResult['checkout_url'];
+                }
+                if (!empty($checkoutResult['gateway_status'])) {
+                    $outcome['gateway_status'] = $checkoutResult['gateway_status'];
+                }
+                if (!empty($checkoutResult['receipt_number'])) {
+                    $outcome['receipt_number'] = $checkoutResult['receipt_number'];
+                }
+                if (!empty($checkoutResult['amount'])) {
+                    $outcome['amount'] = $checkoutResult['amount'];
+                }
+                if (!empty($checkoutResult['currency'])) {
+                    $outcome['currency'] = $checkoutResult['currency'];
+                }
+                if (!empty($checkoutResult['code'])) {
+                    $outcome['checkout_code'] = (int) $checkoutResult['code'];
+                }
+            }
 
             return $outcome;
         } catch (PDOException $e) {
