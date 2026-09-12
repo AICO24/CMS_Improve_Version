@@ -1427,7 +1427,13 @@ class PaymentController {
         $isCitizen = ($userRole === 'user');
 
         if (!empty($data['success_url'])) {
-            $successUrl = $data['success_url'];
+            if (!$this->isInternalRedirectUrl((string) $data['success_url'], $origin)) {
+                return [
+                    'error' => 'Invalid success_url: external redirects are not permitted',
+                    'code' => 400,
+                ];
+            }
+            $successUrl = $this->normalizeRedirectUrl((string) $data['success_url'], $origin);
         } elseif ($isCitizen) {
             $successParams = 'checkout_status=success&payment_id=' . $paymentId;
             if ($referenceKind === 'schedule') {
@@ -1439,7 +1445,13 @@ class PaymentController {
         }
 
         if (!empty($data['cancel_url'])) {
-            $cancelUrl = $data['cancel_url'];
+            if (!$this->isInternalRedirectUrl((string) $data['cancel_url'], $origin)) {
+                return [
+                    'error' => 'Invalid cancel_url: external redirects are not permitted',
+                    'code' => 400,
+                ];
+            }
+            $cancelUrl = $this->normalizeRedirectUrl((string) $data['cancel_url'], $origin);
         } elseif ($isCitizen) {
             $cancelParams = 'checkout_status=cancelled&payment_id=' . $paymentId;
             if ($referenceKind === 'schedule') {
@@ -1508,18 +1520,97 @@ class PaymentController {
     }
 
     private function resolveAppOrigin($data = []) {
-        if (!empty($data['origin']) && filter_var($data['origin'], FILTER_VALIDATE_URL)) {
-            $parsed = parse_url($data['origin']);
-            if (!empty($parsed['scheme']) && !empty($parsed['host'])) {
-                return rtrim($data['origin'], '/');
-            }
-        }
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $serverHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $uri = $_SERVER['REQUEST_URI'] ?? '';
         $script = $_SERVER['SCRIPT_NAME'] ?? '';
         $prefix = (strpos($uri, '/CMS') === 0 || strpos($script, '/CMS') === 0) ? '/CMS' : '';
-        return $scheme . '://' . $host . $prefix;
+        $defaultOrigin = $scheme . '://' . $serverHost . $prefix;
+
+        if (!empty($data['origin']) && filter_var($data['origin'], FILTER_VALIDATE_URL)) {
+            $parsed = parse_url($data['origin']);
+            $originHost = strtolower($parsed['host'] ?? '');
+            $expectedHost = strtolower(parse_url('http://' . $serverHost, PHP_URL_HOST) ?? 'localhost');
+            
+            // Allow origin override only if host matches server host, localhost, or 127.0.0.1
+            $trustedHosts = array_unique(array_filter([$expectedHost, 'localhost', '127.0.0.1']));
+            if (!empty($parsed['scheme']) && in_array($originHost, $trustedHosts, true)) {
+                return rtrim($data['origin'], '/');
+            }
+        }
+
+        return $defaultOrigin;
+    }
+
+    /**
+     * Validates whether a given URL is a safe internal redirect for the application.
+     * Prevents arbitrary external redirects / open redirects.
+     */
+    private function isInternalRedirectUrl(string $url, string $origin): bool {
+        $url = trim($url);
+        if ($url === '') {
+            return false;
+        }
+        // Disallow protocol-relative URLs (e.g. //evil.com)
+        if (str_starts_with($url, '//')) {
+            return false;
+        }
+        // Allow relative internal paths starting with a single '/'
+        if (str_starts_with($url, '/')) {
+            return true;
+        }
+        // For absolute URLs, validate structure and host matching
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            return false;
+        }
+        $parsedUrl = parse_url($url);
+        $urlScheme = strtolower($parsedUrl['scheme'] ?? '');
+        if ($urlScheme !== 'http' && $urlScheme !== 'https') {
+            return false;
+        }
+        $urlHost = strtolower($parsedUrl['host'] ?? '');
+        if ($urlHost === '') {
+            return false;
+        }
+
+        $allowedHosts = [];
+        $parsedOrigin = parse_url($origin);
+        if (!empty($parsedOrigin['host'])) {
+            $allowedHosts[] = strtolower($parsedOrigin['host']);
+        }
+        if (!empty($_SERVER['HTTP_HOST'])) {
+            $serverHost = parse_url('http://' . $_SERVER['HTTP_HOST'], PHP_URL_HOST);
+            if (!empty($serverHost)) {
+                $allowedHosts[] = strtolower($serverHost);
+            }
+        }
+        $allowedHosts[] = 'localhost';
+        $allowedHosts[] = '127.0.0.1';
+        $allowedHosts = array_unique(array_filter($allowedHosts));
+
+        if (!in_array($urlHost, $allowedHosts, true)) {
+            return false;
+        }
+
+        // Port check if specified in both
+        if (isset($parsedUrl['port'], $parsedOrigin['port']) && (int) $parsedUrl['port'] !== (int) $parsedOrigin['port']) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Normalizes an internal redirect URL to an absolute URL suitable for PayMongo.
+     */
+    private function normalizeRedirectUrl(string $url, string $origin): string {
+        $url = trim($url);
+        if (str_starts_with($url, '/')) {
+            $parsedOrigin = parse_url($origin);
+            $base = ($parsedOrigin['scheme'] ?? 'http') . '://' . ($parsedOrigin['host'] ?? 'localhost') . (!empty($parsedOrigin['port']) ? ':' . $parsedOrigin['port'] : '');
+            return rtrim($base, '/') . '/' . ltrim($url, '/');
+        }
+        return $url;
     }
 
     /**

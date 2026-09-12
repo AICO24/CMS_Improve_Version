@@ -188,25 +188,45 @@ $adminRes = $paymentController->createCheckoutSession([
 
 $adminActualSuccess = $mockPayMongo->lastSessionAttributes['success_url'] ?? '';
 
-// Also test explicit custom URL override with citizen on their own schedule
-$customSuccess = 'https://custom-domain.com/confirm?id=999';
-$customCancel = 'https://custom-domain.com/cancel?id=999';
+// Test valid internal custom URL override with citizen on their own schedule
+$customInternalSuccess = 'http://localhost/frontend/pages/my-bookings.html?custom_tag=999';
+$customInternalCancel = '/frontend/pages/my-bookings.html?custom_cancel=999';
 $overrideRes = $paymentController->createCheckoutSession([
     'transaction_type' => 'Lot Purchase',
     'reference_id' => $scheduleId1,
     'reference_kind' => 'schedule',
-    'success_url' => $customSuccess,
-    'cancel_url' => $customCancel,
+    'success_url' => $customInternalSuccess,
+    'cancel_url' => $customInternalCancel,
 ], $userCitizen);
 
 $overrideActualSuccess = $mockPayMongo->lastSessionAttributes['success_url'] ?? '';
 $overrideActualCancel = $mockPayMongo->lastSessionAttributes['cancel_url'] ?? '';
 
-report(3, 'Admin default URLs route to payments.html and explicit URL overrides are preserved',
+// Test arbitrary external redirect rejection (security hardening)
+$evilSuccess = 'https://evil-phishing.com/steal';
+$externalRejectedRes = $paymentController->createCheckoutSession([
+    'transaction_type' => 'Lot Purchase',
+    'reference_id' => $scheduleId1,
+    'reference_kind' => 'schedule',
+    'success_url' => $evilSuccess,
+], $userCitizen);
+
+// Test protocol-relative redirect rejection (security hardening)
+$protoRelative = '//evil-phishing.com/steal';
+$protoRejectedRes = $paymentController->createCheckoutSession([
+    'transaction_type' => 'Lot Purchase',
+    'reference_id' => $scheduleId1,
+    'reference_kind' => 'schedule',
+    'success_url' => $protoRelative,
+], $userCitizen);
+
+report(3, 'Admin defaults to payments.html, valid internal overrides preserved, and external redirects blocked',
     strpos($adminActualSuccess, '/frontend/pages/payments.html') !== false
-    && $overrideActualSuccess === $customSuccess
-    && $overrideActualCancel === $customCancel,
-    "Admin: {$adminActualSuccess}, Override: {$overrideActualSuccess}"
+    && $overrideActualSuccess === $customInternalSuccess
+    && strpos($overrideActualCancel, '/frontend/pages/my-bookings.html?custom_cancel=999') !== false
+    && isset($externalRejectedRes['code']) && $externalRejectedRes['code'] === 400
+    && isset($protoRejectedRes['code']) && $protoRejectedRes['code'] === 400,
+    "Admin: {$adminActualSuccess}, Override: {$overrideActualSuccess}, ExtCode: " . ($externalRejectedRes['code'] ?? 'none')
 );
 
 // =========================================================================
