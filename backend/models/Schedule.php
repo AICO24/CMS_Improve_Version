@@ -253,7 +253,23 @@ class Schedule {
               AND s.created_at <= (NOW() - INTERVAL ? DAY)
               AND NOT EXISTS (
                   SELECT 1 FROM payments p
-                  WHERE p.transaction_type = 'Lot Purchase' AND p.reference_id = s.schedule_id
+                  WHERE p.transaction_type = 'Lot Purchase'
+                    AND p.reference_id = s.schedule_id
+                    AND (
+                        p.verification_status = 'Verified'
+                        OR (
+                            p.verification_status = 'Pending'
+                            AND (
+                                p.gateway_provider IS NULL
+                                OR p.gateway_provider != 'paymongo'
+                                OR (
+                                    p.gateway_provider = 'paymongo'
+                                    AND (p.gateway_status IS NULL OR p.gateway_status NOT IN ('expired', 'cancelled', 'failed'))
+                                    AND p.created_at > (NOW() - INTERVAL 1 DAY)
+                                )
+                            )
+                        )
+                    )
               )
             ORDER BY s.created_at ASC
         ");
@@ -293,7 +309,23 @@ class Schedule {
               AND s.stale_notified_at <= (NOW() - INTERVAL ? DAY)
               AND NOT EXISTS (
                   SELECT 1 FROM payments p
-                  WHERE p.transaction_type = 'Lot Purchase' AND p.reference_id = s.schedule_id
+                  WHERE p.transaction_type = 'Lot Purchase'
+                    AND p.reference_id = s.schedule_id
+                    AND (
+                        p.verification_status = 'Verified'
+                        OR (
+                            p.verification_status = 'Pending'
+                            AND (
+                                p.gateway_provider IS NULL
+                                OR p.gateway_provider != 'paymongo'
+                                OR (
+                                    p.gateway_provider = 'paymongo'
+                                    AND (p.gateway_status IS NULL OR p.gateway_status NOT IN ('expired', 'cancelled', 'failed'))
+                                    AND p.created_at > (NOW() - INTERVAL 1 DAY)
+                                )
+                            )
+                        )
+                    )
               )
             ORDER BY s.created_at ASC
         ");
@@ -357,7 +389,23 @@ class Schedule {
               AND s.final_warning_notified_at <= (NOW() - INTERVAL ? DAY)
               AND NOT EXISTS (
                   SELECT 1 FROM payments p
-                  WHERE p.transaction_type = 'Lot Purchase' AND p.reference_id = s.schedule_id
+                  WHERE p.transaction_type = 'Lot Purchase'
+                    AND p.reference_id = s.schedule_id
+                    AND (
+                        p.verification_status = 'Verified'
+                        OR (
+                            p.verification_status = 'Pending'
+                            AND (
+                                p.gateway_provider IS NULL
+                                OR p.gateway_provider != 'paymongo'
+                                OR (
+                                    p.gateway_provider = 'paymongo'
+                                    AND (p.gateway_status IS NULL OR p.gateway_status NOT IN ('expired', 'cancelled', 'failed'))
+                                    AND p.created_at > (NOW() - INTERVAL 1 DAY)
+                                )
+                            )
+                        )
+                    )
               )
             ORDER BY s.created_at ASC
         ");
@@ -376,7 +424,23 @@ class Schedule {
               AND s.status = 'Pending'
               AND NOT EXISTS (
                   SELECT 1 FROM payments p
-                  WHERE p.transaction_type = 'Lot Purchase' AND p.reference_id = s.schedule_id
+                  WHERE p.transaction_type = 'Lot Purchase'
+                    AND p.reference_id = s.schedule_id
+                    AND (
+                        p.verification_status = 'Verified'
+                        OR (
+                            p.verification_status = 'Pending'
+                            AND (
+                                p.gateway_provider IS NULL
+                                OR p.gateway_provider != 'paymongo'
+                                OR (
+                                    p.gateway_provider = 'paymongo'
+                                    AND (p.gateway_status IS NULL OR p.gateway_status NOT IN ('expired', 'cancelled', 'failed'))
+                                    AND p.created_at > (NOW() - INTERVAL 1 DAY)
+                                )
+                            )
+                        )
+                    )
               )
         ");
         $stmt->execute([(int) $scheduleId]);

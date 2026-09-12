@@ -799,7 +799,7 @@ class PaymentController {
         // changed status in the moment between the check above and here
         // raises a reviewable exception instead of silently overwriting it.
         $adminActor = ['user_id' => $adminId, 'role' => 'admin'];
-        AutomationEngine::run(
+        return AutomationEngine::run(
             'payment.verified',
             'Lot',
             $lotId,
@@ -844,20 +844,20 @@ class PaymentController {
     // to trust for rows created before this migration).
     private function autoConfirmScheduleForVerifiedPurchase($payment, $adminId) {
         if (empty($payment['reference_id']) || ($payment['reference_kind'] ?? null) === 'lot') {
-            return;
+            return null;
         }
 
         $scheduleModel = new Schedule();
         $schedule = $scheduleModel->findById($payment['reference_id']);
         if (!$schedule || in_array($schedule['status'], ['Confirmed', 'Completed', 'Cancelled'], true)) {
-            return;
+            return null;
         }
 
         $scheduleId = $schedule['schedule_id'];
         $adminActor = ['user_id' => $adminId, 'role' => 'admin'];
         $lotModel = new Lot();
 
-        AutomationEngine::run(
+        return AutomationEngine::run(
             'payment.verified',
             'Schedule',
             $scheduleId,
@@ -1314,6 +1314,29 @@ class PaymentController {
         $authoritativeCents = (int) $priceResult['amount_cents'];
         $referenceLabel = $priceResult['reference_label'] ?? ('Lot ' . $referenceId);
 
+        // 3.5. Batch 10B: Concurrency check - active lot checkout lease
+        $targetLotId = null;
+        if ($referenceKind === 'lot') {
+            $targetLotId = (int) $referenceId;
+        } elseif ($referenceKind === 'schedule') {
+            $scheduleModel = new Schedule();
+            $targetSched = $scheduleModel->findById($referenceId);
+            if ($targetSched && !empty($targetSched['lot_id'])) {
+                $targetLotId = (int) $targetSched['lot_id'];
+            }
+        }
+
+        if ($targetLotId !== null) {
+            $activeLease = $this->paymentModel->findActiveLotCheckoutLease($targetLotId, $payment['payment_id'] ?? null, $userId);
+            if ($activeLease) {
+                return [
+                    'error' => 'This lot is currently held by another active checkout session. Please try again later.',
+                    'reason_code' => 'lot_held_checkout',
+                    'code' => 409,
+                ];
+            }
+        }
+
         // 4. Locate or create the Pending CMS Payment row
         if (!$payment) {
             $payment = $this->paymentModel->findPendingByReference('Lot Purchase', $referenceId, $referenceKind, $userId);
@@ -1389,7 +1412,10 @@ class PaymentController {
         }
 
         // 7. Deterministic idempotency key derived from stable CMS payment identity
-        $idempotencyKey = 'cms_cs_payment_' . $paymentId . '_' . $authoritativeCents;
+        // Batch 10B: If retrying after an existing checkout session on this payment,
+        // use a retry suffix so PayMongo creates a new session instead of returning the stale/expired one.
+        $isRetry = !empty($payment['gateway_checkout_session_id']);
+        $idempotencyKey = 'cms_cs_payment_' . $paymentId . '_' . $authoritativeCents . ($isRetry ? '_retry_' . time() : '');
 
         // 8. Construct official PayMongo Checkout Session payload
         $origin = $this->resolveAppOrigin($data);
@@ -1927,13 +1953,217 @@ class PaymentController {
     }
 
     /**
+     * Batch 10B: Detects if a verified payment cannot finalize due to resource collision/unavailability.
+     *
+     * @param array $payment
+     * @return string|null Reason string if collision detected, or null if resource is available/fulfilled.
+     */
+    public function detectResourceCollisionForVerifiedPurchase(array $payment): ?string {
+        if ($payment['transaction_type'] !== 'Lot Purchase') {
+            return null;
+        }
+
+        $referenceKind = $payment['reference_kind'] ?? null;
+        $referenceId = $payment['reference_id'] ?? null;
+        if (empty($referenceId)) {
+            return null;
+        }
+
+        $scheduleModel = new Schedule();
+        $lotModel = new Lot();
+
+        if ($referenceKind === 'schedule') {
+            $schedule = $scheduleModel->findById($referenceId);
+            if (!$schedule) {
+                return 'Associated burial schedule not found';
+            }
+            if ($schedule['status'] === 'Cancelled') {
+                return 'Associated burial schedule was cancelled';
+            }
+            if (empty($schedule['lot_id'])) {
+                return 'Burial schedule has no assigned lot';
+            }
+
+            $lot = $lotModel->findById($schedule['lot_id']);
+            if (!$lot) {
+                return 'Assigned lot not found';
+            }
+
+            // If the schedule is already confirmed, this is an idempotent re-run, not a collision
+            if ($schedule['status'] === 'Confirmed' || $schedule['status'] === 'Completed') {
+                return null;
+            }
+
+            // If the lot is neither Available nor Reserved, it cannot be booked
+            if (!in_array($lot['status'], ['Available', 'Reserved'], true)) {
+                return 'Lot ' . ($lot['lot_number'] ?? $lot['lot_id']) . ' is unavailable (status: ' . $lot['status'] . ')';
+            }
+
+            // Check if there is another active schedule on the exact same lot and date/time
+            $db = Database::getInstance()->getConnection();
+            $stmtConflict = $db->prepare("
+                SELECT schedule_id FROM burial_schedules
+                WHERE lot_id = ?
+                  AND schedule_date = ?
+                  AND (schedule_time = ? OR (? IS NULL AND schedule_time IS NULL))
+                  AND status IN ('Pending', 'Confirmed')
+                  AND schedule_id != ?
+                LIMIT 1
+            ");
+            $stmtConflict->execute([
+                $schedule['lot_id'],
+                $schedule['schedule_date'],
+                $schedule['schedule_time'],
+                $schedule['schedule_time'],
+                $schedule['schedule_id'],
+            ]);
+            $conflictScheduleId = $stmtConflict->fetchColumn();
+            if ($conflictScheduleId) {
+                return 'Schedule slot collision with schedule #' . $conflictScheduleId;
+            }
+
+            return null;
+        }
+
+        if ($referenceKind === 'lot') {
+            $lot = $lotModel->findById($referenceId);
+            if (!$lot) {
+                return 'Purchased lot not found';
+            }
+            if (!in_array($lot['status'], ['Available', 'Reserved'], true)) {
+                return 'Lot ' . ($lot['lot_number'] ?? $lot['lot_id']) . ' is unavailable (status: ' . $lot['status'] . ')';
+            }
+            return null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Batch 10B: Handles resource collision on a verified payment:
+     * - Marks deterministic failure state on payment notes ([RESOURCE_COLLISION: ...])
+     * - Logs immutable audit event
+     * - Raises system exception for admin review
+     * - Dispatches citizen notification & email
+     * - Triggers automated refund via RefundService::processRefund()
+     */
+    public function handleResourceCollisionRefund(array $payment, string $reason, ?int $adminId = null): array {
+        $paymentId = (int) $payment['payment_id'];
+        $db = Database::getInstance()->getConnection();
+
+        // 1. Mark deterministic failure state on payment notes
+        $collisionMarker = '[RESOURCE_COLLISION: ' . $reason . ']';
+        $currentNotes = $payment['notes'] ?? '';
+        if (strpos($currentNotes, '[RESOURCE_COLLISION') === false) {
+            $updatedNotes = trim($currentNotes . ' ' . $collisionMarker);
+            $stmt = $db->prepare("UPDATE payments SET notes = ? WHERE payment_id = ?");
+            $stmt->execute([$updatedNotes, $paymentId]);
+            $payment['notes'] = $updatedNotes;
+        }
+
+        // 2. Immutable audit logging
+        $this->auditLogModel->log(
+            'Payment resource collision detected',
+            $adminId,
+            null,
+            'Payment',
+            $paymentId,
+            [
+                'reason' => $reason,
+                'amount' => $payment['amount'],
+                'reference_id' => $payment['reference_id'] ?? null,
+                'reference_kind' => $payment['reference_kind'] ?? null,
+            ]
+        );
+
+        // 3. System exception for admin visibility
+        $exceptionModel = new SystemException();
+        $exceptionModel->raise([
+            'event' => 'payment.resource_collision',
+            'entity_type' => 'Payment',
+            'entity_id' => $paymentId,
+            'reason' => 'Resource collision on verified payment: ' . $reason,
+            'severity' => 'critical',
+        ]);
+
+        // 4. In-app Notification & Email
+        $notificationModel = new Notification();
+        $notificationModel->create([
+            'title' => 'Burial Resource Unavailable - Refund Initiated',
+            'message' => 'Payment was verified for receipt ' . ($payment['receipt_number'] ?? '') . ', but the requested lot/schedule is no longer available (' . $reason . '). An automated refund has been initiated.',
+            'notification_type' => 'Payment',
+            'user_id' => !empty($payment['received_by']) ? (int) $payment['received_by'] : null,
+            'is_read' => 0,
+        ]);
+
+        if (!empty($payment['received_by'])) {
+            $userModel = new User();
+            $user = $userModel->findById($payment['received_by']);
+            if (!empty($user['email'])) {
+                $this->sendEmail(
+                    $user['email'],
+                    'Payment Verified - Resource Collision Refund',
+                    'Your payment of PHP ' . number_format((float) $payment['amount'], 2) . ' for receipt ' . ($payment['receipt_number'] ?? '') . ' was verified, but the requested cemetery resource is no longer available (' . $reason . '). An automated refund has been initiated.'
+                );
+            }
+        }
+
+        // 5. Automated refund via existing RefundService
+        require_once __DIR__ . '/../services/RefundService.php';
+        $refundService = new RefundService();
+        $refundKey = 'cms_collision_refund_' . $paymentId;
+        $refundResult = $refundService->processRefund(
+            $paymentId,
+            $payment['amount'],
+            'others',
+            'Automated refund: burial resource collision (' . $reason . ')',
+            ['user_id' => $adminId ?? 1, 'role' => 'admin', 'username' => 'system'],
+            $refundKey
+        );
+
+        $this->auditLogModel->log(
+            'Collision refund initiated',
+            $adminId,
+            null,
+            'Payment',
+            $paymentId,
+            [
+                'refund_key' => $refundKey,
+                'result' => $refundResult,
+            ]
+        );
+
+        return [
+            'collision' => true,
+            'reason' => $reason,
+            'refund' => $refundResult,
+        ];
+    }
+
+    /**
      * Batch 8: Centralized trigger for post-verification automations (Lot reservation, Schedule confirmation, etc.)
      * Used by both Webhook Receiver (Batch 4) and ReconciliationService (Batch 8).
+     * Batch 10B: Hardened with resource collision detection and automated refund triggering.
      */
     public function triggerPostVerificationAutomation(array $payment, ?int $adminId = null): void {
         if ($payment['transaction_type'] === 'Lot Purchase') {
-            $this->syncLotStatusForVerifiedPurchase($payment, $adminId);
-            $this->autoConfirmScheduleForVerifiedPurchase($payment, $adminId);
+            $collisionReason = $this->detectResourceCollisionForVerifiedPurchase($payment);
+            if ($collisionReason !== null) {
+                $this->handleResourceCollisionRefund($payment, $collisionReason, $adminId);
+                return;
+            }
+
+            $lotResult = $this->syncLotStatusForVerifiedPurchase($payment, $adminId);
+            if (is_array($lotResult) && !empty($lotResult['exception'])) {
+                $this->handleResourceCollisionRefund($payment, 'Lot reservation automation failed: ' . ($lotResult['reason'] ?? 'status change'), $adminId);
+                return;
+            }
+
+            $schedResult = $this->autoConfirmScheduleForVerifiedPurchase($payment, $adminId);
+            if (is_array($schedResult) && !empty($schedResult['exception'])) {
+                $this->handleResourceCollisionRefund($payment, 'Schedule confirmation automation failed: ' . ($schedResult['reason'] ?? 'status change'), $adminId);
+                return;
+            }
         } elseif ($payment['transaction_type'] === 'Cremation') {
             $this->autoConfirmCremationForVerifiedPayment($payment, $adminId);
             $this->autoUpdateCremationForVerifiedPayment($payment, $adminId);

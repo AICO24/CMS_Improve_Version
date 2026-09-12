@@ -1070,6 +1070,23 @@ class ScheduleController {
             }
 
             $this->transitionLotStatus($schedule['lot_id'], 'Available', null, 'schedule.auto_cancelled_unpaid');
+
+            // Batch 10B (Task 1 & 5): Expire any in-flight/abandoned PayMongo payment for this schedule.
+            // Preserves payment records safely without deletion.
+            $db = Database::getInstance()->getConnection();
+            $stmtPay = $db->prepare("
+                UPDATE payments
+                SET gateway_status = 'expired',
+                    notes = CONCAT(COALESCE(notes, ''), ' [AUTO_CANCELLED_STALE_SCHEDULE]')
+                WHERE transaction_type = 'Lot Purchase'
+                  AND reference_id = ?
+                  AND reference_kind = 'schedule'
+                  AND gateway_provider = 'paymongo'
+                  AND verification_status = 'Pending'
+                  AND (gateway_status IS NULL OR gateway_status NOT IN ('expired', 'cancelled', 'failed'))
+            ");
+            $stmtPay->execute([$scheduleId]);
+
             $this->auditLogModel->log(
                 'Schedule automatically cancelled (no payment within policy window)',
                 null,

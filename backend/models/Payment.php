@@ -279,6 +279,47 @@ class Payment {
     }
 
     /**
+     * Batch 10B: Checks if an active PayMongo checkout lease currently locks a lot.
+     * An active lease is a pending PayMongo payment created within the lease window (1 hour)
+     * whose gateway status is not expired, cancelled, or failed.
+     *
+     * @param int $lotId
+     * @param int|null $excludePaymentId
+     * @param int|null $excludeUserId
+     * @return array|null
+     */
+    public function findActiveLotCheckoutLease($lotId, $excludePaymentId = null, $excludeUserId = null) {
+        $sql = "
+            SELECT p.*
+            FROM payments p
+            LEFT JOIN burial_schedules s ON p.reference_kind = 'schedule' AND p.reference_id = s.schedule_id
+            WHERE p.transaction_type = 'Lot Purchase'
+              AND p.verification_status = 'Pending'
+              AND p.gateway_provider = 'paymongo'
+              AND (p.gateway_status IS NULL OR p.gateway_status NOT IN ('expired', 'cancelled', 'failed'))
+              AND p.created_at > (NOW() - INTERVAL 1 HOUR)
+              AND (
+                  (p.reference_kind = 'lot' AND p.reference_id = ?)
+                  OR (p.reference_kind = 'schedule' AND s.lot_id = ? AND s.status = 'Pending')
+              )
+        ";
+        $params = [(int) $lotId, (int) $lotId];
+        if ($excludePaymentId !== null) {
+            $sql .= " AND p.payment_id != ?";
+            $params[] = (int) $excludePaymentId;
+        }
+        if ($excludeUserId !== null) {
+            $sql .= " AND p.received_by != ?";
+            $params[] = (int) $excludeUserId;
+        }
+        $sql .= " ORDER BY p.payment_id DESC LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    /**
      * Batch 8: Identifies stale Pending gateway payment records that missed their webhook confirmation.
      *
      * Finds payments that are in Pending verification_status, have a stored Hosted Checkout

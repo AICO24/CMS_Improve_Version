@@ -1027,6 +1027,18 @@ class BookingAgentService {
                     throw new BookingDraftException("This lot is no longer available for booking", 'LOT_NOT_AVAILABLE', 409);
                 }
 
+                // 2.5 Active Lot Checkout Lease Check (Batch 10B)
+                require_once __DIR__ . '/../models/Payment.php';
+                $paymentModel = new Payment();
+                $activeLease = $paymentModel->findActiveLotCheckoutLease($lotId, null, $userId);
+                if ($activeLease) {
+                    throw new BookingDraftException(
+                        "This lot is currently held by an active checkout session in progress. Please try again later.",
+                        'LOT_HELD_CHECKOUT',
+                        409
+                    );
+                }
+
                 // 3. Locking read for schedule slot
                 $this->scheduleModel->lockScheduleRangeForLot($lotId);
 
@@ -1156,6 +1168,9 @@ class BookingAgentService {
                 }
                 if (!empty($checkoutResult['code'])) {
                     $outcome['checkout_code'] = (int) $checkoutResult['code'];
+                }
+                if (!empty($checkoutResult['error'])) {
+                    $outcome['checkout_error'] = $checkoutResult['error'];
                 }
             }
 
