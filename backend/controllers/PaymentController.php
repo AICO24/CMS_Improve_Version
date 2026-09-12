@@ -1645,6 +1645,13 @@ class PaymentController {
         }
 
         if (trim((string) $signatureHeader) === '') {
+            $this->systemExceptionModel->raise([
+                'event' => 'payment.webhook_missing_signature',
+                'entity_type' => 'Payment',
+                'entity_id' => 0,
+                'reason' => 'Missing Paymongo-Signature header in webhook request',
+                'severity' => 'warning',
+            ]);
             return ['error' => 'Missing Paymongo-Signature header', 'code' => 401];
         }
 
@@ -1658,6 +1665,13 @@ class PaymentController {
 
         // 4. Verify HMAC-SHA256 signature
         if (!$this->verifyWebhookSignature($rawBody, $signatureHeader, $webhookSecret)) {
+            $this->systemExceptionModel->raise([
+                'event' => 'payment.webhook_invalid_signature',
+                'entity_type' => 'Payment',
+                'entity_id' => 0,
+                'reason' => 'Invalid webhook signature provided',
+                'severity' => 'warning',
+            ]);
             return ['error' => 'Invalid webhook signature', 'code' => 401];
         }
 
@@ -2599,5 +2613,52 @@ class PaymentController {
 
         $refundService = $this->getRefundService();
         return $refundService->processRefund($paymentId, $amount, $reason, $notes, $user, $idempotencyKey);
+    }
+
+    /**
+     * Batch 10D: Safe payment readiness diagnostics for authorized administrators/developers.
+     * Evaluates sandbox readiness without exposing secret keys, webhook secrets, or auth headers.
+     *
+     * @param array|null $user Authenticated user context
+     * @return array Safe readiness summary
+     */
+    public function getGatewayReadiness(?array $user = null): array {
+        if ($user !== null) {
+            $userRole = strtolower(trim((string) ($user['role'] ?? '')));
+            if ($userRole !== 'admin') {
+                return [
+                    'error' => 'Unauthorized: Only administrators can access payment gateway readiness',
+                    'code' => 403,
+                ];
+            }
+        }
+
+        require_once __DIR__ . '/../services/PayMongoService.php';
+        $payMongoService = $this->payMongoService ?? new PayMongoService();
+
+        $isConfigured = $payMongoService->isConfigured();
+        $mode = $payMongoService->getMode();
+        $configValidation = $payMongoService->validateConfig();
+
+        EnvironmentService::loadEnvironment();
+        $webhookSecret = trim((string) EnvironmentService::get('PAYMONGO_WEBHOOK_SECRET', ''));
+        $hasWebhookSecret = ($webhookSecret !== '');
+
+        $hasPublicKey = trim((string) EnvironmentService::get('PAYMONGO_PUBLIC_KEY', '')) !== '';
+        $checkoutAvailable = $isConfigured && $configValidation['valid'];
+        $isReady = $checkoutAvailable && $hasWebhookSecret;
+
+        return [
+            'success' => true,
+            'ready' => $isReady,
+            'paymongo_configured' => $isConfigured,
+            'environment' => $mode,
+            'webhook_endpoint_configured' => $hasWebhookSecret,
+            'checkout_available' => $checkoutAvailable,
+            'has_public_key' => $hasPublicKey,
+            'config_valid' => $configValidation['valid'],
+            'config_errors' => $configValidation['errors'] ?? [],
+            'code' => 200,
+        ];
     }
 }

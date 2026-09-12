@@ -876,6 +876,15 @@ if ($path === 'payments/stale-gateway' && $requestMethod === 'GET') {
     exit;
 }
 
+if ($path === 'payments/readiness' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin']);
+    $result = $paymentController->getGatewayReadiness($user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 if ($path === 'payments/checkout-session' && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $input = readRequestBody();
