@@ -82,7 +82,7 @@ $systemExceptionModel = new SystemException();
 // Clean up prior test records (respecting FK constraints)
 $db->exec("DELETE FROM refunds WHERE payment_id IN (SELECT payment_id FROM payments WHERE notes LIKE '%BATCH8_TEST%') OR notes LIKE '%BATCH8_TEST%'");
 $db->exec("DELETE FROM payments WHERE notes LIKE '%BATCH8_TEST%'");
-$db->exec("DELETE FROM audit_logs WHERE action LIKE '%reconcil%' AND details LIKE '%BATCH8_TEST%'");
+$db->exec("DELETE FROM audit_logs WHERE action LIKE '%reconcil%'");
 
 // Set PayMongo environment to test
 putenv("PAYMONGO_ENV=test");
