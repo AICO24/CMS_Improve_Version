@@ -337,6 +337,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             const payment = await api.request(`payments/${id}`, { method: 'GET' });
             const schedule = await loadReservationDetails(payment);
+            const isPayMongo = (payment.payment_method && payment.payment_method.toLowerCase() === 'paymongo') ||
+                               (payment.gateway_provider && payment.gateway_provider.toLowerCase() === 'paymongo');
             const details = `
                 <div class="payment-detail-summary">
                     <div>
@@ -370,7 +372,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 ` : ''}
                 ${currentUser && currentUser.role === 'admin' && payment.verification_status === 'Pending' ? `
                     <div class="action-buttons admin-verification-actions">
-                        <button id="verifyPaymentBtn" class="btn-verify"><i class="fas fa-check"></i> Verify</button>
+                        ${!isPayMongo ? '<button id="verifyPaymentBtn" class="btn-verify"><i class="fas fa-check"></i> Verify</button>' : '<button class="btn-verify" disabled title="PayMongo payments cannot be manually verified (automated via webhook)" style="opacity: 0.5; cursor: not-allowed;"><i class="fas fa-lock"></i> Gateway Managed</button>'}
                         <button id="rejectPaymentBtn" class="btn-reject"><i class="fas fa-times"></i> Reject</button>
                     </div>
                 ` : ''}

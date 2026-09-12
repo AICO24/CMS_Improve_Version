@@ -364,6 +364,14 @@ class PaymentController {
             return ['error' => 'Amount must be a positive number', 'code' => 400];
         }
 
+        // Batch 10A: Block fake manual PayMongo payment records
+        if (strcasecmp(trim((string) $data['payment_method']), 'PayMongo') === 0) {
+            return [
+                'error' => 'PayMongo payments cannot be recorded manually. Please initiate online payment via the checkout session flow.',
+                'code' => 400,
+            ];
+        }
+
         $transactionType = $this->normalizeTransactionType($data['transaction_type']);
         if ($transactionType === null) {
             return ['error' => 'Invalid transaction type', 'code' => 400];
@@ -427,6 +435,32 @@ class PaymentController {
         return ['error' => 'Failed to record payment', 'code' => 500];
     }
 
+    /**
+     * Batch 10A: Checks if a payment has an active, non-terminal PayMongo checkout session.
+     */
+    private function hasActiveGatewaySession(array $payment): bool {
+        if (empty($payment['gateway_checkout_session_id'])) {
+            return false;
+        }
+
+        $isPayMongo = strcasecmp((string) ($payment['gateway_provider'] ?? ''), 'paymongo') === 0
+                   || strcasecmp((string) ($payment['payment_method'] ?? ''), 'PayMongo') === 0;
+        if (!$isPayMongo) {
+            return false;
+        }
+
+        if (($payment['verification_status'] ?? '') !== 'Pending') {
+            return false;
+        }
+
+        $gatewayStatus = strtolower(trim((string) ($payment['gateway_status'] ?? '')));
+        if (in_array($gatewayStatus, ['paid', 'succeeded', 'expired', 'cancelled', 'failed'], true)) {
+            return false;
+        }
+
+        return true;
+    }
+
     public function update($id, $data, $user) {
         $existing = $this->paymentModel->findById($id);
         if (!$existing) {
@@ -447,6 +481,43 @@ class PaymentController {
         if (!$isStaffOrAdmin) {
             if ((int) $existing['received_by'] !== (int) $userId) {
                 return ['error' => 'You may only update your own payments', 'code' => 403];
+            }
+        }
+
+        // Batch 10A: Protect active PayMongo checkout sessions against parameter tampering
+        if ($this->hasActiveGatewaySession($existing)) {
+            if (isset($data['amount']) && abs((float) $data['amount'] - (float) $existing['amount']) > 0.001) {
+                return [
+                    'error' => 'Cannot modify amount for a payment with an active PayMongo checkout session',
+                    'code' => 409,
+                ];
+            }
+            if (array_key_exists('reference_id', $data) && (string) $data['reference_id'] !== (string) $existing['reference_id']) {
+                return [
+                    'error' => 'Cannot modify reference_id for a payment with an active PayMongo checkout session',
+                    'code' => 409,
+                ];
+            }
+            if (array_key_exists('reference_kind', $data) && (string) ($data['reference_kind'] ?? '') !== (string) ($existing['reference_kind'] ?? '')) {
+                return [
+                    'error' => 'Cannot modify reference_kind for a payment with an active PayMongo checkout session',
+                    'code' => 409,
+                ];
+            }
+            if (array_key_exists('payment_method', $data) && strcasecmp(trim((string) $data['payment_method']), trim((string) $existing['payment_method'])) !== 0) {
+                return [
+                    'error' => 'Cannot modify payment_method for a payment with an active PayMongo checkout session',
+                    'code' => 409,
+                ];
+            }
+            if (array_key_exists('transaction_type', $data)) {
+                $newType = $this->normalizeTransactionType($data['transaction_type']);
+                if (strcasecmp((string) $newType, (string) $existing['transaction_type']) !== 0) {
+                    return [
+                        'error' => 'Cannot modify transaction_type for a payment with an active PayMongo checkout session',
+                        'code' => 409,
+                    ];
+                }
             }
         }
 
@@ -564,6 +635,16 @@ class PaymentController {
 
         if (!in_array($status, ['Verified', 'Rejected'], true)) {
             return ['error' => 'Invalid verification status', 'code' => 400];
+        }
+
+        // Batch 10A: PayMongo payments MUST NOT be manually verified
+        $isPayMongo = strcasecmp((string) ($payment['gateway_provider'] ?? ''), 'paymongo') === 0
+                   || strcasecmp((string) ($payment['payment_method'] ?? ''), 'PayMongo') === 0;
+        if ($isPayMongo && $status === 'Verified') {
+            return [
+                'error' => 'PayMongo payments cannot be manually verified. Verification is handled automatically via gateway webhook or reconciliation.',
+                'code' => 400,
+            ];
         }
 
         // Batch L2.4: everything that must land atomically (the claim itself,
@@ -986,6 +1067,13 @@ class PaymentController {
 
         $updated = 0;
         foreach ($pendingPayments as $payment) {
+            // Batch 10A: Skip PayMongo payments in bulk manual verification
+            $isPayMongo = strcasecmp((string) ($payment['gateway_provider'] ?? ''), 'paymongo') === 0
+                       || strcasecmp((string) ($payment['payment_method'] ?? ''), 'PayMongo') === 0;
+            if ($isPayMongo) {
+                continue;
+            }
+
             $result = $this->verify($payment['payment_id'], $status, $adminId);
             if (!empty($result['success'])) {
                 $updated++;
@@ -1089,6 +1177,14 @@ class PaymentController {
 
         if (($existing['verification_status'] ?? 'Pending') === 'Verified') {
             return ['error' => 'Verified payments cannot be deleted', 'code' => 403];
+        }
+
+        // Batch 10A: Reject deletion of payments with an active PayMongo checkout session
+        if ($this->hasActiveGatewaySession($existing)) {
+            return [
+                'error' => 'Cannot delete payment with an active PayMongo checkout session',
+                'code' => 409,
+            ];
         }
 
         $result = $this->paymentModel->delete($id);
@@ -2033,8 +2129,9 @@ class PaymentController {
     }
 
     /**
-     * Batch 4: Verifies PayMongo webhook signatures.
-     * Supports standard PayMongo header (t=...,te=...,li=...) as well as direct HMAC.
+     * Batch 4 & Batch 10A: Verifies PayMongo webhook signatures.
+     * Enforces timestamp freshness (PayMongo 300-second tolerance) and protects against
+     * signature replay attacks. Direct HMAC fallback is strictly disallowed in production.
      */
     public function verifyWebhookSignature(string $rawBody, string $signatureHeader, string $secret): bool {
         if ($secret === '' || trim($signatureHeader) === '') {
@@ -2058,7 +2155,22 @@ class PaymentController {
         $liveSig = $parsed['li'] ?? null;
 
         if ($timestamp !== null) {
-            $timePayload = $timestamp . '.' . $rawBody;
+            $tsStr = trim((string) $timestamp);
+            if ($tsStr === '' || !ctype_digit($tsStr)) {
+                return false;
+            }
+            $ts = (int) $tsStr;
+            if ($ts <= 0) {
+                return false;
+            }
+
+            $currentTime = time();
+            $tolerance = 300; // 5 minutes standard tolerance window
+            if (abs($currentTime - $ts) > $tolerance) {
+                return false;
+            }
+
+            $timePayload = $tsStr . '.' . $rawBody;
             $computedTimeHash = hash_hmac('sha256', $timePayload, $secret);
 
             if (!empty($testSig) && hash_equals($computedTimeHash, $testSig)) {
@@ -2067,9 +2179,21 @@ class PaymentController {
             if (!empty($liveSig) && hash_equals($computedTimeHash, $liveSig)) {
                 return true;
             }
+
+            return false;
         }
 
-        // Direct check against parsed te or li (when sent without timestamp)
+        // 2. Direct HMAC match fallback without timestamp
+        // Batch 10A: Strictly rejected in production or live mode to prevent timestamp bypass
+        $appEnv = strtolower(trim((string) ($_ENV['APP_ENV'] ?? getenv('APP_ENV') ?: EnvironmentService::get('APP_ENV', 'local'))));
+        $pmEnv = strtolower(trim((string) ($_ENV['PAYMONGO_ENV'] ?? getenv('PAYMONGO_ENV') ?: EnvironmentService::get('PAYMONGO_ENV', 'test'))));
+        $isProductionOrLive = ($appEnv === 'production' || $pmEnv === 'live' || $pmEnv === 'production');
+
+        if ($isProductionOrLive) {
+            return false;
+        }
+
+        // Development / test fallback for raw HMAC signatures (legacy test compatibility)
         if (!empty($testSig) && hash_equals(hash_hmac('sha256', $rawBody, $secret), $testSig)) {
             return true;
         }
@@ -2077,7 +2201,6 @@ class PaymentController {
             return true;
         }
 
-        // 2. Direct HMAC match fallback (for backward-compatibility with tests / raw signatures)
         $directHash = hash_hmac('sha256', $rawBody, $secret);
         if (hash_equals($directHash, $trimmedHeader)) {
             return true;
