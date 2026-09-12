@@ -42,6 +42,38 @@
                     bookingTypeFilter.value = normalizedType;
                 }
             }
+
+            // Batch 10C: Handle PayMongo checkout redirect back to citizen My Bookings
+            const checkoutStatus = urlParams.get('checkout_status');
+            if (checkoutStatus) {
+                const alertEl = document.getElementById('checkoutStatusAlert');
+                if (alertEl) {
+                    if (checkoutStatus === 'success') {
+                        alertEl.style.display = 'flex';
+                        alertEl.style.background = '#f0fdf4';
+                        alertEl.style.border = '1px solid #bbf7d0';
+                        alertEl.style.color = '#166534';
+                        alertEl.innerHTML = '<i class="fas fa-circle-check" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Payment submitted successfully!</strong> Verification is awaiting gateway webhook confirmation. Your booking will update automatically once verified.</div>';
+                        if (typeof showToast === 'function') {
+                            showToast('Payment submitted successfully! Awaiting webhook verification.', 'success');
+                        }
+                    } else if (checkoutStatus === 'cancelled') {
+                        alertEl.style.display = 'flex';
+                        alertEl.style.background = '#fffbeb';
+                        alertEl.style.border = '1px solid #fde68a';
+                        alertEl.style.color = '#92400e';
+                        alertEl.innerHTML = '<i class="fas fa-triangle-exclamation" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Checkout session cancelled.</strong> Your reservation remains Pending. You can complete or retry payment at any time.</div>';
+                        if (typeof showToast === 'function') {
+                            showToast('Checkout was cancelled. Your reservation remains Pending.', 'warning');
+                        }
+                    }
+                }
+                urlParams.delete('checkout_status');
+                urlParams.delete('payment_id');
+                const newSearch = urlParams.toString();
+                const cleanUrl = window.location.pathname + (newSearch ? '?' + newSearch : '');
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
         } catch (e) {
             console.warn('Failed to parse URL query params:', e);
         }
@@ -72,6 +104,15 @@
         if (bookingTypeFilter) {
             bookingTypeFilter.addEventListener('change', () => {
                 loadUnifiedBookings();
+            });
+        }
+
+        const refreshBtn = document.getElementById('refreshBookingsBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', async () => {
+                refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                await loadUnifiedBookings();
+                refreshBtn.innerHTML = '<i class="fas fa-rotate"></i>';
             });
         }
 
@@ -283,6 +324,100 @@
         }
     }
 
+    function resolvePaymentDisplay(record, isDraft, serviceType) {
+        if (isDraft) {
+            return {
+                statusText: 'Draft In Progress',
+                badgeBg: '#fef3c7',
+                badgeColor: '#92400e',
+                canPayOnline: false,
+                buttonLabel: null,
+                explanation: 'Complete booking draft to finalize schedule and online checkout.'
+            };
+        }
+
+        const refundStatus = record.refund_status;
+        const pStatus = record.payment_status;
+        const gwStatus = record.gateway_status;
+        const hasSession = !!record.gateway_checkout_session_id;
+        const bStatus = String(record.status || '').toUpperCase();
+
+        if (refundStatus === 'Succeeded') {
+            return {
+                statusText: 'Refunded',
+                badgeBg: '#e0e7ff',
+                badgeColor: '#3730a3',
+                canPayOnline: false,
+                buttonLabel: null,
+                explanation: 'Payment was refunded via PayMongo.'
+            };
+        }
+
+        if (refundStatus === 'Pending' || refundStatus === 'Processing') {
+            return {
+                statusText: 'Refund Pending',
+                badgeBg: '#fef3c7',
+                badgeColor: '#b45309',
+                canPayOnline: false,
+                buttonLabel: null,
+                explanation: 'A refund is currently processing with the gateway.'
+            };
+        }
+
+        if (pStatus === 'Verified') {
+            return {
+                statusText: 'Payment Verified',
+                badgeBg: '#dcfce7',
+                badgeColor: '#166534',
+                canPayOnline: false,
+                buttonLabel: null,
+                explanation: bStatus === 'CONFIRMED' ? 'Payment verified and schedule confirmed.' : 'Payment verified by gateway webhook.'
+            };
+        }
+
+        if (gwStatus === 'expired' || gwStatus === 'cancelled') {
+            return {
+                statusText: 'Payment Expired / Cancelled',
+                badgeBg: '#fee2e2',
+                badgeColor: '#991b1b',
+                canPayOnline: serviceType === 'burial' && bStatus !== 'CANCELLED',
+                buttonLabel: 'Retry Payment (PayMongo)',
+                explanation: 'Previous checkout session expired or was cancelled. You can retry payment anytime.'
+            };
+        }
+
+        if (pStatus === 'Pending') {
+            if (hasSession && (gwStatus === 'active' || gwStatus === 'awaiting_payment_method')) {
+                return {
+                    statusText: 'Pending / Awaiting Payment',
+                    badgeBg: '#fef3c7',
+                    badgeColor: '#92400e',
+                    canPayOnline: serviceType === 'burial' && bStatus !== 'CANCELLED',
+                    buttonLabel: 'Continue Checkout (PayMongo)',
+                    explanation: 'Awaiting completion of online payment via PayMongo.'
+                };
+            }
+            return {
+                statusText: 'Checkout Available',
+                badgeBg: '#fef3c7',
+                badgeColor: '#92400e',
+                canPayOnline: serviceType === 'burial' && bStatus !== 'CANCELLED',
+                buttonLabel: 'Pay Online (PayMongo)',
+                explanation: 'Reservation recorded as Pending. Online checkout is available.'
+            };
+        }
+
+        // No payment record yet
+        return {
+            statusText: serviceType === 'burial' ? 'Checkout Available' : 'Pending Review',
+            badgeBg: '#f1f5f9',
+            badgeColor: '#475569',
+            canPayOnline: serviceType === 'burial' && bStatus !== 'CANCELLED',
+            buttonLabel: 'Pay Online (PayMongo)',
+            explanation: serviceType === 'burial' ? 'Ready for online checkout.' : 'Awaiting review.'
+        };
+    }
+
     async function openBookingDetails(item) {
         if (!bookingDetailModal || !bookingDetailBody) return;
         bookingDetailModal.style.display = 'flex';
@@ -308,6 +443,8 @@
             const paymentStatus = record.payment_status || 'Pending Verification';
             const paymentAmount = record.payment_amount ? `₱${Number(record.payment_amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : 'N/A';
             const notes = record.notes || 'None';
+
+            const paymentInfo = resolvePaymentDisplay(record, isDraft, serviceType);
 
             bookingDetailBody.innerHTML = `
                 <div style="display:flex;flex-direction:column;gap:14px;">
@@ -344,11 +481,19 @@
                         </div>
                     </div>
 
-                    <div style="background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0;">
-                        <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:#475569;margin-bottom:6px;">Payment Information</div>
-                        <div style="display:flex;justify-content:space-between;font-size:0.9rem;">
-                            <span>Status: <strong>${escapeHtml(paymentStatus)}</strong></span>
+                    <div style="background:#f8fafc;padding:14px;border-radius:8px;border:1px solid #e2e8f0;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                            <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:#475569;">Payment Information</div>
+                            <span style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:0.78rem;font-weight:700;background:${paymentInfo.badgeBg};color:${paymentInfo.badgeColor};">
+                                ${escapeHtml(paymentInfo.statusText)}
+                            </span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:0.9rem;margin-bottom:6px;">
                             <span>Amount: <strong>${escapeHtml(paymentAmount)}</strong></span>
+                            <span>Method: <strong>${escapeHtml(record.payment_method || (serviceType === 'burial' ? 'PayMongo' : 'Standard'))}</strong></span>
+                        </div>
+                        <div style="font-size:0.8rem;color:#64748b;">
+                            <i class="fas fa-info-circle"></i> ${escapeHtml(paymentInfo.explanation)}
                         </div>
                     </div>
 
@@ -361,6 +506,14 @@
 
             if (bookingDetailFooter) {
                 let footerHtml = '<button type="button" class="btn-secondary" id="closeDetailModalBtnInner">Close</button>';
+                if (paymentInfo.canPayOnline && serviceType === 'burial') {
+                    footerHtml = `
+                        <button type="button" class="btn-primary" id="payOnlineModalBtn" style="background:#2c5e47;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;">
+                            <i class="fas fa-credit-card"></i> ${escapeHtml(paymentInfo.buttonLabel)}
+                        </button>
+                        ${footerHtml}
+                    `;
+                }
                 if (canCancel) {
                     footerHtml = `
                         <button type="button" class="btn-danger" id="cancelBookingBtn" style="background:#ef4444;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;">
@@ -372,6 +525,44 @@
                 bookingDetailFooter.innerHTML = footerHtml;
 
                 document.getElementById('closeDetailModalBtnInner')?.addEventListener('click', closeDetails);
+
+                const payBtn = document.getElementById('payOnlineModalBtn');
+                if (payBtn) {
+                    payBtn.addEventListener('click', async () => {
+                        try {
+                            payBtn.disabled = true;
+                            payBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Initializing Checkout...';
+                            const checkoutPayload = {
+                                transaction_type: 'Lot Purchase',
+                                reference_id: sourceId,
+                                reference_kind: 'schedule'
+                            };
+                            if (record.payment_id) {
+                                checkoutPayload.payment_id = record.payment_id;
+                            }
+                            const res = await api.request('payments/checkout-session', {
+                                method: 'POST',
+                                body: checkoutPayload
+                            });
+
+                            if (res && res.checkout_url) {
+                                window.location.href = res.checkout_url;
+                            } else if (res && (res.code === 409 || res.reason_code === 'lot_held_checkout')) {
+                                alert(res.error || 'This lot is currently held by an active checkout session. Please try again in a few minutes.');
+                                payBtn.disabled = false;
+                                payBtn.innerHTML = `<i class="fas fa-credit-card"></i> ${escapeHtml(paymentInfo.buttonLabel)}`;
+                            } else {
+                                alert('Checkout notice: ' + (res?.error || 'Failed to initialize checkout session. Please try again.'));
+                                payBtn.disabled = false;
+                                payBtn.innerHTML = `<i class="fas fa-credit-card"></i> ${escapeHtml(paymentInfo.buttonLabel)}`;
+                            }
+                        } catch (err) {
+                            alert('Checkout request failed: ' + (err.message || 'Unknown error'));
+                            payBtn.disabled = false;
+                            payBtn.innerHTML = `<i class="fas fa-credit-card"></i> ${escapeHtml(paymentInfo.buttonLabel)}`;
+                        }
+                    });
+                }
 
                 const cancelBtn = document.getElementById('cancelBookingBtn');
                 if (cancelBtn) {

@@ -76,6 +76,7 @@ class BookingAgentService {
     public const REQUIRED_CREMATION_FIELDS = ['service_type', 'decedent_name', 'cremation_date'];
 
     private ?BookingAvailabilityService $availabilityService = null;
+    private ?PaymentController $paymentController = null;
 
     public function __construct(
         ?BookingDraft $draftModel = null,
@@ -86,7 +87,8 @@ class BookingAgentService {
         ?DecedentRequest $decedentRequestModel = null,
         ?Cremation $cremationModel = null,
         ?BookingActionRegistry $actionRegistry = null,
-        ?BookingAvailabilityService $availabilityService = null
+        ?BookingAvailabilityService $availabilityService = null,
+        ?PaymentController $paymentController = null
     ) {
         $this->draftModel = $draftModel ?? new BookingDraft();
         $this->decedentModel = $decedentModel ?? new Decedent();
@@ -97,6 +99,7 @@ class BookingAgentService {
         $this->cremationModel = $cremationModel ?? new Cremation();
         $this->actionRegistry = $actionRegistry ?? new BookingActionRegistry();
         $this->availabilityService = $availabilityService;
+        $this->paymentController = $paymentController;
     }
 
     public function getActionRegistry(): BookingActionRegistry {
@@ -1132,7 +1135,7 @@ class BookingAgentService {
                 ];
             });
 
-            $paymentController = new PaymentController();
+            $paymentController = $this->paymentController ?? new PaymentController();
             $paymentUser = is_array($user) ? $user : ['user_id' => $userId, 'role' => $userRole];
             if (!isset($paymentUser['role'])) {
                 $paymentUser['role'] = $userRole;
@@ -1153,6 +1156,14 @@ class BookingAgentService {
                 }
                 if (!empty($checkoutResult['checkout_url'])) {
                     $outcome['checkout_url'] = $checkoutResult['checkout_url'];
+                    $outcome['checkout_initialized'] = true;
+                    $outcome['checkout_status'] = 'ready';
+                } else {
+                    $outcome['checkout_initialized'] = false;
+                    $outcome['checkout_status'] = 'failed';
+                    $outcome['payment_status'] = 'Pending';
+                    $outcome['booking_status'] = 'Pending';
+                    $outcome['message'] = 'Burial reservation created (Pending). Online checkout could not be initialized at this time. You can complete payment from My Bookings.';
                 }
                 if (!empty($checkoutResult['gateway_status'])) {
                     $outcome['gateway_status'] = $checkoutResult['gateway_status'];

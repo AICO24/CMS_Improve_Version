@@ -1199,19 +1199,29 @@
                 state.status = res.status || 'COMMITTED';
                 state.committedRecordId = res.committed_record_id || res.cremation_id || res.schedule_id || null;
                 updateBlueprintHUD();
-                showVoucherInChat();
-                const serviceLabel = state.serviceType === 'cremation' ? 'Cremation' : 'Burial';
-                const successMsg = state.committedRecordId
-                    ? `${serviceLabel} scheduled successfully! Reference ID #${state.committedRecordId}`
-                    : 'Reservation draft confirmed!';
-                if (typeof showToast === 'function') showToast(successMsg, 'success');
 
                 if (res.checkout_url) {
+                    showVoucherInChat();
+                    const serviceLabel = state.serviceType === 'cremation' ? 'Cremation' : 'Burial';
                     if (typeof showToast === 'function') {
-                        showToast('Secure checkout is ready. Redirecting to PayMongo...', 'info');
+                        showToast(`${serviceLabel} scheduled! Redirecting to PayMongo checkout...`, 'info');
                     }
                     window.location.assign(res.checkout_url);
                     return;
+                }
+
+                if (res.checkout_error || res.checkout_initialized === false) {
+                    showCheckoutPendingVoucher(res.checkout_error);
+                    const serviceLabel = state.serviceType === 'cremation' ? 'Cremation' : 'Burial';
+                    const warnMsg = `${serviceLabel} reservation recorded (Pending). Online checkout could not be initialized at this time.`;
+                    if (typeof showToast === 'function') showToast(warnMsg, 'warning');
+                } else {
+                    showVoucherInChat();
+                    const serviceLabel = state.serviceType === 'cremation' ? 'Cremation' : 'Burial';
+                    const successMsg = state.committedRecordId
+                        ? `${serviceLabel} scheduled successfully! Reference ID #${state.committedRecordId}`
+                        : 'Reservation draft confirmed!';
+                    if (typeof showToast === 'function') showToast(successMsg, 'success');
                 }
             } else {
                 appendAssistantMessage(res.error || 'Failed to confirm reservation.');
@@ -1224,6 +1234,66 @@
             updateBlueprintHUD();
             renderPromptChips();
         }
+    }
+
+    /**
+     * Display an informative checkout-pending voucher when online checkout initialization fails
+     */
+    function showCheckoutPendingVoucher(checkoutError) {
+        const isCremation = state.serviceType === 'cremation';
+        const dateVal = isCremation ? state.extractedData.cremation_date : state.extractedData.preferred_date;
+        const refPrefix = isCremation ? 'Cremation #' : 'Schedule #';
+        const scheduleRef = state.committedRecordId ? `${refPrefix}${state.committedRecordId}` : `Draft #${state.draftId}`;
+
+        const errDetail = checkoutError ? escapeHtml(checkoutError) : 'Online checkout could not be initialized at this time.';
+        const voucherHtml = `
+            <div class="reservation-voucher" style="background:#ffffff;border:2px solid #d97706;border-radius:14px;padding:18px;margin:8px 0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px dashed #cbd5e1;padding-bottom:12px;margin-bottom:12px;">
+                    <div>
+                        <span style="font-size:0.75rem;font-weight:700;color:#d97706;text-transform:uppercase;">Reservation Created — Payment Pending</span>
+                        <h3 style="margin:2px 0 0 0;font-size:1.15rem;color:#0f172a;">${scheduleRef}</h3>
+                    </div>
+                    <span class="score-badge" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;padding:4px 10px;font-size:0.8rem;">
+                        <i class="fas fa-clock"></i> Awaiting Payment
+                    </span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:0.85rem;">
+                    <div>
+                        <span style="color:#64748b;font-size:0.75rem;display:block;">Service Type</span>
+                        <strong style="color:#0f172a;">${isCremation ? 'Cremation Service' : 'Burial Service'}</strong>
+                    </div>
+                    <div>
+                        <span style="color:#64748b;font-size:0.75rem;display:block;">Scheduled Date</span>
+                        <strong style="color:#0f172a;">${formatDate(dateVal)}</strong>
+                    </div>
+                    <div>
+                        <span style="color:#64748b;font-size:0.75rem;display:block;">Decedent Name</span>
+                        <strong style="color:#0f172a;">${escapeHtml(state.extractedData.decedent_name || 'N/A')}</strong>
+                    </div>
+                    <div>
+                        <span style="color:#64748b;font-size:0.75rem;display:block;">${isCremation ? 'Columbarium' : 'Burial Lot'}</span>
+                        <strong style="color:#0f172a;">${isCremation ? (escapeHtml(state.extractedData.preferred_columbarium || 'Assigned on arrival')) : (state.selectedLotDetails ? `Lot ${escapeHtml(state.selectedLotDetails.lot_number)} (${escapeHtml(state.selectedLotDetails.section_name)})` : `Lot #${state.extractedData.lot_id}`)}</strong>
+                    </div>
+                </div>
+                <div style="margin-top:12px;background:#fffbeb;padding:10px 14px;border-radius:8px;border:1px solid #fde68a;font-size:0.85rem;color:#92400e;">
+                    <i class="fas fa-circle-exclamation" style="margin-right:4px;"></i> <strong>Payment Notice:</strong> Your reservation is saved as <strong>Pending</strong>, but online checkout could not be initialized (${errDetail}). You can complete payment or retry checkout at any time in My Bookings.
+                </div>
+                <div style="margin-top:14px;padding-top:12px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                    <span style="font-size:0.78rem;color:#64748b;line-height:1.4;">
+                        <i class="fas fa-info-circle text-warning"></i> Your schedule slot is recorded. Please complete payment to finalize reservation.
+                    </span>
+                    <div style="display:flex;gap:8px;">
+                        <a href="my-bookings.html?schedule_id=${state.committedRecordId || ''}" style="padding:6px 14px;font-size:0.8rem;background:#2c5e47;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-calendar-check"></i> Go to My Bookings &rarr;</a>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'chat-message assistant chat-message--rich';
+        msgDiv.innerHTML = voucherHtml;
+        chatThread.appendChild(msgDiv);
+        scrollChatToBottom();
     }
 
     /**

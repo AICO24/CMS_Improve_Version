@@ -226,6 +226,9 @@
                     </div>
                 </div>
 
+                <!-- Checkout Return Status Notification -->
+                <div id="checkoutStatusAlert" class="card" style="display:none;padding:16px 20px;border-radius:10px;margin-bottom:0;"></div>
+
                 <!-- Combined Bookings Table Card -->
                 <div class="card" style="padding:20px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
@@ -241,6 +244,7 @@
                                 <option value="cremation">Cremations</option>
                                 <option value="draft">Active Drafts</option>
                             </select>
+                            <button type="button" id="refreshBookingsBtn" class="btn-secondary" style="padding:6px 12px;border-radius:6px;font-size:0.85rem;cursor:pointer;" title="Refresh bookings"><i class="fas fa-rotate"></i></button>
                             <a href="book-a-service.html" class="btn-primary" style="text-decoration:none;"><i class="fas fa-plus"></i> New Booking</a>
                         </div>
                     </div>

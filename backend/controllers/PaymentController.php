@@ -16,16 +16,21 @@ require_once __DIR__ . '/../services/EnvironmentService.php';
 require_once __DIR__ . '/../services/PayMongoService.php';
 require_once __DIR__ . '/ScheduleController.php';
 require_once __DIR__ . '/CremationController.php';
-
 class PaymentController {
     private $paymentModel;
     private $auditLogModel;
     private $systemExceptionModel;
+    protected ?PayMongoService $payMongoService = null;
 
-    public function __construct() {
-        $this->paymentModel = new Payment();
-        $this->auditLogModel = new AuditLog();
-        $this->systemExceptionModel = new SystemException();
+    public function __construct(?Payment $paymentModel = null, ?AuditLog $auditLogModel = null, ?SystemException $systemExceptionModel = null, ?PayMongoService $payMongoService = null) {
+        $this->paymentModel = $paymentModel ?? new Payment();
+        $this->auditLogModel = $auditLogModel ?? new AuditLog();
+        $this->systemExceptionModel = $systemExceptionModel ?? new SystemException();
+        $this->payMongoService = $payMongoService;
+    }
+
+    public function setPayMongoService(?PayMongoService $service): void {
+        $this->payMongoService = $service;
     }
 
     public function index($filters = [], $pagination = []) {
@@ -1364,7 +1369,7 @@ class PaymentController {
 
         // 5. Check for existing active checkout session (Idempotency / Re-entry)
         require_once __DIR__ . '/../services/PayMongoService.php';
-        $payMongoService = new PayMongoService();
+        $payMongoService = $this->payMongoService ?? new PayMongoService();
 
         if (!empty($payment['gateway_checkout_session_id'])) {
             $existingSessionId = $payment['gateway_checkout_session_id'];
@@ -1419,12 +1424,31 @@ class PaymentController {
 
         // 8. Construct official PayMongo Checkout Session payload
         $origin = $this->resolveAppOrigin($data);
-        $successUrl = !empty($data['success_url'])
-            ? $data['success_url']
-            : ($origin . '/frontend/pages/payments.html?checkout_status=success&payment_id=' . $paymentId);
-        $cancelUrl = !empty($data['cancel_url'])
-            ? $data['cancel_url']
-            : ($origin . '/frontend/pages/payments.html?checkout_status=cancelled&payment_id=' . $paymentId);
+        $isCitizen = ($userRole === 'user');
+
+        if (!empty($data['success_url'])) {
+            $successUrl = $data['success_url'];
+        } elseif ($isCitizen) {
+            $successParams = 'checkout_status=success&payment_id=' . $paymentId;
+            if ($referenceKind === 'schedule') {
+                $successParams .= '&schedule_id=' . $referenceId;
+            }
+            $successUrl = $origin . '/frontend/pages/my-bookings.html?' . $successParams;
+        } else {
+            $successUrl = $origin . '/frontend/pages/payments.html?checkout_status=success&payment_id=' . $paymentId;
+        }
+
+        if (!empty($data['cancel_url'])) {
+            $cancelUrl = $data['cancel_url'];
+        } elseif ($isCitizen) {
+            $cancelParams = 'checkout_status=cancelled&payment_id=' . $paymentId;
+            if ($referenceKind === 'schedule') {
+                $cancelParams .= '&schedule_id=' . $referenceId;
+            }
+            $cancelUrl = $origin . '/frontend/pages/my-bookings.html?' . $cancelParams;
+        } else {
+            $cancelUrl = $origin . '/frontend/pages/payments.html?checkout_status=cancelled&payment_id=' . $paymentId;
+        }
 
         $receiptNumber = $payment['receipt_number'] ?? ('RCPT-' . date('Y') . '-' . $paymentId);
         $sessionAttributes = [

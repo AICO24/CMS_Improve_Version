@@ -22,7 +22,12 @@ class Schedule {
         (SELECT p.verification_status FROM payments p WHERE p.reference_kind = 'schedule' AND p.reference_id = s.schedule_id ORDER BY p.created_at DESC LIMIT 1) AS payment_status,
         (SELECT p.amount FROM payments p WHERE p.reference_kind = 'schedule' AND p.reference_id = s.schedule_id ORDER BY p.created_at DESC LIMIT 1) AS payment_amount,
         (SELECT p.payment_date FROM payments p WHERE p.reference_kind = 'schedule' AND p.reference_id = s.schedule_id ORDER BY p.created_at DESC LIMIT 1) AS payment_date,
-        (SELECT p.receipt_number FROM payments p WHERE p.reference_kind = 'schedule' AND p.reference_id = s.schedule_id ORDER BY p.created_at DESC LIMIT 1) AS payment_receipt_number
+        (SELECT p.receipt_number FROM payments p WHERE p.reference_kind = 'schedule' AND p.reference_id = s.schedule_id ORDER BY p.created_at DESC LIMIT 1) AS payment_receipt_number,
+        (SELECT p.payment_id FROM payments p WHERE p.reference_kind = 'schedule' AND p.reference_id = s.schedule_id ORDER BY p.created_at DESC LIMIT 1) AS payment_id,
+        (SELECT p.payment_method FROM payments p WHERE p.reference_kind = 'schedule' AND p.reference_id = s.schedule_id ORDER BY p.created_at DESC LIMIT 1) AS payment_method,
+        (SELECT p.gateway_status FROM payments p WHERE p.reference_kind = 'schedule' AND p.reference_id = s.schedule_id ORDER BY p.created_at DESC LIMIT 1) AS gateway_status,
+        (SELECT p.gateway_checkout_session_id FROM payments p WHERE p.reference_kind = 'schedule' AND p.reference_id = s.schedule_id ORDER BY p.created_at DESC LIMIT 1) AS gateway_checkout_session_id,
+        (SELECT r.status FROM refunds r WHERE r.payment_id = (SELECT p2.payment_id FROM payments p2 WHERE p2.reference_kind = 'schedule' AND p2.reference_id = s.schedule_id ORDER BY p2.created_at DESC LIMIT 1) ORDER BY r.created_at DESC LIMIT 1) AS refund_status
     ";
 
     public function findAll($filters = [], $pagination = []) {
