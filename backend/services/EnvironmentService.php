@@ -71,12 +71,20 @@ class EnvironmentService {
     }
 
     public static function get($key, $default = null) {
+        $envVal = getenv($key);
+        if ($envVal !== false && $envVal !== '') {
+            return $envVal;
+        }
+
         self::loadEnvironment();
-        if (array_key_exists($key, self::$values)) {
+        if (array_key_exists($key, self::$values) && self::$values[$key] !== '') {
             return self::$values[$key];
         }
 
-        $value = getenv($key);
-        return $value === false ? $default : $value;
+        if ($envVal !== false) {
+            return $envVal;
+        }
+
+        return array_key_exists($key, self::$values) ? self::$values[$key] : $default;
     }
 }

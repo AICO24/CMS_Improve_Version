@@ -427,6 +427,7 @@ if ($path === 'schedules/calendar' && $requestMethod === 'GET') {
 }
 
 if ($path === 'schedules/mine' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     $filters = [];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
@@ -928,6 +929,15 @@ if (preg_match('/^payments\/(\d+)\/verify$/', $path, $matches) && $requestMethod
     $input = readRequestBody();
     $status = $input['verification_status'] ?? null;
     $result = $paymentController->verify($matches[1], $status, $user['user_id']);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^payments\/(\d+)\/sync-status$/', $path, $matches) && in_array($requestMethod, ['POST', 'GET'], true)) {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $paymentController->syncCheckoutSessionStatus((int) $matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);

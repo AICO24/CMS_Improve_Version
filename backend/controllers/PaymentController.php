@@ -2082,6 +2082,164 @@ class PaymentController {
     }
 
     /**
+     * Synchronizes and verifies PayMongo payment status via direct server-to-server query.
+     * Allows returning citizens (e.g. redirected after completing PayMongo checkout) or
+     * staff/admin to immediately verify payment without depending on an incoming webhook.
+     *
+     * @param int   $paymentId Internal CMS payment ID
+     * @param array $user      Authenticated user context
+     * @return array
+     */
+    public function syncCheckoutSessionStatus(int $paymentId, array $user): array {
+        $payment = $this->paymentModel->findById($paymentId);
+        if (!$payment) {
+            return ['success' => false, 'error' => 'Payment not found', 'code' => 404];
+        }
+
+        $role = strtolower((string) ($user['role'] ?? ''));
+        $userId = (int) ($user['user_id'] ?? 0);
+        if (!in_array($role, ['admin', 'staff'], true) && (int) ($payment['received_by'] ?? 0) !== $userId) {
+            return ['success' => false, 'error' => 'Unauthorized access to this payment record', 'code' => 403];
+        }
+
+        // If already verified, return idempotent success
+        if (($payment['verification_status'] ?? '') === 'Verified') {
+            return [
+                'success' => true,
+                'already_verified' => true,
+                'verified' => true,
+                'verification_status' => 'Verified',
+                'gateway_status' => $payment['gateway_status'] ?? 'paid',
+                'message' => 'Payment is already verified',
+                'code' => 200,
+            ];
+        }
+
+        $csId = trim((string) ($payment['gateway_checkout_session_id'] ?? ''));
+        if ($csId === '') {
+            return [
+                'success' => false,
+                'error' => 'No PayMongo checkout session found for this payment',
+                'code' => 400,
+            ];
+        }
+
+        // Query PayMongo server-side API using server secret key
+        $gwRes = $this->payMongoService->getCheckoutSession($csId);
+        if (!($gwRes['success'] ?? false) || empty($gwRes['data'])) {
+            return [
+                'success' => false,
+                'error' => 'Unable to retrieve checkout session from PayMongo: ' . ($gwRes['error'] ?? 'Connection error'),
+                'code' => 502,
+            ];
+        }
+
+        $cs = $gwRes['data'];
+        $csAttrs = $cs['attributes'] ?? [];
+        $csStatus = strtolower((string) ($csAttrs['status'] ?? ''));
+
+        $paymentsList = $csAttrs['payments'] ?? [];
+        $firstPayment = !empty($paymentsList[0]) ? $paymentsList[0] : null;
+        $gatewayPaymentId = $firstPayment['id'] ?? null;
+        $gatewayPaymentStatus = strtolower((string) ($firstPayment['attributes']['status'] ?? ''));
+        $piStatus = strtolower((string) ($csAttrs['payment_intent']['attributes']['status'] ?? ''));
+
+        $validStatuses = ['paid', 'succeeded'];
+        $isPaid = in_array($csStatus, $validStatuses, true)
+               || in_array($gatewayPaymentStatus, $validStatuses, true)
+               || in_array($piStatus, $validStatuses, true);
+
+        $db = Database::getInstance()->getConnection();
+
+        if (!$isPaid) {
+            // Update gateway status if changed (e.g. active, expired, cancelled)
+            $newGwStatus = $csStatus ?: ($gatewayPaymentStatus ?: $piStatus);
+            if ($newGwStatus && $newGwStatus !== ($payment['gateway_status'] ?? '')) {
+                $stmt = $db->prepare("UPDATE payments SET gateway_status = ? WHERE payment_id = ?");
+                $stmt->execute([$newGwStatus, $paymentId]);
+            }
+
+            return [
+                'success' => true,
+                'verified' => false,
+                'verification_status' => $payment['verification_status'] ?? 'Pending',
+                'gateway_status' => $newGwStatus ?: ($payment['gateway_status'] ?? 'pending'),
+                'message' => 'Checkout session is not yet paid (Current status: ' . ($csStatus ?: 'pending') . ')',
+                'code' => 200,
+            ];
+        }
+
+        // Authoritative amount validation
+        $cmsAmountCents = Refund::toCentavos($payment['amount']);
+        $gwAmountCents = null;
+        if ($firstPayment && isset($firstPayment['attributes']['amount'])) {
+            $gwAmountCents = (int) $firstPayment['attributes']['amount'];
+        } elseif (!empty($csAttrs['line_items'][0]['amount'])) {
+            $gwAmountCents = (int) $csAttrs['line_items'][0]['amount'];
+        } elseif (!empty($csAttrs['payment_intent']['attributes']['amount'])) {
+            $gwAmountCents = (int) $csAttrs['payment_intent']['attributes']['amount'];
+        }
+
+        if ($gwAmountCents !== null && $gwAmountCents !== $cmsAmountCents) {
+            return [
+                'success' => false,
+                'error' => sprintf('Amount mismatch: PayMongo amount (%d cents) does not match CMS amount (%d cents)', $gwAmountCents, $cmsAmountCents),
+                'code' => 400,
+            ];
+        }
+
+        // Atomic transition: Pending -> Verified
+        $verifiedAt = date('Y-m-d H:i:s');
+        $claimed = $this->paymentModel->verifyIfPending($paymentId, 'Verified', null, $verifiedAt);
+
+        if ($claimed) {
+            if (!empty($gatewayPaymentId)) {
+                $this->paymentModel->setGatewayPaymentId($paymentId, $gatewayPaymentId, 'paid');
+            } else {
+                $stmt = $db->prepare("UPDATE payments SET gateway_status = 'paid' WHERE payment_id = ?");
+                $stmt->execute([$paymentId]);
+            }
+
+            $this->auditLogModel->log(
+                'Payment verified via PayMongo direct sync',
+                $userId,
+                null,
+                'Payment',
+                $paymentId,
+                [
+                    'status' => 'Verified',
+                    'receipt_number' => $payment['receipt_number'] ?? null,
+                    'source' => 'paymongo_direct_sync',
+                    'checkout_session_id' => $csId,
+                    'gateway_payment_id' => $gatewayPaymentId,
+                ]
+            );
+
+            $notificationModel = new Notification();
+            $notificationModel->create([
+                'title' => 'Payment Approved',
+                'message' => sprintf('Payment %s for receipt %s has been verified via PayMongo.', $payment['receipt_number'], $payment['receipt_number']),
+                'notification_type' => 'Payment',
+                'user_id' => $payment['received_by'] ?? null,
+                'is_read' => 0,
+            ]);
+
+            // Trigger post-verification automation: confirms schedule, reserves lot
+            $freshPayment = $this->paymentModel->findById($paymentId);
+            $this->triggerPostVerificationAutomation($freshPayment ?: $payment, null);
+        }
+
+        return [
+            'success' => true,
+            'verified' => true,
+            'verification_status' => 'Verified',
+            'schedule_status' => 'Confirmed',
+            'message' => 'Payment successfully verified and schedule confirmed',
+            'code' => 200,
+        ];
+    }
+
+    /**
      * Batch 10B: Detects if a verified payment cannot finalize due to resource collision/unavailability.
      *
      * @param array $payment
