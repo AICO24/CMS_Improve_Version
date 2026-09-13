@@ -198,7 +198,7 @@
         // ==================== FINANCE ====================
         {
             route: 'payments.html',
-            allowedRoles: ['admin', 'staff', 'user'],
+            allowedRoles: ['admin', 'staff'],
             showInSidebar: true,
             sidebarGroup: 'Finance',
             label: 'Payments',
