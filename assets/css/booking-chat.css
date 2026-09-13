@@ -1696,24 +1696,51 @@
 }
 
 @media (max-width: 768px) {
+    .dashboard-container {
+        min-height: 100dvh;
+        height: 100dvh;
+    }
+
+    .main-content {
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
+    }
+
     .content-area {
-        overflow-y: auto !important;
-        display: block !important;
-        padding: 12px;
-        height: auto;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        display: flex !important;
+        flex-direction: column;
+        padding: 8px 10px;
+        flex: 1;
+        min-height: 0;
+        gap: 12px;
     }
 
     .ai-chat-layout {
         flex-direction: column;
-        height: auto;
-        min-height: auto;
-        gap: 16px;
+        flex: 1 0 auto;
+        min-height: 0;
+        gap: 12px;
     }
 
     .ai-chat-main {
-        min-height: 520px;
-        height: 70vh;
-        flex: none;
+        min-height: 0;
+        height: calc(100dvh - 100px);
+        max-height: 100%;
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        border-radius: 12px;
+    }
+
+    .chat-window {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
     }
 
     .ai-booking-blueprint {
@@ -1756,6 +1783,11 @@
     }
 
     .chat-input-row {
+        position: sticky;
+        bottom: 0;
         padding: 10px 12px;
+        background: #ffffff;
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+        z-index: 15;
     }
 }

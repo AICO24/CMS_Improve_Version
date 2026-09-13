@@ -145,6 +145,27 @@
                     }
                 }
             });
+
+            // Mobile virtual keyboard handling: ensure input stays visible above keyboard
+            const scrollInputToView = () => {
+                setTimeout(() => {
+                    userInputMsg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    if (chatThread) {
+                        chatThread.scrollTop = chatThread.scrollHeight;
+                    }
+                }, 250);
+            };
+
+            userInputMsg.addEventListener('focus', scrollInputToView);
+            userInputMsg.addEventListener('click', scrollInputToView);
+
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', () => {
+                    if (document.activeElement === userInputMsg) {
+                        scrollInputToView();
+                    }
+                });
+            }
         }
 
         if (btnRestartDraft) btnRestartDraft.addEventListener('click', onRestartDraft);

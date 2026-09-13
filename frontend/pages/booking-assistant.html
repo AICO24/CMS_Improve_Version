@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Booking Assistant | Cemetery Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+    <title>Book a Service | Cemetery Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -118,21 +118,20 @@
                         <div class="ai-assistant-header">
                             <div class="ai-assistant-brand">
                                 <div class="ai-avatar-badge">
-                                    <i class="fas fa-robot"></i>
-                                    <div class="ai-avatar-glow"></div>
+                                    <i class="fas fa-handshake"></i>
                                 </div>
                                 <div class="ai-assistant-meta">
                                     <div class="ai-title-row">
-                                        <h4 class="ai-assistant-name">AI Booking Assistant</h4>
+                                        <h4 class="ai-assistant-name">Booking Assistant</h4>
                                         <span class="ai-status-pill" id="assistantStatusPill">
-                                            <span class="status-pulse-dot"></span> Online
+                                            <span class="status-pulse-dot"></span> Ready
                                         </span>
                                     </div>
-                                    <p class="ai-assistant-desc" id="assistantSubTitle">Unified conversational intake for burial and cremation arrangements</p>
+                                    <p class="ai-assistant-desc" id="assistantSubTitle">Guided reservation intake for burial and cremation arrangements</p>
                                 </div>
                             </div>
                             <div class="ai-header-actions">
-                                <button type="button" class="ai-action-btn" id="btnRestartDraft" title="Discard current draft and start fresh">
+                                <button type="button" class="btn btn-secondary" id="btnRestartDraft" style="height:36px;padding:0 12px;font-size:0.85rem;" title="Discard current draft and start fresh">
                                     <i class="fas fa-rotate-left"></i> Start Over
                                 </button>
                             </div>
@@ -154,20 +153,20 @@
                                 <i class="fas fa-comment-dots chat-input-icon"></i>
                                 <input type="text" id="userInputMsg" placeholder="Type your details (e.g., 'Burial for my father Juan Santos on Nov 20')..." autocomplete="off" />
                             </div>
-                            <button type="submit" class="chat-send-btn" id="btnSendMessage" title="Send message" disabled>
+                            <button type="submit" class="btn btn-primary chat-send-btn" id="btnSendMessage" title="Send message" disabled>
                                 <i class="fas fa-paper-plane"></i>
                             </button>
                         </form>
                     </div>
 
-                    <!-- Right Pane: Live Booking Blueprint HUD -->
+                    <!-- Right Pane: Reservation Summary & Details -->
                     <aside class="ai-booking-blueprint" id="blueprintPanel">
                         <div class="blueprint-header">
                             <div class="blueprint-title">
                                 <i class="fas fa-clipboard-list"></i>
-                                <span>Live Booking Blueprint</span>
+                                <span>Reservation Summary</span>
                             </div>
-                            <span class="blueprint-badge" id="blueprintStatusBadge">Intake</span>
+                            <span class="blueprint-badge" id="blueprintStatusBadge">In Progress</span>
                         </div>
 
                         <div class="blueprint-body">
