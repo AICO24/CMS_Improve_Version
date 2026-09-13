@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings | Cemetery Management</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../../assets/css/tokens.css?v=2">
@@ -20,44 +20,28 @@
     <link rel="stylesheet" href="../../assets/css/components/tables.css?v=2">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/dashboard_staff.css">
-    <link rel="stylesheet" href="../../assets/css/settings.css">
-
+    <link rel="stylesheet" href="../../assets/css/settings.css?v=2">
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
 </head>
 <body class="dashboard-body">
 <script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
     <div class="dashboard-container">
+        <!-- SIDEBAR (Role-aware static default for citizen, dynamic rebuild for admin/staff via api.js) -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
                 <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
             </div>
-                                                <div class="sidebar-nav">
-                    <a href="dashboard_admin.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
+            <div class="sidebar-nav">
+                <a href="dashboard_user.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
                 <div class="nav-group">
                     <button type="button" class="nav-group-header">
-                        <span>Operations</span>
+                        <span>Services</span>
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="book-a-service.html" class="nav-item"><i class="fas fa-handshake icon"></i> <span>Book a Service</span></a>
-                    <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
-                    <a href="manage-reservations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Reservations</span></a>
-                    <a href="manage-cremations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Cremations</span></a>
-                    <a href="relocation-management.html" class="nav-item"><i class="fas fa-truck-moving icon"></i> <span>Relocation Management</span></a>
-                    <a href="expiration-monitoring.html" class="nav-item"><i class="fas fa-hourglass-half icon"></i> <span>Expiration Monitoring</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Cemetery Management</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="lot-management.html" class="nav-item"><i class="fas fa-map-location-dot icon"></i> <span>Lot Management</span></a>
-                    <a href="cremation-management.html" class="nav-item"><i class="fas fa-fire icon"></i> <span>Columbarium Management</span></a>
+                        <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -66,7 +50,8 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="decedent-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>Decedent Records</span></a>
+                        <a href="my-bookings.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>My Bookings</span></a>
+                        <a href="my-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>My Records</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -75,29 +60,7 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Intelligence & Analytics</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="reports.html" class="nav-item"><i class="fas fa-chart-column icon"></i> <span>Reports</span></a>
-                    <a href="forecast.html" class="nav-item"><i class="fas fa-chart-line icon"></i> <span>Capacity Forecast</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>System Administration</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="user-management.html" class="nav-item"><i class="fas fa-users icon"></i> <span>User Management</span></a>
-                    <a href="exceptions.html" class="nav-item"><i class="fas fa-triangle-exclamation icon"></i> <span>System Exceptions</span></a>
-                    <a href="ai.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>AI Configuration</span></a>
-                    <a href="audit.html" class="nav-item"><i class="fas fa-clipboard-list icon"></i> <span>Audit Logs</span></a>
+                        <a href="payment-history.html" class="nav-item"><i class="fas fa-receipt icon"></i> <span>Payment History</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -106,8 +69,8 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
-                    <a href="settings.html" class="nav-item active"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
+                        <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
+                        <a href="settings.html" class="nav-item active"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
                     </div>
                 </div>
             </div>
@@ -150,19 +113,185 @@
                     </button>
                 </div>
             </div>
-                <div class="content-area">
-                <div class="card settings-placeholder">
-                    <div class="settings-placeholder-icon"><i class="fas fa-sliders"></i></div>
-                    <h4>Account settings are on the way</h4>
-                    <p class="muted">Preferences like notification and password controls will live here. In the meantime, you can switch between light and dark mode any time using the toggle in the top bar.</p>
+
+            <div class="content-area">
+                <div id="aiAssistantMount"></div>
+
+                <!-- Section Label -->
+                <p class="section-label"><i class="fas fa-palette"></i> Interface & Appearance</p>
+
+                <!-- Theme Preferences Card -->
+                <div class="settings-main-card">
+                    <div class="settings-card-header">
+                        <div class="settings-card-title-group">
+                            <h4><i class="fas fa-circle-half-stroke" style="color: var(--color-primary-600, #2c5e47);"></i> Theme Preferences</h4>
+                            <p>Customize your viewing experience. You can switch between daylight and dark modes at any time.</p>
+                        </div>
+                        <span class="settings-card-badge">Display</span>
+                    </div>
+
+                    <div class="theme-choice-grid">
+                        <div class="theme-choice-card theme-choice-light" id="themeSelectLight" role="button" tabindex="0" title="Switch to Light Theme">
+                            <div class="theme-preview light-preview">
+                                <div class="preview-header"></div>
+                                <div class="preview-body">
+                                    <div class="preview-sidebar"></div>
+                                    <div class="preview-content">
+                                        <div class="preview-bar"></div>
+                                        <div class="preview-box"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="theme-choice-info">
+                                <div class="theme-choice-title">
+                                    <i class="fas fa-sun"></i>
+                                    <span>Light Mode</span>
+                                </div>
+                                <p>Crisp, high-contrast daylight interface designed for standard ambient lighting.</p>
+                            </div>
+                            <span class="theme-choice-status"><i class="fas fa-check"></i> Standard Daylight</span>
+                        </div>
+
+                        <div class="theme-choice-card theme-choice-dark" id="themeSelectDark" role="button" tabindex="0" title="Switch to Dark Theme">
+                            <div class="theme-preview dark-preview">
+                                <div class="preview-header"></div>
+                                <div class="preview-body">
+                                    <div class="preview-sidebar"></div>
+                                    <div class="preview-content">
+                                        <div class="preview-bar"></div>
+                                        <div class="preview-box"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="theme-choice-info">
+                                <div class="theme-choice-title">
+                                    <i class="fas fa-moon"></i>
+                                    <span>Dark Mode</span>
+                                </div>
+                                <p>Sleek, low-light interface optimized to reduce eye fatigue in dark environments.</p>
+                            </div>
+                            <span class="theme-choice-status"><i class="fas fa-check"></i> Night Atmosphere</span>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Section Label -->
+                <p class="section-label"><i class="fas fa-bell"></i> Notification Preferences</p>
+
+                <!-- Notifications Settings Card -->
+                <div class="settings-main-card">
+                    <div class="settings-card-header">
+                        <div class="settings-card-title-group">
+                            <h4><i class="fas fa-sliders" style="color: var(--color-primary-600, #2c5e47);"></i> Notification Preferences</h4>
+                            <p>Configure notifications for upcoming bookings, payments, and cemetery advisories.</p>
+                        </div>
+                        <span class="settings-card-badge">Alerts</span>
+                    </div>
+
+                    <div class="preferences-list">
+                        <div class="preference-item">
+                            <div class="preference-info">
+                                <div class="preference-title"><i class="fas fa-calendar-check"></i> Booking & Burial Schedule Updates</div>
+                                <p>Receive reminders and confirmation notices for upcoming services.</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked aria-label="Toggle booking schedule alerts">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="preference-item">
+                            <div class="preference-info">
+                                <div class="preference-title"><i class="fas fa-credit-card"></i> Payment & Receipt Notifications</div>
+                                <p>Get automated status updates when payments are verified.</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked aria-label="Toggle payment alerts">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="preference-item">
+                            <div class="preference-info">
+                                <div class="preference-title"><i class="fas fa-hourglass-half"></i> Lot Expiration & Renewal Alerts</div>
+                                <p>Timely notifications regarding lease expirations and renewal windows.</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked aria-label="Toggle expiration alerts">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="preference-item">
+                            <div class="preference-info">
+                                <div class="preference-title"><i class="fas fa-bullhorn"></i> System Advisories & Maintenance</div>
+                                <p>Official announcements and operational schedules from cemetery administration.</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked aria-label="Toggle system announcements">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Label -->
+                <p class="section-label"><i class="fas fa-shield-halved"></i> Security & Session</p>
+
+                <!-- Security Information Card -->
+                <div class="settings-security-card">
+                    <div class="security-card-icon">
+                        <i class="fas fa-shield-check"></i>
+                    </div>
+                    <div class="security-card-text">
+                        <h5>Authentication & Credentials</h5>
+                        <p>Your session is authenticated using encrypted JSON Web Tokens (JWT) with strict Role-Based Access Control (RBAC). For credential updates or password resets, please contact cemetery administration.</p>
+                    </div>
+                </div>
+
+                <footer class="dashboard-footer">
+                    <div class="footer-inner">
+                        <span>CodeRebels Cemetery Management System &copy; 2026</span>
+                        <span>Portal &bull; Settings</span>
+                    </div>
+                </footer>
             </div>
         </main>
     </div>
+
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/pages/settings.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
+    <script>
+    (function() {
+        function updateCards() {
+            var isDark = document.body.getAttribute('data-theme') === 'dark';
+            var lightCard = document.getElementById('themeSelectLight');
+            var darkCard = document.getElementById('themeSelectDark');
+            if (lightCard) lightCard.classList.toggle('active', !isDark);
+            if (darkCard) darkCard.classList.toggle('active', isDark);
+        }
+        function setTheme(t) {
+            document.body.setAttribute('data-theme', t);
+            try { localStorage.setItem('cms-theme', t); } catch(e) {}
+            var btn = document.getElementById('themeToggleBtn');
+            if (btn) {
+                var icon = btn.querySelector('i');
+                if (icon) icon.className = t === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+                btn.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false');
+            }
+            updateCards();
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCards();
+            document.getElementById('themeSelectLight')?.addEventListener('click', function() { setTheme('light'); });
+            document.getElementById('themeSelectDark')?.addEventListener('click', function() { setTheme('dark'); });
+        });
+        var observer = new MutationObserver(updateCards);
+        observer.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
+    })();
+    </script>
 </body>
 </html>

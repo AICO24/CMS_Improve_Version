@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SETTINGS MODULE STYLES (Citizen / Multi-Role)
+   PROFILE MODULE STYLES (Citizen / Multi-Role)
    Harmonized with Admin Reports, Capacity Forecast & User Dashboard
    ========================================================================== */
 
@@ -221,8 +221,101 @@
     background: linear-gradient(90deg, rgba(44, 94, 71, 0.22), rgba(44, 94, 71, 0.04));
 }
 
-/* ── Settings Main Cards (Reports .chart-card pattern) ───────────────── */
-.settings-main-card {
+/* ── Profile Hero Banner Card ───────────────────────────────────────── */
+.profile-hero-card {
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 88% 24%, rgba(13, 148, 136, 0.35), transparent 48%),
+        linear-gradient(135deg, #163229 0%, #2c5e47 60%, #1e4534 100%);
+    color: white;
+    border-radius: 20px;
+    padding: 28px 30px;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    animation: cardEnter 450ms ease both;
+}
+
+.profile-hero-card::before {
+    content: "";
+    position: absolute;
+    width: 180px;
+    height: 180px;
+    right: -30px;
+    top: -50px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.14), transparent 70%);
+    pointer-events: none;
+}
+
+.profile-hero-content {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    position: relative;
+    z-index: 1;
+}
+
+.profile-hero-avatar {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    color: #a7f3d0;
+    flex-shrink: 0;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.profile-hero-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.profile-hero-badge-row {
+    margin-bottom: 2px;
+}
+
+.profile-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(16, 185, 129, 0.22);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #a7f3d0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.profile-hero-name {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: #ffffff;
+}
+
+.profile-hero-text p {
+    margin: 0;
+    font-size: 0.86rem;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* ── Main Profile Information Card (Reports .chart-card pattern) ─────── */
+.profile-main-card {
     position: relative;
     overflow: hidden;
     background:
@@ -239,7 +332,7 @@
     animation: cardEnter 450ms ease both;
 }
 
-.settings-main-card::before {
+.profile-main-card::before {
     content: "";
     position: absolute;
     inset: -30% auto auto -20%;
@@ -250,7 +343,7 @@
     pointer-events: none;
 }
 
-.settings-card-header {
+.profile-card-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -260,7 +353,7 @@
     z-index: 1;
 }
 
-.settings-card-title-group h4 {
+.profile-card-title-group h4 {
     color: #1b3d2f;
     font-size: 1.15rem;
     font-weight: 800;
@@ -270,13 +363,13 @@
     gap: 8px;
 }
 
-.settings-card-title-group p {
+.profile-card-title-group p {
     color: #64748b;
     font-size: 0.86rem;
     margin: 0;
 }
 
-.settings-card-badge {
+.profile-card-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -291,282 +384,58 @@
     border: 1px solid rgba(44, 94, 71, 0.18);
 }
 
-/* ── Theme Choice Cards ─────────────────────────────────────────────── */
-.theme-choice-grid {
+/* ── Profile Details Grid ───────────────────────────────────────────── */
+.profile-details-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px;
-    position: relative;
-    z-index: 1;
-}
-
-.theme-choice-card {
-    background: #ffffff;
-    border: 2px solid rgba(44, 94, 71, 0.16);
-    border-radius: 16px;
-    padding: 18px;
-    display: flex;
-    flex-direction: column;
     gap: 14px;
-    cursor: pointer;
-    transition: all 0.22s ease;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
-}
-
-.theme-choice-card:hover {
-    transform: translateY(-3px);
-    border-color: #2c5e47;
-    box-shadow: 0 10px 24px rgba(44, 94, 71, 0.12);
-}
-
-.theme-choice-card.active {
-    border-color: #2c5e47;
-    background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
-    box-shadow: 0 0 0 3px rgba(44, 94, 71, 0.22), 0 10px 24px rgba(44, 94, 71, 0.12);
-}
-
-.theme-choice-card:focus-visible {
-    outline: 2px solid #2c5e47;
-    outline-offset: 2px;
-}
-
-/* Visual UI Mockup Previews */
-.theme-preview {
-    height: 100px;
-    border-radius: 10px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-.light-preview {
-    background: #f8fafc;
-}
-
-.light-preview .preview-header {
-    height: 18px;
-    background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.light-preview .preview-body {
-    display: flex;
-    flex: 1;
-}
-
-.light-preview .preview-sidebar {
-    width: 28px;
-    background: #1b3d2f;
-}
-
-.light-preview .preview-content {
-    flex: 1;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.light-preview .preview-bar {
-    height: 8px;
-    width: 60%;
-    background: #7aa77a;
-    border-radius: 4px;
-}
-
-.light-preview .preview-box {
-    height: 36px;
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-}
-
-.dark-preview {
-    background: #0b1120;
-}
-
-.dark-preview .preview-header {
-    height: 18px;
-    background: #1e293b;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.dark-preview .preview-body {
-    display: flex;
-    flex: 1;
-}
-
-.dark-preview .preview-sidebar {
-    width: 28px;
-    background: #0f172a;
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.dark-preview .preview-content {
-    flex: 1;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.dark-preview .preview-bar {
-    height: 8px;
-    width: 60%;
-    background: #10b981;
-    border-radius: 4px;
-}
-
-.dark-preview .preview-box {
-    height: 36px;
-    background: #1e293b;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 6px;
-}
-
-.theme-choice-info {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.theme-choice-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 1rem;
-    font-weight: 700;
-    color: #1e293b;
-}
-
-.theme-choice-title i {
-    color: #2c5e47;
-}
-
-.theme-choice-info p {
-    margin: 0;
-    font-size: 0.84rem;
-    color: #64748b;
-    line-height: 1.4;
-}
-
-.theme-choice-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.76rem;
-    font-weight: 700;
-    color: #2c5e47;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-/* ── Preference Items & Toggles ─────────────────────────────────────── */
-.preferences-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
     position: relative;
     z-index: 1;
 }
 
-.preference-item {
+.detail-row {
     background: #ffffff;
     border: 1px solid rgba(44, 94, 71, 0.14);
-    border-radius: 14px;
-    padding: 16px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 18px;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-    transition: all 0.2s ease;
-}
-
-.preference-item:hover {
-    border-color: rgba(44, 94, 71, 0.28);
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
-}
-
-.preference-info {
+    border-radius: 12px;
+    padding: 16px 18px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.preference-title {
-    font-weight: 700;
-    font-size: 0.94rem;
-    color: #1e293b;
+.detail-row:hover {
+    transform: translateY(-2px);
+    border-color: rgba(44, 94, 71, 0.28);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+.detail-label {
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.preference-title i {
-    color: #2c5e47;
-    font-size: 0.88rem;
-}
-
-.preference-info p {
-    margin: 0;
-    font-size: 0.82rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: #64748b;
-    line-height: 1.4;
 }
 
-/* Modern Toggle Switch */
-.toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 46px;
-    height: 26px;
-    flex-shrink: 0;
+.detail-label i {
+    font-size: 0.82rem;
+    color: #2c5e47;
 }
 
-.toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
+.detail-row strong {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1e293b;
+    word-break: break-word;
 }
 
-.toggle-slider {
-    position: absolute;
-    cursor: pointer;
-    inset: 0;
-    background-color: #cbd5e1;
-    transition: 0.25s;
-    border-radius: 26px;
-}
-
-.toggle-slider::before {
-    position: absolute;
-    content: "";
-    height: 20px;
-    width: 20px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: 0.25s;
-    border-radius: 50%;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
-
-.toggle-switch input:checked + .toggle-slider {
-    background-color: #10b981;
-}
-
-.toggle-switch input:checked + .toggle-slider::before {
-    transform: translateX(20px);
-}
-
-.toggle-switch input:focus-visible + .toggle-slider {
-    box-shadow: 0 0 0 2px #2c5e47;
-}
-
-/* ── Security Information Card ──────────────────────────────────────── */
-.settings-security-card {
+/* ── Security Advisory Card ─────────────────────────────────────────── */
+.profile-security-card {
     background: rgba(255, 255, 255, 0.80);
     border: 1px solid rgba(44, 94, 71, 0.14);
     border-radius: 14px;
@@ -659,7 +528,14 @@ body[data-theme="dark"] .profile-avatar {
     color: #94a3b8;
 }
 
-body[data-theme="dark"] .settings-main-card {
+body[data-theme="dark"] .profile-hero-card {
+    background:
+        radial-gradient(circle at 88% 24%, rgba(13, 148, 136, 0.25), transparent 48%),
+        linear-gradient(135deg, #0d231b 0%, #1e4534 60%, #163229 100%);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body[data-theme="dark"] .profile-main-card {
     background:
         linear-gradient(180deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95)),
         linear-gradient(90deg, rgba(44, 94, 71, 0.12), rgba(37, 99, 235, 0.08));
@@ -668,78 +544,42 @@ body[data-theme="dark"] .settings-main-card {
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
 }
 
-body[data-theme="dark"] .settings-card-title-group h4 {
+body[data-theme="dark"] .profile-card-title-group h4 {
     color: #f8fafc;
 }
 
-body[data-theme="dark"] .settings-card-title-group p {
+body[data-theme="dark"] .profile-card-title-group p {
     color: #94a3b8;
 }
 
-body[data-theme="dark"] .settings-card-badge {
+body[data-theme="dark"] .profile-card-badge {
     background: rgba(16, 185, 129, 0.15);
     color: #34d399;
     border-color: rgba(16, 185, 129, 0.3);
 }
 
-body[data-theme="dark"] .theme-choice-card {
+body[data-theme="dark"] .detail-row {
     background: #1e293b;
     border-color: rgba(255, 255, 255, 0.08);
 }
 
-body[data-theme="dark"] .theme-choice-card:hover {
-    border-color: #10b981;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
-}
-
-body[data-theme="dark"] .theme-choice-card.active {
-    border-color: #10b981;
-    background: linear-gradient(180deg, #1e293b 0%, #0d2818 100%);
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.28), 0 10px 24px rgba(0, 0, 0, 0.35);
-}
-
-body[data-theme="dark"] .theme-choice-title {
-    color: #f8fafc;
-}
-
-body[data-theme="dark"] .theme-choice-title i {
-    color: #34d399;
-}
-
-body[data-theme="dark"] .theme-choice-info p {
-    color: #94a3b8;
-}
-
-body[data-theme="dark"] .theme-choice-status {
-    color: #34d399;
-}
-
-body[data-theme="dark"] .preference-item {
-    background: #1e293b;
-    border-color: rgba(255, 255, 255, 0.08);
-}
-
-body[data-theme="dark"] .preference-item:hover {
+body[data-theme="dark"] .detail-row:hover {
     border-color: rgba(16, 185, 129, 0.3);
 }
 
-body[data-theme="dark"] .preference-title {
-    color: #f8fafc;
-}
-
-body[data-theme="dark"] .preference-title i {
-    color: #34d399;
-}
-
-body[data-theme="dark"] .preference-info p {
+body[data-theme="dark"] .detail-label {
     color: #94a3b8;
 }
 
-body[data-theme="dark"] .toggle-slider {
-    background-color: #334155;
+body[data-theme="dark"] .detail-label i {
+    color: #34d399;
 }
 
-body[data-theme="dark"] .settings-security-card {
+body[data-theme="dark"] .detail-row strong {
+    color: #f8fafc;
+}
+
+body[data-theme="dark"] .profile-security-card {
     background: #1e293b;
     border-color: rgba(255, 255, 255, 0.08);
 }
@@ -770,17 +610,20 @@ body[data-theme="dark"] .footer-inner {
     .content-area {
         padding: 16px;
     }
-    .settings-main-card {
+    .profile-hero-card {
+        padding: 20px;
+    }
+    .profile-hero-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    .profile-main-card {
         padding: 18px;
     }
-    .theme-choice-grid {
+    .profile-details-grid {
         grid-template-columns: 1fr;
     }
-    .preference-item {
-        flex-direction: row;
-        align-items: flex-start;
-    }
-    .settings-security-card {
+    .profile-security-card {
         flex-direction: column;
         text-align: center;
     }
@@ -794,7 +637,12 @@ body[data-theme="dark"] .footer-inner {
     .content-area {
         padding: 12px;
     }
-    .preference-item {
-        padding: 14px;
+    .profile-hero-avatar {
+        width: 56px;
+        height: 56px;
+        font-size: 1.8rem;
+    }
+    .profile-hero-name {
+        font-size: 1.15rem;
     }
 }
