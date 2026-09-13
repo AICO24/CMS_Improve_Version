@@ -1520,22 +1520,70 @@ class PaymentController {
     }
 
     private function resolveAppOrigin($data = []) {
-        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+        // 1. Determine scheme: prefer X-Forwarded-Proto if valid
+        $scheme = 'http';
+        if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+            $protoParts = explode(',', $_SERVER['HTTP_X_FORWARDED_PROTO']);
+            $proto = strtolower(trim($protoParts[0]));
+            if (in_array($proto, ['http', 'https'], true)) {
+                $scheme = $proto;
+            }
+        } elseif (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+            $scheme = 'https';
+        }
+
+        // 2. Determine server host: prefer X-Forwarded-Host (e.g. ngrok or reverse proxy)
         $serverHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        if (!empty($_SERVER['HTTP_X_FORWARDED_HOST'])) {
+            $hostParts = explode(',', $_SERVER['HTTP_X_FORWARDED_HOST']);
+            $fwdHost = trim($hostParts[0]);
+            if (!empty($fwdHost)) {
+                $serverHost = $fwdHost;
+            }
+        }
+
         $uri = $_SERVER['REQUEST_URI'] ?? '';
         $script = $_SERVER['SCRIPT_NAME'] ?? '';
         $prefix = (strpos($uri, '/CMS') === 0 || strpos($script, '/CMS') === 0) ? '/CMS' : '';
         $defaultOrigin = $scheme . '://' . $serverHost . $prefix;
 
-        if (!empty($data['origin']) && filter_var($data['origin'], FILTER_VALIDATE_URL)) {
-            $parsed = parse_url($data['origin']);
+        // 3. Check for explicit origin parameter or browser Origin header
+        $candidateOrigin = $data['origin'] ?? ($_SERVER['HTTP_ORIGIN'] ?? '');
+        if (!empty($candidateOrigin) && filter_var($candidateOrigin, FILTER_VALIDATE_URL)) {
+            $parsed = parse_url($candidateOrigin);
             $originHost = strtolower($parsed['host'] ?? '');
-            $expectedHost = strtolower(parse_url('http://' . $serverHost, PHP_URL_HOST) ?? 'localhost');
             
-            // Allow origin override only if host matches server host, localhost, or 127.0.0.1
-            $trustedHosts = array_unique(array_filter([$expectedHost, 'localhost', '127.0.0.1']));
-            if (!empty($parsed['scheme']) && in_array($originHost, $trustedHosts, true)) {
-                return rtrim($data['origin'], '/');
+            // Build trusted hosts list
+            $trustedHosts = [
+                'localhost',
+                '127.0.0.1',
+                strtolower(parse_url('http://' . ($serverHost ?? 'localhost'), PHP_URL_HOST) ?? 'localhost')
+            ];
+            if (!empty($_SERVER['HTTP_HOST'])) {
+                $rawHost = strtolower(parse_url('http://' . $_SERVER['HTTP_HOST'], PHP_URL_HOST) ?? '');
+                if ($rawHost) $trustedHosts[] = $rawHost;
+            }
+            if (!empty($_SERVER['HTTP_X_FORWARDED_HOST'])) {
+                $fwdParts = explode(',', $_SERVER['HTTP_X_FORWARDED_HOST']);
+                $fwdH = strtolower(trim($fwdParts[0]));
+                if ($fwdH) $trustedHosts[] = $fwdH;
+            }
+            if (!empty($_SERVER['HTTP_REFERER'])) {
+                $refHost = strtolower(parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST) ?? '');
+                if ($refHost) $trustedHosts[] = $refHost;
+            }
+            $trustedHosts = array_unique(array_filter($trustedHosts));
+
+            $isTrusted = in_array($originHost, $trustedHosts, true);
+            if (!$isTrusted) {
+                // Allow ngrok and localtunnel development tunnels
+                if (preg_match('/(\.ngrok(-free)?\.(app|dev|io)|\.loca\.lt)$/i', $originHost)) {
+                    $isTrusted = true;
+                }
+            }
+
+            if ($isTrusted && !empty($parsed['scheme']) && in_array(strtolower($parsed['scheme']), ['http', 'https'], true)) {
+                return rtrim($candidateOrigin, '/');
             }
         }
 
@@ -1584,11 +1632,23 @@ class PaymentController {
                 $allowedHosts[] = strtolower($serverHost);
             }
         }
+        if (!empty($_SERVER['HTTP_X_FORWARDED_HOST'])) {
+            $fwdParts = explode(',', $_SERVER['HTTP_X_FORWARDED_HOST']);
+            $fwdHost = parse_url('http://' . trim($fwdParts[0]), PHP_URL_HOST);
+            if (!empty($fwdHost)) {
+                $allowedHosts[] = strtolower($fwdHost);
+            }
+        }
         $allowedHosts[] = 'localhost';
         $allowedHosts[] = '127.0.0.1';
         $allowedHosts = array_unique(array_filter($allowedHosts));
 
-        if (!in_array($urlHost, $allowedHosts, true)) {
+        $isHostAllowed = in_array($urlHost, $allowedHosts, true);
+        if (!$isHostAllowed && preg_match('/(\.ngrok(-free)?\.(app|dev|io)|\.loca\.lt)$/i', $urlHost)) {
+            $isHostAllowed = true;
+        }
+
+        if (!$isHostAllowed) {
             return false;
         }
 

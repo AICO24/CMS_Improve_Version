@@ -1315,7 +1315,7 @@ class BookingAgentController {
             // If caller explicitly requested finalize or draft is already in AWAITING_CONFIRM
             if (!empty($input['finalize']) || $draft['status'] === BookingDraft::STATUS_AWAITING_CONFIRM) {
                 if ($draft['service_type'] === 'burial') {
-                    $result = $this->agentService->finalizeBurialDraft($draftId, $userId, $username, $user);
+                    $result = $this->agentService->finalizeBurialDraft($draftId, $userId, $username, $user, $input);
                     return array_merge(['code' => 200], $result);
                 } elseif ($draft['service_type'] === 'cremation') {
                     $result = $this->agentService->finalizeCremationDraft($draftId, $userId, $username, $user);
@@ -1347,9 +1347,10 @@ class BookingAgentController {
      * 
      * @param int   $draftId
      * @param mixed $user
+     * @param array $input Optional options
      * @return array
      */
-    public function finalize(int $draftId, $user): array {
+    public function finalize(int $draftId, $user, array $input = []): array {
         [$userId, $username] = $this->resolveUserContext($user);
         if ($userId <= 0) {
             return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
@@ -1359,7 +1360,7 @@ class BookingAgentController {
             $draft = $this->draftModel->requireOwnership($draftId, $userId);
 
             if ($draft['service_type'] === 'burial') {
-                $result = $this->agentService->finalizeBurialDraft($draftId, $userId, $username, $user);
+                $result = $this->agentService->finalizeBurialDraft($draftId, $userId, $username, $user, $input);
                 return array_merge(['code' => 200], $result);
             } elseif ($draft['service_type'] === 'cremation') {
                 $result = $this->agentService->finalizeCremationDraft($draftId, $userId, $username, $user);

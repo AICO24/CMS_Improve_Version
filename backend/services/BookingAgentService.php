@@ -946,7 +946,7 @@ class BookingAgentService {
      * @return array Standardized outcome payload.
      * @throws BookingDraftException
      */
-    public function finalizeBurialDraft(int $draftId, int $userId, ?string $username = null, $user = null): array {
+    public function finalizeBurialDraft(int $draftId, int $userId, ?string $username = null, $user = null, array $options = []): array {
         $draft = $this->draftModel->requireOwnership($draftId, $userId);
 
         if ($draft['service_type'] !== 'burial') {
@@ -1142,11 +1142,15 @@ class BookingAgentService {
             }
 
             if (!empty($outcome['success']) && !empty($outcome['schedule_id'])) {
-                $checkoutResult = $paymentController->createCheckoutSession([
+                $sessionPayload = [
                     'transaction_type' => 'Lot Purchase',
                     'reference_id' => (int) $outcome['schedule_id'],
                     'reference_kind' => 'schedule',
-                ], $paymentUser);
+                ];
+                if (!empty($options['origin'])) {
+                    $sessionPayload['origin'] = $options['origin'];
+                }
+                $checkoutResult = $paymentController->createCheckoutSession($sessionPayload, $paymentUser);
 
                 if (!empty($checkoutResult['payment_id'])) {
                     $outcome['payment_id'] = (int) $checkoutResult['payment_id'];

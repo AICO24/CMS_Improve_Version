@@ -703,6 +703,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (paymentId) {
                 payload.payment_id = paymentId;
             }
+            payload.origin = window.location.origin;
 
             await withButtonLoading(payOnlineBtn, async () => {
                 try {

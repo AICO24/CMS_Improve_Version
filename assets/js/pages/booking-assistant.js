@@ -33,7 +33,7 @@
     let blueprintStatusBadge, hudServiceVal, hudDecedentVal, hudAllocationVal, hudReviewVal;
     let hudServiceBadge, hudServiceDesc, hudDecedentName, hudRelationship, hudDate, hudAllocationLabel, hudAllocationDetails, hudLotActionBox, btnOpenLotPicker;
     let btnEditDecedent, btnEditSchedule, hudMissingAlert, hudMissingList, hudMatchCard, hudMatchText;
-    let btnConfirmBooking;
+    let btnConfirmBooking, blueprintPanel, btnToggleBlueprintMobile;
     let lotPickerModal, btnCloseLotPicker, lotSearchFilter, lotSectionFilter, lotPickerSpinner, lotGridContainer, lotPickerEmpty;
     let fieldEditModal, btnCloseFieldEdit, btnCancelFieldEdit, fieldEditForm, fieldEditTitle, fieldEditLabel, fieldEditInput, fieldEditHint;
 
@@ -105,6 +105,8 @@
         hudMatchText = document.getElementById('hudMatchText');
 
         btnConfirmBooking = document.getElementById('btnConfirmBooking');
+        blueprintPanel = document.getElementById('blueprintPanel');
+        btnToggleBlueprintMobile = document.getElementById('btnToggleBlueprintMobile');
 
         lotPickerModal = document.getElementById('lotPickerModal');
         btnCloseLotPicker = document.getElementById('btnCloseLotPicker');
@@ -146,10 +148,22 @@
                 }
             });
 
-            // Mobile virtual keyboard handling: ensure input stays visible above keyboard
+            // Mobile virtual keyboard handling: ensure input and latest messages stay visible above keyboard
+            const updateMobileViewportHeight = () => {
+                const vp = window.visualViewport;
+                const h = vp ? vp.height : window.innerHeight;
+                document.documentElement.style.setProperty('--app-viewport-height', `${h}px`);
+            };
+
             const scrollInputToView = () => {
+                updateMobileViewportHeight();
                 setTimeout(() => {
                     userInputMsg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    if (chatThread) {
+                        chatThread.scrollTop = chatThread.scrollHeight;
+                    }
+                }, 50);
+                setTimeout(() => {
                     if (chatThread) {
                         chatThread.scrollTop = chatThread.scrollHeight;
                     }
@@ -161,11 +175,28 @@
 
             if (window.visualViewport) {
                 window.visualViewport.addEventListener('resize', () => {
+                    updateMobileViewportHeight();
                     if (document.activeElement === userInputMsg) {
                         scrollInputToView();
                     }
                 });
+                window.visualViewport.addEventListener('scroll', updateMobileViewportHeight);
             }
+            window.addEventListener('resize', updateMobileViewportHeight);
+            window.addEventListener('orientationchange', () => {
+                setTimeout(updateMobileViewportHeight, 150);
+                setTimeout(updateMobileViewportHeight, 300);
+            });
+            updateMobileViewportHeight();
+        }
+
+        if (btnToggleBlueprintMobile && blueprintPanel) {
+            btnToggleBlueprintMobile.addEventListener('click', () => {
+                const isVis = blueprintPanel.classList.toggle('mobile-visible');
+                btnToggleBlueprintMobile.innerHTML = isVis
+                    ? '<i class="fas fa-comments"></i> <span id="blueprintToggleText">Chat</span>'
+                    : '<i class="fas fa-clipboard-list"></i> <span id="blueprintToggleText">Summary</span>';
+            });
         }
 
         if (btnRestartDraft) btnRestartDraft.addEventListener('click', onRestartDraft);
@@ -1213,7 +1244,10 @@
         try {
             const res = await api.request(`booking-agent/drafts/${state.draftId}/confirm`, {
                 method: 'POST',
-                body: { finalize: true }
+                body: {
+                    finalize: true,
+                    origin: window.location.origin
+                }
             });
 
             if (res && res.success) {
@@ -1445,7 +1479,13 @@
     }
 
     function scrollChatToBottom() {
+        if (!chatThread) return;
         chatThread.scrollTop = chatThread.scrollHeight;
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => {
+                if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
+            });
+        }
     }
 
     function setLoading(loading) {

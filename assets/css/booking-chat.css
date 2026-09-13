@@ -11,6 +11,14 @@
    this consolidation (see its own header comment for this section).
    ========================================================================== */
 
+:root {
+    --app-viewport-height: 100dvh;
+}
+
+.mobile-blueprint-toggle {
+    display: none !important;
+}
+
 /* ---------- BASE LAYOUT CHAINS ---------- */
 .dashboard-body {
     background:
@@ -1767,15 +1775,54 @@ body[data-theme="dark"].dashboard-body,
 }
 
 @media (max-width: 768px) {
+    html, body {
+        height: 100%;
+        overflow: hidden;
+    }
+
     .dashboard-container {
-        min-height: 100dvh;
-        height: 100dvh;
+        min-height: 0;
+        height: var(--app-viewport-height, 100dvh);
+        max-height: var(--app-viewport-height, 100dvh);
+        overflow: hidden;
     }
 
     .main-content {
-        height: 100dvh;
+        height: 100%;
         min-height: 0;
+        max-height: 100%;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .top-bar {
+        flex-wrap: nowrap;
+        gap: 6px;
+        padding: 6px 12px;
+        min-height: 46px;
+        flex-shrink: 0;
+    }
+
+    .top-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .top-left h3 {
+        font-size: 0.95rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin: 0;
+    }
+
+    .user-info {
+        gap: 6px;
+        flex-shrink: 0;
     }
 
     .content-area {
@@ -1783,27 +1830,55 @@ body[data-theme="dark"].dashboard-body,
         -webkit-overflow-scrolling: touch;
         display: flex !important;
         flex-direction: column;
-        padding: 8px 10px;
-        flex: 1;
+        padding: 6px 8px;
+        flex: 1 1 auto;
         min-height: 0;
-        gap: 12px;
+        gap: 8px;
     }
 
     .ai-chat-layout {
         flex-direction: column;
-        flex: 1 0 auto;
+        flex: 1 1 auto;
         min-height: 0;
-        gap: 12px;
+        height: 100%;
+        gap: 8px;
     }
 
     .ai-chat-main {
         min-height: 0;
-        height: calc(100dvh - 100px);
+        height: 100%;
         max-height: 100%;
         flex: 1 1 auto;
         display: flex;
         flex-direction: column;
         border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .ai-assistant-header {
+        padding: 8px 12px;
+        flex-shrink: 0;
+        gap: 8px;
+    }
+
+    .ai-avatar-badge {
+        width: 32px;
+        height: 32px;
+        font-size: 0.95rem;
+        border-radius: 10px;
+    }
+
+    .ai-assistant-name {
+        font-size: 0.9rem;
+    }
+
+    .ai-status-pill {
+        font-size: 0.68rem;
+        padding: 1px 6px;
+    }
+
+    .ai-assistant-desc {
+        display: none;
     }
 
     .chat-window {
@@ -1812,13 +1887,49 @@ body[data-theme="dark"].dashboard-body,
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior-y: contain;
+        padding: 10px 12px;
+        gap: 10px;
+    }
+
+    .chat-message {
+        max-width: 90%;
+        padding: 10px 14px;
+        font-size: 0.88rem;
+    }
+
+    .mobile-blueprint-toggle {
+        display: inline-flex !important;
+        align-items: center;
+        gap: 5px;
     }
 
     .ai-booking-blueprint {
+        display: none;
         width: 100%;
         flex: none;
         max-height: none;
         overflow: visible;
+    }
+
+    .ai-booking-blueprint.mobile-visible {
+        display: flex !important;
+        flex-direction: column;
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+        width: 100vw;
+        height: var(--app-viewport-height, 100dvh);
+        border-radius: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        background: #ffffff;
+        padding: 16px;
+        padding-bottom: 32px;
+        box-shadow: 0 0 24px rgba(0, 0, 0, 0.25);
+    }
+
+    [data-theme="dark"] .ai-booking-blueprint.mobile-visible {
+        background: #0f172a;
     }
 
     .blueprint-body {
@@ -1849,16 +1960,22 @@ body[data-theme="dark"].dashboard-body,
     }
 
     .chat-prompt-suggestions {
-        padding: 8px 12px;
+        flex-shrink: 0;
+        padding: 6px 8px;
         gap: 6px;
+        overflow-x: auto;
+        white-space: nowrap;
     }
 
     .chat-input-row {
-        position: sticky;
-        bottom: 0;
-        padding: 10px 12px;
+        position: relative;
+        bottom: auto;
+        flex-shrink: 0;
+        padding: 8px 10px;
+        padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
         background: #ffffff;
-        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
-        z-index: 15;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
+        border-top: 1px solid rgba(44, 94, 71, 0.15);
+        z-index: 20;
     }
 }

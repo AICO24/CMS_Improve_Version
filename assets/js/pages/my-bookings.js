@@ -596,7 +596,8 @@
                             const checkoutPayload = {
                                 transaction_type: 'Lot Purchase',
                                 reference_id: sourceId,
-                                reference_kind: 'schedule'
+                                reference_kind: 'schedule',
+                                origin: window.location.origin
                             };
                             if (record.payment_id) {
                                 checkoutPayload.payment_id = record.payment_id;
