@@ -21,7 +21,6 @@
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
     <link rel="stylesheet" href="../../assets/css/payment-history.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/components/search-input.css">
     <link rel="stylesheet" href="../../assets/css/shared/ai-assistant-widget.css">
 
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
@@ -35,48 +34,47 @@
                 <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
                 <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
             </div>
-                                                <div class="sidebar-nav">
+                <div class="sidebar-nav">
                     <a href="dashboard_user.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Services</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
+                    <div class="nav-group">
+                        <button type="button" class="nav-group-header">
+                            <span>Services</span>
+                            <i class="fas fa-chevron-down chev"></i>
+                        </button>
+                        <div class="nav-group-body">
+                            <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
+                        </div>
+                    </div>
+                    <div class="nav-group">
+                        <button type="button" class="nav-group-header">
+                            <span>Records</span>
+                            <i class="fas fa-chevron-down chev"></i>
+                        </button>
+                        <div class="nav-group-body">
+                            <a href="my-bookings.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>My Bookings</span></a>
+                            <a href="my-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>My Records</span></a>
+                        </div>
+                    </div>
+                    <div class="nav-group">
+                        <button type="button" class="nav-group-header">
+                            <span>Finance</span>
+                            <i class="fas fa-chevron-down chev"></i>
+                        </button>
+                        <div class="nav-group-body">
+                            <a href="payment-history.html" class="nav-item active"><i class="fas fa-receipt icon"></i> <span>Payment History</span></a>
+                        </div>
+                    </div>
+                    <div class="nav-group">
+                        <button type="button" class="nav-group-header">
+                            <span>Account</span>
+                            <i class="fas fa-chevron-down chev"></i>
+                        </button>
+                        <div class="nav-group-body">
+                            <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
+                            <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
+                        </div>
                     </div>
                 </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Records</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="my-bookings.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>My Bookings</span></a>
-                    <a href="my-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>My Records</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Finance</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
-                    <a href="payment-history.html" class="nav-item active"><i class="fas fa-receipt icon"></i> <span>Payment History</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Account</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
-                    <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
-                    </div>
-                </div>
-            </div>
             <div class="sidebar-footer">
                 <div class="user-chip">
                     <i class="fas fa-user-circle"></i>
@@ -117,94 +115,132 @@
                     </button>
                 </div>
             </div>
-                <div class="content-area">
+            <div class="content-area">
+                <!-- Summary Stats Section -->
+                <p class="section-label"><i class="fas fa-chart-pie"></i> Payment Overview</p>
+
                 <div class="stats-row payhist-stats">
-                    <div class="stat-card"><div class="stat-title">Total Paid</div><div class="stat-value" id="totalRevenue">₱0</div><div class="stat-sub">All time</div></div>
-                    <div class="stat-card"><div class="stat-title">This Month</div><div class="stat-value" id="monthRevenue">₱0</div><div class="stat-sub">Current month</div></div>
-                    <div class="stat-card"><div class="stat-title">Transactions</div><div class="stat-value" id="transactionCount">0</div><div class="stat-sub">Total count</div></div>
-                    <div class="stat-card"><div class="stat-title">Last Payment</div><div class="stat-value" id="lastPayment">—</div><div class="stat-sub">Date</div></div>
-                </div>
-
-                <div class="toolbar-row">
-                    <div class="toolbar-action-row">
-                        <div class="toolbar-section-label">
-                            <i class="fas fa-filter"></i>
-                            <span>Filters</span>
-                        </div>
+                    <div class="stat-card accent-green">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-peso-sign"></i></span> Total Paid</div>
+                        <div class="stat-value" id="totalRevenue">₱0</div>
+                        <div class="stat-sub">All time</div>
                     </div>
-                    <div class="toolbar-filters">
-                        <div class="search-field">
-                            <input type="text" id="referenceFilter" class="search-field__input" placeholder=" ">
-                            <label for="referenceFilter" class="search-field__label">Reference #</label>
-                            <span class="search-field__icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
-                            </span>
-                        </div>
-                        <select id="transactionTypeFilter">
-                            <option value="">All types</option>
-                            <option value="Lot Purchase">Lot Purchase</option>
-                            <option value="Cremation">Cremation</option>
-                            <option value="Relocation">Relocation</option>
-                            <option value="Renewal">Renewal</option>
-                            <option value="Other">Other</option>
-                        </select>
-                        <label class="status-select-field" for="statusFilter">
-                            <span>Status</span>
-                            <select id="statusFilter" aria-label="Payment status">
-                            <option value="">All statuses</option>
-                            <option value="Pending">Pending</option>
-                            <option value="Verified">Verified</option>
-                            <option value="Rejected">Rejected</option>
-                            </select>
-                        </label>
-                        <label class="date-filter-field">
-                            <span>From</span>
-                            <input type="date" id="dateFromFilter" aria-label="From date">
-                        </label>
-                        <label class="date-filter-field">
-                            <span>To</span>
-                            <input type="date" id="dateToFilter" aria-label="To date">
-                        </label>
-                        <button class="btn-secondary" id="clearFilters">Clear</button>
+                    <div class="stat-card accent-teal">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-calendar-days"></i></span> This Month</div>
+                        <div class="stat-value" id="monthRevenue">₱0</div>
+                        <div class="stat-sub">Current month</div>
+                    </div>
+                    <div class="stat-card accent-purple">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-receipt"></i></span> Transactions</div>
+                        <div class="stat-value" id="transactionCount">0</div>
+                        <div class="stat-sub">Total count</div>
+                    </div>
+                    <div class="stat-card accent-amber">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-clock-rotate-left"></i></span> Last Payment</div>
+                        <div class="stat-value" id="lastPayment">—</div>
+                        <div class="stat-sub">Date</div>
                     </div>
                 </div>
 
-                <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
+                <!-- Main Payment Records Card -->
+                <p class="section-label"><i class="fas fa-table-list"></i> Transaction History</p>
 
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Receipt #</th>
-                                <th>Type</th>
-                                <th>Amount</th>
-                                <th>Date</th>
-                                <th>Method</th>
-                                <th>Status</th>
-                                <th>Received By</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="paymentsTableBody">
-                            <tr><td colspan="8">Loading payments...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+                <div class="payments-main-card">
+                    <div class="payments-card-header">
+                        <div class="payments-card-title-group">
+                            <h4><i class="fas fa-receipt" style="color: var(--color-primary-600, #2c5e47);"></i> Personal Payment Ledger</h4>
+                            <p>Track your verified payments, pending submissions, and transaction receipts.</p>
+                        </div>
+                        <span class="payments-card-badge">Finance</span>
+                    </div>
 
-                <div class="pagination-controls" id="paginationControls">
-                    <span class="pagination-info" id="paginationInfo"></span>
-                    <div class="pagination-actions">
-                        <form class="pagination-jump" id="paginationJumpForm">
-                            <label for="pageJumpInput">Jump to page</label>
-                            <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Enter page number">
-                            <button class="btn-secondary" id="pageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
-                        </form>
-                        <span class="pagination-divider" aria-hidden="true"></span>
-                        <button class="btn-secondary" id="prevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
-                        <button class="btn-secondary" id="nextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
+                    <div class="toolbar-row">
+                        <div class="toolbar-action-row">
+                            <div class="toolbar-section-label">
+                                <i class="fas fa-filter"></i>
+                                <span>Filters</span>
+                            </div>
+                        </div>
+                        <div class="toolbar-filters">
+                            <div class="search-input-wrap">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="referenceFilter" placeholder="Search reference #..." aria-label="Search by reference number">
+                            </div>
+                            <label class="select-filter-shell" for="transactionTypeFilter">
+                                <select id="transactionTypeFilter" aria-label="Transaction type">
+                                    <option value="">All types</option>
+                                    <option value="Lot Purchase">Lot Purchase</option>
+                                    <option value="Cremation">Cremation</option>
+                                    <option value="Relocation">Relocation</option>
+                                    <option value="Renewal">Renewal</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <i class="fas fa-chevron-down"></i>
+                            </label>
+                            <label class="select-filter-shell" for="statusFilter">
+                                <select id="statusFilter" aria-label="Payment status">
+                                    <option value="">All statuses</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Verified">Verified</option>
+                                    <option value="Rejected">Rejected</option>
+                                </select>
+                                <i class="fas fa-chevron-down"></i>
+                            </label>
+                            <label class="date-filter-field">
+                                <span>From</span>
+                                <input type="date" id="dateFromFilter" aria-label="From date">
+                            </label>
+                            <label class="date-filter-field">
+                                <span>To</span>
+                                <input type="date" id="dateToFilter" aria-label="To date">
+                            </label>
+                            <button class="btn-secondary" id="clearFilters" title="Clear all filters">Clear</button>
+                        </div>
+                    </div>
+
+                    <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Receipt #</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                    <th>Method</th>
+                                    <th>Status</th>
+                                    <th>Received By</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="paymentsTableBody">
+                                <tr><td colspan="8">Loading payments...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination-controls" id="paginationControls">
+                        <span class="pagination-info" id="paginationInfo"></span>
+                        <div class="pagination-actions">
+                            <form class="pagination-jump" id="paginationJumpForm">
+                                <label for="pageJumpInput">Jump to page</label>
+                                <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Enter page number">
+                                <button class="btn-secondary" id="pageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
+                            </form>
+                            <span class="pagination-divider" aria-hidden="true"></span>
+                            <button class="btn-secondary" id="prevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
+                            <button class="btn-secondary" id="nextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <footer class="dashboard-footer">
+                <div class="dashboard-footer__bottom">
+                    <span class="dashboard-footer__text">&copy; 2026 Cemetery Management System. All rights reserved.</span>
+                </div>
+            </footer>
         </main>
     </div>
 
