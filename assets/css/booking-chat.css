@@ -13,7 +13,10 @@
 
 /* ---------- BASE LAYOUT CHAINS ---------- */
 .dashboard-body {
-    background: #f1f5f9;
+    background:
+        radial-gradient(circle at 14% 8%, rgba(44, 94, 71, 0.10), transparent 28%),
+        radial-gradient(circle at 88% 18%, rgba(37, 99, 235, 0.08), transparent 24%),
+        linear-gradient(180deg, #f6faf7 0%, #f4f7fa 42%, #eef3f7 100%);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     color: #1e293b;
 }
@@ -24,29 +27,60 @@
 }
 
 .main-content {
+    position: relative;
+    isolation: isolate;
     flex: 1;
     height: 100vh;
     min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: #f1f5f9;
+    background:
+        radial-gradient(circle at 12% 6%, rgba(44, 94, 71, 0.18), transparent 32%),
+        radial-gradient(circle at 88% 14%, rgba(37, 99, 235, 0.12), transparent 28%),
+        linear-gradient(180deg, #eef8f1 0%, #f4f7fa 44%, #eaf0f4 100%);
     transition: margin-left 220ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.main-content::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background:
+        radial-gradient(circle at 20% 28%, rgba(122, 167, 122, 0.28), transparent 24%),
+        radial-gradient(circle at 78% 42%, rgba(43, 54, 88, 0.12), transparent 26%),
+        linear-gradient(135deg, rgba(44, 94, 71, 0.12), rgba(37, 99, 235, 0.08) 45%, rgba(244, 247, 250, 0));
+    pointer-events: none;
+}
+
 .top-bar {
-    background: #ffffff;
-    padding: 12px 24px;
+    position: relative;
+    z-index: 1;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(234, 243, 238, 0.74)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.12), rgba(37, 99, 235, 0.07));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    padding: 14px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    border-bottom: 1px solid #e2e8f0;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.65);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
     flex-shrink: 0;
 }
 
+.top-left h3 {
+    color: #1b3d2f;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+}
+
 .content-area {
+    position: relative;
+    z-index: 1;
     flex: 1;
     min-height: 0;
     display: flex;
@@ -65,16 +99,18 @@
     min-height: 0;
 }
 
-/* Left Pane: Main Chat Assistant */
+/* Left Pane: Main Chat Assistant (Styled like Reports .chart-card) */
 .ai-chat-main {
+    position: relative;
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    background: #ffffff;
-    border-radius: 16px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
+    border-radius: 20px;
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-left: 6px solid #2c5e47;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
     overflow: hidden;
 }
 
@@ -84,8 +120,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 24px;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(239, 247, 243, 0.92) 100%);
+    border-bottom: 1px solid rgba(44, 94, 71, 0.12);
     flex-shrink: 0;
 }
 
@@ -965,21 +1001,23 @@
 
 /* ---------- RIGHT PANE: LIVE BOOKING BLUEPRINT HUD ---------- */
 .ai-booking-blueprint {
-    width: 330px;
+    position: relative;
+    width: 340px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    background: #ffffff;
-    border-radius: 16px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 250, 247, 0.94));
+    border-radius: 20px;
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-top: 6px solid #2c5e47;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
     overflow: hidden;
 }
 
 .blueprint-header {
     padding: 16px 20px;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(239, 247, 243, 0.92) 100%);
+    border-bottom: 1px solid rgba(44, 94, 71, 0.12);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -991,7 +1029,7 @@
     gap: 8px;
     font-size: 0.95rem;
     font-weight: 700;
-    color: #0f172a;
+    color: #1b3d2f;
 }
 
 .blueprint-title i {
@@ -1001,11 +1039,11 @@
 .blueprint-badge {
     font-size: 0.72rem;
     font-weight: 700;
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 999px;
-    background: #f1f5f9;
-    color: #475569;
-    border: 1px solid #e2e8f0;
+    background: rgba(44, 94, 71, 0.10);
+    color: #1f4538;
+    border: 1px solid rgba(44, 94, 71, 0.20);
 }
 
 .blueprint-body {
@@ -1271,10 +1309,12 @@
 
 /* ---------- BLUEPRINT HUD CARDS & STEPPER ---------- */
 .blueprint-card {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.90);
+    border: 1px solid rgba(44, 94, 71, 0.14);
+    border-left: 3px solid #2c5e47;
     border-radius: 12px;
     padding: 12px 14px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
     transition: all 0.2s ease;
 }
 
@@ -1434,7 +1474,9 @@
 
 .lot-picker-dialog {
     background: #ffffff;
-    border-radius: 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-top: 6px solid #2c5e47;
     width: 100%;
     max-width: 860px;
     max-height: 85vh;
@@ -1447,10 +1489,12 @@
 
 .field-edit-dialog {
     background: #ffffff;
-    border-radius: 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-top: 6px solid #2c5e47;
     width: 100%;
     max-width: 440px;
-    padding: 22px;
+    padding: 24px;
     box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.2);
     animation: scaleInModal 0.2s ease-out;
 }
@@ -1465,8 +1509,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 18px 24px;
-    border-bottom: 1px solid #e2e8f0;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-bottom: 1px solid rgba(44, 94, 71, 0.12);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(239, 247, 243, 0.92) 100%);
 }
 
 .lot-picker-title {
@@ -1583,6 +1627,32 @@
 }
 
 /* ---------- DARK MODE ADJUSTMENTS ---------- */
+body[data-theme="dark"] .dashboard-body,
+body[data-theme="dark"].dashboard-body,
+.dashboard-body[data-theme="dark"] {
+    background:
+        radial-gradient(circle at 14% 8%, rgba(44, 94, 71, 0.18), transparent 28%),
+        radial-gradient(circle at 88% 18%, rgba(37, 99, 235, 0.12), transparent 24%),
+        linear-gradient(180deg, #0b131c 0%, #0d1722 42%, #0a1118 100%) !important;
+    color: #e2e8f0;
+}
+
+.dashboard-body[data-theme="dark"] .main-content {
+    background:
+        radial-gradient(circle at 12% 6%, rgba(44, 94, 71, 0.22), transparent 32%),
+        radial-gradient(circle at 88% 14%, rgba(37, 99, 235, 0.16), transparent 28%),
+        linear-gradient(180deg, #0d191d 0%, #0d1722 44%, #0a1118 100%);
+}
+
+.dashboard-body[data-theme="dark"] .top-bar {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(18, 30, 49, 0.90)) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-body[data-theme="dark"] .top-left h3 {
+    color: #f1f5f9;
+}
+
 [data-theme="dark"] .ai-chat-main,
 [data-theme="dark"] .ai-booking-blueprint,
 [data-theme="dark"] .lot-picker-dialog,
@@ -1623,6 +1693,7 @@
 [data-theme="dark"] .blueprint-card {
     background: #0f172a;
     border-color: #334155;
+    border-left-color: #34d399;
 }
 
 [data-theme="dark"] .hud-card-header {
