@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Notifications | Cemetery Management</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../../assets/css/tokens.css?v=2">
@@ -21,43 +21,28 @@
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
     <link rel="stylesheet" href="../../assets/css/components/badges.css">
-    <link rel="stylesheet" href="../../assets/css/notifications.css">
-
+    <link rel="stylesheet" href="../../assets/css/notifications.css?v=2">
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
 </head>
 <body class="dashboard-body">
 <script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
     <div class="dashboard-container">
+        <!-- SIDEBAR (Role-aware static default for citizen, dynamic rebuild for admin/staff via api.js) -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
                 <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
             </div>
-                                                <div class="sidebar-nav">
-                    <a href="dashboard_admin.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
+            <div class="sidebar-nav">
+                <a href="dashboard_user.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
                 <div class="nav-group">
                     <button type="button" class="nav-group-header">
-                        <span>Operations</span>
+                        <span>Services</span>
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="book-a-service.html" class="nav-item"><i class="fas fa-handshake icon"></i> <span>Book a Service</span></a>
-                    <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
-                    <a href="manage-reservations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Reservations</span></a>
-                    <a href="manage-cremations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Cremations</span></a>
-                    <a href="relocation-management.html" class="nav-item"><i class="fas fa-truck-moving icon"></i> <span>Relocation Management</span></a>
-                    <a href="expiration-monitoring.html" class="nav-item"><i class="fas fa-hourglass-half icon"></i> <span>Expiration Monitoring</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Cemetery Management</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="lot-management.html" class="nav-item"><i class="fas fa-map-location-dot icon"></i> <span>Lot Management</span></a>
-                    <a href="cremation-management.html" class="nav-item"><i class="fas fa-fire icon"></i> <span>Columbarium Management</span></a>
+                        <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -66,7 +51,8 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="decedent-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>Decedent Records</span></a>
+                        <a href="my-bookings.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>My Bookings</span></a>
+                        <a href="my-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>My Records</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -75,29 +61,7 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Intelligence & Analytics</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="reports.html" class="nav-item"><i class="fas fa-chart-column icon"></i> <span>Reports</span></a>
-                    <a href="forecast.html" class="nav-item"><i class="fas fa-chart-line icon"></i> <span>Capacity Forecast</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>System Administration</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="user-management.html" class="nav-item"><i class="fas fa-users icon"></i> <span>User Management</span></a>
-                    <a href="exceptions.html" class="nav-item"><i class="fas fa-triangle-exclamation icon"></i> <span>System Exceptions</span></a>
-                    <a href="ai.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>AI Configuration</span></a>
-                    <a href="audit.html" class="nav-item"><i class="fas fa-clipboard-list icon"></i> <span>Audit Logs</span></a>
+                        <a href="payment-history.html" class="nav-item"><i class="fas fa-receipt icon"></i> <span>Payment History</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -106,8 +70,8 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
-                    <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
+                        <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
+                        <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
                     </div>
                 </div>
             </div>
@@ -150,14 +114,56 @@
                     </button>
                 </div>
             </div>
-                <div class="content-area">
+
+            <div class="content-area">
+                <div id="aiAssistantMount"></div>
+
+                <!-- Section Label -->
+                <p class="section-label"><i class="fas fa-bullhorn"></i> Announcements & Updates</p>
+
+                <!-- Hero Card -->
                 <div class="hero-card">
-                    <h4>Project Updates</h4>
-                    <p>Stay informed about upcoming burial schedules, expiring lots, renewals, and general system updates.</p>
-                    <button class="btn-primary" id="markAllReadBtn">Mark all as read</button>
+                    <div class="hero-content">
+                        <div class="hero-icon-shell">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <div class="hero-text">
+                            <h4>System & Service Updates</h4>
+                            <p>Stay informed about upcoming schedules, verified payments, expiring lots, renewals, and official cemetery advisories.</p>
+                        </div>
+                    </div>
+                    <div class="hero-actions">
+                        <button class="btn-primary hero-btn" id="markAllReadBtn">
+                            <i class="fas fa-check-double"></i>
+                            <span>Mark all as read</span>
+                        </button>
+                    </div>
                 </div>
 
-                <div class="notification-list" id="notificationList"></div>
+                <!-- Feed Section Label -->
+                <p class="section-label"><i class="fas fa-list-check"></i> Recent Notifications</p>
+
+                <!-- Main Notifications Card -->
+                <div class="notifications-main-card">
+                    <div class="notifications-card-header">
+                        <div class="notifications-card-title-group">
+                            <h4><i class="fas fa-bell" style="color: var(--color-primary-600, #2c5e47);"></i> Notification Feed</h4>
+                            <p>All automated alerts, reservation updates, and notifications associated with your account.</p>
+                        </div>
+                        <span class="notifications-card-badge">Alerts</span>
+                    </div>
+
+                    <div class="notification-list" id="notificationList">
+                        <!-- Loaded dynamically via notifications.js -->
+                    </div>
+                </div>
+
+                <footer class="dashboard-footer">
+                    <div class="footer-inner">
+                        <span>CodeRebels Cemetery Management System &copy; 2026</span>
+                        <span>Portal &bull; Notifications</span>
+                    </div>
+                </footer>
             </div>
         </main>
     </div>
