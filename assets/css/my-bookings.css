@@ -785,3 +785,49 @@ body[data-theme="dark"].dashboard-body,
     border-left-color: #fbbf24;
     background: linear-gradient(135deg, #4d2800 0%, #683804 100%) !important;
 }
+
+/* ── Responsive Layouts ────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+    .my-bookings-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .content-area {
+        padding: 16px;
+    }
+    .my-bookings-stats {
+        grid-template-columns: 1fr;
+    }
+    .bookings-main-card {
+        padding: 16px;
+    }
+    .bookings-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .bookings-filter-bar .search-input-wrap {
+        max-width: 100%;
+    }
+    .footer-inner {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+@media (max-width: 375px) {
+    .content-area {
+        padding: 12px;
+    }
+    .my-bookings-stats > .stat-card {
+        padding: 14px 16px;
+    }
+    .my-bookings-stats > .stat-card .stat-value {
+        font-size: 1.8rem;
+    }
+    .bookings-data-table thead th,
+    .bookings-data-table tbody td {
+        padding: 10px 12px;
+    }
+}

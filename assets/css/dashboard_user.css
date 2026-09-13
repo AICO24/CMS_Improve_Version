@@ -567,6 +567,18 @@
     }
 }
 
+@media (max-width: 375px) {
+    .content-area {
+        padding: 12px;
+    }
+    .dashboard-user-stats > .stat-card {
+        padding: 14px 16px;
+    }
+    .dashboard-user-stats > .stat-card .stat-value {
+        font-size: 1.8rem;
+    }
+}
+
 /* ── Dark Mode Harmony ──────────────────────────────────────────────── */
 body[data-theme="dark"] .dashboard-body,
 body[data-theme="dark"].dashboard-body,
