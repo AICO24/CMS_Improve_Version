@@ -39,12 +39,14 @@ class PaymentAmountResolver {
     /** Minimum amount (in centavos) PayMongo accepts for a payment. */
     public const GATEWAY_MIN_AMOUNT_CENTS = 100;
 
+    public const DEFAULT_CREMATION_BASE_FEE = 15000.00;
+
     /**
      * Transaction types currently WITHOUT an authoritative server-side price
      * source. Kept in one place so docs/tests/UI can reference it and a
      * future pricing feature updates a single definition.
      */
-    public const TYPES_WITHOUT_SERVER_PRICE = ['Cremation', 'Relocation', 'Renewal', 'Other'];
+    public const TYPES_WITHOUT_SERVER_PRICE = ['Relocation', 'Renewal', 'Other'];
 
     /**
      * Resolve the authoritative amount for a payment reference.
@@ -54,7 +56,7 @@ class PaymentAmountResolver {
      *
      * @param string|null     $transactionType 'Lot Purchase' | 'Cremation' | ...
      * @param int|string|null $referenceId     schedule/lot/cremation/... id
-     * @param string|null     $referenceKind   'schedule' | 'lot' | null (Lot Purchase only)
+     * @param string|null     $referenceKind   'schedule' | 'lot' | null
      * @return array
      */
     public function resolve($transactionType, $referenceId, $referenceKind = null) {
@@ -70,14 +72,17 @@ class PaymentAmountResolver {
             return $this->unresolved('invalid_reference', $type, null, $referenceKind);
         }
 
-        if ($type !== 'Lot Purchase') {
+        if ($type === 'Lot Purchase') {
+            $resolved = $this->resolveLotPurchase($referenceId, $referenceKind);
+        } elseif ($type === 'Cremation') {
+            $resolved = $this->resolveCremation($referenceId);
+        } else {
             // No authoritative price source exists for these yet (see class
             // docblock). Blocking here is the Batch 2 security requirement:
             // a gateway amount may never fall back to a client-supplied number.
             return $this->unresolved('missing_pricing_source', $type, $referenceId, $referenceKind);
         }
 
-        $resolved = $this->resolveLotPurchase($referenceId, $referenceKind);
         if ($resolved === null) {
             return $this->unresolved('reference_not_found', $type, $referenceId, $referenceKind);
         }
@@ -107,7 +112,8 @@ class PaymentAmountResolver {
             'reference_label' => $resolved['label'],
         ];
     }
-/**
+
+    /**
      * Human-readable price-source coverage summary, safe for documentation
      * and admin-facing diagnostics.
      */
@@ -117,6 +123,10 @@ class PaymentAmountResolver {
                 'Lot Purchase' => [
                     'source' => 'lots.price',
                     'reference_kind' => ['lot', 'schedule', null],
+                ],
+                'Cremation' => [
+                    'source' => 'system.cremation_base_fee',
+                    'reference_kind' => [null],
                 ],
             ],
             'unsupported' => self::TYPES_WITHOUT_SERVER_PRICE,
@@ -204,6 +214,42 @@ class PaymentAmountResolver {
         }
 
         return null;
+    }
+
+    /**
+     * Resolve authoritative price for a Cremation booking.
+     *
+     * @param int|string $referenceId Cremation ID
+     * @return array{price:float, reference_kind:null, source:string, label:string}|null
+     */
+    private function resolveCremation($referenceId) {
+        require_once __DIR__ . '/../models/Cremation.php';
+        require_once __DIR__ . '/EnvironmentService.php';
+
+        $cremationModel = new Cremation();
+        $cremation = $cremationModel->findById($referenceId);
+        if (!$cremation) {
+            return null;
+        }
+
+        if (($cremation['status'] ?? '') === 'Cancelled') {
+            return null;
+        }
+
+        $baseFee = (float) EnvironmentService::get('CREMATION_BASE_FEE', self::DEFAULT_CREMATION_BASE_FEE);
+        if ($baseFee <= 0) {
+            $baseFee = self::DEFAULT_CREMATION_BASE_FEE;
+        }
+
+        $columbarium = !empty($cremation['columbarium']) ? $cremation['columbarium'] : 'Standard';
+        $nicheInfo = !empty($cremation['niche_number']) ? ' - Niche ' . $cremation['niche_number'] : '';
+
+        return [
+            'price' => $baseFee,
+            'reference_kind' => null,
+            'source' => 'system.cremation_base_fee',
+            'label' => 'Cremation Booking #' . $cremation['cremation_id'] . ' (' . $columbarium . $nicheInfo . ')',
+        ];
     }
 
     private function normalizeTransactionType($type) {

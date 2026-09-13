@@ -60,7 +60,7 @@
                             api.request(`payments/${returnPaymentId}/sync-status`, { method: 'POST' })
                                 .then((syncRes) => {
                                     if (syncRes && syncRes.verified) {
-                                        alertEl.innerHTML = '<i class="fas fa-circle-check" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Payment Verified &amp; Booking Confirmed!</strong> Your burial reservation has been scheduled and the lot is reserved.</div>';
+                                        alertEl.innerHTML = '<i class="fas fa-circle-check" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Payment Verified &amp; Booking Confirmed!</strong> Your reservation has been scheduled and confirmed.</div>';
                                         if (typeof showToast === 'function') {
                                             showToast('Payment verified & booking confirmed!', 'success');
                                         }
@@ -93,6 +93,8 @@
                 }
                 urlParams.delete('checkout_status');
                 urlParams.delete('payment_id');
+                urlParams.delete('schedule_id');
+                urlParams.delete('cremation_id');
                 const newSearch = urlParams.toString();
                 const cleanUrl = window.location.pathname + (newSearch ? '?' + newSearch : '');
                 window.history.replaceState({}, document.title, cleanUrl);
@@ -364,6 +366,7 @@
         const gwStatus = record.gateway_status;
         const hasSession = !!record.gateway_checkout_session_id;
         const bStatus = String(record.status || '').toUpperCase();
+        const isSupportedOnlineService = (serviceType === 'burial' || serviceType === 'cremation');
 
         if (refundStatus === 'Succeeded') {
             return {
@@ -394,7 +397,7 @@
                 badgeColor: '#166534',
                 canPayOnline: false,
                 buttonLabel: null,
-                explanation: bStatus === 'CONFIRMED' ? 'Payment verified and schedule confirmed.' : 'Payment verified by gateway webhook.'
+                explanation: (bStatus === 'CONFIRMED' || bStatus === 'SCHEDULED') ? 'Payment verified and booking confirmed.' : 'Payment verified by gateway webhook.'
             };
         }
 
@@ -403,7 +406,7 @@
                 statusText: 'Payment Expired / Cancelled',
                 badgeBg: '#fee2e2',
                 badgeColor: '#991b1b',
-                canPayOnline: serviceType === 'burial' && bStatus !== 'CANCELLED',
+                canPayOnline: isSupportedOnlineService && bStatus !== 'CANCELLED',
                 buttonLabel: 'Retry Payment (PayMongo)',
                 explanation: 'Previous checkout session expired or was cancelled. You can retry payment anytime.'
             };
@@ -415,7 +418,7 @@
                     statusText: 'Pending / Awaiting Payment',
                     badgeBg: '#fef3c7',
                     badgeColor: '#92400e',
-                    canPayOnline: serviceType === 'burial' && bStatus !== 'CANCELLED',
+                    canPayOnline: isSupportedOnlineService && bStatus !== 'CANCELLED',
                     buttonLabel: 'Continue Checkout (PayMongo)',
                     explanation: 'Awaiting completion of online payment via PayMongo.'
                 };
@@ -424,7 +427,7 @@
                 statusText: 'Checkout Available',
                 badgeBg: '#fef3c7',
                 badgeColor: '#92400e',
-                canPayOnline: serviceType === 'burial' && bStatus !== 'CANCELLED',
+                canPayOnline: isSupportedOnlineService && bStatus !== 'CANCELLED',
                 buttonLabel: 'Pay Online (PayMongo)',
                 explanation: 'Reservation recorded as Pending. Online checkout is available.'
             };
@@ -432,12 +435,12 @@
 
         // No payment record yet
         return {
-            statusText: serviceType === 'burial' ? 'Checkout Available' : 'Pending Review',
+            statusText: isSupportedOnlineService ? 'Checkout Available' : 'Pending Review',
             badgeBg: '#f1f5f9',
             badgeColor: '#475569',
-            canPayOnline: serviceType === 'burial' && bStatus !== 'CANCELLED',
+            canPayOnline: isSupportedOnlineService && bStatus !== 'CANCELLED',
             buttonLabel: 'Pay Online (PayMongo)',
-            explanation: serviceType === 'burial' ? 'Ready for online checkout.' : 'Awaiting review.'
+            explanation: isSupportedOnlineService ? 'Ready for online checkout.' : 'Awaiting review.'
         };
     }
 
@@ -536,7 +539,7 @@
 
             if (bookingDetailFooter) {
                 let footerHtml = '<button type="button" class="btn btn-secondary" id="closeDetailModalBtnInner">Close</button>';
-                if (paymentInfo.canPayOnline && serviceType === 'burial') {
+                if (paymentInfo.canPayOnline && (serviceType === 'burial' || serviceType === 'cremation')) {
                     footerHtml = `
                         <button type="button" class="btn btn-primary" id="payOnlineModalBtn">
                             <i class="fas fa-credit-card"></i> ${escapeHtml(paymentInfo.buttonLabel)}
@@ -593,10 +596,11 @@
                         try {
                             payBtn.disabled = true;
                             payBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Initializing Checkout...';
+                            const isCremation = serviceType === 'cremation';
                             const checkoutPayload = {
-                                transaction_type: 'Lot Purchase',
+                                transaction_type: isCremation ? 'Cremation' : 'Lot Purchase',
                                 reference_id: sourceId,
-                                reference_kind: 'schedule',
+                                reference_kind: isCremation ? null : 'schedule',
                                 origin: window.location.origin
                             };
                             if (record.payment_id) {

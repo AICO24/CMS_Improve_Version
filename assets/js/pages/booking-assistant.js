@@ -1338,7 +1338,7 @@
                         <i class="fas fa-info-circle text-warning"></i> Your schedule slot is recorded. Please complete payment to finalize reservation.
                     </span>
                     <div style="display:flex;gap:8px;">
-                        <a href="my-bookings.html?schedule_id=${state.committedRecordId || ''}" style="padding:6px 14px;font-size:0.8rem;background:#2c5e47;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-calendar-check"></i> Go to My Bookings &rarr;</a>
+                        <a href="my-bookings.html?${isCremation ? 'cremation_id' : 'schedule_id'}=${state.committedRecordId || ''}" style="padding:6px 14px;font-size:0.8rem;background:#2c5e47;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-calendar-check"></i> Go to My Bookings &rarr;</a>
                     </div>
                 </div>
             </div>

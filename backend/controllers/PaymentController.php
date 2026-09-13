@@ -278,14 +278,18 @@ class PaymentController {
                 if (!$cremation) {
                     return ['error' => 'Cremation reference not found', 'code' => 404];
                 }
+                if ($roleName === 'user' && (int) ($cremation['created_by'] ?? 0) !== (int) $userId) {
+                    return ['error' => 'You may only pay for your own cremation booking', 'code' => 403];
+                }
                 if (($cremation['status'] ?? '') === 'Cancelled') {
                     return ['error' => 'Cancelled cremation records cannot be paid', 'code' => 409];
                 }
 
+                $columbarium = !empty($cremation['columbarium']) ? ' (' . $cremation['columbarium'] . ')' : '';
                 return [
                     'reference_id' => $referenceId,
                     'reference_kind' => null,
-                    'reference_label' => 'Cremation #' . $cremation['cremation_id'],
+                    'reference_label' => 'Cremation #' . $cremation['cremation_id'] . $columbarium,
                 ];
 
             case 'Relocation':
@@ -1256,12 +1260,12 @@ class PaymentController {
             return ['error' => 'Unauthorized', 'code' => 401];
         }
 
-        // 1. Transaction type enforcement (Batch 3 strict boundary)
+        // 1. Transaction type enforcement (Batch 3 strict boundary - supports Lot Purchase & Cremation)
         $rawType = $data['transaction_type'] ?? 'Lot Purchase';
         $transactionType = $this->normalizeTransactionType($rawType);
-        if ($transactionType !== 'Lot Purchase') {
+        if (!in_array($transactionType, ['Lot Purchase', 'Cremation'], true)) {
             return [
-                'error' => 'Only Lot Purchase transactions are supported for online checkout. Other transaction types do not have authoritative pricing yet.',
+                'error' => 'Only Lot Purchase and Cremation transactions are supported for online checkout. Other transaction types do not have authoritative pricing yet.',
                 'code' => 400,
             ];
         }
@@ -1275,8 +1279,8 @@ class PaymentController {
             if (!$payment) {
                 return ['error' => 'Payment not found', 'code' => 404];
             }
-            if ($payment['transaction_type'] !== 'Lot Purchase') {
-                return ['error' => 'Only Lot Purchase payments are supported for online checkout', 'code' => 400];
+            if (!in_array($payment['transaction_type'], ['Lot Purchase', 'Cremation'], true)) {
+                return ['error' => 'Only Lot Purchase and Cremation payments are supported for online checkout', 'code' => 400];
             }
             if (($payment['verification_status'] ?? 'Pending') !== 'Pending') {
                 return ['error' => 'Only Pending payments can be processed for checkout', 'code' => 400];
@@ -1287,6 +1291,7 @@ class PaymentController {
             }
             $referenceId = $payment['reference_id'];
             $referenceKind = $payment['reference_kind'];
+            $transactionType = $payment['transaction_type'];
         } else {
             $referenceId = $this->normalizeReferenceId($data['reference_id'] ?? null);
             if ($referenceId === null) {
@@ -1295,7 +1300,7 @@ class PaymentController {
             $referenceKind = in_array($data['reference_kind'] ?? null, ['schedule', 'lot'], true) ? $data['reference_kind'] : null;
 
             // Server-side ownership and reference validation
-            $referenceCheck = $this->validatePaymentReference('Lot Purchase', $referenceId, $userId, $userRole, $referenceKind);
+            $referenceCheck = $this->validatePaymentReference($transactionType, $referenceId, $userId, $userRole, $referenceKind);
             if (isset($referenceCheck['error'])) {
                 return $referenceCheck;
             }
@@ -1306,7 +1311,7 @@ class PaymentController {
         // 3. Authoritative server-side price resolution
         require_once __DIR__ . '/../services/PaymentAmountResolver.php';
         $resolver = new PaymentAmountResolver();
-        $priceResult = $resolver->resolve('Lot Purchase', $referenceId, $referenceKind);
+        $priceResult = $resolver->resolve($transactionType, $referenceId, $referenceKind);
         if (!($priceResult['resolved'] ?? false)) {
             return [
                 'error' => $priceResult['reason'] ?? 'Authoritative price resolution failed',
@@ -1317,7 +1322,7 @@ class PaymentController {
 
         $authoritativeAmount = (float) $priceResult['amount'];
         $authoritativeCents = (int) $priceResult['amount_cents'];
-        $referenceLabel = $priceResult['reference_label'] ?? ('Lot ' . $referenceId);
+        $referenceLabel = $priceResult['reference_label'] ?? ($transactionType . ' #' . $referenceId);
 
         // 3.5. Batch 10B: Concurrency check - active lot checkout lease
         $targetLotId = null;
@@ -1344,12 +1349,12 @@ class PaymentController {
 
         // 4. Locate or create the Pending CMS Payment row
         if (!$payment) {
-            $payment = $this->paymentModel->findPendingByReference('Lot Purchase', $referenceId, $referenceKind, $userId);
+            $payment = $this->paymentModel->findPendingByReference($transactionType, $referenceId, $referenceKind, $userId);
             if ($payment) {
                 $paymentId = (int) $payment['payment_id'];
             } else {
                 $paymentId = $this->paymentModel->create([
-                    'transaction_type' => 'Lot Purchase',
+                    'transaction_type' => $transactionType,
                     'reference_id' => $referenceId,
                     'reference_kind' => $referenceKind,
                     'amount' => $authoritativeAmount,
@@ -1399,8 +1404,8 @@ class PaymentController {
         // 6. Check gateway configuration
         if (!$payMongoService->isConfigured()) {
             return [
-                'error' => 'Payment gateway is not configured (missing PAYMONGO_SECRET_KEY)',
-                'configured' => false,
+                'error' => 'Online payment gateway is temporarily unconfigured',
+                'reason_code' => 'gateway_unconfigured',
                 'payment_id' => $paymentId,
                 'code' => 503,
             ];
@@ -1438,6 +1443,8 @@ class PaymentController {
             $successParams = 'checkout_status=success&payment_id=' . $paymentId;
             if ($referenceKind === 'schedule') {
                 $successParams .= '&schedule_id=' . $referenceId;
+            } elseif ($transactionType === 'Cremation') {
+                $successParams .= '&cremation_id=' . $referenceId;
             }
             $successUrl = $origin . '/frontend/pages/my-bookings.html?' . $successParams;
         } else {
@@ -1456,6 +1463,8 @@ class PaymentController {
             $cancelParams = 'checkout_status=cancelled&payment_id=' . $paymentId;
             if ($referenceKind === 'schedule') {
                 $cancelParams .= '&schedule_id=' . $referenceId;
+            } elseif ($transactionType === 'Cremation') {
+                $cancelParams .= '&cremation_id=' . $referenceId;
             }
             $cancelUrl = $origin . '/frontend/pages/my-bookings.html?' . $cancelParams;
         } else {
@@ -1466,7 +1475,7 @@ class PaymentController {
         $sessionAttributes = [
             'line_items' => [
                 [
-                    'name' => 'Lot Purchase - ' . $referenceLabel,
+                    'name' => $transactionType . ' - ' . $referenceLabel,
                     'amount' => $authoritativeCents,
                     'currency' => 'PHP',
                     'quantity' => 1,

@@ -1222,10 +1222,11 @@ class BookingAgentService {
      * @param int         $userId
      * @param string|null $username
      * @param mixed       $user User context array or null
+     * @param array       $options
      * @return array Standardized outcome payload.
      * @throws BookingDraftException
      */
-    public function finalizeCremationDraft(int $draftId, int $userId, ?string $username = null, $user = null): array {
+    public function finalizeCremationDraft(int $draftId, int $userId, ?string $username = null, $user = null, array $options = []): array {
         $draft = $this->draftModel->requireOwnership($draftId, $userId);
 
         if ($draft['service_type'] !== 'cremation') {
@@ -1258,15 +1259,13 @@ class BookingAgentService {
         if (!empty($missing)) {
             throw new BookingDraftException(
                 "Cannot finalize cremation draft. Missing required fields: " . implode(', ', $missing),
-                'INCOMPLETE_DRAFT',
+                'MISSING_REQUIRED_FIELDS',
                 400
             );
         }
 
-        $cremationDateStr = (string) ($extracted['cremation_date'] ?? '');
-
-        // Date validation check (isBurial = false, Mondays are permitted for cremation)
-        $dateValidation = $this->validateBookingDate($cremationDateStr, false);
+        $cremationDateStr = $extracted['cremation_date'] ?? null;
+        $dateValidation = $this->dateResolver->validateBookingDate($cremationDateStr, 'cremation');
         if (!$dateValidation['valid']) {
             throw new BookingDraftException($dateValidation['error'] ?? 'Invalid booking date', 'INVALID_DATE', 400);
         }
@@ -1274,7 +1273,7 @@ class BookingAgentService {
         $userRole = strtolower(is_array($user) ? ($user['role'] ?? 'user') : 'user');
         $isAdminOrStaff = in_array($userRole, ['admin', 'staff'], true);
 
-        return Database::getInstance()->transaction(function () use (
+        $outcome = Database::getInstance()->transaction(function () use (
             $draftId, $draft, $userId, $username, $isAdminOrStaff, $extracted, $cremationDateStr
         ) {
             // 1. If currently in READY_FOR_REVIEW, step into AWAITING_CONFIRM
@@ -1318,20 +1317,14 @@ class BookingAgentService {
                 $status = $extracted['status'];
             }
 
-            $columbarium = !empty($extracted['preferred_columbarium']) ? trim((string) $extracted['preferred_columbarium']) : null;
-            if (empty($columbarium) && !empty($extracted['columbarium'])) {
-                $columbarium = trim((string) $extracted['columbarium']);
-            }
+            $columbarium = !empty($extracted['preferred_columbarium']) ? $extracted['preferred_columbarium'] : null;
 
             $cremationData = [
                 'deceased_id'          => $deceasedId,
                 'decedent_request_id'  => $decedentRequestId,
-                'niche_number'         => $isAdminOrStaff ? ($extracted['niche_number'] ?? null) : null,
                 'columbarium'          => $columbarium,
-                'level'                => $isAdminOrStaff && isset($extracted['level']) ? (int) $extracted['level'] : null,
                 'cremation_date'       => $cremationDateStr,
                 'status'               => $status,
-                'ash_storage_location' => $extracted['ash_storage_location'] ?? null,
                 'notes'                => $extracted['notes'] ?? ('AI Booking Assistant Draft #' . $draftId),
                 'created_by'           => $userId,
             ];
@@ -1383,6 +1376,62 @@ class BookingAgentService {
                 'message'             => 'Cremation booking successfully finalized.'
             ];
         });
+
+        $paymentController = $this->paymentController ?? new PaymentController();
+        $paymentUser = is_array($user) ? $user : ['user_id' => $userId, 'role' => $userRole];
+        if (!isset($paymentUser['role'])) {
+            $paymentUser['role'] = $userRole;
+        }
+
+        if (!empty($outcome['success']) && !empty($outcome['cremation_id'])) {
+            $sessionPayload = [
+                'transaction_type' => 'Cremation',
+                'reference_id' => (int) $outcome['cremation_id'],
+                'reference_kind' => null,
+            ];
+            if (!empty($options['origin'])) {
+                $sessionPayload['origin'] = $options['origin'];
+            }
+            $checkoutResult = $paymentController->createCheckoutSession($sessionPayload, $paymentUser);
+
+            if (!empty($checkoutResult['payment_id'])) {
+                $outcome['payment_id'] = (int) $checkoutResult['payment_id'];
+            }
+            if (!empty($checkoutResult['checkout_session_id'])) {
+                $outcome['checkout_session_id'] = $checkoutResult['checkout_session_id'];
+            }
+            if (!empty($checkoutResult['checkout_url'])) {
+                $outcome['checkout_url'] = $checkoutResult['checkout_url'];
+                $outcome['checkout_initialized'] = true;
+                $outcome['checkout_status'] = 'ready';
+            } else {
+                $outcome['checkout_initialized'] = false;
+                $outcome['checkout_status'] = 'failed';
+                $outcome['payment_status'] = 'Pending';
+                $outcome['booking_status'] = 'Pending';
+                $outcome['message'] = 'Cremation booking created (Pending). Online checkout could not be initialized at this time. You can complete payment from My Bookings.';
+            }
+            if (!empty($checkoutResult['gateway_status'])) {
+                $outcome['gateway_status'] = $checkoutResult['gateway_status'];
+            }
+            if (!empty($checkoutResult['receipt_number'])) {
+                $outcome['receipt_number'] = $checkoutResult['receipt_number'];
+            }
+            if (!empty($checkoutResult['amount'])) {
+                $outcome['amount'] = $checkoutResult['amount'];
+            }
+            if (!empty($checkoutResult['currency'])) {
+                $outcome['currency'] = $checkoutResult['currency'];
+            }
+            if (!empty($checkoutResult['code'])) {
+                $outcome['checkout_code'] = (int) $checkoutResult['code'];
+            }
+            if (!empty($checkoutResult['error'])) {
+                $outcome['checkout_error'] = $checkoutResult['error'];
+            }
+        }
+
+        return $outcome;
     }
 
     /**

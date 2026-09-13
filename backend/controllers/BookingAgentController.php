@@ -1318,7 +1318,7 @@ class BookingAgentController {
                     $result = $this->agentService->finalizeBurialDraft($draftId, $userId, $username, $user, $input);
                     return array_merge(['code' => 200], $result);
                 } elseif ($draft['service_type'] === 'cremation') {
-                    $result = $this->agentService->finalizeCremationDraft($draftId, $userId, $username, $user);
+                    $result = $this->agentService->finalizeCremationDraft($draftId, $userId, $username, $user, $input);
                     return array_merge(['code' => 200], $result);
                 }
             }
@@ -1363,7 +1363,7 @@ class BookingAgentController {
                 $result = $this->agentService->finalizeBurialDraft($draftId, $userId, $username, $user, $input);
                 return array_merge(['code' => 200], $result);
             } elseif ($draft['service_type'] === 'cremation') {
-                $result = $this->agentService->finalizeCremationDraft($draftId, $userId, $username, $user);
+                $result = $this->agentService->finalizeCremationDraft($draftId, $userId, $username, $user, $input);
                 return array_merge(['code' => 200], $result);
             }
 
