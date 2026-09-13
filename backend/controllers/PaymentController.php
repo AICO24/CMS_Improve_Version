@@ -26,7 +26,8 @@ class PaymentController {
         $this->paymentModel = $paymentModel ?? new Payment();
         $this->auditLogModel = $auditLogModel ?? new AuditLog();
         $this->systemExceptionModel = $systemExceptionModel ?? new SystemException();
-        $this->payMongoService = $payMongoService;
+        require_once __DIR__ . '/../services/PayMongoService.php';
+        $this->payMongoService = $payMongoService ?? new PayMongoService();
     }
 
     public function setPayMongoService(?PayMongoService $service): void {
@@ -2194,7 +2195,9 @@ class PaymentController {
         }
 
         // Query PayMongo server-side API using server secret key
-        $gwRes = $this->payMongoService->getCheckoutSession($csId);
+        require_once __DIR__ . '/../services/PayMongoService.php';
+        $payMongoService = $this->payMongoService ?? new PayMongoService();
+        $gwRes = $payMongoService->getCheckoutSession($csId);
         if (!($gwRes['success'] ?? false) || empty($gwRes['data'])) {
             return [
                 'success' => false,
