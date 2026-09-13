@@ -94,7 +94,7 @@
         {
             route: 'book-a-service.html',
             allowedRoles: ['admin', 'staff', 'user'],
-            showInSidebar: true,
+            showInSidebar: false,
             sidebarGroup: { admin: 'Operations', staff: 'Operations', user: 'Services' },
             label: 'Book a Service',
             icon: 'fa-handshake',
