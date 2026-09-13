@@ -1242,11 +1242,14 @@
         btnConfirmBooking.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finalizing...';
 
         try {
+            const appOrigin = typeof getAppOrigin === 'function'
+                ? getAppOrigin()
+                : `${window.location.origin}${window.location.pathname.includes('/CMS') ? '/CMS' : ''}`;
             const res = await api.request(`booking-agent/drafts/${state.draftId}/confirm`, {
                 method: 'POST',
                 body: {
                     finalize: true,
-                    origin: window.location.origin
+                    origin: appOrigin
                 }
             });
 

@@ -240,8 +240,9 @@ class BookingDateResolver {
      * @param bool   $isBurial
      * @return array ['valid' => bool, 'error' => string|null]
      */
-    public static function validate(string $dateStr, bool $isBurial = true, ?int $ref = null): array {
+    public static function validate(string $dateStr, $isBurial = true, ?int $ref = null): array {
         $ref = $ref ?? time();
+        $isBurialFlag = is_bool($isBurial) ? $isBurial : (strtolower((string) $isBurial) === 'burial');
         $timestamp = strtotime($dateStr);
         if ($timestamp === false) {
             return ['valid' => false, 'error' => 'Invalid date format'];
@@ -254,14 +255,14 @@ class BookingDateResolver {
             return ['valid' => false, 'error' => 'Booking date cannot be in the past'];
         }
 
-        if ($isBurial && (int) date('N', $timestamp) === 1) {
+        if ($isBurialFlag && (int) date('N', $timestamp) === 1) {
             return ['valid' => false, 'error' => 'Monday booking is not allowed; cemetery maintenance occurs on Mondays. Please select Tuesday through Sunday.'];
         }
 
         return ['valid' => true, 'error' => null];
     }
 
-    public static function validateBookingDate(string $dateStr, bool $isBurial = true, ?int $ref = null): array {
+    public static function validateBookingDate(string $dateStr, $isBurial = true, ?int $ref = null): array {
         return self::validate($dateStr, $isBurial, $ref);
     }
 }

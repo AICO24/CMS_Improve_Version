@@ -77,6 +77,7 @@ class BookingAgentService {
 
     private ?BookingAvailabilityService $availabilityService = null;
     private ?PaymentController $paymentController = null;
+    private ?BookingDateResolver $dateResolver = null;
 
     public function __construct(
         ?BookingDraft $draftModel = null,
@@ -88,7 +89,8 @@ class BookingAgentService {
         ?Cremation $cremationModel = null,
         ?BookingActionRegistry $actionRegistry = null,
         ?BookingAvailabilityService $availabilityService = null,
-        ?PaymentController $paymentController = null
+        ?PaymentController $paymentController = null,
+        ?BookingDateResolver $dateResolver = null
     ) {
         $this->draftModel = $draftModel ?? new BookingDraft();
         $this->decedentModel = $decedentModel ?? new Decedent();
@@ -100,6 +102,7 @@ class BookingAgentService {
         $this->actionRegistry = $actionRegistry ?? new BookingActionRegistry();
         $this->availabilityService = $availabilityService;
         $this->paymentController = $paymentController;
+        $this->dateResolver = $dateResolver ?? new BookingDateResolver();
     }
 
     public function getActionRegistry(): BookingActionRegistry {
@@ -993,7 +996,7 @@ class BookingAgentService {
         }
 
         // Date validation check
-        $dateValidation = $this->validateBookingDate($scheduleDateStr, true);
+        $dateValidation = ($this->dateResolver ?? new BookingDateResolver())->validateBookingDate($scheduleDateStr, true);
         if (!$dateValidation['valid']) {
             throw new BookingDraftException($dateValidation['error'] ?? 'Invalid booking date', 'INVALID_DATE', 400);
         }
@@ -1259,13 +1262,13 @@ class BookingAgentService {
         if (!empty($missing)) {
             throw new BookingDraftException(
                 "Cannot finalize cremation draft. Missing required fields: " . implode(', ', $missing),
-                'MISSING_REQUIRED_FIELDS',
+                'INCOMPLETE_DRAFT',
                 400
             );
         }
 
         $cremationDateStr = $extracted['cremation_date'] ?? null;
-        $dateValidation = $this->dateResolver->validateBookingDate($cremationDateStr, 'cremation');
+        $dateValidation = ($this->dateResolver ?? new BookingDateResolver())->validateBookingDate($cremationDateStr, false);
         if (!$dateValidation['valid']) {
             throw new BookingDraftException($dateValidation['error'] ?? 'Invalid booking date', 'INVALID_DATE', 400);
         }

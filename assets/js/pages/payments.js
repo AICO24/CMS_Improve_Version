@@ -703,7 +703,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (paymentId) {
                 payload.payment_id = paymentId;
             }
-            payload.origin = window.location.origin;
+            payload.origin = (typeof getAppOrigin === 'function' ? getAppOrigin() : `${window.location.origin}${window.location.pathname.includes('/CMS') ? '/CMS' : ''}`);
 
             await withButtonLoading(payOnlineBtn, async () => {
                 try {

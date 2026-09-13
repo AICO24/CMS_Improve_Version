@@ -1586,6 +1586,10 @@ class PaymentController {
 
             $isTrusted = in_array($originHost, $trustedHosts, true);
             if (!$isTrusted) {
+                // Allow RFC1918 private IPs (LAN mobile testing e.g. 192.168.x.x, 10.x.x.x)
+                if (filter_var($originHost, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false && filter_var($originHost, FILTER_VALIDATE_IP)) {
+                    $isTrusted = true;
+                }
                 // Allow ngrok and localtunnel development tunnels
                 if (preg_match('/(\.ngrok(-free)?\.(app|dev|io)|\.loca\.lt)$/i', $originHost)) {
                     $isTrusted = true;
@@ -1593,7 +1597,12 @@ class PaymentController {
             }
 
             if ($isTrusted && !empty($parsed['scheme']) && in_array(strtolower($parsed['scheme']), ['http', 'https'], true)) {
-                return rtrim($candidateOrigin, '/');
+                $baseOrigin = rtrim($candidateOrigin, '/');
+                $candidatePath = $parsed['path'] ?? '';
+                if (!empty($prefix) && (empty($candidatePath) || strpos($candidatePath, $prefix) === false)) {
+                    $baseOrigin .= $prefix;
+                }
+                return $baseOrigin;
             }
         }
 
@@ -1654,8 +1663,13 @@ class PaymentController {
         $allowedHosts = array_unique(array_filter($allowedHosts));
 
         $isHostAllowed = in_array($urlHost, $allowedHosts, true);
-        if (!$isHostAllowed && preg_match('/(\.ngrok(-free)?\.(app|dev|io)|\.loca\.lt)$/i', $urlHost)) {
-            $isHostAllowed = true;
+        if (!$isHostAllowed) {
+            // Allow RFC1918 private IPs (LAN mobile testing)
+            if (filter_var($urlHost, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false && filter_var($urlHost, FILTER_VALIDATE_IP)) {
+                $isHostAllowed = true;
+            } elseif (preg_match('/(\.ngrok(-free)?\.(app|dev|io)|\.loca\.lt)$/i', $urlHost)) {
+                $isHostAllowed = true;
+            }
         }
 
         if (!$isHostAllowed) {
@@ -1676,7 +1690,15 @@ class PaymentController {
     private function normalizeRedirectUrl(string $url, string $origin): string {
         $url = trim($url);
         if (str_starts_with($url, '/')) {
+            $origin = rtrim($origin, '/');
             $parsedOrigin = parse_url($origin);
+            $originPath = rtrim($parsedOrigin['path'] ?? '', '/');
+
+            // If origin has a base path (like /CMS) and url doesn't already start with it, include origin path
+            if ($originPath !== '' && !str_starts_with($url, $originPath . '/')) {
+                return $origin . '/' . ltrim($url, '/');
+            }
+
             $base = ($parsedOrigin['scheme'] ?? 'http') . '://' . ($parsedOrigin['host'] ?? 'localhost') . (!empty($parsedOrigin['port']) ? ':' . $parsedOrigin['port'] : '');
             return rtrim($base, '/') . '/' . ltrim($url, '/');
         }

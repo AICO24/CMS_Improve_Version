@@ -48,47 +48,57 @@
             const returnPaymentId = urlParams.get('payment_id');
             if (checkoutStatus) {
                 const alertEl = document.getElementById('checkoutStatusAlert');
-                if (alertEl) {
-                    if (checkoutStatus === 'success') {
+                if (checkoutStatus === 'success') {
+                    if (alertEl) {
                         alertEl.style.display = 'flex';
                         alertEl.style.background = '#f0fdf4';
                         alertEl.style.border = '1px solid #bbf7d0';
                         alertEl.style.color = '#166534';
                         alertEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Payment submitted!</strong> Confirming status with PayMongo...</div>';
+                    }
 
-                        if (returnPaymentId) {
-                            api.request(`payments/${returnPaymentId}/sync-status`, { method: 'POST' })
-                                .then((syncRes) => {
-                                    if (syncRes && syncRes.verified) {
+                    if (returnPaymentId) {
+                        api.request(`payments/${returnPaymentId}/sync-status`, { method: 'POST' })
+                            .then((syncRes) => {
+                                if (syncRes && syncRes.verified) {
+                                    if (alertEl) {
                                         alertEl.innerHTML = '<i class="fas fa-circle-check" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Payment Verified &amp; Booking Confirmed!</strong> Your reservation has been scheduled and confirmed.</div>';
-                                        if (typeof showToast === 'function') {
-                                            showToast('Payment verified & booking confirmed!', 'success');
-                                        }
-                                    } else {
+                                    }
+                                    if (typeof showToast === 'function') {
+                                        showToast('Payment verified & booking confirmed!', 'success');
+                                    }
+                                } else {
+                                    if (alertEl) {
                                         alertEl.innerHTML = '<i class="fas fa-circle-info" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Payment submitted!</strong> Processing gateway confirmation. Your booking will update once finalized.</div>';
                                     }
-                                    loadUnifiedBookings();
-                                })
-                                .catch(() => {
+                                }
+                                loadUnifiedBookings();
+                            })
+                            .catch(() => {
+                                if (alertEl) {
                                     alertEl.innerHTML = '<i class="fas fa-circle-info" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Payment submitted successfully!</strong> Verification is awaiting gateway confirmation.</div>';
-                                    loadUnifiedBookings();
-                                });
-                        } else {
+                                }
+                                loadUnifiedBookings();
+                            });
+                    } else {
+                        if (alertEl) {
                             alertEl.innerHTML = '<i class="fas fa-circle-check" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Payment submitted successfully!</strong> Verification is awaiting gateway confirmation.</div>';
-                            if (typeof showToast === 'function') {
-                                showToast('Payment submitted successfully!', 'success');
-                            }
-                            loadUnifiedBookings();
                         }
-                    } else if (checkoutStatus === 'cancelled') {
+                        if (typeof showToast === 'function') {
+                            showToast('Payment submitted successfully!', 'success');
+                        }
+                        loadUnifiedBookings();
+                    }
+                } else if (checkoutStatus === 'cancelled') {
+                    if (alertEl) {
                         alertEl.style.display = 'flex';
                         alertEl.style.background = '#fffbeb';
                         alertEl.style.border = '1px solid #fde68a';
                         alertEl.style.color = '#92400e';
                         alertEl.innerHTML = '<i class="fas fa-triangle-exclamation" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Checkout session cancelled.</strong> Your reservation remains Pending. You can complete or retry payment at any time.</div>';
-                        if (typeof showToast === 'function') {
-                            showToast('Checkout was cancelled. Your reservation remains Pending.', 'warning');
-                        }
+                    }
+                    if (typeof showToast === 'function') {
+                        showToast('Checkout was cancelled. Your reservation remains Pending.', 'warning');
                     }
                 }
                 urlParams.delete('checkout_status');
@@ -601,7 +611,7 @@
                                 transaction_type: isCremation ? 'Cremation' : 'Lot Purchase',
                                 reference_id: sourceId,
                                 reference_kind: isCremation ? null : 'schedule',
-                                origin: window.location.origin
+                                origin: (typeof getAppOrigin === 'function' ? getAppOrigin() : `${window.location.origin}${window.location.pathname.includes('/CMS') ? '/CMS' : ''}`)
                             };
                             if (record.payment_id) {
                                 checkoutPayload.payment_id = record.payment_id;

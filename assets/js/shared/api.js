@@ -12,6 +12,20 @@ function getFrontendBasePath() {
     return `${window.location.origin}/CMS/frontend`;
 }
 
+function getAppOrigin() {
+    const currentPath = window.location.pathname || '';
+    let appBase = '';
+    if (currentPath.includes('/frontend/')) {
+        appBase = currentPath.split('/frontend/')[0];
+    } else if (currentPath.includes('/frontend')) {
+        appBase = currentPath.split('/frontend')[0];
+    } else if (currentPath.includes('/CMS')) {
+        appBase = '/CMS';
+    }
+    return `${window.location.origin}${appBase}`;
+}
+window.getAppOrigin = getAppOrigin;
+
 const basePath = window.location.pathname.includes('/frontend/')
     ? window.location.pathname.split('/frontend/')[0]
     : window.location.pathname.split('/frontend')[0] || '';
