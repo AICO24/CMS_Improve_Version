@@ -43,8 +43,9 @@
                 }
             }
 
-            // Batch 10C: Handle PayMongo checkout redirect back to citizen My Bookings
+            // Handle PayMongo checkout redirect back to citizen My Bookings
             const checkoutStatus = urlParams.get('checkout_status');
+            const returnPaymentId = urlParams.get('payment_id');
             if (checkoutStatus) {
                 const alertEl = document.getElementById('checkoutStatusAlert');
                 if (alertEl) {
@@ -53,9 +54,31 @@
                         alertEl.style.background = '#f0fdf4';
                         alertEl.style.border = '1px solid #bbf7d0';
                         alertEl.style.color = '#166534';
-                        alertEl.innerHTML = '<i class="fas fa-circle-check" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Payment submitted successfully!</strong> Verification is awaiting gateway webhook confirmation. Your booking will update automatically once verified.</div>';
-                        if (typeof showToast === 'function') {
-                            showToast('Payment submitted successfully! Awaiting webhook verification.', 'success');
+                        alertEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Payment submitted!</strong> Confirming status with PayMongo...</div>';
+
+                        if (returnPaymentId) {
+                            api.request(`payments/${returnPaymentId}/sync-status`, { method: 'POST' })
+                                .then((syncRes) => {
+                                    if (syncRes && syncRes.verified) {
+                                        alertEl.innerHTML = '<i class="fas fa-circle-check" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Payment Verified &amp; Booking Confirmed!</strong> Your burial reservation has been scheduled and the lot is reserved.</div>';
+                                        if (typeof showToast === 'function') {
+                                            showToast('Payment verified & booking confirmed!', 'success');
+                                        }
+                                    } else {
+                                        alertEl.innerHTML = '<i class="fas fa-circle-info" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Payment submitted!</strong> Processing gateway confirmation. Your booking will update once finalized.</div>';
+                                    }
+                                    loadUnifiedBookings();
+                                })
+                                .catch(() => {
+                                    alertEl.innerHTML = '<i class="fas fa-circle-info" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Payment submitted successfully!</strong> Verification is awaiting gateway confirmation.</div>';
+                                    loadUnifiedBookings();
+                                });
+                        } else {
+                            alertEl.innerHTML = '<i class="fas fa-circle-check" style="font-size:1.25rem;margin-right:12px;margin-top:2px;"></i><div><strong>Payment submitted successfully!</strong> Verification is awaiting gateway confirmation.</div>';
+                            if (typeof showToast === 'function') {
+                                showToast('Payment submitted successfully!', 'success');
+                            }
+                            loadUnifiedBookings();
                         }
                     } else if (checkoutStatus === 'cancelled') {
                         alertEl.style.display = 'flex';
@@ -447,68 +470,75 @@
             const paymentInfo = resolvePaymentDisplay(record, isDraft, serviceType);
 
             bookingDetailBody.innerHTML = `
-                <div style="display:flex;flex-direction:column;gap:14px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid #e2e8f0;">
+                <div style="display:flex;flex-direction:column;gap:16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--color-border);">
                         <div>
-                            <span style="font-size:0.75rem;text-transform:uppercase;color:#64748b;font-weight:700;">Reference</span>
-                            <div style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#0f172a;">${escapeHtml(item.booking_reference || '-')}</div>
+                            <span style="font-size:0.75rem;text-transform:uppercase;color:var(--color-text-muted);font-weight:700;">Reference</span>
+                            <div style="font-family:monospace;font-size:1.15rem;font-weight:700;color:var(--color-text);">${escapeHtml(item.booking_reference || '-')}</div>
                         </div>
                         <div>
-                            <span style="display:inline-block;padding:4px 10px;border-radius:6px;font-size:0.8rem;font-weight:700;text-transform:uppercase;background:${serviceType === 'burial' ? '#dcfce7;color:#166534;' : '#f3e8ff;color:#6b21a8;'}">
+                            <span style="display:inline-block;padding:4px 10px;border-radius:var(--radius-sm);font-size:0.8rem;font-weight:700;text-transform:uppercase;background:${serviceType === 'burial' ? 'var(--color-success-soft);color:var(--color-success-strong);' : 'var(--color-primary-50);color:var(--color-primary-700);'}">
                                 <i class="fas ${serviceType === 'burial' ? 'fa-monument' : 'fa-fire'}"></i> ${escapeHtml(serviceType || 'Service')}
                             </span>
                         </div>
                     </div>
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
                         <div>
-                            <label style="font-size:0.75rem;color:#64748b;font-weight:600;display:block;">Decedent</label>
-                            <strong style="color:#1e293b;font-size:0.95rem;">${escapeHtml(item.decedent_name || 'Pending Formal Record')}</strong>
+                            <label style="font-size:0.75rem;color:var(--color-text-muted);font-weight:600;display:block;margin-bottom:2px;">Decedent</label>
+                            <strong style="color:var(--color-text);font-size:0.95rem;">${escapeHtml(item.decedent_name || 'Pending Formal Record')}</strong>
                         </div>
                         <div>
-                            <label style="font-size:0.75rem;color:#64748b;font-weight:600;display:block;">Current Status</label>
-                            <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.8rem;font-weight:600;background:#f1f5f9;color:#334155;">
+                            <label style="font-size:0.75rem;color:var(--color-text-muted);font-weight:600;display:block;margin-bottom:2px;">Current Status</label>
+                            <span style="display:inline-block;padding:3px 10px;border-radius:var(--radius-sm);font-size:0.8rem;font-weight:600;background:var(--color-surface-soft);color:var(--color-text);">
                                 ${escapeHtml(formatBookingStatus(record.status || item.status, isDraft))}
                             </span>
                         </div>
                         <div>
-                            <label style="font-size:0.75rem;color:#64748b;font-weight:600;display:block;">Scheduled Date / Time</label>
-                            <span style="color:#1e293b;font-size:0.9rem;">${escapeHtml(displayDate)} ${escapeHtml(displayTime)}</span>
+                            <label style="font-size:0.75rem;color:var(--color-text-muted);font-weight:600;display:block;margin-bottom:2px;">Scheduled Date / Time</label>
+                            <span style="color:var(--color-text);font-size:0.9rem;">${escapeHtml(displayDate)} ${escapeHtml(displayTime)}</span>
                         </div>
                         <div>
-                            <label style="font-size:0.75rem;color:#64748b;font-weight:600;display:block;">Allocation</label>
-                            <span style="color:#1e293b;font-size:0.9rem;">${escapeHtml(item.allocation || 'Standard')}</span>
+                            <label style="font-size:0.75rem;color:var(--color-text-muted);font-weight:600;display:block;margin-bottom:2px;">Allocation</label>
+                            <span style="color:var(--color-text);font-size:0.9rem;">${escapeHtml(item.allocation || 'Standard')}</span>
                         </div>
                     </div>
 
-                    <div style="background:#f8fafc;padding:14px;border-radius:8px;border:1px solid #e2e8f0;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                            <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:#475569;">Payment Information</div>
-                            <span style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:0.78rem;font-weight:700;background:${paymentInfo.badgeBg};color:${paymentInfo.badgeColor};">
-                                ${escapeHtml(paymentInfo.statusText)}
-                            </span>
+                    <div style="background:var(--color-surface-soft);padding:14px 16px;border-radius:var(--radius-md);border:1px solid var(--color-border);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+                            <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--color-text-muted);">Payment Information</div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <span style="display:inline-block;padding:3px 10px;border-radius:var(--radius-sm);font-size:0.78rem;font-weight:700;background:${paymentInfo.badgeBg};color:${paymentInfo.badgeColor};">
+                                    ${escapeHtml(paymentInfo.statusText)}
+                                </span>
+                                ${record.payment_id && record.gateway_checkout_session_id && record.verification_status !== 'Verified' ? `
+                                    <button type="button" class="btn btn-secondary" id="btnSyncPaymentModal" style="height:28px;padding:0 8px;font-size:0.75rem;" title="Check real-time status from PayMongo">
+                                        <i class="fas fa-arrows-rotate"></i> Check Status
+                                    </button>
+                                ` : ''}
+                            </div>
                         </div>
-                        <div style="display:flex;justify-content:space-between;font-size:0.9rem;margin-bottom:6px;">
+                        <div style="display:flex;justify-content:space-between;font-size:0.9rem;margin-bottom:6px;color:var(--color-text);">
                             <span>Amount: <strong>${escapeHtml(paymentAmount)}</strong></span>
                             <span>Method: <strong>${escapeHtml(record.payment_method || (serviceType === 'burial' ? 'PayMongo' : 'Standard'))}</strong></span>
                         </div>
-                        <div style="font-size:0.8rem;color:#64748b;">
+                        <div style="font-size:0.8rem;color:var(--color-text-muted);">
                             <i class="fas fa-info-circle"></i> ${escapeHtml(paymentInfo.explanation)}
                         </div>
                     </div>
 
                     <div>
-                        <label style="font-size:0.75rem;color:#64748b;font-weight:600;display:block;">Notes & Special Instructions</label>
-                        <p style="font-size:0.85rem;color:#475569;margin:4px 0 0 0;">${escapeHtml(notes)}</p>
+                        <label style="font-size:0.75rem;color:var(--color-text-muted);font-weight:600;display:block;margin-bottom:2px;">Notes &amp; Special Instructions</label>
+                        <p style="font-size:0.85rem;color:var(--color-text-muted);margin:4px 0 0 0;">${escapeHtml(notes)}</p>
                     </div>
                 </div>
             `;
 
             if (bookingDetailFooter) {
-                let footerHtml = '<button type="button" class="btn-secondary" id="closeDetailModalBtnInner">Close</button>';
+                let footerHtml = '<button type="button" class="btn btn-secondary" id="closeDetailModalBtnInner">Close</button>';
                 if (paymentInfo.canPayOnline && serviceType === 'burial') {
                     footerHtml = `
-                        <button type="button" class="btn-primary" id="payOnlineModalBtn" style="background:#2c5e47;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;">
+                        <button type="button" class="btn btn-primary" id="payOnlineModalBtn">
                             <i class="fas fa-credit-card"></i> ${escapeHtml(paymentInfo.buttonLabel)}
                         </button>
                         ${footerHtml}
@@ -516,7 +546,7 @@
                 }
                 if (canCancel) {
                     footerHtml = `
-                        <button type="button" class="btn-danger" id="cancelBookingBtn" style="background:#ef4444;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;">
+                        <button type="button" class="btn btn-danger" id="cancelBookingBtn">
                             <i class="fas fa-ban"></i> Cancel Booking
                         </button>
                         ${footerHtml}
@@ -525,6 +555,37 @@
                 bookingDetailFooter.innerHTML = footerHtml;
 
                 document.getElementById('closeDetailModalBtnInner')?.addEventListener('click', closeDetails);
+
+                // Real-time PayMongo sync button in modal
+                const syncBtn = document.getElementById('btnSyncPaymentModal');
+                if (syncBtn && record.payment_id) {
+                    syncBtn.addEventListener('click', async () => {
+                        syncBtn.disabled = true;
+                        syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+                        try {
+                            const syncRes = await api.request(`payments/${record.payment_id}/sync-status`, { method: 'POST' });
+                            if (syncRes && syncRes.verified) {
+                                if (typeof showToast === 'function') {
+                                    showToast('Payment verified & booking confirmed!', 'success');
+                                }
+                                await loadUnifiedBookings();
+                                openBookingDetails(item);
+                            } else {
+                                if (typeof showToast === 'function') {
+                                    showToast(syncRes?.message || 'Payment not yet verified on PayMongo.', 'info');
+                                }
+                                syncBtn.disabled = false;
+                                syncBtn.innerHTML = '<i class="fas fa-arrows-rotate"></i> Check Status';
+                            }
+                        } catch (err) {
+                            if (typeof showToast === 'function') {
+                                showToast(err.message || 'Unable to sync status', 'error');
+                            }
+                            syncBtn.disabled = false;
+                            syncBtn.innerHTML = '<i class="fas fa-arrows-rotate"></i> Check Status';
+                        }
+                    });
+                }
 
                 const payBtn = document.getElementById('payOnlineModalBtn');
                 if (payBtn) {
@@ -548,16 +609,31 @@
                             if (res && res.checkout_url) {
                                 window.location.href = res.checkout_url;
                             } else if (res && (res.code === 409 || res.reason_code === 'lot_held_checkout')) {
-                                alert(res.error || 'This lot is currently held by an active checkout session. Please try again in a few minutes.');
+                                const errMsg = res.error || 'This lot is currently held by an active checkout session. Please try again in a few minutes.';
+                                if (typeof showToast === 'function') {
+                                    showToast(errMsg, 'warning');
+                                } else {
+                                    alert(errMsg);
+                                }
                                 payBtn.disabled = false;
                                 payBtn.innerHTML = `<i class="fas fa-credit-card"></i> ${escapeHtml(paymentInfo.buttonLabel)}`;
                             } else {
-                                alert('Checkout notice: ' + (res?.error || 'Failed to initialize checkout session. Please try again.'));
+                                const errMsg = res?.error || 'Failed to initialize checkout session. Please try again.';
+                                if (typeof showToast === 'function') {
+                                    showToast(errMsg, 'error');
+                                } else {
+                                    alert(errMsg);
+                                }
                                 payBtn.disabled = false;
                                 payBtn.innerHTML = `<i class="fas fa-credit-card"></i> ${escapeHtml(paymentInfo.buttonLabel)}`;
                             }
                         } catch (err) {
-                            alert('Checkout request failed: ' + (err.message || 'Unknown error'));
+                            const errMsg = err.message || 'Unknown error occurred while connecting to payment gateway.';
+                            if (typeof showToast === 'function') {
+                                showToast(errMsg, 'error');
+                            } else {
+                                alert(errMsg);
+                            }
                             payBtn.disabled = false;
                             payBtn.innerHTML = `<i class="fas fa-credit-card"></i> ${escapeHtml(paymentInfo.buttonLabel)}`;
                         }
