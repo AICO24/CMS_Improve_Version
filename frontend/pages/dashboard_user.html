@@ -20,8 +20,7 @@
     <link rel="stylesheet" href="../../assets/css/components/tables.css?v=2">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/dashboard_staff.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard_user.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard_user.css?v=2">
 
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
@@ -34,15 +33,15 @@
                 <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
                 <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
             </div>
-                                                <div class="sidebar-nav">
-                    <a href="dashboard_user.html" class="nav-item active"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
+            <div class="sidebar-nav">
+                <a href="dashboard_user.html" class="nav-item active"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
                 <div class="nav-group">
                     <button type="button" class="nav-group-header">
                         <span>Services</span>
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
+                        <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -51,8 +50,8 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="my-bookings.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>My Bookings</span></a>
-                    <a href="my-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>My Records</span></a>
+                        <a href="my-bookings.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>My Bookings</span></a>
+                        <a href="my-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>My Records</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -61,8 +60,7 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
-                    <a href="payment-history.html" class="nav-item"><i class="fas fa-receipt icon"></i> <span>Payment History</span></a>
+                        <a href="payment-history.html" class="nav-item"><i class="fas fa-receipt icon"></i> <span>Payment History</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -71,8 +69,8 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
-                    <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
+                        <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
+                        <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
                     </div>
                 </div>
             </div>
@@ -94,11 +92,11 @@
                             <path class="line" d="M7 16H27"></path>
                         </svg>
                     </label>
-                    <h3 id="pageTitle">User Dashboard</h3>
+                    <h3 id="pageTitle">Citizen Dashboard</h3>
                 </div>
                 <div class="user-info">
                     <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
-                    <div class="notification-icon" id="notificationIcon">
+                    <div class="notification-icon" id="notificationIcon" title="View notifications">
                         <i class="fas fa-bell"></i>
                         <span class="notification-badge" id="notificationBadge">0</span>
                     </div>
@@ -109,55 +107,92 @@
                             <div class="user-role" id="userRole">Client</div>
                         </div>
                     </div>
-                    <button class="Btn logout-btn" id="logoutBtn">
+                    <button class="Btn logout-btn" id="logoutBtn" title="Sign out">
                         <div class="sign"><i class="fas fa-sign-out-alt"></i></div>
                         <div class="text">Logout</div>
                     </button>
                 </div>
             </div>
-                <div class="content-area">
-                <div class="user-welcome-card card">
-                    <p class="welcome-label">👋 Welcome, <span id="welcomeName">Client</span></p>
-                    <p class="welcome-note">Your account summary is below. Check your reservations, payments, and upcoming burial schedule.</p>
+
+            <div class="content-area">
+                <!-- Welcome Hero Card -->
+                <div class="user-welcome-card">
+                    <div class="welcome-badge-pill"><i class="fas fa-shield-halved"></i> Citizen Portal</div>
+                    <h2 class="welcome-label">Welcome back, <span id="welcomeName">Client</span></h2>
+                    <p class="welcome-note">Here is your cemetery arrangements overview. Monitor active burial and cremation bookings, verify your payment standing, and track scheduled cemetery services.</p>
                 </div>
-                <!-- Cremation module audit, Batch H: one shared entry point for
-                     "which service do I need" instead of linking straight into
-                     either flow — see book-a-service.html. -->
-                <div class="attention-row">
-                    <div class="card">
-                        <h4><i class="fas fa-handshake"></i> Need to book a service?</h4>
-                        <p class="muted">Reserve a burial slot or a cremation request — we'll guide you through the requirements, schedule, and payment for whichever one you need.</p>
-                        <a href="booking-assistant.html" class="btn-primary">Book a Service &rarr;</a>
+
+                <!-- Quick Action Toolbar (matches Forecast toolbar) -->
+                <div class="citizen-action-toolbar">
+                    <div class="citizen-action-left">
+                        <div class="citizen-action-icon">
+                            <i class="fas fa-handshake"></i>
+                        </div>
+                        <div class="citizen-action-text">
+                            <h4>Need to arrange a service or burial slot?</h4>
+                            <p>Reserve a burial plot or request cremation services. Our interactive assistant will guide you step-by-step through requirements, scheduling, and payment.</p>
+                        </div>
                     </div>
+                    <a href="booking-assistant.html" class="citizen-action-btn">
+                        <i class="fas fa-robot"></i>
+                        <span>Booking Assistant &rarr;</span>
+                    </a>
                 </div>
-                <div class="stats-row">
-                    <div class="stat-card">
-                        <div class="stat-title">Active Reservation</div>
+
+                <!-- Account Overview Section -->
+                <p class="section-label"><i class="fas fa-chart-pie"></i> Account Overview</p>
+
+                <!-- Gradient Stat Cards (matches Reports & Capacity Forecast) -->
+                <div class="stats-row dashboard-user-stats">
+                    <div class="stat-card accent-green">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-bookmark"></i></span> Active Reservation</div>
                         <div class="stat-value" id="activeReservationCount">-</div>
                         <div class="stat-sub" id="activeReservationText">Loading reservation status...</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-title">Payment Status</div>
+                    <div class="stat-card accent-teal">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-receipt"></i></span> Payment Status</div>
                         <div class="stat-value" id="paymentStatusCount">-</div>
                         <div class="stat-sub" id="paymentStatusText">Checking payment history...</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-title">Burial Schedule</div>
+                    <div class="stat-card accent-amber">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-calendar-check"></i></span> Burial Schedule</div>
                         <div class="stat-value" id="scheduleCount">-</div>
                         <div class="stat-sub" id="scheduleText">Fetching upcoming bookings...</div>
                     </div>
+                    <div class="stat-card accent-navy">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-bell"></i></span> Notifications</div>
+                        <div class="stat-value" id="unreadNotificationsCount">-</div>
+                        <div class="stat-sub" id="unreadNotificationsText">Checking unread updates...</div>
+                    </div>
                 </div>
+
+                <!-- Activity Panels Section -->
+                <p class="section-label"><i class="fas fa-clock-rotate-left"></i> Activity &amp; Records</p>
+
                 <div class="card-grid">
-                    <div class="card">
-                        <h4>Upcoming Schedule</h4>
+                    <div class="chart-card">
+                        <div class="chart-card__header">
+                            <span class="chart-card__title"><i class="fas fa-calendar-day" style="color: var(--color-primary-600);"></i> Upcoming Schedule</span>
+                            <span class="chart-card__badge">Bookings</span>
+                        </div>
                         <ul class="recent-list" id="upcomingScheduleList"></ul>
                     </div>
-                    <div class="card">
-                        <h4>Notifications</h4>
+                    <div class="chart-card">
+                        <div class="chart-card__header">
+                            <span class="chart-card__title"><i class="fas fa-bell" style="color: var(--color-primary-600);"></i> Recent Notifications</span>
+                            <span class="chart-card__badge">Updates</span>
+                        </div>
                         <ul class="recent-list" id="notificationsList"></ul>
                     </div>
                 </div>
             </div>
+
+            <!-- Dashboard Footer (matches Reports & Capacity Forecast) -->
+            <footer class="dashboard-footer">
+                <div class="dashboard-footer__bottom">
+                    <span class="dashboard-footer__text">&copy; 2026 Cemetery Management System. All rights reserved.</span>
+                </div>
+            </footer>
         </main>
     </div>
     <script src="../../assets/js/shared/navigation-config.js"></script>

@@ -1,87 +1,657 @@
-/* .user-welcome-card no longer overrides background/radius/shadow/padding
-   — this element already carries class="card" in the HTML, and those
-   hardcoded light-mode-only values (background:#fff etc.) were loading
-   after and beating components/cards.css's token-driven .card rule, so
-   this card stayed white regardless of the theme toggle. Letting .card
-   do the work fixes that; nothing here needs its own box model. */
+/* ==========================================================================
+   USER / CITIZEN DASHBOARD STYLES
+   Visual language harmonized with Admin Reports & Capacity Forecasting
+   ========================================================================== */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+/* ── Background & Atmosphere (mirrors Reports & Forecasting) ────────── */
+.dashboard-body {
+    background:
+        radial-gradient(circle at 14% 8%, rgba(44, 94, 71, 0.10), transparent 28%),
+        radial-gradient(circle at 88% 18%, rgba(37, 99, 235, 0.08), transparent 24%),
+        linear-gradient(180deg, #f6faf7 0%, #f4f7fa 42%, #eef3f7 100%);
+    font-family: 'Inter', sans-serif;
+    color: #243736;
+}
+
+.main-content {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 12% 6%, rgba(44, 94, 71, 0.20), transparent 32%),
+        radial-gradient(circle at 88% 14%, rgba(37, 99, 235, 0.14), transparent 28%),
+        linear-gradient(180deg, #eef8f1 0%, #f4f7fa 44%, #eaf0f4 100%);
+}
+
+.main-content::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background:
+        radial-gradient(circle at 20% 28%, rgba(122, 167, 122, 0.34), transparent 24%),
+        radial-gradient(circle at 78% 42%, rgba(43, 54, 88, 0.16), transparent 26%),
+        linear-gradient(135deg, rgba(44, 94, 71, 0.14), rgba(37, 99, 235, 0.09) 45%, rgba(244, 247, 250, 0));
+}
+
+.top-bar,
+.content-area {
+    position: relative;
+    z-index: 1;
+}
+
+/* ── Top bar — glassmorphic, matches Reports ────────────────────────── */
+.top-bar {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(234, 243, 238, 0.74)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.12), rgba(37, 99, 235, 0.07));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.62);
+    border-left: none;
+    border-right: none;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+
+.top-left {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.top-left h3 {
+    color: var(--color-primary-800);
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.content-area {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex: 1 0 auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* ── Welcome Hero Banner ────────────────────────────────────────────── */
+.user-welcome-card {
+    position: relative;
+    overflow: hidden;
+    padding: 22px 26px;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(235, 246, 240, 0.90)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.10), rgba(37, 99, 235, 0.05));
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-left: 6px solid var(--color-primary-500);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+}
+
+.user-welcome-card::before {
+    content: "";
+    position: absolute;
+    right: -30px;
+    top: -30px;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(44, 94, 71, 0.12), transparent 70%);
+    pointer-events: none;
+}
+
+.welcome-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    background: rgba(44, 94, 71, 0.10);
+    color: var(--color-primary-700);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+}
 
 .welcome-label {
     margin: 0;
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--color-text);
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--color-primary-800);
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .welcome-note {
-    margin: 12px 0 0;
+    margin: 6px 0 0;
     color: var(--color-text-muted);
-    line-height: 1.7;
-    max-width: 580px;
+    line-height: 1.6;
+    font-size: 0.9rem;
+    max-width: 680px;
 }
 
-/*
-  Scoped to desktop only (Batch 10) — this used to apply unconditionally,
-  which unintentionally beat the 2-col/1-col breakpoints already defined
-  for .stats-row in dashboard.css and dashboard_staff.css (same
-  specificity, loads later), so the 3-column grid never actually
-  collapsed on narrow screens on this page.
-*/
-@media (min-width: 1025px) {
-    .stats-row {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
+/* ── Citizen Action Highlight Toolbar (matches Forecast toolbar) ────── */
+.citizen-action-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 16px 20px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(231, 240, 236, 0.9));
+    border: 1px solid rgba(44, 94, 71, 0.14);
+    border-left: 6px solid var(--color-primary-500);
+    border-bottom: 2px solid rgba(44, 94, 71, 0.10);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
 }
 
-.stat-card {
-    min-height: 150px;
+.citizen-action-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
 }
 
-/* .recent-list li no longer has its own bespoke padding/text styling —
-   dashboard_user.js now builds each item with class="recent-item" (the
-   same shared component the Admin/Staff dashboards use for their
-   transaction list, defined once in dashboard.css), so all three
-   dashboards render list items identically instead of two different
-   visual languages. */
+.citizen-action-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(44, 94, 71, 0.12);
+    color: var(--color-primary-600);
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
 
+.citizen-action-text h4 {
+    margin: 0 0 4px 0;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--color-primary-800);
+}
+
+.citizen-action-text p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.45;
+}
+
+.citizen-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 175px;
+    height: 42px;
+    padding: 0 18px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(44, 94, 71, 0.28);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(236, 253, 245, 0.98));
+    color: var(--color-primary-800);
+    font-weight: 700;
+    font-size: 0.86rem;
+    text-decoration: none !important;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+    transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.citizen-action-btn:hover {
+    background: rgba(209, 250, 229, 0.96);
+    border-color: rgba(15, 118, 110, 0.38);
+    color: var(--color-primary-800);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
+}
+
+.citizen-action-btn i {
+    color: #0f766e;
+    font-size: 0.95rem;
+}
+
+/* ── Section Divider Label (matches Reports) ────────────────────────── */
+.section-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary-700);
+    margin: 8px 0 2px;
+}
+
+.section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(44, 94, 71, 0.14);
+}
+
+/* ── Gradient Stat Cards (matches Reports / Forecast) ───────────────── */
+.dashboard-user-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    align-items: stretch;
+}
+
+.dashboard-user-stats > .stat-card {
+    position: relative;
+    min-height: 124px;
+    height: 100%;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    border: 1px solid rgba(22, 50, 41, 0.20);
+    border-left: 8px solid #163229;
+    background: linear-gradient(135deg, #2c5e47 0%, #3b7055 100%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    border-radius: var(--radius-lg);
+    contain: layout;
+    transition: transform 220ms cubic-bezier(0.2, 0, 0.2, 1),
+        box-shadow 220ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.dashboard-user-stats > .stat-card::before {
+    content: "";
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    right: -40px;
+    top: -30px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.22), rgba(255,255,255,0) 70%);
+    pointer-events: none;
+}
+
+.dashboard-user-stats > .stat-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 52%);
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+.dashboard-user-stats > .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
+}
+
+.dashboard-user-stats > .stat-card .stat-title,
+.dashboard-user-stats > .stat-card .stat-value,
+.dashboard-user-stats > .stat-card .stat-sub {
+    position: relative;
+    z-index: 1;
+}
+
+.dashboard-user-stats > .stat-card .stat-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.76rem;
+    line-height: 1.25;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.dashboard-user-stats > .stat-card .card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    margin-left: auto;
+    order: 2;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    font-size: 13px;
+}
+
+.dashboard-user-stats > .stat-card .stat-value {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    color: #fff;
+    font-size: clamp(1.25rem, 1.4vw, 1.55rem);
+    font-weight: 700;
+    line-height: 1.2;
+    text-shadow: 0 1px 1px rgba(15, 23, 42, 0.16);
+    font-family: var(--font-display);
+}
+
+.dashboard-user-stats > .stat-card .stat-sub {
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.78rem;
+    line-height: 1.3;
+    min-height: 18px;
+}
+
+/* Color accents matching Reports */
+.dashboard-user-stats > .stat-card.accent-green {
+    border-left-color: #163229;
+    background: linear-gradient(135deg, #2c5e47 0%, #3b7055 100%);
+}
+
+.dashboard-user-stats > .stat-card.accent-teal {
+    border-left-color: #0f766e;
+    background: linear-gradient(135deg, #0d9488 0%, #2fb5aa 100%);
+}
+
+.dashboard-user-stats > .stat-card.accent-amber {
+    border-left-color: #92400e;
+    background: linear-gradient(135deg, #b45309 0%, #d08a28 100%);
+}
+
+.dashboard-user-stats > .stat-card.accent-navy {
+    border-left-color: #2b3658;
+    background: linear-gradient(135deg, #2b3658 0%, #465376 100%);
+}
+
+/* ── Activity Cards Grid (matches Reports .chart-card panels) ───────── */
 .card-grid {
     display: grid;
-    grid-template-columns: 1.5fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 18px;
+    align-items: stretch;
 }
 
-.card-grid .card {
-    padding: 22px;
-    min-height: 280px;
+.card-grid .chart-card {
+    position: relative;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 247, 243, 0.92)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.08), rgba(37, 99, 235, 0.05));
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-left: 6px solid var(--color-primary-500);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    min-height: 320px;
+    transition: transform 220ms ease, box-shadow 220ms ease;
 }
 
-.card-grid .card h4 {
-    margin-bottom: 18px;
+.card-grid .chart-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.10);
+}
+
+.card-grid .chart-card::before {
+    content: "";
+    position: absolute;
+    inset: -30% auto auto -20%;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(15, 118, 110, 0.10), rgba(15, 118, 110, 0) 68%);
+    pointer-events: none;
+}
+
+.card-grid .chart-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(44, 94, 71, 0.10);
+    position: relative;
+    z-index: 1;
+}
+
+.card-grid .chart-card__title {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--color-primary-800);
+    line-height: 1.3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-grid .chart-card__badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    background: rgba(44, 94, 71, 0.10);
+    color: var(--color-primary-700);
+}
+
+.recent-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+}
+
+.recent-item {
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(44, 94, 71, 0.12);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.recent-item:hover {
+    transform: translateX(3px);
+    border-color: rgba(44, 94, 71, 0.28);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+.recent-item-title {
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--color-primary-800);
+}
+
+.recent-item-meta {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    margin-top: 4px;
+    line-height: 1.4;
 }
 
 .notification-badge.hidden {
     display: none;
 }
 
-.detail-row {
+/* ── Citizen Footer (matches Reports & Capacity Forecast) ───────────── */
+.dashboard-footer {
+    position: relative;
+    z-index: 1;
+    margin-top: 24px;
+    padding: 0 24px 20px;
+    background: transparent;
+}
+
+.dashboard-footer__bottom {
     display: flex;
-    justify-content: space-between;
-    gap: var(--space-4);
-    padding: 10px 0;
-    border-bottom: 1px solid var(--color-border);
-    font-family: var(--font-sans);
-    font-size: var(--fs-body-sm);
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.73rem;
+    letter-spacing: 0.02em;
 }
 
-.detail-row:last-child {
-    border-bottom: none;
+.dashboard-footer__bottom::before,
+.dashboard-footer__bottom::after {
+    content: "";
+    display: block;
+    width: 140px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(100, 116, 139, 0), rgba(100, 116, 139, 0.8), rgba(100, 116, 139, 0));
 }
 
-.detail-row span {
-    color: var(--color-text-muted);
+.dashboard-footer__text {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #64748b;
 }
 
+.dashboard-footer__text::before,
+.dashboard-footer__text::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(100, 116, 139, 0.65);
+    display: inline-block;
+}
+
+/* ── Responsive Layout Breakpoints ──────────────────────────────────── */
 @media (max-width: 1080px) {
+    .dashboard-user-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
     .card-grid {
         grid-template-columns: 1fr;
     }
+}
+
+@media (max-width: 760px) {
+    .content-area {
+        padding: 16px;
+    }
+    .dashboard-user-stats {
+        grid-template-columns: 1fr;
+    }
+    .citizen-action-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+    }
+    .citizen-action-btn {
+        width: 100%;
+    }
+}
+
+/* ── Dark Mode Harmony ──────────────────────────────────────────────── */
+body[data-theme="dark"] .dashboard-body,
+body[data-theme="dark"].dashboard-body,
+.dashboard-body[data-theme="dark"] {
+    background:
+        radial-gradient(circle at 14% 8%, rgba(44, 94, 71, 0.18), transparent 28%),
+        radial-gradient(circle at 88% 18%, rgba(37, 99, 235, 0.12), transparent 24%),
+        linear-gradient(180deg, #0b131c 0%, #0d1722 42%, #0a1118 100%) !important;
+    color: #e2e8f0;
+}
+
+.dashboard-body[data-theme="dark"] .main-content {
+    background:
+        radial-gradient(circle at 12% 6%, rgba(44, 94, 71, 0.22), transparent 32%),
+        radial-gradient(circle at 88% 14%, rgba(37, 99, 235, 0.16), transparent 28%),
+        linear-gradient(180deg, #0d191d 0%, #0d1722 44%, #0a1118 100%);
+}
+
+.dashboard-body[data-theme="dark"] .top-bar {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(18, 30, 49, 0.90)) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-body[data-theme="dark"] .top-left h3 {
+    color: #f1f5f9;
+}
+
+.dashboard-body[data-theme="dark"] .user-welcome-card {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(20, 36, 30, 0.88));
+    border-color: rgba(44, 94, 71, 0.35);
+}
+
+.dashboard-body[data-theme="dark"] .welcome-label {
+    color: #f1f5f9;
+}
+
+.dashboard-body[data-theme="dark"] .citizen-action-toolbar {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(20, 36, 30, 0.88));
+    border-color: rgba(44, 94, 71, 0.35);
+}
+
+.dashboard-body[data-theme="dark"] .citizen-action-text h4 {
+    color: #f1f5f9;
+}
+
+.dashboard-body[data-theme="dark"] .citizen-action-btn {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+    border-color: rgba(44, 94, 71, 0.50);
+    color: #a7f3d0;
+}
+
+.dashboard-body[data-theme="dark"] .card-grid .chart-card {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(17, 27, 40, 0.88));
+    border-color: rgba(44, 94, 71, 0.25);
+}
+
+.dashboard-body[data-theme="dark"] .card-grid .chart-card__title {
+    color: #f1f5f9;
+}
+
+.dashboard-body[data-theme="dark"] .recent-item {
+    background: rgba(30, 41, 59, 0.70);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-body[data-theme="dark"] .recent-item-title {
+    color: #f1f5f9;
+}
+
+.dashboard-body[data-theme="dark"] .dashboard-user-stats > .stat-card.accent-green {
+    border-left-color: #34d399;
+    background: linear-gradient(135deg, #13392a 0%, #1e4d39 100%) !important;
+}
+
+.dashboard-body[data-theme="dark"] .dashboard-user-stats > .stat-card.accent-teal {
+    border-left-color: #2dd4bf;
+    background: linear-gradient(135deg, #0f4440 0%, #135853 100%) !important;
+}
+
+.dashboard-body[data-theme="dark"] .dashboard-user-stats > .stat-card.accent-amber {
+    border-left-color: #fbbf24;
+    background: linear-gradient(135deg, #4d2800 0%, #683804 100%) !important;
+}
+
+.dashboard-body[data-theme="dark"] .dashboard-user-stats > .stat-card.accent-navy {
+    border-left-color: #818cf8;
+    background: linear-gradient(135deg, #182036 0%, #222b49 100%) !important;
 }

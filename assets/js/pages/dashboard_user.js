@@ -85,11 +85,14 @@ const loadDashboard = async () => {
     updateText('scheduleCount', String(upcomingSchedules.length));
     updateText('scheduleText', upcomingSchedules.length ? 'Upcoming booking details are listed below.' : 'No upcoming burial schedules.');
 
+    const unreadCount = Number(notificationsUnread.count || 0);
+    updateText('unreadNotificationsCount', String(unreadCount));
+    updateText('unreadNotificationsText', unreadCount > 0 ? `${unreadCount} unread update${unreadCount > 1 ? 's' : ''}.` : 'All caught up.');
+
     const badge = document.getElementById('notificationBadge');
     if (badge) {
-        const count = Number(notificationsUnread.count || 0);
-        badge.textContent = String(count);
-        badge.classList.toggle('hidden', count === 0);
+        badge.textContent = String(unreadCount);
+        badge.classList.toggle('hidden', unreadCount === 0);
     }
 
     updateText('welcomeName', user.full_name || user.username || 'Client');
