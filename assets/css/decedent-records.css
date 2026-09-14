@@ -1413,89 +1413,431 @@
     max-width: 760px;
 }
 
-.import-help {
-    margin: 0 0 var(--space-3);
-    color: var(--color-text-muted);
-    font-size: var(--fs-body-sm);
-    line-height: 1.5;
+.modal-content.modal--import {
+    max-width: 840px;
+    width: 95%;
+    padding: var(--space-5, 24px);
 }
 
-.import-columns-legend {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-3);
-    margin-bottom: var(--space-3);
+.modal-header-compact {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: var(--space-4, 16px);
 }
 
-.import-columns-group {
-    padding: 10px 12px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-surface-soft);
+.modal-header-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(44, 94, 71, 0.12);
+    color: #2c5e47;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
 }
 
-.import-columns-group strong {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 0.8rem;
+.modal-header-compact h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
     color: var(--color-text);
 }
 
-.import-columns-group ul {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.import-columns-group li {
-    position: relative;
-    padding: 3px 0 3px 16px;
-    font-size: 0.8rem;
+.modal-header-subtitle {
+    margin: 3px 0 0;
+    font-size: 0.82rem;
     color: var(--color-text-muted);
 }
 
-.import-columns-group li::before {
-    content: "";
-    position: absolute;
-    left: 2px;
-    top: 10px;
-    width: 5px;
-    height: 5px;
+/* 3-Step Guided Bar */
+.import-steps-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--color-surface-soft);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 10px 18px;
+    margin-bottom: var(--space-4, 16px);
+}
+
+.import-step-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+}
+
+.import-step-item.active {
+    color: #2c5e47;
+    font-weight: 600;
+}
+
+.import-step-item .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
+    background: rgba(0, 0, 0, 0.06);
+    font-size: 0.72rem;
+}
+
+.import-step-item.active .step-num {
     background: #2c5e47;
+    color: #ffffff;
+}
+
+.import-step-arrow {
+    color: var(--color-border);
+    font-size: 0.75rem;
+}
+
+/* Step 1: Guide Card & Pills */
+.import-guide-card {
+    background: var(--color-surface-soft);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    margin-bottom: var(--space-4, 16px);
+}
+
+.import-guide-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.import-guide-top .import-help {
+    margin: 0;
+    flex: 1;
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    line-height: 1.45;
+}
+
+.import-guide-top code {
+    background: rgba(44, 94, 71, 0.10);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #2c5e47;
 }
 
 .import-template-btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: var(--space-4);
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 8px;
+    white-space: nowrap;
 }
 
-.import-upload-row {
+.import-columns-legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.import-columns-group {
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+}
+
+.legend-group-header {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    margin-bottom: var(--space-4);
+    gap: 6px;
+    margin-bottom: 8px;
 }
 
+.legend-group-header strong {
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text);
+}
+
+.badge-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+
+.dot-required {
+    background: #10b981;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+}
+
+.dot-optional {
+    background: #94a3b8;
+}
+
+.import-pills-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.import-pill {
+    font-size: 0.74rem;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 6px;
+    line-height: 1.3;
+}
+
+.pill-required {
+    background: rgba(16, 185, 129, 0.12);
+    color: #065f46;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.pill-optional {
+    background: rgba(148, 163, 184, 0.14);
+    color: #475569;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+/* Step 2: Drag & Drop Dropzone */
+.import-upload-section {
+    margin-bottom: var(--space-4, 16px);
+}
+
+.csv-dropzone {
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-soft);
+    padding: 24px 18px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+    outline: none;
+}
+
+.csv-dropzone:hover,
+.csv-dropzone.dragover {
+    border-color: #2c5e47;
+    background: rgba(44, 94, 71, 0.04);
+}
+
+.csv-dropzone.dragover {
+    transform: scale(1.008);
+}
+
+.dropzone-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.dropzone-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(44, 94, 71, 0.10);
+    color: #2c5e47;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.dropzone-title {
+    margin: 0;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+.dropzone-browse {
+    color: #2c5e47;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.dropzone-sub {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.dropzone-file-selected {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+}
+
+.file-card-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.file-card-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    background: rgba(16, 185, 129, 0.12);
+    color: #065f46;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.file-details {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.file-name {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--color-text);
+    word-break: break-all;
+}
+
+.file-size {
+    font-size: 0.74rem;
+    color: var(--color-text-muted);
+}
+
+.file-remove-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(239, 68, 68, 0.10);
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.file-remove-btn:hover {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.import-upload-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.import-upload-actions #previewImportBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    font-weight: 600;
+    border-radius: 8px;
+}
+
+/* Step 3: Preview Section & Metrics Summary */
 .import-preview-section {
-    margin-top: var(--space-3);
+    margin-top: var(--space-4, 16px);
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-4, 16px);
+}
+
+.import-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.preview-title {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .import-summary {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    margin-bottom: var(--space-3);
-    font-size: var(--fs-body-sm);
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.summary-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
+.summary-total {
+    background: var(--color-surface-soft);
+    border: 1px solid var(--color-border);
     color: var(--color-text);
 }
 
+.summary-ready {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #065f46;
+}
+
+.summary-warn {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #b45309;
+}
+
+.summary-err {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #b91c1c;
+}
+
 .import-preview-table-container {
-    max-height: 320px;
+    max-height: 280px;
     overflow-y: auto;
-    margin-bottom: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-4, 16px);
+}
+
+.import-preview-table-container thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--color-surface);
 }
 
 .import-row-notes {
@@ -1503,6 +1845,12 @@
     margin-left: 6px;
     color: var(--color-text-muted);
     font-size: 0.8rem;
+}
+
+.import-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
 }
 
 /* ---------- MODALS ---------- */
@@ -2483,5 +2831,182 @@
 .dashboard-body[data-theme="dark"] .modal-form-actions {
     border-top-color: rgba(255, 255, 255, 0.08);
 }
+
+/* CSV Import Modal Dark Mode */
+.dashboard-body[data-theme="dark"] .modal-content.modal--import {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.50);
+}
+
+.dashboard-body[data-theme="dark"] .modal-header-icon-wrap {
+    background: rgba(52, 211, 153, 0.15);
+    color: #34d399;
+}
+
+.dashboard-body[data-theme="dark"] .modal-header-subtitle {
+    color: #94a3b8;
+}
+
+.dashboard-body[data-theme="dark"] .import-steps-bar {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-body[data-theme="dark"] .import-step-item {
+    color: #94a3b8;
+}
+
+.dashboard-body[data-theme="dark"] .import-step-item.active {
+    color: #34d399;
+}
+
+.dashboard-body[data-theme="dark"] .import-step-item .step-num {
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+}
+
+.dashboard-body[data-theme="dark"] .import-step-item.active .step-num {
+    background: #34d399;
+    color: #0f172a;
+}
+
+.dashboard-body[data-theme="dark"] .import-step-arrow {
+    color: rgba(255, 255, 255, 0.20);
+}
+
+.dashboard-body[data-theme="dark"] .import-guide-card {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-body[data-theme="dark"] .import-guide-top .import-help {
+    color: #94a3b8;
+}
+
+.dashboard-body[data-theme="dark"] .import-guide-top code {
+    background: rgba(52, 211, 153, 0.12);
+    color: #34d399;
+}
+
+.dashboard-body[data-theme="dark"] .import-columns-group {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-body[data-theme="dark"] .legend-group-header strong {
+    color: #f1f5f9;
+}
+
+.dashboard-body[data-theme="dark"] .pill-required {
+    background: rgba(52, 211, 153, 0.15);
+    color: #34d399;
+    border-color: rgba(52, 211, 153, 0.28);
+}
+
+.dashboard-body[data-theme="dark"] .pill-optional {
+    background: rgba(148, 163, 184, 0.14);
+    color: #cbd5e1;
+    border-color: rgba(148, 163, 184, 0.22);
+}
+
+.dashboard-body[data-theme="dark"] .csv-dropzone {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.dashboard-body[data-theme="dark"] .csv-dropzone:hover,
+.dashboard-body[data-theme="dark"] .csv-dropzone.dragover {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: #34d399;
+}
+
+.dashboard-body[data-theme="dark"] .dropzone-icon {
+    background: rgba(52, 211, 153, 0.15);
+    color: #34d399;
+}
+
+.dashboard-body[data-theme="dark"] .dropzone-title {
+    color: #f8fafc;
+}
+
+.dashboard-body[data-theme="dark"] .dropzone-browse {
+    color: #34d399;
+}
+
+.dashboard-body[data-theme="dark"] .dropzone-sub {
+    color: #94a3b8;
+}
+
+.dashboard-body[data-theme="dark"] .dropzone-file-selected {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.dashboard-body[data-theme="dark"] .file-card-icon {
+    background: rgba(52, 211, 153, 0.15);
+    color: #34d399;
+}
+
+.dashboard-body[data-theme="dark"] .file-name {
+    color: #f8fafc;
+}
+
+.dashboard-body[data-theme="dark"] .file-size {
+    color: #94a3b8;
+}
+
+.dashboard-body[data-theme="dark"] .file-remove-btn {
+    background: rgba(248, 113, 113, 0.18);
+    color: #f87171;
+}
+
+.dashboard-body[data-theme="dark"] .file-remove-btn:hover {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.dashboard-body[data-theme="dark"] .import-preview-section {
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-body[data-theme="dark"] .preview-title {
+    color: #f8fafc;
+}
+
+.dashboard-body[data-theme="dark"] .summary-total {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #e2e8f0;
+}
+
+.dashboard-body[data-theme="dark"] .summary-ready {
+    background: rgba(52, 211, 153, 0.15);
+    border-color: rgba(52, 211, 153, 0.30);
+    color: #34d399;
+}
+
+.dashboard-body[data-theme="dark"] .summary-warn {
+    background: rgba(251, 191, 36, 0.15);
+    border-color: rgba(251, 191, 36, 0.30);
+    color: #fbbf24;
+}
+
+.dashboard-body[data-theme="dark"] .summary-err {
+    background: rgba(248, 113, 113, 0.15);
+    border-color: rgba(248, 113, 113, 0.30);
+    color: #f87171;
+}
+
+.dashboard-body[data-theme="dark"] .import-preview-table-container {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-body[data-theme="dark"] .import-preview-table-container thead th {
+    background: #1e293b;
+    color: #f8fafc;
+    border-bottom-color: rgba(255, 255, 255, 0.10);
+}
+
 
 
