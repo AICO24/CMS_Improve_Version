@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Decedent Records | Cemetery Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../../assets/css/tokens.css?v=2">
     <link rel="stylesheet" href="../../assets/css/typography.css">
@@ -28,27 +30,34 @@
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
 </head>
+
 <body class="dashboard-body">
-<script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <script>(function () { try { var t = localStorage.getItem('cms-theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); document.body.setAttribute('data-theme', t); } catch (e) { } })();</script>
     <div class="dashboard-container">
         <!-- STATIC SIDEBAR (same as admin dashboard) -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
-                <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
+                <button type="button" id="railToggleBtn" title="Collapse to icons"><i
+                        class="fas fa-angles-left"></i></button>
             </div>
-                                                <div class="sidebar-nav">
-                    <a href="dashboard_staff.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
+            <div class="sidebar-nav">
+                <a href="dashboard_staff.html" class="nav-item"><i class="fas fa-gauge-high icon"></i>
+                    <span>Dashboard</span></a>
                 <div class="nav-group">
                     <button type="button" class="nav-group-header">
                         <span>Operations</span>
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="book-a-service.html" class="nav-item"><i class="fas fa-handshake icon"></i> <span>Book a Service</span></a>
-                    <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
-                    <a href="manage-reservations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Reservations</span></a>
-                    <a href="manage-cremations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Cremations</span></a>
+                        <a href="book-a-service.html" class="nav-item"><i class="fas fa-handshake icon"></i> <span>Book
+                                a Service</span></a>
+                        <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i>
+                            <span>Booking Assistant</span></a>
+                        <a href="manage-reservations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i>
+                            <span>Manage Reservations</span></a>
+                        <a href="manage-cremations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i>
+                            <span>Manage Cremations</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -57,8 +66,10 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="lot-management.html" class="nav-item"><i class="fas fa-map-location-dot icon"></i> <span>Lot Management</span></a>
-                    <a href="decedent-records.html" class="nav-item active"><i class="fas fa-folder-open icon"></i> <span>Decedent Records</span></a>
+                        <a href="lot-management.html" class="nav-item"><i class="fas fa-map-location-dot icon"></i>
+                            <span>Lot Management</span></a>
+                        <a href="decedent-records.html" class="nav-item active"><i class="fas fa-folder-open icon"></i>
+                            <span>Decedent Records</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -67,7 +78,8 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
+                        <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i>
+                            <span>Payments</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -76,7 +88,8 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="exceptions.html" class="nav-item"><i class="fas fa-triangle-exclamation icon"></i> <span>System Exceptions</span></a>
+                        <a href="exceptions.html" class="nav-item"><i class="fas fa-triangle-exclamation icon"></i>
+                            <span>System Exceptions</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -85,15 +98,18 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
-                    <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
+                        <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i>
+                            <span>Profile</span></a>
+                        <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i>
+                            <span>Settings</span></a>
                     </div>
                 </div>
             </div>
             <div class="sidebar-footer">
                 <div class="user-chip">
                     <i class="fas fa-user"></i>
-                    <div><span id="sidebarUserName">Admin User</span><small id="sidebarUserRole">Administrator</small></div>
+                    <div><span id="sidebarUserName">Admin User</span><small id="sidebarUserRole">Administrator</small>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -104,7 +120,9 @@
                     <label class="hamburger">
                         <input type="checkbox" id="toggleSidebar">
                         <svg viewBox="0 0 32 32">
-                            <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
+                            <path class="line line-top-bottom"
+                                d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14">
+                            </path>
                             <path class="line" d="M7 16H27"></path>
                         </svg>
                     </label>
@@ -112,7 +130,8 @@
                     <div id="aiAssistantMount"></div>
                 </div>
                 <div class="user-info">
-                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
+                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode"
+                        aria-pressed="false"><i class="fas fa-moon"></i></button>
                     <div class="notification-icon" id="notificationIcon">
                         <i class="fas fa-bell"></i>
                         <span class="notification-badge" id="notificationBadge">0</span>
@@ -130,31 +149,36 @@
                     </button>
                 </div>
             </div>
-<div class="content-area">
+            <div class="content-area">
                 <!-- Summary Statistics — at top for executive overview -->
                 <div class="stats-row decrec-stats">
                     <div class="stat-card accent-teal">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-folder-open"></i></span> Total Records</div>
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-folder-open"></i></span> Total
+                            Records</div>
                         <div class="stat-value" id="totalCount">0</div>
                         <div class="stat-sub">Decedents on file</div>
                     </div>
                     <div class="stat-card accent-navy">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-monument"></i></span> Burials</div>
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-monument"></i></span> Burials
+                        </div>
                         <div class="stat-value" id="burialCount">0</div>
                         <div class="stat-sub">Interred</div>
                     </div>
                     <div class="stat-card accent-amber">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-fire"></i></span> Cremations</div>
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-fire"></i></span> Cremations
+                        </div>
                         <div class="stat-value" id="cremationCount">0</div>
                         <div class="stat-sub">Ashes stored</div>
                     </div>
                     <div class="stat-card accent-blue">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-cake-candles"></i></span> Avg. Age</div>
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-cake-candles"></i></span> Avg.
+                            Age</div>
                         <div class="stat-value" id="avgAge">0</div>
                         <div class="stat-sub">Years old</div>
                     </div>
                     <div class="stat-card accent-red">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span> Needs Attention</div>
+                        <div class="stat-title"><span class="card-icon"><i
+                                    class="fas fa-triangle-exclamation"></i></span> Needs Attention</div>
                         <div class="stat-value" id="attentionCount">0</div>
                         <div class="stat-sub">Incomplete records</div>
                     </div>
@@ -181,9 +205,16 @@
                         <span class="filter-bar__label"><i class="fas fa-filter"></i> Filters</span>
                         <div class="search-field">
                             <input type="text" id="searchInput" class="search-field__input" placeholder=" ">
-                            <label for="searchInput" class="search-field__label">Search by name, lot number, or record ID</label>
+                            <label for="searchInput" class="search-field__label">Search by name, lot number, or record
+                                ID</label>
                             <span class="search-field__icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z">
+                                    </path>
+                                    <rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2"
+                                        y="14.8859" x="12.2469"></rect>
+                                </svg>
                             </span>
                         </div>
                         <select id="typeFilter" class="filter-select" aria-label="Filter by record type">
@@ -237,7 +268,9 @@
                                     </tr>
                                 </thead>
                                 <tbody id="tableBody">
-                                    <tr><td colspan="8">Loading records...</td></tr>
+                                    <tr>
+                                        <td colspan="8">Loading records...</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -247,12 +280,16 @@
                             <div class="pagination-actions">
                                 <form class="pagination-jump" id="paginationJumpForm">
                                     <label for="pageJumpInput">Jump to page</label>
-                                    <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Enter page number">
-                                    <button class="btn-secondary" id="pageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
+                                    <input type="number" id="pageJumpInput" min="1" step="1"
+                                        placeholder="Enter page number">
+                                    <button class="btn-secondary" id="pageJumpBtn" type="submit"><i
+                                            class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
                                 </form>
                                 <span class="pagination-divider" aria-hidden="true"></span>
-                                <button class="btn-secondary" id="prevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
-                                <button class="btn-secondary" id="nextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
+                                <button class="btn-secondary" id="prevPage"><i
+                                        class="fas fa-chevron-left"></i><span>Previous</span></button>
+                                <button class="btn-secondary" id="nextPage"><span>Next</span><i
+                                        class="fas fa-chevron-right"></i></button>
                             </div>
                         </div>
                     </div>
@@ -279,7 +316,9 @@
                                     </tr>
                                 </thead>
                                 <tbody id="pendingRequestsBody">
-                                    <tr><td colspan="6">Loading pending requests...</td></tr>
+                                    <tr>
+                                        <td colspan="6">Loading pending requests...</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -307,10 +346,12 @@
                     <!-- Left Column: AI Document Assistant & Live Preview -->
                     <div class="split-modal-ai-pane">
                         <div class="ai-pane-header">
-                            <span class="ai-pane-title"><i class="fas fa-wand-magic-sparkles"></i> AI Document Assistant</span>
+                            <span class="ai-pane-title"><i class="fas fa-wand-magic-sparkles"></i> AI Document
+                                Assistant</span>
                             <span class="ai-pane-badge">Optional</span>
                         </div>
-                        <p class="ai-pane-desc">Upload a death certificate or burial permit to auto-fill record fields.</p>
+                        <p class="ai-pane-desc">Upload a death certificate or burial permit to auto-fill record fields.
+                        </p>
 
                         <div class="ai-doc-selector-group">
                             <label for="certificateDocType" class="field-label-sm">Document Type</label>
@@ -322,7 +363,8 @@
                         </div>
 
                         <div class="ai-dropzone" id="certDropzone">
-                            <input type="file" id="certificateFileInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
+                            <input type="file" id="certificateFileInput"
+                                accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
                             <div class="ai-dropzone-placeholder" id="certDropzonePlaceholder">
                                 <i class="fas fa-cloud-arrow-up"></i>
                                 <span>Click or drag certificate here</span>
@@ -334,7 +376,8 @@
                                     <i class="fas fa-file-pdf"></i>
                                     <span id="certPdfName">document.pdf</span>
                                 </div>
-                                <button type="button" class="btn-clear-preview" id="clearCertFileBtn" title="Remove file">&times;</button>
+                                <button type="button" class="btn-clear-preview" id="clearCertFileBtn"
+                                    title="Remove file">&times;</button>
                             </div>
                         </div>
 
@@ -344,7 +387,8 @@
                         </button>
 
                         <div class="extraction-status-chips" id="extractionStatusChips" style="display: none;"></div>
-                        <p class="certificate-upload-hint" id="certificateUploadHint">File will be attached automatically once saved.</p>
+                        <p class="certificate-upload-hint" id="certificateUploadHint">File will be attached
+                            automatically once saved.</p>
                     </div>
 
                     <!-- Right Column: Structured Record Fields -->
@@ -354,30 +398,43 @@
                                 <i class="fas fa-user-circle"></i> Personal Details
                             </div>
                             <div class="decrec-form-grid">
-                                <div class="form-group"><label>First Name</label><input type="text" id="firstName" required></div>
-                                <div class="form-group"><label>Last Name</label><input type="text" id="lastName" required></div>
-                                <div class="form-group"><label>Middle Name</label><input type="text" id="middleName"></div>
-                                <div class="form-group"><label>Suffix (Jr., Sr.)</label><input type="text" id="suffix"></div>
-                                <div class="form-group"><label>Date of Birth</label><input type="date" id="dob" required></div>
-                                <div class="form-group"><label>Date of Death</label><input type="date" id="dod" required></div>
-                                <div class="form-group full-width"><label>Cause of Death</label><input type="text" id="cause" placeholder="e.g. Cardiopulmonary arrest"></div>
+                                <div class="form-group"><label>First Name</label><input type="text" id="firstName"
+                                        required></div>
+                                <div class="form-group"><label>Last Name</label><input type="text" id="lastName"
+                                        required></div>
+                                <div class="form-group"><label>Middle Name</label><input type="text" id="middleName">
+                                </div>
+                                <div class="form-group"><label>Suffix (Jr., Sr.)</label><input type="text" id="suffix">
+                                </div>
+                                <div class="form-group"><label>Date of Birth</label><input type="date" id="dob"
+                                        required></div>
+                                <div class="form-group"><label>Date of Death</label><input type="date" id="dod"
+                                        required></div>
+                                <div class="form-group full-width"><label>Cause of Death</label><input type="text"
+                                        id="cause" placeholder="e.g. Cardiopulmonary arrest"></div>
                             </div>
 
                             <div class="form-section-header">
                                 <i class="fas fa-monument"></i> Cemetery &amp; Family Information
                             </div>
                             <div class="decrec-form-grid">
-                                <div class="form-group"><label>Lot Number</label><select id="lotNumber" required><option value="">Select a lot</option></select></div>
-                                <div class="form-group"><label>Section</label><input type="text" id="section" readonly></div>
-                                <div class="form-group"><label>Family Contact Name</label><input type="text" id="contactName"></div>
-                                <div class="form-group"><label>Family Contact Number</label><input type="text" id="contactNumber"></div>
+                                <div class="form-group"><label>Lot Number</label><select id="lotNumber" required>
+                                        <option value="">Select a lot</option>
+                                    </select></div>
+                                <div class="form-group"><label>Section</label><input type="text" id="section" readonly>
+                                </div>
+                                <div class="form-group"><label>Family Contact Name</label><input type="text"
+                                        id="contactName"></div>
+                                <div class="form-group"><label>Family Contact Number</label><input type="text"
+                                        id="contactNumber"></div>
                                 <div class="form-group"><label>Cremated?</label>
                                     <select id="isCremated">
                                         <option value="no">No</option>
                                         <option value="yes">Yes</option>
                                     </select>
                                 </div>
-                                <div class="form-group" id="ashStorageGroup" style="display:none;"><label>Ash Storage Location</label><input type="text" id="ashStorage"></div>
+                                <div class="form-group" id="ashStorageGroup" style="display:none;"><label>Ash Storage
+                                        Location</label><input type="text" id="ashStorage"></div>
                             </div>
                         </div>
 
@@ -415,7 +472,8 @@
                         <option value="burial_permit">Burial Permit</option>
                         <option value="other">Other</option>
                     </select>
-                    <input type="file" id="documentFileInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
+                    <input type="file" id="documentFileInput"
+                        accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
                     <button type="button" class="btn-secondary" id="uploadDocumentBtn">Upload</button>
                 </div>
             </div>
@@ -443,7 +501,7 @@
     <div id="importModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
         <div class="modal-content modal--lg modal--import">
             <button type="button" class="close-import" aria-label="Close"><i class="fas fa-xmark"></i></button>
-            
+
             <div class="modal-header-compact">
                 <div class="modal-header-icon-wrap">
                     <i class="fas fa-file-csv"></i>
@@ -454,107 +512,79 @@
                 </div>
             </div>
 
-            <!-- 3-Step Guided Flow -->
-            <div class="import-steps-bar">
-                <div class="import-step-item active">
-                    <span class="step-num"><i class="fas fa-file-lines"></i></span>
-                    <span class="step-text">1. Template Format</span>
+            <!-- Template Download Strip -->
+            <div class="template-download-card">
+                <div class="template-card-text">
+                    <div class="template-card-title"><i class="fas fa-file-excel"></i> Pre-formatted Spreadsheet Template</div>
+                    <p class="template-card-desc">Download our ready-made CSV template with all the required and optional headers already set up.</p>
                 </div>
-                <div class="import-step-arrow"><i class="fas fa-chevron-right"></i></div>
-                <div class="import-step-item">
-                    <span class="step-num"><i class="fas fa-cloud-arrow-up"></i></span>
-                    <span class="step-text">2. Upload CSV</span>
+                <button type="button" class="btn-secondary download-template-btn" id="downloadImportTemplate">
+                    <i class="fas fa-arrow-down-to-line"></i> Download Template (.csv)
+                </button>
+            </div>
+
+            <!-- Human-Friendly Field Guidance (No database snake_case) -->
+            <div class="import-fields-guide">
+                <div class="guide-group guide-group--required">
+                    <div class="guide-group-header">
+                        <span class="guide-badge guide-badge--required">Required Fields</span>
+                    </div>
+                    <ul class="guide-list">
+                        <li><strong>First Name</strong> & <strong>Last Name</strong></li>
+                        <li><strong>Date of Birth</strong> & <strong>Date of Death</strong> <span class="guide-sub">(Format: YYYY-MM-DD, e.g. 1955-08-20)</span></li>
+                        <li><strong>Lot Number</strong> & <strong>Section</strong> <span class="guide-sub">(e.g. A1-01, Section A)</span></li>
+                    </ul>
                 </div>
-                <div class="import-step-arrow"><i class="fas fa-chevron-right"></i></div>
-                <div class="import-step-item">
-                    <span class="step-num"><i class="fas fa-list-check"></i></span>
-                    <span class="step-text">3. Preview & Confirm</span>
+                <div class="guide-group guide-group--optional">
+                    <div class="guide-group-header">
+                        <span class="guide-badge guide-badge--optional">Optional Fields</span>
+                    </div>
+                    <ul class="guide-list">
+                        <li><strong>Middle Name</strong> & <strong>Suffix</strong> <span class="guide-sub">(e.g. Jr., Sr., III)</span></li>
+                        <li><strong>Cause of Death</strong></li>
+                        <li><strong>Family Contact Name</strong> & <strong>Phone Number</strong></li>
+                        <li><strong>Cremated</strong> <span class="guide-sub">(Yes/No)</span> & <strong>Ash Storage Location</strong></li>
+                    </ul>
                 </div>
             </div>
 
-            <div class="import-step">
-                <!-- Step 1: Template & Columns Guidance -->
-                <div class="import-guide-card">
-                    <div class="import-guide-top">
-                        <p class="import-help">
-                            Ensure your spreadsheet columns match the schema below. Dates must be formatted as <code>YYYY-MM-DD</code> (e.g., 2020-03-15).
-                        </p>
-                        <button type="button" class="btn-secondary import-template-btn" id="downloadImportTemplate">
-                            <i class="fas fa-file-arrow-down"></i>
-                            Download Sample Template
-                        </button>
+            <!-- Modern File Upload Zone -->
+            <div class="import-upload-container">
+                <div class="csv-upload-box" id="importDropzone" tabindex="0" role="button" aria-label="Upload CSV File">
+                    <input type="file" id="importFileInput" accept=".csv,text/csv" hidden>
+                    <div class="upload-empty-state" id="dropzoneEmpty">
+                        <div class="upload-icon-circle"><i class="fas fa-cloud-arrow-up"></i></div>
+                        <div class="upload-text-wrap">
+                            <span class="upload-main-text">Click to choose a CSV file, or drag and drop</span>
+                            <span class="upload-sub-text">Supports standard .csv format up to 5MB</span>
+                        </div>
                     </div>
-
-                    <div class="import-columns-legend">
-                        <div class="import-columns-group required">
-                            <div class="legend-group-header">
-                                <span class="badge-dot dot-required"></span>
-                                <strong>Required Headers</strong>
-                            </div>
-                            <div class="import-pills-wrap">
-                                <span class="import-pill pill-required">First Name</span>
-                                <span class="import-pill pill-required">Last Name</span>
-                                <span class="import-pill pill-required">Date of Birth</span>
-                                <span class="import-pill pill-required">Date of Death</span>
-                                <span class="import-pill pill-required">Lot Number</span>
-                                <span class="import-pill pill-required">Section</span>
+                    <div class="upload-selected-state" id="importFileCard" hidden>
+                        <div class="selected-file-details">
+                            <div class="selected-file-icon"><i class="fas fa-file-csv"></i></div>
+                            <div class="selected-file-meta">
+                                <span class="selected-file-name" id="importFileName">records.csv</span>
+                                <span class="selected-file-size" id="importFileSize">0 KB</span>
                             </div>
                         </div>
-                        <div class="import-columns-group optional">
-                            <div class="legend-group-header">
-                                <span class="badge-dot dot-optional"></span>
-                                <strong>Optional Headers</strong>
-                            </div>
-                            <div class="import-pills-wrap">
-                                <span class="import-pill pill-optional">Middle Name</span>
-                                <span class="import-pill pill-optional">Suffix</span>
-                                <span class="import-pill pill-optional">Cause of Death</span>
-                                <span class="import-pill pill-optional">Contact Name</span>
-                                <span class="import-pill pill-optional">Contact Number</span>
-                                <span class="import-pill pill-optional">Cremated? (Yes/No)</span>
-                                <span class="import-pill pill-optional">Ash Storage</span>
-                            </div>
-                        </div>
+                        <button type="button" class="btn-change-file" id="removeImportFileBtn" title="Choose another file">
+                            <i class="fas fa-rotate"></i> Change File
+                        </button>
                     </div>
                 </div>
-
-                <!-- Step 2: Interactive CSV Drag & Drop Upload Zone -->
-                <div class="import-upload-section">
-                    <div class="csv-dropzone" id="importDropzone" tabindex="0" role="button" aria-label="Upload CSV File">
-                        <input type="file" id="importFileInput" accept=".csv,text/csv" hidden>
-                        <div class="dropzone-inner" id="dropzoneEmpty">
-                            <div class="dropzone-icon"><i class="fas fa-cloud-arrow-up"></i></div>
-                            <div class="dropzone-text">
-                                <p class="dropzone-title">Drag & drop your CSV file here, or <span class="dropzone-browse">Browse</span></p>
-                                <span class="dropzone-sub">Supports standard .csv format up to 5MB</span>
-                            </div>
-                        </div>
-                        <div class="dropzone-file-selected" id="importFileCard" hidden>
-                            <div class="file-card-info">
-                                <div class="file-card-icon"><i class="fas fa-file-csv"></i></div>
-                                <div class="file-details">
-                                    <span class="file-name" id="importFileName">records.csv</span>
-                                    <span class="file-size" id="importFileSize">0 KB</span>
-                                </div>
-                            </div>
-                            <button type="button" class="file-remove-btn" id="removeImportFileBtn" title="Remove file" aria-label="Remove file">
-                                <i class="fas fa-xmark"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="import-upload-actions">
-                        <button type="button" class="btn-secondary" id="previewImportBtn">
-                            <i class="fas fa-magnifying-glass-chart"></i> Preview Records
-                        </button>
-                    </div>
+                <div class="import-actions-row">
+                    <button type="button" class="btn-secondary" id="previewImportBtn">
+                        <i class="fas fa-magnifying-glass-chart"></i> Preview & Validate Records
+                    </button>
                 </div>
             </div>
 
-            <!-- Step 3: Inspection Table & Confirmation -->
+            <!-- Preview & Validation Inspection Table -->
             <div id="importPreviewSection" class="import-preview-section" hidden>
                 <div class="import-preview-header">
-                    <div class="preview-header-left">
+                    <div>
                         <h4 class="preview-title"><i class="fas fa-table-list"></i> CSV Data Validation Preview</h4>
+                        <p class="preview-subtitle">Review validated records before saving them to the permanent decedent registry.</p>
                     </div>
                     <div class="import-summary" id="importSummary"></div>
                 </div>
@@ -564,10 +594,10 @@
                             <tr>
                                 <th style="width: 42px;"><input type="checkbox" id="selectAllImportRows" title="Toggle all ready rows"></th>
                                 <th>Row</th>
-                                <th>Name</th>
-                                <th>DOB — DOD</th>
-                                <th>Lot</th>
-                                <th>Status / Notes</th>
+                                <th>Full Name</th>
+                                <th>Life Dates (DOB — DOD)</th>
+                                <th>Lot & Section</th>
+                                <th>Validation Status & Notes</th>
                             </tr>
                         </thead>
                         <tbody id="importPreviewBody"></tbody>
@@ -594,4 +624,5 @@
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
 </body>
+
 </html>

@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     const session = await requireRole(['admin', 'staff']);
     if (!session) return;
 
@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function debounce(fn, wait) {
         let timeout;
-        return function(...args) {
+        return function (...args) {
             clearTimeout(timeout);
             timeout = setTimeout(() => fn.apply(this, args), wait);
         };
@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         loadRecords();
     });
 
-    recordForm.addEventListener('submit', async function(event) {
+    recordForm.addEventListener('submit', async function (event) {
         event.preventDefault();
         const saveBtn = recordForm.querySelector('button[type="submit"]');
         await withButtonLoading(saveBtn, saveRecord);
@@ -215,12 +215,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         lotSelect.previousElementSibling.textContent = isCremated === 'yes' ? 'Lot Number (optional)' : 'Lot Number';
     }
 
-    document.getElementById('isCremated').addEventListener('change', function() {
+    document.getElementById('isCremated').addEventListener('change', function () {
         ashStorageGroup.style.display = this.value === 'yes' ? 'block' : 'none';
         updateLotRequirement(this.value);
     });
 
-    lotSelect.addEventListener('change', function() {
+    lotSelect.addEventListener('change', function () {
         const selectedId = parseInt(this.value, 10);
         const selectedLot = lots.find((lot) => lot.lot_id === selectedId);
         sectionInput.value = selectedLot ? selectedLot.section_name : '';
@@ -1042,17 +1042,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const importPreviewBody = document.getElementById('importPreviewBody');
     const selectAllImportRows = document.getElementById('selectAllImportRows');
     const confirmImportBtn = document.getElementById('confirmImportBtn');
-    const importStepItems = importModal ? importModal.querySelectorAll('.import-step-item') : [];
 
-    function setImportStep(step) {
-        importStepItems.forEach((item, idx) => {
-            if (idx + 1 <= step) {
-                item.classList.add('active');
-            } else {
-                item.classList.remove('active');
-            }
-        });
-    }
 
     function formatFileSize(bytes) {
         if (!bytes || bytes === 0) return '0 B';
@@ -1072,7 +1062,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (importFileSize) importFileSize.textContent = formatFileSize(file.size);
         if (dropzoneEmpty) dropzoneEmpty.hidden = true;
         if (importFileCard) importFileCard.hidden = false;
-        setImportStep(2);
     }
 
     function clearImportFile() {
@@ -1083,7 +1072,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (importPreviewBody) importPreviewBody.innerHTML = '';
         if (selectAllImportRows) selectAllImportRows.checked = false;
         importPreviewRows = [];
-        setImportStep(1);
     }
 
     if (importDropzone) {
@@ -1214,7 +1202,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         importPreviewSection.hidden = false;
-        setImportStep(3);
     }
 
     if (selectAllImportRows) {
