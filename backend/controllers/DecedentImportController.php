@@ -32,16 +32,153 @@ class DecedentImportController {
     private const FIELD_LABELS = [
         'first_name' => 'First Name',
         'last_name' => 'Last Name',
+        'middle_name' => 'Middle Name',
+        'suffix' => 'Suffix',
         'dob' => 'Date of Birth',
         'dod' => 'Date of Death',
         'lot_number' => 'Lot Number',
         'section_name' => 'Section',
+        'cause_of_death' => 'Cause of Death',
+        'contact_name' => 'Contact Name',
+        'contact_number' => 'Contact Number',
+        'is_cremated' => 'Is Cremated',
+        'ash_storage' => 'Ash Storage',
+    ];
+
+    // Batch 1 (Smart Import Automation): comprehensive synonym dictionary
+    // mapping real-world spreadsheet headers (spaces, capitalizations, common
+    // aliases) to canonical internal field names without requiring staff to
+    // manually reformat column titles in Excel.
+    private const COLUMN_SYNONYMS = [
+        'first_name' => ['first_name', 'first name', 'firstname', 'given_name', 'given name', 'fname', 'first'],
+        'last_name' => ['last_name', 'last name', 'lastname', 'surname', 'family_name', 'family name', 'lname', 'last'],
+        'middle_name' => ['middle_name', 'middle name', 'middlename', 'mname', 'middle', 'middle initial', 'mi'],
+        'suffix' => ['suffix', 'generation', 'ext', 'extension'],
+        'dob' => ['dob', 'date_of_birth', 'date of birth', 'birth_date', 'birth date', 'birthdate', 'born', 'bday', 'birth'],
+        'dod' => ['dod', 'date_of_death', 'date of death', 'death_date', 'death date', 'deathdate', 'deceased_date', 'date deceased', 'died', 'death'],
+        'lot_number' => ['lot_number', 'lot number', 'lot_no', 'lot no', 'lot #', 'lot_id_str', 'lot'],
+        'section_name' => ['section_name', 'section name', 'section', 'sec', 'sec_name'],
+        'cause_of_death' => ['cause_of_death', 'cause of death', 'cause', 'death_cause', 'reason of death'],
+        'contact_name' => ['contact_name', 'contact name', 'family_contact', 'family contact', 'informant', 'informant_name', 'informant name', 'contact_person', 'contact person'],
+        'contact_number' => ['contact_number', 'contact number', 'contact_no', 'contact no', 'contact_phone', 'contact phone', 'phone', 'mobile', 'cellphone', 'tel', 'telephone', 'phone_number', 'phone number'],
+        'is_cremated' => ['is_cremated', 'is cremated', 'cremated', 'cremation'],
+        'ash_storage' => ['ash_storage', 'ash storage', 'niche', 'niche_number', 'niche number', 'columbarium', 'ash_location', 'ash location'],
     ];
 
     public function __construct() {
         $this->decedentModel = new Decedent();
         $this->lotModel = new Lot();
         $this->decedentController = new DecedentController();
+    }
+
+    // Maps an incoming raw header column to a canonical field key using
+    // exact match or the synonym dictionary. Strips UTF-8 BOM and periods.
+    public static function matchHeaderToCanonical($rawHeader) {
+        $clean = preg_replace('/^\xEF\xBB\xBF/', '', (string) $rawHeader);
+        $clean = strtolower(trim($clean));
+        $noPunct = trim(str_replace(['.', ',', ':', ';'], '', $clean));
+        $normalized = trim(preg_replace('/[\s_\-\.]+/', ' ', $clean));
+
+        foreach (self::COLUMN_SYNONYMS as $canonical => $synonyms) {
+            if ($clean === $canonical || $noPunct === $canonical) {
+                return $canonical;
+            }
+            foreach ($synonyms as $synonym) {
+                $synClean = strtolower($synonym);
+                $synNoPunct = trim(str_replace(['.', ',', ':', ';'], '', $synClean));
+                $synNormalized = trim(preg_replace('/[\s_\-\.]+/', ' ', $synClean));
+                if ($clean === $synClean || $noPunct === $synNoPunct || $normalized === $synNormalized) {
+                    return $canonical;
+                }
+            }
+        }
+        return null;
+    }
+
+    // Batch 1 (Smart Import Normalization): robust deterministic date parser
+    // converts YYYY-MM-DD, MM/DD/YYYY (Philippine standard), DD/MM/YYYY,
+    // YYYY/MM/DD, and standard textual dates into strict ISO 'YYYY-MM-DD'.
+    public static function normalizeDate($value) {
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return null;
+        }
+
+        // 1. Strict YYYY-MM-DD
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $raw, $m)) {
+            return checkdate((int) $m[2], (int) $m[3], (int) $m[1])
+                ? sprintf('%04d-%02d-%02d', (int) $m[1], (int) $m[2], (int) $m[3])
+                : null;
+        }
+
+        // 2. YYYY/MM/DD or YYYY.MM.DD
+        if (preg_match('/^(\d{4})[\/\.](\d{1,2})[\/\.](\d{1,2})$/', $raw, $m)) {
+            return checkdate((int) $m[2], (int) $m[3], (int) $m[1])
+                ? sprintf('%04d-%02d-%02d', (int) $m[1], (int) $m[2], (int) $m[3])
+                : null;
+        }
+
+        // 3. Separated by slash, hyphen, or dot with 4-digit year at the end: MM/DD/YYYY or DD/MM/YYYY
+        if (preg_match('/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/', $raw, $m)) {
+            $p1 = (int) $m[1];
+            $p2 = (int) $m[2];
+            $year = (int) $m[3];
+
+            // If part1 > 12, it must be DD/MM/YYYY
+            if ($p1 > 12 && $p2 <= 12 && checkdate($p2, $p1, $year)) {
+                return sprintf('%04d-%02d-%02d', $year, $p2, $p1);
+            }
+            // Standard Philippine convention default: MM/DD/YYYY
+            if ($p1 <= 12 && checkdate($p1, $p2, $year)) {
+                return sprintf('%04d-%02d-%02d', $year, $p1, $p2);
+            }
+            // Fallback to DD/MM/YYYY
+            if ($p2 <= 12 && checkdate($p2, $p1, $year)) {
+                return sprintf('%04d-%02d-%02d', $year, $p2, $p1);
+            }
+            return null; // Both interpretations invalid (e.g. 00/00/0000 or 13/32/2020)
+        }
+
+        // 4. Textual dates (e.g. "January 15, 2020", "15 Jan 2020", "Jan 15 2020")
+        $timestamp = strtotime($raw);
+        if ($timestamp !== false) {
+            $parsedYear = (int) date('Y', $timestamp);
+            if ($parsedYear >= 1800 && $parsedYear <= 2100) {
+                return date('Y-m-d', $timestamp);
+            }
+        }
+
+        return null;
+    }
+
+    // Normalizes name casing and whitespace. Converts ALL CAPS names
+    // (common in government/hospital exports) to Title Case.
+    public static function normalizeName($value) {
+        if ($value === null) {
+            return null;
+        }
+        $val = trim(preg_replace('/\s+/', ' ', (string) $value));
+        if ($val === '') {
+            return '';
+        }
+        if (mb_strtoupper($val, 'UTF-8') === $val && mb_strlen($val, 'UTF-8') > 1) {
+            return mb_convert_case(mb_strtolower($val, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+        }
+        return $val;
+    }
+
+    // Cleans phone numbers of stray formatting artifacts while preserving digits.
+    public static function normalizePhone($value) {
+        if ($value === null) {
+            return null;
+        }
+        $val = trim((string) $value);
+        if ($val === '') {
+            return null;
+        }
+        $clean = preg_replace('/[^\d\+\-\s\(\)]/', '', $val);
+        $clean = trim(preg_replace('/\s+/', ' ', $clean));
+        return $clean !== '' ? $clean : null;
     }
 
     // $file: one entry of $_FILES (readRequestBody()'s ['files'][...] shape —
@@ -76,11 +213,25 @@ class DecedentImportController {
             fclose($handle);
             return ['error' => 'The CSV file appears to be empty', 'code' => 400];
         }
-        $header = array_map(function ($col) {
-            return strtolower(trim((string) $col));
-        }, $header);
 
-        $missingColumns = array_diff(self::REQUIRED_COLUMNS, $header);
+        // Batch 1: dynamic header mapping via synonym dictionary. Strips BOM,
+        // maps aliases ("First Name", "Date of Birth") to canonical keys.
+        $mappedHeaders = [];
+        $foundCanonical = [];
+        foreach ($header as $i => $col) {
+            $canonical = self::matchHeaderToCanonical($col);
+            $mappedHeaders[$i] = $canonical;
+            if ($canonical !== null) {
+                $foundCanonical[$canonical] = true;
+            }
+        }
+
+        $missingColumns = [];
+        foreach (self::REQUIRED_COLUMNS as $req) {
+            if (empty($foundCanonical[$req])) {
+                $missingColumns[] = self::FIELD_LABELS[$req] ?? $req;
+            }
+        }
         if (!empty($missingColumns)) {
             fclose($handle);
             return ['error' => 'Missing required column(s): ' . implode(', ', $missingColumns), 'code' => 400];
@@ -110,8 +261,10 @@ class DecedentImportController {
             }
 
             $record = [];
-            foreach ($header as $i => $col) {
-                $record[$col] = isset($line[$i]) ? trim((string) $line[$i]) : '';
+            foreach ($mappedHeaders as $i => $col) {
+                if ($col !== null && isset($line[$i])) {
+                    $record[$col] = trim((string) $line[$i]);
+                }
             }
             $rows[] = $this->evaluateRow($rowNumber, $record);
         }
@@ -141,21 +294,29 @@ class DecedentImportController {
         $warnings = [];
 
         foreach (self::REQUIRED_COLUMNS as $field) {
-            if (empty($record[$field])) {
-                $errors[] = "Missing " . self::FIELD_LABELS[$field];
+            $val = trim((string) ($record[$field] ?? ''));
+            if ($val === '') {
+                $errors[] = "Missing " . (self::FIELD_LABELS[$field] ?? $field);
             }
         }
 
-        $dob = $record['dob'] ?? '';
-        $dod = $record['dod'] ?? '';
-        if ($dob !== '' && $dod !== '') {
-            if (!$this->isValidDate($dob)) {
-                $errors[] = "Date of Birth '{$dob}' is not a valid date (use YYYY-MM-DD)";
+        $rawDob = $record['dob'] ?? '';
+        $rawDod = $record['dod'] ?? '';
+        $dob = self::normalizeDate($rawDob);
+        $dod = self::normalizeDate($rawDod);
+
+        if ($rawDob !== '') {
+            if ($dob === null) {
+                $errors[] = "Date of Birth '{$rawDob}' is not a valid date (use YYYY-MM-DD or MM/DD/YYYY)";
             }
-            if (!$this->isValidDate($dod)) {
-                $errors[] = "Date of Death '{$dod}' is not a valid date (use YYYY-MM-DD)";
+        }
+        if ($rawDod !== '') {
+            if ($dod === null) {
+                $errors[] = "Date of Death '{$rawDod}' is not a valid date (use YYYY-MM-DD or MM/DD/YYYY)";
             }
-            if (empty($errors) && strtotime($dod) < strtotime($dob)) {
+        }
+        if ($dob !== null && $dod !== null) {
+            if (strtotime($dod) < strtotime($dob)) {
                 $errors[] = 'Date of Death cannot be before Date of Birth';
             }
         }
@@ -172,25 +333,35 @@ class DecedentImportController {
             }
         }
 
+        $firstName = self::normalizeName($record['first_name'] ?? '');
+        $lastName = self::normalizeName($record['last_name'] ?? '');
+        $middleName = self::normalizeName($record['middle_name'] ?? null);
+        $suffix = trim((string) ($record['suffix'] ?? '')) ?: null;
+        $contactName = self::normalizeName($record['contact_name'] ?? null);
+        $contactNumber = self::normalizePhone($record['contact_number'] ?? null);
+        $causeOfDeath = trim((string) ($record['cause_of_death'] ?? '')) ?: null;
+        $ashStorage = trim((string) ($record['ash_storage'] ?? '')) ?: null;
+        $isCremated = (strtolower($record['is_cremated'] ?? '') === 'yes') ? 'yes' : 'no';
+
         $data = [
             'lot_id' => $lotId,
-            'first_name' => $record['first_name'] ?? '',
-            'last_name' => $record['last_name'] ?? '',
-            'middle_name' => $record['middle_name'] ?? null,
-            'suffix' => $record['suffix'] ?? null,
-            'dob' => $dob,
-            'dod' => $dod,
-            'cause_of_death' => $record['cause_of_death'] ?? null,
-            'contact_name' => $record['contact_name'] ?? null,
-            'contact_number' => $record['contact_number'] ?? null,
-            'is_cremated' => (strtolower($record['is_cremated'] ?? '') === 'yes') ? 'yes' : 'no',
-            'ash_storage' => $record['ash_storage'] ?? null,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'middle_name' => $middleName ?: null,
+            'suffix' => $suffix,
+            'dob' => $dob ?: $rawDob,
+            'dod' => $dod ?: $rawDod,
+            'cause_of_death' => $causeOfDeath,
+            'contact_name' => $contactName ?: null,
+            'contact_number' => $contactNumber,
+            'is_cremated' => $isCremated,
+            'ash_storage' => $ashStorage,
         ];
 
         $status = 'ready';
         if (!empty($errors)) {
             $status = 'rejected';
-        } elseif ($lotId !== null) {
+        } elseif ($lotId !== null && $dob !== null && $dod !== null) {
             // Only worth checking once the row is otherwise clean — an
             // unresolved lot or bad dates already blocks the row regardless
             // of whether it also happens to look like a duplicate.
