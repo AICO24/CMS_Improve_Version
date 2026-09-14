@@ -1455,27 +1455,48 @@
 
 .btn-approve-request,
 .btn-reject-request {
-    padding: 0.4rem 0.85rem;
-    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: var(--radius-pill);
     border: 1px solid transparent;
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: 0.78rem;
+    font-weight: 700;
     cursor: pointer;
+    transition: all 180ms ease;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
 }
 
 .btn-approve-request {
     background: var(--color-success-soft, #dcfce7);
     color: var(--color-success-strong, #166534);
+    border-color: rgba(22, 101, 52, 0.20);
+}
+
+.btn-approve-request:hover {
+    background: #166534;
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(22, 101, 52, 0.25);
 }
 
 .btn-reject-request {
     background: var(--color-danger-soft, #fee2e2);
     color: var(--color-danger-strong, #991b1b);
-    margin-left: 0.5rem;
+    border-color: rgba(153, 27, 27, 0.20);
+    margin-left: 0.35rem;
+}
+
+.btn-reject-request:hover {
+    background: #991b1b;
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(153, 27, 27, 0.25);
 }
 
 /* ============================================
-   BATCH 1: Reports-style structure additions
+   BATCH 1 & 4: Reports-style structure & table cards
    ============================================ */
 
 /* Section label — divider with title (mirrors reports.css .section-label) */
@@ -1488,7 +1509,7 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--color-primary-700);
-    margin: 4px 0 12px;
+    margin: 6px 0 10px;
 }
 .section-label::after {
     content: '';
@@ -1497,15 +1518,66 @@
     background: rgba(44, 94, 71, 0.14);
 }
 
-/* Chart card — Reports-style panel wrapping a table */
+/* Chart card — Reports-style glassmorphic panel wrapping a table */
 .chart-card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    position: relative;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 247, 243, 0.92)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.08), rgba(37, 99, 235, 0.05));
+    border: 1px solid rgba(44, 94, 71, 0.16);
     border-left: 6px solid var(--color-primary-500);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-1);
-    padding: var(--space-4);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+    padding: 16px 20px 14px;
+    min-width: 0;
+    margin-bottom: 14px;
+    transition: box-shadow 220ms ease;
 }
+
+.chart-card::before {
+    content: "";
+    position: absolute;
+    inset: -30% auto auto -20%;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(15, 118, 110, 0.08), rgba(15, 118, 110, 0) 68%);
+    pointer-events: none;
+}
+
+.chart-card:hover {
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.11);
+}
+
+.chart-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(44, 94, 71, 0.08);
+}
+
+.chart-card__title {
+    font-size: 0.96rem;
+    font-weight: 700;
+    color: var(--color-primary-800);
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+}
+
+.chart-card__badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    background: rgba(44, 94, 71, 0.10);
+    color: var(--color-primary-700);
+    border: 1px solid rgba(44, 94, 71, 0.14);
+}
+
 /* Inner table-container inherits card surface, handles scroll */
 .chart-card .table-container {
     background: transparent;
@@ -1513,26 +1585,153 @@
     box-shadow: none;
     border: none;
     padding: 0;
+    overflow-x: auto;
 }
-.chart-card__header {
+
+.chart-card .data-table thead th {
+    background: rgba(44, 94, 71, 0.06);
+    color: var(--color-primary-800);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 2px solid rgba(44, 94, 71, 0.14);
+    padding: 10px 14px;
+}
+
+.chart-card .data-table tbody td {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    border-bottom: 1px solid rgba(44, 94, 71, 0.06);
+    vertical-align: middle;
+}
+
+.chart-card .data-table tbody tr:hover {
+    background: rgba(44, 94, 71, 0.03);
+}
+
+/* Docked pagination controls inside .chart-card (mirrors Reports expiration tab) */
+.chart-card > .pagination-controls,
+.chart-card #paginationControls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 14px;
+    padding: 14px 4px 4px;
+    border-top: 1px solid rgba(44, 94, 71, 0.10);
+    background: transparent;
+    width: 100%;
+}
+
+.chart-card .pagination-info {
+    color: #556872;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.chart-card .pagination-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.chart-card .pagination-actions > .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    min-width: 72px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    border: 1px solid rgba(44, 94, 71, 0.20);
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--color-primary-800);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    transition: all 180ms ease;
+    cursor: pointer;
+}
+
+.chart-card .pagination-actions > .btn-secondary:hover:not(:disabled) {
+    background: var(--color-primary-600);
+    color: #fff;
+    border-color: var(--color-primary-600);
+    box-shadow: 0 4px 12px rgba(44, 94, 71, 0.18);
+    transform: translateY(-1px);
+}
+
+.chart-card .pagination-actions > .btn-secondary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.chart-card .pagination-divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(44, 94, 71, 0.18);
+    display: inline-block;
+    margin: 0 2px;
+}
+
+.chart-card .pagination-jump {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 8px;
+    margin: 0;
 }
-.chart-card__title {
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: var(--color-primary-800);
-}
-.chart-card__badge {
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 3px 10px;
-    border-radius: var(--radius-pill);
-    background: rgba(44, 94, 71, 0.10);
+
+.chart-card .pagination-jump label {
     color: var(--color-primary-700);
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.chart-card .pagination-jump input {
+    width: 110px;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid rgba(44, 94, 71, 0.20);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--color-neutral-800);
+    font-size: 0.82rem;
+    box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.04);
+    transition: border-color 150ms ease;
+}
+
+.chart-card .pagination-jump input:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+}
+
+.chart-card .pagination-jump button {
+    height: 36px;
+    padding: 0 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(44, 94, 71, 0.20);
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--color-primary-800);
+    cursor: pointer;
+    transition: all 180ms ease;
+}
+
+.chart-card .pagination-jump button:hover {
+    background: var(--color-primary-600);
+    color: #fff;
+    border-color: var(--color-primary-600);
 }
 
 /* Reports-style footer */
