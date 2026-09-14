@@ -130,36 +130,8 @@
                     </button>
                 </div>
             </div>
-                <div class="content-area">
-                <!-- Pending Requests: citizens' chat-submitted requests to add a
-                     decedent not yet in this table (see lot-chat-assistant.js's
-                     appendDecedentRequestForm) — never auto-creates a record,
-                     Approve pre-fills the same Add Decedent form below so staff
-                     still verifies/assigns everything sensitive by hand. -->
-                <div class="card" id="pendingRequestsCard">
-                    <div class="table-toolbar">
-                        <h3>Pending Decedent Requests</h3>
-                    </div>
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Requested Name</th>
-                                    <th>Approx. Date of Death</th>
-                                    <th>Relationship</th>
-                                    <th>Requested By</th>
-                                    <th>Requested At</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="pendingRequestsBody">
-                                <tr><td colspan="6">Loading pending requests...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Header with Add Button and Search -->
+<div class="content-area">
+                <!-- Search / Filters / Add / Import -->
                 <div class="records-header">
                     <div class="search-field">
                         <input type="text" id="searchInput" class="search-field__input" placeholder=" ">
@@ -189,9 +161,36 @@
                     </button>
                 </div>
 
+                <!-- Pending Decedent Requests -->
+                <p class="section-label"><i class="fas fa-inbox"></i> Pending Decedent Requests</p>
+                <div class="chart-card" id="pendingRequestsCard">
+                    <div class="chart-card__header">
+                        <span class="chart-card__title">Citizen-requested records</span>
+                        <span class="chart-card__badge">Pending</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Requested Name</th>
+                                    <th>Approx. Date of Death</th>
+                                    <th>Relationship</th>
+                                    <th>Requested By</th>
+                                    <th>Requested At</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pendingRequestsBody">
+                                <tr><td colspan="6">Loading pending requests...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Active Filter Chips -->
                 <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
 
-                <!-- Stats Row -->
+                <!-- Summary Statistics -->
                 <div class="stats-row decrec-stats">
                     <div class="stat-card"><div class="stat-title">Total Records</div><div class="stat-value" id="totalCount">0</div><div class="stat-sub">Decedents</div></div>
                     <div class="stat-card"><div class="stat-title">Burials</div><div class="stat-value" id="burialCount">0</div><div class="stat-sub">Interred</div></div>
@@ -200,27 +199,35 @@
                     <div class="stat-card"><div class="stat-title">Needs Attention</div><div class="stat-value" id="attentionCount">0</div><div class="stat-sub">Incomplete records</div></div>
                 </div>
 
-                <!-- Table -->
-                <div class="table-container">
-                    <table class="data-table" id="recordsTable">
-                        <thead>
-                            <tr>
-                                <th>Record ID</th>
-                                <th>Full Name</th>
-                                <th>Date of Birth</th>
-                                <th>Date of Death</th>
-                                <th>Lot Number</th>
-                                <th>Section</th>
-                                <th>Type</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody">
-                            <tr><td colspan="8">Loading records...</td></tr>
-                        </tbody>
-                    </table>
+                <!-- Decedent Records table -->
+                <p class="section-label"><i class="fas fa-table-list"></i> Decedent Records</p>
+                <div class="chart-card">
+                    <div class="chart-card__header">
+                        <span class="chart-card__title">All records</span>
+                        <span class="chart-card__badge">Table</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="recordsTable">
+                            <thead>
+                                <tr>
+                                    <th>Record ID</th>
+                                    <th>Full Name</th>
+                                    <th>Date of Birth</th>
+                                    <th>Date of Death</th>
+                                    <th>Lot Number</th>
+                                    <th>Section</th>
+                                    <th>Type</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <tr><td colspan="8">Loading records...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
+                <!-- Pagination -->
                 <div class="pagination-controls" id="paginationControls">
                     <span class="pagination-info" id="paginationInfo"></span>
                     <div class="pagination-actions">
@@ -237,6 +244,12 @@
             </div>
         </main>
     </div>
+
+    <footer class="reports-footer">
+        <div class="reports-footer__bottom">
+            <span class="reports-footer__text">© 2026 Cemetery Management System. All rights reserved.</span>
+        </div>
+    </footer>
 
     <!-- Add/Edit Modal -->
     <div id="recordModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">

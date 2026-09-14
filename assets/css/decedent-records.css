@@ -1280,3 +1280,98 @@
     color: var(--color-danger-strong, #991b1b);
     margin-left: 0.5rem;
 }
+
+/* ============================================
+   BATCH 1: Reports-style structure additions
+   ============================================ */
+
+/* Section label — divider with title (mirrors reports.css .section-label) */
+.section-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary-700);
+    margin: 4px 0 12px;
+}
+.section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(44, 94, 71, 0.14);
+}
+
+/* Chart card — Reports-style panel wrapping a table */
+.chart-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-left: 6px solid var(--color-primary-500);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1);
+    padding: var(--space-4);
+}
+/* Inner table-container inherits card surface, handles scroll */
+.chart-card .table-container {
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+}
+.chart-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.chart-card__title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--color-primary-800);
+}
+.chart-card__badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    background: rgba(44, 94, 71, 0.10);
+    color: var(--color-primary-700);
+}
+
+/* Reports-style footer */
+.reports-footer {
+    margin-top: 20px;
+    padding: 0 24px 22px;
+    background: transparent;
+}
+.reports-footer__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.73rem;
+    letter-spacing: 0.02em;
+}
+.reports-footer__text {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #64748b;
+}
+.reports-footer__text::before,
+.reports-footer__text::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(100, 116, 139, 0.65);
+    display: inline-block;
+}
