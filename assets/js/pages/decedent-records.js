@@ -683,15 +683,34 @@ document.addEventListener('DOMContentLoaded', async function () {
             return '';
         }
 
+        const AUDIT_FIELD_LABELS = {
+            first_name: 'First Name',
+            last_name: 'Last Name',
+            middle_name: 'Middle Name',
+            suffix: 'Suffix',
+            dob: 'Date of Birth',
+            dod: 'Date of Death',
+            cause_of_death: 'Cause of Death',
+            lot_id: 'Plot ID',
+            lot_number: 'Lot Number',
+            section_name: 'Section',
+            contact_name: 'Family Contact',
+            contact_number: 'Contact Number',
+            is_cremated: 'Cremated',
+            ash_storage: 'Ash Storage Location',
+            status: 'Status',
+        };
+
         return Object.entries(details).map(([field, value]) => {
-            if (field === 'note') return escapeHtml(String(value));
-            if (field === 'duplicate_warning_overridden' && value) return 'saved despite a possible-duplicate warning';
-            if (value === 'changed') return `${escapeHtml(field)} updated`;
+            if (field === 'note') return `<span class="audit-note">${escapeHtml(String(value))}</span>`;
+            if (field === 'duplicate_warning_overridden' && value) return '<span class="audit-warn-badge">Saved despite duplicate warning</span>';
+            const label = AUDIT_FIELD_LABELS[field] || field.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+            if (value === 'changed') return `<span class="audit-chip"><strong>${escapeHtml(label)}</strong> updated</span>`;
             if (value && typeof value === 'object' && ('from' in value || 'to' in value)) {
-                return `${escapeHtml(field)}: ${escapeHtml(value.from ?? '—')} → ${escapeHtml(value.to ?? '—')}`;
+                return `<span class="audit-chip"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value.from ?? '—')} → ${escapeHtml(value.to ?? '—')}</span>`;
             }
-            return `${escapeHtml(field)}: ${escapeHtml(String(value))}`;
-        }).join('; ');
+            return `<span class="audit-chip"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(String(value))}</span>`;
+        }).join(' ');
     }
 
     function renderActivityTimeline(entries) {
@@ -699,20 +718,42 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (!timelineEl) return;
 
         if (!Array.isArray(entries) || entries.length === 0) {
-            timelineEl.innerHTML = '<p class="activity-empty">No activity recorded yet.</p>';
+            timelineEl.innerHTML = '<p class="activity-empty"><i class="fas fa-clock-rotate-left"></i> No activity recorded yet for this record.</p>';
             return;
         }
 
         timelineEl.innerHTML = entries.map((entry) => {
+            const actionLower = (entry.action || '').toLowerCase();
+            let iconClass = 'fa-circle-dot';
+            let badgeClass = 'timeline-badge--default';
+            if (actionLower.includes('creat') || actionLower.includes('add')) {
+                iconClass = 'fa-circle-plus';
+                badgeClass = 'timeline-badge--created';
+            } else if (actionLower.includes('update') || actionLower.includes('edit')) {
+                iconClass = 'fa-pen-to-square';
+                badgeClass = 'timeline-badge--updated';
+            } else if (actionLower.includes('delete') || actionLower.includes('remov')) {
+                iconClass = 'fa-trash-can';
+                badgeClass = 'timeline-badge--deleted';
+            } else if (actionLower.includes('document') || actionLower.includes('upload')) {
+                iconClass = 'fa-file-arrow-up';
+                badgeClass = 'timeline-badge--document';
+            }
+
             const summary = formatAuditDetails(entry.details);
             return `
                 <div class="activity-entry">
-                    <div class="activity-entry-header">
-                        <strong>${escapeHtml(entry.action)}</strong>
-                        <span class="activity-entry-time">${escapeHtml(entry.created_at)}</span>
+                    <div class="timeline-indicator ${badgeClass}">
+                        <i class="fas ${iconClass}"></i>
                     </div>
-                    <div class="activity-entry-meta">${escapeHtml(entry.user_full_name || entry.username || 'System')}</div>
-                    ${summary ? `<div class="activity-entry-details">${summary}</div>` : ''}
+                    <div class="activity-entry-content">
+                        <div class="activity-entry-header">
+                            <strong class="activity-action-title">${escapeHtml(entry.action)}</strong>
+                            <span class="activity-entry-time"><i class="far fa-clock"></i> ${escapeHtml(entry.created_at)}</span>
+                        </div>
+                        <div class="activity-entry-meta"><i class="far fa-user"></i> ${escapeHtml(entry.user_full_name || entry.username || 'System Administrator')}</div>
+                        ${summary ? `<div class="activity-entry-details">${summary}</div>` : ''}
+                    </div>
                 </div>
             `;
         }).join('');
@@ -724,6 +765,19 @@ document.addEventListener('DOMContentLoaded', async function () {
     // modal's own markup is fixed and only its content changes per record.
     let currentViewDecedentId = null;
 
+    function calculateAge(dobStr, dodStr) {
+        if (!dobStr || !dodStr) return '';
+        const dob = new Date(dobStr);
+        const dod = new Date(dodStr);
+        if (isNaN(dob.getTime()) || isNaN(dod.getTime())) return '';
+        let age = dod.getFullYear() - dob.getFullYear();
+        const m = dod.getMonth() - dob.getMonth();
+        if (m < 0 || (m === 0 && dod.getDate() < dob.getDate())) {
+            age--;
+        }
+        return age >= 0 ? `${age} yrs old` : '';
+    }
+
     async function openViewModal(id) {
         const record = records.find((item) => item.decedent_id === id);
         if (!record) {
@@ -731,23 +785,104 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
         currentViewDecedentId = id;
 
+        // Reset document picker label
+        const documentFileInput = document.getElementById('documentFileInput');
+        const documentFileText = document.getElementById('documentFileText');
+        if (documentFileInput) documentFileInput.value = '';
+        if (documentFileText) {
+            documentFileText.textContent = 'Select file (.pdf, .jpg, .png)';
+            documentFileText.parentElement.classList.remove('has-file');
+        }
+
         const missing = getMissingFields(record);
-        const attentionNotice = missing.length
-            ? `<div class="detail-row"><span>Status</span><strong><span class="status-badge status-warning">Needs Attention</span> — missing: ${escapeHtml(missing.join(', '))}</strong></div>`
-            : '';
+        const statusBadgeHtml = missing.length
+            ? `<div class="view-status-wrap">
+                 <span class="view-status-badge badge--warning"><i class="fas fa-triangle-exclamation"></i> Needs Attention</span>
+                 <span class="view-missing-note">Missing: ${escapeHtml(missing.join(', '))}</span>
+               </div>`
+            : `<div class="view-status-wrap">
+                 <span class="view-status-badge badge--complete"><i class="fas fa-circle-check"></i> Complete & Verified</span>
+               </div>`;
+
+        const fullName = `${escapeHtml(record.first_name)} ${record.middle_name ? escapeHtml(record.middle_name) + ' ' : ''}${escapeHtml(record.last_name)}${record.suffix ? ' ' + escapeHtml(record.suffix) : ''}`;
+        const ageText = calculateAge(record.dob, record.dod);
 
         const details = `
-            ${attentionNotice}
-            <div class="detail-row"><span>Full Name</span><strong>${escapeHtml(record.first_name)} ${escapeHtml(record.last_name)}${record.suffix ? ' ' + escapeHtml(record.suffix) : ''}</strong></div>
-            <div class="detail-row"><span>Date of Birth</span><strong>${escapeHtml(record.dob)}</strong></div>
-            <div class="detail-row"><span>Date of Death</span><strong>${escapeHtml(record.dod)}</strong></div>
-            <div class="detail-row"><span>Cause of Death</span><strong>${escapeHtml(record.cause_of_death || '—')}</strong></div>
-            <div class="detail-row"><span>Lot Number</span><strong>${escapeHtml(record.lot_number)}</strong></div>
-            <div class="detail-row"><span>Section</span><strong>${escapeHtml(record.section_name)}</strong></div>
-            <div class="detail-row"><span>Contact Name</span><strong>${escapeHtml(record.contact_name || '—')}</strong></div>
-            <div class="detail-row"><span>Contact Number</span><strong>${escapeHtml(record.contact_number || '—')}</strong></div>
-            <div class="detail-row"><span>Cremated?</span><strong>${record.is_cremated === 'yes' ? 'Yes' : 'No'}</strong></div>
-            ${record.is_cremated === 'yes' ? `<div class="detail-row"><span>Ash Storage</span><strong>${escapeHtml(record.ash_storage || '—')}</strong></div>` : ''}
+            <div class="view-hero-card">
+                <div class="view-hero-avatar">
+                    <i class="fas fa-monument"></i>
+                </div>
+                <div class="view-hero-info">
+                    <div class="view-hero-title-row">
+                        <h2 class="view-decedent-name">${fullName}</h2>
+                        ${statusBadgeHtml}
+                    </div>
+                    <div class="view-hero-lifespan">
+                        <i class="fas fa-calendar-day"></i>
+                        <span>${escapeHtml(record.dob || '—')} — ${escapeHtml(record.dod || '—')}</span>
+                        ${ageText ? `<span class="view-lifespan-pill">${escapeHtml(ageText)}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+
+            <div class="view-details-grid">
+                <!-- Card 1: Vital & Burial Information -->
+                <div class="view-info-card">
+                    <div class="view-card-header">
+                        <i class="fas fa-user-circle"></i>
+                        <span>Vital & Burial Details</span>
+                    </div>
+                    <div class="view-card-body">
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-cake-candles"></i> Date of Birth</span>
+                            <strong class="prop-value">${escapeHtml(record.dob || '—')}</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-dove"></i> Date of Death</span>
+                            <strong class="prop-value">${escapeHtml(record.dod || '—')}</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-heart-pulse"></i> Cause of Death</span>
+                            <strong class="prop-value">${escapeHtml(record.cause_of_death || 'Not Specified')}</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-fire-burner"></i> Cremated?</span>
+                            <strong class="prop-value">${record.is_cremated === 'yes' ? '<span class="view-tag-cremated"><i class="fas fa-fire"></i> Cremated</span>' : 'No'}</strong>
+                        </div>
+                        ${record.is_cremated === 'yes' ? `
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-box-archive"></i> Ash Storage</span>
+                            <strong class="prop-value">${escapeHtml(record.ash_storage || '—')}</strong>
+                        </div>` : ''}
+                    </div>
+                </div>
+
+                <!-- Card 2: Plot Assignment & Family Contacts -->
+                <div class="view-info-card">
+                    <div class="view-card-header">
+                        <i class="fas fa-map-location-dot"></i>
+                        <span>Plot & Family Contact</span>
+                    </div>
+                    <div class="view-card-body">
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-layer-group"></i> Section</span>
+                            <strong class="prop-value"><span class="view-section-tag">${escapeHtml(record.section_name || '—')}</span></strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-thumbtack"></i> Lot Number</span>
+                            <strong class="prop-value"><span class="view-lot-tag">${escapeHtml(record.lot_number || '—')}</span></strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-user-group"></i> Family Contact</span>
+                            <strong class="prop-value">${escapeHtml(record.contact_name || '—')}</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-phone"></i> Contact Number</span>
+                            <strong class="prop-value">${record.contact_number ? `<a href="tel:${escapeHtml(record.contact_number)}" class="prop-phone-link"><i class="fas fa-phone-volume"></i> ${escapeHtml(record.contact_number)}</a>` : '—'}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
         `;
         viewDetails.innerHTML = details;
         document.getElementById('viewModal').style.display = 'flex';
@@ -758,7 +893,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         const timelineEl = document.getElementById('viewActivityTimeline');
         if (timelineEl) {
-            timelineEl.innerHTML = '<p class="activity-loading">Loading activity...</p>';
+            timelineEl.innerHTML = '<p class="activity-loading">Loading activity history...</p>';
             try {
                 const entries = await api.request(`audit-logs?entity_type=Decedent&entity_id=${id}`, { method: 'GET' });
                 renderActivityTimeline(entries);
@@ -775,7 +910,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const DOCUMENT_TYPE_LABELS = {
         death_certificate: 'Death Certificate',
         burial_permit: 'Burial Permit',
-        other: 'Other',
+        other: 'Other Document',
     };
 
     async function loadDocumentsList(decedentId) {
@@ -796,18 +931,41 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (!listEl) return;
 
         if (documents.length === 0) {
-            listEl.innerHTML = '<p class="activity-empty">No documents uploaded yet.</p>';
+            listEl.innerHTML = '<p class="activity-empty"><i class="fas fa-folder-open"></i> No documents attached to this record yet.</p>';
             return;
         }
 
-        listEl.innerHTML = documents.map((doc) => `
-            <div class="document-entry" data-document-id="${doc.document_id}">
-                <span class="status-badge status-info">${escapeHtml(DOCUMENT_TYPE_LABELS[doc.document_type] || 'Other')}</span>
-                <a href="${escapeHtml(doc.file_path)}" target="_blank" rel="noopener" class="document-filename">${escapeHtml(doc.original_filename)}</a>
-                <span class="document-meta">${escapeHtml(doc.uploaded_by_name || 'Unknown')} · ${escapeHtml(doc.created_at)}</span>
-                <button type="button" class="document-delete-btn" title="Delete document" data-document-id="${doc.document_id}"><i class="fas fa-trash"></i></button>
-            </div>
-        `).join('');
+        listEl.innerHTML = documents.map((doc) => {
+            const fileName = (doc.original_filename || '').toLowerCase();
+            let fileIcon = 'fa-file-lines';
+            let iconTypeClass = 'doc-icon--default';
+            if (fileName.endsWith('.pdf')) {
+                fileIcon = 'fa-file-pdf';
+                iconTypeClass = 'doc-icon--pdf';
+            } else if (fileName.match(/\.(jpg|jpeg|png|webp|gif)$/)) {
+                fileIcon = 'fa-file-image';
+                iconTypeClass = 'doc-icon--image';
+            }
+
+            return `
+                <div class="document-entry" data-document-id="${doc.document_id}">
+                    <div class="doc-file-indicator ${iconTypeClass}">
+                        <i class="fas ${fileIcon}"></i>
+                    </div>
+                    <div class="document-entry-info">
+                        <div class="doc-entry-top">
+                            <span class="status-badge status-info doc-type-pill">${escapeHtml(DOCUMENT_TYPE_LABELS[doc.document_type] || 'Document')}</span>
+                            <a href="${escapeHtml(doc.file_path)}" target="_blank" rel="noopener" class="document-filename" title="Open / Preview Attachment">
+                                <span>${escapeHtml(doc.original_filename)}</span>
+                                <i class="fas fa-arrow-up-right-from-square"></i>
+                            </a>
+                        </div>
+                        <span class="document-meta"><i class="far fa-clock"></i> Uploaded by ${escapeHtml(doc.uploaded_by_name || 'Staff')} · ${escapeHtml(doc.created_at)}</span>
+                    </div>
+                    <button type="button" class="document-delete-btn" title="Delete document" data-document-id="${doc.document_id}"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+        }).join('');
 
         listEl.querySelectorAll('.document-delete-btn').forEach((btn) => {
             btn.addEventListener('click', () => deleteDocument(btn.dataset.documentId));
@@ -836,6 +994,20 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
 
+    const documentFileInputEl = document.getElementById('documentFileInput');
+    const documentFileTextEl = document.getElementById('documentFileText');
+    if (documentFileInputEl && documentFileTextEl) {
+        documentFileInputEl.addEventListener('change', () => {
+            if (documentFileInputEl.files && documentFileInputEl.files.length > 0) {
+                documentFileTextEl.textContent = documentFileInputEl.files[0].name;
+                documentFileTextEl.parentElement.classList.add('has-file');
+            } else {
+                documentFileTextEl.textContent = 'Select file (.pdf, .jpg, .png)';
+                documentFileTextEl.parentElement.classList.remove('has-file');
+            }
+        });
+    }
+
     document.getElementById('uploadDocumentBtn').addEventListener('click', async () => {
         const fileInput = document.getElementById('documentFileInput');
         const typeSelect = document.getElementById('documentTypeSelect');
@@ -855,8 +1027,12 @@ document.addEventListener('DOMContentLoaded', async function () {
             try {
                 const result = await api.request(`decedents/${currentViewDecedentId}/documents`, { method: 'POST', body: formData });
                 if (result.success) {
-                    showToast('Document uploaded.', { type: 'success' });
+                    showToast('Document uploaded successfully.', { type: 'success' });
                     fileInput.value = '';
+                    if (documentFileTextEl) {
+                        documentFileTextEl.textContent = 'Select file (.pdf, .jpg, .png)';
+                        documentFileTextEl.parentElement.classList.remove('has-file');
+                    }
                     await loadDocumentsList(currentViewDecedentId);
                 } else {
                     showToast(result.error || 'Could not upload document.', { type: 'error' });

@@ -456,44 +456,61 @@
 
     <!-- View Modal -->
     <div id="viewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
-        <div class="modal-content">
+        <div class="modal-content modal--view">
             <button type="button" class="close-view" aria-label="Close"><i class="fas fa-xmark"></i></button>
-            <h3 id="viewModalTitle">Decedent Record Details</h3>
-            <div id="viewDetails"></div>
-
-            <!-- Batch K1 (document upload): death certificate/burial permit
-                 attachments for this record. Upload only — no AI extraction. -->
-            <div class="documents-section">
-                <h4>Documents</h4>
-                <div id="viewDocumentsList" class="documents-list"></div>
-                <div class="documents-upload-row">
-                    <select id="documentTypeSelect" aria-label="Document type">
-                        <option value="death_certificate">Death Certificate</option>
-                        <option value="burial_permit">Burial Permit</option>
-                        <option value="other">Other</option>
-                    </select>
-                    <input type="file" id="documentFileInput"
-                        accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
-                    <button type="button" class="btn-secondary" id="uploadDocumentBtn">Upload</button>
+            <div class="modal-header-compact view-modal-header">
+                <div class="modal-header-icon-wrap view-header-icon">
+                    <i class="fas fa-id-card-clip"></i>
+                </div>
+                <div>
+                    <h3 id="viewModalTitle">Decedent Record Details</h3>
+                    <p class="modal-header-subtitle">Interment, plot allocation, and official documentation</p>
                 </div>
             </div>
 
-            <!-- Batch D (activity history): this record's own audit_logs
-                 entries (entity_type=Decedent&entity_id={id}) — the same
-                 data the global Audit Logs page shows, scoped to just this
-                 record so staff don't have to leave the module to see it. -->
+            <!-- View Details Container (Hero Card + 2-Column Details Grid) -->
+            <div id="viewDetails"></div>
+
+            <!-- Batch K1 (document upload): death certificate/burial permit attachments -->
+            <div class="documents-section">
+                <div class="section-title-wrap">
+                    <h4 class="view-section-title"><i class="fas fa-folder-open"></i> Attached Documents & Permits</h4>
+                </div>
+                <div id="viewDocumentsList" class="documents-list"></div>
+                <div class="documents-upload-bar">
+                    <select id="documentTypeSelect" aria-label="Document type" class="document-type-select">
+                        <option value="death_certificate">Death Certificate</option>
+                        <option value="burial_permit">Burial Permit</option>
+                        <option value="other">Other Document</option>
+                    </select>
+                    <label for="documentFileInput" class="custom-file-picker" id="documentFileLabel" tabindex="0" role="button">
+                        <i class="fas fa-paperclip"></i>
+                        <span id="documentFileText">Select file (.pdf, .jpg, .png)</span>
+                    </label>
+                    <input type="file" id="documentFileInput"
+                        accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" hidden>
+                    <button type="button" class="btn-secondary upload-doc-btn" id="uploadDocumentBtn">
+                        <i class="fas fa-arrow-up-from-bracket"></i> Upload
+                    </button>
+                </div>
+            </div>
+
+            <!-- Batch D (activity history): audit logs scoped to this record -->
             <div class="activity-timeline-section">
-                <h4>Activity History</h4>
+                <div class="section-title-wrap">
+                    <h4 class="view-section-title"><i class="fas fa-clock-rotate-left"></i> Activity & Audit Trail</h4>
+                </div>
                 <div id="viewActivityTimeline" class="activity-timeline"></div>
             </div>
 
-            <button class="btn-edit" id="editFromView">
-                <span class="edit-text">Edit Record</span>
-
-                <span class="edit-icon">
-                    <i class="fas fa-pen"></i>
-                </span>
-            </button>
+            <div class="view-modal-footer">
+                <button class="btn-edit" id="editFromView">
+                    <span class="edit-text">Edit Record</span>
+                    <span class="edit-icon">
+                        <i class="fas fa-pen"></i>
+                    </span>
+                </button>
+            </div>
         </div>
     </div>
 
