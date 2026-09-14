@@ -281,8 +281,14 @@ document.addEventListener('DOMContentLoaded', async function () {
                 <td>${escapeHtml(request.requested_by_name || 'Unknown')}</td>
                 <td>${escapeHtml(request.created_at)}</td>
                 <td class="action-buttons">
-                    <button class="btn-approve-request" data-id="${request.request_id}">Approve</button>
-                    <button class="btn-reject-request" data-id="${request.request_id}">Reject</button>
+                    <button class="btn-approve-request" data-id="${request.request_id}" title="Review & Approve Registration Request">
+                        <i class="fas fa-check"></i>
+                        <span>Approve</span>
+                    </button>
+                    <button class="btn-reject-request" data-id="${request.request_id}" title="Reject Request">
+                        <i class="fas fa-xmark"></i>
+                        <span>Reject</span>
+                    </button>
                 </td>
             </tr>
         `).join('');

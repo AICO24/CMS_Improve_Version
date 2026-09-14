@@ -21,6 +21,8 @@
     align-items: center;
     justify-content: center;
     background: var(--overlay-scrim);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     padding: var(--space-5);
     z-index: 200;
 }

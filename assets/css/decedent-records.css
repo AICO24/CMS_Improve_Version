@@ -1267,6 +1267,61 @@
     outline-offset: 2px;
 }
 
+/* ==========================================================================
+   MODAL BACKDROP BLUR & SMOOTH ENTRANCE
+   Applies when adding records, editing records, viewing, or importing CSV
+   ========================================================================== */
+.modal {
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.dashboard-body[data-theme="dark"] .modal {
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+@keyframes modalBackdropFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes modalContentZoomIn {
+    from {
+        opacity: 0;
+        transform: scale(0.97) translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.modal[style*="display: flex"],
+.modal[style*="display: block"] {
+    animation: modalBackdropFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modal[style*="display: flex"] > .modal-content,
+.modal[style*="display: block"] > .modal-content {
+    animation: modalContentZoomIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .modal[style*="display: flex"],
+    .modal[style*="display: block"],
+    .modal[style*="display: flex"] > .modal-content,
+    .modal[style*="display: block"] > .modal-content {
+        animation: none;
+    }
+}
+
 /* ---------- RECORD DETAILS (view modal) ---------- */
 .modal-content.modal--view {
     max-width: 760px;
@@ -2702,44 +2757,61 @@
 
 .btn-approve-request,
 .btn-reject-request {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: var(--radius-pill);
-    border: 1px solid transparent;
-    font-size: 0.78rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 180ms ease;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    padding: 6px 14px !important;
+    border-radius: 999px !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.01em !important;
+    cursor: pointer !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+    outline: none !important;
+    vertical-align: middle !important;
 }
 
 .btn-approve-request {
-    background: var(--color-success-soft, #dcfce7);
-    color: var(--color-success-strong, #166534);
-    border-color: rgba(22, 101, 52, 0.20);
+    background: #166534 !important;
+    color: #ffffff !important;
+    border: 1px solid #14532d !important;
+    box-shadow: 0 2px 6px rgba(22, 101, 52, 0.25) !important;
 }
 
 .btn-approve-request:hover {
-    background: #166534;
-    color: #fff;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(22, 101, 52, 0.25);
+    background: #15803d !important;
+    color: #ffffff !important;
+    transform: translateY(-1.5px) !important;
+    box-shadow: 0 5px 12px rgba(22, 101, 52, 0.35) !important;
+}
+
+.btn-approve-request:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 2px 4px rgba(22, 101, 52, 0.20) !important;
 }
 
 .btn-reject-request {
-    background: var(--color-danger-soft, #fee2e2);
-    color: var(--color-danger-strong, #991b1b);
-    border-color: rgba(153, 27, 27, 0.20);
-    margin-left: 0.35rem;
+    background: #ffffff !important;
+    color: #dc2626 !important;
+    border: 1.5px solid #f87171 !important;
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.08) !important;
+    margin-left: 0.4rem !important;
 }
 
 .btn-reject-request:hover {
-    background: #991b1b;
-    color: #fff;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(153, 27, 27, 0.25);
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    border-color: #dc2626 !important;
+    transform: translateY(-1.5px) !important;
+    box-shadow: 0 5px 12px rgba(220, 38, 38, 0.30) !important;
+}
+
+.btn-reject-request:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.15) !important;
 }
 
 /* ============================================
@@ -3190,25 +3262,29 @@
 }
 
 .dashboard-body[data-theme="dark"] .btn-approve-request {
-    background: rgba(22, 101, 52, 0.35);
-    color: #86efac;
-    border-color: rgba(134, 239, 172, 0.30);
+    background: #059669 !important;
+    color: #ffffff !important;
+    border-color: #10b981 !important;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.4) !important;
 }
 
 .dashboard-body[data-theme="dark"] .btn-approve-request:hover {
-    background: #166534;
-    color: #ffffff;
+    background: #10b981 !important;
+    color: #0f172a !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.5) !important;
 }
 
 .dashboard-body[data-theme="dark"] .btn-reject-request {
-    background: rgba(153, 27, 27, 0.35);
-    color: #fca5a5;
-    border-color: rgba(252, 165, 165, 0.30);
+    background: rgba(239, 68, 68, 0.14) !important;
+    color: #f87171 !important;
+    border-color: rgba(248, 113, 113, 0.40) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
 .dashboard-body[data-theme="dark"] .btn-reject-request:hover {
-    background: #991b1b;
-    color: #ffffff;
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4) !important;
 }
 
 .dashboard-body[data-theme="dark"] .reports-footer__text {
