@@ -514,20 +514,66 @@ document.addEventListener('DOMContentLoaded', async function() {
     const certificateDocType = document.getElementById('certificateDocType');
     const extractCertificateBtn = document.getElementById('extractCertificateBtn');
     const certificateUploadHint = document.getElementById('certificateUploadHint');
+    const certPreviewContainer = document.getElementById('certPreviewContainer');
+    const certDropzonePlaceholder = document.getElementById('certDropzonePlaceholder');
+    const certPreviewImg = document.getElementById('certPreviewImg');
+    const certPreviewPdf = document.getElementById('certPreviewPdf');
+    const certPdfName = document.getElementById('certPdfName');
+    const clearCertFileBtn = document.getElementById('clearCertFileBtn');
+    const extractionStatusChips = document.getElementById('extractionStatusChips');
 
     function resetCertificateUpload() {
         certificateFileInput.value = '';
         certificateDocType.value = 'death_certificate';
         certificateUploadHint.textContent = 'This file will be attached to the record automatically once you save.';
+        if (certPreviewContainer) certPreviewContainer.style.display = 'none';
+        if (certDropzonePlaceholder) certDropzonePlaceholder.style.display = 'flex';
+        if (certPreviewImg) { certPreviewImg.src = ''; certPreviewImg.style.display = 'none'; }
+        if (certPreviewPdf) certPreviewPdf.style.display = 'none';
+        if (extractionStatusChips) { extractionStatusChips.innerHTML = ''; extractionStatusChips.style.display = 'none'; }
+    }
+
+    if (certificateFileInput) {
+        certificateFileInput.addEventListener('change', () => {
+            const file = certificateFileInput.files[0];
+            if (!file) {
+                resetCertificateUpload();
+                return;
+            }
+            if (certDropzonePlaceholder) certDropzonePlaceholder.style.display = 'none';
+            if (certPreviewContainer) certPreviewContainer.style.display = 'flex';
+
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    if (certPreviewImg) {
+                        certPreviewImg.src = e.target.result;
+                        certPreviewImg.style.display = 'block';
+                    }
+                    if (certPreviewPdf) certPreviewPdf.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                if (certPreviewImg) certPreviewImg.style.display = 'none';
+                if (certPreviewPdf) {
+                    certPreviewPdf.style.display = 'flex';
+                    if (certPdfName) certPdfName.textContent = file.name;
+                }
+            }
+        });
+    }
+
+    if (clearCertFileBtn) {
+        clearCertFileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetCertificateUpload();
+        });
     }
 
     function readFileAsBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => {
-                // reader.result is "data:<mime>;base64,<data>" — the server
-                // only wants the raw base64 payload, it already knows the
-                // mime type from the same request.
                 const commaIndex = reader.result.indexOf(',');
                 resolve(commaIndex >= 0 ? reader.result.slice(commaIndex + 1) : reader.result);
             };
@@ -558,14 +604,36 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
 
                 // Pre-fill only — every field stays a normal, editable input.
-                // Staff still reviews everything before Save.
-                if (result.first_name) document.getElementById('firstName').value = result.first_name;
-                if (result.last_name) document.getElementById('lastName').value = result.last_name;
-                if (result.middle_name) document.getElementById('middleName').value = result.middle_name;
-                if (result.suffix) document.getElementById('suffix').value = result.suffix;
-                if (result.dob) document.getElementById('dob').value = result.dob;
-                if (result.dod) document.getElementById('dod').value = result.dod;
-                if (result.cause_of_death) document.getElementById('cause').value = result.cause_of_death;
+                const extractedFields = [];
+                function fillAndHighlight(id, val, label) {
+                    if (val) {
+                        const el = document.getElementById(id);
+                        if (el) {
+                            el.value = val;
+                            el.style.transition = 'box-shadow 300ms ease, border-color 300ms ease';
+                            el.style.borderColor = '#10b981';
+                            el.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.25)';
+                            setTimeout(() => {
+                                el.style.borderColor = '';
+                                el.style.boxShadow = '';
+                            }, 2500);
+                        }
+                        extractedFields.push(label);
+                    }
+                }
+
+                fillAndHighlight('firstName', result.first_name, 'First Name');
+                fillAndHighlight('lastName', result.last_name, 'Last Name');
+                fillAndHighlight('middleName', result.middle_name, 'Middle Name');
+                fillAndHighlight('suffix', result.suffix, 'Suffix');
+                fillAndHighlight('dob', result.dob, 'DOB');
+                fillAndHighlight('dod', result.dod, 'DOD');
+                fillAndHighlight('cause', result.cause_of_death, 'Cause of Death');
+
+                if (extractionStatusChips && extractedFields.length) {
+                    extractionStatusChips.style.display = 'flex';
+                    extractionStatusChips.innerHTML = extractedFields.map((f) => `<span class="extraction-chip"><i class="fas fa-check"></i> ${escapeHtml(f)}</span>`).join('');
+                }
 
                 showToast('Fields filled in from the document — please review before saving.', { type: 'success' });
             } catch (error) {

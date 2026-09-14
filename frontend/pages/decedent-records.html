@@ -297,62 +297,102 @@
 
     <!-- Add/Edit Modal -->
     <div id="recordModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="modal-content">
+        <div class="modal-content modal-content--split">
             <button type="button" class="close" aria-label="Close"><i class="fas fa-xmark"></i></button>
             <h3 id="modalTitle">Add Decedent Record</h3>
             <form id="recordForm">
                 <input type="hidden" id="recordId">
 
-                <!-- Batch K (document-assisted entry): reads a death
-                     certificate/burial permit and pre-fills the fields
-                     below as a draft — staff still reviews everything and
-                     clicks Save themselves; nothing here writes to the
-                     record directly. The same file also gets attached to
-                     this record automatically once Save succeeds, so it
-                     only needs to be selected once. -->
-                <div class="certificate-upload-box">
-                    <label>Upload Death Certificate or Burial Permit (optional)</label>
-                    <div class="certificate-upload-row">
-                        <select id="certificateDocType" aria-label="Document type">
-                            <option value="death_certificate">Death Certificate</option>
-                            <option value="burial_permit">Burial Permit</option>
-                            <option value="other">Other</option>
-                        </select>
-                        <input type="file" id="certificateFileInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
-                        <button type="button" class="btn-secondary" id="extractCertificateBtn">Extract &amp; Fill Fields</button>
+                <div class="split-modal-layout">
+                    <!-- Left Column: AI Document Assistant & Live Preview -->
+                    <div class="split-modal-ai-pane">
+                        <div class="ai-pane-header">
+                            <span class="ai-pane-title"><i class="fas fa-wand-magic-sparkles"></i> AI Document Assistant</span>
+                            <span class="ai-pane-badge">Optional</span>
+                        </div>
+                        <p class="ai-pane-desc">Upload a death certificate or burial permit to auto-fill record fields.</p>
+
+                        <div class="ai-doc-selector-group">
+                            <label for="certificateDocType" class="field-label-sm">Document Type</label>
+                            <select id="certificateDocType" aria-label="Document type">
+                                <option value="death_certificate">Death Certificate</option>
+                                <option value="burial_permit">Burial Permit</option>
+                                <option value="other">Other Document</option>
+                            </select>
+                        </div>
+
+                        <div class="ai-dropzone" id="certDropzone">
+                            <input type="file" id="certificateFileInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
+                            <div class="ai-dropzone-placeholder" id="certDropzonePlaceholder">
+                                <i class="fas fa-cloud-arrow-up"></i>
+                                <span>Click or drag certificate here</span>
+                                <small>JPG, PNG, or PDF</small>
+                            </div>
+                            <div class="ai-preview-container" id="certPreviewContainer" style="display: none;">
+                                <img id="certPreviewImg" src="" alt="Document Preview" style="display: none;">
+                                <div id="certPreviewPdf" class="cert-pdf-preview" style="display: none;">
+                                    <i class="fas fa-file-pdf"></i>
+                                    <span id="certPdfName">document.pdf</span>
+                                </div>
+                                <button type="button" class="btn-clear-preview" id="clearCertFileBtn" title="Remove file">&times;</button>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-extract-ai" id="extractCertificateBtn">
+                            <i class="fas fa-sparkles"></i>
+                            <span>Extract &amp; Auto-Fill Fields</span>
+                        </button>
+
+                        <div class="extraction-status-chips" id="extractionStatusChips" style="display: none;"></div>
+                        <p class="certificate-upload-hint" id="certificateUploadHint">File will be attached automatically once saved.</p>
                     </div>
-                    <p class="certificate-upload-hint" id="certificateUploadHint">This file will be attached to the record automatically once you save.</p>
-                </div>
 
-                <div class="decrec-form-grid">
-                <div class="form-group"><label>First Name</label><input type="text" id="firstName" required></div>
-                <div class="form-group"><label>Last Name</label><input type="text" id="lastName" required></div>
-                <div class="form-group"><label>Middle Name</label><input type="text" id="middleName"></div>
-                <div class="form-group"><label>Suffix (Jr., Sr., etc.)</label><input type="text" id="suffix"></div>
-                <div class="form-group"><label>Date of Birth</label><input type="date" id="dob" required></div>
-                <div class="form-group"><label>Date of Death</label><input type="date" id="dod" required></div>
-                <div class="form-group full-width"><label>Cause of Death</label><textarea id="cause" rows="2"></textarea></div>
-                <div class="form-group"><label>Lot Number</label><select id="lotNumber" required><option value="">Select a lot</option></select></div>
-                <div class="form-group"><label>Section</label><input type="text" id="section" readonly></div>
-                <div class="form-group"><label>Family Contact Name</label><input type="text" id="contactName"></div>
-                <div class="form-group"><label>Family Contact Number</label><input type="text" id="contactNumber"></div>
-                <div class="form-group"><label>Cremated?</label>
-                    <select id="isCremated">
-                        <option value="no">No</option>
-                        <option value="yes">Yes</option>
-                    </select>
-                </div>
-                <div class="form-group full-width" id="ashStorageGroup" style="display:none;"><label>Ash Storage Location</label><input type="text" id="ashStorage"></div>
-                </div>
-                <button type="submit" class="btn-save bookmarkBtn">
-                    <span class="IconContainer">
-                        <i class="fas fa-save icon"></i>
-                    </span>
+                    <!-- Right Column: Structured Record Fields -->
+                    <div class="split-modal-form-pane">
+                        <div class="form-pane-content">
+                            <div class="form-section-header">
+                                <i class="fas fa-user-circle"></i> Personal Details
+                            </div>
+                            <div class="decrec-form-grid">
+                                <div class="form-group"><label>First Name</label><input type="text" id="firstName" required></div>
+                                <div class="form-group"><label>Last Name</label><input type="text" id="lastName" required></div>
+                                <div class="form-group"><label>Middle Name</label><input type="text" id="middleName"></div>
+                                <div class="form-group"><label>Suffix (Jr., Sr.)</label><input type="text" id="suffix"></div>
+                                <div class="form-group"><label>Date of Birth</label><input type="date" id="dob" required></div>
+                                <div class="form-group"><label>Date of Death</label><input type="date" id="dod" required></div>
+                                <div class="form-group full-width"><label>Cause of Death</label><input type="text" id="cause" placeholder="e.g. Cardiopulmonary arrest"></div>
+                            </div>
 
-                    <span class="text">
-                        Save
-                    </span>
-                </button>
+                            <div class="form-section-header">
+                                <i class="fas fa-monument"></i> Cemetery &amp; Family Information
+                            </div>
+                            <div class="decrec-form-grid">
+                                <div class="form-group"><label>Lot Number</label><select id="lotNumber" required><option value="">Select a lot</option></select></div>
+                                <div class="form-group"><label>Section</label><input type="text" id="section" readonly></div>
+                                <div class="form-group"><label>Family Contact Name</label><input type="text" id="contactName"></div>
+                                <div class="form-group"><label>Family Contact Number</label><input type="text" id="contactNumber"></div>
+                                <div class="form-group"><label>Cremated?</label>
+                                    <select id="isCremated">
+                                        <option value="no">No</option>
+                                        <option value="yes">Yes</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" id="ashStorageGroup" style="display:none;"><label>Ash Storage Location</label><input type="text" id="ashStorage"></div>
+                            </div>
+                        </div>
+
+                        <div class="modal-form-actions">
+                            <button type="submit" class="btn-save bookmarkBtn">
+                                <span class="IconContainer">
+                                    <i class="fas fa-save icon"></i>
+                                </span>
+                                <span class="text">
+                                    Save Record
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </form>
         </div>
     </div>
