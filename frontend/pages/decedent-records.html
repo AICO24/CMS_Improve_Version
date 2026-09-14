@@ -131,8 +131,38 @@
                 </div>
             </div>
 <div class="content-area">
-                <!-- Search / Filters / Add / Import -->
-                <div class="records-header">
+                <!-- Summary Statistics — at top for executive overview -->
+                <div class="stats-row decrec-stats">
+                    <div class="stat-card accent-teal">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-folder-open"></i></span> Total Records</div>
+                        <div class="stat-value" id="totalCount">0</div>
+                        <div class="stat-sub">Decedents on file</div>
+                    </div>
+                    <div class="stat-card accent-navy">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-monument"></i></span> Burials</div>
+                        <div class="stat-value" id="burialCount">0</div>
+                        <div class="stat-sub">Interred</div>
+                    </div>
+                    <div class="stat-card accent-amber">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-fire"></i></span> Cremations</div>
+                        <div class="stat-value" id="cremationCount">0</div>
+                        <div class="stat-sub">Ashes stored</div>
+                    </div>
+                    <div class="stat-card accent-blue">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-cake-candles"></i></span> Avg. Age</div>
+                        <div class="stat-value" id="avgAge">0</div>
+                        <div class="stat-sub">Years old</div>
+                    </div>
+                    <div class="stat-card accent-red">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span> Needs Attention</div>
+                        <div class="stat-value" id="attentionCount">0</div>
+                        <div class="stat-sub">Incomplete records</div>
+                    </div>
+                </div>
+
+                <!-- Search / Filters / Add / Import Toolbar -->
+                <div class="filter-bar records-header">
+                    <span class="filter-bar__label"><i class="fas fa-filter"></i> Filters</span>
                     <div class="search-field">
                         <input type="text" id="searchInput" class="search-field__input" placeholder=" ">
                         <label for="searchInput" class="search-field__label">Search by name, lot number, or record ID</label>
@@ -149,17 +179,25 @@
                         <input type="checkbox" id="attentionFilter">
                         Needs attention only
                     </label>
-                    <button class="btn-add type1" id="openAddModal">
-                        <span class="btn-txt">
-                            <i class="fas fa-plus"></i>
-                            Add New Record
-                        </span>
-                    </button>
-                    <button class="btn-secondary" id="openImportModal" type="button">
-                        <i class="fas fa-file-csv"></i>
-                        Import CSV
-                    </button>
+                    <div class="toolbar-actions-panel">
+                        <span class="toolbar-actions-label">Record actions</span>
+                        <div class="toolbar-actions" aria-label="Record actions">
+                            <button class="btn-add type1" id="openAddModal">
+                                <span class="btn-txt">
+                                    <i class="fas fa-plus"></i>
+                                    Add New Record
+                                </span>
+                            </button>
+                            <button class="btn-secondary" id="openImportModal" type="button">
+                                <i class="fas fa-file-csv"></i>
+                                Import CSV
+                            </button>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Active Filter Chips — right below toolbar -->
+                <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
 
                 <!-- Pending Decedent Requests -->
                 <p class="section-label"><i class="fas fa-inbox"></i> Pending Decedent Requests</p>
@@ -185,18 +223,6 @@
                             </tbody>
                         </table>
                     </div>
-                </div>
-
-                <!-- Active Filter Chips -->
-                <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
-
-                <!-- Summary Statistics -->
-                <div class="stats-row decrec-stats">
-                    <div class="stat-card"><div class="stat-title">Total Records</div><div class="stat-value" id="totalCount">0</div><div class="stat-sub">Decedents</div></div>
-                    <div class="stat-card"><div class="stat-title">Burials</div><div class="stat-value" id="burialCount">0</div><div class="stat-sub">Interred</div></div>
-                    <div class="stat-card"><div class="stat-title">Cremations</div><div class="stat-value" id="cremationCount">0</div><div class="stat-sub">Ashes stored</div></div>
-                    <div class="stat-card"><div class="stat-title">Avg. Age</div><div class="stat-value" id="avgAge">0</div><div class="stat-sub">Years old</div></div>
-                    <div class="stat-card"><div class="stat-title">Needs Attention</div><div class="stat-value" id="attentionCount">0</div><div class="stat-sub">Incomplete records</div></div>
                 </div>
 
                 <!-- Decedent Records table -->
@@ -225,31 +251,30 @@
                             </tbody>
                         </table>
                     </div>
-                </div>
-
-                <!-- Pagination -->
-                <div class="pagination-controls" id="paginationControls">
-                    <span class="pagination-info" id="paginationInfo"></span>
-                    <div class="pagination-actions">
-                        <form class="pagination-jump" id="paginationJumpForm">
-                            <label for="pageJumpInput">Jump to page</label>
-                            <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Enter page number">
-                            <button class="btn-secondary" id="pageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
-                        </form>
-                        <span class="pagination-divider" aria-hidden="true"></span>
-                        <button class="btn-secondary" id="prevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
-                        <button class="btn-secondary" id="nextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
+                    <!-- Pagination docked into table card -->
+                    <div class="pagination-controls" id="paginationControls">
+                        <span class="pagination-info" id="paginationInfo"></span>
+                        <div class="pagination-actions">
+                            <form class="pagination-jump" id="paginationJumpForm">
+                                <label for="pageJumpInput">Jump to page</label>
+                                <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Enter page number">
+                                <button class="btn-secondary" id="pageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
+                            </form>
+                            <span class="pagination-divider" aria-hidden="true"></span>
+                            <button class="btn-secondary" id="prevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
+                            <button class="btn-secondary" id="nextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </div><!-- /content-area -->
+
+            <footer class="reports-footer">
+                <div class="reports-footer__bottom">
+                    <span class="reports-footer__text">© 2026 Cemetery Management System. All rights reserved.</span>
+                </div>
+            </footer>
         </main>
     </div>
-
-    <footer class="reports-footer">
-        <div class="reports-footer__bottom">
-            <span class="reports-footer__text">© 2026 Cemetery Management System. All rights reserved.</span>
-        </div>
-    </footer>
 
     <!-- Add/Edit Modal -->
     <div id="recordModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
