@@ -213,21 +213,26 @@ class Lot {
         return $stmt->fetchAll();
     }
 
-    // Decedent Records module audit, Batch J (CSV import): lot_number alone
-    // isn't unique cemetery-wide (only unique per block — see lots'
+    // Decedent Records module audit, Batch J (CSV import) & Batch 2: lot_number
+    // alone isn't unique cemetery-wide (only unique per block — see lots'
     // `block_id, lot_number` unique key), so a historical-records CSV
-    // (which knows lot numbers the way staff talk about them, not internal
-    // lot_ids) has to disambiguate by section too. Case-insensitive on both
-    // — a spreadsheet's casing is not something worth rejecting a row over.
-    public function findByNumberAndSection($lotNumber, $sectionName) {
-        $stmt = $this->db->prepare("
-            SELECT l.lot_id, l.lot_number, s.section_name
+    // has to disambiguate by section and, optionally, block_name.
+    // Case-insensitive on all parameters.
+    public function findByNumberAndSection($lotNumber, $sectionName, $blockName = null) {
+        $sql = "
+            SELECT l.lot_id, l.lot_number, s.section_name, b.block_name
             FROM lots l
             JOIN blocks b ON l.block_id = b.block_id
             JOIN sections s ON b.section_id = s.section_id
             WHERE LOWER(l.lot_number) = LOWER(?) AND LOWER(s.section_name) = LOWER(?)
-        ");
-        $stmt->execute([trim((string) $lotNumber), trim((string) $sectionName)]);
+        ";
+        $params = [trim((string) $lotNumber), trim((string) $sectionName)];
+        if (!empty($blockName)) {
+            $sql .= " AND LOWER(b.block_name) = LOWER(?)";
+            $params[] = trim((string) $blockName);
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll();
     }
 

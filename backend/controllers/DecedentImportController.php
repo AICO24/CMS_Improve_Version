@@ -23,6 +23,10 @@ class DecedentImportController {
     // this becoming a general-purpose spreadsheet-processing endpoint.
     private const MAX_ROWS = 500;
 
+    // Fields required for every decedent regardless of burial or cremation.
+    private const BASE_REQUIRED_COLUMNS = ['first_name', 'last_name', 'dob', 'dod'];
+
+    // Legacy default for files that do not declare cremation status.
     private const REQUIRED_COLUMNS = ['first_name', 'last_name', 'dob', 'dod', 'lot_number', 'section_name'];
 
     // Human-readable labels for every error/warning message this controller
@@ -38,6 +42,7 @@ class DecedentImportController {
         'dod' => 'Date of Death',
         'lot_number' => 'Lot Number',
         'section_name' => 'Section',
+        'block_name' => 'Block',
         'cause_of_death' => 'Cause of Death',
         'contact_name' => 'Contact Name',
         'contact_number' => 'Contact Number',
@@ -45,7 +50,7 @@ class DecedentImportController {
         'ash_storage' => 'Ash Storage',
     ];
 
-    // Batch 1 (Smart Import Automation): comprehensive synonym dictionary
+    // Batch 1 & 2 (Smart Import Automation): comprehensive synonym dictionary
     // mapping real-world spreadsheet headers (spaces, capitalizations, common
     // aliases) to canonical internal field names without requiring staff to
     // manually reformat column titles in Excel.
@@ -58,6 +63,7 @@ class DecedentImportController {
         'dod' => ['dod', 'date_of_death', 'date of death', 'death_date', 'death date', 'deathdate', 'deceased_date', 'date deceased', 'died', 'death'],
         'lot_number' => ['lot_number', 'lot number', 'lot_no', 'lot no', 'lot #', 'lot_id_str', 'lot'],
         'section_name' => ['section_name', 'section name', 'section', 'sec', 'sec_name'],
+        'block_name' => ['block_name', 'block name', 'block', 'blk', 'blk_name', 'block_no', 'block no'],
         'cause_of_death' => ['cause_of_death', 'cause of death', 'cause', 'death_cause', 'reason of death'],
         'contact_name' => ['contact_name', 'contact name', 'family_contact', 'family contact', 'informant', 'informant_name', 'informant name', 'contact_person', 'contact person'],
         'contact_number' => ['contact_number', 'contact number', 'contact_no', 'contact no', 'contact_phone', 'contact phone', 'phone', 'mobile', 'cellphone', 'tel', 'telephone', 'phone_number', 'phone number'],
@@ -226,10 +232,22 @@ class DecedentImportController {
             }
         }
 
+        // Batch 2 (Cremation Alignment): first_name, last_name, dob, dod are
+        // unconditionally required. lot_number and section_name are required
+        // unless the file includes an 'is_cremated' column (where pure
+        // cremation records legitimately have no burial lot).
         $missingColumns = [];
-        foreach (self::REQUIRED_COLUMNS as $req) {
+        foreach (self::BASE_REQUIRED_COLUMNS as $req) {
             if (empty($foundCanonical[$req])) {
                 $missingColumns[] = self::FIELD_LABELS[$req] ?? $req;
+            }
+        }
+        if (empty($foundCanonical['is_cremated'])) {
+            if (empty($foundCanonical['lot_number'])) {
+                $missingColumns[] = self::FIELD_LABELS['lot_number'];
+            }
+            if (empty($foundCanonical['section_name'])) {
+                $missingColumns[] = self::FIELD_LABELS['section_name'];
             }
         }
         if (!empty($missingColumns)) {
@@ -239,6 +257,8 @@ class DecedentImportController {
 
         $rows = [];
         $rowNumber = 1; // the header itself is row 1, so the first data row is 2 — matches what staff sees if they open the file in a spreadsheet app.
+        $seenFileRecords = []; // Batch 2: in-file duplicate detection map
+
         while (($line = fgetcsv($handle)) !== false) {
             $rowNumber++;
 
@@ -266,7 +286,25 @@ class DecedentImportController {
                     $record[$col] = trim((string) $line[$i]);
                 }
             }
-            $rows[] = $this->evaluateRow($rowNumber, $record);
+
+            // Batch 2: track exact duplicates within the same uploaded file
+            $fName = self::normalizeName($record['first_name'] ?? '');
+            $lName = self::normalizeName($record['last_name'] ?? '');
+            $dDob = self::normalizeDate($record['dob'] ?? '');
+            $dDod = self::normalizeDate($record['dod'] ?? '');
+            $fileDupKey = ($fName !== '' && $lName !== '' && $dDob !== null && $dDod !== null)
+                ? strtolower($fName) . '|' . strtolower($lName) . '|' . $dDob . '|' . $dDod
+                : null;
+
+            $duplicateOfRow = ($fileDupKey !== null && isset($seenFileRecords[$fileDupKey]))
+                ? $seenFileRecords[$fileDupKey]
+                : null;
+
+            if ($fileDupKey !== null && !isset($seenFileRecords[$fileDupKey])) {
+                $seenFileRecords[$fileDupKey] = $rowNumber;
+            }
+
+            $rows[] = $this->evaluateRow($rowNumber, $record, $duplicateOfRow);
         }
         fclose($handle);
 
@@ -285,18 +323,31 @@ class DecedentImportController {
 
     // Mirrors DecedentController's own store()/checkForDuplicates() rules
     // exactly (required fields, dob<=dod, exact-duplicate block, near-
-    // duplicate flag) plus the one thing unique to a spreadsheet import:
-    // resolving a human-readable "lot_number in section_name" to a real
-    // lot_id. Never writes anything — purely annotates $record for the
-    // frontend's review table.
-    private function evaluateRow($rowNumber, $record) {
+    // duplicate flag) plus resolving a human-readable lot_number, section_name,
+    // and block_name to a real lot_id. Never writes anything — purely annotates
+    // $record for the frontend's review table.
+    private function evaluateRow($rowNumber, $record, $duplicateOfRow = null) {
         $errors = [];
         $warnings = [];
 
-        foreach (self::REQUIRED_COLUMNS as $field) {
+        $isCremated = (strtolower($record['is_cremated'] ?? '') === 'yes') ? 'yes' : 'no';
+
+        // Check required fields for all records
+        foreach (self::BASE_REQUIRED_COLUMNS as $field) {
             $val = trim((string) ($record[$field] ?? ''));
             if ($val === '') {
                 $errors[] = "Missing " . (self::FIELD_LABELS[$field] ?? $field);
+            }
+        }
+
+        // Batch 2 (Cremation Alignment): a burial record requires lot & section;
+        // a cremation-only record legitimately has no burial lot.
+        if ($isCremated !== 'yes') {
+            if (empty($record['lot_number'])) {
+                $errors[] = "Missing " . self::FIELD_LABELS['lot_number'];
+            }
+            if (empty($record['section_name'])) {
+                $errors[] = "Missing " . self::FIELD_LABELS['section_name'];
             }
         }
 
@@ -321,13 +372,21 @@ class DecedentImportController {
             }
         }
 
+        // Batch 2 (Lot Disambiguation): disambiguate lot using section + optional block_name
         $lotId = null;
-        if (!empty($record['lot_number']) && !empty($record['section_name'])) {
-            $matches = $this->lotModel->findByNumberAndSection($record['lot_number'], $record['section_name']);
+        $lotNumber = $record['lot_number'] ?? '';
+        $sectionName = $record['section_name'] ?? '';
+        $blockName = !empty($record['block_name']) ? trim((string) $record['block_name']) : null;
+
+        if (!empty($lotNumber) && !empty($sectionName)) {
+            $matches = $this->lotModel->findByNumberAndSection($lotNumber, $sectionName, $blockName);
             if (count($matches) === 0) {
-                $errors[] = "No lot '{$record['lot_number']}' found in section '{$record['section_name']}'";
+                $blkMsg = $blockName !== null ? " in block '{$blockName}'" : "";
+                $errors[] = "No lot '{$lotNumber}' found in section '{$sectionName}'{$blkMsg}";
             } elseif (count($matches) > 1) {
-                $errors[] = "Lot '{$record['lot_number']}' in section '{$record['section_name']}' matches more than one block — ambiguous";
+                $matchedBlocks = array_unique(array_filter(array_column($matches, 'block_name')));
+                $blkList = !empty($matchedBlocks) ? " (" . implode(', ', $matchedBlocks) . ")" : "";
+                $errors[] = "Lot '{$lotNumber}' in section '{$sectionName}' matches more than one block{$blkList} — specify block";
             } else {
                 $lotId = (int) $matches[0]['lot_id'];
             }
@@ -341,7 +400,6 @@ class DecedentImportController {
         $contactNumber = self::normalizePhone($record['contact_number'] ?? null);
         $causeOfDeath = trim((string) ($record['cause_of_death'] ?? '')) ?: null;
         $ashStorage = trim((string) ($record['ash_storage'] ?? '')) ?: null;
-        $isCremated = (strtolower($record['is_cremated'] ?? '') === 'yes') ? 'yes' : 'no';
 
         $data = [
             'lot_id' => $lotId,
@@ -359,12 +417,18 @@ class DecedentImportController {
         ];
 
         $status = 'ready';
+
+        // Batch 2: in-file duplicate check
+        if ($duplicateOfRow !== null) {
+            $errors[] = "Duplicate entry within this file (matches row {$duplicateOfRow})";
+        }
+
+        $canCheckDuplicates = ($isCremated === 'yes' || $lotId !== null) && $dob !== null && $dod !== null && $firstName !== '' && $lastName !== '';
+
         if (!empty($errors)) {
             $status = 'rejected';
-        } elseif ($lotId !== null && $dob !== null && $dod !== null) {
-            // Only worth checking once the row is otherwise clean — an
-            // unresolved lot or bad dates already blocks the row regardless
-            // of whether it also happens to look like a duplicate.
+        } elseif ($canCheckDuplicates) {
+            // Only check database once the row is otherwise clean
             $exact = $this->decedentModel->findExactDuplicate($data);
             if ($exact) {
                 $status = 'rejected';
@@ -383,8 +447,9 @@ class DecedentImportController {
         return [
             'row_number' => $rowNumber,
             'data' => $data,
-            'lot_number' => $record['lot_number'] ?? '',
-            'section_name' => $record['section_name'] ?? '',
+            'lot_number' => $lotNumber,
+            'section_name' => $sectionName,
+            'block_name' => $blockName ?: '',
             'status' => $status,
             'errors' => $errors,
             'warnings' => $warnings,

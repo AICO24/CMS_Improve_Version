@@ -1322,11 +1322,11 @@ document.addEventListener('DOMContentLoaded', async function () {
     document.getElementById('downloadImportTemplate').addEventListener('click', () => {
         // A few varied example rows (not just one) so the template reads as
         // an organized little table when opened, not a single crammed line.
-        const columns = ['first_name', 'last_name', 'middle_name', 'suffix', 'dob', 'dod', 'lot_number', 'section_name', 'cause_of_death', 'contact_name', 'contact_number', 'is_cremated', 'ash_storage'];
+        const columns = ['first_name', 'last_name', 'middle_name', 'suffix', 'dob', 'dod', 'lot_number', 'section_name', 'block_name', 'cause_of_death', 'contact_name', 'contact_number', 'is_cremated', 'ash_storage'];
         const sampleRows = [
-            ['Juan', 'Dela Cruz', 'Santos', '', '1950-01-01', '2020-03-15', 'A1-01', 'Section A', 'Natural causes', 'Maria Dela Cruz', '09171234567', 'no', ''],
-            ['Rosario', 'Villanueva', '', 'Jr.', '1945-06-20', '2019-11-02', 'A1-02', 'Section A', 'Cardiac arrest', 'Pedro Villanueva', '09182223344', 'no', ''],
-            ['Elena', 'Bautista', 'Reyes', '', '1938-09-08', '2021-04-10', 'B1-05', 'Section B', 'Old age', 'Ana Bautista', '09193334455', 'yes', 'Columbarium Niche 12'],
+            ['Juan', 'Dela Cruz', 'Santos', '', '1950-01-01', '2020-03-15', '1', 'Section A', 'Block 1', 'Natural causes', 'Maria Dela Cruz', '09171234567', 'no', ''],
+            ['Rosario', 'Villanueva', '', 'Jr.', '1945-06-20', '2019-11-02', '2', 'Section A', 'Block 1', 'Cardiac arrest', 'Pedro Villanueva', '09182223344', 'no', ''],
+            ['Elena', 'Bautista', 'Reyes', '', '1938-09-08', '2021-04-10', '', '', '', 'Old age', 'Ana Bautista', '09193334455', 'yes', 'Columbarium Niche 12'],
         ];
         const csvRows = [columns, ...sampleRows].map((row) => row.join(','));
         const blob = new Blob([csvRows.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8;' });
@@ -1367,13 +1367,16 @@ document.addEventListener('DOMContentLoaded', async function () {
             const disabled = row.status === 'rejected' ? 'disabled' : '';
             if (row.status !== 'rejected') hasCheckableRows = true;
             const notes = [...(row.errors || []), ...(row.warnings || [])].join('; ') || '—';
+            const lotDisplay = row.lot_number
+                ? `${escapeHtml(row.lot_number)} (${escapeHtml(row.section_name)}${row.block_name ? ' - ' + escapeHtml(row.block_name) : ''})`
+                : (row.data.is_cremated === 'yes' ? '<span class="status-badge status-info">Cremation Only</span>' : '—');
             return `
                 <tr data-index="${index}">
                     <td><input type="checkbox" class="import-row-check" ${checked} ${disabled}></td>
                     <td>${row.row_number}</td>
                     <td>${escapeHtml(`${row.data.first_name} ${row.data.last_name}`)}</td>
                     <td>${escapeHtml(row.data.dob)} — ${escapeHtml(row.data.dod)}</td>
-                    <td>${escapeHtml(row.lot_number)} (${escapeHtml(row.section_name)})</td>
+                    <td>${lotDisplay}</td>
                     <td><span class="status-badge ${STATUS_BADGE_CLASS[row.status]}">${STATUS_LABELS[row.status]}</span> <span class="import-row-notes">${escapeHtml(notes)}</span></td>
                 </tr>
             `;
