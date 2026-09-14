@@ -477,8 +477,13 @@ class DecedentImportController {
             return ['error' => 'Too many rows in a single import', 'code' => 400];
         }
 
+        $userId = is_array($actor) ? ($actor['user_id'] ?? null) : $actor;
+        $username = is_array($actor) ? ($actor['username'] ?? null) : null;
+        $batchId = 'BATCH-' . date('YmdHis') . '-' . bin2hex(random_bytes(3));
+
         $imported = 0;
         $failed = [];
+        $createdIds = [];
 
         foreach ($rows as $index => $row) {
             $data = is_array($row['data'] ?? null) ? $row['data'] : [];
@@ -486,22 +491,93 @@ class DecedentImportController {
                 $data['confirm_duplicate'] = true;
             }
 
-            $result = $this->decedentController->store($data, $actor);
-            if (!empty($result['success'])) {
-                $imported++;
-            } else {
+            try {
+                $result = $this->decedentController->store($data, $actor);
+                if (!empty($result['success'])) {
+                    $imported++;
+                    if (!empty($result['decedent_id'])) {
+                        $createdIds[] = (int) $result['decedent_id'];
+                    }
+                } else {
+                    $failed[] = [
+                        'row_number' => $row['row_number'] ?? ($index + 1),
+                        'error' => $result['error'] ?? ($result['message'] ?? 'Unknown error'),
+                    ];
+                }
+            } catch (Throwable $e) {
                 $failed[] = [
                     'row_number' => $row['row_number'] ?? ($index + 1),
-                    'error' => $result['error'] ?? ($result['message'] ?? 'Unknown error'),
+                    'error' => 'Exception: ' . $e->getMessage(),
                 ];
             }
         }
 
+        // Batch 4 (Audit Logging & AutomationEngine Integration):
+        // 1. Log aggregate AuditLog entry
+        require_once __DIR__ . '/../models/AuditLog.php';
+        $auditLog = new AuditLog();
+        $auditAction = !empty($failed)
+            ? 'Decedent batch import completed with errors'
+            : 'Decedent batch import completed';
+
+        $auditDetails = [
+            'import_batch_id' => $batchId,
+            'imported_count' => $imported,
+            'failed_count' => count($failed),
+            'total_requested' => count($rows),
+            'created_decedent_ids' => $createdIds,
+        ];
+        if (!empty($failed)) {
+            $auditDetails['failures'] = array_slice($failed, 0, 10);
+        }
+
+        $auditLog->log(
+            $auditAction,
+            $userId,
+            $username,
+            'DecedentImport',
+            null,
+            $auditDetails
+        );
+
+        // 2. If there are failed rows, raise a reviewable SystemException
+        if (!empty($failed)) {
+            require_once __DIR__ . '/../models/SystemException.php';
+            require_once __DIR__ . '/../models/Notification.php';
+            $exceptionModel = new SystemException();
+            $failedCount = count($failed);
+            $totalCount = count($rows);
+            $reason = "Batch import {$batchId} encountered {$failedCount} failure(s) out of {$totalCount} row(s).";
+
+            $exceptionModel->raise([
+                'event' => 'decedent.import_partial_failure',
+                'entity_type' => 'DecedentImport',
+                'entity_id' => !empty($createdIds) ? $createdIds[0] : 0,
+                'reason' => $reason,
+                'severity' => $imported === 0 ? 'critical' : 'warning',
+                'context' => [
+                    'import_batch_id' => $batchId,
+                    'failed' => array_slice($failed, 0, 10),
+                ],
+            ]);
+
+            $notificationModel = new Notification();
+            $notificationModel->create([
+                'title' => 'Decedent Import Warning',
+                'message' => $reason,
+                'notification_type' => 'System',
+                'user_id' => $userId,
+                'is_read' => 0,
+            ]);
+        }
+
         return [
             'success' => true,
+            'import_batch_id' => $batchId,
             'imported' => $imported,
             'failed' => $failed,
-            'message' => "Imported {$imported} of " . count($rows) . ' record(s)',
+            'created_ids' => $createdIds,
+            'message' => "Imported {$imported} of " . count($rows) . " record(s) (Batch ID: {$batchId})",
         ];
     }
 }
