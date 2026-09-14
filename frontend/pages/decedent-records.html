@@ -441,54 +441,128 @@
 
     <!-- Import Modal (Batch J: bulk CSV import for historical records) -->
     <div id="importModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
-        <div class="modal-content modal--lg">
+        <div class="modal-content modal--lg modal--import">
             <button type="button" class="close-import" aria-label="Close"><i class="fas fa-xmark"></i></button>
-            <h3 id="importModalTitle">Import Decedent Records from CSV</h3>
-
-            <div class="import-step">
-                <p class="import-help">Your spreadsheet needs one column per field below. Dates should be written as YYYY-MM-DD (e.g. 2020-03-15). Download the template below to get the exact column headers already set up for you.</p>
-                <div class="import-columns-legend">
-                    <div class="import-columns-group">
-                        <strong>Required</strong>
-                        <ul>
-                            <li>First Name</li>
-                            <li>Last Name</li>
-                            <li>Date of Birth</li>
-                            <li>Date of Death</li>
-                            <li>Lot Number</li>
-                            <li>Section</li>
-                        </ul>
-                    </div>
-                    <div class="import-columns-group">
-                        <strong>Optional</strong>
-                        <ul>
-                            <li>Middle Name</li>
-                            <li>Suffix</li>
-                            <li>Cause of Death</li>
-                            <li>Family Contact Name</li>
-                            <li>Family Contact Number</li>
-                            <li>Cremated? (Yes/No)</li>
-                            <li>Ash Storage Location</li>
-                        </ul>
-                    </div>
+            
+            <div class="modal-header-compact">
+                <div class="modal-header-icon-wrap">
+                    <i class="fas fa-file-csv"></i>
                 </div>
-                <button type="button" class="btn-secondary import-template-btn" id="downloadImportTemplate">
-                    <i class="fas fa-file-arrow-down"></i>
-                    Download Template
-                </button>
-                <div class="import-upload-row">
-                    <input type="file" id="importFileInput" accept=".csv,text/csv">
-                    <button type="button" class="btn-secondary" id="previewImportBtn">Preview</button>
+                <div>
+                    <h3 id="importModalTitle">Import Decedent Records from CSV</h3>
+                    <p class="modal-header-subtitle">Bulk import historical or batch decedent records via spreadsheet</p>
                 </div>
             </div>
 
+            <!-- 3-Step Guided Flow -->
+            <div class="import-steps-bar">
+                <div class="import-step-item active">
+                    <span class="step-num"><i class="fas fa-file-lines"></i></span>
+                    <span class="step-text">1. Template Format</span>
+                </div>
+                <div class="import-step-arrow"><i class="fas fa-chevron-right"></i></div>
+                <div class="import-step-item">
+                    <span class="step-num"><i class="fas fa-cloud-arrow-up"></i></span>
+                    <span class="step-text">2. Upload CSV</span>
+                </div>
+                <div class="import-step-arrow"><i class="fas fa-chevron-right"></i></div>
+                <div class="import-step-item">
+                    <span class="step-num"><i class="fas fa-list-check"></i></span>
+                    <span class="step-text">3. Preview & Confirm</span>
+                </div>
+            </div>
+
+            <div class="import-step">
+                <!-- Step 1: Template & Columns Guidance -->
+                <div class="import-guide-card">
+                    <div class="import-guide-top">
+                        <p class="import-help">
+                            Ensure your spreadsheet columns match the schema below. Dates must be formatted as <code>YYYY-MM-DD</code> (e.g., 2020-03-15).
+                        </p>
+                        <button type="button" class="btn-secondary import-template-btn" id="downloadImportTemplate">
+                            <i class="fas fa-file-arrow-down"></i>
+                            Download Sample Template
+                        </button>
+                    </div>
+
+                    <div class="import-columns-legend">
+                        <div class="import-columns-group required">
+                            <div class="legend-group-header">
+                                <span class="badge-dot dot-required"></span>
+                                <strong>Required Headers</strong>
+                            </div>
+                            <div class="import-pills-wrap">
+                                <span class="import-pill pill-required">First Name</span>
+                                <span class="import-pill pill-required">Last Name</span>
+                                <span class="import-pill pill-required">Date of Birth</span>
+                                <span class="import-pill pill-required">Date of Death</span>
+                                <span class="import-pill pill-required">Lot Number</span>
+                                <span class="import-pill pill-required">Section</span>
+                            </div>
+                        </div>
+                        <div class="import-columns-group optional">
+                            <div class="legend-group-header">
+                                <span class="badge-dot dot-optional"></span>
+                                <strong>Optional Headers</strong>
+                            </div>
+                            <div class="import-pills-wrap">
+                                <span class="import-pill pill-optional">Middle Name</span>
+                                <span class="import-pill pill-optional">Suffix</span>
+                                <span class="import-pill pill-optional">Cause of Death</span>
+                                <span class="import-pill pill-optional">Contact Name</span>
+                                <span class="import-pill pill-optional">Contact Number</span>
+                                <span class="import-pill pill-optional">Cremated? (Yes/No)</span>
+                                <span class="import-pill pill-optional">Ash Storage</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Interactive CSV Drag & Drop Upload Zone -->
+                <div class="import-upload-section">
+                    <div class="csv-dropzone" id="importDropzone" tabindex="0" role="button" aria-label="Upload CSV File">
+                        <input type="file" id="importFileInput" accept=".csv,text/csv" hidden>
+                        <div class="dropzone-inner" id="dropzoneEmpty">
+                            <div class="dropzone-icon"><i class="fas fa-cloud-arrow-up"></i></div>
+                            <div class="dropzone-text">
+                                <p class="dropzone-title">Drag & drop your CSV file here, or <span class="dropzone-browse">Browse</span></p>
+                                <span class="dropzone-sub">Supports standard .csv format up to 5MB</span>
+                            </div>
+                        </div>
+                        <div class="dropzone-file-selected" id="importFileCard" hidden>
+                            <div class="file-card-info">
+                                <div class="file-card-icon"><i class="fas fa-file-csv"></i></div>
+                                <div class="file-details">
+                                    <span class="file-name" id="importFileName">records.csv</span>
+                                    <span class="file-size" id="importFileSize">0 KB</span>
+                                </div>
+                            </div>
+                            <button type="button" class="file-remove-btn" id="removeImportFileBtn" title="Remove file" aria-label="Remove file">
+                                <i class="fas fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="import-upload-actions">
+                        <button type="button" class="btn-secondary" id="previewImportBtn">
+                            <i class="fas fa-magnifying-glass-chart"></i> Preview Records
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Inspection Table & Confirmation -->
             <div id="importPreviewSection" class="import-preview-section" hidden>
-                <div class="import-summary" id="importSummary"></div>
+                <div class="import-preview-header">
+                    <div class="preview-header-left">
+                        <h4 class="preview-title"><i class="fas fa-table-list"></i> CSV Data Validation Preview</h4>
+                    </div>
+                    <div class="import-summary" id="importSummary"></div>
+                </div>
                 <div class="table-container import-preview-table-container">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th></th>
+                                <th style="width: 42px;"><input type="checkbox" id="selectAllImportRows" title="Toggle all ready rows"></th>
                                 <th>Row</th>
                                 <th>Name</th>
                                 <th>DOB — DOD</th>
@@ -499,10 +573,12 @@
                         <tbody id="importPreviewBody"></tbody>
                     </table>
                 </div>
-                <button type="button" class="btn-save bookmarkBtn" id="confirmImportBtn">
-                    <span class="IconContainer"><i class="fas fa-upload icon"></i></span>
-                    <span class="text">Import Selected Rows</span>
-                </button>
+                <div class="import-modal-footer">
+                    <button type="button" class="btn-save bookmarkBtn" id="confirmImportBtn">
+                        <span class="IconContainer"><i class="fas fa-upload icon"></i></span>
+                        <span class="text">Import Selected Rows</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
