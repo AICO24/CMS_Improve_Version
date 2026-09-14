@@ -31,6 +31,10 @@ class DecedentRequestController {
     public function index($status = null) {
         $requests = $this->requestModel->findAll($status);
         $this->flagPossibleDuplicates($requests);
+        foreach ($requests as &$request) {
+            $request['parsed_name'] = self::parseFullName($request['full_name'] ?? '');
+        }
+        unset($request);
         return $requests;
     }
 
@@ -95,7 +99,217 @@ class DecedentRequestController {
     }
 
     public function mine($userId) {
-        return $this->requestModel->findByUser($userId);
+        $requests = $this->requestModel->findByUser($userId);
+        foreach ($requests as &$request) {
+            $request['parsed_name'] = self::parseFullName($request['full_name'] ?? '');
+        }
+        unset($request);
+        return $requests;
+    }
+
+    // Batch 3 (Automated Data Prefill): Intelligently splits a full name string
+    // into canonical components: first_name, middle_name, last_name, suffix.
+    // Handles suffixes (Jr, Sr, III, etc.), inverted comma format ("Santos, Juan M."),
+    // compound Filipino/Spanish surnames (De La Cruz, Del Rosario, San Jose),
+    // and middle initials while preserving clean Title Casing.
+    public static function parseFullName($fullName) {
+        if (!is_string($fullName)) {
+            return [
+                'first_name' => '',
+                'middle_name' => '',
+                'last_name' => '',
+                'suffix' => '',
+            ];
+        }
+
+        $raw = trim(preg_replace('/\s+/', ' ', $fullName));
+        if ($raw === '') {
+            return [
+                'first_name' => '',
+                'middle_name' => '',
+                'last_name' => '',
+                'suffix' => '',
+            ];
+        }
+
+        $knownSuffixes = [
+            'jr' => 'Jr.',
+            'jr.' => 'Jr.',
+            'sr' => 'Sr.',
+            'sr.' => 'Sr.',
+            'ii' => 'II',
+            'iii' => 'III',
+            'iv' => 'IV',
+            'v' => 'V',
+            'vi' => 'VI',
+            'vii' => 'VII',
+            'viii' => 'VIII',
+            'ix' => 'IX',
+            'x' => 'X',
+            '1st' => '1st',
+            '2nd' => '2nd',
+            '3rd' => '3rd',
+        ];
+
+        $compoundSurnameMulti = ['de la', 'de los', 'de las', 'delos', 'delas', 'van der', 'van den', 'van de', 'von der'];
+        $compoundSurnameSingle = ['san', 'santa', 'santo', 'del', 'de', 'dela', 'delos', 'delas', 'van', 'von', 'da', 'das', 'dos', 'al'];
+
+        $suffix = '';
+
+        // 1. Inverted format with comma: "Last, First Middle [Suffix]" or "Last, First, Suffix"
+        if (strpos($raw, ',') !== false) {
+            $parts = array_values(array_filter(array_map('trim', explode(',', $raw)), fn($p) => $p !== ''));
+            if (count($parts) >= 2) {
+                $lastNamePart = $parts[0];
+                $firstMiddlePart = $parts[1];
+
+                if (isset($parts[2])) {
+                    $clean3 = strtolower(rtrim($parts[2], '.'));
+                    if (isset($knownSuffixes[$clean3])) {
+                        $suffix = $knownSuffixes[$clean3];
+                    }
+                }
+
+                $tokens = explode(' ', $firstMiddlePart);
+                if (empty($suffix) && count($tokens) > 1) {
+                    $lastTok = strtolower(rtrim(end($tokens), '.'));
+                    if (isset($knownSuffixes[$lastTok])) {
+                        $suffix = $knownSuffixes[$lastTok];
+                        array_pop($tokens);
+                    }
+                }
+
+                $firstName = '';
+                $middleName = '';
+                if (count($tokens) === 1) {
+                    $firstName = $tokens[0];
+                } elseif (count($tokens) === 2) {
+                    if (preg_match('/^[A-Za-z]\.?$/', $tokens[1])) {
+                        $firstName = $tokens[0];
+                        $middleName = $tokens[1];
+                    } else {
+                        $compoundFirstLeads = ['maria', 'mary', 'john', 'juan', 'mark', 'anne', 'ana', 'jose'];
+                        if (in_array(strtolower($tokens[0]), $compoundFirstLeads, true)) {
+                            $firstName = implode(' ', $tokens);
+                        } else {
+                            $firstName = $tokens[0];
+                            $middleName = $tokens[1];
+                        }
+                    }
+                } else {
+                    $middleName = array_pop($tokens);
+                    $firstName = implode(' ', $tokens);
+                }
+
+                if ($middleName !== '' && preg_match('/^[A-Za-z]$/', $middleName)) {
+                    $middleName .= '.';
+                }
+
+                return [
+                    'first_name' => self::normalizeName($firstName),
+                    'middle_name' => self::normalizeName($middleName),
+                    'last_name' => self::normalizeName($lastNamePart),
+                    'suffix' => $suffix,
+                ];
+            }
+        }
+
+        // 2. Standard format: "First [Middle] Last [Suffix]"
+        $tokens = explode(' ', $raw);
+
+        // Check suffix at the end
+        if (count($tokens) > 1) {
+            $lastTok = strtolower(rtrim(end($tokens), '.'));
+            if (isset($knownSuffixes[$lastTok])) {
+                $suffix = $knownSuffixes[$lastTok];
+                array_pop($tokens);
+            }
+        }
+
+        if (count($tokens) === 1) {
+            return [
+                'first_name' => self::normalizeName($tokens[0]),
+                'middle_name' => '',
+                'last_name' => '',
+                'suffix' => $suffix,
+            ];
+        }
+
+        // Check compound surname
+        $lastName = '';
+        $len = count($tokens);
+        if ($len >= 4 && in_array(strtolower($tokens[$len - 3] . ' ' . $tokens[$len - 2]), $compoundSurnameMulti, true)) {
+            $lastName = implode(' ', array_splice($tokens, $len - 3, 3));
+        } elseif ($len >= 3 && in_array(strtolower($tokens[$len - 2]), $compoundSurnameSingle, true)) {
+            $lastName = implode(' ', array_splice($tokens, $len - 2, 2));
+        } else {
+            $lastName = array_pop($tokens);
+        }
+
+        $firstName = '';
+        $middleName = '';
+
+        if (count($tokens) === 1) {
+            $firstName = $tokens[0];
+        } elseif (count($tokens) === 2) {
+            if (preg_match('/^[A-Za-z]\.?$/', $tokens[1])) {
+                $firstName = $tokens[0];
+                $middleName = $tokens[1];
+            } else {
+                $compoundFirstLeads = ['maria', 'mary', 'john', 'juan', 'mark', 'anne', 'ana', 'jose'];
+                if (in_array(strtolower($tokens[0]), $compoundFirstLeads, true)) {
+                    $firstName = implode(' ', $tokens);
+                } else {
+                    $firstName = $tokens[0];
+                    $middleName = $tokens[1];
+                }
+            }
+        } else {
+            // 3 or more tokens in remainder
+            $lastTok = end($tokens);
+            if (preg_match('/^[A-Za-z]\.?$/', $lastTok)) {
+                $middleName = array_pop($tokens);
+                $firstName = implode(' ', $tokens);
+            } else {
+                $middleName = array_pop($tokens);
+                $firstName = implode(' ', $tokens);
+            }
+        }
+
+        if ($middleName !== '' && preg_match('/^[A-Za-z]$/', $middleName)) {
+            $middleName .= '.';
+        }
+
+        return [
+            'first_name' => self::normalizeName($firstName),
+            'middle_name' => self::normalizeName($middleName),
+            'last_name' => self::normalizeName($lastName),
+            'suffix' => $suffix,
+        ];
+    }
+
+    public static function normalizeName($value) {
+        if ($value === null) {
+            return '';
+        }
+        $val = trim(preg_replace('/\s+/', ' ', (string) $value));
+        if ($val === '') {
+            return '';
+        }
+        if (mb_strtoupper($val, 'UTF-8') === $val || mb_strtolower($val, 'UTF-8') === $val) {
+            $words = explode(' ', mb_strtolower($val, 'UTF-8'));
+            $lowerParticles = ['de', 'del', 'da', 'la', 'le', 'y', 'van', 'von'];
+            $resultWords = [];
+            foreach ($words as $idx => $w) {
+                if ($idx > 0 && in_array($w, $lowerParticles, true)) {
+                    $resultWords[] = $w;
+                } else {
+                    $resultWords[] = mb_convert_case($w, MB_CASE_TITLE, 'UTF-8');
+                }
+            }
+            return implode(' ', $resultWords);
+        }
+        return $val;
     }
 
     public function store($data, $user) {

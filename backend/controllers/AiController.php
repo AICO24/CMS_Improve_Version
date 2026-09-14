@@ -191,6 +191,38 @@ class AiController {
     // decedent_documents itself.
     public function extractCertificate($payload) {
         $payload = is_array($payload) ? $payload : [];
+
+        // Batch 3 (Automated Data Prefill): Resolve document from disk if
+        // attachment_path or request_id is supplied without image_base64.
+        if (empty($payload['image_base64'])) {
+            $attachmentPath = $payload['attachment_path'] ?? null;
+            if (empty($attachmentPath) && !empty($payload['request_id'])) {
+                require_once __DIR__ . '/../models/DecedentRequest.php';
+                $reqModel = new DecedentRequest();
+                $req = $reqModel->findById((int) $payload['request_id']);
+                if ($req && !empty($req['attachment_path'])) {
+                    $attachmentPath = $req['attachment_path'];
+                }
+            }
+
+            if (!empty($attachmentPath)) {
+                $relativePath = parse_url($attachmentPath, PHP_URL_PATH) ?: $attachmentPath;
+                $diskPath = __DIR__ . '/../uploads/decedent-documents/' . basename($relativePath);
+                if (is_file($diskPath)) {
+                    $bytes = file_get_contents($diskPath);
+                    if ($bytes !== false) {
+                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                        $mime = $finfo ? finfo_file($finfo, $diskPath) : 'application/octet-stream';
+                        if ($finfo) {
+                            finfo_close($finfo);
+                        }
+                        $payload['image_base64'] = base64_encode($bytes);
+                        $payload['mime_type'] = $mime;
+                    }
+                }
+            }
+        }
+
         $result = $this->aiService->getCertificateExtraction($payload);
         $data = (!empty($result['error']) || !is_array($result)) ? null : ($result['result'] ?? null);
         return ['result' => is_array($data) ? $data : null];

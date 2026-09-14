@@ -273,9 +273,24 @@ document.addEventListener('DOMContentLoaded', async function () {
             return;
         }
 
-        pendingRequestsBody.innerHTML = pendingRequests.map((request) => `
+        pendingRequestsBody.innerHTML = pendingRequests.map((request) => {
+            const hasDoc = Boolean(request.attachment_path);
+            const docBadge = hasDoc
+                ? `<span class="status-badge status-info" title="Citizen uploaded document: ${escapeHtml(request.attachment_original_filename || 'Attachment')}"><i class="fas fa-paperclip"></i> Attachment</span>`
+                : '';
+            const scheduleBadge = request.linked_schedule_id
+                ? `<span class="status-badge status-warning" title="A citizen already booked and may have paid for this — finish the record so their burial can be marked Completed.">Burial #${escapeHtml(request.linked_schedule_id)}</span>`
+                : '';
+            const cremationBadge = request.linked_cremation_id
+                ? `<span class="status-badge status-warning" title="Citizen booked cremation — finish the record so their cremation can proceed.">Cremation #${escapeHtml(request.linked_cremation_id)}</span>`
+                : '';
+            const dupBadge = request.possible_duplicate_of
+                ? `<span class="status-badge status-danger" title="Another pending request (#${escapeHtml(request.possible_duplicate_of)}: ${escapeHtml(request.possible_duplicate_name)}) looks similar — check before approving both.">Possible duplicate of #${escapeHtml(request.possible_duplicate_of)}</span>`
+                : '';
+
+            return `
             <tr data-request-id="${request.request_id}">
-                <td>${escapeHtml(request.full_name)} ${request.linked_schedule_id ? '<span class="status-badge status-warning" title="A citizen already booked and may have paid for this — finish the record so their burial can be marked Completed.">Linked to booking #' + escapeHtml(request.linked_schedule_id) + '</span>' : ''} ${request.possible_duplicate_of ? '<span class="status-badge status-danger" title="Another pending request (#' + escapeHtml(request.possible_duplicate_of) + ': ' + escapeHtml(request.possible_duplicate_name) + ') looks similar — check before approving both.">Possible duplicate of #' + escapeHtml(request.possible_duplicate_of) + '</span>' : ''}</td>
+                <td>${escapeHtml(request.full_name)} ${scheduleBadge} ${cremationBadge} ${docBadge} ${dupBadge}</td>
                 <td>${escapeHtml(request.approximate_dod || '—')}</td>
                 <td>${escapeHtml(request.relationship || '—')}</td>
                 <td>${escapeHtml(request.requested_by_name || 'Unknown')}</td>
@@ -291,7 +306,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                     </button>
                 </td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
 
         pendingRequestsBody.querySelectorAll('.btn-approve-request').forEach((btn) => {
             btn.addEventListener('click', () => approveRequest(parseInt(btn.dataset.id, 10)));
@@ -301,14 +317,233 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 
-    // Approve doesn't create the decedent_records row itself — it opens the
-    // SAME Add Decedent form staff already uses (pre-filled with the name/
-    // dod the citizen supplied, plus — Batch G — the requester's own name/
-    // phone number as a starting point for the family contact fields, since
-    // the person submitting this request usually IS that contact), so staff
-    // still fills in and verifies every sensitive/required field (lot, dob,
-    // cause of death, contact info) by hand before saving. saveRecord()
-    // links the request to whatever decedent_id that form creates.
+    // Batch 3 (Automated Data Prefill): Intelligently splits a full name string
+    // into canonical components: first_name, middle_name, last_name, suffix.
+    // Handles suffixes (Jr, Sr, III, etc.), inverted comma format ("Santos, Juan M."),
+    // compound Filipino/Spanish surnames (De La Cruz, Del Rosario, San Jose),
+    // and middle initials with clean Title Casing.
+    function parseFullName(fullName) {
+        if (!fullName || typeof fullName !== 'string') {
+            return { first_name: '', middle_name: '', last_name: '', suffix: '' };
+        }
+
+        const raw = fullName.trim().replace(/\s+/g, ' ');
+        if (!raw) {
+            return { first_name: '', middle_name: '', last_name: '', suffix: '' };
+        }
+
+        const knownSuffixes = {
+            'jr': 'Jr.', 'jr.': 'Jr.',
+            'sr': 'Sr.', 'sr.': 'Sr.',
+            'ii': 'II', 'iii': 'III', 'iv': 'IV', 'v': 'V', 'vi': 'VI', 'vii': 'VII', 'viii': 'VIII', 'ix': 'IX', 'x': 'X',
+            '1st': '1st', '2nd': '2nd', '3rd': '3rd',
+        };
+
+        const compoundSurnameMulti = ['de la', 'de los', 'de las', 'delos', 'delas', 'van der', 'van den', 'van de', 'von der'];
+        const compoundSurnameSingle = ['san', 'santa', 'santo', 'del', 'de', 'dela', 'delos', 'delas', 'van', 'von', 'da', 'das', 'dos', 'al'];
+
+        let suffix = '';
+
+        function toTitleCase(str) {
+            if (!str) return '';
+            const lowerParticles = ['de', 'del', 'da', 'la', 'le', 'y', 'van', 'von'];
+            const words = str.toLowerCase().split(' ');
+            return words.map((w, idx) => {
+                if (idx > 0 && lowerParticles.includes(w)) {
+                    return w;
+                }
+                return w.charAt(0).toUpperCase() + w.slice(1);
+            }).join(' ');
+        }
+
+        // Check for "Last, First Middle [Suffix]" format
+        if (raw.includes(',')) {
+            const parts = raw.split(',').map((p) => p.trim()).filter(Boolean);
+            if (parts.length >= 2) {
+                const lastNamePart = parts[0];
+                const firstMiddlePart = parts[1];
+
+                if (parts[2]) {
+                    const clean3 = parts[2].toLowerCase().replace(/\.$/, '');
+                    if (knownSuffixes[clean3]) {
+                        suffix = knownSuffixes[clean3];
+                    }
+                }
+
+                let tokens = firstMiddlePart.split(' ');
+                if (!suffix && tokens.length > 1) {
+                    const lastTok = tokens[tokens.length - 1].toLowerCase().replace(/\.$/, '');
+                    if (knownSuffixes[lastTok]) {
+                        suffix = knownSuffixes[lastTok];
+                        tokens.pop();
+                    }
+                }
+
+                let firstName = '';
+                let middleName = '';
+                if (tokens.length === 1) {
+                    firstName = tokens[0];
+                } else if (tokens.length === 2) {
+                    if (/^[A-Za-z]\.?$/.test(tokens[1])) {
+                        firstName = tokens[0];
+                        middleName = tokens[1];
+                    } else {
+                        const compoundFirstLeads = ['maria', 'mary', 'john', 'juan', 'mark', 'anne', 'ana', 'jose'];
+                        if (compoundFirstLeads.includes(tokens[0].toLowerCase())) {
+                            firstName = tokens.join(' ');
+                        } else {
+                            firstName = tokens[0];
+                            middleName = tokens[1];
+                        }
+                    }
+                } else {
+                    middleName = tokens.pop();
+                    firstName = tokens.join(' ');
+                }
+
+                if (middleName && /^[A-Za-z]$/.test(middleName)) {
+                    middleName += '.';
+                }
+
+                return {
+                    first_name: toTitleCase(firstName),
+                    middle_name: toTitleCase(middleName),
+                    last_name: toTitleCase(lastNamePart),
+                    suffix: suffix,
+                };
+            }
+        }
+
+        // Standard "First [Middle] Last [Suffix]"
+        let tokens = raw.split(' ');
+
+        if (tokens.length > 1) {
+            const lastTok = tokens[tokens.length - 1].toLowerCase().replace(/\.$/, '');
+            if (knownSuffixes[lastTok]) {
+                suffix = knownSuffixes[lastTok];
+                tokens.pop();
+            }
+        }
+
+        if (tokens.length === 1) {
+            return {
+                first_name: toTitleCase(tokens[0]),
+                middle_name: '',
+                last_name: '',
+                suffix: suffix,
+            };
+        }
+
+        let lastName = '';
+        const len = tokens.length;
+        if (len >= 4 && compoundSurnameMulti.includes((tokens[len - 3] + ' ' + tokens[len - 2]).toLowerCase())) {
+            lastName = tokens.splice(len - 3, 3).join(' ');
+        } else if (len >= 3 && compoundSurnameSingle.includes(tokens[len - 2].toLowerCase())) {
+            lastName = tokens.splice(len - 2, 2).join(' ');
+        } else {
+            lastName = tokens.pop();
+        }
+
+        let firstName = '';
+        let middleName = '';
+        if (tokens.length === 1) {
+            firstName = tokens[0];
+        } else if (tokens.length === 2) {
+            if (/^[A-Za-z]\.?$/.test(tokens[1])) {
+                firstName = tokens[0];
+                middleName = tokens[1];
+            } else {
+                const compoundFirstLeads = ['maria', 'mary', 'john', 'juan', 'mark', 'anne', 'ana', 'jose'];
+                if (compoundFirstLeads.includes(tokens[0].toLowerCase())) {
+                    firstName = tokens.join(' ');
+                } else {
+                    firstName = tokens[0];
+                    middleName = tokens[1];
+                }
+            }
+        } else {
+            const lastTok = tokens[tokens.length - 1];
+            if (/^[A-Za-z]\.?$/.test(lastTok)) {
+                middleName = tokens.pop();
+                firstName = tokens.join(' ');
+            } else {
+                middleName = tokens.pop();
+                firstName = tokens.join(' ');
+            }
+        }
+
+        if (middleName && /^[A-Za-z]$/.test(middleName)) {
+            middleName += '.';
+        }
+
+        return {
+            first_name: toTitleCase(firstName),
+            middle_name: toTitleCase(middleName),
+            last_name: toTitleCase(lastName),
+            suffix: suffix,
+        };
+    }
+
+    function showRequestApprovalBanner(request) {
+        const banner = document.getElementById('requestApprovalBanner');
+        if (!banner) return;
+
+        const rel = request.relationship ? `Relationship: <strong>${escapeHtml(request.relationship)}</strong>` : '';
+        const notes = request.notes ? `<div class="banner-notes"><i class="fas fa-comment-dots"></i> "${escapeHtml(request.notes)}"</div>` : '';
+        const docInfo = request.attachment_path
+            ? `<span class="banner-link-pill"><i class="fas fa-paperclip"></i> Attached: ${escapeHtml(request.attachment_original_filename || 'Document')}</span>`
+            : '';
+        const linkInfo = request.linked_cremation_id
+            ? `<span class="banner-link-pill"><i class="fas fa-fire"></i> Cremation #${escapeHtml(request.linked_cremation_id)}</span>`
+            : (request.linked_schedule_id
+                ? `<span class="banner-link-pill"><i class="fas fa-calendar-check"></i> Booking #${escapeHtml(request.linked_schedule_id)}</span>`
+                : '');
+
+        banner.innerHTML = `
+            <div class="banner-header">
+                <div class="banner-title"><i class="fas fa-clipboard-user"></i> Citizen Registration Request #${escapeHtml(request.request_id)}</div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    ${linkInfo}
+                    ${docInfo}
+                </div>
+            </div>
+            <div class="banner-body">
+                <span>Requested by <strong>${escapeHtml(request.requested_by_name || 'Citizen')}</strong> ${rel ? '· ' + rel : ''}</span>
+                ${notes}
+            </div>
+        `;
+        banner.style.display = 'block';
+    }
+
+    function setupCitizenAttachmentPreview(request) {
+        if (!request || !request.attachment_path) return;
+
+        if (certDropzonePlaceholder) certDropzonePlaceholder.style.display = 'none';
+        if (certPreviewContainer) certPreviewContainer.style.display = 'flex';
+
+        const isImage = /\.(jpg|jpeg|png|webp)$/i.test(request.attachment_path);
+        if (isImage) {
+            if (certPreviewImg) {
+                certPreviewImg.src = request.attachment_path;
+                certPreviewImg.style.display = 'block';
+            }
+            if (certPreviewPdf) certPreviewPdf.style.display = 'none';
+        } else {
+            if (certPreviewImg) certPreviewImg.style.display = 'none';
+            if (certPreviewPdf) {
+                certPreviewPdf.style.display = 'flex';
+                if (certPdfName) certPdfName.textContent = request.attachment_original_filename || 'Citizen Document (PDF)';
+            }
+        }
+
+        if (certificateUploadHint) {
+            certificateUploadHint.textContent = `Citizen document on file: ${request.attachment_original_filename || 'Attachment'}. Will be finalized into documents upon approval.`;
+        }
+    }
+
+    // Approve opens the Add Decedent form pre-filled with the citizen-supplied
+    // information using intelligent name splitting, contact auto-fill, and
+    // existing attachment preview with 1-click AI extraction.
     function approveRequest(requestId) {
         const request = pendingRequests.find((item) => item.request_id === requestId);
         if (!request) return;
@@ -316,9 +551,29 @@ document.addEventListener('DOMContentLoaded', async function () {
         approvingRequestId = requestId;
         openAddModal();
 
-        const nameParts = request.full_name.trim().split(/\s+/);
-        document.getElementById('firstName').value = nameParts[0] || '';
-        document.getElementById('lastName').value = nameParts.slice(1).join(' ') || '';
+        modalTitle.innerText = `Approve Request #${requestId} — Add Decedent Record`;
+
+        // Intelligent Name Splitting: use backend-parsed or JS parser fallback
+        const parsed = request.parsed_name || parseFullName(request.full_name);
+        document.getElementById('firstName').value = parsed.first_name || '';
+        document.getElementById('middleName').value = parsed.middle_name || '';
+        document.getElementById('lastName').value = parsed.last_name || '';
+        document.getElementById('suffix').value = parsed.suffix || '';
+
+        // Visual highlight on prefilled name fields
+        ['firstName', 'middleName', 'lastName', 'suffix'].forEach((fId) => {
+            const el = document.getElementById(fId);
+            if (el && el.value) {
+                el.style.transition = 'box-shadow 300ms ease, border-color 300ms ease';
+                el.style.borderColor = '#10b981';
+                el.style.boxShadow = '0 0 0 2px rgba(16, 185, 129, 0.2)';
+                setTimeout(() => {
+                    el.style.borderColor = '';
+                    el.style.boxShadow = '';
+                }, 2000);
+            }
+        });
+
         if (request.approximate_dod) {
             document.getElementById('dod').value = request.approximate_dod;
         }
@@ -327,6 +582,21 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
         if (request.requested_by_contact_number) {
             document.getElementById('contactNumber').value = request.requested_by_contact_number;
+        }
+
+        // Cremation alignment
+        if (request.linked_cremation_id) {
+            document.getElementById('isCremated').value = 'yes';
+            ashStorageGroup.style.display = 'block';
+            updateLotRequirement('yes');
+        }
+
+        // Render context banner inside modal
+        showRequestApprovalBanner(request);
+
+        // Document handling: preview citizen attachment
+        if (request.attachment_path) {
+            setupCitizenAttachmentPreview(request);
         }
     }
 
@@ -479,6 +749,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
         updateLotRequirement('no');
         resetCertificateUpload();
+        const banner = document.getElementById('requestApprovalBanner');
+        if (banner) {
+            banner.innerHTML = '';
+            banner.style.display = 'none';
+        }
         recordModal.style.display = 'flex';
     }
 
@@ -590,17 +865,27 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     extractCertificateBtn.addEventListener('click', async () => {
         const file = certificateFileInput.files[0];
-        if (!file) {
+        const activeRequest = approvingRequestId ? pendingRequests.find((r) => r.request_id === approvingRequestId) : null;
+        const requestAttachmentPath = activeRequest && activeRequest.attachment_path;
+
+        if (!file && !requestAttachmentPath) {
             showToast('Please choose a file first.', { type: 'error' });
             return;
         }
 
         await withButtonLoading(extractCertificateBtn, async () => {
             try {
-                const imageBase64 = await readFileAsBase64(file);
+                let payload = {};
+                if (file) {
+                    const imageBase64 = await readFileAsBase64(file);
+                    payload = { image_base64: imageBase64, mime_type: file.type };
+                } else {
+                    payload = { attachment_path: requestAttachmentPath };
+                }
+
                 const response = await api.request('ai/extract-certificate', {
                     method: 'POST',
-                    body: { image_base64: imageBase64, mime_type: file.type },
+                    body: payload,
                 });
                 const result = response && response.result;
 
