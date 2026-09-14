@@ -1030,17 +1030,122 @@ document.addEventListener('DOMContentLoaded', async function() {
     let importPreviewRows = [];
 
     const importFileInput = document.getElementById('importFileInput');
+    const importDropzone = document.getElementById('importDropzone');
+    const dropzoneEmpty = document.getElementById('dropzoneEmpty');
+    const importFileCard = document.getElementById('importFileCard');
+    const importFileName = document.getElementById('importFileName');
+    const importFileSize = document.getElementById('importFileSize');
+    const removeImportFileBtn = document.getElementById('removeImportFileBtn');
     const previewImportBtn = document.getElementById('previewImportBtn');
     const importPreviewSection = document.getElementById('importPreviewSection');
     const importSummaryEl = document.getElementById('importSummary');
     const importPreviewBody = document.getElementById('importPreviewBody');
+    const selectAllImportRows = document.getElementById('selectAllImportRows');
     const confirmImportBtn = document.getElementById('confirmImportBtn');
+    const importStepItems = importModal ? importModal.querySelectorAll('.import-step-item') : [];
+
+    function setImportStep(step) {
+        importStepItems.forEach((item, idx) => {
+            if (idx + 1 <= step) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+
+    function formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function handleCsvFileSelect(file) {
+        if (!file) return;
+        if (!file.name.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
+            showToast('Please choose a valid CSV (.csv) file.', { type: 'error' });
+            return;
+        }
+        if (importFileName) importFileName.textContent = file.name;
+        if (importFileSize) importFileSize.textContent = formatFileSize(file.size);
+        if (dropzoneEmpty) dropzoneEmpty.hidden = true;
+        if (importFileCard) importFileCard.hidden = false;
+        setImportStep(2);
+    }
+
+    function clearImportFile() {
+        if (importFileInput) importFileInput.value = '';
+        if (dropzoneEmpty) dropzoneEmpty.hidden = false;
+        if (importFileCard) importFileCard.hidden = true;
+        if (importPreviewSection) importPreviewSection.hidden = true;
+        if (importPreviewBody) importPreviewBody.innerHTML = '';
+        if (selectAllImportRows) selectAllImportRows.checked = false;
+        importPreviewRows = [];
+        setImportStep(1);
+    }
+
+    if (importDropzone) {
+        importDropzone.addEventListener('click', (e) => {
+            if (e.target.closest('#removeImportFileBtn')) return;
+            if (importFileInput) importFileInput.click();
+        });
+
+        importDropzone.addEventListener('keydown', (e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('#removeImportFileBtn')) {
+                e.preventDefault();
+                if (importFileInput) importFileInput.click();
+            }
+        });
+
+        importDropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            importDropzone.classList.add('dragover');
+        });
+
+        importDropzone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            importDropzone.classList.remove('dragover');
+        });
+
+        importDropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            importDropzone.classList.remove('dragover');
+            if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                try {
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    importFileInput.files = dt.files;
+                } catch (err) {
+                    // Fallback if DataTransfer constructor is unsupported
+                }
+                handleCsvFileSelect(file);
+            }
+        });
+    }
+
+    if (importFileInput) {
+        importFileInput.addEventListener('change', () => {
+            if (importFileInput.files && importFileInput.files.length > 0) {
+                handleCsvFileSelect(importFileInput.files[0]);
+            }
+        });
+    }
+
+    if (removeImportFileBtn) {
+        removeImportFileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearImportFile();
+        });
+    }
 
     function openImportModal() {
-        importFileInput.value = '';
-        importPreviewRows = [];
-        importPreviewSection.hidden = true;
-        importPreviewBody.innerHTML = '';
+        clearImportFile();
         importModal.style.display = 'flex';
     }
 
@@ -1080,15 +1185,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         importPreviewRows = Array.isArray(preview.rows) ? preview.rows : [];
         const summary = preview.summary || {};
         importSummaryEl.innerHTML = `
-            <strong>${summary.total || 0}</strong> row(s) —
-            <span class="status-badge status-success">${summary.ready || 0} ready</span>
-            <span class="status-badge status-warning">${summary.needs_review || 0} need review</span>
-            <span class="status-badge status-danger">${summary.rejected || 0} rejected</span>
+            <span class="summary-pill summary-total"><i class="fas fa-database"></i> Total: ${summary.total || 0}</span>
+            <span class="summary-pill summary-ready"><i class="fas fa-circle-check"></i> Ready: ${summary.ready || 0}</span>
+            <span class="summary-pill summary-warn"><i class="fas fa-triangle-exclamation"></i> Review: ${summary.needs_review || 0}</span>
+            <span class="summary-pill summary-err"><i class="fas fa-circle-xmark"></i> Rejected: ${summary.rejected || 0}</span>
         `;
 
+        let hasCheckableRows = false;
         importPreviewBody.innerHTML = importPreviewRows.map((row, index) => {
             const checked = row.status === 'ready' ? 'checked' : '';
             const disabled = row.status === 'rejected' ? 'disabled' : '';
+            if (row.status !== 'rejected') hasCheckableRows = true;
             const notes = [...(row.errors || []), ...(row.warnings || [])].join('; ') || '—';
             return `
                 <tr data-index="${index}">
@@ -1102,11 +1209,34 @@ document.addEventListener('DOMContentLoaded', async function() {
             `;
         }).join('');
 
+        if (selectAllImportRows) {
+            selectAllImportRows.checked = hasCheckableRows && ((summary.ready || 0) > 0);
+        }
+
         importPreviewSection.hidden = false;
+        setImportStep(3);
+    }
+
+    if (selectAllImportRows) {
+        selectAllImportRows.addEventListener('change', () => {
+            const isChecked = selectAllImportRows.checked;
+            importPreviewBody.querySelectorAll('.import-row-check:not(:disabled)').forEach((cb) => {
+                cb.checked = isChecked;
+            });
+        });
+
+        importPreviewBody.addEventListener('change', (e) => {
+            if (e.target.classList.contains('import-row-check')) {
+                const allCheckable = Array.from(importPreviewBody.querySelectorAll('.import-row-check:not(:disabled)'));
+                if (allCheckable.length > 0) {
+                    selectAllImportRows.checked = allCheckable.every((cb) => cb.checked);
+                }
+            }
+        });
     }
 
     previewImportBtn.addEventListener('click', async () => {
-        const file = importFileInput.files[0];
+        const file = importFileInput.files ? importFileInput.files[0] : null;
         if (!file) {
             showToast('Please choose a CSV file first.', { type: 'error' });
             return;
