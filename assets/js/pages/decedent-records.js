@@ -137,6 +137,32 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
+    // ── Reports-style Sub-Tabs switching ──
+    const tabBtnAll = document.getElementById('tabBtnAllRecords');
+    const tabBtnPending = document.getElementById('tabBtnPendingRequests');
+    const paneAll = document.getElementById('allRecordsTabPane');
+    const panePending = document.getElementById('pendingRequestsTabPane');
+    const pendingBadge = document.getElementById('pendingRequestsBadge');
+
+    function switchRecordsTab(tab) {
+        if (tab === 'pending') {
+            if (tabBtnPending) tabBtnPending.classList.add('active');
+            if (tabBtnAll) tabBtnAll.classList.remove('active');
+            if (panePending) panePending.style.display = 'block';
+            if (paneAll) paneAll.style.display = 'none';
+        } else {
+            if (tabBtnAll) tabBtnAll.classList.add('active');
+            if (tabBtnPending) tabBtnPending.classList.remove('active');
+            if (paneAll) paneAll.style.display = 'block';
+            if (panePending) panePending.style.display = 'none';
+        }
+    }
+
+    if (tabBtnAll && tabBtnPending) {
+        tabBtnAll.addEventListener('click', () => switchRecordsTab('all'));
+        tabBtnPending.addEventListener('click', () => switchRecordsTab('pending'));
+    }
+
     document.getElementById('openAddModal').addEventListener('click', () => {
         approvingRequestId = null;
         openAddModal();
@@ -218,6 +244,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         const pendingRequestsBody = document.getElementById('pendingRequestsBody');
         try {
             pendingRequests = await api.request('decedent-requests?status=pending', { method: 'GET' });
+            if (pendingBadge) {
+                const count = Array.isArray(pendingRequests) ? pendingRequests.length : 0;
+                pendingBadge.textContent = count;
+                pendingBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+            }
             renderPendingRequests();
         } catch (error) {
             console.error('Failed to load pending decedent requests', error);
