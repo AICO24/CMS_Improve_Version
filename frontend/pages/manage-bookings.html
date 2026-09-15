@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Bookings | Cemetery Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/tokens.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/spacing.css">
+    <link rel="stylesheet" href="../../assets/css/shadows.css">
+    <link rel="stylesheet" href="../../assets/css/animations.css">
+    <link rel="stylesheet" href="../../assets/css/base.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/components/buttons.css">
+    <link rel="stylesheet" href="../../assets/css/components/cards.css">
+    <link rel="stylesheet" href="../../assets/css/components/forms.css">
+    <link rel="stylesheet" href="../../assets/css/components/tables.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/components/modals.css">
+    <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/shared/ai-assistant-widget.css">
+    <link rel="stylesheet" href="../../assets/css/manage-bookings.css">
+    <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
+</head>
+<body class="dashboard-body">
+<script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
+                <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
+            </div>
+            <div class="sidebar-nav">
+                <!-- Dynamically populated by sidebar-nav.js / navigation-config.js -->
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="top-bar">
+                <div class="top-left">
+                    <label class="hamburger">
+                        <input type="checkbox" id="toggleSidebar">
+                        <svg viewBox="0 0 32 32">
+                            <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
+                            <path class="line" d="M7 16H27"></path>
+                        </svg>
+                    </label>
+                    <h3 id="pageTitle">Manage Bookings</h3>
+                </div>
+                <div class="user-info">
+                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
+                    <div class="notification-icon" id="notificationIcon">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="notificationBadge">0</span>
+                    </div>
+                    <div class="profile">
+                        <div class="profile-avatar" id="userAvatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="profile-text">
+                            <div class="user-name" id="userName">Admin User</div>
+                            <div class="user-role" id="userRole">Administrator</div>
+                        </div>
+                    </div>
+                    <button class="Btn logout-btn" id="logoutBtn">
+                        <div class="sign"><i class="fas fa-sign-out-alt"></i></div>
+                        <div class="text">Logout</div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <!-- ── Top Stat Cards (Inspired by Reports Module) ───── -->
+                <div class="bookings-stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-calendar-days"></i></span> Total Bookings</div>
+                        <div class="stat-value" id="statTotalBookings">0</div>
+                        <div class="stat-sub">Active &amp; scheduled services</div>
+                    </div>
+                    <div class="stat-card accent-teal">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-monument"></i></span> Ground Burials</div>
+                        <div class="stat-value" id="statBurialCount">0</div>
+                        <div class="stat-sub">Traditional plot reservations</div>
+                    </div>
+                    <div class="stat-card accent-amber">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-fire"></i></span> Cremations</div>
+                        <div class="stat-value" id="statCremationCount">0</div>
+                        <div class="stat-sub">Columbarium &amp; niche services</div>
+                    </div>
+                    <div class="stat-card accent-red">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span> Needs Review</div>
+                        <div class="stat-value" id="statReviewCount">0</div>
+                        <div class="stat-sub">Exceptions requiring attention</div>
+                    </div>
+                    <div class="stat-card accent-purple">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-circle-check"></i></span> Completed</div>
+                        <div class="stat-value" id="statCompletedCount">0</div>
+                        <div class="stat-sub">Finished ceremonies</div>
+                    </div>
+                </div>
+
+                <!-- ── Service Tab Navigation Bar & Export Suite ─────── -->
+                <div class="booking-tabs-bar">
+                    <div class="booking-tabs-track">
+                        <button type="button" class="booking-tab-btn active" data-tab="all" id="tabAll">
+                            <i class="fas fa-layer-group"></i>
+                            <span>All Bookings</span>
+                            <span class="booking-tab-badge" id="badgeAllCount">0</span>
+                        </button>
+                        <button type="button" class="booking-tab-btn" data-tab="burial" id="tabBurial">
+                            <i class="fas fa-monument"></i>
+                            <span>Ground Burials</span>
+                            <span class="booking-tab-badge" id="badgeBurialCount">0</span>
+                        </button>
+                        <button type="button" class="booking-tab-btn" data-tab="cremation" id="tabCremation">
+                            <i class="fas fa-fire"></i>
+                            <span>Cremations</span>
+                            <span class="booking-tab-badge" id="badgeCremationCount">0</span>
+                        </button>
+                    </div>
+                    <div class="booking-export-actions">
+                        <button type="button" class="report-export-button report-export-button--pdf" id="exportPdfBtn" title="Print daily manifest / schedule PDF">
+                            <i class="fas fa-file-pdf"></i>
+                            <span>Print Manifest</span>
+                        </button>
+                        <button type="button" class="report-export-button report-export-button--excel" id="exportCsvBtn" title="Export bookings list to CSV">
+                            <i class="fas fa-file-excel"></i>
+                            <span>Export CSV</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ── Main Card: Search, Filters, & Table ───────────── -->
+                <div class="main-card">
+                    <div class="toolbar-main-row">
+                        <div class="toolbar-filters">
+                            <div class="search-field">
+                                <input type="text" id="searchQuery" class="search-field__input" placeholder="Search decedent, lot, columbarium, niche...">
+                                <span class="search-field__icon" aria-hidden="true">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
+                                </span>
+                            </div>
+                            <label class="status-select-field" for="statusFilter">
+                                <span>Status</span>
+                                <select id="statusFilter" aria-label="Filter by status">
+                                    <option value="">All statuses</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Confirmed">Confirmed / Scheduled</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="toolbar-actions">
+                            <button class="btn-action-pill" id="toggleAwaitingConfirmation" type="button" aria-pressed="false">
+                                <i class="fas fa-triangle-exclamation"></i>
+                                <span>Needs Review</span>
+                                <span class="count-badge" id="awaitingConfirmationCount">0</span>
+                            </button>
+                            <a class="btn-action-pill" href="exceptions.html" title="Jump to System Exceptions Console">
+                                <i class="fas fa-clipboard-list"></i> Exceptions Hub
+                            </a>
+                            <button class="btn-action-pill" id="clearFilters" type="button">Clear</button>
+                        </div>
+                    </div>
+
+                    <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
+
+                    <!-- Polymorphic Data Table -->
+                    <div class="table-container">
+                        <table class="data-table" id="bookingsTable">
+                            <thead id="bookingsHead">
+                                <!-- Dynamic headers depending on active tab -->
+                            </thead>
+                            <tbody id="bookingsBody">
+                                <tr><td colspan="9" style="text-align:center; padding: 30px;">Loading bookings...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination Controls -->
+                    <div class="pagination-controls" id="paginationControls">
+                        <span class="pagination-info" id="paginationInfo"></span>
+                        <div class="pagination-actions">
+                            <form class="pagination-jump" id="paginationJumpForm">
+                                <label for="pageJumpInput">Jump to</label>
+                                <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Page">
+                                <button class="btn-secondary" id="pageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i></button>
+                            </form>
+                            <span class="pagination-divider" aria-hidden="true"></span>
+                            <button class="btn-secondary" id="prevPage" type="button"><i class="fas fa-chevron-left"></i><span>Prev</span></button>
+                            <button class="btn-secondary" id="nextPage" type="button"><span>Next</span><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ── Booking Detail Modal ──────────────────────────────── -->
+    <div class="modal" id="bookingDetailModal">
+        <div class="modal-content modal--lg">
+            <div class="modal-header">
+                <span id="detailModalTitle"><i class="fas fa-calendar-check"></i> Booking Details</span>
+                <button type="button" class="close-view" id="closeDetailModal" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body" id="bookingDetailBody">
+                <p>Loading details...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="closeDetailModalBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Cash / Offline Payment & Instant Completion Modal ─── -->
+    <div class="modal" id="cashPaymentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span><i class="fas fa-money-bill-wave"></i> Record Cash / Offline Payment</span>
+                <button type="button" class="close-view" id="closeCashModal" aria-label="Close">&times;</button>
+            </div>
+            <form id="cashPaymentForm">
+                <div class="modal-body">
+                    <input type="hidden" id="cashPaymentTargetId">
+                    <input type="hidden" id="cashPaymentServiceType">
+                    
+                    <div class="form-group">
+                        <label for="cashPaymentAmount">Amount received (&#8369;)</label>
+                        <input type="number" id="cashPaymentAmount" min="0.01" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cashPaymentMethod">Payment method</label>
+                        <select id="cashPaymentMethod">
+                            <option value="Cash">Cash</option>
+                            <option value="Check">Check</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cashPaymentReceipt">Receipt number <span class="muted">(optional — leave blank to auto-generate)</span></label>
+                        <input type="text" id="cashPaymentReceipt" placeholder="Leave blank to auto-generate official receipt">
+                    </div>
+                    <p class="help" id="cashPaymentHelpText">
+                        Marks the booking Completed, records a Verified payment in Revenue Reports, and automatically triggers post-completion resource automation.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancelCashModal">Cancel</button>
+                    <button type="submit" class="btn-primary" id="submitCashPayment">Confirm Payment &amp; Complete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ── Floating AI Assistant Mount (Fixed to Bottom-Right) ── -->
+    <div id="aiAssistantMount"></div>
+
+    <!-- ── Scripts ───────────────────────────────────────────── -->
+    <script src="../../assets/js/shared/api.js"></script>
+    <script src="../../assets/js/shared/navigation-config.js"></script>
+    <script src="../../assets/js/shared/sidebar-nav.js"></script>
+    <script src="../../assets/js/shared/pagination.js"></script>
+    <script src="../../assets/js/shared/reservation-ui.js"></script>
+    <script src="../../assets/js/shared/ai-assistant-widget.js"></script>
+    <script src="../../assets/js/pages/manage-bookings.js"></script>
+</body>
+</html>
