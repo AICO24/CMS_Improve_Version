@@ -315,13 +315,12 @@ const ROLE_SIDEBAR_LINKS = {
         { group: 'Operations', items: [
             ['book-a-service.html', 'fa-handshake', 'Book a Service'],
             ['booking-assistant.html', 'fa-robot', 'Booking Assistant'],
-            ['manage-reservations.html', 'fa-calendar-check', 'Manage Reservations'],
+            ['manage-bookings.html', 'fa-calendar-check', 'Manage Bookings'],
             ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
         ] },
         { group: 'Records', items: [
             ['decedent-records.html', 'fa-folder-open', 'Decedent Records'],
             ['cremation-management.html', 'fa-fire', 'Cremation Management'],
-            ['manage-cremations.html', 'fa-calendar-check', 'Manage Cremations'],
             ['relocation-management.html', 'fa-truck-moving', 'Relocation Management'],
             ['expiration-monitoring.html', 'fa-hourglass-half', 'Expiration Monitoring'],
         ] },
@@ -348,7 +347,7 @@ const ROLE_SIDEBAR_LINKS = {
         { group: 'Operations', items: [
             ['book-a-service.html', 'fa-handshake', 'Book a Service'],
             ['booking-assistant.html', 'fa-robot', 'Booking Assistant'],
-            ['manage-reservations.html', 'fa-calendar-check', 'Manage Reservations'],
+            ['manage-bookings.html', 'fa-calendar-check', 'Manage Bookings'],
             ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
         ] },
         // Batch E (Decedent Records audit): staff now has API + page access
