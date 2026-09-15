@@ -153,6 +153,23 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     async function refreshStats() {
         try {
+            const res = await api.request('bookings/stats', { method: 'GET' }).catch(() => null);
+            if (res && res.success && res.data) {
+                const d = res.data;
+                statTotalBookings.textContent = d.total_bookings ?? 0;
+                statBurialCount.textContent = d.burials_count ?? 0;
+                statCremationCount.textContent = d.cremations_count ?? 0;
+                statReviewCount.textContent = d.exceptions_count ?? 0;
+                statCompletedCount.textContent = d.completed_count ?? 0;
+
+                badgeAllCount.textContent = d.total_bookings ?? 0;
+                badgeBurialCount.textContent = d.burials_count ?? 0;
+                badgeCremationCount.textContent = d.cremations_count ?? 0;
+                awaitingCountBadge.textContent = d.exceptions_count ?? 0;
+                return;
+            }
+
+            // Fallback to separate endpoints if needed
             const [schedStats, cremStats, exceptions] = await Promise.all([
                 api.request('schedules/stats', { method: 'GET' }).catch(() => ({})),
                 api.request('cremations/queue-stats', { method: 'GET' }).catch(() => ({})),
@@ -451,24 +468,45 @@ document.addEventListener('DOMContentLoaded', async function() {
                 totalRecords = res.meta?.total || items.length;
                 totalPages = res.meta?.pages || 1;
             } else {
-                // 'all' tab: fetch both concurrently and merge
-                const [burialsRes, cremationsRes] = await Promise.all([
-                    fetchBurials().catch(() => ({ data: [] })),
-                    fetchCremations().catch(() => ({ data: [] }))
-                ]);
+                // 'all' tab: utilize unified backend endpoint with server-side pagination & sorting
+                const params = new URLSearchParams();
+                params.set('page', pagination.page);
+                params.set('per_page', perPage);
+                if (currentQuery.trim()) params.set('q', currentQuery.trim());
+                if (awaitingReviewOnly) {
+                    params.set('awaiting_confirmation', '1');
+                } else if (currentStatus) {
+                    params.set('status', currentStatus);
+                }
 
-                const burialList = (Array.isArray(burialsRes.data) ? burialsRes.data : (Array.isArray(burialsRes) ? burialsRes : []))
-                    .map(s => normalizeBurial(s, exceptions.scheduleIds));
-                const cremationList = (Array.isArray(cremationsRes.data) ? cremationsRes.data : (Array.isArray(cremationsRes) ? cremationsRes : []))
-                    .map(c => normalizeCremation(c, exceptions.cremationIds));
+                try {
+                    const res = await api.request(`bookings?${params.toString()}`, { method: 'GET' });
+                    if (res && res.success && Array.isArray(res.data)) {
+                        items = res.data;
+                        totalRecords = res.meta?.total || items.length;
+                        totalPages = res.meta?.total_pages || 1;
+                    } else {
+                        throw new Error('Unified endpoint fallback');
+                    }
+                } catch (e) {
+                    // Fallback to concurrent fetches if unified route is unavailable
+                    const [burialsRes, cremationsRes] = await Promise.all([
+                        fetchBurials().catch(() => ({ data: [] })),
+                        fetchCremations().catch(() => ({ data: [] }))
+                    ]);
 
-                const merged = [...burialList, ...cremationList];
-                // Sort by date descending
-                merged.sort((a, b) => (b.date_raw || '').localeCompare(a.date_raw || '') || b.id - a.id);
+                    const burialList = (Array.isArray(burialsRes.data) ? burialsRes.data : (Array.isArray(burialsRes) ? burialsRes : []))
+                        .map(s => normalizeBurial(s, exceptions.scheduleIds));
+                    const cremationList = (Array.isArray(cremationsRes.data) ? cremationsRes.data : (Array.isArray(cremationsRes) ? cremationsRes : []))
+                        .map(c => normalizeCremation(c, exceptions.cremationIds));
 
-                items = merged;
-                totalRecords = (burialsRes.meta?.total || burialList.length) + (cremationsRes.meta?.total || cremationList.length);
-                totalPages = Math.max(1, Math.ceil(totalRecords / perPage));
+                    const merged = [...burialList, ...cremationList];
+                    merged.sort((a, b) => (b.date_raw || '').localeCompare(a.date_raw || '') || b.id - a.id);
+
+                    items = merged;
+                    totalRecords = (burialsRes.meta?.total || burialList.length) + (cremationsRes.meta?.total || cremationList.length);
+                    totalPages = Math.max(1, Math.ceil(totalRecords / perPage));
+                }
             }
 
             cachedCurrentPageData = items;
