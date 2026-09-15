@@ -16,6 +16,7 @@ require_once __DIR__ . '/../controllers/ExpirationController.php';
 require_once __DIR__ . '/../controllers/UserController.php';
 require_once __DIR__ . '/../controllers/SystemExceptionController.php';
 require_once __DIR__ . '/../controllers/BookingAgentController.php';
+require_once __DIR__ . '/../controllers/BookingController.php';
 require_once __DIR__ . '/../middleware/Auth.php';
 require_once __DIR__ . '/../services/RateLimiter.php';
 require_once __DIR__ . '/../services/ReconciliationService.php';
@@ -279,6 +280,7 @@ $decedentDocumentController = new DecedentDocumentController();
 $scheduleController = new ScheduleController();
 $aiController = new AiController();
 $bookingAgentController = new BookingAgentController();
+$bookingController = new BookingController();
 
 if ($path === 'sections' && $requestMethod === 'GET') {
     echo json_encode($lotController->getSections());
@@ -1964,6 +1966,61 @@ if ($path === 'bookings/mine' && $requestMethod === 'GET') {
     ];
 
     $result = $bookingAgentController->getUnifiedBookings($user, $filters, $pagination);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+// =========================================================================
+// UNIFIED BOOKINGS MANAGEMENT ROUTES (Admin & Staff Consolidated Operations)
+// =========================================================================
+
+if ($path === 'bookings/stats' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $result = $bookingController->stats($user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if ($path === 'bookings/sweep' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin']);
+    $result = $bookingController->runSweep($user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^bookings\/(burial|cremation)\/(\d+)$/', $path, $matches) && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $result = $bookingController->show($matches[1], (int) $matches[2], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^bookings\/(burial|cremation)\/(\d+)$/', $path, $matches) && in_array($requestMethod, ['POST', 'PUT'], true)) {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $result = $bookingController->updateStatus($matches[1], (int) $matches[2], $input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if ($path === 'bookings' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $filters = $_GET;
+    $pagination = [
+        'page'     => $_GET['page'] ?? 1,
+        'per_page' => $_GET['per_page'] ?? 10,
+    ];
+    $result = $bookingController->index($filters, $pagination, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
