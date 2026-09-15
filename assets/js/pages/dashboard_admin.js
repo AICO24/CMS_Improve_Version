@@ -67,25 +67,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     updateAttentionCard();
 
-    // Cremation module audit, Batch E: baseline visibility, not an alert —
-    // always renders (unlike updateAttentionCard() above, which hides when
-    // there's nothing open) since the point is that a staff member landing
-    // here gets *some* signal about Cremation, not just silence when it
-    // happens to be quiet.
-    async function updateCremationSummary() {
-        const pendingEl = document.getElementById('cremationPendingCount');
-        const todayEl = document.getElementById('cremationTodayScheduledCount');
-        if (!pendingEl || !todayEl) return;
+    async function updateBookingSummary() {
+        const pendingEl = document.getElementById('bookingPendingCount');
+        const scheduledEl = document.getElementById('bookingScheduledCount');
+        if (!pendingEl && !scheduledEl) return;
         try {
-            const stats = await api.request('cremations/queue-stats', { method: 'GET' });
-            pendingEl.textContent = stats.pending || 0;
-            todayEl.textContent = stats.today_scheduled || 0;
+            const res = await api.request('bookings/stats', { method: 'GET' });
+            if (res && res.success && res.data) {
+                if (pendingEl) pendingEl.textContent = res.data.pending_count ?? 0;
+                if (scheduledEl) scheduledEl.textContent = res.data.scheduled_count ?? 0;
+            }
         } catch (e) {
-            pendingEl.textContent = '—';
-            todayEl.textContent = '—';
+            if (pendingEl) pendingEl.textContent = '—';
+            if (scheduledEl) scheduledEl.textContent = '—';
         }
     }
-    updateCremationSummary();
+    updateBookingSummary();
 
     // System-Wide AI Assistant: system-scoped follow-up on the briefing
     // below ("what's that one open exception about?") without leaving the

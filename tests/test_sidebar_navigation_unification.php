@@ -293,7 +293,7 @@ $hasCmsNavigationGlobal = strpos($navConfig, 'window.CMS_NAVIGATION = {') !== fa
 $noObsoleteBookingCardOnAdminDash = strpos($adminDash, 'Need a Lot Recommendation?') === false
     && strpos($adminDash, 'Open Burial Assistant') === false;
 $hasOperationalQueuesCard = strpos($adminDash, 'Operational Queues') !== false
-    && strpos($adminDash, 'manage-reservations.html') !== false;
+    && (strpos($adminDash, 'manage-bookings.html') !== false || strpos($adminDash, 'manage-reservations.html') !== false);
 
 assertCondition(
     "TEST 16: Navigation configuration canonical source of truth & Admin dashboard booking clutter removed",

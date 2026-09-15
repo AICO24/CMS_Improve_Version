@@ -65,6 +65,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     updateAttentionCard();
 
+    async function updateBookingSummary() {
+        const pendingEl = document.getElementById('bookingPendingCount');
+        const scheduledEl = document.getElementById('bookingScheduledCount');
+        if (!pendingEl && !scheduledEl) return;
+        try {
+            const res = await api.request('bookings/stats', { method: 'GET' });
+            if (res && res.success && res.data) {
+                if (pendingEl) pendingEl.textContent = res.data.pending_count ?? 0;
+                if (scheduledEl) scheduledEl.textContent = res.data.scheduled_count ?? 0;
+            }
+        } catch (e) {
+            if (pendingEl) pendingEl.textContent = '—';
+            if (scheduledEl) scheduledEl.textContent = '—';
+        }
+    }
+    updateBookingSummary();
+
     try {
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
