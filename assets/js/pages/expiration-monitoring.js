@@ -278,11 +278,11 @@ document.addEventListener('DOMContentLoaded', async function () {
                         <td>
                             <div class="decedent-cell">
                                 <span class="decedent-name">
-                                    <i class="fas fa-cross"></i> ${escapeHtml(record.decedent_name || 'Unassigned Occupant')}
+                                    <i class="fas fa-cross"></i> ${escapeHtml((record.decedent_name && record.decedent_name.trim()) ? record.decedent_name.trim() : 'Unassigned Occupant')}
                                 </span>
                                 <span class="contact-meta">
-                                    <i class="fas fa-user-tag"></i> ${escapeHtml(record.contact_name || 'No Contact Person')}
-                                    ${record.contact_number ? '• ' + escapeHtml(record.contact_number) : ''}
+                                    <i class="fas fa-user-tag"></i> ${escapeHtml((record.contact_name && record.contact_name.trim()) ? record.contact_name.trim() : 'No Contact Person')}
+                                    ${(record.contact_number && record.contact_number.trim()) ? '• ' + escapeHtml(record.contact_number.trim()) : ''}
                                 </span>
                             </div>
                         </td>

@@ -605,6 +605,27 @@
 .table-scroll {
     width: 100%;
     overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(13, 148, 136, 0.25) transparent;
+}
+
+.table-scroll::-webkit-scrollbar {
+    height: 6px;
+}
+
+.table-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.table-scroll::-webkit-scrollbar-thumb {
+    background: rgba(13, 148, 136, 0.25);
+    border-radius: 999px;
+}
+
+.table-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(13, 148, 136, 0.5);
 }
 
 /* Data Table Specific Styling */
