@@ -239,7 +239,7 @@
 
     <!-- ── Booking Detail View Modal (Decedent Records Hero & Grid Pattern) ── -->
     <div class="modal" id="bookingDetailModal" role="dialog" aria-modal="true" aria-labelledby="detailModalTitle">
-        <div class="modal-content modal--view modal--lg">
+        <div class="modal-content modal--view">
             <button type="button" class="close-view" id="closeDetailModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
             <div class="modal-header-compact view-modal-header">
                 <div class="modal-header-icon-wrap view-header-icon">
@@ -250,9 +250,18 @@
                     <p class="modal-header-subtitle">Ceremony schedule, plot/niche allocation, and accounting settlement</p>
                 </div>
             </div>
-            <div class="modal-body" id="bookingDetailBody">
-                <p>Loading details...</p>
+
+            <!-- View Details Container (Hero Card + 4-Stage Stepper + 2-Column Details Grid + Notes) -->
+            <div id="bookingDetailBody"></div>
+
+            <!-- Activity & Audit Trail (scoped to this booking schedule / cremation) -->
+            <div class="activity-timeline-section">
+                <div class="section-title-wrap">
+                    <h4 class="view-section-title"><i class="fas fa-clock-rotate-left"></i> Activity &amp; Audit Trail</h4>
+                </div>
+                <div id="bookingActivityTimeline" class="activity-timeline"></div>
             </div>
+
             <div class="view-modal-footer" id="bookingDetailFooter">
                 <button type="button" class="btn-secondary" id="closeDetailModalBtn">Close</button>
             </div>
