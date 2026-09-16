@@ -541,74 +541,456 @@
    dark-mode bug found in reports.css/forecast.css: hardcoded #fff with
    no dark coverage, shadowing the token-driven canonical .card. */
 
-.card-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 20px;
+/* ── High-Density Polymorphic Expiration Table Card ── */
+.chart-card.expiration-table-card {
+    background: var(--color-surface, #ffffff);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    overflow: hidden;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
 }
 
-.card-block h4 {
-    margin-bottom: 10px;
+.chart-card .chart-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(248, 250, 252, 0.8));
 }
 
-/* .card-block p's color override is gone too — components/cards.css
-   already defines a token-driven `.card-block p, .muted` rule with the
-   identical value (#64748b == var(--color-text-muted)); this was a
-   redundant duplicate blocking that inheritance, same shape of bug as
-   reports.css's .muted fix. */
+.chart-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.chart-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--color-text, #1e293b);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chart-title i {
+    color: var(--color-primary-600, #0d9488);
+}
+
+.badge-emerald {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+
+.table-subtitle {
+    font-size: 0.82rem;
+    color: var(--color-text-muted, #64748b);
+    font-weight: 600;
+}
 
 .table-scroll {
+    width: 100%;
     overflow-x: auto;
 }
 
-/* .data-table base styling now comes from assets/css/components/tables.css (Batch 5); its min-width (620px) already matches this table's needs */
+/* Data Table Specific Styling */
+.expiration-data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
 
-/* .data-table th/td styling now comes from assets/css/components/tables.css (Batch 5) */
+.expiration-data-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
 
-/* .status-badge base (shape/padding/size) now comes from assets/css/dashboard.css so
-   this module's badges match the rest of the app; only state colors stay local. */
+.expiration-data-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    font-size: 0.86rem;
+}
+
+.expiration-data-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.expiration-data-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+/* Lot Cell */
+.lot-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.lot-number-chip {
+    font-weight: 800;
+    color: #0f766e;
+    font-size: 0.92rem;
+    letter-spacing: 0.01em;
+}
+
+.lot-location-meta {
+    font-size: 0.76rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+/* Decedent Cell */
+.decedent-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.decedent-name {
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.decedent-name i {
+    font-size: 0.72rem;
+    color: #94a3b8;
+}
+
+.contact-meta {
+    font-size: 0.76rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Timeline Cell */
+.timeline-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.timeline-dates {
+    font-size: 0.80rem;
+    color: #334155;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.timeline-dates i {
+    font-size: 0.70rem;
+    color: #94a3b8;
+    margin: 0 4px;
+}
+
+.timeline-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    width: fit-content;
+}
+
+.timeline-badge.timeline-active {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+
+.timeline-badge.timeline-expiring {
+    background: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fde68a;
+}
+
+.timeline-badge.timeline-overdue {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.timeline-badge.timeline-renewed {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+
+/* Notice Badges */
+.notice-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.notice-badge.notice-sent {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+
+.notice-badge.notice-pending {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #cbd5e1;
+}
+
+/* Circular Action Buttons (Matching Relocation Management) */
+.action-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.btn-action-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+    box-shadow: 0 2px 5px rgba(15, 23, 42, 0.05);
+    background: #ffffff;
+    padding: 0;
+}
+
+.btn-action-icon i {
+    font-size: 13px;
+    transition: transform 0.2s ease;
+}
+
+/* 1. View Button (Blue) */
+.btn-action-icon.btn-view {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
+}
+
+.btn-action-icon.btn-view:hover {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.32);
+}
+
+.btn-action-icon.btn-view:hover i {
+    transform: scale(1.15);
+}
+
+/* 2. Renew Button (Emerald Green) */
+.btn-action-icon.btn-renew {
+    background: #ecfdf5;
+    color: #059669;
+    border-color: #a7f3d0;
+}
+
+.btn-action-icon.btn-renew:hover {
+    background: #059669;
+    color: #ffffff;
+    border-color: #059669;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(5, 150, 105, 0.32);
+}
+
+.btn-action-icon.btn-renew:hover i {
+    transform: rotate(45deg) scale(1.15);
+}
+
+/* 3. Notify Button (Amber) */
+.btn-action-icon.btn-notify {
+    background: #fff8eb;
+    color: #d97706;
+    border-color: #fde68a;
+}
+
+.btn-action-icon.btn-notify:hover {
+    background: #f59e0b;
+    color: #ffffff;
+    border-color: #f59e0b;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(245, 158, 11, 0.32);
+}
+
+.btn-action-icon.btn-notify:hover i {
+    transform: translateY(-1px) scale(1.15);
+}
+
+/* 4. Relocate Button (Purple) */
+.btn-action-icon.btn-relocate {
+    background: #f5f3ff;
+    color: #7c3aed;
+    border-color: #ddd6fe;
+}
+
+.btn-action-icon.btn-relocate:hover {
+    background: #7c3aed;
+    color: #ffffff;
+    border-color: #7c3aed;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(124, 58, 237, 0.32);
+}
+
+.btn-action-icon.btn-relocate:hover i {
+    transform: scale(1.15);
+}
+
+/* 5. Delete Button (Red) */
+.btn-action-icon.btn-delete-row {
+    background: #fff5f5;
+    color: #dc2626;
+    border-color: #fecaca;
+}
+
+.btn-action-icon.btn-delete-row:hover {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(220, 38, 38, 0.32);
+}
+
+.btn-action-icon.btn-delete-row:hover i {
+    transform: rotate(-15deg) scale(1.15);
+}
+
+.btn-action-icon:active {
+    transform: scale(0.92);
+}
+
+/* Dark mode overrides for table & buttons */
+[data-theme="dark"] .chart-card.expiration-table-card {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .chart-card .chart-header {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .expiration-data-table th {
+    background: rgba(15, 23, 42, 0.5);
+    color: #94a3b8;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .expiration-data-table td {
+    border-color: rgba(255, 255, 255, 0.06);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .expiration-data-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .lot-number-chip {
+    color: #34d399;
+}
+
+[data-theme="dark"] .decedent-name {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .timeline-dates {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .btn-action-icon {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .btn-action-icon.btn-view {
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .btn-action-icon.btn-renew {
+    color: #34d399;
+}
+
+[data-theme="dark"] .btn-action-icon.btn-notify {
+    color: #fbbf24;
+}
+
+[data-theme="dark"] .btn-action-icon.btn-relocate {
+    color: #a78bfa;
+}
+
+[data-theme="dark"] .btn-action-icon.btn-delete-row {
+    color: #f87171;
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
 
 .status-warning {
     background: #fff7ed;
     color: #c2410c;
+    border: 1px solid #ffedd5;
 }
 
 .status-danger {
     background: #fee2e2;
     color: #b91c1c;
+    border: 1px solid #fecaca;
 }
 
-/* .btn-ghost now comes from assets/css/components/buttons.css (Batch 5) */
-
-.status-message {
-    margin-top: 12px;
-    color: #334155;
-    font-size: 0.95rem;
+.status-success {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
 }
 
-.btn-ghost + .btn-ghost {
-    margin-left: 8px;
-}
-
-.activity-row {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 18px;
-}
-
-.activity-block {
-    background: var(--color-surface);
-    border-radius: 20px;
-    padding: 20px;
-    box-shadow: 0 16px 32px rgba(15,23,42,0.05);
-}
-
-.activity-block h4 {
-    margin-bottom: 10px;
-}
-
-.activity-block p {
-    color: var(--color-text-muted);
+.status-active {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
 }
 
 /* .muted's own color override is gone — same redundant-duplicate-of-

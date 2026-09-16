@@ -2,10 +2,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const user = await requireRole(['admin']);
     if (!user) return;
 
-    // System-Wide AI Assistant: closes the exact gap the adviser named
-    // directly ("if something is about to expire, it should notify or
-    // inform the admin") — module-scoped since no single lease is selected
-    // on page load.
+    // AI Assistant widget
     initAiAssistant({
         mountSelector: '#aiAssistantMount',
         context: { scope: 'module', module: 'Expiration' },
@@ -31,26 +28,28 @@ document.addEventListener('DOMContentLoaded', async function () {
         logoutBtn.addEventListener('click', () => api.logout());
     }
 
-    const expiredPerPage = 10;
-    const expiredPaginationInfo = document.getElementById('expiredPaginationInfo');
-    const expiredPrevPage = document.getElementById('expiredPrevPage');
-    const expiredNextPage = document.getElementById('expiredNextPage');
-    const expiredPageJumpForm = document.getElementById('expiredPaginationJumpForm');
-    const expiredPageJumpInput = document.getElementById('expiredPageJumpInput');
-    const expiredPageJumpBtn = document.getElementById('expiredPageJumpBtn');
-    const activeFilterChips = document.getElementById('activeFilterChips');
-    const expiredPagination = createPagination({
-        prevBtn: expiredPrevPage,
-        nextBtn: expiredNextPage,
-        jumpForm: expiredPageJumpForm,
-        jumpInput: expiredPageJumpInput,
-        jumpBtn: expiredPageJumpBtn,
-        infoEl: expiredPaginationInfo,
-        itemLabel: 'lot',
-        onChange: loadExpiredLots,
-    });
-
     let currentTab = 'all';
+    const perPage = 10;
+    let cachedRecords = [];
+
+    const paginationInfo = document.getElementById('expirationPaginationInfo');
+    const prevPageBtn = document.getElementById('expirationPrevPage');
+    const nextPageBtn = document.getElementById('expirationNextPage');
+    const pageJumpForm = document.getElementById('expirationPaginationJumpForm');
+    const pageJumpInput = document.getElementById('expirationPageJumpInput');
+    const pageJumpBtn = document.getElementById('expirationPageJumpBtn');
+    const activeFilterChips = document.getElementById('activeFilterChips');
+
+    const pagination = createPagination({
+        prevBtn: prevPageBtn,
+        nextBtn: nextPageBtn,
+        jumpForm: pageJumpForm,
+        jumpInput: pageJumpInput,
+        jumpBtn: pageJumpBtn,
+        infoEl: paginationInfo,
+        itemLabel: 'lease record',
+        onChange: loadExpirationData,
+    });
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -60,6 +59,13 @@ document.addEventListener('DOMContentLoaded', async function () {
             '"': '&quot;',
             "'": '&#39;',
         }[char]));
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return '—';
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return dateString;
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
     }
 
     async function populateSectionsDropdown() {
@@ -120,52 +126,10 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (!chip || !button) return;
             button.addEventListener('click', async () => {
                 chip.clear();
+                pagination.reset();
                 await refreshExpirationView();
             });
         });
-    }
-
-    // Independent of the main status filter dropdown above — this table's whole
-    // purpose is showing expired lots, so it always requests status=expired
-    // (still honoring the shared search box) rather than following whatever
-    // the dropdown is set to.
-    async function loadExpiredLots() {
-        const expiredTable = document.getElementById('expiredTableBody');
-        const query = document.getElementById('expirationSearch').value.trim();
-        const params = new URLSearchParams();
-        params.set('status', 'expired');
-        if (query) params.append('q', query);
-        params.set('page', expiredPagination.page);
-        params.set('per_page', expiredPerPage);
-
-        try {
-            const result = await api.request(`expiration-records?${params.toString()}`, { method: 'GET' });
-            const expiredRecords = Array.isArray(result.data) ? result.data : [];
-            expiredTable.innerHTML = expiredRecords.length > 0 ? expiredRecords.map(record => `
-                <tr>
-                    <td>${record.lot_number || record.lot_id || 'N/A'}</td>
-                    <td>${record.section_name || 'N/A'}</td>
-                    <td>${record.end_date || 'N/A'}</td>
-                    <td><span class="status-badge status-danger">Expired</span></td>
-                    <td>${record.notes ? record.notes : '—'}</td>
-                </tr>
-            `).join('') : `
-                <tr>
-                    <td colspan="5">
-                        <div class="expmon-empty-state">
-                            <i class="fas fa-circle-check"></i>
-                            <strong>No expired lots found</strong>
-                            <span>All lots are within their lease period.</span>
-                        </div>
-                    </td>
-                </tr>
-            `;
-            expiredPagination.render(result.meta || { page: 1, total_pages: 1, total: expiredRecords.length });
-        } catch (error) {
-            console.error('Failed to load expired lots:', error);
-            expiredTable.innerHTML = '<tr><td colspan="5">Failed to load expired lots.</td></tr>';
-            expiredPagination.render({ page: 1, total_pages: 1, total: 0 });
-        }
     }
 
     async function updateNotificationBadge() {
@@ -182,38 +146,33 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     async function loadExpirationData() {
+        const tableBody = document.getElementById('expirationTableBody');
+        const query = document.getElementById('expirationSearch').value.trim();
+        const section = document.getElementById('expirationSectionFilter') ? document.getElementById('expirationSectionFilter').value : 'all';
+        const urgency = document.getElementById('expirationUrgencyFilter') ? document.getElementById('expirationUrgencyFilter').value : 'all';
+        const status = document.getElementById('expirationStatusFilter') ? document.getElementById('expirationStatusFilter').value : 'all';
+
+        const params = new URLSearchParams();
+        if (query) params.append('q', query);
+        if (section && section !== 'all') params.append('section', section);
+        if (urgency && urgency !== 'all') params.append('urgency', urgency);
+
+        if (currentTab !== 'all') {
+            params.append('status', currentTab);
+        } else if (status && status !== 'all') {
+            params.append('status', status);
+        }
+
+        params.append('page', pagination.page);
+        params.append('per_page', perPage);
+
         try {
-            const query = document.getElementById('expirationSearch').value.trim();
-            const section = document.getElementById('expirationSectionFilter') ? document.getElementById('expirationSectionFilter').value : 'all';
-            const urgency = document.getElementById('expirationUrgencyFilter') ? document.getElementById('expirationUrgencyFilter').value : 'all';
-            const status = document.getElementById('expirationStatusFilter') ? document.getElementById('expirationStatusFilter').value : 'all';
-
-            const params = new URLSearchParams();
-            if (query) params.append('q', query);
-            if (section && section !== 'all') params.append('section', section);
-            if (urgency && urgency !== 'all') params.append('urgency', urgency);
-
-            if (currentTab !== 'all') {
-                params.append('status', currentTab);
-            } else if (status && status !== 'all') {
-                params.append('status', status);
-            }
-
-            const [records, stats] = await Promise.all([
+            const [recordsResult, stats] = await Promise.all([
                 api.request(`expiration-records?${params.toString()}`, { method: 'GET' }),
                 api.request('expiration-records/stats', { method: 'GET' })
             ]);
 
-            const statusMsg = document.getElementById('expirationStatusMessage');
-            if (statusMsg) {
-                const activeFilters = [];
-                if (currentTab !== 'all') activeFilters.push(`Tab: ${currentTab}`);
-                if (status !== 'all') activeFilters.push(`Status: ${status}`);
-                if (section !== 'all') activeFilters.push(`Section: ${section}`);
-                if (urgency !== 'all') activeFilters.push(`Timeline: ${urgency}`);
-                statusMsg.innerText = activeFilters.length ? `Showing filtered results for ${activeFilters.join(', ')}.` : '';
-            }
-
+            // Update 5 Stat Cards
             const totalTrackedCount = document.getElementById('totalTrackedCount');
             const expiringSoonCount = document.getElementById('expiringSoonCount');
             const expiredCount = document.getElementById('expiredCount');
@@ -247,43 +206,247 @@ document.addEventListener('DOMContentLoaded', async function () {
                 }
             }
 
-            const upcomingTable = document.getElementById('upcomingTableBody');
-            const recordsList = Array.isArray(records) ? records : (records.data || []);
+            const recordsList = Array.isArray(recordsResult) ? recordsResult : (recordsResult.data || []);
+            const meta = recordsResult.meta || { page: 1, total_pages: 1, total: recordsList.length };
+            cachedRecords = recordsList;
 
-            if (upcomingTable) {
-                upcomingTable.innerHTML = recordsList.length > 0 ? recordsList.slice(0, 5).map(record => `
-                    <tr data-lot-id="${record.lot_id || ''}" data-start-date="${record.start_date || ''}" data-exhumation-status="${record.exhumation_status || ''}" data-notes="${(record.notes || '').replace(/"/g, '&quot;')}">
-                        <td>${record.lot_number || record.lot_id || 'N/A'}</td>
-                        <td>${record.section_name || 'N/A'}</td>
-                        <td>${record.end_date || 'N/A'}</td>
-                        <td><span class="status-badge ${record.status === 'Expired' ? 'status-danger' : record.status === 'Exhumation' ? 'status-danger' : record.status === 'Renewed' ? 'status-info' : 'status-warning'}">${record.status || 'Expiring'}</span></td>
-                        <td>
-                            <button class="btn-ghost" data-action="notify" data-id="${record.expiration_id}">Notify</button>
-                            ${record.status === 'Expiring' || record.status === 'Expired' ? `<button class="btn-ghost" data-action="renew" data-id="${record.expiration_id}">Renew</button>` : ''}
-                        </td>
-                    </tr>
-                `).join('') : `
+            // Table header badge & summary
+            const badgeCount = document.getElementById('expirationBadgeCount');
+            if (badgeCount) badgeCount.innerText = `${meta.total ?? recordsList.length} lots`;
+
+            const filterSummary = document.getElementById('tableFilterSummary');
+            if (filterSummary) {
+                const parts = [];
+                if (currentTab !== 'all') parts.push(`Tab: ${currentTab}`);
+                if (status !== 'all') parts.push(`Status: ${status}`);
+                if (section !== 'all') parts.push(`Section: ${section}`);
+                if (urgency !== 'all') parts.push(`Timeline: ${urgency}`);
+                filterSummary.innerText = parts.length ? `Filtered by ${parts.join(', ')}` : 'Showing all tracked leases';
+            }
+
+            if (!tableBody) return;
+
+            if (recordsList.length === 0) {
+                tableBody.innerHTML = `
                     <tr>
-                        <td colspan="5">
+                        <td colspan="6">
                             <div class="expmon-empty-state">
                                 <i class="fas fa-hourglass"></i>
                                 <strong>No expiration records found</strong>
-                                <span>Adjust the filters to see more records.</span>
+                                <span>Adjust your search keywords or filter criteria.</span>
                             </div>
                         </td>
                     </tr>
                 `;
+            } else {
+                tableBody.innerHTML = recordsList.map(record => {
+                    const daysRemaining = Number(record.days_remaining);
+                    let countdownBadgeHtml = '';
+
+                    if (record.renewed === 'yes') {
+                        countdownBadgeHtml = `<span class="timeline-badge timeline-renewed"><i class="fas fa-rotate"></i> Renewed</span>`;
+                    } else if (daysRemaining < 0) {
+                        countdownBadgeHtml = `<span class="timeline-badge timeline-overdue"><i class="fas fa-triangle-exclamation"></i> Overdue by ${Math.abs(daysRemaining)}d</span>`;
+                    } else if (daysRemaining <= 30) {
+                        countdownBadgeHtml = `<span class="timeline-badge timeline-expiring"><i class="fas fa-clock"></i> Expiring in ${daysRemaining}d</span>`;
+                    } else {
+                        countdownBadgeHtml = `<span class="timeline-badge timeline-active"><i class="fas fa-check-circle"></i> Active (${daysRemaining}d left)</span>`;
+                    }
+
+                    const statusBadgeClass = record.status === 'Expired' 
+                        ? 'status-danger' 
+                        : record.status === 'Exhumation' 
+                        ? 'status-danger' 
+                        : record.status === 'Renewed' 
+                        ? 'status-success' 
+                        : record.status === 'Expiring' 
+                        ? 'status-warning' 
+                        : 'status-active';
+
+                    const noticeBadgeHtml = record.notified_at 
+                        ? `<span class="notice-badge notice-sent" title="Notified on ${formatDate(record.notified_at)}"><i class="fas fa-check-double"></i> Notified</span>` 
+                        : `<span class="notice-badge notice-pending"><i class="fas fa-envelope"></i> Unnotified</span>`;
+
+                    return `
+                    <tr data-id="${record.expiration_id}" data-lot-id="${record.lot_id || ''}">
+                        <td>
+                            <div class="lot-cell">
+                                <span class="lot-number-chip">${escapeHtml(record.lot_number || 'LOT-' + record.lot_id)}</span>
+                                <span class="lot-location-meta">${escapeHtml(record.section_name || 'N/A')} • ${escapeHtml(record.block_name || 'Block')}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="decedent-cell">
+                                <span class="decedent-name">
+                                    <i class="fas fa-cross"></i> ${escapeHtml(record.decedent_name || 'Unassigned Occupant')}
+                                </span>
+                                <span class="contact-meta">
+                                    <i class="fas fa-user-tag"></i> ${escapeHtml(record.contact_name || 'No Contact Person')}
+                                    ${record.contact_number ? '• ' + escapeHtml(record.contact_number) : ''}
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="timeline-cell">
+                                <span class="timeline-dates">
+                                    ${formatDate(record.start_date)} <i class="fas fa-arrow-right"></i> ${formatDate(record.end_date)}
+                                </span>
+                                ${countdownBadgeHtml}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-badge ${statusBadgeClass}">
+                                ${record.status === 'Exhumation' ? '<i class="fas fa-truck-moving"></i> ' : ''}${escapeHtml(record.status || 'Active')}
+                            </span>
+                        </td>
+                        <td>
+                            ${noticeBadgeHtml}
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn-action-icon btn-view" data-id="${record.expiration_id}" title="View Lease Details" aria-label="View Lease Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn-action-icon btn-renew" data-id="${record.expiration_id}" title="Renew Lease" aria-label="Renew Lease">
+                                <i class="fas fa-rotate"></i>
+                            </button>
+                            <button class="btn-action-icon btn-notify" data-id="${record.expiration_id}" data-lot="${escapeHtml(record.lot_number || '')}" title="Send Reminder Notice" aria-label="Send Reminder Notice">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                            <button class="btn-action-icon btn-relocate" data-id="${record.expiration_id}" title="Initiate Relocation / Exhumation" aria-label="Initiate Relocation / Exhumation">
+                                <i class="fas fa-truck-moving"></i>
+                            </button>
+                            <button class="btn-action-icon btn-delete-row" data-id="${record.expiration_id}" title="Delete Record" aria-label="Delete Record">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
             }
+
+            pagination.render(meta);
             renderActiveFilterChips();
+            wireTableActionButtons();
         } catch (error) {
             console.error('Failed to load expiration data:', error);
+            if (tableBody) tableBody.innerHTML = '<tr><td colspan="6">Failed to load expiration records.</td></tr>';
+            pagination.render({ page: 1, total_pages: 1, total: 0 });
         }
+    }
+
+    function wireTableActionButtons() {
+        const tbody = document.getElementById('expirationTableBody');
+        if (!tbody) return;
+
+        // 1. View Button
+        tbody.querySelectorAll('.btn-view').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                const rec = cachedRecords.find(r => String(r.expiration_id) === String(id));
+                if (rec && typeof window.showExpirationViewModal === 'function') {
+                    window.showExpirationViewModal(rec);
+                } else {
+                    alert(`Viewing lease details for Lot ${rec?.lot_number || id} (Full details modal will load in Batch 4).`);
+                }
+            });
+        });
+
+        // 2. Renew Button
+        tbody.querySelectorAll('.btn-renew').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                const rec = cachedRecords.find(r => String(r.expiration_id) === String(id));
+                const termStr = prompt(`Renew lease for Lot ${rec?.lot_number || id}?\nEnter renewal term in years:`, "5");
+                if (!termStr) return;
+                const years = parseInt(termStr, 10);
+                if (isNaN(years) || years <= 0) {
+                    alert('Please enter a valid positive number of years.');
+                    return;
+                }
+                try {
+                    const res = await api.request(`expiration-records/${id}/renew`, {
+                        method: 'POST',
+                        body: { years, notes: `Renewed for ${years} years via quick action.` }
+                    });
+                    alert(res.message || 'Lease renewed successfully!');
+                    await refreshExpirationView();
+                } catch (err) {
+                    alert('Renewal failed: ' + (err.message || 'Unknown error'));
+                }
+            });
+        });
+
+        // 3. Send Notice Button
+        tbody.querySelectorAll('.btn-notify').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                const lot = btn.dataset.lot || id;
+                if (!confirm(`Send expiration notice notification for Lot ${lot}?`)) return;
+
+                try {
+                    await api.request('notifications', {
+                        method: 'POST',
+                        body: {
+                            title: `Expiration reminder: Lot ${lot}`,
+                            message: `Official expiration notice dispatched for Lot ${lot}. Next-of-kin has been flagged for contact.`,
+                            notification_type: 'Expiration',
+                            is_read: 0
+                        }
+                    });
+                    alert(`Reminder notification sent for Lot ${lot}!`);
+                    await updateNotificationBadge();
+                    await refreshExpirationView();
+                } catch (err) {
+                    alert('Notice dispatch failed: ' + (err.message || 'Unknown error'));
+                }
+            });
+        });
+
+        // 4. Relocate / Exhumation Button
+        tbody.querySelectorAll('.btn-relocate').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                const rec = cachedRecords.find(r => String(r.expiration_id) === String(id));
+                if (!confirm(`Initiate relocation / exhumation request for expired Lot ${rec?.lot_number || id}?\nThis will create a formal request in the Relocation Management module.`)) return;
+
+                try {
+                    const res = await api.request(`expiration-records/${id}/initiate-relocation`, {
+                        method: 'POST',
+                        body: { reason: `Lease expired on ${rec?.end_date || 'N/A'}. Initiated from Expiration Monitoring.` }
+                    });
+                    alert(res.message || 'Relocation request initiated successfully!');
+                    await refreshExpirationView();
+                } catch (err) {
+                    alert('Relocation initiation failed: ' + (err.message || 'Unknown error'));
+                }
+            });
+        });
+
+        // 5. Delete Button
+        tbody.querySelectorAll('.btn-delete-row').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                const rec = cachedRecords.find(r => String(r.expiration_id) === String(id));
+                if (!confirm(`Are you sure you want to delete the expiration record for Lot ${rec?.lot_number || id}?`)) return;
+
+                try {
+                    const res = await api.request(`expiration-records/${id}`, { method: 'DELETE' });
+                    alert(res.message || 'Expiration record deleted.');
+                    await refreshExpirationView();
+                } catch (err) {
+                    alert('Delete failed: ' + (err.message || 'Unknown error'));
+                }
+            });
+        });
     }
 
     async function refreshExpirationView() {
         await loadExpirationData();
-        expiredPagination.reset();
-        await loadExpiredLots();
     }
 
     // Sub-Tabs segmented switcher
@@ -296,6 +459,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             btn.classList.add('active');
             btn.setAttribute('aria-selected', 'true');
             currentTab = btn.dataset.tab || 'all';
+            pagination.reset();
             refreshExpirationView();
         });
     });
@@ -316,6 +480,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 b.classList.toggle('active', b.dataset.tab === 'all');
                 b.setAttribute('aria-selected', b.dataset.tab === 'all' ? 'true' : 'false');
             });
+            pagination.reset();
             refreshExpirationView();
         });
     }
@@ -328,6 +493,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 autoSyncBtn.disabled = true;
                 const res = await api.request('expiration-records/sync', { method: 'POST' });
                 alert(res.message || 'Leases synced successfully from lots registry!');
+                pagination.reset();
                 await refreshExpirationView();
             } catch (err) {
                 console.error('Auto-sync failed:', err);
@@ -400,83 +566,33 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 
-    const refreshBtn = document.getElementById('refreshExpirationData');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', refreshExpirationView);
-    }
-
-    document.getElementById('expirationSearch').addEventListener('keyup', function(event) {
+    // Live search input
+    document.getElementById('expirationSearch').addEventListener('keyup', function (event) {
         if (event.key === 'Enter') {
+            pagination.reset();
             refreshExpirationView();
         }
     });
 
     const secFilter = document.getElementById('expirationSectionFilter');
-    if (secFilter) secFilter.addEventListener('change', refreshExpirationView);
-
-    const urgFilter = document.getElementById('expirationUrgencyFilter');
-    if (urgFilter) urgFilter.addEventListener('change', refreshExpirationView);
-
-    const statFilter = document.getElementById('expirationStatusFilter');
-    if (statFilter) statFilter.addEventListener('change', refreshExpirationView);
-
-    await populateSectionsDropdown();
-
-    document.querySelector('.content-area').addEventListener('click', async function(event) {
-        const button = event.target.closest('button[data-action]');
-        if (!button) return;
-
-        const action = button.dataset.action;
-        const id = button.dataset.id;
-        const record = button.closest('tr');
-        if (!id) return;
-
-        try {
-            if (action === 'notify') {
-                const title = 'Expiration reminder: lot ' + (record.querySelector('td:first-child')?.innerText || id);
-                const message = 'Please review the expiration record for lot ' + (record.querySelector('td:first-child')?.innerText || id) + ' before lease expiration.';
-                await api.request('notifications', {
-                    method: 'POST',
-                    body: {
-                        title,
-                        message,
-                        notification_type: 'Expiration',
-                        is_read: 0
-                    }
-                });
-                alert('Notification created for the selected expiration.');
-                await updateNotificationBadge();
-            }
-
-            if (action === 'renew') {
-                const recordId = id;
-                const payload = {
-                    lot_id: record.dataset.lotId || null,
-                    start_date: record.dataset.startDate || null,
-                    end_date: record.querySelector('td:nth-child(3)')?.innerText || null,
-                    renewed: 'yes',
-                    exhumation_status: record.dataset.exhumationStatus || 'Pending',
-                    notes: record.dataset.notes || ''
-                };
-
-                if (!payload.lot_id) {
-                    alert('Unable to renew this record, required information missing.');
-                    return;
-                }
-
-                await api.request(`expiration-records/${recordId}`, {
-                    method: 'PUT',
-                    body: payload
-                });
-                alert('Expiration record renewed successfully.');
-                await refreshExpirationView();
-            }
-        } catch (error) {
-            console.error('Expiration action failed:', error);
-            alert('Action failed: ' + (error.message || 'Unknown error'));
-        }
+    if (secFilter) secFilter.addEventListener('change', () => {
+        pagination.reset();
+        refreshExpirationView();
     });
 
+    const urgFilter = document.getElementById('expirationUrgencyFilter');
+    if (urgFilter) urgFilter.addEventListener('change', () => {
+        pagination.reset();
+        refreshExpirationView();
+    });
+
+    const statFilter = document.getElementById('expirationStatusFilter');
+    if (statFilter) statFilter.addEventListener('change', () => {
+        pagination.reset();
+        refreshExpirationView();
+    });
+
+    await populateSectionsDropdown();
     await refreshExpirationView();
     await updateNotificationBadge();
     setInterval(updateNotificationBadge, 30000);

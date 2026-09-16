@@ -274,62 +274,68 @@
 
                 <div id="expirationStatusMessage" class="status-message"></div>
 
-                <div class="card card-grid">
-                    <div class="card-block">
-                        <h4>Upcoming Expirations</h4>
-                        <p class="muted">Monitor the lots with lease end dates approaching within 30 days.</p>
-                        <div class="table-scroll">
-                            <table class="data-table">
-                                <thead>
-                                    <tr><th>Lot #</th><th>Section</th><th>Lease End</th><th>Status</th><th>Action</th></tr>
-                                </thead>
-                                <tbody id="upcomingTableBody">
-                                    <tr><td colspan="5">Loading expiration records...</td></tr>
-                                </tbody>
-                            </table>
+                <!-- ── High-Density Polymorphic Data Table in Chart Card ── -->
+                <div class="chart-card expiration-table-card">
+                    <div class="chart-header">
+                        <div class="chart-header-left">
+                            <h4 class="chart-title">
+                                <i class="fas fa-hourglass-half"></i>
+                                <span>Lease Expiration &amp; Renewal Registry</span>
+                            </h4>
+                            <span class="badge badge-emerald" id="expirationBadgeCount">0 lots</span>
+                        </div>
+                        <div class="chart-actions">
+                            <span class="table-subtitle" id="tableFilterSummary">Showing all tracked leases</span>
                         </div>
                     </div>
-                    <div class="card-block">
-                        <h4>Expired Lots</h4>
-                        <p class="muted">Review recently expired lots and take action.</p>
-                        <div class="table-scroll">
-                            <table class="data-table">
-                                <thead>
-                                    <tr><th>Lot #</th><th>Section</th><th>Lease End</th><th>Status</th><th>Notes</th></tr>
-                                </thead>
-                                <tbody id="expiredTableBody">
-                                    <tr><td colspan="5">Loading expired lots...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="pagination-controls" id="expiredPaginationControls">
-                            <span class="pagination-info" id="expiredPaginationInfo"></span>
-                            <div class="pagination-actions">
-                                <form class="pagination-jump" id="expiredPaginationJumpForm">
-                                    <label for="expiredPageJumpInput">Jump to page</label>
-                                    <input type="number" id="expiredPageJumpInput" min="1" step="1" placeholder="Enter page number">
-                                    <button class="btn-secondary" id="expiredPageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
-                                </form>
-                                <span class="pagination-divider" aria-hidden="true"></span>
-                                <button class="btn-secondary" id="expiredPrevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
-                                <button class="btn-secondary" id="expiredNextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="card activity-row">
-                    <div class="activity-block">
-                        <h4>Renewal Alerts</h4>
-                        <p>Lots approaching renewal are listed in the Upcoming Expirations table above.</p>
+                    <div class="table-scroll">
+                        <table class="data-table expiration-data-table" id="expirationTable">
+                            <thead>
+                                <tr>
+                                    <th>Lot / Plot</th>
+                                    <th>Deceased &amp; Next of Kin</th>
+                                    <th>Lease Timeline</th>
+                                    <th>Status</th>
+                                    <th>Notice Delivery</th>
+                                    <th class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expirationTableBody">
+                                <tr>
+                                    <td colspan="6">
+                                        <div class="expmon-empty-state">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                            <strong>Loading expiration records...</strong>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="activity-block">
-                        <h4>Exhumation Schedule</h4>
-                        <p>Check Relocation Management for scheduled exhumations.</p>
-                    </div>
-                    <div class="activity-block">
-                        <h4>Owner Notifications</h4>
-                        <p>Send reminders and review returned delivery statuses.</p>
+
+                    <!-- Docked Pagination Controls -->
+                    <div class="pagination-controls" id="expirationPaginationControls">
+                        <span class="pagination-info" id="expirationPaginationInfo"></span>
+                        <div class="pagination-actions">
+                            <form class="pagination-jump" id="expirationPaginationJumpForm">
+                                <label for="expirationPageJumpInput">Jump to</label>
+                                <input type="number" id="expirationPageJumpInput" min="1" step="1" placeholder="Page #">
+                                <button class="btn-secondary" id="expirationPageJumpBtn" type="submit">
+                                    <i class="fas fa-arrow-right-to-bracket"></i>
+                                    <span>Go</span>
+                                </button>
+                            </form>
+                            <span class="pagination-divider" aria-hidden="true"></span>
+                            <button class="btn-secondary" id="expirationPrevPage" type="button">
+                                <i class="fas fa-chevron-left"></i>
+                                <span>Previous</span>
+                            </button>
+                            <button class="btn-secondary" id="expirationNextPage" type="button">
+                                <span>Next</span>
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
