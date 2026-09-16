@@ -392,19 +392,19 @@
 
 .panel-filters-group .search-field {
     flex: 1 1 280px;
-    min-width: 220px;
-    max-width: 420px;
+    min-width: 240px;
+    max-width: 440px;
     position: relative;
 }
 
 .panel-filters-group .search-field__input {
     width: 100%;
-    height: 40px;
+    height: 42px;
     font-size: 0.86rem;
-    padding: 0 12px 0 38px;
+    padding: 0 14px 0 40px;
     border-radius: var(--radius-md, 8px);
     border: 1px solid rgba(44, 94, 71, 0.22);
-    background: rgba(255, 255, 255, 0.95);
+    background: #ffffff;
     color: #1e293b;
     outline: none;
     transition: all 0.18s ease;
@@ -418,13 +418,43 @@
 
 .panel-filters-group .search-field__icon {
     position: absolute;
-    left: 12px;
+    left: 14px;
+    right: auto;
     top: 50%;
     transform: translateY(-50%);
     width: 16px;
     height: 16px;
     color: #64748b;
     pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.panel-filters-group .search-field__label {
+    position: absolute;
+    left: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.82rem;
+    color: #64748b;
+    background: #ffffff;
+    padding: 0 4px;
+    pointer-events: none;
+    transition: all 0.18s ease;
+    max-width: calc(100% - 50px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.panel-filters-group .search-field__input:focus ~ .search-field__label,
+.panel-filters-group .search-field__input:not(:placeholder-shown) ~ .search-field__label {
+    top: 0;
+    left: 14px;
+    transform: translateY(-50%) scale(0.85);
+    color: #059669;
+    font-weight: 700;
 }
 
 .filter-select {
@@ -1602,6 +1632,54 @@ body[data-theme="dark"] .booking-notes-box {
     background: #0f172a;
     border-color: #334155;
     color: #cbd5e1;
+}
+
+body[data-theme="dark"] .panel-filters-group .search-field__label {
+    background: #0f172a;
+    color: #94a3b8;
+}
+
+/* ── Floating AI Assistant (Fixed to Bottom-Right Corner) ── */
+#aiAssistantMount,
+#aiAssistantMount.ai-assistant-mount {
+    position: fixed !important;
+    right: 24px !important;
+    bottom: 24px !important;
+    z-index: 9990 !important;
+    display: block !important;
+}
+
+#aiAssistantMount .ai-assistant-toggle {
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 50% !important;
+    background: #2c5e47 !important;
+    color: #ffffff !important;
+    box-shadow: 0 8px 24px rgba(44, 94, 71, 0.40) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.35rem !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+#aiAssistantMount .ai-assistant-toggle:hover {
+    transform: scale(1.08) !important;
+    box-shadow: 0 12px 30px rgba(44, 94, 71, 0.50) !important;
+}
+
+#aiAssistantMount .ai-assistant-toggle.is-open {
+    display: none !important;
+}
+
+@media (max-width: 600px) {
+    #aiAssistantMount,
+    #aiAssistantMount.ai-assistant-mount {
+        right: 16px !important;
+        bottom: 16px !important;
+    }
 }
 
 body[data-theme="dark"] .btn-secondary.panel-btn:hover,
