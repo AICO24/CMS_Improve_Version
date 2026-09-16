@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Modals
     const detailModal = document.getElementById('bookingDetailModal');
     const detailModalBody = document.getElementById('bookingDetailBody');
+    const detailModalFooter = document.getElementById('bookingDetailFooter');
     const closeDetailModalBtn = document.getElementById('closeDetailModal');
     const closeDetailModalFooterBtn = document.getElementById('closeDetailModalBtn');
 
@@ -92,7 +93,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (currentQuery) searchQuery.value = currentQuery;
     if (currentStatus) statusFilter.value = currentStatus;
     if (awaitingReviewOnly) {
-        toggleAwaitingBtn.setAttribute('aria-pressed', 'true');
+        if (toggleAwaitingBtn) {
+            toggleAwaitingBtn.checked = true;
+            toggleAwaitingBtn.setAttribute('aria-pressed', 'true');
+        }
         statusFilter.disabled = true;
     }
 
@@ -339,7 +343,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     function buildPaymentBadge(item) {
         const ps = String(item.payment_status || '').toLowerCase();
         if (ps === 'verified' || ps === 'paid') {
-            return `<span class="payment-badge payment-badge--verified"><i class="fas fa-check-circle"></i> Verified</span>`;
+            return `<span class="payment-badge payment-badge--verified"><i class="fas fa-circle-check"></i> Verified</span>`;
         }
         if (ps === 'pending') {
             return `<span class="payment-badge payment-badge--pending"><i class="fas fa-clock"></i> Pending</span>`;
@@ -435,7 +439,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             { key: 'status', label: 'Status', value: currentStatus, clear: () => { statusFilter.value = ''; currentStatus = ''; } },
             { key: 'awaiting', label: 'Filter', value: awaitingReviewOnly ? 'Needs Review' : '', clear: () => {
                 awaitingReviewOnly = false;
-                toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+                if (toggleAwaitingBtn) {
+                    toggleAwaitingBtn.checked = false;
+                    toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+                }
                 statusFilter.disabled = false;
             } },
         ], async () => {
@@ -450,46 +457,51 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         try {
             const exceptions = await loadOpenExceptionIds();
-
             let items = [];
             let totalRecords = 0;
             let totalPages = 1;
 
-            if (currentTab === 'burial') {
-                const res = await fetchBurials();
-                const rawList = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
-                items = rawList.map(s => normalizeBurial(s, exceptions.scheduleIds));
-                totalRecords = res.meta?.total || items.length;
-                totalPages = res.meta?.pages || 1;
-            } else if (currentTab === 'cremation') {
-                const res = await fetchCremations();
-                const rawList = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
-                items = rawList.map(c => normalizeCremation(c, exceptions.cremationIds));
-                totalRecords = res.meta?.total || items.length;
-                totalPages = res.meta?.pages || 1;
-            } else {
-                // 'all' tab: utilize unified backend endpoint with server-side pagination & sorting
+            // Check if unified /api/bookings endpoint is reachable
+            let unifiedRes = null;
+            try {
                 const params = new URLSearchParams();
                 params.set('page', pagination.page);
                 params.set('per_page', perPage);
+                if (currentTab !== 'all') params.set('service', currentTab);
                 if (currentQuery.trim()) params.set('q', currentQuery.trim());
                 if (awaitingReviewOnly) {
                     params.set('awaiting_confirmation', '1');
                 } else if (currentStatus) {
                     params.set('status', currentStatus);
                 }
+                unifiedRes = await api.request(`bookings?${params.toString()}`, { method: 'GET' });
+            } catch (unifiedErr) {
+                unifiedRes = null;
+            }
 
-                try {
-                    const res = await api.request(`bookings?${params.toString()}`, { method: 'GET' });
-                    if (res && res.success && Array.isArray(res.data)) {
-                        items = res.data;
-                        totalRecords = res.meta?.total || items.length;
-                        totalPages = res.meta?.total_pages || 1;
-                    } else {
-                        throw new Error('Unified endpoint fallback');
-                    }
-                } catch (e) {
-                    // Fallback to concurrent fetches if unified route is unavailable
+            if (unifiedRes && unifiedRes.success && Array.isArray(unifiedRes.data)) {
+                items = unifiedRes.data.map(item => {
+                    const isBurial = item.service_type === 'burial';
+                    const excSet = isBurial ? exceptions.scheduleIds : exceptions.cremationIds;
+                    return isBurial ? normalizeBurial(item, excSet) : normalizeCremation(item, excSet);
+                });
+                totalRecords = unifiedRes.meta?.total || items.length;
+                totalPages = Math.max(1, unifiedRes.meta?.total_pages || Math.ceil(totalRecords / perPage));
+            } else {
+                // Fallback: parallel fetch from schedules and cremations
+                if (currentTab === 'burial') {
+                    const res = await fetchBurials();
+                    const list = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+                    items = list.map(s => normalizeBurial(s, exceptions.scheduleIds));
+                    totalRecords = res.meta?.total || items.length;
+                    totalPages = Math.max(1, res.meta?.total_pages || Math.ceil(totalRecords / perPage));
+                } else if (currentTab === 'cremation') {
+                    const res = await fetchCremations();
+                    const list = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+                    items = list.map(c => normalizeCremation(c, exceptions.cremationIds));
+                    totalRecords = res.meta?.total || items.length;
+                    totalPages = Math.max(1, res.meta?.total_pages || Math.ceil(totalRecords / perPage));
+                } else {
                     const [burialsRes, cremationsRes] = await Promise.all([
                         fetchBurials().catch(() => ({ data: [] })),
                         fetchCremations().catch(() => ({ data: [] }))
@@ -515,10 +527,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 bookingsBody.innerHTML = `
                     <tr>
                         <td colspan="9">
-                            <div class="mgmt-empty-state">
+                            <div class="decrec-empty-state">
                                 <i class="fas fa-calendar-xmark"></i>
                                 <strong>No bookings found</strong>
-                                <span>Adjust your search or status filter to see more bookings.</span>
+                                <span>Adjust your search keywords or active filters to see more bookings.</span>
                             </div>
                         </td>
                     </tr>
@@ -547,75 +559,232 @@ document.addEventListener('DOMContentLoaded', async function() {
         ]);
     }
 
-    // ── DETAIL VIEW MODAL ──────────────────────────────────────
+    // ── DETAIL VIEW MODAL (Decedent Records Pattern) ───────────
     async function viewBookingDetails(serviceType, id) {
-        detailModalBody.innerHTML = '<p style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading details...</p>';
+        detailModalBody.innerHTML = '<p style="text-align:center; padding:40px; color:#64748b;"><i class="fas fa-spinner fa-spin fa-2x"></i><br><span style="margin-top:10px; display:inline-block;">Loading booking details...</span></p>';
         detailModal.style.display = 'flex';
 
         const endpoint = serviceType === 'burial' ? `schedules/${id}` : `cremations/${id}`;
         try {
             const data = await api.request(endpoint, { method: 'GET' });
             if (data.error) {
-                detailModalBody.innerHTML = `<p class="error-msg">${escapeHtml(data.error)}</p>`;
+                detailModalBody.innerHTML = `<p class="error-msg" style="color:#ef4444; padding:20px; text-align:center;">${escapeHtml(data.error)}</p>`;
                 return;
             }
 
             const isBurial = serviceType === 'burial';
             const fullName = (data.first_name || data.last_name) ? `${data.first_name || ''} ${data.last_name || ''}`.trim() : '';
-            const decedentDisplay = fullName || (data.provisional_name ? `${data.provisional_name} (unregistered)` : 'N/A');
-            const paymentDisplay = data.payment_status
-                ? `${escapeHtml(data.payment_status)} &bull; &#8369;${escapeHtml(data.payment_amount || '0.00')} on ${escapeHtml(data.payment_date || 'N/A')} (Receipt: ${escapeHtml(data.payment_receipt_number || 'N/A')})`
-                : 'No verified payment on record';
+            const decedentDisplay = fullName || (data.provisional_name ? `${data.provisional_name}` : 'Unspecified Decedent');
+            const isProvisional = !fullName && !!data.provisional_name;
+
+            const scheduleDisplay = isBurial
+                ? `${data.schedule_date || 'Date TBD'}${data.schedule_time ? ` at ${data.schedule_time}` : ''}`
+                : (data.cremation_date ? `${data.cremation_date}` : 'Date TBD');
 
             const statusTrackerHtml = window.reservationUI.buildStatusTracker(data.status, data.payment_status, {
                 confirmedLabel: isBurial ? 'Confirmed' : 'Scheduled'
             });
 
+            // Location calculation
+            const locationDisplay = isBurial
+                ? (data.lot_number ? `Lot ${escapeHtml(data.lot_number)}, Section ${escapeHtml(data.section_name || 'Standard')}` : 'No lot assigned yet')
+                : `${escapeHtml(data.columbarium || 'Columbarium')} &bull; Niche ${escapeHtml(data.niche_number || 'Auto-allocated upon completion')}`;
+
+            // Payment calculation
+            const paymentStatusStr = data.payment_status || 'Unpaid';
+            const paymentAmountFormatted = parseFloat(data.payment_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+            const paymentMethodStr = data.payment_method || 'Standard';
+            const paymentReceiptStr = data.payment_receipt_number || 'N/A';
+            const paymentDateStr = data.payment_date || 'N/A';
+
             detailModalBody.innerHTML = `
-                <div style="margin-bottom: 20px;">
-                    ${statusTrackerHtml}
-                </div>
-                <div class="detail-grid">
-                    <div class="detail-item">
-                        <div class="detail-item__label">Service Type</div>
-                        <div class="detail-item__value">${buildServiceBadge(serviceType)} #${id}</div>
+                <!-- View Hero Profile Card -->
+                <div class="view-hero-card">
+                    <div class="view-hero-avatar ${isBurial ? 'avatar--burial' : 'avatar--cremation'}">
+                        <i class="fas ${isBurial ? 'fa-monument' : 'fa-fire'}"></i>
                     </div>
-                    <div class="detail-item">
-                        <div class="detail-item__label">Lifecycle Status</div>
-                        <div class="detail-item__value">${buildStatusBadge(data.status)}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-item__label">Decedent Name</div>
-                        <div class="detail-item__value">${escapeHtml(decedentDisplay)}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-item__label">Ceremony Schedule</div>
-                        <div class="detail-item__value">${escapeHtml(isBurial ? `${data.schedule_date || ''} ${data.schedule_time || ''}` : (data.cremation_date || 'N/A'))}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-item__label">${isBurial ? 'Lot & Section' : 'Columbarium & Niche'}</div>
-                        <div class="detail-item__value">
-                            ${isBurial ? `Lot ${escapeHtml(data.lot_number || 'N/A')}, Sec ${escapeHtml(data.section_name || 'N/A')}` : `${escapeHtml(data.columbarium || 'N/A')} &bull; Niche ${escapeHtml(data.niche_number || 'TBD')}`}
+                    <div class="view-hero-info">
+                        <div class="view-hero-title-row">
+                            <h2 class="view-decedent-name">${escapeHtml(decedentDisplay)}</h2>
+                            <div class="view-status-wrap">
+                                ${buildServiceBadge(serviceType)}
+                                ${buildStatusBadge(data.status)}
+                                ${isProvisional ? '<span class="view-schedule-pill" style="background:#fef3c7; color:#92400e;"><i class="fas fa-user-clock"></i> Provisional Request</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="view-hero-schedule">
+                            <i class="fas fa-calendar-day"></i>
+                            <span>${escapeHtml(scheduleDisplay)}</span>
+                            <span class="view-schedule-pill">${isBurial ? 'Ground Interment' : 'Cremation Ceremony'}</span>
                         </div>
                     </div>
-                    <div class="detail-item">
-                        <div class="detail-item__label">Requested By</div>
-                        <div class="detail-item__value">${escapeHtml(data.created_by_name || 'N/A')}</div>
+                </div>
+
+                <!-- 4-Stage Stepper Tracker -->
+                <div class="booking-stepper-wrap">
+                    ${statusTrackerHtml}
+                </div>
+
+                <!-- 2-Column Info Cards Grid -->
+                <div class="view-details-grid">
+                    <!-- Card 1: Ceremony & Slot Allocation -->
+                    <div class="view-info-card">
+                        <div class="view-card-header">
+                            <i class="fas fa-calendar-check"></i>
+                            <span>Ceremony &amp; Allocation Details</span>
+                        </div>
+                        <div class="view-card-body">
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-hashtag"></i> Booking Ref</span>
+                                <strong class="prop-value">#${id} (${isBurial ? 'Burial' : 'Cremation'})</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-clock"></i> Schedule Date &amp; Time</span>
+                                <strong class="prop-value">${escapeHtml(scheduleDisplay)}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas ${isBurial ? 'fa-map-pin' : 'fa-box-archive'}"></i> ${isBurial ? 'Assigned Lot & Section' : 'Columbarium & Niche'}</span>
+                                <strong class="prop-value">${locationDisplay}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-circle-nodes"></i> Operational Lifecycle</span>
+                                <strong class="prop-value">${data.status === 'Completed' ? '<span style="color:#059669; font-weight:700;"><i class="fas fa-circle-check"></i> Completed &amp; Synchronized</span>' : (data.status === 'Cancelled' ? '<span style="color:#dc2626;"><i class="fas fa-ban"></i> Cancelled &amp; Released</span>' : '<span style="color:#d97706;"><i class="fas fa-hourglass-half"></i> Active / In Progress</span>')}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Family & Client Information -->
+                    <div class="view-info-card">
+                        <div class="view-card-header">
+                            <i class="fas fa-user-group"></i>
+                            <span>Applicant &amp; Family Record</span>
+                        </div>
+                        <div class="view-card-body">
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-user"></i> Requested By</span>
+                                <strong class="prop-value">${escapeHtml(data.created_by_name || 'Citizen User')}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-phone"></i> Contact Phone</span>
+                                <strong class="prop-value">${escapeHtml(data.contact_number || data.phone || data.created_by_phone || 'On file')}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-envelope"></i> Email Address</span>
+                                <strong class="prop-value">${escapeHtml(data.created_by_email || data.email || 'Verified user')}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-heart"></i> Kin Relationship</span>
+                                <strong class="prop-value">${escapeHtml(data.relationship || 'Next of kin / Representative')}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Payment & Accounting Record -->
+                    <div class="view-info-card">
+                        <div class="view-card-header">
+                            <i class="fas fa-credit-card"></i>
+                            <span>Payment &amp; Accounting Record</span>
+                        </div>
+                        <div class="view-card-body">
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-shield-check"></i> Payment Status</span>
+                                <strong class="prop-value">${buildPaymentBadge({ payment_status: paymentStatusStr })}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-peso-sign"></i> Amount</span>
+                                <strong class="prop-value">&#8369;${paymentAmountFormatted}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-receipt"></i> Official Receipt</span>
+                                <strong class="prop-value">${escapeHtml(paymentReceiptStr)}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-money-bill-transfer"></i> Payment Method</span>
+                                <strong class="prop-value">${escapeHtml(paymentMethodStr)}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 4: Audit & System Metadata -->
+                    <div class="view-info-card">
+                        <div class="view-card-header">
+                            <i class="fas fa-shield-halved"></i>
+                            <span>System &amp; Verification Trail</span>
+                        </div>
+                        <div class="view-card-body">
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-calendar-plus"></i> Creation Date</span>
+                                <strong class="prop-value">${escapeHtml(data.created_at || 'System record')}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-file-invoice"></i> Settlement Date</span>
+                                <strong class="prop-value">${escapeHtml(paymentDateStr)}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-user-shield"></i> Handled By</span>
+                                <strong class="prop-value">${escapeHtml(user.name || 'Staff Console')}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-bell"></i> Automation Trail</span>
+                                <strong class="prop-value"><span style="color:#0f766e;"><i class="fas fa-check-double"></i> Verified Sync</span></strong>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="detail-item" style="margin-bottom: 14px;">
-                    <div class="detail-item__label">Payment Information</div>
-                    <div class="detail-item__value" style="font-size:0.88rem;">${paymentDisplay}</div>
+                ${data.notes ? `
+                <!-- Special Instructions / Notes Box -->
+                <div class="booking-notes-box">
+                    <div class="booking-notes-label"><i class="fas fa-note-sticky"></i> Special Instructions &amp; Requests</div>
+                    <p class="booking-notes-text">${escapeHtml(data.notes)}</p>
                 </div>
-
-                <div class="detail-item">
-                    <div class="detail-item__label">Notes &amp; Instructions</div>
-                    <div class="detail-item__value" style="font-size:0.88rem; font-weight:normal; color:#475569;">${escapeHtml(data.notes || 'No special instructions on file.')}</div>
-                </div>
+                ` : ''}
             `;
+
+            // Modal Footer Actions
+            const footerEl = document.getElementById('bookingDetailFooter');
+            const canComplete = data.status === 'Confirmed' || data.status === 'Scheduled';
+            const canCash = data.status === 'Pending';
+            const canCancel = (data.status === 'Pending' || data.status === 'Confirmed' || data.status === 'Scheduled');
+
+            footerEl.innerHTML = `
+                ${canCash ? `<button type="button" class="btn-secondary" id="modalActionCash" style="color:#d97706; border-color:#fde68a; background:#fffbeb;"><i class="fas fa-money-bill-wave"></i> Record Cash</button>` : ''}
+                ${canComplete ? `<button type="button" class="btn-secondary" id="modalActionComplete" style="color:#059669; border-color:#a7f3d0; background:#ecfdf5;"><i class="fas fa-check"></i> Mark Complete</button>` : ''}
+                ${canCancel ? `<button type="button" class="btn-secondary" id="modalActionCancel" style="color:#dc2626; border-color:#fecaca; background:#fef2f2;"><i class="fas fa-xmark"></i> Cancel Booking</button>` : ''}
+                <button type="button" class="btn-secondary" id="closeDetailModalBtn">Close</button>
+            `;
+
+            // Wire footer action buttons
+            const modalActionCash = document.getElementById('modalActionCash');
+            if (modalActionCash) {
+                modalActionCash.addEventListener('click', () => {
+                    closeDetailModal();
+                    openCashModal(serviceType, id);
+                });
+            }
+
+            const modalActionComplete = document.getElementById('modalActionComplete');
+            if (modalActionComplete) {
+                modalActionComplete.addEventListener('click', async () => {
+                    await completeBooking(serviceType, id, modalActionComplete);
+                    closeDetailModal();
+                });
+            }
+
+            const modalActionCancel = document.getElementById('modalActionCancel');
+            if (modalActionCancel) {
+                modalActionCancel.addEventListener('click', async () => {
+                    await cancelBooking(serviceType, id, modalActionCancel);
+                    closeDetailModal();
+                });
+            }
+
+            const closeBtn = document.getElementById('closeDetailModalBtn');
+            if (closeBtn) closeBtn.addEventListener('click', closeDetailModal);
+
         } catch (error) {
-            detailModalBody.innerHTML = '<p class="error-msg">Unable to load booking details.</p>';
+            console.error('Error viewing booking details:', error);
+            detailModalBody.innerHTML = '<p class="error-msg" style="color:#ef4444; padding:20px; text-align:center;">Unable to load booking details right now.</p>';
         }
     }
 
@@ -624,7 +793,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     closeDetailModalBtn.addEventListener('click', closeDetailModal);
-    closeDetailModalFooterBtn.addEventListener('click', closeDetailModal);
     detailModal.addEventListener('click', (e) => {
         if (e.target === detailModal) closeDetailModal();
     });
@@ -792,13 +960,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     searchQuery.addEventListener('input', debouncedFilter);
     statusFilter.addEventListener('change', debouncedFilter);
 
-    toggleAwaitingBtn.addEventListener('click', async () => {
-        awaitingReviewOnly = !awaitingReviewOnly;
-        toggleAwaitingBtn.setAttribute('aria-pressed', String(awaitingReviewOnly));
-        statusFilter.disabled = awaitingReviewOnly;
-        pagination.reset();
-        await loadAndRenderBookings();
-    });
+    if (toggleAwaitingBtn) {
+        toggleAwaitingBtn.addEventListener('change', async () => {
+            awaitingReviewOnly = toggleAwaitingBtn.checked;
+            toggleAwaitingBtn.setAttribute('aria-pressed', String(awaitingReviewOnly));
+            statusFilter.disabled = awaitingReviewOnly;
+            pagination.reset();
+            await loadAndRenderBookings();
+        });
+    }
 
     clearFilters.addEventListener('click', async () => {
         searchQuery.value = '';
@@ -807,7 +977,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         currentQuery = '';
         currentStatus = '';
         awaitingReviewOnly = false;
-        toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+        if (toggleAwaitingBtn) {
+            toggleAwaitingBtn.checked = false;
+            toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+        }
         pagination.reset();
         await loadAndRenderBookings();
     });
