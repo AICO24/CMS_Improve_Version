@@ -81,6 +81,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     let currentStatusFilter = 'all';
     let currentAttentionFilter = false;
     let cachedRequests = [];
+    let cachedDecedents = [];
+    let cachedLots = [];
 
     const perPage = 10;
     const paginationInfo = document.getElementById('paginationInfo');
@@ -476,22 +478,158 @@ document.addEventListener('DOMContentLoaded', async function() {
         await loadAndRenderRequests();
     }
 
-    async function populateDropdowns() {
+    // ── Dropzone & AI Document Assistant State ──
+    const relocFileInput = document.getElementById('relocFileInput');
+    const relocDocType = document.getElementById('relocationDocType');
+    const relocDropzonePlaceholder = document.getElementById('relocDropzonePlaceholder');
+    const relocPreviewContainer = document.getElementById('relocPreviewContainer');
+    const relocPreviewImg = document.getElementById('relocPreviewImg');
+    const relocPreviewPdf = document.getElementById('relocPreviewPdf');
+    const relocPdfName = document.getElementById('relocPdfName');
+    const clearRelocFileBtn = document.getElementById('clearRelocFileBtn');
+    const extractRelocDocBtn = document.getElementById('extractRelocDocBtn');
+    const relocExtractionChips = document.getElementById('relocExtractionChips');
+    const relocUploadHint = document.getElementById('relocUploadHint');
+
+    function resetDocumentUpload() {
+        if (relocFileInput) relocFileInput.value = '';
+        if (relocDocType) relocDocType.value = 'exhumation_permit';
+        if (relocUploadHint) relocUploadHint.textContent = 'Permit file will be attached automatically to this relocation record upon save.';
+        if (relocPreviewContainer) relocPreviewContainer.style.display = 'none';
+        if (relocDropzonePlaceholder) relocDropzonePlaceholder.style.display = 'flex';
+        if (relocPreviewImg) { relocPreviewImg.src = ''; relocPreviewImg.style.display = 'none'; }
+        if (relocPreviewPdf) relocPreviewPdf.style.display = 'none';
+        if (relocExtractionChips) { relocExtractionChips.innerHTML = ''; relocExtractionChips.style.display = 'none'; }
+    }
+
+    function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const commaIndex = reader.result.indexOf(',');
+                resolve(commaIndex >= 0 ? reader.result.slice(commaIndex + 1) : reader.result);
+            };
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function resetOriginLotFields() {
+        const fromLotDisplay = document.getElementById('fromLotDisplay');
+        const fromLotId = document.getElementById('fromLotId');
+        const fromSectionDisplay = document.getElementById('fromSectionDisplay');
+        const decedentHint = document.getElementById('decedentHint');
+
+        if (fromLotDisplay) fromLotDisplay.value = '';
+        if (fromLotId) fromLotId.value = '';
+        if (fromSectionDisplay) fromSectionDisplay.value = '';
+        if (decedentHint) {
+            decedentHint.textContent = 'Current burial lot and section will be detected and locked automatically.';
+            decedentHint.style.color = '';
+        }
+    }
+
+    function populateDestinationLots(excludeLotId = null, selectedLotId = null) {
+        const toLotSelect = document.getElementById('toLotId');
+        if (!toLotSelect) return;
+
+        const availableLots = cachedLots.filter(l => {
+            const isAvailable = (l.status || '').toLowerCase() === 'available';
+            const isExcluded = excludeLotId && Number(l.lot_id) === Number(excludeLotId);
+            return isAvailable && !isExcluded;
+        });
+
+        if (availableLots.length === 0) {
+            toLotSelect.innerHTML = '<option value="">No available destination lots found</option>';
+            return;
+        }
+
+        toLotSelect.innerHTML = '<option value="">Select an available destination lot...</option>' +
+            availableLots.map(l => {
+                return `<option value="${l.lot_id}">Lot ${escapeHtml(l.lot_number)} (${escapeHtml(l.section_name || 'General Section')})</option>`;
+            }).join('');
+
+        if (selectedLotId) {
+            toLotSelect.value = selectedLotId;
+        }
+    }
+
+    function handleDecedentSelection(decedentId, preserveToLotId = null) {
+        const decedent = cachedDecedents.find(d => Number(d.decedent_id) === Number(decedentId));
+        const fromLotDisplay = document.getElementById('fromLotDisplay');
+        const fromLotId = document.getElementById('fromLotId');
+        const fromSectionDisplay = document.getElementById('fromSectionDisplay');
+        const decedentHint = document.getElementById('decedentHint');
+
+        if (!decedent || !decedent.lot_id) {
+            resetOriginLotFields();
+            populateDestinationLots();
+            if (decedentHint) {
+                decedentHint.textContent = 'Please choose a buried decedent with an active lot assignment.';
+                decedentHint.style.color = '#dc2626';
+            }
+            return;
+        }
+
+        // Automated prefill of origin lot and section
+        if (fromLotId) fromLotId.value = decedent.lot_id;
+        if (fromLotDisplay) fromLotDisplay.value = `Lot ${decedent.lot_number || decedent.lot_id}`;
+        if (fromSectionDisplay) fromSectionDisplay.value = decedent.section_name || 'General Section';
+
+        if (decedentHint) {
+            decedentHint.innerHTML = `<i class="fas fa-circle-check" style="color: #10b981;"></i> Current resting place verified: <strong>Lot ${escapeHtml(decedent.lot_number || '')} (${escapeHtml(decedent.section_name || '')})</strong>.`;
+            decedentHint.style.color = '#047857';
+        }
+
+        // Visual flash highlight on prefilled fields
+        [fromLotDisplay, fromSectionDisplay].forEach(el => {
+            if (!el) return;
+            el.style.transition = 'background-color 300ms ease, border-color 300ms ease';
+            el.style.backgroundColor = '#ecfdf5';
+            el.style.borderColor = '#10b981';
+            setTimeout(() => {
+                el.style.backgroundColor = '';
+                el.style.borderColor = '';
+            }, 1800);
+        });
+
+        // Dynamic destination lot dropdown: exclude decedent's origin lot!
+        populateDestinationLots(decedent.lot_id, preserveToLotId);
+    }
+
+    async function populateDropdowns(selectedDecedentId = null, selectedToLotId = null) {
         try {
-            const decedents = await apiRequest('decedents');
-            const lots = await apiRequest('lots');
+            const [decedentsRes, lotsRes] = await Promise.all([
+                apiRequest('decedents'),
+                apiRequest('lots')
+            ]);
+
+            cachedDecedents = Array.isArray(decedentsRes.data) ? decedentsRes.data : (Array.isArray(decedentsRes) ? decedentsRes : []);
+            cachedLots = Array.isArray(lotsRes.data) ? lotsRes.data : (Array.isArray(lotsRes) ? lotsRes : []);
 
             const decedentSelect = document.getElementById('decedentId');
-            decedentSelect.innerHTML = '<option value="">Select decedent</option>' +
-                decedents.map(d => `<option value="${d.decedent_id}">${d.first_name} ${d.last_name}</option>`).join('');
+            if (decedentSelect) {
+                const sortedDecedents = [...cachedDecedents].filter(d => d.lot_id).sort((a, b) => {
+                    const nameA = `${a.last_name}, ${a.first_name}`.toLowerCase();
+                    const nameB = `${b.last_name}, ${b.first_name}`.toLowerCase();
+                    return nameA.localeCompare(nameB);
+                });
 
-            const fromLotSelect = document.getElementById('fromLotId');
-            fromLotSelect.innerHTML = '<option value="">Select current lot</option>' +
-                lots.map(l => `<option value="${l.lot_id}">${l.lot_number} (${l.section_name})</option>`).join('');
+                decedentSelect.innerHTML = '<option value="">Choose a buried decedent...</option>' +
+                    sortedDecedents.map(d => {
+                        const name = `${d.last_name}, ${d.first_name}${d.suffix ? ' ' + d.suffix : ''}`;
+                        const lotInfo = ` — Lot ${d.lot_number} (${d.section_name || 'Sec —'})`;
+                        return `<option value="${d.decedent_id}">${escapeHtml(name)}${lotInfo}</option>`;
+                    }).join('');
 
-            const toLotSelect = document.getElementById('toLotId');
-            toLotSelect.innerHTML = '<option value="">Select destination lot</option>' +
-                lots.filter(l => l.status === 'Available').map(l => `<option value="${l.lot_id}">${l.lot_number} (${l.section_name})</option>`).join('');
+                if (selectedDecedentId) {
+                    decedentSelect.value = selectedDecedentId;
+                    handleDecedentSelection(selectedDecedentId, selectedToLotId);
+                } else {
+                    resetOriginLotFields();
+                    populateDestinationLots(null, selectedToLotId);
+                }
+            }
         } catch (error) {
             console.error('Failed to populate dropdowns:', error);
         }
@@ -639,72 +777,245 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('modalTitle').innerText = 'New Relocation Request';
         document.getElementById('requestForm').reset();
         document.getElementById('requestId').value = '';
-        document.getElementById('requestStatus').value = 'Pending';
+        const statusGroup = document.getElementById('statusGroup');
+        if (statusGroup) statusGroup.style.display = 'none';
+        resetDocumentUpload();
+        resetOriginLotFields();
         populateDropdowns();
         requestModal.style.display = 'flex';
     }
 
     async function openEditModal(req) {
         if (!req) return;
-        document.getElementById('modalTitle').innerText = 'Edit Relocation Request';
+        document.getElementById('modalTitle').innerText = `Edit Relocation Request #REQ-${req.request_id}`;
         document.getElementById('requestId').value = req.request_id;
-        document.getElementById('decedentId').value = req.deceased_id;
-        document.getElementById('fromLotId').value = req.from_lot_id;
-        document.getElementById('toLotId').value = req.to_lot_id;
-        document.getElementById('reason').value = req.reason;
-        document.getElementById('requestStatus').value = req.status;
-        await populateDropdowns();
+        document.getElementById('reason').value = req.reason || '';
+        const statusGroup = document.getElementById('statusGroup');
+        if (statusGroup) {
+            statusGroup.style.display = 'block';
+            document.getElementById('requestStatus').value = req.status || 'Pending';
+        }
+        resetDocumentUpload();
+        await populateDropdowns(req.deceased_id, req.to_lot_id);
         requestModal.style.display = 'flex';
     }
 
+    // Decedent selection change listener
+    const decedentSelectEl = document.getElementById('decedentId');
+    if (decedentSelectEl) {
+        decedentSelectEl.addEventListener('change', (e) => {
+            handleDecedentSelection(e.target.value);
+        });
+    }
+
+    // Document file change listener (Preview)
+    if (relocFileInput) {
+        relocFileInput.addEventListener('change', () => {
+            const file = relocFileInput.files[0];
+            if (!file) {
+                resetDocumentUpload();
+                return;
+            }
+            if (relocDropzonePlaceholder) relocDropzonePlaceholder.style.display = 'none';
+            if (relocPreviewContainer) relocPreviewContainer.style.display = 'flex';
+
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    if (relocPreviewImg) {
+                        relocPreviewImg.src = e.target.result;
+                        relocPreviewImg.style.display = 'block';
+                    }
+                    if (relocPreviewPdf) relocPreviewPdf.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                if (relocPreviewImg) relocPreviewImg.style.display = 'none';
+                if (relocPreviewPdf) {
+                    relocPreviewPdf.style.display = 'flex';
+                    if (relocPdfName) relocPdfName.textContent = file.name;
+                }
+            }
+            if (relocUploadHint) {
+                relocUploadHint.textContent = `"${file.name}" ready to attach upon save.`;
+            }
+        });
+    }
+
+    if (clearRelocFileBtn) {
+        clearRelocFileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetDocumentUpload();
+        });
+    }
+
+    // AI Extract & Auto-Fill button listener
+    if (extractRelocDocBtn) {
+        extractRelocDocBtn.addEventListener('click', async () => {
+            const file = relocFileInput ? relocFileInput.files[0] : null;
+            if (!file) {
+                showToast('Please select an exhumation permit or document file first.', { type: 'error' });
+                return;
+            }
+
+            await withButtonLoading(extractRelocDocBtn, async () => {
+                try {
+                    const imageBase64 = await readFileAsBase64(file);
+                    const payload = { image_base64: imageBase64, mime_type: file.type };
+
+                    const response = await api.request('ai/extract-certificate', {
+                        method: 'POST',
+                        body: payload,
+                    });
+                    const result = response && response.result;
+
+                    if (!result || (!result.first_name && !result.last_name)) {
+                        showToast("Couldn't read document fields clearly — please select decedent manually.", { type: 'warning' });
+                        return;
+                    }
+
+                    const searchFirst = (result.first_name || '').toLowerCase().trim();
+                    const searchLast = (result.last_name || '').toLowerCase().trim();
+
+                    const matchedDecedent = cachedDecedents.find(d => {
+                        const df = (d.first_name || '').toLowerCase().trim();
+                        const dl = (d.last_name || '').toLowerCase().trim();
+                        if (searchFirst && searchLast) {
+                            return (df.includes(searchFirst) || searchFirst.includes(df)) &&
+                                   (dl.includes(searchLast) || searchLast.includes(dl));
+                        }
+                        if (searchLast) return dl === searchLast;
+                        if (searchFirst) return df === searchFirst;
+                        return false;
+                    });
+
+                    const chips = [];
+                    if (matchedDecedent && matchedDecedent.lot_id) {
+                        const decedentSelect = document.getElementById('decedentId');
+                        if (decedentSelect) {
+                            decedentSelect.value = matchedDecedent.decedent_id;
+                            handleDecedentSelection(matchedDecedent.decedent_id);
+                            chips.push(`<span class="extraction-chip"><i class="fas fa-check"></i> Matched: ${escapeHtml(matchedDecedent.first_name)} ${escapeHtml(matchedDecedent.last_name)}</span>`);
+                            chips.push(`<span class="extraction-chip"><i class="fas fa-lock"></i> Lot ${escapeHtml(matchedDecedent.lot_number)} Locked</span>`);
+                        }
+                    } else if (matchedDecedent && !matchedDecedent.lot_id) {
+                        chips.push(`<span class="extraction-chip" style="color:#dc2626;"><i class="fas fa-triangle-exclamation"></i> Dec. ${escapeHtml(matchedDecedent.first_name)} has no burial lot</span>`);
+                    } else {
+                        chips.push(`<span class="extraction-chip"><i class="fas fa-info-circle"></i> Extracted: ${escapeHtml(result.first_name || '')} ${escapeHtml(result.last_name || '')}</span>`);
+                    }
+
+                    const reasonInput = document.getElementById('reason');
+                    if (reasonInput && !reasonInput.value.trim()) {
+                        reasonInput.value = 'Exhumation and relocation requested per attached permit / documentation.';
+                        chips.push('<span class="extraction-chip"><i class="fas fa-check"></i> Reason suggested</span>');
+                    }
+
+                    if (relocExtractionChips) {
+                        relocExtractionChips.innerHTML = chips.join('');
+                        relocExtractionChips.style.display = 'flex';
+                    }
+                    showToast('Document analyzed! Decedent & origin lot updated.', { type: 'success' });
+                } catch (err) {
+                    console.error('AI extraction failed', err);
+                    showToast('Document extraction failed: ' + (err.message || 'Unknown error'), { type: 'error' });
+                }
+            });
+        });
+    }
+
+    // Form submission with automated validation & permit document attachment
     document.getElementById('requestForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         const id = document.getElementById('requestId').value;
-        const statusValue = document.getElementById('requestStatus').value || 'Pending';
-        const statusMap = {
-            pending: 'Pending',
-            approved: 'Approved',
-            completed: 'Completed',
-            denied: 'Denied'
-        };
-        const data = {
-            deceased_id: parseInt(document.getElementById('decedentId').value, 10),
-            from_lot_id: parseInt(document.getElementById('fromLotId').value, 10),
-            to_lot_id: parseInt(document.getElementById('toLotId').value, 10),
-            reason: document.getElementById('reason').value.trim(),
-            status: statusMap[statusValue.toLowerCase()] || 'Pending'
-        };
+        const decedentId = parseInt(document.getElementById('decedentId').value, 10);
+        const fromLotId = parseInt(document.getElementById('fromLotId').value, 10);
+        const toLotId = parseInt(document.getElementById('toLotId').value, 10);
+        const reason = document.getElementById('reason').value.trim();
+        const statusGroup = document.getElementById('statusGroup');
+        const statusValue = (statusGroup && statusGroup.style.display !== 'none') ? (document.getElementById('requestStatus').value || 'Pending') : 'Pending';
 
-        if (!data.deceased_id || !data.from_lot_id || !data.to_lot_id || !data.reason) {
-            alert('Please fill in all required fields.');
+        if (!decedentId) {
+            showToast('Please select a decedent to relocate.', { type: 'error' });
+            return;
+        }
+        if (!fromLotId) {
+            showToast('Origin lot could not be determined for the selected decedent.', { type: 'error' });
+            return;
+        }
+        if (!toLotId) {
+            showToast('Please select a destination lot.', { type: 'error' });
+            return;
+        }
+        if (fromLotId === toLotId) {
+            showToast('Destination lot cannot be the same as the origin lot.', { type: 'error' });
+            return;
+        }
+        if (!reason) {
+            showToast('Please enter the reason for relocation / exhumation.', { type: 'error' });
             return;
         }
 
-        const saveBtn = e.target.querySelector('button[type="submit"]');
+        const data = {
+            deceased_id: decedentId,
+            from_lot_id: fromLotId,
+            to_lot_id: toLotId,
+            reason: reason,
+            status: statusValue
+        };
+
+        const saveBtn = document.getElementById('saveRequestBtn') || e.target.querySelector('button[type="submit"]');
         await withButtonLoading(saveBtn, async () => {
             try {
                 const result = id
                     ? await apiRequest(`relocations/${id}`, { method: 'PUT', body: data })
                     : await apiRequest('relocations', { method: 'POST', body: data });
+
                 if (result.success) {
+                    const targetRequestId = id || result.data?.request_id || result.request_id || result.id;
+
+                    // If a permit document was selected in the AI Dropzone, attach it!
+                    const file = relocFileInput ? relocFileInput.files[0] : null;
+                    if (file && targetRequestId) {
+                        try {
+                            const formData = new FormData();
+                            formData.append('document_file', file);
+                            formData.append('document_type', relocDocType ? relocDocType.value : 'exhumation_permit');
+                            await apiRequest(`relocations/${targetRequestId}/documents`, {
+                                method: 'POST',
+                                body: formData
+                            });
+                        } catch (uploadErr) {
+                            console.error('Attached document upload error:', uploadErr);
+                            showToast('Relocation saved, but document upload failed: ' + uploadErr.message, { type: 'warning' });
+                        }
+                    }
+
                     requestModal.style.display = 'none';
                     document.getElementById('requestForm').reset();
+                    resetDocumentUpload();
+                    resetOriginLotFields();
                     pagination.reset();
                     await refreshAll();
-                    // New requests auto-approve immediately (see
-                    // RelocationController::store()) — reflect the real
-                    // outcome instead of a generic "saved" message.
-                    alert(id ? 'Relocation request saved successfully.' : (result.message || 'Relocation request saved successfully.'));
+
+                    showToast(id ? 'Relocation request updated successfully.' : (result.message || 'Relocation request created and processed.'), { type: 'success' });
                 } else {
-                    alert(result.error || 'Failed to save request');
+                    showToast(result.error || 'Failed to save relocation request.', { type: 'error' });
                 }
             } catch (error) {
-                alert('Error: ' + error.message);
+                showToast('Error: ' + error.message, { type: 'error' });
             }
         });
     });
 
     document.getElementById('openAddModal').addEventListener('click', openAddModal);
+
+    const cancelRequestBtn = document.getElementById('cancelRequestBtn');
+    if (cancelRequestBtn) {
+        cancelRequestBtn.addEventListener('click', () => {
+            requestModal.style.display = 'none';
+        });
+    }
+
     document.querySelectorAll('.close, .close-view').forEach(el => {
         el.addEventListener('click', () => {
             document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');

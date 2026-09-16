@@ -299,43 +299,134 @@
 
     <!-- Add/Edit Request Modal -->
     <div id="requestModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="modal-content">
-            <button type="button" class="close" aria-label="Close">&times;</button>
+        <div class="modal-content modal-content--split">
+            <button type="button" class="close" id="closeModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
             <h3 id="modalTitle">New Relocation Request</h3>
             <form id="requestForm">
                 <input type="hidden" id="requestId">
-                <div class="form-group">
-                    <label>Decedent</label>
-                    <select id="decedentId" required>
-                        <option value="">Select decedent</option>
-                    </select>
+
+                <div class="split-modal-layout">
+                    <!-- Left Column: AI Document Assistant & Live Preview -->
+                    <div class="split-modal-ai-pane">
+                        <div class="ai-pane-header">
+                            <span class="ai-pane-title">
+                                <i class="fas fa-wand-magic-sparkles"></i> AI Document Assistant
+                            </span>
+                            <span class="ai-pane-badge">Optional</span>
+                        </div>
+                        <p class="ai-pane-desc">Upload an exhumation permit, transfer clearance, or death certificate to auto-fill or attach.</p>
+
+                        <div class="ai-doc-selector-group">
+                            <label for="relocationDocType" class="field-label-sm">Document Type</label>
+                            <select id="relocationDocType" aria-label="Document type">
+                                <option value="exhumation_permit">Exhumation Permit</option>
+                                <option value="transfer_clearance">Transfer Clearance</option>
+                                <option value="family_consent">Family Consent Form</option>
+                                <option value="other">Other Document</option>
+                            </select>
+                        </div>
+
+                        <div class="ai-dropzone" id="relocDropzone">
+                            <input type="file" id="relocFileInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
+                            <div class="ai-dropzone-placeholder" id="relocDropzonePlaceholder">
+                                <i class="fas fa-cloud-arrow-up"></i>
+                                <span>Click or drag permit document here</span>
+                                <small>JPG, PNG, or PDF (Max 10MB)</small>
+                            </div>
+                            <div class="ai-preview-container" id="relocPreviewContainer" style="display: none;">
+                                <img id="relocPreviewImg" src="" alt="Document Preview" style="display: none;">
+                                <div id="relocPreviewPdf" class="cert-pdf-preview" style="display: none;">
+                                    <i class="fas fa-file-pdf"></i>
+                                    <span id="relocPdfName">document.pdf</span>
+                                </div>
+                                <button type="button" class="btn-clear-preview" id="clearRelocFileBtn" title="Remove file">&times;</button>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-extract-ai" id="extractRelocDocBtn">
+                            <i class="fas fa-wand-magic-sparkles"></i>
+                            <span>Extract &amp; Auto-Fill Decedent</span>
+                        </button>
+
+                        <div class="extraction-status-chips" id="relocExtractionChips" style="display: none;"></div>
+                        <p class="certificate-upload-hint" id="relocUploadHint">Permit file will be attached automatically to this relocation record upon save.</p>
+                    </div>
+
+                    <!-- Right Column: Structured Relocation Form -->
+                    <div class="split-modal-form-pane">
+                        <div class="form-pane-content">
+                            <!-- Section 1: Decedent & Current Location (Automated) -->
+                            <div class="form-section-header">
+                                <i class="fas fa-user-tag"></i> Decedent &amp; Origin Lot (Automated)
+                            </div>
+                            <div class="reloc-form-grid">
+                                <div class="form-group full-width">
+                                    <label for="decedentId">Select Decedent to Relocate <span class="required-star">*</span></label>
+                                    <select id="decedentId" required>
+                                        <option value="">Choose a buried decedent...</option>
+                                    </select>
+                                    <small class="field-hint" id="decedentHint">Current burial lot and section will be detected and locked automatically.</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="fromLotDisplay">Origin Lot (Current)</label>
+                                    <input type="text" id="fromLotDisplay" readonly placeholder="Auto-detected upon selection" class="input-locked">
+                                    <input type="hidden" id="fromLotId">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="fromSectionDisplay">Origin Section</label>
+                                    <input type="text" id="fromSectionDisplay" readonly placeholder="Auto-detected" class="input-locked">
+                                </div>
+                            </div>
+
+                            <!-- Section 2: Destination & Route Logistics -->
+                            <div class="form-section-header">
+                                <i class="fas fa-map-location-dot"></i> Destination Lot &amp; Logistics
+                            </div>
+                            <div class="reloc-form-grid">
+                                <div class="form-group full-width">
+                                    <label for="toLotId">Destination Lot (Available Only) <span class="required-star">*</span></label>
+                                    <select id="toLotId" required>
+                                        <option value="">Select an available destination lot...</option>
+                                    </select>
+                                    <small class="field-hint" id="toLotHint">Only 'Available' ground lots are shown. Current origin lot is excluded.</small>
+                                </div>
+                            </div>
+
+                            <!-- Section 3: Transfer Reason & Justification -->
+                            <div class="form-section-header">
+                                <i class="fas fa-file-lines"></i> Relocation Reason &amp; Justification
+                            </div>
+                            <div class="reloc-form-grid">
+                                <div class="form-group full-width">
+                                    <label for="reason">Reason for Exhumation / Relocation <span class="required-star">*</span></label>
+                                    <textarea id="reason" rows="3" required placeholder="e.g. Family request for consolidation, lease term completed, court-ordered transfer..."></textarea>
+                                </div>
+
+                                <div class="form-group" id="statusGroup" style="display: none;">
+                                    <label for="requestStatus">Status</label>
+                                    <select id="requestStatus">
+                                        <option value="Pending">Pending</option>
+                                        <option value="Approved">Approved</option>
+                                        <option value="Completed">Completed</option>
+                                        <option value="Denied">Denied</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-form-actions">
+                            <button type="button" class="btn-secondary" id="cancelRequestBtn">Cancel</button>
+                            <button type="submit" class="btn-save bookmarkBtn" id="saveRequestBtn">
+                                <span class="IconContainer">
+                                    <i class="fas fa-save icon"></i>
+                                </span>
+                                <span class="text">Save Request</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>From Lot (Current)</label>
-                    <select id="fromLotId" required>
-                        <option value="">Select current lot</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>To Lot (Destination)</label>
-                    <select id="toLotId" required>
-                        <option value="">Select destination lot</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Reason for relocation / exhumation</label>
-                    <textarea id="reason" rows="3" required placeholder="e.g., Family request, lease expiration, etc."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Status</label>
-                    <select id="requestStatus">
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="completed">Completed</option>
-                        <option value="denied">Denied</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span></button>
             </form>
         </div>
     </div>
