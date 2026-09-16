@@ -431,19 +431,76 @@
         </div>
     </div>
 
-    <!-- View/Approve Modal -->
+    <!-- View/Approve Modal (Organized Decedent Records Reference Layout) -->
     <div id="viewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
-        <div class="modal-content">
-            <button type="button" class="close-view" aria-label="Close">&times;</button>
-            <h3 id="viewModalTitle">Request Details</h3>
+        <div class="modal-content modal--view">
+            <button type="button" class="close-view" aria-label="Close"><i class="fas fa-xmark"></i></button>
+            <div class="modal-header-compact view-modal-header">
+                <div class="modal-header-icon-wrap view-header-icon">
+                    <i class="fas fa-truck-moving"></i>
+                </div>
+                <div>
+                    <h3 id="viewModalTitle">Relocation Request Details</h3>
+                    <p class="modal-header-subtitle">Exhumation clearance, lot transfer, and authorized documentation</p>
+                </div>
+            </div>
+
+            <!-- View Details Container (Hero Card + 2-Column Details Grid) -->
             <div id="viewDetails"></div>
-            <div style="margin-top: 10px;"><div id="aiAssistantMountRecord"></div></div>
-            <div class="modal-buttons">
-                <button class="btn-approve" id="approveBtn">Approve</button>
-                <button class="btn-complete" id="completeBtn">Mark Complete</button>
-                <button class="btn-deny" id="denyBtn">Deny</button>
-                <button class="btn-edit" id="editFromView">Edit Request</button>
-                <button class="btn-deny" id="deleteFromView" style="display:none;">Delete Request</button>
+
+            <!-- Attached Documents & Permits -->
+            <div class="documents-section">
+                <div class="section-title-wrap">
+                    <h4 class="view-section-title"><i class="fas fa-folder-open"></i> Attached Documents & Permits</h4>
+                </div>
+                <div id="viewDocumentsList" class="documents-list"></div>
+                <div class="documents-upload-bar">
+                    <select id="documentTypeSelect" aria-label="Document type" class="document-type-select">
+                        <option value="relocation_permit">Relocation Permit</option>
+                        <option value="exhumation_permit">Exhumation Permit</option>
+                        <option value="transfer_clearance">Transfer Clearance</option>
+                        <option value="family_consent">Family Consent</option>
+                        <option value="death_certificate">Death Certificate</option>
+                        <option value="other">Other Document</option>
+                    </select>
+                    <label for="documentFileInput" class="custom-file-picker" id="documentFileLabel" tabindex="0" role="button">
+                        <i class="fas fa-paperclip"></i>
+                        <span id="documentFileText">Select file (.pdf, .jpg, .png)</span>
+                    </label>
+                    <input type="file" id="documentFileInput"
+                        accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" hidden>
+                    <button type="button" class="btn-secondary upload-doc-btn" id="uploadDocumentBtn">
+                        <i class="fas fa-arrow-up-from-bracket"></i> Upload
+                    </button>
+                </div>
+            </div>
+
+            <!-- Activity & Audit Trail -->
+            <div class="activity-timeline-section">
+                <div class="section-title-wrap">
+                    <h4 class="view-section-title"><i class="fas fa-clock-rotate-left"></i> Activity & Audit Trail</h4>
+                </div>
+                <div id="viewActivityTimeline" class="activity-timeline"></div>
+            </div>
+
+            <!-- Modal Action Footer -->
+            <div class="view-modal-footer">
+                <div class="modal-actions-left">
+                    <button type="button" class="btn-print-clearance" id="printClearanceBtn">
+                        <i class="fas fa-print"></i>
+                        <span>Print Clearance Slip</span>
+                    </button>
+                </div>
+                <div class="modal-actions-right">
+                    <button type="button" class="btn-approve" id="approveBtn" style="display:none;">Approve</button>
+                    <button type="button" class="btn-complete" id="completeBtn" style="display:none;">Mark Complete</button>
+                    <button type="button" class="btn-deny" id="denyBtn" style="display:none;">Deny</button>
+                    <button type="button" class="btn-edit" id="editFromView" style="display:none;">
+                        <span class="edit-text">Edit Request</span>
+                        <span class="edit-icon"><i class="fas fa-pen"></i></span>
+                    </button>
+                    <button type="button" class="btn-deny" id="deleteFromView" style="display:none;">Delete</button>
+                </div>
             </div>
         </div>
     </div>

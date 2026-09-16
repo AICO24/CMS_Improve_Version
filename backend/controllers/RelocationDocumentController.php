@@ -8,7 +8,7 @@ class RelocationDocumentController {
     private $relocationModel;
     private $auditLogModel;
 
-    private const ALLOWED_TYPES = ['exhumation_permit', 'transfer_clearance', 'family_consent', 'other'];
+    private const ALLOWED_TYPES = ['relocation_permit', 'exhumation_permit', 'transfer_clearance', 'family_consent', 'death_certificate', 'other'];
     private const EXTENSIONS_BY_MIME = [
         'image/jpeg' => 'jpg',
         'image/png' => 'png',

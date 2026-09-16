@@ -635,6 +635,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    let currentViewRequestId = null;
+    let currentViewRequestRecord = null;
+
+    const DOCUMENT_TYPE_LABELS = {
+        relocation_permit: 'Relocation Permit',
+        exhumation_permit: 'Exhumation Permit',
+        transfer_clearance: 'Transfer Clearance',
+        family_consent: 'Family Consent',
+        death_certificate: 'Death Certificate',
+        other: 'Other Document',
+    };
+
     async function showViewModal(id) {
         try {
             const req = await apiRequest(`relocations/${id}`);
@@ -642,24 +654,120 @@ document.addEventListener('DOMContentLoaded', async function() {
                 alert(req.error);
                 return;
             }
+            currentViewRequestId = id;
+            currentViewRequestRecord = req;
 
-            // A Pending request now only exists because the automatic
-            // approval attempt raised an exception (see
-            // loadOpenRelocationExceptions()) — surface why, same "Control
-            // Center" framing as the burial-scheduling exceptions flow,
-            // instead of leaving an unexplained stuck status.
             const openReason = openRelocationExceptions.get(Number(req.request_id));
+
+            // Reset document upload picker label
+            const documentFileInput = document.getElementById('documentFileInput');
+            const documentFileText = document.getElementById('documentFileText');
+            if (documentFileInput) documentFileInput.value = '';
+            if (documentFileText) {
+                documentFileText.textContent = 'Select file (.pdf, .jpg, .png)';
+                documentFileText.parentElement.classList.remove('has-file');
+            }
+
+            const fullName = `${escapeHtml(req.first_name || '')} ${escapeHtml(req.last_name || '')}`.trim() || 'Unnamed Decedent';
+            const statusKey = (req.status || 'Pending').toLowerCase();
+
             const details = `
-                <div class="detail-row"><span>Request ID</span><strong>REQ-${req.request_id}</strong></div>
-                <div class="detail-row"><span>Decedent</span><strong>${req.first_name} ${req.last_name}</strong></div>
-                <div class="detail-row"><span>From Lot</span><strong>${req.from_lot_number} (${req.from_section})</strong></div>
-                <div class="detail-row"><span>To Lot</span><strong>${req.to_lot_number} (${req.to_section})</strong></div>
-                <div class="detail-row"><span>Reason</span><strong>${req.reason}</strong></div>
-                <div class="detail-row"><span>Status</span><strong class="status-badge status-${req.status.toLowerCase()}">${req.status}</strong></div>
-                <div class="detail-row"><span>Requested By</span><strong>${req.requested_by_name}</strong></div>
-                <div class="detail-row"><span>Created</span><strong>${req.created_at}</strong></div>
-                ${req.approved_by_name ? `<div class="detail-row"><span>Approved By</span><strong>${req.approved_by_name}</strong></div>` : ''}
-                ${openReason ? `<div class="detail-row"><span>Needs review</span><strong>${openReason} — <a href="exceptions.html">Review in Exceptions</a></strong></div>` : ''}
+                <!-- Hero Profile Card -->
+                <div class="view-hero-card">
+                    <div class="view-hero-avatar">
+                        <i class="fas fa-truck-moving"></i>
+                    </div>
+                    <div class="view-hero-info">
+                        <div class="view-hero-title-row">
+                            <h2 class="view-decedent-name">${fullName}</h2>
+                            <div class="view-status-wrap">
+                                <span class="status-badge status-${statusKey}">${escapeHtml(req.status)}</span>
+                                <span class="view-lifespan-pill"><i class="fas fa-receipt"></i> REQ-${req.request_id}</span>
+                            </div>
+                        </div>
+                        <div class="view-hero-route">
+                            <span class="route-pill-origin"><i class="fas fa-location-dot"></i> Origin: Lot ${escapeHtml(req.from_lot_number)} (${escapeHtml(req.from_section)})</span>
+                            <i class="fas fa-arrow-right-long route-pill-arrow"></i>
+                            <span class="route-pill-dest"><i class="fas fa-flag-checkered"></i> Destination: Lot ${escapeHtml(req.to_lot_number)} (${escapeHtml(req.to_section)})</span>
+                        </div>
+                    </div>
+                </div>
+
+                ${openReason ? `
+                <div class="view-exception-alert">
+                    <i class="fas fa-triangle-exclamation"></i>
+                    <div class="view-exception-alert-text">
+                        <strong>Relocation Exception Flagged:</strong> ${escapeHtml(openReason)}
+                        — <a href="exceptions.html">Resolve in System Exceptions</a>
+                    </div>
+                </div>` : ''}
+
+                <!-- 2-Column Info Grid -->
+                <div class="view-details-grid">
+                    <!-- Card 1: Transfer Route & Logistics -->
+                    <div class="view-info-card">
+                        <div class="view-card-header">
+                            <i class="fas fa-route"></i>
+                            <span>Transfer Logistics & Route</span>
+                        </div>
+                        <div class="view-card-body">
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-arrow-up-from-bracket"></i> Origin Lot</span>
+                                <strong class="prop-value"><span class="view-lot-tag">Lot ${escapeHtml(req.from_lot_number)}</span></strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-layer-group"></i> Origin Section</span>
+                                <strong class="prop-value"><span class="view-section-tag">${escapeHtml(req.from_section)}</span></strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-location-crosshairs"></i> Destination Lot</span>
+                                <strong class="prop-value"><span class="view-lot-tag">Lot ${escapeHtml(req.to_lot_number)}</span></strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-layer-group"></i> Destination Section</span>
+                                <strong class="prop-value"><span class="view-section-tag">${escapeHtml(req.to_section)}</span></strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-comment-dots"></i> Transfer Reason</span>
+                                <strong class="prop-value">${escapeHtml(req.reason || 'Not Specified')}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-calendar-day"></i> Target Date</span>
+                                <strong class="prop-value">${escapeHtml(req.scheduled_date || 'Standard Exhumation Flow')}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Administrative & Authorization -->
+                    <div class="view-info-card">
+                        <div class="view-card-header">
+                            <i class="fas fa-shield-halved"></i>
+                            <span>Administrative & Authorization</span>
+                        </div>
+                        <div class="view-card-body">
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-user-pen"></i> Requested By</span>
+                                <strong class="prop-value">${escapeHtml(req.requested_by_name || 'System / Staff')}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-clock"></i> Date Submitted</span>
+                                <strong class="prop-value">${escapeHtml(req.created_at || '—')}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-user-check"></i> Authorized By</span>
+                                <strong class="prop-value">${escapeHtml(req.approved_by_name || (req.status === 'Approved' || req.status === 'Completed' ? 'System Administrator' : 'Pending Review'))}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-calendar-check"></i> Action Timestamp</span>
+                                <strong class="prop-value">${escapeHtml(req.completed_at || req.approved_at || req.updated_at || '—')}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-flag"></i> Request Status</span>
+                                <strong class="prop-value"><span class="status-badge status-${statusKey}">${escapeHtml(req.status)}</span></strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             `;
             document.getElementById('viewDetails').innerHTML = details;
 
@@ -668,21 +776,22 @@ document.addEventListener('DOMContentLoaded', async function() {
             const denyBtn = document.getElementById('denyBtn');
             const editBtn = document.getElementById('editFromView');
             const deleteBtn = document.getElementById('deleteFromView');
+            const printBtn = document.getElementById('printClearanceBtn');
 
             const isAdmin = user.role === 'admin';
-            // Approval now happens automatically at creation — a request is
-            // only ever still Pending here because that attempt hit an open
-            // exception, so Approve/Deny only make sense as that exception's
-            // resolution action, not a routine click on every new request.
             const isPending = req.status === 'Pending';
             const needsReview = isPending && Boolean(openReason);
             const isApproved = req.status === 'Approved';
 
-            approveBtn.style.display = (isAdmin && needsReview) ? 'inline-block' : 'none';
-            completeBtn.style.display = (isAdmin && isApproved) ? 'inline-block' : 'none';
-            denyBtn.style.display = (isAdmin && needsReview) ? 'inline-block' : 'none';
-            editBtn.style.display = isPending ? 'inline-block' : 'none';
-            deleteBtn.style.display = isPending ? 'inline-block' : 'none';
+            approveBtn.style.display = (isAdmin && needsReview) ? 'inline-flex' : 'none';
+            completeBtn.style.display = (isAdmin && isApproved) ? 'inline-flex' : 'none';
+            denyBtn.style.display = (isAdmin && needsReview) ? 'inline-flex' : 'none';
+            editBtn.style.display = isPending ? 'inline-flex' : 'none';
+            deleteBtn.style.display = isPending ? 'inline-flex' : 'none';
+
+            if (printBtn) {
+                printBtn.onclick = () => printRelocationClearanceSlip(req);
+            }
 
             approveBtn.onclick = async () => {
                 if (!confirm('Approve this relocation request?')) return;
@@ -755,23 +864,425 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             };
 
-            // System-Wide AI Assistant (Phase 4): mounts with this record's
-            // context pre-wired, but no longer auto-asks on open (quota-
-            // reduction batch — viewing a relocation request must never
-            // cost an LLM call by itself). The admin can still open the
-            // panel and ask a question, using this same entity-scoped
-            // context.
-            initAiAssistant({
-                mountSelector: '#aiAssistantMountRecord',
-                context: { scope: 'entity', entity_type: 'Relocation', entity_id: id },
-                label: 'Ask AI',
-            });
+            // Load attached documents and audit timeline
+            await loadRelocationDocuments(id);
+            await loadRelocationActivityTimeline(id);
 
             viewModal.style.display = 'flex';
         } catch (error) {
             alert('Failed to load request: ' + error.message);
         }
     }
+
+    async function loadRelocationDocuments(requestId) {
+        const listEl = document.getElementById('viewDocumentsList');
+        if (!listEl) return;
+        listEl.innerHTML = '<p class="activity-loading"><i class="fas fa-spinner fa-spin"></i> Loading documents...</p>';
+        try {
+            const documents = await apiRequest(`relocations/${requestId}/documents`);
+            renderRelocationDocumentsList(Array.isArray(documents) ? documents : [], requestId);
+        } catch (error) {
+            console.error('Failed to load documents', error);
+            listEl.innerHTML = '<p class="activity-empty">Could not load documents.</p>';
+        }
+    }
+
+    function renderRelocationDocumentsList(documents, requestId) {
+        const listEl = document.getElementById('viewDocumentsList');
+        if (!listEl) return;
+
+        if (documents.length === 0) {
+            listEl.innerHTML = '<p class="activity-empty"><i class="fas fa-folder-open"></i> No documents attached to this relocation request yet.</p>';
+            return;
+        }
+
+        listEl.innerHTML = documents.map((doc) => {
+            const fileName = (doc.original_filename || '').toLowerCase();
+            let fileIcon = 'fa-file-lines';
+            let iconTypeClass = 'doc-icon--default';
+            if (fileName.endsWith('.pdf')) {
+                fileIcon = 'fa-file-pdf';
+                iconTypeClass = 'doc-icon--pdf';
+            } else if (fileName.match(/\.(jpg|jpeg|png|webp|gif)$/)) {
+                fileIcon = 'fa-file-image';
+                iconTypeClass = 'doc-icon--image';
+            }
+
+            const canDelete = user.role === 'admin';
+
+            return `
+                <div class="document-entry" data-document-id="${doc.document_id}">
+                    <div class="doc-file-indicator ${iconTypeClass}">
+                        <i class="fas ${fileIcon}"></i>
+                    </div>
+                    <div class="document-entry-info">
+                        <div class="doc-entry-top">
+                            <span class="doc-type-pill">${escapeHtml(DOCUMENT_TYPE_LABELS[doc.document_type] || 'Document')}</span>
+                            <a href="${escapeHtml(doc.file_path)}" target="_blank" rel="noopener" class="document-filename" title="Open / Preview Attachment">
+                                <span>${escapeHtml(doc.original_filename)}</span>
+                                <i class="fas fa-arrow-up-right-from-square"></i>
+                            </a>
+                        </div>
+                        <span class="document-meta"><i class="far fa-clock"></i> Uploaded by ${escapeHtml(doc.uploaded_by_name || 'Staff')} · ${escapeHtml(doc.created_at)}</span>
+                    </div>
+                    ${canDelete ? `<button type="button" class="document-delete-btn" title="Delete document" data-document-id="${doc.document_id}"><i class="fas fa-trash"></i></button>` : ''}
+                </div>
+            `;
+        }).join('');
+
+        listEl.querySelectorAll('.document-delete-btn').forEach((btn) => {
+            btn.addEventListener('click', () => deleteRelocationDocument(requestId, btn.dataset.documentId));
+        });
+    }
+
+    async function deleteRelocationDocument(requestId, documentId) {
+        if (!confirm('Are you sure you want to delete this document attachment?')) return;
+        try {
+            const result = await apiRequest(`relocations/${requestId}/documents/${documentId}`, { method: 'DELETE' });
+            if (result.success) {
+                showToast('Document deleted successfully.', { type: 'success' });
+                await loadRelocationDocuments(requestId);
+                await loadRelocationActivityTimeline(requestId);
+            } else {
+                showToast(result.error || 'Could not delete document.', { type: 'error' });
+            }
+        } catch (error) {
+            showToast(error.message || 'Could not delete document.', { type: 'error' });
+        }
+    }
+
+    async function loadRelocationActivityTimeline(requestId) {
+        const timelineEl = document.getElementById('viewActivityTimeline');
+        if (!timelineEl) return;
+        timelineEl.innerHTML = '<p class="activity-loading"><i class="fas fa-spinner fa-spin"></i> Loading activity history...</p>';
+        try {
+            const entries = await apiRequest(`audit-logs?entity_type=Relocation&entity_id=${requestId}`);
+            renderRelocationActivityTimeline(Array.isArray(entries) ? entries : []);
+        } catch (error) {
+            console.error('Failed to load activity timeline', error);
+            timelineEl.innerHTML = '<p class="activity-empty">Could not load activity history.</p>';
+        }
+    }
+
+    function renderRelocationActivityTimeline(entries) {
+        const timelineEl = document.getElementById('viewActivityTimeline');
+        if (!timelineEl) return;
+
+        if (!Array.isArray(entries) || entries.length === 0) {
+            timelineEl.innerHTML = '<p class="activity-empty"><i class="fas fa-clock-rotate-left"></i> No audit activity recorded yet for this relocation.</p>';
+            return;
+        }
+
+        timelineEl.innerHTML = entries.map((entry) => {
+            const actionLower = (entry.action || '').toLowerCase();
+            let iconClass = 'fa-circle-dot';
+            let badgeClass = 'timeline-badge--default';
+            if (actionLower.includes('creat') || actionLower.includes('add')) {
+                iconClass = 'fa-circle-plus';
+                badgeClass = 'timeline-badge--created';
+            } else if (actionLower.includes('approv')) {
+                iconClass = 'fa-circle-check';
+                badgeClass = 'timeline-badge--created';
+            } else if (actionLower.includes('complete')) {
+                iconClass = 'fa-flag-checkered';
+                badgeClass = 'timeline-badge--created';
+            } else if (actionLower.includes('den') || actionLower.includes('reject')) {
+                iconClass = 'fa-circle-xmark';
+                badgeClass = 'timeline-badge--deleted';
+            } else if (actionLower.includes('update') || actionLower.includes('edit')) {
+                iconClass = 'fa-pen-to-square';
+                badgeClass = 'timeline-badge--updated';
+            } else if (actionLower.includes('delete') || actionLower.includes('remov')) {
+                iconClass = 'fa-trash-can';
+                badgeClass = 'timeline-badge--deleted';
+            } else if (actionLower.includes('document') || actionLower.includes('upload')) {
+                iconClass = 'fa-file-arrow-up';
+                badgeClass = 'timeline-badge--document';
+            }
+
+            const summary = formatAuditDetails(entry.details);
+            return `
+                <div class="activity-entry">
+                    <div class="timeline-indicator ${badgeClass}">
+                        <i class="fas ${iconClass}"></i>
+                    </div>
+                    <div class="activity-entry-content">
+                        <div class="activity-entry-header">
+                            <strong class="activity-action-title">${escapeHtml(entry.action)}</strong>
+                            <span class="activity-entry-time"><i class="far fa-clock"></i> ${escapeHtml(entry.created_at)}</span>
+                        </div>
+                        <div class="activity-entry-meta"><i class="far fa-user"></i> ${escapeHtml(entry.user_full_name || entry.username || 'System Administrator')}</div>
+                        ${summary ? `<div class="activity-entry-details">${summary}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function formatAuditDetails(rawDetails) {
+        if (!rawDetails) return '';
+        let details = rawDetails;
+        if (typeof rawDetails === 'string') {
+            try {
+                details = JSON.parse(rawDetails);
+            } catch (e) {
+                return escapeHtml(rawDetails);
+            }
+        }
+        if (!details || typeof details !== 'object') {
+            return '';
+        }
+
+        const AUDIT_FIELD_LABELS = {
+            from_lot_id: 'Origin Lot',
+            to_lot_id: 'Destination Lot',
+            reason: 'Transfer Reason',
+            status: 'Status',
+            document_type: 'Document Type',
+            original_filename: 'Filename',
+            deceased_id: 'Decedent',
+        };
+
+        return Object.entries(details).map(([field, value]) => {
+            if (field === 'note') return `<span class="audit-note">${escapeHtml(String(value))}</span>`;
+            const label = AUDIT_FIELD_LABELS[field] || field.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+            if (value === 'changed') return `<span class="audit-chip"><strong>${escapeHtml(label)}</strong> updated</span>`;
+            if (value && typeof value === 'object' && ('from' in value || 'to' in value)) {
+                return `<span class="audit-chip"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value.from ?? '—')} → ${escapeHtml(value.to ?? '—')}</span>`;
+            }
+            return `<span class="audit-chip"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(String(value))}</span>`;
+        }).join(' ');
+    }
+
+    function printRelocationClearanceSlip(req) {
+        if (!req) return;
+        const printWindow = window.open('', '_blank', 'width=840,height=900');
+        if (!printWindow) {
+            showToast('Popup was blocked. Please allow popups to print clearance slip.', { type: 'error' });
+            return;
+        }
+
+        const fullName = `${req.first_name || ''} ${req.last_name || ''}`.trim() || 'Unnamed Decedent';
+        const slipDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Clearance Slip - REQ-${escapeHtml(req.request_id)}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #1e293b;
+            margin: 40px;
+            background: #ffffff;
+        }
+        .slip-container {
+            max-width: 720px;
+            margin: 0 auto;
+            border: 2px solid #2c5e47;
+            border-radius: 12px;
+            padding: 36px 40px;
+        }
+        .slip-header {
+            text-align: center;
+            border-bottom: 2px solid #2c5e47;
+            padding-bottom: 20px;
+            margin-bottom: 24px;
+        }
+        .slip-header h1 {
+            margin: 0;
+            font-size: 1.4rem;
+            color: #2c5e47;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .slip-header p {
+            margin: 6px 0 0;
+            font-size: 0.88rem;
+            color: #64748b;
+        }
+        .slip-title-badge {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 4px 16px;
+            background: rgba(44, 94, 71, 0.12);
+            color: #2c5e47;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+        .slip-section {
+            margin-bottom: 22px;
+        }
+        .slip-section-title {
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #2c5e47;
+            border-bottom: 1px solid #cbd5e1;
+            padding-bottom: 4px;
+            margin-bottom: 12px;
+        }
+        .slip-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px 24px;
+            font-size: 0.88rem;
+        }
+        .slip-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        .slip-row.full-width {
+            grid-column: 1 / -1;
+        }
+        .slip-label {
+            color: #64748b;
+            font-weight: 500;
+        }
+        .slip-value {
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .route-highlight {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            text-align: center;
+            margin: 16px 0;
+        }
+        .route-box-title {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #64748b;
+        }
+        .route-box-val {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #2c5e47;
+            margin-top: 2px;
+        }
+        .route-arrow {
+            font-size: 1.4rem;
+            color: #2c5e47;
+            font-weight: 700;
+        }
+        .slip-signatures {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 48px;
+            padding-top: 20px;
+        }
+        .sig-box {
+            text-align: center;
+        }
+        .sig-line {
+            border-top: 1px solid #0f172a;
+            margin-top: 50px;
+            padding-top: 6px;
+            font-weight: 700;
+            font-size: 0.84rem;
+        }
+        .sig-title {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+        @media print {
+            body { margin: 0; }
+            .slip-container { border: 1.5px solid #000; }
+        }
+    </style>
+</head>
+<body>
+    <div class="slip-container">
+        <div class="slip-header">
+            <h1>Cemetery Management System</h1>
+            <p>Official Exhumation & Relocation Clearance Slip</p>
+            <div class="slip-title-badge">Clearance Slip • REQ-${escapeHtml(req.request_id)}</div>
+        </div>
+
+        <div class="slip-section">
+            <div class="slip-section-title">Record Details</div>
+            <div class="slip-grid">
+                <div class="slip-row">
+                    <span class="slip-label">Decedent Name:</span>
+                    <span class="slip-value">${fullName}</span>
+                </div>
+                <div class="slip-row">
+                    <span class="slip-label">Date Issued:</span>
+                    <span class="slip-value">${slipDate}</span>
+                </div>
+                <div class="slip-row">
+                    <span class="slip-label">Status:</span>
+                    <span class="slip-value">${escapeHtml(req.status)}</span>
+                </div>
+                <div class="slip-row">
+                    <span class="slip-label">Requested By:</span>
+                    <span class="slip-value">${escapeHtml(req.requested_by_name || 'Staff')}</span>
+                </div>
+                <div class="slip-row full-width">
+                    <span class="slip-label">Reason for Transfer:</span>
+                    <span class="slip-value">${escapeHtml(req.reason || 'Not Specified')}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="route-highlight">
+            <div>
+                <div class="route-box-title">Origin Resting Place</div>
+                <div class="route-box-val">Lot ${escapeHtml(req.from_lot_number)}</div>
+                <div style="font-size:0.75rem;color:#64748b;">${escapeHtml(req.from_section)}</div>
+            </div>
+            <div class="route-arrow">➔</div>
+            <div>
+                <div class="route-box-title">Destination Resting Place</div>
+                <div class="route-box-val">Lot ${escapeHtml(req.to_lot_number)}</div>
+                <div style="font-size:0.75rem;color:#64748b;">${escapeHtml(req.to_section)}</div>
+            </div>
+        </div>
+
+        <div class="slip-section">
+            <div class="slip-section-title">Certification & Authority</div>
+            <p style="font-size: 0.82rem; color: #475569; line-height: 1.5; margin: 6px 0;">
+                This document certifies that exhumation and lot-to-lot relocation of the aforementioned remains has been officially authorized pursuant to cemetery regulations and sanitation clearance.
+            </p>
+        </div>
+
+        <div class="slip-signatures">
+            <div class="sig-box">
+                <div class="sig-line">${escapeHtml(req.requested_by_name || 'Authorized Staff')}</div>
+                <div class="sig-title">Prepared By / Relocation Officer</div>
+            </div>
+            <div class="sig-box">
+                <div class="sig-line">${escapeHtml(req.approved_by_name || 'Cemetery Administrator')}</div>
+                <div class="sig-title">Authorized By / Administration</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+        `;
+
+        printWindow.document.open();
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+            printWindow.print();
+        }, 300);
+    }
+
 
     function openAddModal() {
         document.getElementById('modalTitle').innerText = 'New Relocation Request';
@@ -1006,6 +1517,61 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         });
     });
+
+    // Wire up document picker and upload action inside View Modal
+    const viewDocFileInput = document.getElementById('documentFileInput');
+    const viewDocFileText = document.getElementById('documentFileText');
+    if (viewDocFileInput && viewDocFileText) {
+        viewDocFileInput.addEventListener('change', () => {
+            if (viewDocFileInput.files && viewDocFileInput.files.length > 0) {
+                viewDocFileText.textContent = viewDocFileInput.files[0].name;
+                viewDocFileText.parentElement.classList.add('has-file');
+            } else {
+                viewDocFileText.textContent = 'Select file (.pdf, .jpg, .png)';
+                viewDocFileText.parentElement.classList.remove('has-file');
+            }
+        });
+    }
+
+    const uploadDocBtn = document.getElementById('uploadDocumentBtn');
+    if (uploadDocBtn) {
+        uploadDocBtn.addEventListener('click', async () => {
+            if (!currentViewRequestId) return;
+            const file = viewDocFileInput ? viewDocFileInput.files[0] : null;
+            const typeSelect = document.getElementById('documentTypeSelect');
+            if (!file) {
+                showToast('Please select a document file first.', { type: 'error' });
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('document_file', file);
+            formData.append('document_type', typeSelect ? typeSelect.value : 'other');
+
+            await withButtonLoading(uploadDocBtn, async () => {
+                try {
+                    const result = await apiRequest(`relocations/${currentViewRequestId}/documents`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (result.success) {
+                        showToast('Document uploaded successfully.', { type: 'success' });
+                        viewDocFileInput.value = '';
+                        if (viewDocFileText) {
+                            viewDocFileText.textContent = 'Select file (.pdf, .jpg, .png)';
+                            viewDocFileText.parentElement.classList.remove('has-file');
+                        }
+                        await loadRelocationDocuments(currentViewRequestId);
+                        await loadRelocationActivityTimeline(currentViewRequestId);
+                    } else {
+                        showToast(result.error || 'Could not upload document.', { type: 'error' });
+                    }
+                } catch (error) {
+                    showToast(error.message || 'Could not upload document.', { type: 'error' });
+                }
+            });
+        });
+    }
 
     document.getElementById('openAddModal').addEventListener('click', openAddModal);
 
