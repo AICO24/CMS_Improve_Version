@@ -178,6 +178,27 @@ document.addEventListener('DOMContentLoaded', async function() {
                 loadAndRenderRequests();
             });
         });
+
+        const clearFiltersBtn = document.getElementById('clearFilters');
+        if (clearFiltersBtn) {
+            clearFiltersBtn.style.display = chips.length > 0 ? 'inline-flex' : 'none';
+        }
+    }
+
+    const clearFiltersBtn = document.getElementById('clearFilters');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            currentQuery = '';
+            statusFilter.value = 'all';
+            currentStatusFilter = 'all';
+            attentionFilter.checked = false;
+            currentAttentionFilter = false;
+            switchTab('all');
+            renderActiveFilterChips();
+            pagination.reset();
+            loadAndRenderRequests();
+        });
     }
 
     function switchTab(tab) {

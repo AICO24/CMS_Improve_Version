@@ -152,26 +152,40 @@
     color: rgba(255, 255, 255, 0.85);
 }
 
-/* ── Sub-Tabs Navigation (Segmented Switcher) ── */
-.records-tabs {
+/* ── Unified Master Control Panel (Single Consolidated Box like Manage Bookings) ── */
+.relocations-control-panel {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(238, 246, 241, 0.90)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.08), rgba(37, 99, 235, 0.04));
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-left: 6px solid var(--color-primary-500, #10b981);
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.panel-top-row {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    margin-bottom: 12px;
-    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .records-tabs-track {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px;
+    gap: 6px;
+    padding: 4px;
     border-radius: var(--radius-lg, 12px);
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(234, 243, 238, 0.88)),
-        linear-gradient(90deg, rgba(44, 94, 71, 0.08), rgba(37, 99, 235, 0.05));
+    background: rgba(255, 255, 255, 0.85);
     border: 1px solid rgba(44, 94, 71, 0.14);
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
 .records-tab-btn {
@@ -179,13 +193,13 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-width: 135px;
+    min-width: 130px;
     height: 38px;
     padding: 0 16px;
     border-radius: var(--radius-md, 8px);
     border: 1px solid transparent;
     background: transparent;
-    color: var(--color-primary-800, #1b3d2f);
+    color: var(--color-primary-800, #1e3a2b);
     font-size: 0.82rem;
     font-weight: 700;
     letter-spacing: 0.01em;
@@ -201,7 +215,7 @@
 
 .records-tab-btn:hover:not(.active) {
     background: rgba(44, 94, 71, 0.08);
-    color: var(--color-primary-900, #0f291e);
+    color: var(--color-primary-900, #163024);
     transform: translateY(-1px);
 }
 
@@ -230,21 +244,33 @@
     box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
 }
 
-/* ── Filter Bar / Header ── */
-.filter-bar.reloc-header {
+.panel-action-buttons {
     display: flex;
     align-items: center;
-    gap: 12px;
     flex-wrap: wrap;
-    margin-bottom: 12px;
-    padding: 12px 18px;
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(234, 243, 238, 0.88)),
-        linear-gradient(90deg, rgba(44, 94, 71, 0.10), rgba(37, 99, 235, 0.06));
-    border: 1px solid rgba(44, 94, 71, 0.14);
-    border-left: 6px solid var(--color-primary-500, #2c5e47);
-    border-radius: var(--radius-lg, 12px);
-    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
+    gap: 8px;
+}
+
+.panel-divider {
+    height: 1px;
+    background: linear-gradient(90deg, rgba(44, 94, 71, 0.18) 0%, rgba(226, 232, 240, 0.9) 50%, rgba(44, 94, 71, 0.08) 100%);
+    width: 100%;
+}
+
+.panel-bottom-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.panel-filters-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    flex: 1 1 auto;
 }
 
 .filter-bar__label {
@@ -253,7 +279,7 @@
     gap: 8px;
     font-size: 0.78rem;
     font-weight: 700;
-    color: var(--color-primary-700, #1e3a2f);
+    color: var(--color-primary-700, #047857);
     white-space: nowrap;
     align-self: center;
 }
@@ -269,10 +295,30 @@
     color: var(--color-primary-600, #0f766e);
 }
 
-.filter-bar .search-field {
-    flex: 1 1 240px;
-    min-width: 200px;
-    max-width: 340px;
+.panel-filters-group .search-field {
+    flex: 1 1 280px;
+    min-width: 240px;
+    max-width: 440px;
+    position: relative;
+}
+
+.panel-filters-group .search-field__input {
+    width: 100%;
+    height: 42px;
+    font-size: 0.86rem;
+    padding: 0 14px 0 40px;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid rgba(44, 94, 71, 0.22);
+    background: #ffffff;
+    color: #1e293b;
+    outline: none;
+    transition: all 0.18s ease;
+}
+
+.panel-filters-group .search-field__input:focus {
+    background: #ffffff;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
 }
 
 .filter-select {
@@ -309,6 +355,7 @@
     border: 1px solid rgba(220, 38, 38, 0.20);
     transition: all 0.2s ease;
     user-select: none;
+    height: 42px;
 }
 
 .attention-filter-toggle:hover {
@@ -322,17 +369,59 @@
     cursor: pointer;
 }
 
-.toolbar-actions-panel {
-    display: flex;
+.report-export-button {
+    font-size: 0.82rem;
+    height: 40px;
+    padding: 0 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
-    margin-left: auto;
+    gap: 7px;
+    cursor: pointer;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    transition: all 0.18s ease;
 }
 
-.toolbar-actions {
-    display: flex;
+.report-export-button:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    transform: translateY(-1px);
+}
+
+.report-export-button--excel {
+    color: #16a34a;
+    border-color: #bbf7d0;
+}
+
+.report-export-button--excel:hover {
+    background: #f0fdf4;
+    border-color: #4ade80;
+    color: #15803d;
+}
+
+.btn-secondary.btn-clear-all {
+    height: 40px;
+    padding: 0 14px;
+    font-size: 0.80rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid rgba(220, 38, 38, 0.25);
+    background: rgba(220, 38, 38, 0.06);
+    color: #dc2626;
+    cursor: pointer;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    transition: all 0.18s ease;
+}
+
+.btn-secondary.btn-clear-all:hover {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
 }
 
 /* ── Primary Action Button (.btn-add.type1) ── */
@@ -2515,4 +2604,54 @@
 .dashboard-body[data-theme="dark"] .btn-print-clearance:hover {
     background: #34d399;
     color: #0f172a;
-}
+}
+
+/* Control Panel Box Dark Mode */
+.dashboard-body[data-theme="dark"] .relocations-control-panel {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
+    border-left-color: #34d399;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+.dashboard-body[data-theme="dark"] .records-tabs-track {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.10);
+}
+
+.dashboard-body[data-theme="dark"] .records-tab-btn {
+    color: #cbd5e1;
+}
+
+.dashboard-body[data-theme="dark"] .records-tab-btn:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.06);
+    color: #f8fafc;
+}
+
+.dashboard-body[data-theme="dark"] .panel-divider {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-body[data-theme="dark"] .panel-filters-group .search-field__input {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f8fafc;
+}
+
+.dashboard-body[data-theme="dark"] .filter-select {
+    background-color: #0f172a;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f8fafc;
+}
+
+.dashboard-body[data-theme="dark"] .report-export-button {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f8fafc;
+}
+
+.dashboard-body[data-theme="dark"] .report-export-button:hover {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.20);
+}
+
