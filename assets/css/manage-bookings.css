@@ -85,94 +85,176 @@
     flex: 1 0 auto;
 }
 
-/* ── Summary Statistics Cards (Decedent Records Reference) ─ */
-.stats-row.bookings-stats {
+/* ── Stat cards grid (Reports / Decedent Records 3D Executive Cards) ──────── */
+.stats-row.bookings-stats,
+.bookings-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    align-items: stretch;
+    margin-bottom: 6px;
     width: 100%;
 }
 
-.stat-card {
-    background: rgba(255, 255, 255, 0.94);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: var(--radius-lg, 14px);
-    padding: 18px 20px;
-    border: 1px solid rgba(226, 232, 240, 0.85);
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+.bookings-stats > .stat-card {
     position: relative;
-    overflow: hidden;
-    transition: transform 0.22s cubic-bezier(0.2, 0, 0.2, 1), box-shadow 0.22s ease;
+    min-height: 124px;
+    height: 100%;
+    padding: 16px 18px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    overflow: hidden;
+    border: 1px solid rgba(22, 50, 41, 0.20);
+    border-left: 8px solid #163229;
+    background: linear-gradient(135deg, #2c5e47 0%, #3b7055 100%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    border-radius: var(--radius-lg, 14px);
+    contain: layout;
+    animation: statFloat 7s ease-in-out infinite alternate;
+    transition: transform 220ms cubic-bezier(0.2, 0, 0.2, 1),
+        box-shadow 220ms cubic-bezier(0.2, 0, 0.2, 1);
 }
 
-.stat-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.09);
-}
-
-.stat-card::before {
-    content: '';
+.bookings-stats > .stat-card::before {
+    content: "";
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: #3b82f6;
-    border-radius: 14px 14px 0 0;
+    width: 120px;
+    height: 120px;
+    right: -40px;
+    top: -30px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 70%);
+    pointer-events: none;
 }
 
-.stat-card.accent-teal::before   { background: #0d9488; }
-.stat-card.accent-navy::before   { background: #1e3a8a; }
-.stat-card.accent-amber::before  { background: #f59e0b; }
-.stat-card.accent-red::before    { background: #ef4444; }
-.stat-card.accent-purple::before { background: #8b5cf6; }
+.bookings-stats > .stat-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 52%);
+    pointer-events: none;
+    border-radius: inherit;
+}
 
-.stat-card .stat-title {
-    font-size: 0.80rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #64748b;
+.bookings-stats > .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
+}
+
+.bookings-stats > .stat-card .stat-title,
+.bookings-stats > .stat-card .stat-value,
+.bookings-stats > .stat-card .stat-sub {
+    position: relative;
+    z-index: 1;
+}
+
+.bookings-stats > .stat-card .stat-title {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: 10px;
+    width: 100%;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.76rem;
+    line-height: 1.25;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
-.stat-card .card-icon {
+.bookings-stats > .stat-card .stat-title .card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md, 8px);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    background: #f1f5f9;
-    color: #475569;
-    font-size: 0.85rem;
+    flex: 0 0 auto;
+    margin-left: auto;
+    order: 2;
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    font-size: 13px;
 }
 
-.stat-card.accent-teal .card-icon   { background: #ccfbf1; color: #0f766e; }
-.stat-card.accent-navy .card-icon   { background: #dbeafe; color: #1e40af; }
-.stat-card.accent-amber .card-icon  { background: #fef3c7; color: #b45309; }
-.stat-card.accent-red .card-icon    { background: #fee2e2; color: #b91c1c; }
-.stat-card.accent-purple .card-icon { background: #f3e8ff; color: #7e22ce; }
-
-.stat-card .stat-value {
-    font-size: 1.85rem;
-    font-weight: 800;
-    color: #0f172a;
-    line-height: 1.1;
-    margin-bottom: 4px;
+.bookings-stats > .stat-card .stat-value {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    color: #ffffff;
+    font-size: clamp(1.25rem, 1.4vw, 1.55rem);
+    font-weight: 700;
+    line-height: 1.2;
+    text-shadow: 0 1px 1px rgba(15, 23, 42, 0.16);
 }
 
-.stat-card .stat-sub {
-    font-size: 0.76rem;
-    color: #94a3b8;
-    font-weight: 500;
+.bookings-stats > .stat-card .stat-sub {
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.78rem;
+    line-height: 1.3;
+    min-height: 18px;
+}
+
+/* Reports / Decedent Records Aligned Color Accents */
+.bookings-stats > .stat-card.accent-teal {
+    border-left-color: #0f766e;
+    background: linear-gradient(135deg, #0d9488 0%, #2fb5aa 100%);
+}
+
+.bookings-stats > .stat-card.accent-navy {
+    border-left-color: #2b3658;
+    background: linear-gradient(135deg, #2b3658 0%, #465376 100%);
+}
+
+.bookings-stats > .stat-card.accent-amber {
+    border-left-color: #92400e;
+    background: linear-gradient(135deg, #b45309 0%, #d08a28 100%);
+}
+
+.bookings-stats > .stat-card.accent-blue {
+    border-left-color: #1d4ed8;
+    background: linear-gradient(135deg, #2563eb 0%, #4f7fdc 100%);
+}
+
+.bookings-stats > .stat-card.accent-red {
+    border-left-color: #991b1b;
+    background: linear-gradient(135deg, #dc2626 0%, #e85757 100%);
+}
+
+.bookings-stats > .stat-card.accent-purple {
+    border-left-color: #5b21b6;
+    background: linear-gradient(135deg, #7c3aed 0%, #9d6fe3 100%);
+}
+
+@keyframes statFloat {
+    0% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-2px);
+    }
+    100% {
+        transform: translateY(0px);
+    }
+}
+
+/* Responsive grid for stat cards */
+@media (max-width: 1200px) {
+    .bookings-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .bookings-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 580px) {
+    .bookings-stats {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* ── Unified Master Control Panel (Single Consolidated Box) ── */
@@ -1583,7 +1665,6 @@ body[data-theme="dark"] .booking-notes-text {
     color: #f1f5f9;
 }
 
-body[data-theme="dark"] .stat-card,
 body[data-theme="dark"] .chart-card,
 body[data-theme="dark"] .modal-content,
 body[data-theme="dark"] .view-info-card {
@@ -1753,9 +1834,9 @@ body[data-theme="dark"] .booking-notes-text {
     color: #cbd5e1;
 }
 
-body[data-theme="dark"] .stat-card .card-icon {
-    background: #0f172a;
-    color: #94a3b8;
+body[data-theme="dark"] .bookings-stats > .stat-card .card-icon {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
 }
 
 body[data-theme="dark"] .filter-chip {
