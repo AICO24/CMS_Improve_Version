@@ -348,6 +348,8 @@ class Lot {
         'schedule.auto_cancelled_unpaid::Available' => ['Available', 'Reserved'],
         'lot.expired::Expired' => ['Occupied'],
         'relocation.approved::Reserved' => ['Available'],
+        'relocation.denied::Available' => ['Reserved', 'Available'],
+        'relocation.cancelled::Available' => ['Reserved', 'Available'],
         'relocation.completed::Available' => self::FROM_STATUSES_UNRESTRICTED,
         'relocation.completed::Occupied' => ['Reserved'],
         'payment.verified::Reserved' => ['Available'],

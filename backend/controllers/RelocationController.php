@@ -60,6 +60,10 @@ class RelocationController {
             }
         }
 
+        if ((int) $data['from_lot_id'] === (int) $data['to_lot_id']) {
+            return ['error' => 'Source lot and destination lot cannot be the same', 'code' => 400];
+        }
+
         $fromLot = $this->lotModel->findById($data['from_lot_id']);
         $toLot = $this->lotModel->findById($data['to_lot_id']);
         if (!$fromLot || !$toLot) {
@@ -69,6 +73,15 @@ class RelocationController {
         $decedent = $this->decedentModel->findById($data['deceased_id']);
         if (!$decedent) {
             return ['error' => 'Decedent not found', 'code' => 404];
+        }
+
+        if (!empty($decedent['lot_id']) && (int) $decedent['lot_id'] !== (int) $data['from_lot_id']) {
+            return ['error' => 'Selected decedent is currently interred in a different lot', 'code' => 400];
+        }
+
+        $existingActive = $this->relocationModel->findActiveByDecedent($data['deceased_id']);
+        if ($existingActive) {
+            return ['error' => 'An active relocation request already exists for this decedent (REQ-' . $existingActive['request_id'] . ')', 'code' => 409];
         }
 
         if ($toLot['status'] !== 'Available') {
@@ -276,17 +289,15 @@ class RelocationController {
             return ['error' => 'Request must be approved first', 'code' => 403];
         }
 
-        // from_lot's prior status isn't validated anywhere in this flow (not
-        // by store(), not here) — it's assumed Occupied (that's where the
-        // decedent currently rests) but nothing enforces it, so this release
-        // deliberately carries no guard, preserving exact pre-existing
-        // behavior (it always succeeded unconditionally before Batch C too).
+        // Release source lot back to Available
         $this->transitionLotStatus($request['from_lot_id'], 'Available', $userId, 'relocation.completed');
-        // to_lot, by contrast, was guarded into Reserved by approve() above,
-        // and nothing else should have touched it since — a guard here is
-        // safe and catches a real anomaly (e.g. it was reset via a direct
-        // lot edit while the relocation sat Approved).
+        // Occupy destination lot
         $this->transitionLotStatus($request['to_lot_id'], 'Occupied', $userId, 'relocation.completed');
+
+        // Automation fix: update the decedent's lot assignment to the destination lot
+        if (!empty($request['deceased_id']) && !empty($request['to_lot_id'])) {
+            $this->decedentModel->updateLotId($request['deceased_id'], $request['to_lot_id']);
+        }
 
         $result = $this->relocationModel->updateStatus($id, 'Completed', $userId);
         if ($result) {
@@ -296,7 +307,12 @@ class RelocationController {
                 null,
                 'Relocation',
                 $id,
-                ['deceased_id' => $request['deceased_id'] ?? null, 'from_lot_id' => $request['from_lot_id'] ?? null, 'to_lot_id' => $request['to_lot_id'] ?? null]
+                [
+                    'deceased_id' => $request['deceased_id'] ?? null,
+                    'from_lot_id' => $request['from_lot_id'] ?? null,
+                    'to_lot_id' => $request['to_lot_id'] ?? null,
+                    'lot_updated_on_decedent' => true,
+                ]
             );
             $this->notifyRelocationStatusChange($request, 'Completed');
             return ['success' => true, 'message' => 'Relocation completed'];
@@ -309,8 +325,13 @@ class RelocationController {
         if (!$request) {
             return ['error' => 'Relocation request not found', 'code' => 404];
         }
-        if ($request['status'] !== 'Pending') {
+        if (!in_array($request['status'], ['Pending', 'Approved'], true)) {
             return ['error' => 'Request is already processed', 'code' => 403];
+        }
+
+        // If request was Approved, destination lot was Reserved. Roll it back to Available!
+        if ($request['status'] === 'Approved' && !empty($request['to_lot_id'])) {
+            $this->transitionLotStatus($request['to_lot_id'], 'Available', $userId, 'relocation.denied');
         }
 
         $result = $this->relocationModel->updateStatus($id, 'Denied', $userId);
@@ -334,16 +355,15 @@ class RelocationController {
         if (!$request) {
             return ['error' => 'Relocation request not found', 'code' => 404];
         }
-        if ($request['status'] !== 'Pending') {
-            return ['error' => 'Cannot delete a processed request', 'code' => 403];
+        if (!in_array($request['status'], ['Pending', 'Approved'], true)) {
+            return ['error' => 'Cannot cancel a processed request', 'code' => 403];
         }
 
-        // Sub-batch 5 (Batch G): soft-cancel — reuses the exact same model
-        // call deny() already makes (Relocation::updateStatus(), which also
-        // stamps approved_by/updated_at) instead of a hard DELETE, so
-        // cancellation history survives. No Lot side-effect existed here
-        // before and none is needed now: a Pending request never reserved
-        // to_lot (only approve() does that), so there's nothing to release.
+        // If request was Approved, destination lot was Reserved. Roll it back to Available!
+        if ($request['status'] === 'Approved' && !empty($request['to_lot_id'])) {
+            $this->transitionLotStatus($request['to_lot_id'], 'Available', $userId, 'relocation.cancelled');
+        }
+
         $result = $this->relocationModel->updateStatus($id, 'Denied', $userId);
         if ($result) {
             $this->auditLogModel->log(

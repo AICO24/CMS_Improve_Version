@@ -8,6 +8,7 @@ require_once __DIR__ . '/../controllers/DecedentDocumentController.php';
 require_once __DIR__ . '/../controllers/ScheduleController.php';
 require_once __DIR__ . '/../controllers/CremationController.php';
 require_once __DIR__ . '/../controllers/RelocationController.php';
+require_once __DIR__ . '/../controllers/RelocationDocumentController.php';
 require_once __DIR__ . '/../controllers/PaymentController.php';
 require_once __DIR__ . '/../controllers/NotificationController.php';
 require_once __DIR__ . '/../controllers/AiController.php';
@@ -737,6 +738,7 @@ if ($path === 'cremations/auto-cancel-stale-pending' && $requestMethod === 'POST
 }
 
 $relocationController = new RelocationController();
+$relocationDocumentController = new RelocationDocumentController();
 
 if ($path === 'relocations/stats' && $requestMethod === 'GET') {
     AuthMiddleware::requireRole(['admin', 'staff']);
@@ -821,6 +823,38 @@ if (preg_match('/^relocations\/(\d+)\/deny$/', $path, $matches) && $requestMetho
 if (preg_match('/^relocations\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
     $user = AuthMiddleware::requireRole(['admin']);
     $result = $relocationController->destroy($matches[1], $user['user_id']);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^relocations\/(\d+)\/documents$/', $path, $matches) && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $result = $relocationDocumentController->index($matches[1]);
+    if (isset($result['code'])) {
+        http_response_code($result['code']);
+        unset($result['code']);
+    }
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^relocations\/(\d+)\/documents$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $file = $input['files']['document_file'] ?? null;
+    $documentType = $input['document_type'] ?? 'other';
+    $result = $relocationDocumentController->store($matches[1], $file, $documentType, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^relocations\/(\d+)\/documents\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $result = $relocationDocumentController->destroy($matches[2], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);

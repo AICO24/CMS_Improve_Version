@@ -282,6 +282,11 @@ class Decedent {
         ]);
     }
 
+    public function updateLotId($id, $newLotId) {
+        $stmt = $this->db->prepare("UPDATE decedent_records SET lot_id = ? WHERE decedent_id = ?");
+        return $stmt->execute([$newLotId ? (int) $newLotId : null, (int) $id]);
+    }
+
     public function patchCremationStatus($id, $data) {
         $fields = [];
         $params = [];

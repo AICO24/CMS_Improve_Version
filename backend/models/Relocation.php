@@ -184,6 +184,19 @@ class Relocation {
         return $stmt->execute([$status, $approvedBy ? (int) $approvedBy : null, (int) $id]);
     }
 
+    public function findActiveByDecedent($deceasedId, $excludeRequestId = null) {
+        $sql = "SELECT * FROM relocation_requests WHERE deceased_id = ? AND status IN ('Pending', 'Approved')";
+        $params = [(int) $deceasedId];
+        if ($excludeRequestId) {
+            $sql .= " AND request_id != ?";
+            $params[] = (int) $excludeRequestId;
+        }
+        $sql .= " LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetch() ?: null;
+    }
+
     public function delete($id) {
         $stmt = $this->db->prepare("DELETE FROM relocation_requests WHERE request_id = ?");
         return $stmt->execute([(int) $id]);
@@ -193,12 +206,22 @@ class Relocation {
         $stmt = $this->db->query(" 
             SELECT 
                 COUNT(*) as total,
-                SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending,
-                SUM(CASE WHEN status = 'Approved' THEN 1 ELSE 0 END) as approved,
-                SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed,
-                SUM(CASE WHEN status = 'Denied' THEN 1 ELSE 0 END) as denied
+                COALESCE(SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END), 0) as pending,
+                COALESCE(SUM(CASE WHEN status = 'Approved' THEN 1 ELSE 0 END), 0) as approved,
+                COALESCE(SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END), 0) as completed,
+                COALESCE(SUM(CASE WHEN status = 'Denied' THEN 1 ELSE 0 END), 0) as denied,
+                (SELECT COUNT(*) FROM system_exceptions se WHERE se.entity_type = 'Relocation' AND se.status = 'open') as attention
             FROM relocation_requests
         ");
-        return $stmt->fetch();
+        $stats = $stmt->fetch();
+        if ($stats) {
+            $stats['total'] = (int) ($stats['total'] ?? 0);
+            $stats['pending'] = (int) ($stats['pending'] ?? 0);
+            $stats['approved'] = (int) ($stats['approved'] ?? 0);
+            $stats['completed'] = (int) ($stats['completed'] ?? 0);
+            $stats['denied'] = (int) ($stats['denied'] ?? 0);
+            $stats['attention'] = (int) ($stats['attention'] ?? 0);
+        }
+        return $stats;
     }
 }
