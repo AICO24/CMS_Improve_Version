@@ -471,19 +471,41 @@ document.addEventListener('DOMContentLoaded', async function() {
                     </div>
                 </td>
                 <td class="action-buttons">
-                    <button class="btn-view-request" data-id="${req.request_id}" title="View Details">
+                    <button class="btn-action-icon btn-view" data-id="${req.request_id}" title="View Details" aria-label="View Details">
                         <i class="fas fa-eye"></i>
-                        <span class="btn-view-label">View</span>
+                    </button>
+                    <button class="btn-action-icon btn-edit-row" data-id="${req.request_id}" title="Edit Request" aria-label="Edit Request">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <button class="btn-action-icon btn-delete-row" data-id="${req.request_id}" title="Delete Request" aria-label="Delete Request">
+                        <i class="fas fa-trash"></i>
                     </button>
                 </td>
             </tr>
             `;
         }).join('');
 
-        tbody.querySelectorAll('.btn-view-request').forEach(btn => {
-            btn.addEventListener('click', () => {
+        tbody.querySelectorAll('.btn-view').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const id = btn.dataset.id || btn.closest('tr').dataset.id;
                 showViewModal(id);
+            });
+        });
+
+        tbody.querySelectorAll('.btn-edit-row').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id || btn.closest('tr').dataset.id;
+                openEditModal(id);
+            });
+        });
+
+        tbody.querySelectorAll('.btn-delete-row').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id || btn.closest('tr').dataset.id;
+                deleteRelocationRequest(id);
             });
         });
     }
@@ -1317,7 +1339,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         requestModal.style.display = 'flex';
     }
 
-    async function openEditModal(req) {
+    async function openEditModal(reqOrId) {
+        let req = typeof reqOrId === 'object' && reqOrId !== null ? reqOrId : cachedRequests.find(r => r.request_id == reqOrId);
+        if (!req && reqOrId) {
+            try {
+                req = await apiRequest(`relocations/${reqOrId}`);
+            } catch (e) {
+                console.error('Failed to load request for edit', e);
+            }
+        }
         if (!req) return;
         document.getElementById('modalTitle').innerText = `Edit Relocation Request #REQ-${req.request_id}`;
         document.getElementById('requestId').value = req.request_id;
@@ -1328,8 +1358,23 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('requestStatus').value = req.status || 'Pending';
         }
         resetDocumentUpload();
-        await populateDropdowns(req.deceased_id, req.to_lot_id);
+        await populateDropdowns(req.deceased_id || req.decedent_id, req.to_lot_id);
         requestModal.style.display = 'flex';
+    }
+
+    async function deleteRelocationRequest(id) {
+        if (!confirm(`Delete relocation request #REQ-${id}? This action cannot be undone.`)) return;
+        try {
+            const result = await apiRequest(`relocations/${id}`, { method: 'DELETE' });
+            if (result.success) {
+                showToast('Relocation request deleted successfully.', { type: 'success' });
+                await refreshAll();
+            } else {
+                showToast(result.error || 'Failed to delete request.', { type: 'error' });
+            }
+        } catch (error) {
+            showToast('Error: ' + error.message, { type: 'error' });
+        }
     }
 
     // Decedent selection change listener

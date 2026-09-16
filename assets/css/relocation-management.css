@@ -1045,58 +1045,97 @@
     font-size: 10px;
 }
 
-/* ── Action Buttons & View Button ── */
+/* ── Row Action Buttons (Icon-only: View, Edit, Delete) ── */
 .action-buttons {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.btn-view-request {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    height: 34px;
-    padding: 0 12px;
-    border: 1px solid #bfdbfe;
-    border-radius: 8px;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-action-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.22s cubic-bezier(0.2, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+    background: #ffffff;
+    padding: 0;
+    position: relative;
+}
+
+.btn-action-icon i {
+    font-size: 14px;
+    transition: transform 0.22s ease;
+}
+
+/* 1. View Button (Blue) */
+.btn-action-icon.btn-view {
     background: #eff6ff;
     color: #2563eb;
-    font-size: 0.80rem;
-    font-weight: 700;
-    cursor: pointer;
-    overflow: hidden;
-    position: relative;
-    transition: all 0.2s cubic-bezier(0.2, 0, 0.2, 1);
-    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08);
+    border-color: #bfdbfe;
 }
 
-.btn-view-request i {
-    font-size: 13px;
-    transition: transform 0.2s ease;
-}
-
-.btn-view-request .btn-view-label {
-    line-height: 1;
-}
-
-.btn-view-request:hover {
+.btn-action-icon.btn-view:hover {
     background: #2563eb;
     color: #ffffff;
     border-color: #2563eb;
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.28);
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.32);
 }
 
-.btn-view-request:hover i {
-    transform: scale(1.15);
+.btn-action-icon.btn-view:hover i {
+    transform: scale(1.18);
 }
 
-.btn-view-request:active {
-    transform: scale(0.96);
+/* 2. Edit Button (Amber) */
+.btn-action-icon.btn-edit-row {
+    background: #fff8eb;
+    color: #d97706;
+    border-color: #fde68a;
 }
 
-.btn-view-request:focus-visible {
+.btn-action-icon.btn-edit-row:hover {
+    background: #f59e0b;
+    color: #ffffff;
+    border-color: #f59e0b;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(245, 158, 11, 0.32);
+}
+
+.btn-action-icon.btn-edit-row:hover i {
+    transform: rotate(-15deg) scale(1.15);
+}
+
+/* 3. Delete Button (Red) */
+.btn-action-icon.btn-delete-row {
+    background: #fff5f5;
+    color: #dc2626;
+    border-color: #fecaca;
+}
+
+.btn-action-icon.btn-delete-row:hover {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(220, 38, 38, 0.32);
+}
+
+.btn-action-icon.btn-delete-row:hover i {
+    transform: rotate(-15deg) scale(1.15);
+}
+
+.btn-action-icon:active {
+    transform: scale(0.92);
+}
+
+.btn-action-icon:focus-visible {
     outline: 2px solid var(--color-primary-500);
     outline-offset: 2px;
 }
@@ -2654,4 +2693,39 @@
     background: #1e293b;
     border-color: rgba(255, 255, 255, 0.20);
 }
+
+/* Action Icons Dark Mode */
+.dashboard-body[data-theme="dark"] .btn-action-icon.btn-view {
+    background: rgba(37, 99, 235, 0.16);
+    border-color: rgba(37, 99, 235, 0.32);
+    color: #60a5fa;
+}
+
+.dashboard-body[data-theme="dark"] .btn-action-icon.btn-edit-row {
+    background: rgba(245, 158, 11, 0.16);
+    border-color: rgba(245, 158, 11, 0.32);
+    color: #fbbf24;
+}
+
+.dashboard-body[data-theme="dark"] .btn-action-icon.btn-delete-row {
+    background: rgba(220, 38, 38, 0.16);
+    border-color: rgba(220, 38, 38, 0.32);
+    color: #f87171;
+}
+
+.dashboard-body[data-theme="dark"] .btn-action-icon.btn-view:hover {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.dashboard-body[data-theme="dark"] .btn-action-icon.btn-edit-row:hover {
+    background: #f59e0b;
+    color: #ffffff;
+}
+
+.dashboard-body[data-theme="dark"] .btn-action-icon.btn-delete-row:hover {
+    background: #dc2626;
+    color: #ffffff;
+}
+
 
