@@ -98,6 +98,20 @@ class ExpirationController {
         return $this->expirationModel->getStats();
     }
 
+    public function renew($id, $data, $userId = null) {
+        $years = !empty($data['years']) ? (int) $data['years'] : 5;
+        $notes = $data['notes'] ?? '';
+        return $this->expirationModel->renewLease($id, $years, $notes, $userId);
+    }
+
+    public function sync() {
+        return $this->expirationModel->syncFromLots();
+    }
+
+    public function initiateRelocation($id, $data = [], $userId = null) {
+        return $this->expirationModel->initiateRelocation($id, $data, $userId);
+    }
+
     // Batch D (Admin-Wide Automation Audit): previously used findExpiringSoon()
     // (every matching row, every call) with no record of what had already
     // been notified — every visit to the Notifications page created a fresh

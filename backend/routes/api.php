@@ -1632,12 +1632,40 @@ if ($path === 'expiration-records' && $requestMethod === 'GET') {
     if (isset($_GET['renewed'])) $filters['renewed'] = $_GET['renewed'];
     if (isset($_GET['exhumation_status'])) $filters['exhumation_status'] = $_GET['exhumation_status'];
     if (isset($_GET['lot_id'])) $filters['lot_id'] = $_GET['lot_id'];
+    if (isset($_GET['section'])) $filters['section'] = $_GET['section'];
+    if (isset($_GET['urgency'])) $filters['urgency'] = $_GET['urgency'];
     if (isset($_GET['status'])) $filters['status'] = $_GET['status'];
     if (isset($_GET['q'])) $filters['q'] = $_GET['q'];
     $pagination = [];
     if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
     if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
     echo json_encode($expirationController->index($filters, $pagination));
+    exit;
+}
+
+if ($path === 'expiration-records/sync' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    echo json_encode($expirationController->sync());
+    exit;
+}
+
+if (preg_match('/^expiration-records\/(\d+)\/renew$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $result = $expirationController->renew($matches[1], $input, $user['user_id'] ?? null);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^expiration-records\/(\d+)\/initiate-relocation$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $result = $expirationController->initiateRelocation($matches[1], $input, $user['user_id'] ?? null);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
     exit;
 }
 
