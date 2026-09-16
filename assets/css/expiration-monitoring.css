@@ -11,36 +11,89 @@
 /* .stats-row / .stat-card / .stat-title / .stat-value now come from
    assets/css/dashboard.css so this module's stat cards match every other module. */
 
-/* Gradient stat cards (mirrors Payments' .payment-stats visual language). */
+/* Executive 3D Embossed Stat Cards */
 .expmon-stats {
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 14px;
+    margin-bottom: 20px;
+    align-items: stretch;
 }
 
 .expmon-stats > .stat-card {
     position: relative;
-    min-height: 136px;
-    padding: 18px 18px 16px;
+    min-height: 124px;
+    height: 100%;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     overflow: hidden;
-    border: 1px solid rgba(194, 65, 12, 0.20);
-    border-left: 8px solid #7c2d12;
-    background: linear-gradient(135deg, #c2410c 0%, #dd6a3a 100%);
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.09);
-    transition: transform 260ms cubic-bezier(0.2, 0, 0.2, 1),
-                box-shadow 260ms cubic-bezier(0.2, 0, 0.2, 1);
+    border: 1px solid rgba(22, 50, 41, 0.20);
+    border-left: 8px solid #163229;
+    background: linear-gradient(135deg, #2c5e47 0%, #3b7055 100%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    border-radius: var(--radius-lg, 14px);
+    contain: layout;
+    animation: statFloat 7s ease-in-out infinite alternate;
+    transition: transform 220ms cubic-bezier(0.2, 0, 0.2, 1),
+                box-shadow 220ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.expmon-stats > .stat-card::before {
+    content: "";
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    right: -40px;
+    top: -30px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 70%);
+    pointer-events: none;
 }
 
 .expmon-stats > .stat-card::after {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 52%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 55%);
     pointer-events: none;
 }
 
 .expmon-stats > .stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.13);
+    transform: translateY(-3px);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.14);
+}
+
+.expmon-stats > .stat-card.accent-teal {
+    border-left-color: #0f766e;
+    background: linear-gradient(135deg, #0d9488 0%, #2fb5aa 100%);
+}
+
+.expmon-stats > .stat-card.accent-amber {
+    border-left-color: #92400e;
+    background: linear-gradient(135deg, #b45309 0%, #d08a28 100%);
+}
+
+.expmon-stats > .stat-card.accent-navy {
+    border-left-color: #2b3658;
+    background: linear-gradient(135deg, #2b3658 0%, #465376 100%);
+}
+
+.expmon-stats > .stat-card.accent-blue {
+    border-left-color: #1d4ed8;
+    background: linear-gradient(135deg, #2563eb 0%, #4f7fdc 100%);
+}
+
+.expmon-stats > .stat-card.accent-red {
+    border-left-color: #991b1b;
+    background: linear-gradient(135deg, #dc2626 0%, #e85757 100%);
+}
+
+@keyframes statFloat {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-2px); }
+    100% { transform: translateY(0px); }
 }
 
 .expmon-stats > .stat-card .stat-title,
@@ -53,184 +106,301 @@
 .expmon-stats > .stat-card .stat-title {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    padding-right: 12px;
-    color: rgba(255, 255, 255, 0.88);
-    font-size: 0.82rem;
-    margin-bottom: 14px;
+    gap: 8px;
+    font-size: 0.80rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.92);
+    margin-bottom: 6px;
 }
 
-.expmon-stats > .stat-card .stat-title::before {
-    width: 34px;
-    height: 34px;
-    border-radius: var(--radius-md);
+.expmon-stats > .stat-card .card-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm, 6px);
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    background: rgba(255, 255, 255, 0.20);
+    color: #ffffff;
+    font-size: 13px;
     flex: 0 0 auto;
-    background: rgba(255, 255, 255, 0.18);
-    color: #fff;
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900;
-    font-size: 14px;
-    text-transform: none;
-}
-
-.expmon-stats > .stat-card:nth-child(1) .stat-title::before {
-    content: "\f017";
-}
-
-.expmon-stats > .stat-card:nth-child(2) {
-    border-left-color: #7f1d1d;
-    background: linear-gradient(135deg, #b91c1c 0%, #d33f3f 100%);
-}
-
-.expmon-stats > .stat-card:nth-child(2) .stat-title::before {
-    content: "\f071";
-}
-
-.expmon-stats > .stat-card:nth-child(3) {
-    border-left-color: #1d4ed8;
-    background: linear-gradient(135deg, #2563eb 0%, #4f7fdc 100%);
-}
-
-.expmon-stats > .stat-card:nth-child(3) .stat-title::before {
-    content: "\f2f9";
-}
-
-.expmon-stats > .stat-card:nth-child(4) {
-    border-left-color: #163229;
-    background: linear-gradient(135deg, #2c5e47 0%, #3b7055 100%);
-}
-
-.expmon-stats > .stat-card:nth-child(4) .stat-title::before {
-    content: "\f725";
 }
 
 .expmon-stats > .stat-card .stat-value {
-    max-width: 100%;
-    overflow-wrap: anywhere;
-    color: #fff;
-    font-size: 1.35rem;
-    line-height: 1.2;
-    text-shadow: 0 1px 1px rgba(15, 23, 42, 0.16);
+    font-size: 1.85rem;
+    font-weight: 800;
+    line-height: 1.15;
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(15, 23, 42, 0.20);
+    margin: 4px 0 2px;
 }
 
 .expmon-stats > .stat-card .stat-sub {
-    color: rgba(255, 255, 255, 0.78);
-    font-size: 0.8rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
 }
 
-/* .control-row is this page's equivalent of the .toolbar-row wrapper
-   several other modules use — different class name, so it didn't
-   benefit from theme-dark.css's existing generic .toolbar-row/
-   .filter-toolbar dark-mode rule. Token-driven now instead of adding a
-   third name to that generic rule, so it's covered regardless. */
-.control-row {
+/* ── Unified Master Control Panel (Single Consolidated Box) ── */
+.expiration-control-panel {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(238, 246, 241, 0.90)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.08), rgba(37, 99, 235, 0.04));
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-left: 6px solid var(--color-primary-500, #10b981);
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+    padding: 16px 20px;
     display: flex;
     flex-direction: column;
     gap: 14px;
-    margin-bottom: 24px;
-    padding: 20px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-left: 6px solid #c2410c;
-    border-radius: 14px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    width: 100%;
+    margin-bottom: 20px;
 }
 
-.toolbar-action-row {
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--color-border);
+.panel-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
-.toolbar-section-label {
+.records-tabs-track {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    color: var(--color-text);
-    font-size: 0.85rem;
+    gap: 6px;
+    padding: 4px;
+    border-radius: var(--radius-lg, 12px);
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(44, 94, 71, 0.14);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.records-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 120px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--color-primary-800, #1e3a2b);
+    font-size: 0.82rem;
     font-weight: 700;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: all 180ms cubic-bezier(0.2, 0, 0.2, 1);
     white-space: nowrap;
 }
 
-/* --color-warning-soft/-strong rather than the module's original custom
-   burnt-orange (#fff1e8/#c2410c) — close in hue, but token-driven so it
-   actually inverts in dark mode; the raw custom pair had no dark
-   coverage at all. */
-.toolbar-section-label i {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
+.records-tab-btn i {
+    font-size: 0.82rem;
+    opacity: 0.85;
+}
+
+.records-tab-btn:hover:not(.active) {
+    background: rgba(44, 94, 71, 0.08);
+    color: var(--color-primary-900, #163024);
+    transform: translateY(-1px);
+}
+
+.records-tab-btn.active {
+    background: linear-gradient(135deg, #1e3a2f 0%, #2c5e47 100%);
+    color: #ffffff;
+    box-shadow: 0 6px 16px rgba(22, 50, 41, 0.22);
+}
+
+.records-tab-btn.active i {
+    opacity: 1;
+    color: #34d399;
+}
+
+.records-tab-btn .tab-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-warning-soft);
-    color: var(--color-warning-strong);
-}
-
-.toolbar-main-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 14px;
-}
-
-.status-select-field {
-    height: 46px;
-    min-width: 180px;
-    padding: 0 12px;
-    border: 1px solid #d6dbe6;
-    border-radius: 12px;
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 1px;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.status-select-field span {
-    color: #556872;
-    font-size: 0.68rem;
-    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 0.70rem;
+    font-weight: 800;
     line-height: 1;
-    text-transform: uppercase;
+    background: #ef4444;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
 }
 
-.status-select-field select {
-    height: 23px;
+.panel-action-buttons {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.panel-divider {
+    height: 1px;
+    background: linear-gradient(90deg, rgba(44, 94, 71, 0.18) 0%, rgba(226, 232, 240, 0.9) 50%, rgba(44, 94, 71, 0.08) 100%);
     width: 100%;
-    padding: 0 20px 0 0;
-    border: none;
-    background: transparent;
-    box-shadow: none;
-    color: #243736;
-    font-size: 0.9rem;
 }
 
-.status-select-field select:focus {
+.panel-bottom-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.panel-filters-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    flex: 1 1 auto;
+}
+
+.filter-bar__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-primary-700, #047857);
+    white-space: nowrap;
+    align-self: center;
+}
+
+.filter-bar__label i {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm, 6px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary-50, #eef8f1);
+    color: var(--color-primary-600, #0f766e);
+}
+
+.panel-filters-group .search-field {
+    flex: 1 1 260px;
+    min-width: 220px;
+    max-width: 400px;
+    position: relative;
+}
+
+.panel-filters-group .search-field__input {
+    width: 100%;
+    height: 42px;
+    font-size: 0.86rem;
+    padding: 0 14px 0 40px;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid rgba(44, 94, 71, 0.22);
+    background: #ffffff;
+    color: #1e293b;
     outline: none;
+    transition: all 0.18s ease;
 }
 
-.status-select-field:focus-within {
-    border-color: #c2410c;
-    box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.14);
+.panel-filters-group .search-field__input:focus {
+    background: #ffffff;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
 }
 
-.status-select-field:hover {
+.filter-select {
+    height: 42px;
+    padding: 0 32px 0 12px;
+    border: 1.5px solid var(--color-border, #d8e5dd);
+    border-radius: var(--radius-md, 8px);
+    background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2364748b'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E") no-repeat right 8px center/16px 16px;
+    color: #1e293b;
+    font-size: 0.86rem;
+    font-weight: 600;
+    cursor: pointer;
+    appearance: none;
+    transition: all 0.2s ease;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--color-primary-500, #2c5e47);
+    box-shadow: 0 0 0 3px rgba(44, 94, 71, 0.15);
+}
+
+.btn-outline-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: var(--radius-md, 8px);
+    border: 1.5px solid #fecaca;
+    background: #fff;
+    color: #dc2626;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-outline-danger:hover {
+    background: #fee2e2;
+    border-color: #f87171;
     transform: translateY(-1px);
-    border-color: #c2410c;
 }
 
-.control-row .search-field {
-    height: 46px;
-    min-width: 240px;
+/* Dark mode overrides for control panel */
+[data-theme="dark"] .expiration-control-panel {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.90));
+    border-color: rgba(255, 255, 255, 0.08);
+    border-left-color: #10b981;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
 }
 
-.control-row .btn-primary {
-    height: 46px;
+[data-theme="dark"] .records-tabs-track {
+    background: rgba(15, 23, 42, 0.8);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .records-tab-btn {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .records-tab-btn:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.06);
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .records-tab-btn.active {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+}
+
+[data-theme="dark"] .filter-select {
+    background-color: #1e293b;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .panel-filters-group .search-field__input {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .btn-outline-danger {
+    background: #1e293b;
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #f87171;
+}
+
+[data-theme="dark"] .btn-outline-danger:hover {
+    background: rgba(239, 68, 68, 0.15);
 }
 
 .active-filter-chips {

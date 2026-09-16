@@ -50,6 +50,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         onChange: loadExpiredLots,
     });
 
+    let currentTab = 'all';
+
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (char) => ({
             '&': '&amp;',
@@ -60,13 +62,48 @@ document.addEventListener('DOMContentLoaded', async function () {
         }[char]));
     }
 
+    async function populateSectionsDropdown() {
+        const sectionSelect = document.getElementById('expirationSectionFilter');
+        if (!sectionSelect) return;
+        try {
+            const sections = await api.request('sections', { method: 'GET' });
+            if (Array.isArray(sections)) {
+                sections.forEach(sec => {
+                    const opt = document.createElement('option');
+                    const name = sec.section_name || sec.name || '';
+                    if (!name) return;
+                    opt.value = name;
+                    opt.textContent = name;
+                    sectionSelect.appendChild(opt);
+                });
+            }
+        } catch (err) {
+            console.warn('Could not load sections:', err);
+        }
+    }
+
     function renderActiveFilterChips() {
         const searchValue = document.getElementById('expirationSearch').value.trim();
+        const sectionSelect = document.getElementById('expirationSectionFilter');
+        const sectionValue = sectionSelect && sectionSelect.value !== 'all' ? sectionSelect.value : '';
+        const urgencySelect = document.getElementById('expirationUrgencyFilter');
+        const urgencyValue = urgencySelect && urgencySelect.value !== 'all' ? urgencySelect.options[urgencySelect.selectedIndex].text : '';
         const statusSelect = document.getElementById('expirationStatusFilter');
-        const statusValue = statusSelect.value !== 'all' ? statusSelect.options[statusSelect.selectedIndex].text : '';
+        const statusValue = statusSelect && statusSelect.value !== 'all' ? statusSelect.options[statusSelect.selectedIndex].text : '';
+        const tabLabel = currentTab !== 'all' ? `Tab: ${currentTab.charAt(0).toUpperCase() + currentTab.slice(1)}` : '';
+
         const chips = [
             { key: 'q', label: 'Search', value: searchValue, clear: () => { document.getElementById('expirationSearch').value = ''; } },
-            { key: 'status', label: 'Status', value: statusValue, clear: () => { statusSelect.value = 'all'; } },
+            { key: 'section', label: 'Section', value: sectionValue, clear: () => { if (sectionSelect) sectionSelect.value = 'all'; } },
+            { key: 'urgency', label: 'Timeline', value: urgencyValue, clear: () => { if (urgencySelect) urgencySelect.value = 'all'; } },
+            { key: 'status', label: 'Status', value: statusValue, clear: () => { if (statusSelect) statusSelect.value = 'all'; } },
+            { key: 'tab', label: 'Filter Tab', value: tabLabel, clear: () => {
+                currentTab = 'all';
+                document.querySelectorAll('.records-tab-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.tab === 'all');
+                    b.setAttribute('aria-selected', b.dataset.tab === 'all' ? 'true' : 'false');
+                });
+            } }
         ].filter((chip) => chip.value);
 
         if (!activeFilterChips) return;
@@ -147,40 +184,82 @@ document.addEventListener('DOMContentLoaded', async function () {
     async function loadExpirationData() {
         try {
             const query = document.getElementById('expirationSearch').value.trim();
-            const status = document.getElementById('expirationStatusFilter').value;
+            const section = document.getElementById('expirationSectionFilter') ? document.getElementById('expirationSectionFilter').value : 'all';
+            const urgency = document.getElementById('expirationUrgencyFilter') ? document.getElementById('expirationUrgencyFilter').value : 'all';
+            const status = document.getElementById('expirationStatusFilter') ? document.getElementById('expirationStatusFilter').value : 'all';
+
             const params = new URLSearchParams();
             if (query) params.append('q', query);
-            if (status && status !== 'all') params.append('status', status);
+            if (section && section !== 'all') params.append('section', section);
+            if (urgency && urgency !== 'all') params.append('urgency', urgency);
+
+            if (currentTab !== 'all') {
+                params.append('status', currentTab);
+            } else if (status && status !== 'all') {
+                params.append('status', status);
+            }
 
             const [records, stats] = await Promise.all([
                 api.request(`expiration-records?${params.toString()}`, { method: 'GET' }),
                 api.request('expiration-records/stats', { method: 'GET' })
             ]);
 
-            document.getElementById('expirationStatusMessage').innerText = status === 'all' ? '' : `Showing filtered results for ${status}.`;
+            const statusMsg = document.getElementById('expirationStatusMessage');
+            if (statusMsg) {
+                const activeFilters = [];
+                if (currentTab !== 'all') activeFilters.push(`Tab: ${currentTab}`);
+                if (status !== 'all') activeFilters.push(`Status: ${status}`);
+                if (section !== 'all') activeFilters.push(`Section: ${section}`);
+                if (urgency !== 'all') activeFilters.push(`Timeline: ${urgency}`);
+                statusMsg.innerText = activeFilters.length ? `Showing filtered results for ${activeFilters.join(', ')}.` : '';
+            }
 
+            const totalTrackedCount = document.getElementById('totalTrackedCount');
             const expiringSoonCount = document.getElementById('expiringSoonCount');
             const expiredCount = document.getElementById('expiredCount');
             const renewalsDueCount = document.getElementById('renewalsDueCount');
             const exhumationCount = document.getElementById('exhumationCount');
-            if (expiringSoonCount) expiringSoonCount.innerText = stats.expiring_soon || 0;
-            if (expiredCount) expiredCount.innerText = stats.expired || 0;
-            if (renewalsDueCount) renewalsDueCount.innerText = stats.renewals_due || 0;
-            if (exhumationCount) exhumationCount.innerText = stats.exhumations || 0;
+
+            if (totalTrackedCount) totalTrackedCount.innerText = stats.total ?? 0;
+            if (expiringSoonCount) expiringSoonCount.innerText = stats.expiring_soon ?? 0;
+            if (expiredCount) expiredCount.innerText = stats.expired ?? 0;
+            if (renewalsDueCount) renewalsDueCount.innerText = stats.renewals_due ?? 0;
+            if (exhumationCount) exhumationCount.innerText = stats.exhumations ?? 0;
+
+            // Sub-tab counter badges
+            const expiringSoonBadge = document.getElementById('expiringSoonBadge');
+            if (expiringSoonBadge) {
+                if (stats.expiring_soon > 0) {
+                    expiringSoonBadge.innerText = stats.expiring_soon;
+                    expiringSoonBadge.style.display = 'inline-flex';
+                } else {
+                    expiringSoonBadge.style.display = 'none';
+                }
+            }
+
+            const expiredBadge = document.getElementById('expiredBadge');
+            if (expiredBadge) {
+                if (stats.expired > 0) {
+                    expiredBadge.innerText = stats.expired;
+                    expiredBadge.style.display = 'inline-flex';
+                } else {
+                    expiredBadge.style.display = 'none';
+                }
+            }
 
             const upcomingTable = document.getElementById('upcomingTableBody');
-            const recordsList = Array.isArray(records) ? records : [];
+            const recordsList = Array.isArray(records) ? records : (records.data || []);
 
             if (upcomingTable) {
-                upcomingTable.innerHTML = recordsList.length > 0 ? recordsList.slice(0, 3).map(record => `
+                upcomingTable.innerHTML = recordsList.length > 0 ? recordsList.slice(0, 5).map(record => `
                     <tr data-lot-id="${record.lot_id || ''}" data-start-date="${record.start_date || ''}" data-exhumation-status="${record.exhumation_status || ''}" data-notes="${(record.notes || '').replace(/"/g, '&quot;')}">
                         <td>${record.lot_number || record.lot_id || 'N/A'}</td>
                         <td>${record.section_name || 'N/A'}</td>
                         <td>${record.end_date || 'N/A'}</td>
-                        <td><span class="status-badge ${record.status === 'Expired' ? 'status-danger' : record.status === 'Exhumation' ? 'status-danger' : 'status-warning'}">${record.status || 'Expiring'}</span></td>
+                        <td><span class="status-badge ${record.status === 'Expired' ? 'status-danger' : record.status === 'Exhumation' ? 'status-danger' : record.status === 'Renewed' ? 'status-info' : 'status-warning'}">${record.status || 'Expiring'}</span></td>
                         <td>
                             <button class="btn-ghost" data-action="notify" data-id="${record.expiration_id}">Notify</button>
-                            ${record.status === 'Expiring' ? `<button class="btn-ghost" data-action="renew" data-id="${record.expiration_id}">Renew</button>` : ''}
+                            ${record.status === 'Expiring' || record.status === 'Expired' ? `<button class="btn-ghost" data-action="renew" data-id="${record.expiration_id}">Renew</button>` : ''}
                         </td>
                     </tr>
                 `).join('') : `
@@ -207,6 +286,120 @@ document.addEventListener('DOMContentLoaded', async function () {
         await loadExpiredLots();
     }
 
+    // Sub-Tabs segmented switcher
+    document.querySelectorAll('.records-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.records-tab-btn').forEach(b => {
+                b.classList.remove('active');
+                b.setAttribute('aria-selected', 'false');
+            });
+            btn.classList.add('active');
+            btn.setAttribute('aria-selected', 'true');
+            currentTab = btn.dataset.tab || 'all';
+            refreshExpirationView();
+        });
+    });
+
+    // Reset filters button
+    const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+    if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', () => {
+            document.getElementById('expirationSearch').value = '';
+            const sec = document.getElementById('expirationSectionFilter');
+            if (sec) sec.value = 'all';
+            const urg = document.getElementById('expirationUrgencyFilter');
+            if (urg) urg.value = 'all';
+            const stat = document.getElementById('expirationStatusFilter');
+            if (stat) stat.value = 'all';
+            currentTab = 'all';
+            document.querySelectorAll('.records-tab-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.tab === 'all');
+                b.setAttribute('aria-selected', b.dataset.tab === 'all' ? 'true' : 'false');
+            });
+            refreshExpirationView();
+        });
+    }
+
+    // Auto-Sync Leases button
+    const autoSyncBtn = document.getElementById('autoSyncBtn');
+    if (autoSyncBtn) {
+        autoSyncBtn.addEventListener('click', async () => {
+            try {
+                autoSyncBtn.disabled = true;
+                const res = await api.request('expiration-records/sync', { method: 'POST' });
+                alert(res.message || 'Leases synced successfully from lots registry!');
+                await refreshExpirationView();
+            } catch (err) {
+                console.error('Auto-sync failed:', err);
+                alert('Auto-sync failed: ' + (err.message || 'Unknown error'));
+            } finally {
+                autoSyncBtn.disabled = false;
+            }
+        });
+    }
+
+    // Send Reminders button
+    const bulkNotifyBtn = document.getElementById('bulkNotifyBtn');
+    if (bulkNotifyBtn) {
+        bulkNotifyBtn.addEventListener('click', async () => {
+            try {
+                bulkNotifyBtn.disabled = true;
+                const res = await api.request('expiration-records/generate-notifications', { method: 'POST' });
+                alert(res.message || 'Reminders generated successfully!');
+                await updateNotificationBadge();
+                await refreshExpirationView();
+            } catch (err) {
+                console.error('Bulk notify failed:', err);
+                alert('Send reminders failed: ' + (err.message || 'Unknown error'));
+            } finally {
+                bulkNotifyBtn.disabled = false;
+            }
+        });
+    }
+
+    // Export CSV button
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', async () => {
+            try {
+                const allData = await api.request('expiration-records', { method: 'GET' });
+                const list = Array.isArray(allData) ? allData : (allData.data || []);
+                if (!list.length) {
+                    alert('No expiration records available to export.');
+                    return;
+                }
+                const headers = ['Expiration ID', 'Lot Number', 'Section', 'Block', 'Status', 'Days Remaining', 'Start Date', 'End Date', 'Renewed', 'Exhumation Status', 'Deceased Occupant', 'Contact Person', 'Contact Number', 'Notes'];
+                const rows = list.map(r => [
+                    r.expiration_id,
+                    `"${r.lot_number || ''}"`,
+                    `"${r.section_name || ''}"`,
+                    `"${r.block_name || ''}"`,
+                    `"${r.status || ''}"`,
+                    r.days_remaining ?? '',
+                    r.start_date || '',
+                    r.end_date || '',
+                    r.renewed || 'no',
+                    `"${r.exhumation_status || ''}"`,
+                    `"${r.decedent_name || ''}"`,
+                    `"${r.contact_name || ''}"`,
+                    `"${r.contact_number || ''}"`,
+                    `"${(r.notes || '').replace(/"/g, '""')}"`
+                ]);
+                const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement('a');
+                link.setAttribute('href', encodedUri);
+                link.setAttribute('download', `expiration_records_${new Date().toISOString().slice(0, 10)}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (err) {
+                console.error('Export CSV failed:', err);
+                alert('Export failed: ' + (err.message || 'Unknown error'));
+            }
+        });
+    }
+
     const refreshBtn = document.getElementById('refreshExpirationData');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', refreshExpirationView);
@@ -217,7 +410,17 @@ document.addEventListener('DOMContentLoaded', async function () {
             refreshExpirationView();
         }
     });
-    document.getElementById('expirationStatusFilter').addEventListener('change', refreshExpirationView);
+
+    const secFilter = document.getElementById('expirationSectionFilter');
+    if (secFilter) secFilter.addEventListener('change', refreshExpirationView);
+
+    const urgFilter = document.getElementById('expirationUrgencyFilter');
+    if (urgFilter) urgFilter.addEventListener('change', refreshExpirationView);
+
+    const statFilter = document.getElementById('expirationStatusFilter');
+    if (statFilter) statFilter.addEventListener('change', refreshExpirationView);
+
+    await populateSectionsDropdown();
 
     document.querySelector('.content-area').addEventListener('click', async function(event) {
         const button = event.target.closest('button[data-action]');
