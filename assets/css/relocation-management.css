@@ -470,37 +470,64 @@
     min-width: 72px;
 }
 
-/* Same hardcoded-near-black-text empty-state bug fixed on this pattern
-   in several other module CSS files earlier in this redesign. */
+/* ── Enhanced Empty State ── */
 .reloc-empty-state {
-    min-height: 180px;
+    min-height: 200px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    color: var(--color-text-muted);
+    gap: 10px;
+    padding: 30px 20px;
+    color: var(--color-text-muted, #64748b);
+    text-align: center;
 }
 
-.reloc-empty-state i {
-    width: 52px;
-    height: 52px;
+.reloc-empty-state .empty-icon-wrap {
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-info-soft);
-    color: var(--color-info-strong);
-    font-size: 22px;
+    background: rgba(15, 118, 110, 0.10);
+    color: #0f766e;
+    font-size: 24px;
+    margin-bottom: 4px;
 }
 
 .reloc-empty-state strong {
-    color: var(--color-text);
+    color: var(--color-text, #1e293b);
     font-size: 1.05rem;
+    font-weight: 700;
 }
 
 .reloc-empty-state span {
-    font-size: 0.85rem;
+    font-size: 0.86rem;
+    max-width: 360px;
+    line-height: 1.4;
+}
+
+.reloc-empty-state .btn-clear-filters {
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.reloc-empty-state .btn-clear-filters:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a;
 }
 
 .toolbar-row {
@@ -577,17 +604,287 @@
     outline-offset: 2px;
 }
 
-/* .table-container now comes from assets/css/components/tables.css (Batch 5) */
+/* ── Main Relocation Records Card (Reports .chart-card style) ────── */
+.chart-card {
+    position: relative;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 247, 243, 0.92)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.08), rgba(37, 99, 235, 0.05));
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-left: 6px solid var(--color-primary-500, #2c5e47);
+    border-radius: var(--radius-lg, 14px);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+    padding: 16px 20px 14px;
+    min-width: 0;
+    margin-bottom: 14px;
+    transition: box-shadow 220ms ease;
+}
 
-/* .data-table base styling now comes from assets/css/components/tables.css (Batch 5) */
+.chart-card::before {
+    content: "";
+    position: absolute;
+    inset: -30% auto auto -20%;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(15, 118, 110, 0.08), rgba(15, 118, 110, 0) 68%);
+    pointer-events: none;
+}
 
-/* .data-table th/td styling now comes from assets/css/components/tables.css (Batch 5) */
+.chart-card:hover {
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.11);
+}
 
-/* This rule was already superseded by the more specific .data-table tbody tr:hover
-   in assets/css/components/tables.css — removed as dead CSS (Batch 5) */
+.chart-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(44, 94, 71, 0.08);
+}
 
-/* Status badges — base shape/padding/size now comes from assets/css/dashboard.css so
-   this module's badges match the rest of the app; only state colors stay local. */
+.chart-card__title {
+    font-size: 0.96rem;
+    font-weight: 700;
+    color: var(--color-primary-800, #163229);
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+}
+
+.chart-card__badge {
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: var(--radius-pill, 999px);
+    background: rgba(44, 94, 71, 0.10);
+    color: var(--color-primary-700, #1e3a2f);
+    border: 1px solid rgba(44, 94, 71, 0.16);
+}
+
+/* Inner table-container inside chart-card */
+.chart-card .table-container {
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    overflow-x: auto;
+}
+
+.chart-card .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 820px;
+}
+
+.chart-card .data-table thead th {
+    background: rgba(44, 94, 71, 0.06);
+    color: var(--color-primary-800, #163229);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 2px solid rgba(44, 94, 71, 0.14);
+    padding: 12px 14px;
+    white-space: nowrap;
+}
+
+.chart-card .data-table tbody td {
+    padding: 12px 14px;
+    font-size: 0.85rem;
+    border-bottom: 1px solid rgba(44, 94, 71, 0.06);
+    vertical-align: middle;
+}
+
+.chart-card .data-table tbody tr:hover {
+    background: rgba(44, 94, 71, 0.04);
+}
+
+/* Docked pagination controls inside .chart-card */
+.chart-card > .pagination-controls,
+.chart-card #paginationControls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 14px;
+    padding: 14px 4px 4px;
+    border-top: 1px solid rgba(44, 94, 71, 0.10);
+    background: transparent;
+    width: 100%;
+}
+
+.chart-card .pagination-info {
+    color: #556872;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+/* ── Request ID Chip ── */
+.reloc-id-chip {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--font-mono, 'JetBrains Mono', 'Courier New', monospace);
+    font-weight: 700;
+    font-size: 0.78rem;
+    color: #0f766e;
+    background: rgba(15, 118, 110, 0.08);
+    border: 1px solid rgba(15, 118, 110, 0.22);
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+/* ── Decedent Info Cell ── */
+.decedent-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 160px;
+}
+
+.decedent-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(44, 94, 71, 0.12), rgba(15, 118, 110, 0.18));
+    color: #163229;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    border: 1px solid rgba(44, 94, 71, 0.16);
+}
+
+.decedent-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.decedent-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--color-text, #1e293b);
+    line-height: 1.25;
+}
+
+.decedent-meta {
+    font-size: 0.74rem;
+    color: var(--color-text-muted, #64748b);
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+/* ── Visual Transfer Route Badge ── */
+.transfer-route-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    background: rgba(241, 245, 249, 0.85);
+    border: 1px solid rgba(203, 213, 225, 0.8);
+    border-radius: 8px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.transfer-route-badge:hover {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.06);
+}
+
+.route-point {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.80rem;
+    padding: 3px 7px;
+    border-radius: 5px;
+}
+
+.route-point.from {
+    background: rgba(226, 232, 240, 0.6);
+    color: #475569;
+}
+
+.route-point.to {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+    font-weight: 700;
+    border: 1px solid rgba(16, 185, 129, 0.20);
+}
+
+.route-point i {
+    font-size: 11px;
+}
+
+.route-lot {
+    font-weight: 700;
+}
+
+.route-section {
+    font-size: 0.72rem;
+    opacity: 0.85;
+}
+
+.route-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #0f766e;
+    font-size: 12px;
+    animation: arrowNudge 2.5s infinite ease-in-out;
+}
+
+@keyframes arrowNudge {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(2px); }
+}
+
+/* ── Reason Cell ── */
+.reason-cell {
+    max-width: 170px;
+}
+
+.reason-text {
+    display: inline-block;
+    color: var(--color-text-muted, #475569);
+    font-size: 0.82rem;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* ── Status Cell & Attention Badge ── */
+.status-cell-wrap {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
 
 .status-pending {
     background: #fff3e3;
@@ -609,50 +906,105 @@
     color: #991b1b;
 }
 
-/* Action buttons */
-.action-buttons {
-    display: flex;
-    gap: 8px;
+.status-badge.attention-badge {
+    background: rgba(220, 38, 38, 0.10);
+    color: #dc2626;
+    border: 1px solid rgba(220, 38, 38, 0.25);
+    font-size: 0.70rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    animation: pulseAttention 2s infinite ease-in-out;
 }
 
-/* Row action icon — matches the circular icon-pop design (color-fill +
-   lift + icon animation on hover) used in Decedent Records' Actions
-   column, replicated here for visual consistency across modules (UI-H). */
+@keyframes pulseAttention {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.75; transform: scale(0.98); }
+}
+
+/* ── Requester Cell ── */
+.requester-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 130px;
+}
+
+.requester-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-text, #1e293b);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.requester-name i {
+    color: var(--color-primary-600, #0f766e);
+    font-size: 12px;
+}
+
+.requester-date {
+    font-size: 0.74rem;
+    color: var(--color-text-muted, #64748b);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.requester-date i {
+    font-size: 10px;
+}
+
+/* ── Action Buttons & View Button ── */
+.action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .btn-view-request {
-    width: 42px;
-    height: 42px;
-    border: none;
-    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
     background: #eff6ff;
     color: #2563eb;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    font-size: 0.80rem;
+    font-weight: 700;
     cursor: pointer;
     overflow: hidden;
     position: relative;
-    transition: .35s ease;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
+    transition: all 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08);
 }
 
 .btn-view-request i {
-    font-size: 15px;
-    transition: .35s ease;
+    font-size: 13px;
+    transition: transform 0.2s ease;
+}
+
+.btn-view-request .btn-view-label {
+    line-height: 1;
 }
 
 .btn-view-request:hover {
     background: #2563eb;
-    color: white;
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(37, 99, 235, .35);
+    color: #ffffff;
+    border-color: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.28);
 }
 
 .btn-view-request:hover i {
-    transform: scale(1.25);
+    transform: scale(1.15);
 }
 
 .btn-view-request:active {
-    transform: scale(.90);
+    transform: scale(0.96);
 }
 
 .btn-view-request:focus-visible {

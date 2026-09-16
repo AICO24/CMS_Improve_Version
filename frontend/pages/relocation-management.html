@@ -254,36 +254,43 @@
                 <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
 
                 <!-- Requests table -->
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Request ID</th>
-                                <th>Decedent</th>
-                                <th>From Lot</th>
-                                <th>To Lot</th>
-                                <th>Reason</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="requestsTableBody">
-                            <tr><td colspan="7">Loading requests...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+                <p class="section-label"><i class="fas fa-truck-moving"></i> Relocation &amp; Exhumation Queue</p>
+                <div class="chart-card">
+                    <div class="chart-card__header">
+                        <span class="chart-card__title" id="tableHeaderTitle">All relocation requests</span>
+                        <span class="chart-card__badge" id="tableHeaderBadge">Live Queue</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="relocationsTable">
+                            <thead>
+                                <tr>
+                                    <th>Request ID</th>
+                                    <th>Decedent</th>
+                                    <th>Transfer Route</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                    <th>Requested By</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="requestsTableBody">
+                                <tr><td colspan="7" style="text-align: center; padding: 30px;">Loading requests...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-                <div class="pagination-controls" id="paginationControls">
-                    <span class="pagination-info" id="paginationInfo"></span>
-                    <div class="pagination-actions">
-                        <form class="pagination-jump" id="paginationJumpForm">
-                            <label for="pageJumpInput">Jump to page</label>
-                            <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Enter page number">
-                            <button class="btn-secondary" id="pageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
-                        </form>
-                        <span class="pagination-divider" aria-hidden="true"></span>
-                        <button class="btn-secondary" id="prevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
-                        <button class="btn-secondary" id="nextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
+                    <div class="pagination-controls" id="paginationControls">
+                        <span class="pagination-info" id="paginationInfo"></span>
+                        <div class="pagination-actions">
+                            <form class="pagination-jump" id="paginationJumpForm">
+                                <label for="pageJumpInput">Jump to page</label>
+                                <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Enter page number">
+                                <button class="btn-secondary" id="pageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
+                            </form>
+                            <span class="pagination-divider" aria-hidden="true"></span>
+                            <button class="btn-secondary" id="prevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
+                            <button class="btn-secondary" id="nextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
+                        </div>
                     </div>
                 </div>
             </div>

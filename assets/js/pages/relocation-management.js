@@ -39,6 +39,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         };
     }
 
+    function formatDateTime(dateStr) {
+        if (!dateStr) return '—';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return escapeHtml(dateStr);
+        return d.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    }
+
     const statsEls = {
         pending: document.getElementById('pendingCount'),
         approved: document.getElementById('approvedCount'),
@@ -276,58 +287,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    async function loadAndRenderRequests() {
-        try {
-            const result = await loadRequests();
-            const requests = Array.isArray(result.data) ? result.data : [];
-            cachedRequests = requests;
-            renderTable(requests);
-            pagination.render(result.meta || { page: 1, total_pages: 1, total: requests.length });
-        } catch (error) {
-            console.error('Failed to load relocation requests', error);
-            tbody.innerHTML = '<tr><td colspan="7">Failed to load requests. Please refresh.</td></tr>';
-            pagination.render({ page: 1, total_pages: 1, total: 0 });
-        }
-    }
-
-    function renderTable(requests) {
-        if (!Array.isArray(requests) || requests.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7">
-                        <div class="reloc-empty-state">
-                            <i class="fas fa-truck-moving"></i>
-                            <strong>No relocation requests found</strong>
-                            <span>New relocation requests will appear here.</span>
-                        </div>
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-
-        tbody.innerHTML = requests.map(req => `
-            <tr data-id="${req.request_id}">
-                <td>REQ-${req.request_id}</td>
-                <td>${req.first_name} ${req.last_name}</td>
-                <td>${req.from_lot_number}</td>
-                <td>${req.to_lot_number}</td>
-                <td>${req.reason.substring(0, 40)}${req.reason.length > 40 ? '...' : ''}</td>
-                <td><span class="status-badge status-${req.status.toLowerCase()}">${req.status}</span></td>
-                <td class="action-buttons">
-                    <button class="btn-view-request" title="View Details"><i class="fas fa-eye"></i></button>
-                </td>
-            </tr>
-        `).join('');
-
-        tbody.querySelectorAll('.btn-view-request').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const id = btn.closest('tr').dataset.id;
-                showViewModal(id);
-            });
-        });
-    }
-
     // Full Automation, Admin-First (Round 2): relocation requests now
     // auto-approve at creation (RelocationController::store()) — a request
     // only stays Pending when that auto-approval hit a system_exceptions
@@ -347,6 +306,163 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.error('Failed to load open relocation exceptions', error);
             return new Map();
         }
+    }
+
+    async function loadAndRenderRequests() {
+        try {
+            if (!openRelocationExceptions || openRelocationExceptions.size === 0) {
+                openRelocationExceptions = await loadOpenRelocationExceptions();
+            }
+            const result = await loadRequests();
+            const requests = Array.isArray(result.data) ? result.data : [];
+            cachedRequests = requests;
+            renderTable(requests);
+            pagination.render(result.meta || { page: 1, total_pages: 1, total: requests.length });
+
+            const tableHeaderTitle = document.getElementById('tableHeaderTitle');
+            const tableHeaderBadge = document.getElementById('tableHeaderBadge');
+            if (tableHeaderTitle) {
+                if (currentAttentionFilter) {
+                    tableHeaderTitle.innerText = 'Relocation Requests Requiring Attention';
+                } else if (currentTab === 'pending') {
+                    tableHeaderTitle.innerText = 'Pending Relocation Queue';
+                } else if (currentTab === 'approved') {
+                    tableHeaderTitle.innerText = 'Approved & In-Progress Relocations';
+                } else if (currentTab === 'completed') {
+                    tableHeaderTitle.innerText = 'Completed Relocation Archive';
+                } else if (currentStatusFilter !== 'all') {
+                    tableHeaderTitle.innerText = `${currentStatusFilter} Relocation Requests`;
+                } else if (currentQuery) {
+                    tableHeaderTitle.innerText = `Search results for "${currentQuery}"`;
+                } else {
+                    tableHeaderTitle.innerText = 'All Relocation Requests';
+                }
+            }
+            if (tableHeaderBadge) {
+                const totalCount = result.meta?.total !== undefined ? result.meta.total : requests.length;
+                tableHeaderBadge.innerText = `${totalCount} ${totalCount === 1 ? 'Record' : 'Records'}`;
+            }
+        } catch (error) {
+            console.error('Failed to load relocation requests', error);
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px;">Failed to load requests. Please refresh.</td></tr>';
+            pagination.render({ page: 1, total_pages: 1, total: 0 });
+        }
+    }
+
+    function renderTable(requests) {
+        if (!Array.isArray(requests) || requests.length === 0) {
+            const isFiltered = Boolean(currentQuery || currentTab !== 'all' || currentStatusFilter !== 'all' || currentAttentionFilter);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7">
+                        <div class="reloc-empty-state">
+                            <div class="empty-icon-wrap">
+                                <i class="fas fa-truck-moving"></i>
+                            </div>
+                            <strong>${isFiltered ? 'No matching relocation requests' : 'No relocation requests found'}</strong>
+                            <span>${isFiltered ? 'Try clearing or modifying your search and filter criteria.' : 'New relocation requests will appear here.'}</span>
+                            ${isFiltered ? `
+                                <button type="button" class="btn-secondary btn-clear-filters" id="emptyClearFiltersBtn">
+                                    <i class="fas fa-filter-circle-xmark"></i> Clear Filters
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `;
+            const clearBtn = document.getElementById('emptyClearFiltersBtn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    switchTab('all');
+                    if (searchInput) { searchInput.value = ''; currentQuery = ''; }
+                    if (statusFilter) { statusFilter.value = 'all'; currentStatusFilter = 'all'; }
+                    if (attentionFilter) { attentionFilter.checked = false; currentAttentionFilter = false; }
+                    renderActiveFilterChips();
+                    pagination.reset();
+                    loadAndRenderRequests();
+                });
+            }
+            return;
+        }
+
+        tbody.innerHTML = requests.map(req => {
+            const reqId = Number(req.request_id);
+            const fullName = `${req.first_name || ''} ${req.last_name || ''}`.trim() || 'Unknown Decedent';
+            const hasException = openRelocationExceptions && openRelocationExceptions.has(reqId);
+            const exceptionReason = hasException ? openRelocationExceptions.get(reqId) : '';
+            const truncatedReason = req.reason ? (req.reason.length > 42 ? req.reason.substring(0, 42) + '...' : req.reason) : 'No reason specified';
+
+            return `
+            <tr data-id="${req.request_id}">
+                <td>
+                    <span class="reloc-id-chip" title="Relocation Request #${req.request_id}">REQ-${req.request_id}</span>
+                </td>
+                <td>
+                    <div class="decedent-cell">
+                        <div class="decedent-avatar" aria-hidden="true">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="decedent-info">
+                            <span class="decedent-name">${escapeHtml(fullName)}</span>
+                            <span class="decedent-meta"><i class="fas fa-hashtag"></i> ID: ${escapeHtml(String(req.deceased_id || req.decedent_id || '—'))}</span>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="transfer-route-badge">
+                        <span class="route-point from" title="Origin Lot ${escapeHtml(req.from_lot_number || 'N/A')} (${escapeHtml(req.from_section || '—')})">
+                            <i class="fas fa-map-pin"></i>
+                            <span class="route-lot">${escapeHtml(req.from_lot_number || 'N/A')}</span>
+                            <span class="route-section">${escapeHtml(req.from_section || 'Sec —')}</span>
+                        </span>
+                        <span class="route-arrow" aria-hidden="true">
+                            <i class="fas fa-arrow-right"></i>
+                        </span>
+                        <span class="route-point to" title="Destination Lot ${escapeHtml(req.to_lot_number || 'N/A')} (${escapeHtml(req.to_section || '—')})">
+                            <i class="fas fa-location-dot"></i>
+                            <span class="route-lot">${escapeHtml(req.to_lot_number || 'N/A')}</span>
+                            <span class="route-section">${escapeHtml(req.to_section || 'Sec —')}</span>
+                        </span>
+                    </div>
+                </td>
+                <td>
+                    <div class="reason-cell" title="${escapeHtml(req.reason || '')}">
+                        <span class="reason-text">${escapeHtml(truncatedReason)}</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="status-cell-wrap">
+                        <span class="status-badge status-${escapeHtml(req.status.toLowerCase())}">${escapeHtml(req.status)}</span>
+                        ${hasException ? `
+                            <span class="status-badge attention-badge" title="Needs attention: ${escapeHtml(exceptionReason)}">
+                                <i class="fas fa-triangle-exclamation"></i>
+                                <span>Action Req</span>
+                            </span>
+                        ` : ''}
+                    </div>
+                </td>
+                <td>
+                    <div class="requester-cell">
+                        <span class="requester-name"><i class="fas fa-user-circle"></i> ${escapeHtml(req.requested_by_name || 'Staff / System')}</span>
+                        <span class="requester-date"><i class="far fa-clock"></i> ${formatDateTime(req.created_at)}</span>
+                    </div>
+                </td>
+                <td class="action-buttons">
+                    <button class="btn-view-request" data-id="${req.request_id}" title="View Details">
+                        <i class="fas fa-eye"></i>
+                        <span class="btn-view-label">View</span>
+                    </button>
+                </td>
+            </tr>
+            `;
+        }).join('');
+
+        tbody.querySelectorAll('.btn-view-request').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.dataset.id || btn.closest('tr').dataset.id;
+                showViewModal(id);
+            });
+        });
     }
 
     async function refreshAll() {
