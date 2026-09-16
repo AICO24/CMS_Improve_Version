@@ -242,6 +242,60 @@
     gap: 8px;
 }
 
+.panel-action-buttons .btn-secondary,
+.panel-action-buttons .btn-primary {
+    height: 38px;
+    border-radius: var(--radius-md, 8px);
+    font-size: 0.82rem;
+    font-weight: 700;
+    gap: 8px;
+    padding: 0 16px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
+.report-export-button {
+    height: 38px;
+    padding: 0 16px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: var(--radius-md, 8px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    transition: all 180ms cubic-bezier(0.2, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+    white-space: nowrap;
+}
+
+.report-export-button:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+}
+
+.report-export-button--excel {
+    color: #15803d;
+    border-color: #86efac;
+    background: #ffffff;
+}
+
+.report-export-button--excel i {
+    color: #16a34a;
+    font-size: 0.92rem;
+}
+
+.report-export-button--excel:hover {
+    background: #f0fdf4;
+    border-color: #22c55e;
+    color: #166534;
+}
+
 .panel-divider {
     height: 1px;
     background: linear-gradient(90deg, rgba(44, 94, 71, 0.18) 0%, rgba(226, 232, 240, 0.9) 50%, rgba(44, 94, 71, 0.08) 100%);
@@ -1752,6 +1806,23 @@
     background: #1f2937;
     color: #e2e8f0;
     border-color: #374151;
+}
+
+.dashboard-body[data-theme="dark"] .report-export-button {
+    background: #1f2937;
+    border-color: #374151;
+    color: #e2e8f0;
+}
+
+.dashboard-body[data-theme="dark"] .report-export-button--excel {
+    color: #4ade80;
+    border-color: rgba(74, 222, 128, 0.35);
+    background: #1f2937;
+}
+
+.dashboard-body[data-theme="dark"] .report-export-button--excel:hover {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: #4ade80;
 }
 
 .dashboard-body[data-theme="dark"] .form-lot-summary {
