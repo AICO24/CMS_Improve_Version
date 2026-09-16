@@ -753,6 +753,7 @@ if ($path === 'relocations' && $requestMethod === 'GET') {
     if (isset($_GET['deceased_id'])) $filters['deceased_id'] = $_GET['deceased_id'];
     if (isset($_GET['from_lot_id'])) $filters['from_lot_id'] = $_GET['from_lot_id'];
     if (isset($_GET['to_lot_id'])) $filters['to_lot_id'] = $_GET['to_lot_id'];
+    if (isset($_GET['attention'])) $filters['attention'] = $_GET['attention'];
     if (isset($_GET['q'])) $filters['q'] = $_GET['q'];
     $pagination = [];
     if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];

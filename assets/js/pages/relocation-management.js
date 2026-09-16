@@ -21,15 +21,55 @@ document.addEventListener('DOMContentLoaded', async function() {
         api.logout();
     });
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char]));
+    }
+
+    function debounce(fn, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => fn.apply(this, args), wait);
+        };
+    }
+
     const statsEls = {
         pending: document.getElementById('pendingCount'),
         approved: document.getElementById('approvedCount'),
         completed: document.getElementById('completedCount'),
-        total: document.getElementById('totalCount')
+        total: document.getElementById('totalCount'),
+        attention: document.getElementById('attentionCount'),
     };
     const tbody = document.getElementById('requestsTableBody');
     const requestModal = document.getElementById('requestModal');
     const viewModal = document.getElementById('viewModal');
+
+    // Sub-Tabs elements
+    const tabBtnAll = document.getElementById('tabBtnAll');
+    const tabBtnPending = document.getElementById('tabBtnPending');
+    const tabBtnApproved = document.getElementById('tabBtnApproved');
+    const tabBtnCompleted = document.getElementById('tabBtnCompleted');
+    const pendingBadge = document.getElementById('pendingBadge');
+    const approvedBadge = document.getElementById('approvedBadge');
+
+    // Filter toolbar elements
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const attentionFilter = document.getElementById('attentionFilter');
+    const activeFilterChips = document.getElementById('activeFilterChips');
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+
+    let currentTab = 'all';
+    let currentQuery = '';
+    let currentStatusFilter = 'all';
+    let currentAttentionFilter = false;
+    let cachedRequests = [];
 
     const perPage = 10;
     const paginationInfo = document.getElementById('paginationInfo');
@@ -57,6 +97,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         const params = new URLSearchParams();
         params.set('page', pagination.page);
         params.set('per_page', perPage);
+
+        if (currentTab !== 'all') {
+            params.set('status', currentTab.charAt(0).toUpperCase() + currentTab.slice(1));
+        } else if (currentStatusFilter !== 'all') {
+            params.set('status', currentStatusFilter);
+        }
+
+        if (currentQuery) {
+            params.set('q', currentQuery);
+        }
+
+        if (currentAttentionFilter) {
+            params.set('attention', '1');
+        }
+
         return await apiRequest(`relocations?${params.toString()}`);
     }
 
@@ -65,16 +120,167 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function renderStats(stats) {
-        statsEls.pending.innerText = stats.pending || 0;
-        statsEls.approved.innerText = stats.approved || 0;
-        statsEls.completed.innerText = stats.completed || 0;
-        statsEls.total.innerText = stats.total || 0;
+        if (statsEls.pending) statsEls.pending.innerText = stats.pending || 0;
+        if (statsEls.approved) statsEls.approved.innerText = stats.approved || 0;
+        if (statsEls.completed) statsEls.completed.innerText = stats.completed || 0;
+        if (statsEls.total) statsEls.total.innerText = stats.total || 0;
+        if (statsEls.attention) statsEls.attention.innerText = stats.attention || 0;
+
+        if (pendingBadge) {
+            const count = stats.pending || 0;
+            pendingBadge.innerText = count;
+            pendingBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+        }
+        if (approvedBadge) {
+            const count = stats.approved || 0;
+            approvedBadge.innerText = count;
+            approvedBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+        }
+    }
+
+    function renderActiveFilterChips() {
+        const chips = [
+            { key: 'tab', label: 'Tab', value: currentTab !== 'all' ? (currentTab.charAt(0).toUpperCase() + currentTab.slice(1)) : '', clear: () => switchTab('all') },
+            { key: 'q', label: 'Search', value: currentQuery, clear: () => { searchInput.value = ''; currentQuery = ''; } },
+            { key: 'status', label: 'Status', value: currentStatusFilter !== 'all' && currentTab === 'all' ? currentStatusFilter : '', clear: () => { statusFilter.value = 'all'; currentStatusFilter = 'all'; } },
+            { key: 'attention', label: 'Filter', value: currentAttentionFilter ? 'Needs attention only' : '', clear: () => { attentionFilter.checked = false; currentAttentionFilter = false; } },
+        ].filter(chip => chip.value);
+
+        if (!activeFilterChips) return;
+        activeFilterChips.innerHTML = chips.map(chip => `
+            <span class="filter-chip" data-filter-key="${chip.key}">
+                ${escapeHtml(chip.label)}: ${escapeHtml(chip.value)}
+                <button type="button" aria-label="Remove ${escapeHtml(chip.label)} filter">&times;</button>
+            </span>
+        `).join('');
+
+        activeFilterChips.querySelectorAll('.filter-chip').forEach(chipEl => {
+            const chip = chips.find(item => item.key === chipEl.dataset.filterKey);
+            const btn = chipEl.querySelector('button');
+            if (!chip || !btn) return;
+            btn.addEventListener('click', () => {
+                chip.clear();
+                renderActiveFilterChips();
+                pagination.reset();
+                loadAndRenderRequests();
+            });
+        });
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        [
+            { btn: tabBtnAll, tab: 'all' },
+            { btn: tabBtnPending, tab: 'pending' },
+            { btn: tabBtnApproved, tab: 'approved' },
+            { btn: tabBtnCompleted, tab: 'completed' },
+        ].forEach(item => {
+            if (!item.btn) return;
+            if (item.tab === tab) {
+                item.btn.classList.add('active');
+            } else {
+                item.btn.classList.remove('active');
+            }
+        });
+
+        if (tab !== 'all') {
+            statusFilter.value = tab.charAt(0).toUpperCase() + tab.slice(1);
+            currentStatusFilter = statusFilter.value;
+        } else {
+            statusFilter.value = 'all';
+            currentStatusFilter = 'all';
+        }
+
+        renderActiveFilterChips();
+        pagination.reset();
+        loadAndRenderRequests();
+    }
+
+    if (tabBtnAll) tabBtnAll.addEventListener('click', () => switchTab('all'));
+    if (tabBtnPending) tabBtnPending.addEventListener('click', () => switchTab('pending'));
+    if (tabBtnApproved) tabBtnApproved.addEventListener('click', () => switchTab('approved'));
+    if (tabBtnCompleted) tabBtnCompleted.addEventListener('click', () => switchTab('completed'));
+
+    const onSearchChange = debounce(() => {
+        currentQuery = searchInput.value.trim();
+        renderActiveFilterChips();
+        pagination.reset();
+        loadAndRenderRequests();
+    }, 300);
+
+    if (searchInput) searchInput.addEventListener('input', onSearchChange);
+
+    if (statusFilter) {
+        statusFilter.addEventListener('change', () => {
+            currentStatusFilter = statusFilter.value;
+            if (currentStatusFilter !== 'all') {
+                const matchTab = currentStatusFilter.toLowerCase();
+                if (['pending', 'approved', 'completed'].includes(matchTab)) {
+                    currentTab = matchTab;
+                    [tabBtnAll, tabBtnPending, tabBtnApproved, tabBtnCompleted].forEach(b => {
+                        if (b) b.classList.toggle('active', b.dataset.tab === matchTab);
+                    });
+                }
+            } else {
+                currentTab = 'all';
+                [tabBtnAll, tabBtnPending, tabBtnApproved, tabBtnCompleted].forEach(b => {
+                    if (b) b.classList.toggle('active', b.dataset.tab === 'all');
+                });
+            }
+            renderActiveFilterChips();
+            pagination.reset();
+            loadAndRenderRequests();
+        });
+    }
+
+    if (attentionFilter) {
+        attentionFilter.addEventListener('change', () => {
+            currentAttentionFilter = attentionFilter.checked;
+            renderActiveFilterChips();
+            pagination.reset();
+            loadAndRenderRequests();
+        });
+    }
+
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', () => {
+            if (!cachedRequests || cachedRequests.length === 0) {
+                showToast('No relocation records to export.', { type: 'info' });
+                return;
+            }
+
+            const headers = ['Request ID', 'Decedent', 'From Lot', 'From Section', 'To Lot', 'To Section', 'Reason', 'Status', 'Requested By', 'Approved By', 'Created At'];
+            const rows = cachedRequests.map(r => [
+                `"REQ-${r.request_id}"`,
+                `"${(r.first_name + ' ' + r.last_name).replace(/"/g, '""')}"`,
+                `"${(r.from_lot_number || '').replace(/"/g, '""')}"`,
+                `"${(r.from_section || '').replace(/"/g, '""')}"`,
+                `"${(r.to_lot_number || '').replace(/"/g, '""')}"`,
+                `"${(r.to_section || '').replace(/"/g, '""')}"`,
+                `"${(r.reason || '').replace(/"/g, '""')}"`,
+                `"${r.status}"`,
+                `"${(r.requested_by_name || '').replace(/"/g, '""')}"`,
+                `"${(r.approved_by_name || '').replace(/"/g, '""')}"`,
+                `"${r.created_at}"`,
+            ]);
+
+            const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `Relocation_Requests_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Relocation records exported to CSV.', { type: 'success' });
+        });
     }
 
     async function loadAndRenderRequests() {
         try {
             const result = await loadRequests();
             const requests = Array.isArray(result.data) ? result.data : [];
+            cachedRequests = requests;
             renderTable(requests);
             pagination.render(result.meta || { page: 1, total_pages: 1, total: requests.length });
         } catch (error) {

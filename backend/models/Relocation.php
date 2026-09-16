@@ -25,12 +25,19 @@ class Relocation {
             $sql .= " AND r.to_lot_id = ?";
             $params[] = (int) $filters['to_lot_id'];
         }
+        if (!empty($filters['attention']) && in_array($filters['attention'], ['1', 'true', true], true)) {
+            $sql .= " AND r.request_id IN (SELECT entity_id FROM system_exceptions WHERE entity_type = 'Relocation' AND status = 'open')";
+        }
         if (!empty($filters['q'])) {
-            $sql .= " AND (d.first_name LIKE ? OR d.last_name LIKE ? OR from_lot.lot_number LIKE ? OR to_lot.lot_number LIKE ?)";
+            $sql .= " AND (d.first_name LIKE ? OR d.last_name LIKE ? OR from_lot.lot_number LIKE ? OR to_lot.lot_number LIKE ? OR r.request_id = ? OR CONCAT('REQ-', r.request_id) LIKE ?)";
             $search = '%' . $filters['q'] . '%';
+            $cleanNum = preg_replace('/[^0-9]/', '', $filters['q']);
+            $numSearch = !empty($cleanNum) ? (int) $cleanNum : 0;
             $params[] = $search;
             $params[] = $search;
             $params[] = $search;
+            $params[] = $search;
+            $params[] = $numSearch;
             $params[] = $search;
         }
     }
