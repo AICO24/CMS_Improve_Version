@@ -101,7 +101,12 @@ class ExpirationController {
     public function renew($id, $data, $userId = null) {
         $years = !empty($data['years']) ? (int) $data['years'] : 5;
         $notes = $data['notes'] ?? '';
-        return $this->expirationModel->renewLease($id, $years, $notes, $userId);
+        $customEndDate = !empty($data['new_end_date']) ? $data['new_end_date'] : null;
+        return $this->expirationModel->renewLease($id, $years, $notes, $userId, $customEndDate);
+    }
+
+    public function dispatchNotice($id, $data = [], $userId = null) {
+        return $this->expirationModel->dispatchNotice($id, $data, $userId);
     }
 
     public function sync() {

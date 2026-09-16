@@ -1669,6 +1669,16 @@ if (preg_match('/^expiration-records\/(\d+)\/initiate-relocation$/', $path, $mat
     exit;
 }
 
+if (preg_match('/^expiration-records\/(\d+)\/notify$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $result = $expirationController->dispatchNotice($matches[1], $input, $user['user_id'] ?? null);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 if (preg_match('/^expiration-records\/(\d+)$/', $path, $matches) && $requestMethod === 'GET') {
     $result = $expirationController->show($matches[1]);
     http_response_code($result['code'] ?? 200);

@@ -513,20 +513,24 @@ class ExpirationRecord {
         ];
     }
 
-    public function renewLease($id, $years = 5, $notes = '', $userId = null) {
+    public function renewLease($id, $years = 5, $notes = '', $userId = null, $customEndDate = null) {
         $existing = $this->findById($id);
         if (!$existing) {
             return ['error' => 'Expiration record not found', 'code' => 404];
         }
 
-        $years = max(1, (int) $years);
-        $baseTimestamp = ($existing['end_date'] && strtotime($existing['end_date']) > time()) 
-            ? strtotime($existing['end_date']) 
-            : time();
-        $newEndDate = date('Y-m-d', strtotime("+$years years", $baseTimestamp));
+        if (!empty($customEndDate) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $customEndDate)) {
+            $newEndDate = $customEndDate;
+        } else {
+            $years = max(1, (int) $years);
+            $baseTimestamp = ($existing['end_date'] && strtotime($existing['end_date']) > time()) 
+                ? strtotime($existing['end_date']) 
+                : time();
+            $newEndDate = date('Y-m-d', strtotime("+$years years", $baseTimestamp));
+        }
         
         $prevNotes = $existing['notes'] ? trim($existing['notes']) : '';
-        $renewalTag = "Renewed for {$years} yr(s) on " . date('Y-m-d') . ($notes ? ": " . trim($notes) : "");
+        $renewalTag = "Renewed until $newEndDate on " . date('Y-m-d') . ($notes ? ": " . trim($notes) : "");
         $combinedNotes = $prevNotes ? "$prevNotes | $renewalTag" : $renewalTag;
 
         $stmt = $this->db->prepare("
@@ -563,6 +567,60 @@ class ExpirationRecord {
             'success' => true,
             'message' => "Lease renewed successfully until $newEndDate",
             'new_end_date' => $newEndDate,
+            'data' => $this->findById($id)
+        ];
+    }
+
+    public function dispatchNotice($id, $data = [], $userId = null) {
+        $existing = $this->findById($id);
+        if (!$existing) {
+            return ['error' => 'Expiration record not found', 'code' => 404];
+        }
+
+        $stage = !empty($data['stage']) ? trim($data['stage']) : 'Notice of Lease Expiration';
+        $method = !empty($data['method']) ? trim($data['method']) : 'SMS';
+        $notes = !empty($data['notes']) ? trim($data['notes']) : '';
+        $contact = $existing['contact_name'] ?: 'Family of ' . ($existing['decedent_name'] ?: 'Lot Occupant');
+
+        $tag = "[$stage via $method on " . date('Y-m-d') . ($notes ? " - $notes" : "") . "]";
+        $prevNotes = $existing['notes'] ? trim($existing['notes']) : '';
+        $combinedNotes = $prevNotes ? "$prevNotes | $tag" : $tag;
+
+        $stmt = $this->db->prepare("
+            UPDATE expiration_records 
+            SET notified_at = NOW(), notes = ?, updated_at = NOW()
+            WHERE expiration_id = ?
+        ");
+        $stmt->execute([$combinedNotes, $id]);
+
+        require_once __DIR__ . '/Notification.php';
+        $notificationModel = new Notification();
+        $notificationModel->create([
+            'title' => "Notice Dispatched: Lot {$existing['lot_number']}",
+            'message' => "Dispatched $stage via $method to $contact for Lot {$existing['lot_number']} (Section {$existing['section_name']}).",
+            'notification_type' => 'Expiration',
+            'is_read' => 0
+        ]);
+
+        require_once __DIR__ . '/AuditLog.php';
+        $audit = new AuditLog();
+        $audit->log(
+            'Expiration notice dispatched',
+            $userId,
+            null,
+            'Expiration',
+            $id,
+            [
+                'lot_number' => $existing['lot_number'],
+                'stage' => $stage,
+                'method' => $method,
+                'contact' => $contact
+            ]
+        );
+
+        return [
+            'success' => true,
+            'message' => "Notice dispatched successfully via $method",
             'data' => $this->findById($id)
         ];
     }

@@ -342,6 +342,216 @@
         </main>
     </div>
 
+    <!-- ── Organized View Modal (Decedent Records Style Standard) ── -->
+    <div id="viewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
+        <div class="modal-content modal--view">
+            <button type="button" class="close-view" id="closeViewModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
+            <div class="modal-header-compact view-modal-header">
+                <div class="modal-header-icon-wrap view-header-icon">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <div>
+                    <h3 id="viewModalTitle">Lease Expiration Record Details</h3>
+                    <p class="modal-header-subtitle">Tenure monitoring, deceased occupant, family contact &amp; renewal history</p>
+                </div>
+            </div>
+
+            <!-- Hero Card + 2-Column Info Grid container -->
+            <div id="viewDetails"></div>
+
+            <!-- Notice & Communication History -->
+            <div class="documents-section">
+                <div class="section-title-wrap">
+                    <h4 class="view-section-title"><i class="fas fa-envelope-open-text"></i> Expiration Notices &amp; Delivery Log</h4>
+                </div>
+                <div id="viewNoticesList" class="notices-list"></div>
+            </div>
+
+            <!-- Activity & Audit Trail -->
+            <div class="activity-timeline-section">
+                <div class="section-title-wrap">
+                    <h4 class="view-section-title"><i class="fas fa-clock-rotate-left"></i> Tenure &amp; Relocation Audit Trail</h4>
+                </div>
+                <div id="viewActivityTimeline" class="activity-timeline"></div>
+            </div>
+
+            <!-- Modal Action Footer -->
+            <div class="view-modal-footer">
+                <div class="modal-actions-left">
+                    <button type="button" class="btn-print-clearance" id="printLeaseSlipBtn">
+                        <i class="fas fa-print"></i>
+                        <span>Print Lease Summary</span>
+                    </button>
+                </div>
+                <div class="modal-actions-right">
+                    <button type="button" class="btn-renew-action" id="renewFromViewBtn">
+                        <i class="fas fa-rotate"></i>
+                        <span>Renew Lease</span>
+                    </button>
+                    <button type="button" class="btn-notify-action" id="notifyFromViewBtn">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Send Notice</span>
+                    </button>
+                    <button type="button" class="btn-relocate-action" id="relocateFromViewBtn">
+                        <i class="fas fa-truck-moving"></i>
+                        <span>Relocate Lot</span>
+                    </button>
+                    <button type="button" class="btn-delete-action" id="deleteFromViewBtn">
+                        <i class="fas fa-trash-can"></i>
+                        <span>Delete</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Renew Lease Modal ── -->
+    <div id="renewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="renewModalTitle">
+        <div class="modal-content modal--form">
+            <button type="button" class="close" id="closeRenewModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
+            <div class="modal-header-compact">
+                <div class="modal-header-icon-wrap icon-renew">
+                    <i class="fas fa-rotate"></i>
+                </div>
+                <div>
+                    <h3 id="renewModalTitle">Renew Lot Lease</h3>
+                    <p class="modal-header-subtitle">Extend lot lease tenure and log renewal terms</p>
+                </div>
+            </div>
+            <form id="renewForm" class="expiration-action-form">
+                <input type="hidden" id="renewExpirationId">
+                <div class="form-lot-summary" id="renewLotSummary"></div>
+                <div class="form-group">
+                    <label>Quick Extension Term</label>
+                    <div class="quick-terms-row">
+                        <button type="button" class="btn-term" data-years="1">+1 Year</button>
+                        <button type="button" class="btn-term active" data-years="5">+5 Years</button>
+                        <button type="button" class="btn-term" data-years="10">+10 Years</button>
+                        <button type="button" class="btn-term" data-years="25">+25 Years</button>
+                    </div>
+                </div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="renewEndDate">New Expiration Date <span class="required">*</span></label>
+                        <input type="date" id="renewEndDate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="renewFee">Renewal Fee (₱)</label>
+                        <input type="number" id="renewFee" class="form-control" placeholder="0.00" min="0" step="0.01">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="renewNotes">Renewal Notes / Remarks</label>
+                    <textarea id="renewNotes" class="form-control" rows="3" placeholder="Receipt #, agreement terms, or family instructions..."></textarea>
+                </div>
+                <div class="modal-footer-compact">
+                    <button type="button" class="btn-secondary" id="cancelRenewBtn">Cancel</button>
+                    <button type="submit" class="btn-primary" id="confirmRenewSubmitBtn">
+                        <i class="fas fa-check-circle"></i> Confirm Renewal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ── Relocation / Exhumation Handoff Modal ── -->
+    <div id="relocateModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="relocateModalTitle">
+        <div class="modal-content modal--form">
+            <button type="button" class="close" id="closeRelocateModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
+            <div class="modal-header-compact">
+                <div class="modal-header-icon-wrap icon-relocate">
+                    <i class="fas fa-truck-moving"></i>
+                </div>
+                <div>
+                    <h3 id="relocateModalTitle">Initiate Relocation / Exhumation</h3>
+                    <p class="modal-header-subtitle">Handoff expired lot to Relocation Management</p>
+                </div>
+            </div>
+            <form id="relocateForm" class="expiration-action-form">
+                <input type="hidden" id="relocateExpirationId">
+                <div class="form-lot-summary" id="relocateLotSummary"></div>
+                <div class="form-group">
+                    <label for="relocateReason">Reason for Relocation <span class="required">*</span></label>
+                    <select id="relocateReason" class="form-control" required>
+                        <option value="Lease Expired (No Renewal)">Lease Expired (No Renewal)</option>
+                        <option value="Family Requested Transfer">Family Requested Transfer</option>
+                        <option value="Cemetery Section Redevelopment">Cemetery Section Redevelopment</option>
+                        <option value="Court / Public Health Order">Court / Public Health Order</option>
+                        <option value="Other">Other Reason</option>
+                    </select>
+                </div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="relocateExhumationDate">Proposed Exhumation Date <span class="required">*</span></label>
+                        <input type="date" id="relocateExhumationDate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="relocateDestination">Destination / Relocation Type <span class="required">*</span></label>
+                        <input type="text" id="relocateDestination" class="form-control" placeholder="e.g. Ossuary Crypt, Columbarium, Other" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="relocateNotes">Additional Instructions / Clearance Notes</label>
+                    <textarea id="relocateNotes" class="form-control" rows="3" placeholder="Authorized kin, permit references, or special handling..."></textarea>
+                </div>
+                <div class="modal-footer-compact">
+                    <button type="button" class="btn-secondary" id="cancelRelocateBtn">Cancel</button>
+                    <button type="submit" class="btn-warning-solid" id="confirmRelocateSubmitBtn">
+                        <i class="fas fa-truck-moving"></i> Submit Relocation Request
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ── Dispatch Expiration Notice Modal ── -->
+    <div id="notifyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="notifyModalTitle">
+        <div class="modal-content modal--form">
+            <button type="button" class="close" id="closeNotifyModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
+            <div class="modal-header-compact">
+                <div class="modal-header-icon-wrap icon-notify">
+                    <i class="fas fa-paper-plane"></i>
+                </div>
+                <div>
+                    <h3 id="notifyModalTitle">Dispatch Expiration Notice</h3>
+                    <p class="modal-header-subtitle">Send official renewal reminder to family contact</p>
+                </div>
+            </div>
+            <form id="notifyForm" class="expiration-action-form">
+                <input type="hidden" id="notifyExpirationId">
+                <div class="form-lot-summary" id="notifyLotSummary"></div>
+                <div class="form-group">
+                    <label for="noticeStageSelect">Notice Level</label>
+                    <select id="noticeStageSelect" class="form-control">
+                        <option value="1st Notice (30 Days Remaining)">1st Notice (30 Days Remaining)</option>
+                        <option value="2nd Notice (15 Days Remaining)">2nd Notice (15 Days Remaining)</option>
+                        <option value="Final Notice (Expired / Overdue)">Final Notice (Expired / Overdue)</option>
+                        <option value="Exhumation Clearance Notice">Exhumation Clearance Notice</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="noticeDeliveryMethod">Delivery Method</label>
+                    <select id="noticeDeliveryMethod" class="form-control">
+                        <option value="SMS">SMS / Phone Call</option>
+                        <option value="Registered Mail">Registered Mail / Official Letter</option>
+                        <option value="Email">Email</option>
+                        <option value="In-Person">In-Person at Cemetery Office</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="noticeNotes">Notice Remarks / Reference</label>
+                    <textarea id="noticeNotes" class="form-control" rows="3" placeholder="Reference number, kin response, or notes..."></textarea>
+                </div>
+                <div class="modal-footer-compact">
+                    <button type="button" class="btn-secondary" id="cancelNotifyBtn">Cancel</button>
+                    <button type="submit" class="btn-primary" id="confirmNotifySubmitBtn">
+                        <i class="fas fa-paper-plane"></i> Dispatch Notice
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/shared/button-loading.js"></script>
