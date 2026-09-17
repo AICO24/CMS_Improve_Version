@@ -273,24 +273,15 @@
                 <div class="bottom-row">
                     <div class="card chart-card revenue-chart-card">
                         <div class="chart-card-header">
-                            <div class="chart-title-group">
-                                <span class="chart-icon-badge"><i class="fas fa-chart-column"></i></span>
-                                <div>
-                                    <h4>Monthly Revenue Trend</h4>
-                                    <span class="chart-card-subtitle">Financial performance &amp; collections overview</span>
-                                </div>
-                            </div>
+                            <span class="chart-card-title">Monthly Revenue</span>
                             <div class="chart-header-actions">
-                                <span class="chart-type-badge"><i class="fas fa-chart-simple"></i> Monthly Bar</span>
-                                <a href="reports.html" class="btn-reports-link" title="View Full Financial Reports">
-                                    <i class="fas fa-file-invoice-dollar"></i>
-                                    <span>Reports &rarr;</span>
-                                </a>
+                                <span class="chart-card-badge">Bar</span>
+                                <a href="reports.html" class="btn-reports-link" title="View Full Financial Reports">Reports &rarr;</a>
                             </div>
                         </div>
                         <div class="chart-canvas-wrapper">
                             <div class="chart-frame">
-                                <canvas id="occChart" height="195"></canvas>
+                                <canvas id="occChart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -321,6 +312,12 @@
         </main>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        if (typeof Chart !== 'undefined') {
+            Chart.defaults.elements.bar.borderRadius = 6;
+            Chart.defaults.elements.bar.borderSkipped = 'bottom';
+        }
+    </script>
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/shared/ai-assistant-widget.js"></script>
