@@ -1441,7 +1441,12 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             if (!hierarchyInitialized) {
                 const initialGroups = groupLotsByCategory(allLots);
-                if (initialGroups.length) expandedCategories.add(initialGroups[0].name);
+                if (initialGroups.length) {
+                    expandedCategories.add(initialGroups[0].name);
+                    if (initialGroups[0].sections && initialGroups[0].sections.length) {
+                        expandedSections.add(`${initialGroups[0].name}::${initialGroups[0].sections[0].name}`);
+                    }
+                }
                 hierarchyInitialized = true;
             }
 

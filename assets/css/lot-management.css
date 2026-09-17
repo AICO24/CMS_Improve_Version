@@ -1752,6 +1752,12 @@
     border-top: 1.5px solid #edf2f7;
 }
 
+.category-body[hidden],
+.section-body[hidden],
+[hidden] {
+    display: none !important;
+}
+
 .category-body-header {
     display: flex;
     align-items: center;
