@@ -293,67 +293,203 @@
         </main>
     </div>
 
-    <!-- Add/Edit Modal -->
+    <!-- Modernized Add/Edit Modal -->
     <div id="lotModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="modal-content">
-            <button type="button" class="close" aria-label="Close">&times;</button>
-            <h3 id="modalTitle">Add New Lot</h3>
+        <div class="modal-content modal-content--wide">
+            <div class="modal-header-custom">
+                <div class="modal-title-group">
+                    <span class="modal-subtitle-chip"><i class="fas fa-pen-to-square"></i> Lot Registry Form</span>
+                    <h3 id="modalTitle" class="modal-heading-main">Add New Lot</h3>
+                </div>
+                <button type="button" class="close" aria-label="Close">&times;</button>
+            </div>
             <form id="lotForm">
                 <input type="hidden" id="lotId">
-                <div class="form-group"><label>Lot Number (optional)</label><input type="text" id="lotNumber" placeholder="Leave blank to auto-generate"></div>
-                <div class="form-group"><label>Section</label><select id="lotSection" required></select></div>
-                <div class="form-group"><label>Block</label><select id="lotBlock" required></select></div>
-                <div class="form-group"><label>Lot Type</label><select id="lotType" required></select></div>
-                <div class="form-group"><label>Price (₱)</label><input type="number" id="lotPrice" required></div>
-                <div class="form-group"><label>Dimensions (e.g., 8x10 ft)</label><input type="text" id="lotDimensions">
-                </div>
-                <div class="form-group form-group-warning">
-                    <label for="lotStatus">Status</label>
-                    <select id="lotStatus">
-                        <option value="Available">Available</option>
-                        <option value="Occupied">Occupied</option>
-                        <option value="Reserved">Reserved</option>
-                        <option value="Expired">Expired</option>
-                    </select>
-                    <p class="help"><i class="fas fa-triangle-exclamation"></i> Changing this directly overrides the lot's lifecycle status — it bypasses the normal reservation/payment/expiration flow.</p>
-                </div>
-                <div class="form-group"><label>Notes</label><textarea id="lotNotes" rows="2"></textarea></div>
-                <button type="submit" class="bookmarkBtn btn-save">
-                    <span class="IconContainer">
-                        <i class="fas fa-save icon"></i>
-                    </span>
+                <div class="modal-body-custom">
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label for="lotNumber">Lot Number <span class="text-muted">(Optional)</span></label>
+                            <input type="text" id="lotNumber" placeholder="Leave blank to auto-generate">
+                            <span class="form-hint" id="lotNumberHint">e.g. L101 (Leave blank to auto-generate sequentially)</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="lotType">Lot Type / Category <span class="text-danger">*</span></label>
+                            <select id="lotType" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="lotSection">Cemetery Section <span class="text-danger">*</span></label>
+                            <select id="lotSection" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="lotBlock">Assigned Block <span class="text-danger">*</span></label>
+                            <select id="lotBlock" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="lotPrice">Price (₱) <span class="text-danger">*</span></label>
+                            <input type="number" id="lotPrice" step="0.01" min="0" required placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="lotDimensions">Dimensions</label>
+                            <input type="text" id="lotDimensions" placeholder="e.g. 1.0m x 2.44m">
+                        </div>
+                    </div>
 
-                    <span class="text">Save</span>
-                </button>
+                    <div class="form-group form-group-warning mt-3">
+                        <label for="lotStatus"><i class="fas fa-shield-halved"></i> Lifecycle Status Override</label>
+                        <select id="lotStatus">
+                            <option value="Available">Available</option>
+                            <option value="Occupied">Occupied</option>
+                            <option value="Reserved">Reserved</option>
+                            <option value="Expired">Expired</option>
+                        </select>
+                        <p class="help"><i class="fas fa-triangle-exclamation"></i> Changing this directly overrides the lot's lifecycle status — it bypasses the normal reservation/payment/expiration flow.</p>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label for="lotNotes">Location Notes / Landmarks</label>
+                        <textarea id="lotNotes" rows="2" placeholder="Describe landmarks, tree vicinity, or plot orientation..."></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer-custom">
+                    <button type="button" class="btn-secondary close-lot-modal-btn">Cancel</button>
+                    <button type="submit" class="btn-primary btn-save-lot">
+                        <i class="fas fa-floppy-disk"></i>
+                        <span>Save Lot Record</span>
+                    </button>
+                </div>
             </form>
         </div>
     </div>
 
-    <!-- View Modal -->
+    <!-- Modernized Executive View Lot Modal (2-Column Card System) -->
     <div id="viewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
-        <div class="modal-content">
-            <button type="button" class="close-view" aria-label="Close">&times;</button>
-            <h3 id="viewModalTitle">Lot Details</h3>
-            <div id="viewDetails"></div>
-            <div style="margin-top: 10px;"><div id="aiAssistantMountRecord"></div></div>
-
-            <div class="modal-action-row" id="availableSlotActions" style="display: none;">
-                <button class="modal-action-btn modal-action-btn--reserve" id="btnProceedReserve" type="button">
-                    <i class="fas fa-calendar-check"></i> Proceed to Reservation
-                </button>
-                <button class="modal-action-btn modal-action-btn--payment" id="btnProceedPayment" type="button">
-                    <i class="fas fa-credit-card"></i> Record Payment
-                </button>
+        <div class="modal-content modal-content--wide">
+            <div class="modal-header-custom">
+                <div class="modal-title-group">
+                    <span class="modal-subtitle-chip" id="viewSectionChip"><i class="fas fa-map-pin"></i> Cemetery Plot</span>
+                    <h3 id="viewModalTitle" class="modal-heading-main"><i class="fas fa-monument"></i> Lot Details</h3>
+                </div>
+                <div class="modal-header-actions">
+                    <span id="viewStatusBadge" class="status-pill status-available"><span class="dot"></span>Available</span>
+                    <button type="button" class="close-view" aria-label="Close">&times;</button>
+                </div>
+            </div>
+            
+            <div class="modal-body-custom">
+                <!-- 2-Column Responsive Card System: Plot Specs & Occupancy Timeline -->
+                <div class="lot-view-grid" id="viewDetails"></div>
+                
+                <!-- System-Wide AI Assistant Mount for this Specific Lot Record -->
+                <div class="lot-ai-assistant-wrapper">
+                    <div id="aiAssistantMountRecord"></div>
+                </div>
             </div>
 
-            <div class="modal-action-row">
-                <button class="modal-action-btn modal-action-btn--edit" id="editFromView" type="button">
-                    <i class="fas fa-pen"></i> Edit Lot
-                </button>
-                <button class="modal-action-btn modal-action-btn--delete" id="deleteFromView" type="button">
-                    <i class="fas fa-trash"></i> Delete Lot
-                </button>
+            <div class="modal-footer-custom">
+                <!-- Action Row for Available Lots (Quick Booking / Payment) -->
+                <div class="modal-action-row" id="availableSlotActions" style="display: none;">
+                    <button class="modal-action-btn modal-action-btn--reserve" id="btnProceedReserve" type="button">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Proceed to Reservation</span>
+                    </button>
+                    <button class="modal-action-btn modal-action-btn--payment" id="btnProceedPayment" type="button">
+                        <i class="fas fa-receipt"></i>
+                        <span>Record Payment</span>
+                    </button>
+                </div>
+
+                <!-- Secondary Management Actions (Edit, Delete, Close) -->
+                <div class="modal-action-row modal-action-row--secondary">
+                    <button class="modal-action-btn modal-action-btn--edit" id="editFromView" type="button">
+                        <i class="fas fa-pen"></i>
+                        <span>Edit Lot</span>
+                    </button>
+                    <button class="modal-action-btn modal-action-btn--delete" id="deleteFromView" type="button">
+                        <i class="fas fa-trash"></i>
+                        <span>Delete Lot</span>
+                    </button>
+                    <button class="modal-action-btn modal-action-btn--close" id="closeViewModalBtn" type="button">
+                        <i class="fas fa-xmark"></i>
+                        <span>Close</span>
+                    </button>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Batch Lot Generator Modal (Automation Wizard) -->
+    <div id="batchLotModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="batchModalTitle">
+        <div class="modal-content modal-content--wide">
+            <div class="modal-header-custom">
+                <div class="modal-title-group">
+                    <span class="modal-subtitle-chip"><i class="fas fa-layer-group"></i> Automation Wizard</span>
+                    <h3 id="batchModalTitle" class="modal-heading-main">Batch Lot Generator</h3>
+                </div>
+                <button type="button" class="close-batch" id="closeBatchModalTop" aria-label="Close">&times;</button>
+            </div>
+            <form id="batchLotForm">
+                <div class="modal-body-custom">
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label for="batchSection">Target Section <span class="text-danger">*</span></label>
+                            <select id="batchSection" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="batchBlock">Target Block <span class="text-danger">*</span></label>
+                            <select id="batchBlock" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="batchType">Lot Type / Category <span class="text-danger">*</span></label>
+                            <select id="batchType" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="batchCount">Lots to Generate <span class="text-danger">*</span></label>
+                            <input type="number" id="batchCount" min="1" max="100" value="10" required>
+                            <span class="form-hint">1 to 100 lots per batch</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="batchPrefix">Lot Number Prefix</label>
+                            <input type="text" id="batchPrefix" value="L" placeholder="e.g. L or BLK-A-">
+                        </div>
+                        <div class="form-group">
+                            <label for="batchStartNumber">Starting Number <span class="text-muted">(Optional)</span></label>
+                            <input type="number" id="batchStartNumber" min="1" placeholder="Auto-compute from block">
+                            <span class="form-hint">Leave blank to auto-continue block sequence</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="batchPrice">Price per Lot (₱) <span class="text-danger">*</span></label>
+                            <input type="number" id="batchPrice" step="0.01" min="0" required placeholder="50000.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="batchDimensions">Dimensions</label>
+                            <input type="text" id="batchDimensions" value="1.0m x 2.44m" placeholder="e.g. 1.0m x 2.44m">
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label for="batchNotes">Shared Notes / Description</label>
+                        <textarea id="batchNotes" rows="2" placeholder="Batch generated standard plots..."></textarea>
+                    </div>
+
+                    <!-- Reactive Live Preview Box -->
+                    <div class="batch-preview-box" id="batchPreviewBox">
+                        <div class="batch-preview-icon"><i class="fas fa-calculator"></i></div>
+                        <div class="batch-preview-content">
+                            <strong id="batchPreviewTitle">Generating 10 Lots</strong>
+                            <p id="batchPreviewText">Estimated range: <span class="badge badge-emerald" id="batchPreviewRange">L1 to L10</span> in Section ...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer-custom">
+                    <button type="button" class="btn-secondary" id="closeBatchModalBottom">Cancel</button>
+                    <button type="submit" class="btn-primary" id="btnSubmitBatch">
+                        <i class="fas fa-magic"></i>
+                        <span>Generate Lots Now</span>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

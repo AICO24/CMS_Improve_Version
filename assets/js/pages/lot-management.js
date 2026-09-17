@@ -854,7 +854,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    // ---------- View/Add/Edit modals (unchanged behavior) ----------
+    // ---------- View/Add/Edit modals & Automation Wizards ----------
 
     async function showViewModal(lotId) {
         try {
@@ -864,17 +864,124 @@ document.addEventListener('DOMContentLoaded', async function() {
                 return;
             }
 
-            const details = `
-                <div class="detail-row"><span>Lot Number</span><strong>${lot.lot_number}</strong></div>
-                <div class="detail-row"><span>Section</span><strong>${lot.section_name}</strong></div>
-                <div class="detail-row"><span>Block</span><strong>${lot.block_name || 'N/A'}</strong></div>
-                <div class="detail-row"><span>Type</span><strong>${lot.lot_type_name}</strong></div>
-                <div class="detail-row"><span>Price</span><strong>₱${parseFloat(lot.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
-                <div class="detail-row"><span>Status</span><strong>${lot.status}</strong></div>
-                <div class="detail-row"><span>Dimensions</span><strong>${lot.dimensions || '—'}</strong></div>
-                <div class="detail-row"><span>Notes</span><strong>${lot.location_notes || 'None'}</strong></div>
+            // Update View Modal Header
+            const viewSectionChip = document.getElementById('viewSectionChip');
+            if (viewSectionChip) {
+                viewSectionChip.innerHTML = `<i class="fas fa-map-pin"></i> ${escapeHtml(lot.section_name || 'Cemetery Plot')} &bull; ${escapeHtml(lot.lot_type_name || 'Standard')}`;
+            }
+            const viewModalTitle = document.getElementById('viewModalTitle');
+            if (viewModalTitle) {
+                viewModalTitle.innerHTML = `<i class="fas fa-monument"></i> Lot ${escapeHtml(lot.lot_number)}`;
+            }
+            const viewStatusBadge = document.getElementById('viewStatusBadge');
+            if (viewStatusBadge) {
+                viewStatusBadge.className = `status-pill status-${(lot.status || '').toLowerCase()}`;
+                viewStatusBadge.innerHTML = `<span class="dot"></span>${escapeHtml(lot.status)}`;
+            }
+
+            // Build Occupancy Card Info
+            let occupancyContent = '';
+            if (lot.occupant_name) {
+                occupancyContent = `
+                    <div class="lot-view-item">
+                        <span class="lot-view-label">Current Occupant</span>
+                        <strong class="lot-view-value" style="color: #0284c7;"><i class="fas fa-user"></i> ${escapeHtml(lot.occupant_name)}</strong>
+                    </div>
+                    <div class="lot-view-item">
+                        <span class="lot-view-label">Life Dates</span>
+                        <span class="lot-view-value">${lot.date_of_birth ? 'DOB: ' + escapeHtml(lot.date_of_birth) : ''} ${lot.date_of_death ? '&bull; DOD: ' + escapeHtml(lot.date_of_death) : ''}</span>
+                    </div>
+                    <div class="lot-view-item">
+                        <span class="lot-view-label">Interment Date</span>
+                        <span class="lot-view-value">${escapeHtml(lot.burial_date || 'None recorded')}</span>
+                    </div>
+                `;
+            } else if (lot.reserved_for_name) {
+                occupancyContent = `
+                    <div class="lot-view-item">
+                        <span class="lot-view-label">Reserved Beneficiary</span>
+                        <strong class="lot-view-value" style="color: #b45309;"><i class="fas fa-user-clock"></i> ${escapeHtml(lot.reserved_for_name)}</strong>
+                    </div>
+                    <div class="lot-view-item">
+                        <span class="lot-view-label">Burial Schedule</span>
+                        <span class="lot-view-value">#${lot.schedule_id || 'N/A'} (${escapeHtml(lot.burial_status || 'Reserved')})</span>
+                    </div>
+                `;
+            } else {
+                occupancyContent = `
+                    <div class="lot-view-item">
+                        <span class="lot-view-label">Occupancy Status</span>
+                        <span class="occupant-vacant" style="font-size: 0.88rem;"><i class="fas fa-circle-check"></i> Vacant &amp; Available for Burial</span>
+                    </div>
+                `;
+            }
+
+            // Build Lease Timeline
+            let leaseHealthBadge = '<span class="text-muted">—</span>';
+            if (lot.days_until_expiration !== null) {
+                if (lot.days_until_expiration <= 0) {
+                    leaseHealthBadge = '<span class="badge" style="background:#fee2e2; color:#b91c1c;">Expired</span>';
+                } else if (lot.days_until_expiration <= 30) {
+                    leaseHealthBadge = `<span class="badge" style="background:#fef3c7; color:#b45309;">${lot.days_until_expiration}d remaining</span>`;
+                } else {
+                    leaseHealthBadge = `<span class="badge" style="background:#dcfce7; color:#15803d;">${lot.days_until_expiration}d active</span>`;
+                }
+            }
+
+            const leaseContent = `
+                <div class="lot-view-item">
+                    <span class="lot-view-label">Lease Duration</span>
+                    <span class="lot-view-value">${lot.lease_start_date ? escapeHtml(lot.lease_start_date) : 'N/A'} &rarr; ${lot.lease_end_date ? escapeHtml(lot.lease_end_date) : 'N/A'}</span>
+                </div>
+                <div class="lot-view-item">
+                    <span class="lot-view-label">Lease Status</span>
+                    ${leaseHealthBadge}
+                </div>
             `;
-            document.getElementById('viewDetails').innerHTML = details;
+
+            const detailsHtml = `
+                <div class="lot-view-card">
+                    <div class="lot-view-card-title">
+                        <i class="fas fa-monument"></i>
+                        <span>Plot Specifications</span>
+                    </div>
+                    <div class="lot-view-item">
+                        <span class="lot-view-label">Plot Number</span>
+                        <strong class="lot-view-value" style="color: var(--color-primary-700, #047857);">${escapeHtml(lot.lot_number)}</strong>
+                    </div>
+                    <div class="lot-view-item">
+                        <span class="lot-view-label">Section &amp; Block</span>
+                        <span class="lot-view-value"><i class="fas fa-map-pin text-muted"></i> ${escapeHtml(lot.section_name)} &bull; Block: ${escapeHtml(lot.block_name || 'N/A')}</span>
+                    </div>
+                    <div class="lot-view-item">
+                        <span class="lot-view-label">Lot Type / Category</span>
+                        <span class="lot-pill"><i class="fas ${categoryIcon(lot.lot_type_name)}"></i> ${escapeHtml(lot.lot_type_name || 'Standard')}</span>
+                    </div>
+                    <div class="lot-view-item">
+                        <span class="lot-view-label">Base Price</span>
+                        <strong class="lot-view-value" style="color: var(--color-primary-700, #047857); font-size: 1rem;">₱${formatPrice(lot.price)}</strong>
+                    </div>
+                    <div class="lot-view-item">
+                        <span class="lot-view-label">Dimensions</span>
+                        <span class="lot-view-value">${escapeHtml(lot.dimensions || 'Standard')}</span>
+                    </div>
+                    <div class="lot-view-item">
+                        <span class="lot-view-label">Notes &amp; Vicinity</span>
+                        <span class="lot-view-value text-muted">${escapeHtml(lot.location_notes || 'None recorded')}</span>
+                    </div>
+                </div>
+
+                <div class="lot-view-card">
+                    <div class="lot-view-card-title">
+                        <i class="fas fa-address-card"></i>
+                        <span>Occupancy &amp; Lease Records</span>
+                    </div>
+                    ${occupancyContent}
+                    <div class="panel-divider" style="margin: 4px 0;"></div>
+                    ${leaseContent}
+                </div>
+            `;
+            document.getElementById('viewDetails').innerHTML = detailsHtml;
 
             const slotActions = document.getElementById('availableSlotActions');
             if (slotActions) {
@@ -889,12 +996,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                     if (btnPayment) {
                         btnPayment.onclick = () => {
-                            // reference_kind=lot: states explicitly that lot_id (not a
-                            // schedule_id) is what's being referenced — see
-                            // PaymentController::validatePaymentReference()'s comment
-                            // and migration_20260902_add_payment_reference_kind.sql.
-                            // Without this, a raw lot_id could numerically collide with
-                            // an unrelated schedule_id and get misattributed on verify.
                             window.location.href = `payments.html?lot_id=${lot.lot_id}&lot_number=${encodeURIComponent(lot.lot_number)}&price=${lot.price}&reference_kind=lot`;
                         };
                     }
@@ -905,25 +1006,23 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             document.getElementById('viewModal').style.display = 'flex';
 
-            // System-Wide AI Assistant: mounts with this record's context
-            // pre-wired, but no longer auto-asks on open (quota-reduction
-            // batch — opening a record must never cost an LLM call by
-            // itself). The admin can still open the panel and ask a
-            // question, and the assistant answers using this same
-            // entity-scoped context. Separate mount from the page-level
-            // header assistant above (#aiAssistantMountRecord vs
-            // #aiAssistantMount) so opening one doesn't clobber the other's
-            // conversation.
             initAiAssistant({
                 mountSelector: '#aiAssistantMountRecord',
                 context: { scope: 'entity', entity_type: 'Lot', entity_id: lotId },
-                label: 'Ask AI',
+                label: 'Ask AI About This Lot',
             });
 
             document.getElementById('editFromView').onclick = () => {
                 document.getElementById('viewModal').style.display = 'none';
                 openEditModal(lotId);
             };
+
+            const closeViewBtn = document.getElementById('closeViewModalBtn');
+            if (closeViewBtn) {
+                closeViewBtn.onclick = () => {
+                    document.getElementById('viewModal').style.display = 'none';
+                };
+            }
 
             const deleteBtn = document.getElementById('deleteFromView');
             if (deleteBtn) {
@@ -944,12 +1043,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    // L3.4: now awaits populateFormDropdowns() before showing the modal
-    // (previously fired-and-forgot it). That was harmless while the Section/
-    // Lot Type <select>s carried hardcoded placeholder <option>s in the HTML
-    // (removed in L3.4 — they duplicated live API data and could drift), but
-    // without them the modal would otherwise flash empty dropdowns for the
-    // moment it takes populateFormDropdowns()'s block fetch to resolve.
     async function openAddModal() {
         document.getElementById('modalTitle').innerText = 'Add New Lot';
         document.getElementById('lotForm').reset();
@@ -979,23 +1072,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    // Shows what the backend will auto-generate (Lot::generateLotNumber(), 'L' +
-    // count-in-block + 1) as a placeholder so staff can leave Lot Number blank.
-    // Never writes into the input's value — the count here is only as fresh as
-    // the last full lot fetch, so the actually-submitted number must come from
-    // the backend's live count at insert time, not this client-side preview.
     function updateLotNumberPreview() {
         const lotNumberInput = document.getElementById('lotNumber');
+        const hint = document.getElementById('lotNumberHint');
         const isEditMode = !!document.getElementById('lotId').value;
         if (isEditMode) return;
 
         const blockId = parseInt(document.getElementById('lotBlock').value, 10);
         if (!blockId) {
             lotNumberInput.placeholder = 'Leave blank to auto-generate';
+            if (hint) hint.innerText = 'Leave blank to auto-generate sequentially';
             return;
         }
         const countInBlock = allLots.filter(lot => lot.block_id === blockId).length;
-        lotNumberInput.placeholder = `e.g. L${countInBlock + 1} (leave blank to auto-generate)`;
+        const autoNum = `L${countInBlock + 1}`;
+        lotNumberInput.placeholder = `e.g. ${autoNum} (leave blank to auto-generate)`;
+        if (hint) hint.innerText = `Auto-generated default will be: ${autoNum}`;
     }
 
     async function populateFormDropdowns(selectedSection = '', selectedBlockId = '') {
@@ -1010,7 +1102,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const section = allSections.find(item => item.section_name === sectionName);
             if (section) {
                 const blocks = await apiRequest(`blocks?section_id=${section.section_id}`);
-                blockSelect.innerHTML = '<option value="">Select a block</option>' + blocks.map(block =>
+                blockSelect.innerHTML = '<option value="">Select a block</option>' + (blocks || []).map(block =>
                     `<option value="${block.block_id}" ${String(block.block_id) === String(selectedBlockId) ? 'selected' : ''}>${block.block_name}</option>`
                 ).join('');
             }
@@ -1019,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         const typeSelect = document.getElementById('lotType');
-        typeSelect.innerHTML = lotTypes.map(type => `<option value="${type.type_id}">${type.type_name}</option>`).join('');
+        typeSelect.innerHTML = lotTypes.map(type => `<option value="${type.lot_type_id || type.type_id}">${type.type_name}</option>`).join('');
 
         sectionSelect.onchange = () => populateFormDropdowns(sectionSelect.value);
         blockSelect.onchange = () => updateLotNumberPreview();
@@ -1039,16 +1131,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             location_notes: document.getElementById('lotNotes').value.trim() || null,
         };
 
-        if (!data.block_id || !data.lot_type_id || !data.price) {
+        if (!data.block_id || !data.lot_type_id || isNaN(data.price)) {
             alert('Please fill in all required fields.');
             return;
         }
 
-        // L3.7: only prompts when Status is actually being changed during an
-        // edit (not on a routine metadata save where Status just happens to
-        // still show the lot's current value, and not on Add — a new lot's
-        // initial status isn't an override of anything). Backend enforcement
-        // is unchanged; this is purely a "did you mean to do that" UX gate.
         if (id && editingOriginalStatus && data.status !== editingOriginalStatus) {
             const confirmed = confirm(
                 `Change this lot's status from ${editingOriginalStatus} to ${data.status}?\n\n` +
@@ -1080,6 +1167,201 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     });
 
+    // ---------- Batch Lot Generator Automation Wizard ----------
+
+    async function openBatchModal() {
+        const batchModal = document.getElementById('batchLotModal');
+        if (!batchModal) return;
+
+        const batchSection = document.getElementById('batchSection');
+        const batchType = document.getElementById('batchType');
+
+        if (batchSection) {
+            batchSection.innerHTML = allSections.map(s => `<option value="${s.section_id}">${escapeHtml(s.section_name)}</option>`).join('');
+        }
+        if (batchType) {
+            batchType.innerHTML = lotTypes.map(t => `<option value="${t.lot_type_id || t.type_id}">${escapeHtml(t.type_name)}</option>`).join('');
+        }
+
+        if (allSections.length && batchSection) {
+            await updateBatchBlocks(batchSection.value);
+        }
+
+        updateBatchPreview();
+        batchModal.style.display = 'flex';
+    }
+
+    async function updateBatchBlocks(sectionId) {
+        const batchBlock = document.getElementById('batchBlock');
+        if (!batchBlock) return;
+        try {
+            const blocks = await apiRequest(`blocks?section_id=${sectionId}`);
+            batchBlock.innerHTML = (blocks || []).map(b => `<option value="${b.block_id}">${escapeHtml(b.block_name)}</option>`).join('');
+        } catch (err) {
+            batchBlock.innerHTML = '<option value="">No blocks found</option>';
+        }
+        updateBatchPreview();
+    }
+
+    function updateBatchPreview() {
+        const countInput = document.getElementById('batchCount');
+        const prefixInput = document.getElementById('batchPrefix');
+        const startInput = document.getElementById('batchStartNumber');
+        const blockSelect = document.getElementById('batchBlock');
+        const sectionSelect = document.getElementById('batchSection');
+        const previewTitle = document.getElementById('batchPreviewTitle');
+        const previewRange = document.getElementById('batchPreviewRange');
+        const previewText = document.getElementById('batchPreviewText');
+
+        if (!countInput || !previewTitle || !previewRange || !previewText) return;
+
+        const count = Math.max(1, Math.min(100, parseInt(countInput.value, 10) || 10));
+        const prefix = (prefixInput?.value ?? 'L').trim();
+        const blockId = parseInt(blockSelect?.value, 10);
+        let startNum = parseInt(startInput?.value, 10);
+
+        if (isNaN(startNum) || startNum < 1) {
+            if (blockId) {
+                const countInBlock = allLots.filter(l => l.block_id === blockId).length;
+                startNum = countInBlock + 1;
+            } else {
+                startNum = 1;
+            }
+        }
+
+        const endNum = startNum + count - 1;
+        previewTitle.innerText = `Generating ${count} Lots`;
+        previewRange.innerText = `${prefix}${startNum} to ${prefix}${endNum}`;
+
+        const secName = sectionSelect?.selectedOptions[0]?.text || 'Selected Section';
+        const blkName = blockSelect?.selectedOptions[0]?.text || 'Selected Block';
+        previewText.innerHTML = `Estimated range: <span class="badge badge-emerald">${prefix}${startNum} to ${prefix}${endNum}</span> in ${escapeHtml(secName)} - ${escapeHtml(blkName)}`;
+    }
+
+    const batchSectionSelect = document.getElementById('batchSection');
+    if (batchSectionSelect) {
+        batchSectionSelect.addEventListener('change', () => updateBatchBlocks(batchSectionSelect.value));
+    }
+    const batchBlockSelect = document.getElementById('batchBlock');
+    if (batchBlockSelect) {
+        batchBlockSelect.addEventListener('change', () => updateBatchPreview());
+    }
+    ['batchCount', 'batchPrefix', 'batchStartNumber'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', () => updateBatchPreview());
+    });
+
+    const batchLotForm = document.getElementById('batchLotForm');
+    if (batchLotForm) {
+        batchLotForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('btnSubmitBatch');
+            const blockId = parseInt(document.getElementById('batchBlock').value, 10);
+            const lotTypeId = parseInt(document.getElementById('batchType').value, 10);
+            const count = parseInt(document.getElementById('batchCount').value, 10);
+            const price = parseFloat(document.getElementById('batchPrice').value);
+            const prefix = (document.getElementById('batchPrefix').value || 'L').trim();
+            const startNum = document.getElementById('batchStartNumber').value ? parseInt(document.getElementById('batchStartNumber').value, 10) : null;
+            const dimensions = document.getElementById('batchDimensions').value.trim();
+            const notes = document.getElementById('batchNotes').value.trim();
+
+            if (!blockId || !lotTypeId || isNaN(count) || isNaN(price)) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            await withButtonLoading(submitBtn, async () => {
+                try {
+                    const result = await apiRequest('lots/batch-generate', {
+                        method: 'POST',
+                        body: {
+                            block_id: blockId,
+                            lot_type_id: lotTypeId,
+                            count: count,
+                            price: price,
+                            prefix: prefix,
+                            start_number: startNum,
+                            dimensions: dimensions || null,
+                            location_notes: notes || null
+                        }
+                    });
+
+                    if (result.success) {
+                        document.getElementById('batchLotModal').style.display = 'none';
+                        alert(`Success! Generated ${result.data?.count || count} lots (${result.data?.lot_numbers?.[0]} to ${result.data?.lot_numbers?.[result.data.lot_numbers.length - 1]}).`);
+                        await refreshAll();
+                    } else {
+                        alert(result.error || 'Failed to generate lots');
+                    }
+                } catch (err) {
+                    alert('Error: ' + err.message);
+                }
+            });
+        });
+    }
+
+    // ---------- Automation Endpoints: Auto-Sync & CSV Export ----------
+
+    const autoSyncBtn = document.getElementById('autoSyncBtn');
+    if (autoSyncBtn) {
+        autoSyncBtn.addEventListener('click', async () => {
+            await withButtonLoading(autoSyncBtn, async () => {
+                try {
+                    const res = await apiRequest('lots/sync-status', { method: 'POST' });
+                    if (res.success) {
+                        const s = res.stats || {};
+                        alert(`Auto-Sync Complete!\n\n${res.message}\n• Marked Occupied: ${s.occupied_updated ?? 0}\n• Marked Expired: ${s.expired_updated ?? 0}\n• Sections Recounted: ${s.sections_updated ?? 0}`);
+                        await refreshAll();
+                    } else {
+                        alert(res.error || 'Failed to sync statuses');
+                    }
+                } catch (err) {
+                    alert('Auto-Sync failed: ' + err.message);
+                }
+            });
+        });
+    }
+
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', async () => {
+            await withButtonLoading(exportCsvBtn, async () => {
+                try {
+                    const params = new URLSearchParams();
+                    if (filters.search) params.set('search', filters.search);
+                    if (filters.category) params.set('lot_type', filters.category);
+                    if (filters.section) params.set('section', filters.section);
+                    if (filters.status) params.set('status', filters.status);
+
+                    const token = localStorage.getItem('jwt_token');
+                    const url = `${API_BASE}/lots/export?${params.toString()}`;
+                    const response = await fetch(url, {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Export request failed: ' + response.statusText);
+                    }
+
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    const dateStr = new Date().toISOString().slice(0, 10);
+                    a.download = `lots_registry_${dateStr}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(downloadUrl);
+                } catch (err) {
+                    alert('Export failed: ' + err.message);
+                }
+            });
+        });
+    }
+
     // ---------- Initial load / refresh ----------
 
     async function refreshAll() {
@@ -1101,9 +1383,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                 hierarchyInitialized = true;
             }
 
-            // L3.3: re-applies whatever filters are currently active (e.g.
-            // right after saving a lot while a status filter is set) instead
-            // of always showing the unfiltered full list.
             await refreshVisibleLots();
         } catch (error) {
             console.error('Failed to load lot data:', error);
@@ -1113,12 +1392,28 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     await refreshAll();
 
-    document.getElementById('openAddLotModal').addEventListener('click', openAddModal);
-    document.querySelector('.close').addEventListener('click', () => document.getElementById('lotModal').style.display = 'none');
-    document.querySelector('.close-view').addEventListener('click', () => document.getElementById('viewModal').style.display = 'none');
+    // ---------- Global Modal Controls Wiring ----------
+
+    document.getElementById('openAddLotModal')?.addEventListener('click', openAddModal);
+    document.getElementById('openBatchLotModal')?.addEventListener('click', openBatchModal);
+
+    document.querySelector('.close')?.addEventListener('click', () => document.getElementById('lotModal').style.display = 'none');
+    document.querySelector('.close-lot-modal-btn')?.addEventListener('click', () => document.getElementById('lotModal').style.display = 'none');
+
+    document.querySelector('.close-view')?.addEventListener('click', () => document.getElementById('viewModal').style.display = 'none');
+    document.getElementById('closeViewModalBtn')?.addEventListener('click', () => document.getElementById('viewModal').style.display = 'none');
+
+    document.getElementById('closeBatchModalTop')?.addEventListener('click', () => document.getElementById('batchLotModal').style.display = 'none');
+    document.getElementById('closeBatchModalBottom')?.addEventListener('click', () => document.getElementById('batchLotModal').style.display = 'none');
 
     window.addEventListener('click', (e) => {
-        if (e.target === document.getElementById('lotModal')) document.getElementById('lotModal').style.display = 'none';
-        if (e.target === document.getElementById('viewModal')) document.getElementById('viewModal').style.display = 'none';
+        const lotModal = document.getElementById('lotModal');
+        const viewModal = document.getElementById('viewModal');
+        const batchModal = document.getElementById('batchLotModal');
+
+        if (lotModal && e.target === lotModal) lotModal.style.display = 'none';
+        if (viewModal && e.target === viewModal) viewModal.style.display = 'none';
+        if (batchModal && e.target === batchModal) batchModal.style.display = 'none';
     });
 });
+
