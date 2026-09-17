@@ -1,6 +1,9 @@
 /* dashboard_admin.css – sidebar fixed, no internal scroll */
 .dashboard-body {
-    background: #f4f7fa;
+    background:
+        radial-gradient(circle at 14% 8%, rgba(44, 94, 71, 0.10), transparent 28%),
+        radial-gradient(circle at 88% 18%, rgba(37, 99, 235, 0.08), transparent 24%),
+        linear-gradient(180deg, #f6faf7 0%, #f4f7fa 42%, #eef3f7 100%);
     font-family: 'Inter', sans-serif;
     color: #243736;
 }
@@ -135,9 +138,16 @@
 
 /* ========== MAIN CONTENT ========== */
 .main-content {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
     flex: 1;
     min-height: 100vh;
-    background: #f4f7fa;
+    background:
+        radial-gradient(circle at 12% 6%, rgba(44, 94, 71, 0.18), transparent 32%),
+        radial-gradient(circle at 88% 14%, rgba(37, 99, 235, 0.12), transparent 28%),
+        linear-gradient(180deg, #eef8f1 0%, #f4f7fa 44%, #eaf0f4 100%);
 }
 
 /* margin-left/transition and .sidebar.collapsed pin/unpin now come from the shared dashboard.css (Batch 3 / Phase 8) */
@@ -147,20 +157,32 @@
    for no stated reason — removed so the stat cards animate in once,
    consistently, the same way on every dashboard. */
 
-/* Top bar (unchanged, but keep consistent) */
+/* Top bar — glassmorphic style (Reports / Forecast pattern) */
 .top-bar {
-    background: #fff;
-    padding: 12px 20px;
+    position: relative;
+    z-index: 10;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(234, 243, 238, 0.74)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.12), rgba(37, 99, 235, 0.07));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    padding: 14px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    border-bottom: 1px solid rgba(44, 94, 71, 0.12);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 }
 .top-left {
     display: flex;
     gap: 12px;
     align-items: center;
+}
+.top-left h3 {
+    color: var(--color-primary-800);
+    font-weight: 800;
+    letter-spacing: 0;
 }
 /* .hamburger and its SVG icon states now come from assets/css/dashboard.css (Batch 6) -- the previous per-page copy had .hamburger input { display: none; }, which made the toggle unreachable by keyboard */
 .user-info {
@@ -219,24 +241,48 @@
     font-size: 0.8rem;
 }
 .content-area {
-    padding: 20px;
+    position: relative;
+    z-index: 1;
+    flex: 1 0 auto;
+    padding: 24px;
+}
+
+/* Section divider labels (Reports / Forecast pattern) */
+.section-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary-700);
+    margin: 10px 0 14px;
+}
+
+.section-label i {
+    font-size: 0.82rem;
+    opacity: 0.9;
 }
 
 /* .stats-row / .stat-card / .stat-title / .stat-value / .stat-sub now come from
    assets/css/dashboard.css so this dashboard's stat cards match every other
    module instead of using their own smaller, unshadowed variant. */
+.stats-row {
+    margin-bottom: 20px;
+}
 
 .mid-row {
     display: grid;
     grid-template-columns: 3fr 2fr;
     gap: 18px;
-    margin-bottom: 18px;
+    margin-bottom: 12px;
 }
 /* Full Automation, Admin-First: the "needs attention" card (open
    system_exceptions) — hidden by JS when there's nothing to review, so
    this only needs a warning tint, not a whole layout of its own. */
 .attention-row {
-    margin-bottom: 18px;
+    margin-bottom: 20px;
 }
 .card.attention-card {
     padding: var(--space-4);
@@ -334,6 +380,94 @@
     display: grid;
     grid-template-columns: 1fr 360px;
     gap: 18px;
+    margin-bottom: 24px;
+}
+
+/* Dashboard Footer (Reports / Forecast pattern) */
+.dashboard-footer {
+    position: relative;
+    z-index: 1;
+    margin-top: auto;
+    padding: 0 24px 22px;
+    background: transparent;
+}
+
+.dashboard-footer__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    text-align: center;
+    color: var(--color-text-muted, #64748b);
+    font-size: 0.73rem;
+    letter-spacing: 0.02em;
+}
+
+.dashboard-footer__bottom::before,
+.dashboard-footer__bottom::after {
+    content: "";
+    display: block;
+    width: 140px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(100, 116, 139, 0), rgba(100, 116, 139, 0.8), rgba(100, 116, 139, 0));
+    position: relative;
+}
+
+.dashboard-footer__text {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--color-text-muted, #64748b);
+}
+
+.dashboard-footer__text::before,
+.dashboard-footer__text::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(100, 116, 139, 0.65);
+    display: inline-block;
+}
+
+/* Dark theme support for foundation elements */
+.dashboard-body[data-theme="dark"] {
+    background: var(--color-bg);
+}
+
+.dashboard-body[data-theme="dark"] .main-content {
+    background: var(--color-bg);
+}
+
+.dashboard-body[data-theme="dark"] .top-bar {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow-1);
+}
+
+.dashboard-body[data-theme="dark"] .top-left h3 {
+    color: var(--color-text);
+}
+
+.dashboard-body[data-theme="dark"] .section-label {
+    color: var(--color-primary-300);
+}
+
+.dashboard-body[data-theme="dark"] .dashboard-footer__bottom,
+.dashboard-body[data-theme="dark"] .dashboard-footer__text {
+    color: var(--color-text-muted);
+}
+
+.dashboard-body[data-theme="dark"] .dashboard-footer__bottom::before,
+.dashboard-body[data-theme="dark"] .dashboard-footer__bottom::after {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0));
+}
+
+.dashboard-body[data-theme="dark"] .dashboard-footer__text::before,
+.dashboard-body[data-theme="dark"] .dashboard-footer__text::after {
+    background: var(--color-text-muted);
 }
 /* .recent-list / .recent-item (+ .availability-item/-track/-fill) now
    come from the shared dashboard.css (Phase 5a) — this file's own

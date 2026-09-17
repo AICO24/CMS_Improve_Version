@@ -180,6 +180,7 @@
                         <p class="muted" id="aiBriefingText">Loading today's briefing…</p>
                     </div>
                 </div>
+                <p class="section-label"><i class="fas fa-gauge"></i> Cemetery Operations &amp; Capacity</p>
                 <div class="mid-row">
                     <div class="card availability"><h4>Real-time Availability Map</h4><div class="availability-map" id="availabilityMap"></div></div>
                     <div class="card operational-queues">
@@ -192,11 +193,17 @@
                     </div>
                 </div>
                 <p class="muted small" style="margin-top:8px;">A full AI-driven capacity forecast is available on the <a href="forecast.html">Capacity Forecast</a> page.</p>
+                <p class="section-label"><i class="fas fa-chart-line"></i> Revenue &amp; Activity Analytics</p>
                 <div class="bottom-row">
                     <div class="card chart-card"><canvas id="occChart" height="160"></canvas></div>
                     <div class="card transactions"><h4>Recent Transactions</h4><ul id="recentList" class="recent-list"></ul></div>
                 </div>
             </div>
+            <footer class="dashboard-footer">
+                <div class="dashboard-footer__bottom">
+                    <span class="dashboard-footer__text">&copy; 2026 Cemetery Management System. All rights reserved.</span>
+                </div>
+            </footer>
         </main>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
