@@ -283,7 +283,7 @@ class BookingAvailabilityService {
                 'code'     => self::CODE_CLARIFICATION_REQUIRED,
                 'matches'  => $matches,
                 'lot'      => null,
-                'message'  => "Multiple lots matched the identifier '{$clean}'. Please specify the section (e.g., Section A)."
+                'message'  => "Multiple lots matched the identifier '{$clean}'. Please specify the section (e.g., Garden of Everlasting Peace)."
             ];
         }
 
