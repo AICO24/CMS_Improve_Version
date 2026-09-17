@@ -30,6 +30,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     let currentViewMode = 'grid'; // 'grid' | 'table'
     let currentPage = 1;
     const perPage = 10;
+    const expandedSanctuaries = new Set();
+    const expandedLevels = new Set();
 
     // --- DOM Elements ---
     const statsEls = {
@@ -45,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     };
     const capacityBanner = document.getElementById('capacityAlertBanner');
 
-    const gridContainer = document.getElementById('columbariumGrid');
+    const gridContainer = document.getElementById('columbariumHierarchy') || document.getElementById('columbariumGrid');
     const gridWrapper = document.getElementById('columbariumGridWrapper');
     const tableWrapper = document.getElementById('columbariumTableWrapper');
     const tableBody = document.getElementById('columbariumTableBody');
@@ -235,6 +237,67 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    function sanctuaryIcon(name) {
+        const key = (name || '').toLowerCase();
+        if (key.includes('jude') || key.includes('peter') || key.includes('saint') || key.includes('san ')) return 'fa-church';
+        if (key.includes('peace') || key.includes('lady')) return 'fa-dove';
+        if (key.includes('ascension') || key.includes('resurrection')) return 'fa-cloud-sun';
+        if (key.includes('mercy') || key.includes('heart')) return 'fa-heart';
+        if (key.includes('gallery') || key.includes('cloister') || key.includes('hall')) return 'fa-building-columns';
+        return 'fa-monument';
+    }
+
+    function groupNichesBySanctuaryAndLevel(niches) {
+        const map = new Map();
+
+        niches.forEach(niche => {
+            const sanctuaryName = niche.columbarium || 'Columbarium A';
+            if (!map.has(sanctuaryName)) {
+                map.set(sanctuaryName, {
+                    name: sanctuaryName,
+                    levels: new Map(),
+                    counts: { total: 0, available: 0, occupied: 0 }
+                });
+            }
+
+            const sGroup = map.get(sanctuaryName);
+            sGroup.counts.total++;
+            if (niche.status === 'occupied') sGroup.counts.occupied++;
+            else sGroup.counts.available++;
+
+            const lvlNum = parseInt(niche.level, 10) || 1;
+            if (!sGroup.levels.has(lvlNum)) {
+                sGroup.levels.set(lvlNum, {
+                    level: lvlNum,
+                    niches: [],
+                    counts: { total: 0, available: 0, occupied: 0 },
+                    isEyeLevel: lvlNum === 3 || lvlNum === 4
+                });
+            }
+
+            const lGroup = sGroup.levels.get(lvlNum);
+            lGroup.niches.push(niche);
+            lGroup.counts.total++;
+            if (niche.status === 'occupied') lGroup.counts.occupied++;
+            else lGroup.counts.available++;
+        });
+
+        // Convert Map to sorted array
+        const result = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+        result.forEach(s => {
+            s.levels = Array.from(s.levels.values()).sort((a, b) => a.level - b.level);
+            s.levels.forEach(l => {
+                l.niches.sort((a, b) => {
+                    const numA = parseInt((a.niche_number || '').replace(/\D/g, ''), 10) || 0;
+                    const numB = parseInt((b.niche_number || '').replace(/\D/g, ''), 10) || 0;
+                    return numA - numB;
+                });
+            });
+        });
+
+        return result;
+    }
+
     function applyFilters() {
         filteredNiches = allNiches.filter(niche => {
             // Status filter
@@ -263,6 +326,15 @@ document.addEventListener('DOMContentLoaded', async function() {
             return true;
         });
 
+        // If active filters or search, auto-expand matching wings and levels so results are visible
+        if (searchQuery || currentStatusFilter || currentColumbarium || currentLevel) {
+            filteredNiches.forEach(n => {
+                const colName = n.columbarium || 'Columbarium A';
+                expandedSanctuaries.add(colName);
+                expandedLevels.add(`${colName}__L${n.level || 1}`);
+            });
+        }
+
         currentPage = 1;
         renderCurrentView();
     }
@@ -271,7 +343,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (currentViewMode === 'grid') {
             gridWrapper.style.display = 'block';
             tableWrapper.style.display = 'none';
-            renderGrid(filteredNiches);
+            renderHierarchy(filteredNiches);
         } else {
             gridWrapper.style.display = 'none';
             tableWrapper.style.display = 'block';
@@ -279,7 +351,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    function renderGrid(niches) {
+    function renderHierarchy(niches) {
         if (!Array.isArray(niches) || niches.length === 0) {
             gridContainer.innerHTML = `
                 <div class="cremation-empty-state">
@@ -291,41 +363,131 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        gridContainer.innerHTML = niches.map(niche => {
-            const isOccupied = niche.status === 'occupied';
-            const statusClass = isOccupied ? 'status-occupied' : 'status-available';
-            const statusLabel = isOccupied ? 'Occupied' : 'Available';
-            const decedentName = niche.first_name ? `${escapeHtml(niche.first_name)} ${escapeHtml(niche.last_name || '')}` : '';
+        const groups = groupNichesBySanctuaryAndLevel(niches);
 
-            return `
-                <div class="niche-card" data-id="${escapeHtml(niche.cremation_id || niche.niche_number)}" tabindex="0" role="button" aria-label="View niche ${escapeHtml(niche.niche_number)}">
-                    <div class="niche-header">
-                        <span class="niche-level-tag">Level ${escapeHtml(niche.level || 1)}</span>
-                        <span class="niche-status ${statusClass}"><i class="fas ${isOccupied ? 'fa-urn' : 'fa-check'}"></i> ${statusLabel}</span>
-                    </div>
-                    <div class="niche-number">${escapeHtml(niche.niche_number)}</div>
-                    <div class="niche-location"><i class="fas fa-building-columns"></i> ${escapeHtml(niche.columbarium || 'N/A')}</div>
-                    ${decedentName ? `<div class="deceased-name" title="${decedentName}"><i class="fas fa-user"></i> ${decedentName}</div>` : ''}
-                </div>
-            `;
-        }).join('');
-
-        gridContainer.querySelectorAll('.niche-card').forEach(card => {
-            const openCard = () => {
-                const id = card.dataset.id;
-                const niche = niches.find(n => (n.cremation_id || n.niche_number).toString() === id.toString());
-                if (niche) {
-                    showViewModal(niche);
-                }
-            };
-            card.addEventListener('click', openCard);
-            card.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    openCard();
-                }
+        // By default, if nothing is expanded yet, expand the first sanctuary and its levels
+        if (expandedSanctuaries.size === 0 && groups.length > 0) {
+            expandedSanctuaries.add(groups[0].name);
+            groups[0].levels.forEach(lvl => {
+                expandedLevels.add(`${groups[0].name}__L${lvl.level}`);
             });
-        });
+        }
+
+        gridContainer.innerHTML = groups.map(sGroup => renderSanctuaryHtml(sGroup)).join('');
+    }
+
+    function renderSanctuaryHtml(sGroup) {
+        const isExpanded = expandedSanctuaries.has(sGroup.name);
+        const icon = sanctuaryIcon(sGroup.name);
+        const total = sGroup.counts.total || 1;
+        const avail = sGroup.counts.available;
+        const occ = sGroup.counts.occupied;
+        const availPct = Math.round((avail / total) * 100);
+        const occPct = 100 - availPct;
+
+        return `
+            <div class="sanctuary-group">
+                <button type="button" class="sanctuary-header" data-sanctuary="${escapeHtml(sGroup.name)}" aria-expanded="${isExpanded}">
+                    <div class="sanctuary-title">
+                        <div class="sanctuary-icon-box">
+                            <i class="fas ${icon}"></i>
+                        </div>
+                        <div class="sanctuary-title-info">
+                            <div class="sanctuary-name-row">
+                                <h3 class="sanctuary-name">${escapeHtml(sGroup.name)}</h3>
+                                ${availPct > 0 
+                                    ? `<span class="avail-hero-badge high"><i class="fas fa-circle-check"></i> ${availPct}% Available</span>`
+                                    : `<span class="avail-hero-badge full"><i class="fas fa-lock"></i> 100% Occupied</span>`}
+                            </div>
+                            <div class="sanctuary-meta-row">
+                                <span class="sanctuary-meta-pill"><i class="fas fa-layer-group"></i> ${sGroup.levels.length} ${sGroup.levels.length === 1 ? 'Level' : 'Levels'}</span>
+                                <span class="sanctuary-meta-pill"><i class="fas fa-monument"></i> ${sGroup.counts.total} Niches</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sanctuary-occupancy-wrap">
+                        <div class="occupancy-dashboard-pod">
+                            <div class="pod-header">
+                                <span class="pod-title"><i class="fas fa-chart-pie"></i> Wing Capacity</span>
+                                <span class="pod-ratio"><strong>${avail}</strong> / ${sGroup.counts.total} Ready</span>
+                            </div>
+                            <div class="occupancy-track" title="${avail} Available, ${occ} Occupied">
+                                <div class="occupancy-bar avail" style="width: ${availPct}%"></div>
+                                <div class="occupancy-bar occ" style="width: ${occPct}%"></div>
+                            </div>
+                            <div class="occupancy-legend">
+                                <span class="legend-chip avail"><span class="chip-dot"></span><strong>${avail}</strong> Avail</span>
+                                <span class="legend-chip occ"><span class="chip-dot"></span><strong>${occ}</strong> Occ</span>
+                            </div>
+                        </div>
+
+                        <div class="sanctuary-chevron-btn ${isExpanded ? 'expanded' : ''}" title="${isExpanded ? 'Collapse wing' : 'Expand wing'}">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                </button>
+
+                <div class="sanctuary-body" style="display: ${isExpanded ? 'flex' : 'none'};">
+                    ${sGroup.levels.map(lvl => renderLevelHtml(sGroup.name, lvl)).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderLevelHtml(sanctuaryName, lvl) {
+        const levelKey = `${sanctuaryName}__L${lvl.level}`;
+        const isExpanded = expandedLevels.has(levelKey);
+        const isAllOcc = lvl.counts.available === 0;
+
+        return `
+            <div class="level-group">
+                <button type="button" class="level-header" data-level-key="${escapeHtml(levelKey)}" aria-expanded="${isExpanded}">
+                    <div class="level-title">
+                        <div class="level-badge">L${lvl.level}</div>
+                        <div class="level-name">
+                            <span>Level ${lvl.level}</span>
+                            ${lvl.isEyeLevel ? `<span class="prime-eye-level-tag" title="Prime Eye-Level Niche Tier"><i class="fas fa-crown"></i> Prime Eye-Level</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="level-meta-wrap">
+                        <span class="level-stat-pill ${isAllOcc ? 'full' : ''}">
+                            ${lvl.counts.available} Open / ${lvl.counts.total} Niches
+                        </span>
+                        <div class="level-chevron-btn ${isExpanded ? 'expanded' : ''}">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                </button>
+
+                <div class="level-body" style="display: ${isExpanded ? 'block' : 'none'};">
+                    <div class="level-niches-grid">
+                        ${lvl.niches.map(renderNicheCardHtml).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderNicheCardHtml(niche) {
+        const isOccupied = niche.status === 'occupied';
+        const statusClass = isOccupied ? 'status-occupied' : 'status-available';
+        const statusLabel = isOccupied ? 'Occupied' : 'Available';
+        const decedentName = niche.first_name ? `${escapeHtml(niche.first_name)} ${escapeHtml(niche.last_name || '')}` : '';
+        const isEyeLevel = parseInt(niche.level, 10) === 3 || parseInt(niche.level, 10) === 4;
+
+        return `
+            <div class="niche-card" data-id="${escapeHtml(niche.cremation_id || niche.niche_number)}" tabindex="0" role="button" aria-label="View niche ${escapeHtml(niche.niche_number)}">
+                <div class="niche-header">
+                    <span class="niche-level-tag">L${escapeHtml(niche.level || 1)}</span>
+                    ${isEyeLevel ? `<span class="prime-eye-level-tag" style="font-size: 0.62rem; padding: 1px 5px;"><i class="fas fa-crown"></i> Prime</span>` : ''}
+                </div>
+                <div class="niche-number">${escapeHtml(niche.niche_number)}</div>
+                <div class="niche-location"><i class="fas fa-building-columns"></i> ${escapeHtml(niche.columbarium || 'N/A')}</div>
+                ${decedentName ? `<div class="deceased-name" title="${decedentName}"><i class="fas fa-user"></i> ${decedentName}</div>` : ''}
+                <span class="niche-status ${statusClass}"><i class="fas ${isOccupied ? 'fa-urn' : 'fa-check'}"></i> ${statusLabel}</span>
+            </div>
+        `;
     }
 
     function renderTable(niches) {
@@ -898,6 +1060,59 @@ document.addEventListener('DOMContentLoaded', async function() {
             sidebar.classList.toggle('collapsed');
         });
     }
+
+    // --- Hierarchical Grid Interactions (Sanctuary & Level Accordions, Card View) ---
+    gridContainer.addEventListener('click', (e) => {
+        // 1. Sanctuary Header click
+        const sanctuaryBtn = e.target.closest('.sanctuary-header');
+        if (sanctuaryBtn) {
+            const sName = sanctuaryBtn.dataset.sanctuary;
+            if (expandedSanctuaries.has(sName)) {
+                expandedSanctuaries.delete(sName);
+            } else {
+                expandedSanctuaries.add(sName);
+            }
+            renderHierarchy(filteredNiches);
+            return;
+        }
+
+        // 2. Level Header click
+        const levelBtn = e.target.closest('.level-header');
+        if (levelBtn) {
+            const lKey = levelBtn.dataset.levelKey;
+            if (expandedLevels.has(lKey)) {
+                expandedLevels.delete(lKey);
+            } else {
+                expandedLevels.add(lKey);
+            }
+            renderHierarchy(filteredNiches);
+            return;
+        }
+
+        // 3. Niche Card click
+        const card = e.target.closest('.niche-card');
+        if (card) {
+            const id = card.dataset.id;
+            const niche = filteredNiches.find(n => (n.cremation_id || n.niche_number).toString() === id.toString());
+            if (niche) {
+                showViewModal(niche);
+            }
+        }
+    });
+
+    gridContainer.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            const card = e.target.closest('.niche-card');
+            if (card) {
+                e.preventDefault();
+                const id = card.dataset.id;
+                const niche = filteredNiches.find(n => (n.cremation_id || n.niche_number).toString() === id.toString());
+                if (niche) {
+                    showViewModal(niche);
+                }
+            }
+        }
+    });
 
     // --- Initialization ---
     await loadColumbariums();

@@ -177,26 +177,32 @@ class Cremation {
     }
 
     public function getNiches($columbarium = null) {
+        if ($columbarium) {
+            return $this->getNichesForColumbarium($columbarium);
+        }
+
+        $columbariums = $this->getDistinctColumbariums();
+        $all = [];
+        foreach ($columbariums as $col) {
+            $all = array_merge($all, $this->getNichesForColumbarium($col));
+        }
+        return $all;
+    }
+
+    public function getNichesForColumbarium($columbarium) {
         $rows = [];
-        $defaultColumbarium = $columbarium ?? 'Columbarium A';
+        $targetColumbarium = $columbarium ?: 'Columbarium A';
 
         $sql = "
             SELECT c.cremation_id, c.niche_number, c.columbarium, c.level, c.status, c.cremation_date, c.ash_storage_location, c.notes,
                    d.first_name, d.last_name
             FROM cremation_records c
             LEFT JOIN decedent_records d ON c.deceased_id = d.decedent_id
-            WHERE 1=1
+            WHERE (c.columbarium = ? " . ($targetColumbarium === 'Columbarium A' ? "OR c.columbarium IS NULL OR c.columbarium = ''" : "") . ")
+            ORDER BY c.created_at DESC
         ";
-        $params = [];
-
-        if ($columbarium) {
-            $sql .= " AND (c.columbarium = ? OR c.columbarium IS NULL)";
-            $params[] = $columbarium;
-        }
-
-        $sql .= " ORDER BY c.created_at DESC";
         $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
+        $stmt->execute([$targetColumbarium]);
         $records = $stmt->fetchAll();
 
         $maxIndex = self::DEFAULT_CAPACITY;
@@ -211,7 +217,7 @@ class Cremation {
             $calcLevel = (int) ceil($i / 10);
             $rows[] = [
                 'niche_number' => 'N-' . $i,
-                'columbarium' => $defaultColumbarium,
+                'columbarium' => $targetColumbarium,
                 'level' => max(1, min(10, $calcLevel)),
                 'status' => 'available',
                 'first_name' => null,
@@ -232,7 +238,7 @@ class Cremation {
 
             $row = [
                 'niche_number' => $nicheNumber ?: 'N-' . (count($rows) + 1),
-                'columbarium' => $record['columbarium'] ?? $defaultColumbarium,
+                'columbarium' => $record['columbarium'] ?? $targetColumbarium,
                 'level' => !empty($record['level']) ? (int) $record['level'] : 1,
                 'status' => $normalizedStatus,
                 'first_name' => $record['first_name'] ?? null,
@@ -395,34 +401,48 @@ class Cremation {
     }
 
     public function getStats($columbarium = null) {
+        if ($columbarium) {
+            $sql = "
+                SELECT COUNT(*) as total,
+                       SUM(CASE WHEN status != 'Cancelled' THEN 1 ELSE 0 END) as occupied
+                FROM cremation_records
+                WHERE (columbarium = ? " . ($columbarium === 'Columbarium A' ? "OR columbarium IS NULL OR columbarium = ''" : "") . ")
+            ";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$columbarium]);
+            $result = $stmt->fetch();
+
+            $occupied = isset($result['occupied']) ? (int) $result['occupied'] : 0;
+            $capacity = max(self::DEFAULT_CAPACITY, $occupied);
+            $available = max(0, $capacity - $occupied);
+            $result['total'] = $capacity;
+            $result['occupied'] = $occupied;
+            $result['available'] = $available;
+            $result['occupancy_rate'] = $capacity > 0 ? round(($occupied / $capacity) * 100) : 0;
+            return $result;
+        }
+
+        // Aggregate across all columbariums
+        $columbariums = $this->getDistinctColumbariums();
         $sql = "
-            SELECT COUNT(*) as total,
-                   SUM(CASE WHEN status != 'Cancelled' THEN 1 ELSE 0 END) as occupied
+            SELECT SUM(CASE WHEN status != 'Cancelled' THEN 1 ELSE 0 END) as occupied
             FROM cremation_records
             WHERE 1=1
         ";
-        $params = [];
-        if ($columbarium) {
-            $sql .= " AND (columbarium = ? OR columbarium IS NULL)";
-            $params[] = $columbarium;
-        }
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
+        $stmt = $this->db->query($sql);
         $result = $stmt->fetch();
 
         $occupied = isset($result['occupied']) ? (int) $result['occupied'] : 0;
-        // Capacity isn't tracked by a real column/table yet, so it's assumed to be
-        // the default niche grid size, growing to match occupied niches if that
-        // ever exceeds the default. Cancelled records are never counted as
-        // capacity used (only $occupied, which already excludes them, does).
-        $capacity = max(self::DEFAULT_CAPACITY, $occupied);
-        $available = $capacity - $occupied;
-        $result['total'] = $capacity;
-        $result['occupied'] = $occupied;
-        $result['available'] = $available;
-        $result['occupancy_rate'] = $capacity > 0 ? round(($occupied / $capacity) * 100) : 0;
+        $numCols = max(1, count($columbariums));
+        $capacity = max(self::DEFAULT_CAPACITY * $numCols, $occupied);
+        $available = max(0, $capacity - $occupied);
 
-        return $result;
+        return [
+            'total' => $capacity,
+            'occupied' => $occupied,
+            'available' => $available,
+            'occupancy_rate' => $capacity > 0 ? round(($occupied / $capacity) * 100) : 0,
+        ];
     }
 
     // Batch N6 (adviser feedback 2026-08-18): "suggest na i-automate" the
@@ -444,9 +464,8 @@ class Cremation {
         return null;
     }
 
-    // Real columbarium names actually in use, so the frontend can offer a
-    // dropdown instead of a free-text field that drifts into inconsistent
-    // spellings ("Columbarium A" vs "columbarium a" vs "Col. A") over time.
+    // Real columbarium names actually in use + prestigious sanctuary presets
+    // so the frontend can offer an organized dropdown and structured walls.
     public function getDistinctColumbariums() {
         $stmt = $this->db->prepare("
             SELECT DISTINCT columbarium FROM cremation_records
@@ -454,7 +473,19 @@ class Cremation {
             ORDER BY columbarium
         ");
         $stmt->execute();
-        return array_column($stmt->fetchAll(), 'columbarium');
+        $dbList = array_column($stmt->fetchAll(), 'columbarium');
+
+        $presets = [
+            'St. Jude Thaddeus Sanctuary',
+            'Our Lady of Peace Gallery',
+            'San Lorenzo Ruiz Wing',
+            'Ascension Gallery',
+            'Columbarium A'
+        ];
+
+        $combined = array_values(array_unique(array_merge($dbList, $presets)));
+        sort($combined);
+        return $combined;
     }
 
     public function isNicheAvailable($nicheNumber, $columbarium = null) {
