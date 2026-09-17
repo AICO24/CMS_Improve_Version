@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cremation Management | Cemetery Management System</title>
+    <title>Columbarium Management | Cemetery Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -19,8 +19,9 @@
     <link rel="stylesheet" href="../../assets/css/components/forms.css">
     <link rel="stylesheet" href="../../assets/css/components/tables.css?v=2">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
+    <link rel="stylesheet" href="../../assets/css/components/toast.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/cremation-management.css">
+    <link rel="stylesheet" href="../../assets/css/cremation-management.css?v=2">
     <link rel="stylesheet" href="../../assets/css/shared/ai-assistant-widget.css">
 
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
@@ -29,88 +30,14 @@
 <body class="dashboard-body">
 <script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
     <div class="dashboard-container">
-        <!-- STATIC SIDEBAR (identical to admin dashboard) -->
+        <!-- DYNAMIC SIDEBAR (centralized via navigation-config.js / sidebar-nav.js) -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
                 <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
             </div>
-                                                <div class="sidebar-nav">
-                    <a href="dashboard_admin.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Operations</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="book-a-service.html" class="nav-item"><i class="fas fa-handshake icon"></i> <span>Book a Service</span></a>
-                    <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
-                    <a href="manage-reservations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Reservations</span></a>
-                    <a href="manage-cremations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Cremations</span></a>
-                    <a href="relocation-management.html" class="nav-item"><i class="fas fa-truck-moving icon"></i> <span>Relocation Management</span></a>
-                    <a href="expiration-monitoring.html" class="nav-item"><i class="fas fa-hourglass-half icon"></i> <span>Expiration Monitoring</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Cemetery Management</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="lot-management.html" class="nav-item"><i class="fas fa-map-location-dot icon"></i> <span>Lot Management</span></a>
-                    <a href="cremation-management.html" class="nav-item active"><i class="fas fa-fire icon"></i> <span>Columbarium Management</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Records</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="decedent-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>Decedent Records</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Finance</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Intelligence & Analytics</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="reports.html" class="nav-item"><i class="fas fa-chart-column icon"></i> <span>Reports</span></a>
-                    <a href="forecast.html" class="nav-item"><i class="fas fa-chart-line icon"></i> <span>Capacity Forecast</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>System Administration</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="user-management.html" class="nav-item"><i class="fas fa-users icon"></i> <span>User Management</span></a>
-                    <a href="exceptions.html" class="nav-item"><i class="fas fa-triangle-exclamation icon"></i> <span>System Exceptions</span></a>
-                    <a href="ai.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>AI Configuration</span></a>
-                    <a href="audit.html" class="nav-item"><i class="fas fa-clipboard-list icon"></i> <span>Audit Logs</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Account</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
-                    <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
-                    </div>
-                </div>
+            <div class="sidebar-nav">
+                <!-- Dynamically populated by sidebar-nav.js / navigation-config.js -->
             </div>
             <div class="sidebar-footer">
                 <div class="user-chip">
@@ -130,7 +57,7 @@
                             <path class="line" d="M7 16H27"></path>
                         </svg>
                     </label>
-                    <h3 id="pageTitle">Cremation Management</h3>
+                    <h3 id="pageTitle">Columbarium Management</h3>
                     <div id="aiAssistantMount"></div>
                 </div>
                 <div class="user-info">
@@ -152,23 +79,152 @@
                     </button>
                 </div>
             </div>
-                <div class="content-area">
-                <!-- Stats row -->
+
+            <div class="content-area">
+                <!-- Proactive Columbarium Capacity Alert Banner -->
+                <div id="capacityAlertBanner" class="columbarium-alert-banner" style="display: none;"></div>
+
+                <!-- ── Executive Summary Statistics — 4 Embossed Cards ── -->
                 <div class="stats-row cremation-stats">
-                    <div class="stat-card"><div class="stat-title">Total Niches</div><div class="stat-value" id="totalNiches">0</div><div class="stat-sub">Columbarium spaces</div></div>
-                    <div class="stat-card"><div class="stat-title">Occupied</div><div class="stat-value" id="occupiedNiches">0</div><div class="stat-sub">With ashes stored</div></div>
-                    <div class="stat-card"><div class="stat-title">Available</div><div class="stat-value" id="availableNiches">0</div><div class="stat-sub">Empty niches</div></div>
-                    <div class="stat-card"><div class="stat-title">Occupancy Rate</div><div class="stat-value" id="occupancyRate">0%</div><div class="stat-sub">Current usage</div></div>
+                    <div class="stat-card accent-teal stat-card-filterable" data-status-filter="" role="button" tabindex="0" aria-label="Show all niches">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-monument"></i></span> Total Niches</div>
+                        <div class="stat-value" id="totalNiches">0</div>
+                        <div class="stat-sub">Columbarium capacity</div>
+                    </div>
+                    <div class="stat-card accent-emerald stat-card-filterable" data-status-filter="available" role="button" tabindex="0" aria-label="Filter by Available niches">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-check-circle"></i></span> Available</div>
+                        <div class="stat-value" id="availableNiches">0</div>
+                        <div class="stat-sub">Ready for assignment</div>
+                    </div>
+                    <div class="stat-card accent-navy stat-card-filterable" data-status-filter="occupied" role="button" tabindex="0" aria-label="Filter by Occupied niches">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-urn"></i></span> Occupied</div>
+                        <div class="stat-value" id="occupiedNiches">0</div>
+                        <div class="stat-sub">Ashes interred</div>
+                    </div>
+                    <div class="stat-card accent-amber stat-card-filterable" data-status-filter="" role="button" tabindex="0" aria-label="View occupancy rate">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-chart-pie"></i></span> Occupancy Rate</div>
+                        <div class="stat-value" id="occupancyRate">0%</div>
+                        <div class="stat-sub">Current capacity usage</div>
+                    </div>
                 </div>
 
-                <!-- Add button -->
-                <div class="toolbar-row">
-                    <button class="btn-add" id="openAddModal"><span class="btn-txt"><i class="fas fa-plus"></i> Add New Niche</span></button>
+                <!-- ── Unified Master Control Panel ── -->
+                <div class="columbarium-control-panel">
+                    <!-- Top Tier: Sub-Tabs Segmented Switcher + Action Buttons -->
+                    <div class="panel-top-row">
+                        <div class="records-tabs-track" role="tablist">
+                            <button type="button" class="records-tab-btn active" id="tabBtnAll" data-tab="" role="tab" aria-selected="true">
+                                <i class="fas fa-table-list"></i>
+                                <span>All Niches</span>
+                                <span class="tab-badge" id="allTabBadge" style="display: none;">0</span>
+                            </button>
+                            <button type="button" class="records-tab-btn" id="tabBtnAvailable" data-tab="available" role="tab" aria-selected="false">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Available</span>
+                                <span class="tab-badge" id="availableTabBadge" style="display: none;">0</span>
+                            </button>
+                            <button type="button" class="records-tab-btn" id="tabBtnOccupied" data-tab="occupied" role="tab" aria-selected="false">
+                                <i class="fas fa-urn"></i>
+                                <span>Occupied</span>
+                                <span class="tab-badge" id="occupiedTabBadge" style="display: none;">0</span>
+                            </button>
+                        </div>
+
+                        <div class="panel-action-buttons">
+                            <button type="button" class="btn-add type1" id="openAddModal" title="Record a cremation or allocate a niche">
+                                <span class="btn-txt">
+                                    <i class="fas fa-plus"></i>
+                                    Record / Assign
+                                </span>
+                            </button>
+                            <button type="button" class="btn-secondary" id="autoSyncBtn" title="Sync columbarium occupancy and capacity alerts">
+                                <i class="fas fa-arrows-rotate"></i>
+                                <span>Auto-Sync</span>
+                            </button>
+                            <button type="button" class="btn-secondary report-export-button report-export-button--excel" id="exportCsvBtn" title="Export columbarium niche inventory to CSV">
+                                <i class="fas fa-file-excel"></i>
+                                <span>Export CSV</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Tier: Filters & Search & View Switcher -->
+                    <div class="panel-bottom-row">
+                        <div class="filter-controls-group">
+                            <div class="search-input-wrap">
+                                <i class="fas fa-magnifying-glass search-icon"></i>
+                                <input type="text" id="searchNicheInput" class="search-field" placeholder="Search by niche, decedent name..." autocomplete="off">
+                                <button type="button" class="search-clear-btn" id="searchClearBtn" style="display: none;" title="Clear search">&times;</button>
+                            </div>
+
+                            <div class="select-field-wrap">
+                                <label for="columbariumFilter"><i class="fas fa-building-columns"></i></label>
+                                <select id="columbariumFilter" class="filter-select">
+                                    <option value="">All Columbariums</option>
+                                </select>
+                            </div>
+
+                            <div class="select-field-wrap">
+                                <label for="levelFilter"><i class="fas fa-layer-group"></i></label>
+                                <select id="levelFilter" class="filter-select">
+                                    <option value="">All Levels</option>
+                                    <option value="1">Level 1</option>
+                                    <option value="2">Level 2</option>
+                                    <option value="3">Level 3</option>
+                                    <option value="4">Level 4</option>
+                                    <option value="5">Level 5</option>
+                                    <option value="6">Level 6</option>
+                                    <option value="7">Level 7</option>
+                                    <option value="8">Level 8</option>
+                                    <option value="9">Level 9</option>
+                                    <option value="10">Level 10</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- View Mode Switcher -->
+                        <div class="view-mode-toggle-group" role="group" aria-label="View mode">
+                            <button type="button" class="view-toggle-btn active" id="viewGridBtn" title="Wall Grid View">
+                                <i class="fas fa-border-all"></i>
+                                <span>Grid</span>
+                            </button>
+                            <button type="button" class="view-toggle-btn" id="viewTableBtn" title="Data Table View">
+                                <i class="fas fa-list"></i>
+                                <span>Table</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Columbarium Grid -->
-                <div class="columbarium-grid" id="columbariumGrid">
-                    <!-- Niches will be injected here -->
+                <!-- ── VIEW 1: Columbarium Visual Niche Wall ── -->
+                <div class="columbarium-grid-wrapper" id="columbariumGridWrapper">
+                    <div class="columbarium-grid" id="columbariumGrid">
+                        <!-- Niches injected here -->
+                    </div>
+                </div>
+
+                <!-- ── VIEW 2: Modern High-Density Data Table ── -->
+                <div class="columbarium-table-wrapper" id="columbariumTableWrapper" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="data-table" id="columbariumTable">
+                            <thead>
+                                <tr>
+                                    <th>Niche</th>
+                                    <th>Columbarium</th>
+                                    <th>Level</th>
+                                    <th>Status</th>
+                                    <th>Assigned Decedent</th>
+                                    <th>Cremation Date</th>
+                                    <th>Ash Storage</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="columbariumTableBody">
+                                <!-- Table rows injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="table-pagination" id="columbariumPagination"></div>
                 </div>
             </div>
         </main>
@@ -178,36 +234,38 @@
     <div id="cremationModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-content">
             <button type="button" class="close" aria-label="Close">&times;</button>
-            <h3 id="modalTitle">Add New Cremation Record</h3>
+            <h3 id="modalTitle">Record Cremation &amp; Assign Niche</h3>
             <form id="cremationForm">
                 <input type="hidden" id="cremationId">
                 <div class="form-group">
-                    <label>Decedent</label>
+                    <label for="deceasedId">Decedent <span class="required">*</span></label>
                     <select id="deceasedId" required></select>
                 </div>
                 <div class="form-group">
-                    <label>Columbarium</label>
+                    <label for="columbarium">Columbarium</label>
                     <select id="columbarium"></select>
                     <input type="text" id="columbariumNew" placeholder="New columbarium name" style="display:none; margin-top:8px;">
                 </div>
                 <div class="form-group">
-                    <label>Niche Number</label>
+                    <label for="nicheNumber">Niche Number</label>
                     <div class="niche-suggest-row">
                         <input type="text" id="nicheNumber" placeholder="e.g., N-001">
                         <button type="button" class="btn-secondary" id="suggestNicheBtn">Suggest Niche</button>
                     </div>
                     <div class="help" id="suggestNicheHint" style="display:none;"></div>
                 </div>
-                <div class="form-group">
-                    <label>Level</label>
-                    <input type="number" id="level" min="1" max="10" value="1">
+                <div class="form-row" style="display: flex; gap: 12px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="level">Level</label>
+                        <input type="number" id="level" min="1" max="10" value="1">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="cremationDate">Cremation Date</label>
+                        <input type="date" id="cremationDate">
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label>Cremation Date</label>
-                    <input type="date" id="cremationDate">
-                </div>
-                <div class="form-group">
-                    <label>Status</label>
+                    <label for="cremationStatus">Status</label>
                     <select id="cremationStatus">
                         <option value="Scheduled">Scheduled</option>
                         <option value="Completed">Completed</option>
@@ -215,12 +273,12 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Ash Storage Location</label>
-                    <input type="text" id="ashStorage" placeholder="e.g., Columbarium A - Niche 12">
+                    <label for="ashStorage">Ash Storage Location</label>
+                    <input type="text" id="ashStorage" placeholder="e.g., Columbarium A — Level 1, Niche N-1">
                 </div>
                 <div class="form-group">
-                    <label>Notes</label>
-                    <textarea id="cremationNotes" rows="2"></textarea>
+                    <label for="cremationNotes">Notes</label>
+                    <textarea id="cremationNotes" rows="2" placeholder="Optional notes..."></textarea>
                 </div>
                 <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span></button>
             </form>
@@ -234,20 +292,22 @@
             <h3 id="assignModalTitle">Assign Decedent to Niche</h3>
             <form id="assignForm">
                 <div class="form-group">
-                    <label>Decedent</label>
+                    <label for="assignDecedentId">Decedent <span class="required">*</span></label>
                     <select id="assignDecedentId" required></select>
                 </div>
                 <div class="form-group">
-                    <label>Niche Number</label>
+                    <label for="assignNicheNumber">Niche Number</label>
                     <input type="text" id="assignNicheNumber" readonly>
                 </div>
-                <div class="form-group">
-                    <label>Columbarium</label>
-                    <input type="text" id="assignColumbarium">
-                </div>
-                <div class="form-group">
-                    <label>Level</label>
-                    <input type="number" id="assignLevel" min="1" max="10" value="1">
+                <div class="form-row" style="display: flex; gap: 12px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="assignColumbarium">Columbarium</label>
+                        <input type="text" id="assignColumbarium" readonly>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="assignLevel">Level</label>
+                        <input type="number" id="assignLevel" min="1" max="10" value="1">
+                    </div>
                 </div>
                 <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span></button>
             </form>
@@ -260,16 +320,21 @@
             <button type="button" class="close-view" aria-label="Close">&times;</button>
             <h3 id="viewModalTitle">Niche Details</h3>
             <div id="viewDetails"></div>
-            <div style="margin-top: 10px;"><div id="aiAssistantMountRecord"></div></div>
-            <button class="btn-edit" id="editFromView"><span class="edit-text">Edit Record</span><i class="fas fa-pen edit-icon"></i></button>
-            <button class="btn-assign" id="assignFromView">Assign Decedent</button>
-            <button class="btn-delete" id="deleteFromView">Delete Record</button>
+            <div style="margin-top: 12px;"><div id="aiAssistantMountRecord"></div></div>
+            <div class="modal-actions-footer" style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px;">
+                <button type="button" class="btn-edit" id="editFromView"><span class="edit-text">Edit Record</span><i class="fas fa-pen edit-icon"></i></button>
+                <button type="button" class="btn-assign" id="assignFromView">Assign Decedent</button>
+                <button type="button" class="btn-delete" id="deleteFromView">Delete Record</button>
+            </div>
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/shared/button-loading.js"></script>
+    <script src="../../assets/js/shared/toast.js"></script>
+    <script src="../../assets/js/shared/confirm-modal.js"></script>
     <script src="../../assets/js/shared/ai-assistant-widget.js"></script>
     <script src="../../assets/js/pages/cremation-management.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
