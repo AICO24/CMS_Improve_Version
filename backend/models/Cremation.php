@@ -189,9 +189,41 @@ class Cremation {
         return $all;
     }
 
+    public function getColumbariumStructures() {
+        $configFile = __DIR__ . '/../config/columbarium_structures.json';
+        if (file_exists($configFile)) {
+            $content = file_get_contents($configFile);
+            $decoded = json_decode($content, true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+        }
+        return [
+            'St. Jude Thaddeus Sanctuary' => ['levels' => 5, 'niches_per_level' => 10, 'prefix' => 'SJ-L'],
+            'Our Lady of Peace Gallery' => ['levels' => 5, 'niches_per_level' => 10, 'prefix' => 'OLP-L'],
+            'San Lorenzo Ruiz Wing' => ['levels' => 4, 'niches_per_level' => 8, 'prefix' => 'SLR-L'],
+            'Ascension Gallery' => ['levels' => 4, 'niches_per_level' => 8, 'prefix' => 'ASC-L'],
+            'Columbarium A' => ['levels' => 3, 'niches_per_level' => 10, 'prefix' => 'N-'],
+        ];
+    }
+
+    public function saveColumbariumStructure($columbarium, $levels, $nichesPerLevel, $prefix) {
+        $structures = $this->getColumbariumStructures();
+        $structures[$columbarium] = [
+            'levels' => max(1, min(10, (int) $levels)),
+            'niches_per_level' => max(1, min(25, (int) $nichesPerLevel)),
+            'prefix' => trim($prefix) ?: 'N-',
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+        $configFile = __DIR__ . '/../config/columbarium_structures.json';
+        file_put_contents($configFile, json_encode($structures, JSON_PRETTY_PRINT));
+        return $structures[$columbarium];
+    }
+
     public function getNichesForColumbarium($columbarium) {
-        $rows = [];
         $targetColumbarium = $columbarium ?: 'Columbarium A';
+        $structures = $this->getColumbariumStructures();
+        $config = $structures[$targetColumbarium] ?? null;
 
         $sql = "
             SELECT c.cremation_id, c.niche_number, c.columbarium, c.level, c.status, c.cremation_date, c.ash_storage_location, c.notes,
@@ -205,54 +237,132 @@ class Cremation {
         $stmt->execute([$targetColumbarium]);
         $records = $stmt->fetchAll();
 
-        $maxIndex = self::DEFAULT_CAPACITY;
+        $rows = [];
+        $occupiedMap = [];
         foreach ($records as $record) {
-            $suffix = preg_replace('/\D/', '', (string) ($record['niche_number'] ?? ''));
-            if ($suffix !== '') {
-                $maxIndex = max($maxIndex, (int) $suffix);
+            $nNum = (string) ($record['niche_number'] ?? '');
+            if ($nNum !== '') {
+                $occupiedMap[$nNum] = $record;
             }
         }
 
-        for ($i = 1; $i <= $maxIndex; $i++) {
-            $calcLevel = (int) ceil($i / 10);
-            $rows[] = [
-                'niche_number' => 'N-' . $i,
-                'columbarium' => $targetColumbarium,
-                'level' => max(1, min(10, $calcLevel)),
-                'status' => 'available',
-                'first_name' => null,
-                'last_name' => null,
-                'cremation_id' => null,
-                'cremation_date' => null,
-                'ash_storage_location' => null,
-                'notes' => null,
-            ];
-        }
+        if ($config) {
+            $levels = (int) $config['levels'];
+            $perLevel = (int) $config['niches_per_level'];
+            $prefix = $config['prefix'];
 
-        foreach ($records as $record) {
-            $nicheNumber = $record['niche_number'] ?? null;
-            $suffix = preg_replace('/\D/', '', (string) $nicheNumber);
-            $index = $suffix !== '' ? ((int) $suffix - 1) : null;
-            $status = (string) ($record['status'] ?? 'Scheduled');
-            $normalizedStatus = $status === 'Cancelled' ? 'available' : 'occupied';
+            for ($lvl = 1; $lvl <= $levels; $lvl++) {
+                for ($slot = 1; $slot <= $perLevel; $slot++) {
+                    if (str_ends_with($prefix, '-L') || str_ends_with($prefix, 'L')) {
+                        $nicheNum = rtrim($prefix, 'L') . "L{$lvl}-" . str_pad($slot, 2, '0', STR_PAD_LEFT);
+                    } elseif ($prefix === 'N-') {
+                        $index = ($lvl - 1) * $perLevel + $slot;
+                        $nicheNum = "N-{$index}";
+                    } else {
+                        $nicheNum = "{$prefix}L{$lvl}-" . str_pad($slot, 2, '0', STR_PAD_LEFT);
+                    }
 
-            $row = [
-                'niche_number' => $nicheNumber ?: 'N-' . (count($rows) + 1),
-                'columbarium' => $record['columbarium'] ?? $targetColumbarium,
-                'level' => !empty($record['level']) ? (int) $record['level'] : 1,
-                'status' => $normalizedStatus,
-                'first_name' => $record['first_name'] ?? null,
-                'last_name' => $record['last_name'] ?? null,
-                'cremation_id' => $record['cremation_id'] ?? null,
-                'cremation_date' => $record['cremation_date'] ?? null,
-                'ash_storage_location' => $record['ash_storage_location'] ?? null,
-                'notes' => $record['notes'] ?? null,
-            ];
+                    if (isset($occupiedMap[$nicheNum])) {
+                        $rec = $occupiedMap[$nicheNum];
+                        $status = (string) ($rec['status'] ?? 'Scheduled');
+                        $normalizedStatus = $status === 'Cancelled' ? 'available' : 'occupied';
+                        $rows[] = [
+                            'niche_number' => $nicheNum,
+                            'columbarium' => $targetColumbarium,
+                            'level' => $lvl,
+                            'status' => $normalizedStatus,
+                            'first_name' => $rec['first_name'] ?? null,
+                            'last_name' => $rec['last_name'] ?? null,
+                            'cremation_id' => $rec['cremation_id'] ?? null,
+                            'cremation_date' => $rec['cremation_date'] ?? null,
+                            'ash_storage_location' => $rec['ash_storage_location'] ?? null,
+                            'notes' => $rec['notes'] ?? null,
+                        ];
+                        unset($occupiedMap[$nicheNum]);
+                    } else {
+                        $rows[] = [
+                            'niche_number' => $nicheNum,
+                            'columbarium' => $targetColumbarium,
+                            'level' => $lvl,
+                            'status' => 'available',
+                            'first_name' => null,
+                            'last_name' => null,
+                            'cremation_id' => null,
+                            'cremation_date' => null,
+                            'ash_storage_location' => null,
+                            'notes' => null,
+                        ];
+                    }
+                }
+            }
 
-            if ($index !== null && isset($rows[$index])) {
-                $rows[$index] = $row;
-            } else {
-                $rows[] = $row;
+            // Any remaining occupied records not mapped to structured slots get appended
+            foreach ($occupiedMap as $nNum => $rec) {
+                $status = (string) ($rec['status'] ?? 'Scheduled');
+                $rows[] = [
+                    'niche_number' => $nNum,
+                    'columbarium' => $targetColumbarium,
+                    'level' => !empty($rec['level']) ? (int) $rec['level'] : 1,
+                    'status' => $status === 'Cancelled' ? 'available' : 'occupied',
+                    'first_name' => $rec['first_name'] ?? null,
+                    'last_name' => $rec['last_name'] ?? null,
+                    'cremation_id' => $rec['cremation_id'] ?? null,
+                    'cremation_date' => $rec['cremation_date'] ?? null,
+                    'ash_storage_location' => $rec['ash_storage_location'] ?? null,
+                    'notes' => $rec['notes'] ?? null,
+                ];
+            }
+        } else {
+            // Default virtual 10-slot logic
+            $maxIndex = self::DEFAULT_CAPACITY;
+            foreach ($records as $record) {
+                $suffix = preg_replace('/\D/', '', (string) ($record['niche_number'] ?? ''));
+                if ($suffix !== '') {
+                    $maxIndex = max($maxIndex, (int) $suffix);
+                }
+            }
+
+            for ($i = 1; $i <= $maxIndex; $i++) {
+                $calcLevel = (int) ceil($i / 10);
+                $rows[] = [
+                    'niche_number' => 'N-' . $i,
+                    'columbarium' => $targetColumbarium,
+                    'level' => max(1, min(10, $calcLevel)),
+                    'status' => 'available',
+                    'first_name' => null,
+                    'last_name' => null,
+                    'cremation_id' => null,
+                    'cremation_date' => null,
+                    'ash_storage_location' => null,
+                    'notes' => null,
+                ];
+            }
+
+            foreach ($records as $record) {
+                $nicheNumber = $record['niche_number'] ?? null;
+                $suffix = preg_replace('/\D/', '', (string) $nicheNumber);
+                $index = $suffix !== '' ? ((int) $suffix - 1) : null;
+                $status = (string) ($record['status'] ?? 'Scheduled');
+                $normalizedStatus = $status === 'Cancelled' ? 'available' : 'occupied';
+
+                $row = [
+                    'niche_number' => $nicheNumber ?: 'N-' . (count($rows) + 1),
+                    'columbarium' => $record['columbarium'] ?? $targetColumbarium,
+                    'level' => !empty($record['level']) ? (int) $record['level'] : 1,
+                    'status' => $normalizedStatus,
+                    'first_name' => $record['first_name'] ?? null,
+                    'last_name' => $record['last_name'] ?? null,
+                    'cremation_id' => $record['cremation_id'] ?? null,
+                    'cremation_date' => $record['cremation_date'] ?? null,
+                    'ash_storage_location' => $record['ash_storage_location'] ?? null,
+                    'notes' => $record['notes'] ?? null,
+                ];
+
+                if ($index !== null && isset($rows[$index])) {
+                    $rows[$index] = $row;
+                } else {
+                    $rows[] = $row;
+                }
             }
         }
 
@@ -401,6 +511,8 @@ class Cremation {
     }
 
     public function getStats($columbarium = null) {
+        $structures = $this->getColumbariumStructures();
+
         if ($columbarium) {
             $sql = "
                 SELECT COUNT(*) as total,
@@ -413,7 +525,9 @@ class Cremation {
             $result = $stmt->fetch();
 
             $occupied = isset($result['occupied']) ? (int) $result['occupied'] : 0;
-            $capacity = max(self::DEFAULT_CAPACITY, $occupied);
+            $struct = $structures[$columbarium] ?? null;
+            $baseCapacity = $struct ? ((int) $struct['levels'] * (int) $struct['niches_per_level']) : self::DEFAULT_CAPACITY;
+            $capacity = max($baseCapacity, $occupied);
             $available = max(0, $capacity - $occupied);
             $result['total'] = $capacity;
             $result['occupied'] = $occupied;
@@ -433,8 +547,12 @@ class Cremation {
         $result = $stmt->fetch();
 
         $occupied = isset($result['occupied']) ? (int) $result['occupied'] : 0;
-        $numCols = max(1, count($columbariums));
-        $capacity = max(self::DEFAULT_CAPACITY * $numCols, $occupied);
+        $totalCapacity = 0;
+        foreach ($columbariums as $col) {
+            $struct = $structures[$col] ?? null;
+            $totalCapacity += $struct ? ((int) $struct['levels'] * (int) $struct['niches_per_level']) : self::DEFAULT_CAPACITY;
+        }
+        $capacity = max($totalCapacity, $occupied);
         $available = max(0, $capacity - $occupied);
 
         return [
@@ -475,15 +593,9 @@ class Cremation {
         $stmt->execute();
         $dbList = array_column($stmt->fetchAll(), 'columbarium');
 
-        $presets = [
-            'St. Jude Thaddeus Sanctuary',
-            'Our Lady of Peace Gallery',
-            'San Lorenzo Ruiz Wing',
-            'Ascension Gallery',
-            'Columbarium A'
-        ];
+        $configuredList = array_keys($this->getColumbariumStructures());
 
-        $combined = array_values(array_unique(array_merge($dbList, $presets)));
+        $combined = array_values(array_unique(array_merge($dbList, $configuredList)));
         sort($combined);
         return $combined;
     }

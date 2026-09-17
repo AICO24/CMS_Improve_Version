@@ -820,6 +820,46 @@ class CremationController {
         return $list;
     }
 
+    public function batchGenerateNiches($data, $userId) {
+        $columbarium = trim($data['columbarium'] ?? '');
+        $levels = isset($data['levels']) ? (int) $data['levels'] : 5;
+        $nichesPerLevel = isset($data['niches_per_level']) ? (int) $data['niches_per_level'] : 10;
+        $prefix = trim($data['prefix'] ?? '');
+
+        if (empty($columbarium)) {
+            return ['error' => 'Columbarium sanctuary name is required', 'code' => 400];
+        }
+        if ($levels < 1 || $levels > 10) {
+            return ['error' => 'Number of levels must be between 1 and 10', 'code' => 400];
+        }
+        if ($nichesPerLevel < 1 || $nichesPerLevel > 25) {
+            return ['error' => 'Niches per level must be between 1 and 25', 'code' => 400];
+        }
+        if (empty($prefix)) {
+            $prefix = 'N-';
+        }
+
+        $saved = $this->cremationModel->saveColumbariumStructure($columbarium, $levels, $nichesPerLevel, $prefix);
+        $totalNiches = $levels * $nichesPerLevel;
+
+        $this->auditLogModel->log(
+            $userId,
+            'CREMATION_BATCH_GENERATE_NICHES',
+            "Batch generated {$totalNiches} niches for columbarium '{$columbarium}' ({$levels} levels x {$nichesPerLevel} slots, prefix: {$prefix})",
+            'columbarium',
+            null,
+            ['columbarium' => $columbarium, 'levels' => $levels, 'niches_per_level' => $nichesPerLevel, 'prefix' => $prefix]
+        );
+
+        return [
+            'success' => true,
+            'message' => "Successfully configured {$totalNiches} sequential niches for {$columbarium}.",
+            'columbarium' => $columbarium,
+            'total_niches' => $totalNiches,
+            'structure' => $saved
+        ];
+    }
+
     public function suggestNiche($columbarium = null) {
         // getNiches()/the virtual 10-slot grid only correctly represents a
         // SINGLE columbarium at a time — passing null merges every

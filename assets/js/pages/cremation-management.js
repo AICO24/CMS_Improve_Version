@@ -67,10 +67,24 @@ document.addEventListener('DOMContentLoaded', async function() {
     const viewModal = document.getElementById('viewModal');
     const cremationModal = document.getElementById('cremationModal');
     const assignModal = document.getElementById('assignModal');
+    const batchNicheModal = document.getElementById('batchNicheModal');
 
     // Forms
     const cremationForm = document.getElementById('cremationForm');
     const assignForm = document.getElementById('assignForm');
+    const batchNicheForm = document.getElementById('batchNicheForm');
+
+    // Batch Modal Elements
+    const openBatchNicheModalBtn = document.getElementById('openBatchNicheModal');
+    const closeBatchNicheModalBtn = document.getElementById('closeBatchNicheModal');
+    const cancelBatchNicheBtn = document.getElementById('cancelBatchNicheBtn');
+    const batchColumbariumSelect = document.getElementById('batchColumbarium');
+    const batchColumbariumNewInput = document.getElementById('batchColumbariumNew');
+    const batchNichePrefixInput = document.getElementById('batchNichePrefix');
+    const batchLevelsCountInput = document.getElementById('batchLevelsCount');
+    const batchNichesPerLevelInput = document.getElementById('batchNichesPerLevel');
+    const batchTotalCountBadge = document.getElementById('batchTotalCountBadge');
+    const batchPreviewList = document.getElementById('batchPreviewList');
 
     // Modal Inputs
     const modalColumbariumSelect = document.getElementById('columbarium');
@@ -142,6 +156,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             // Populate Modal Columbarium dropdown
             populateModalColumbariums();
+            populateBatchColumbariums();
         } catch (error) {
             console.error('Failed to load columbariums', error);
         }
@@ -161,6 +176,89 @@ document.addEventListener('DOMContentLoaded', async function() {
             modalColumbariumSelect.value = distinctColumbariums[0] || NEW_COLUMBARIUM_VALUE;
         }
         modalColumbariumNew.style.display = modalColumbariumSelect.value === NEW_COLUMBARIUM_VALUE ? 'block' : 'none';
+    }
+
+    function populateBatchColumbariums(selectedValue = null) {
+        if (!batchColumbariumSelect) return;
+        batchColumbariumSelect.innerHTML = distinctColumbariums.map(name =>
+            `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`
+        ).join('') + `<option value="${NEW_COLUMBARIUM_VALUE}">+ Add new sanctuary / wing...</option>`;
+
+        if (selectedValue && distinctColumbariums.includes(selectedValue)) {
+            batchColumbariumSelect.value = selectedValue;
+        } else if (selectedValue) {
+            batchColumbariumSelect.value = NEW_COLUMBARIUM_VALUE;
+            batchColumbariumNewInput.value = selectedValue;
+        } else {
+            batchColumbariumSelect.value = distinctColumbariums[0] || NEW_COLUMBARIUM_VALUE;
+        }
+        batchColumbariumNewInput.style.display = batchColumbariumSelect.value === NEW_COLUMBARIUM_VALUE ? 'block' : 'none';
+
+        const curName = batchColumbariumSelect.value === NEW_COLUMBARIUM_VALUE ? batchColumbariumNewInput.value.trim() : batchColumbariumSelect.value;
+        batchNichePrefixInput.value = suggestPrefixForSanctuary(curName);
+        updateBatchPreview();
+    }
+
+    function suggestPrefixForSanctuary(name) {
+        const key = (name || '').trim().toLowerCase();
+        if (key.includes('jude')) return 'SJ-L';
+        if (key.includes('peace') || key.includes('lady')) return 'OLP-L';
+        if (key.includes('lorenzo') || key.includes('ruiz')) return 'SLR-L';
+        if (key.includes('ascension')) return 'ASC-L';
+        if (key.includes('mercy')) return 'DM-L';
+        if (key.includes('peter')) return 'SP-L';
+        if (key.includes('columbarium a')) return 'N-';
+
+        const words = (name || '').replace(/[^a-zA-Z0-9\s]/g, '').split(/\s+/).filter(w => !['and', 'the', 'of', 'in', '&'].includes(w.toLowerCase()));
+        if (words.length >= 2) {
+            return words.slice(0, 3).map(w => w[0].toUpperCase()).join('') + '-L';
+        } else if (words.length === 1 && words[0].length >= 2) {
+            return words[0].substring(0, 3).toUpperCase() + '-L';
+        }
+        return 'N-';
+    }
+
+    function updateBatchPreview() {
+        if (!batchPreviewList) return;
+        const isNew = batchColumbariumSelect.value === NEW_COLUMBARIUM_VALUE;
+        const col = isNew ? (batchColumbariumNewInput.value.trim() || 'New Sanctuary') : batchColumbariumSelect.value;
+        const rawPrefix = batchNichePrefixInput.value.trim() || 'N-';
+        const levels = Math.max(1, Math.min(10, parseInt(batchLevelsCountInput.value, 10) || 5));
+        const perLevel = Math.max(1, Math.min(25, parseInt(batchNichesPerLevelInput.value, 10) || 10));
+        const total = levels * perLevel;
+
+        if (batchTotalCountBadge) batchTotalCountBadge.textContent = `${total} Niches Total`;
+
+        function formatSlot(lvl, slot) {
+            if (rawPrefix.endsWith('-L') || rawPrefix.endsWith('L')) {
+                const p = rawPrefix.replace(/L$/, '');
+                return `${p}L${lvl}-${String(slot).padStart(2, '0')}`;
+            } else if (rawPrefix === 'N-') {
+                const idx = (lvl - 1) * perLevel + slot;
+                return `N-${idx}`;
+            }
+            return `${rawPrefix}L${lvl}-${String(slot).padStart(2, '0')}`;
+        }
+
+        let previewHtml = `<div style="margin-bottom: 6px; font-weight: 600;">Sanctuary Wing: <strong style="color: #047857;">${escapeHtml(col)}</strong></div>`;
+        const sampleLevels = levels <= 4 ? Array.from({ length: levels }, (_, i) => i + 1) : [1, 2, 3, levels];
+
+        sampleLevels.forEach((lvl, idx) => {
+            if (levels > 4 && idx === 3) {
+                previewHtml += `<div style="color: #94a3b8; font-size: 0.72rem; padding: 2px 0;">... and ${levels - 4} intermediate level(s) ...</div>`;
+            }
+            const isPrime = (lvl === 3 || lvl === 4);
+            const first = formatSlot(lvl, 1);
+            const last = formatSlot(lvl, perLevel);
+            previewHtml += `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 2px 0;">
+                    <span><strong>Level ${lvl}</strong>: <code>${escapeHtml(first)}</code> &rarr; <code>${escapeHtml(last)}</code> (${perLevel} niches)</span>
+                    ${isPrime ? '<span style="color: #b45309; font-weight: 700; font-size: 0.68rem; background: #fef3c7; padding: 1px 6px; border-radius: 999px;"><i class="fas fa-crown"></i> Prime Eye-Level</span>' : ''}
+                </div>
+            `;
+        });
+
+        batchPreviewList.innerHTML = previewHtml;
     }
 
     function currentModalColumbariumValue() {
@@ -898,6 +996,97 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         });
     });
+
+    // --- Batch Niche Generator Form Submission & Events ---
+    if (openBatchNicheModalBtn) {
+        openBatchNicheModalBtn.addEventListener('click', () => {
+            populateBatchColumbariums(currentColumbarium || (distinctColumbariums[0] || 'St. Jude Thaddeus Sanctuary'));
+            openModal(batchNicheModal);
+        });
+    }
+
+    if (closeBatchNicheModalBtn) {
+        closeBatchNicheModalBtn.addEventListener('click', () => closeModal(batchNicheModal));
+    }
+    if (cancelBatchNicheBtn) {
+        cancelBatchNicheBtn.addEventListener('click', () => closeModal(batchNicheModal));
+    }
+
+    if (batchColumbariumSelect) {
+        batchColumbariumSelect.addEventListener('change', () => {
+            const isNew = batchColumbariumSelect.value === NEW_COLUMBARIUM_VALUE;
+            batchColumbariumNewInput.style.display = isNew ? 'block' : 'none';
+            if (isNew) {
+                batchColumbariumNewInput.focus();
+            } else {
+                batchNichePrefixInput.value = suggestPrefixForSanctuary(batchColumbariumSelect.value);
+            }
+            updateBatchPreview();
+        });
+    }
+
+    if (batchColumbariumNewInput) {
+        batchColumbariumNewInput.addEventListener('input', () => {
+            batchNichePrefixInput.value = suggestPrefixForSanctuary(batchColumbariumNewInput.value);
+            updateBatchPreview();
+        });
+    }
+
+    if (batchNichePrefixInput) batchNichePrefixInput.addEventListener('input', updateBatchPreview);
+    if (batchLevelsCountInput) batchLevelsCountInput.addEventListener('input', updateBatchPreview);
+    if (batchNichesPerLevelInput) batchNichesPerLevelInput.addEventListener('input', updateBatchPreview);
+
+    if (batchNicheForm) {
+        batchNicheForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const isNew = batchColumbariumSelect.value === NEW_COLUMBARIUM_VALUE;
+            const col = isNew ? batchColumbariumNewInput.value.trim() : batchColumbariumSelect.value;
+            const prefix = batchNichePrefixInput.value.trim() || 'N-';
+            const levels = parseInt(batchLevelsCountInput.value, 10) || 5;
+            const nichesPerLevel = parseInt(batchNichesPerLevelInput.value, 10) || 10;
+
+            if (!col) {
+                if (typeof showToast === 'function') showToast('Please select or specify a target sanctuary wing name.', { type: 'error' });
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBatchNicheBtn');
+            await withButtonLoading(submitBtn, async () => {
+                try {
+                    const result = await apiRequest('cremations/batch-niches', {
+                        method: 'POST',
+                        body: {
+                            columbarium: col,
+                            levels: levels,
+                            niches_per_level: nichesPerLevel,
+                            prefix: prefix
+                        }
+                    });
+
+                    if (result.success) {
+                        closeModal(batchNicheModal);
+                        expandedSanctuaries.add(col);
+                        for (let l = 1; l <= levels; l++) {
+                            expandedLevels.add(`${col}__L${l}`);
+                        }
+                        await loadColumbariums();
+                        await refreshAll();
+                        if (typeof showToast === 'function') {
+                            showToast(result.message || `Successfully generated ${result.total_niches} niches for ${col}.`, { type: 'success' });
+                        }
+                    } else {
+                        if (typeof showToast === 'function') {
+                            showToast(result.error || 'Failed to generate niches', { type: 'error' });
+                        }
+                    }
+                } catch (error) {
+                    if (typeof showToast === 'function') {
+                        showToast('Error: ' + error.message, { type: 'error' });
+                    }
+                }
+            });
+        });
+    }
 
     // --- Filter & Control Listeners ---
     // Status Tabs

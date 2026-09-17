@@ -652,6 +652,16 @@ if ($path === 'cremations/assign' && $requestMethod === 'POST') {
     exit;
 }
 
+if ($path === 'cremations/batch-niches' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin']);
+    $input = readRequestBody();
+    $result = $cremationController->batchGenerateNiches($input, $user['user_id']);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 // Cremation Phase B: citizen's own cremation requests — mirrors
 // schedules/mine exactly. Placed before 'cremations' (GET) so its own
 // filters (page/per_page only) aren't shadowed by that route's broader
