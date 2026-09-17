@@ -401,7 +401,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     const searchInput = document.getElementById('lotSearchInput');
     const categoryFilterSelect = document.getElementById('filterCategory');
     const sectionFilterSelect = document.getElementById('filterSection');
-    const statusFilterSelect = document.getElementById('filterStatus');
 
     // L3.3: re-fetches from the server whenever a filter is active, instead
     // of re-filtering the already-fully-loaded allLots array in the browser.
@@ -474,7 +473,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                 label: `Status: ${filters.status}`,
                 clear: () => {
                     filters.status = '';
-                    statusFilterSelect.value = '';
                 }
             });
         }
@@ -525,14 +523,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         refreshVisibleLots();
     });
 
-    statusFilterSelect.addEventListener('change', () => {
-        filters.status = statusFilterSelect.value;
-        updateActiveStatCard();
-        updateActiveSubTabs();
-        renderActiveFilterChips();
-        refreshVisibleLots();
-    });
-
     document.getElementById('btnResetFilters').addEventListener('click', () => {
         filters.search = '';
         filters.category = '';
@@ -541,7 +531,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         searchInput.value = '';
         categoryFilterSelect.value = '';
         sectionFilterSelect.value = '';
-        statusFilterSelect.value = '';
         updateActiveStatCard();
         updateActiveSubTabs();
         renderActiveFilterChips();
@@ -550,7 +539,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function applyStatusQuickFilter(status) {
         filters.status = status;
-        statusFilterSelect.value = status;
         updateActiveStatCard();
         updateActiveSubTabs();
         renderActiveFilterChips();
