@@ -459,7 +459,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!Array.isArray(niches) || niches.length === 0) {
             gridContainer.innerHTML = `
                 <div class="cremation-empty-state">
-                    <i class="fas fa-urn"></i>
+                    <i class="fas fa-monument"></i>
                     <strong>No matching niches found</strong>
                     <span>Try changing your filters or click "Record / Assign" to register a new niche.</span>
                 </div>
@@ -580,7 +580,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <div class="niche-number">${escapeHtml(niche.niche_number)}</div>
                 <div class="niche-location"><i class="fas fa-building-columns"></i> ${escapeHtml(niche.columbarium || 'N/A')}</div>
                 ${decedentName ? `<div class="deceased-name" title="${decedentName}"><i class="fas fa-user"></i> ${decedentName}</div>` : ''}
-                <span class="niche-status ${statusClass}"><i class="fas ${isOccupied ? 'fa-urn' : 'fa-check'}"></i> ${statusLabel}</span>
+                <span class="niche-status ${statusClass}"><i class="fas ${isOccupied ? 'fa-jar' : 'fa-check'}"></i> ${statusLabel}</span>
             </div>
         `;
     }
@@ -591,7 +591,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <tr>
                     <td colspan="8" style="text-align: center; padding: 40px;">
                         <div class="cremation-empty-state" style="min-height: auto; padding: 0;">
-                            <i class="fas fa-urn"></i>
+                            <i class="fas fa-monument"></i>
                             <strong>No matching niches found</strong>
                             <span>Try changing your filters or click "Record / Assign".</span>
                         </div>
