@@ -563,23 +563,59 @@ class Cremation {
         ];
     }
 
-    // Batch N6 (adviser feedback 2026-08-18): "suggest na i-automate" the
-    // cremation board — staff currently has to invent a niche_number/level
-    // by hand. Reuses getNiches()'s existing virtual-grid logic (same
-    // DEFAULT_CAPACITY-slot model already used for the grid display and
-    // stats) so the suggestion can never drift from what the grid/stats
-    // themselves consider "available".
-    public function findNextAvailableNiche($columbarium = null) {
-        foreach ($this->getNiches($columbarium) as $niche) {
-            if ($niche['status'] === 'available') {
-                return [
-                    'niche_number' => $niche['niche_number'],
-                    'columbarium' => $niche['columbarium'],
-                    'level' => $niche['level'],
-                ];
+    // Batch N6 + Batch 3: Smart Tier-Based Niche Suggester
+    // Allows staff/families to prioritize Prime Eye-Level (Heart-Level, Level 3-4)
+    // or Standard/Budget niches, with intelligent fallback.
+    public function findNextAvailableNiche($columbarium = null, $tierPreference = 'any') {
+        $allNiches = $this->getNiches($columbarium);
+        $availableNiches = array_values(array_filter($allNiches, fn($n) => ($n['status'] ?? '') === 'available'));
+
+        if (empty($availableNiches)) {
+            return null;
+        }
+
+        if ($tierPreference === 'prime') {
+            // Level 3 or 4
+            foreach ($availableNiches as $niche) {
+                $lvl = (int) ($niche['level'] ?? 1);
+                if ($lvl === 3 || $lvl === 4) {
+                    return [
+                        'niche_number' => $niche['niche_number'],
+                        'columbarium' => $niche['columbarium'],
+                        'level' => $niche['level'],
+                        'tier' => 'prime',
+                        'is_prime' => true,
+                    ];
+                }
+            }
+        } elseif ($tierPreference === 'standard') {
+            // Level 1, 2, 5+
+            foreach ($availableNiches as $niche) {
+                $lvl = (int) ($niche['level'] ?? 1);
+                if ($lvl !== 3 && $lvl !== 4) {
+                    return [
+                        'niche_number' => $niche['niche_number'],
+                        'columbarium' => $niche['columbarium'],
+                        'level' => $niche['level'],
+                        'tier' => 'standard',
+                        'is_prime' => false,
+                    ];
+                }
             }
         }
-        return null;
+
+        // Fallback or 'any': return first available niche
+        $first = $availableNiches[0];
+        $lvl = (int) ($first['level'] ?? 1);
+        $isPrime = ($lvl === 3 || $lvl === 4);
+        return [
+            'niche_number' => $first['niche_number'],
+            'columbarium' => $first['columbarium'],
+            'level' => $first['level'],
+            'tier' => $isPrime ? 'prime' : 'standard',
+            'is_prime' => $isPrime,
+            'note' => ($tierPreference === 'prime' && !$isPrime) ? 'No vacant eye-level niches; suggesting best available slot.' : null,
+        ];
     }
 
     // Real columbarium names actually in use + prestigious sanctuary presets

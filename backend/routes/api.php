@@ -638,7 +638,8 @@ if ($path === 'cremations/columbariums' && $requestMethod === 'GET') {
 
 if ($path === 'cremations/suggest-niche' && $requestMethod === 'GET') {
     $columbarium = $_GET['columbarium'] ?? null;
-    echo json_encode($cremationController->suggestNiche($columbarium));
+    $tier = $_GET['tier'] ?? 'any';
+    echo json_encode($cremationController->suggestNiche($columbarium, $tier));
     exit;
 }
 

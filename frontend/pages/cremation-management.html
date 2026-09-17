@@ -252,11 +252,21 @@
                 </div>
                 <div class="form-group">
                     <label for="nicheNumber">Niche Number</label>
-                    <div class="niche-suggest-row">
-                        <input type="text" id="nicheNumber" placeholder="e.g., N-001">
-                        <button type="button" class="btn-secondary" id="suggestNicheBtn">Suggest Niche</button>
+                    <div class="niche-suggest-row" style="display: flex; gap: 8px;">
+                        <input type="text" id="nicheNumber" placeholder="e.g., SJ-L3-05" style="flex: 1;">
+                        <button type="button" class="btn-secondary" id="suggestNicheBtn" title="Suggest next available niche">
+                            <i class="fas fa-wand-magic-sparkles"></i> Suggest
+                        </button>
                     </div>
-                    <div class="help" id="suggestNicheHint" style="display:none;"></div>
+                    <div class="suggest-tier-selector" style="display: flex; gap: 6px; margin-top: 8px;">
+                        <button type="button" class="tier-pill-btn active" data-tier="prime" id="tierBtnPrime" title="Prioritize Prime Eye-Level (Levels 3 &amp; 4)">
+                            <i class="fas fa-crown"></i> Prime Eye-Level (L3-4)
+                        </button>
+                        <button type="button" class="tier-pill-btn" data-tier="any" id="tierBtnAny" title="Suggest next available in any level">
+                            <i class="fas fa-arrows-split-up-and-left"></i> Any Available
+                        </button>
+                    </div>
+                    <div class="help" id="suggestNicheHint" style="display:none; margin-top: 6px;"></div>
                 </div>
                 <div class="form-row" style="display: flex; gap: 12px;">
                     <div class="form-group" style="flex: 1;">
@@ -277,8 +287,11 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="ashStorage">Ash Storage Location</label>
-                    <input type="text" id="ashStorage" placeholder="e.g., Columbarium A — Level 1, Niche N-1">
+                    <label for="ashStorage" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Ash Storage Location</span>
+                        <span style="font-size: 0.70rem; color: #059669; font-weight: 700;"><i class="fas fa-check-double"></i> Auto-Formatted</span>
+                    </label>
+                    <input type="text" id="ashStorage" placeholder="e.g., [SJ-L3-05] St. Jude Thaddeus Sanctuary — Level 3 (Prime Eye-Level), Niche SJ-L3-05">
                 </div>
                 <div class="form-group">
                     <label for="cremationNotes">Notes</label>
@@ -301,7 +314,10 @@
                 </div>
                 <div class="form-group">
                     <label for="assignNicheNumber">Niche Number</label>
-                    <input type="text" id="assignNicheNumber" readonly>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="text" id="assignNicheNumber" readonly style="flex: 1;">
+                        <span id="assignTierBadge" style="display: none; padding: 4px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;"></span>
+                    </div>
                 </div>
                 <div class="form-row" style="display: flex; gap: 12px;">
                     <div class="form-group" style="flex: 1;">
@@ -310,8 +326,12 @@
                     </div>
                     <div class="form-group" style="flex: 1;">
                         <label for="assignLevel">Level</label>
-                        <input type="number" id="assignLevel" min="1" max="10" value="1">
+                        <input type="number" id="assignLevel" min="1" max="10" value="1" readonly>
                     </div>
+                </div>
+                <div class="form-group">
+                    <label for="assignAshStorage">Storage Location Code</label>
+                    <input type="text" id="assignAshStorage" readonly style="background: #f8fafc; font-size: 0.82rem; color: #334155;">
                 </div>
                 <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span></button>
             </form>

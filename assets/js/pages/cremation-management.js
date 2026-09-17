@@ -99,6 +99,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     const assignColumbarium = document.getElementById('assignColumbarium');
     const assignLevel = document.getElementById('assignLevel');
     const assignDecedentId = document.getElementById('assignDecedentId');
+    const assignTierBadge = document.getElementById('assignTierBadge');
+    const assignAshStorage = document.getElementById('assignAshStorage');
+    const tierBtnPrime = document.getElementById('tierBtnPrime');
+    const tierBtnAny = document.getElementById('tierBtnAny');
+    let currentSuggestTier = 'prime';
 
     const NEW_COLUMBARIUM_VALUE = '__new__';
 
@@ -776,15 +781,30 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    suggestNicheBtn.addEventListener('click', async () => {
+    function updateAshStorageLocation() {
+        const columbarium = currentModalColumbariumValue() || 'Columbarium A';
+        const nicheNum = (nicheNumberInput.value || '').trim();
+        const lvl = parseInt(levelInput.value, 10) || 1;
+        if (!nicheNum) return;
+
+        const isPrime = (lvl === 3 || lvl === 4);
+        const tierTag = isPrime ? ' (Prime Eye-Level)' : '';
+        ashStorageInput.value = `[${nicheNum}] ${columbarium} — Level ${lvl}${tierTag}, Niche ${nicheNum}`;
+    }
+
+    async function triggerSmartSuggestion() {
         const columbarium = currentModalColumbariumValue() || 'Columbarium A';
         await withButtonLoading(suggestNicheBtn, async () => {
             try {
-                const result = await apiRequest(`cremations/suggest-niche?columbarium=${encodeURIComponent(columbarium)}`);
+                const result = await apiRequest(`cremations/suggest-niche?columbarium=${encodeURIComponent(columbarium)}&tier=${encodeURIComponent(currentSuggestTier)}`);
                 if (result.available) {
                     nicheNumberInput.value = result.niche_number;
                     levelInput.value = result.level || 1;
-                    suggestNicheHint.textContent = `Suggested niche ${result.niche_number} in ${result.columbarium} — you can still adjust it.`;
+                    const tierLabel = (result.level == 3 || result.level == 4) ? '👑 Prime Eye-Level' : `Standard Level ${result.level}`;
+                    suggestNicheHint.innerHTML = `<i class="fas fa-magic"></i> Suggested <strong>${escapeHtml(result.niche_number)}</strong> (${tierLabel}) in <em>${escapeHtml(result.columbarium)}</em>`;
+                    if (result.note) {
+                        suggestNicheHint.innerHTML += `<br><small style="color: #d97706; font-weight: 600;"><i class="fas fa-info-circle"></i> ${escapeHtml(result.note)}</small>`;
+                    }
                     suggestNicheHint.style.display = 'block';
                     updateAshStorageLocation();
                 } else {
@@ -796,7 +816,34 @@ document.addEventListener('DOMContentLoaded', async function() {
                 suggestNicheHint.style.display = 'block';
             }
         });
-    });
+    }
+
+    suggestNicheBtn.addEventListener('click', triggerSmartSuggestion);
+
+    // Tier selector pill toggles
+    if (tierBtnPrime && tierBtnAny) {
+        tierBtnPrime.addEventListener('click', () => {
+            currentSuggestTier = 'prime';
+            tierBtnPrime.classList.add('active');
+            tierBtnAny.classList.remove('active');
+            triggerSmartSuggestion();
+        });
+
+        tierBtnAny.addEventListener('click', () => {
+            currentSuggestTier = 'any';
+            tierBtnAny.classList.add('active');
+            tierBtnPrime.classList.remove('active');
+            triggerSmartSuggestion();
+        });
+    }
+
+    // Auto-update ash storage when user edits inputs manually
+    nicheNumberInput.addEventListener('input', updateAshStorageLocation);
+    levelInput.addEventListener('change', updateAshStorageLocation);
+    modalColumbariumSelect.addEventListener('change', updateAshStorageLocation);
+    if (modalColumbariumNew) {
+        modalColumbariumNew.addEventListener('input', updateAshStorageLocation);
+    }
 
     async function openAddModal() {
         document.getElementById('modalTitle').innerText = 'Record Cremation & Assign Niche';
@@ -804,22 +851,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('cremationId').value = '';
         suggestNicheHint.style.display = 'none';
 
+        // Reset tier selector preference to Prime
+        currentSuggestTier = 'prime';
+        if (tierBtnPrime && tierBtnAny) {
+            tierBtnPrime.classList.add('active');
+            tierBtnAny.classList.remove('active');
+        }
+
         const preferredCol = currentColumbarium || (distinctColumbariums[0] || 'Columbarium A');
         populateModalColumbariums(preferredCol);
 
         await populateDecedents();
 
-        // Auto-fetch next available suggestion on open
-        try {
-            const suggestion = await apiRequest(`cremations/suggest-niche?columbarium=${encodeURIComponent(preferredCol)}`);
-            if (suggestion.available) {
-                nicheNumberInput.value = suggestion.niche_number;
-                levelInput.value = suggestion.level || 1;
-                updateAshStorageLocation();
-            }
-        } catch (e) {
-            // Non-fatal if suggestion fails
-        }
+        // Auto-fetch next available suggestion on open with tier preference
+        await triggerSmartSuggestion();
 
         openModal(cremationModal);
     }
@@ -855,7 +900,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     function openAssignModal(niche) {
         assignNicheNumber.value = niche.niche_number;
         assignColumbarium.value = niche.columbarium || 'Columbarium A';
-        assignLevel.value = niche.level || 1;
+        const lvl = parseInt(niche.level, 10) || 1;
+        assignLevel.value = lvl;
+
+        // Display Prime / Standard badge
+        if (assignTierBadge) {
+            const isPrime = (lvl === 3 || lvl === 4);
+            assignTierBadge.style.display = 'inline-flex';
+            if (isPrime) {
+                assignTierBadge.className = 'tier-badge-prime';
+                assignTierBadge.innerHTML = '<i class="fas fa-crown"></i> Prime Eye-Level';
+            } else {
+                assignTierBadge.className = 'tier-badge-standard';
+                assignTierBadge.innerHTML = `<i class="fas fa-layer-group"></i> Level ${lvl}`;
+            }
+        }
+
+        // Preview standard storage location
+        if (assignAshStorage) {
+            const isPrime = (lvl === 3 || lvl === 4);
+            const tierTag = isPrime ? ' (Prime Eye-Level)' : '';
+            assignAshStorage.value = `[${niche.niche_number}] ${niche.columbarium || 'Columbarium A'} — Level ${lvl}${tierTag}, Niche ${niche.niche_number}`;
+        }
+
         populateDecedentsForAssign();
         openModal(assignModal);
     }
@@ -963,6 +1030,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             niche_number: assignNicheNumber.value.trim(),
             columbarium: assignColumbarium.value.trim() || null,
             level: parseInt(assignLevel.value, 10) || 1,
+            ash_storage_location: assignAshStorage ? assignAshStorage.value.trim() : null,
             status: 'Completed'
         };
 

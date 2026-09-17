@@ -860,20 +860,14 @@ class CremationController {
         ];
     }
 
-    public function suggestNiche($columbarium = null) {
-        // getNiches()/the virtual 10-slot grid only correctly represents a
-        // SINGLE columbarium at a time — passing null merges every
-        // columbarium's records into one grid keyed by niche_number suffix,
-        // so two columbariums that each have an "N-2" would collide and
-        // overwrite each other. Always pin to a real columbarium here
-        // (defaulting to the same 'Columbarium A' default used elsewhere)
-        // so the suggestion is never computed against that merged view.
+    public function suggestNiche($columbarium = null, $tierPreference = 'any') {
+        // Pin to a real columbarium, defaulting to 'Columbarium A'
         $columbarium = $columbarium ?: 'Columbarium A';
-        $suggestion = $this->cremationModel->findNextAvailableNiche($columbarium);
+        $suggestion = $this->cremationModel->findNextAvailableNiche($columbarium, $tierPreference ?: 'any');
         if (!$suggestion) {
             return [
                 'available' => false,
-                'message' => 'No available niches in this columbarium. Try another columbarium.',
+                'message' => 'No available niches in this columbarium. Try another columbarium or use Batch Generate to add slots.',
             ];
         }
         return array_merge(['available' => true], $suggestion);
@@ -904,13 +898,17 @@ class CremationController {
 
         $deceasedId = (int) $data['deceased_id'];
         $nicheNumber = $data['niche_number'];
+        $storageLocation = !empty($data['ash_storage_location'])
+            ? $data['ash_storage_location']
+            : (!empty($data['columbarium']) ? "[{$nicheNumber}] {$data['columbarium']} — Level " . ($data['level'] ?? 1) . ", Niche {$nicheNumber}" : $nicheNumber);
+
         $cremationData = [
             'deceased_id' => $deceasedId,
             'niche_number' => $nicheNumber,
             'columbarium' => $data['columbarium'] ?? null,
             'level' => isset($data['level']) ? (int) $data['level'] : null,
             'status' => 'Completed',
-            'ash_storage_location' => $nicheNumber,
+            'ash_storage_location' => $storageLocation,
             'created_by' => $userId,
         ];
 
@@ -941,12 +939,12 @@ class CremationController {
                     }
                     return true;
                 },
-                function () use ($cremationModel, $decedentModel, $cremationData, $deceasedId, $nicheNumber) {
+                function () use ($cremationModel, $decedentModel, $cremationData, $deceasedId, $nicheNumber, $storageLocation) {
                     $newId = $cremationModel->create($cremationData);
                     if ($newId) {
                         $decedentModel->patchCremationStatus($deceasedId, [
                             'is_cremated' => 'yes',
-                            'ash_storage' => $nicheNumber,
+                            'ash_storage' => $storageLocation,
                         ]);
                     }
                     return ['cremation_id' => $newId, 'niche_number' => $nicheNumber];

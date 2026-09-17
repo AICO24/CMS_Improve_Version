@@ -1475,3 +1475,96 @@
 [data-theme="dark"] .deceased-name {
     color: #34d399;
 }
+
+/* ========================================================
+   TIER SELECTOR PILLS & BADGES (Batch 3)
+   ======================================================== */
+.suggest-tier-selector {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.tier-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    transition: all 160ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tier-pill-btn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a;
+    transform: translateY(-1px);
+}
+
+.tier-pill-btn.active[data-tier="prime"] {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #d97706;
+    color: #92400e;
+    box-shadow: 0 2px 6px rgba(217, 119, 6, 0.22);
+}
+
+.tier-pill-btn.active[data-tier="any"] {
+    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+    border-color: #6366f1;
+    color: #3730a3;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.2);
+}
+
+.tier-badge-prime {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 1px solid #d97706;
+    color: #92400e;
+}
+
+.tier-badge-standard {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+}
+
+[data-theme="dark"] .tier-pill-btn {
+    background: #1e293b;
+    border-color: #334155;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .tier-pill-btn:hover {
+    background: #27354a;
+    border-color: #475569;
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .tier-pill-btn.active[data-tier="prime"] {
+    background: rgba(217, 119, 6, 0.2);
+    border-color: #d97706;
+    color: #fcd34d;
+}
+
+[data-theme="dark"] .tier-pill-btn.active[data-tier="any"] {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: #6366f1;
+    color: #c7d2fe;
+}
+
+[data-theme="dark"] .tier-badge-prime {
+    background: rgba(217, 119, 6, 0.2);
+    border-color: #d97706;
+    color: #fcd34d;
+}
+
+[data-theme="dark"] .tier-badge-standard {
+    background: #334155;
+    border-color: #475569;
+    color: #cbd5e1;
+}
