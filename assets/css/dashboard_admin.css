@@ -265,11 +265,134 @@
     opacity: 0.9;
 }
 
-/* .stats-row / .stat-card / .stat-title / .stat-value / .stat-sub now come from
-   assets/css/dashboard.css so this dashboard's stat cards match every other
-   module instead of using their own smaller, unshadowed variant. */
+/* ========== KPI / STAT CARDS (Reports & Forecast pattern) ========== */
 .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
     margin-bottom: 20px;
+}
+
+.stats-row > .stat-card {
+    position: relative;
+    min-height: 124px;
+    height: 100%;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-left: 8px solid #2b3658;
+    background: linear-gradient(135deg, #2b3658 0%, #465376 100%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    border-radius: var(--radius-lg, 20px);
+    contain: layout;
+    transition: transform 220ms cubic-bezier(0.2, 0, 0.2, 1),
+                box-shadow 220ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.stats-row > .stat-card::before {
+    content: "";
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    right: -36px;
+    top: -30px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 70%);
+    pointer-events: none;
+}
+
+.stats-row > .stat-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 52%);
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+.stats-row > .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
+}
+
+.stats-row > .stat-card .stat-title,
+.stats-row > .stat-card .stat-value,
+.stats-row > .stat-card .stat-sub {
+    position: relative;
+    z-index: 1;
+}
+
+.stats-row > .stat-card .stat-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.76rem;
+    line-height: 1.25;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0;
+}
+
+.stats-row > .stat-card .card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md, 12px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    margin-left: auto;
+    order: 2;
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    font-size: 13px;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.stats-row > .stat-card .stat-value {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    color: #ffffff;
+    font-size: clamp(1.4rem, 1.6vw, 1.85rem);
+    font-weight: 700;
+    line-height: 1.2;
+    text-shadow: 0 1px 2px rgba(15, 23, 42, 0.20);
+    margin: 8px 0 2px;
+}
+
+.stats-row > .stat-card .stat-sub {
+    margin-top: 4px;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.78rem;
+    line-height: 1.3;
+    min-height: 18px;
+}
+
+/* Accent Color Variants */
+.stats-row > .stat-card.accent-navy {
+    border-left-color: #2b3658;
+    background: linear-gradient(135deg, #2b3658 0%, #465376 100%);
+}
+
+.stats-row > .stat-card.accent-teal {
+    border-left-color: #0f766e;
+    background: linear-gradient(135deg, #0d9488 0%, #2fb5aa 100%);
+}
+
+.stats-row > .stat-card.accent-green {
+    border-left-color: #163229;
+    background: linear-gradient(135deg, #2c5e47 0%, #3b7055 100%);
+}
+
+.stats-row > .stat-card.accent-amber {
+    border-left-color: #92400e;
+    background: linear-gradient(135deg, #b45309 0%, #d08a28 100%);
 }
 
 .mid-row {
@@ -468,6 +591,44 @@
 .dashboard-body[data-theme="dark"] .dashboard-footer__text::before,
 .dashboard-body[data-theme="dark"] .dashboard-footer__text::after {
     background: var(--color-text-muted);
+}
+
+/* Dark theme adjustments for KPI cards */
+.dashboard-body[data-theme="dark"] .stats-row > .stat-card {
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.dashboard-body[data-theme="dark"] .stats-row > .stat-card .stat-title {
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.dashboard-body[data-theme="dark"] .stats-row > .stat-card .stat-value {
+    color: #ffffff;
+}
+
+.dashboard-body[data-theme="dark"] .stats-row > .stat-card .stat-sub {
+    color: rgba(255, 255, 255, 0.80);
+}
+
+.dashboard-body[data-theme="dark"] .stats-row > .stat-card.accent-navy {
+    border-left-color: #818cf8;
+    background: linear-gradient(135deg, #1e2238 0%, #2b3352 100%);
+}
+
+.dashboard-body[data-theme="dark"] .stats-row > .stat-card.accent-teal {
+    border-left-color: #2dd4bf;
+    background: linear-gradient(135deg, #0a3330 0%, #104843 100%);
+}
+
+.dashboard-body[data-theme="dark"] .stats-row > .stat-card.accent-green {
+    border-left-color: #34d399;
+    background: linear-gradient(135deg, #0f2e21 0%, #1a4231 100%);
+}
+
+.dashboard-body[data-theme="dark"] .stats-row > .stat-card.accent-amber {
+    border-left-color: #fbbf24;
+    background: linear-gradient(135deg, #381e05 0%, #522d08 100%);
 }
 /* .recent-list / .recent-item (+ .availability-item/-track/-fill) now
    come from the shared dashboard.css (Phase 5a) — this file's own
