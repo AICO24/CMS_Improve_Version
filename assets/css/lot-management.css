@@ -396,29 +396,30 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
+    gap: 12px;
+    flex-wrap: nowrap;
 }
 
 .records-tabs-track {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
     padding: 3px;
     border-radius: var(--radius-md, 10px);
     background: rgba(255, 255, 255, 0.88);
     border: 1px solid rgba(44, 94, 71, 0.14);
     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+    flex-shrink: 0;
 }
 
 .records-tab-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 5px;
     min-width: auto;
-    height: 34px;
-    padding: 0 11px;
+    height: 36px;
+    padding: 0 10px;
     border-radius: var(--radius-sm, 7px);
     border: 1px solid transparent;
     background: transparent;
@@ -470,18 +471,61 @@
 .panel-action-buttons {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
     gap: 6px;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Primary Action Button (.btn-add.type1) — Manage Bookings Canonical Style ── */
+.btn-add.type1 {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    padding: 0 14px;
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+    color: #ffffff;
+    font-size: 0.80rem;
+    font-weight: 700;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    transition: all 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.btn-add.type1:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.45);
+    background: linear-gradient(135deg, #059669 0%, #065f46 100%);
+    color: #ffffff;
+}
+
+.btn-add.type1:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+}
+
+.btn-add.type1 .btn-txt {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.btn-add.type1 i {
+    font-size: 0.82rem;
 }
 
 .panel-action-buttons .btn-secondary,
 .panel-action-buttons .btn-primary {
-    height: 34px;
-    border-radius: var(--radius-sm, 7px);
+    height: 36px;
+    border-radius: var(--radius-sm, 8px);
     font-size: 0.78rem;
     font-weight: 700;
     gap: 6px;
-    padding: 0 12px;
+    padding: 0 11px;
     box-shadow: 0 2px 4px rgba(15, 23, 42, 0.04);
     display: inline-flex;
     align-items: center;
@@ -489,65 +533,6 @@
     cursor: pointer;
     transition: all 160ms ease;
     white-space: nowrap;
-}
-
-/* ── Signature Animated Add Button (.button.type1.btn-add-lot) ── */
-.button.type1.btn-add-lot {
-    height: 34px;
-    padding: 0 16px;
-    position: relative;
-    background: transparent;
-    border: 2px solid #2c5e47;
-    border-radius: 30px;
-    cursor: pointer;
-    overflow: hidden;
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    color: #2c5e47;
-    font-size: 0.78rem;
-    font-weight: 700;
-    transition: all 0.5s ease-in-out;
-    white-space: nowrap;
-    text-decoration: none;
-    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.04);
-}
-
-.button.type1.btn-add-lot .btn-txt {
-    position: relative;
-    z-index: 2;
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    transition: color 0.3s ease;
-}
-
-.button.type1.btn-add-lot::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 10px;
-    height: 10px;
-    background: #2c5e47;
-    border-radius: 30px;
-    visibility: hidden;
-    transition: all 0.5s ease-in-out;
-    z-index: 1;
-}
-
-.button.type1.btn-add-lot:hover {
-    color: #ffffff;
-    border-color: #2c5e47;
-    box-shadow: 0 4px 18px rgba(44, 94, 71, 0.45);
-    transform: translateY(-1px);
-}
-
-.button.type1.btn-add-lot:hover::after {
-    visibility: visible;
-    transform: scale(100) translateX(2px);
 }
 
 .panel-action-buttons .btn-primary {
@@ -571,15 +556,16 @@
 .panel-action-buttons .btn-secondary:hover {
     background: #f8fafc;
     border-color: #94a3b8;
+    color: #0f172a;
     transform: translateY(-1px);
 }
 
 .report-export-button {
-    height: 34px;
-    padding: 0 12px;
+    height: 36px;
+    padding: 0 11px;
     font-size: 0.78rem;
     font-weight: 700;
-    border-radius: var(--radius-sm, 7px);
+    border-radius: var(--radius-sm, 8px);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -649,6 +635,7 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
     padding-right: 4px;
+    white-space: nowrap;
 }
 
 .panel-filters-group .filter-bar__label i {
@@ -663,92 +650,84 @@
     font-size: 0.72rem;
 }
 
-/* ── Signature Animated Search Box (.search-box + .mainbox) ── */
-.panel-filters-group .search-box {
+/* ── Manage Bookings Search Field Component (Floating Label + SVG Icon) ── */
+.panel-filters-group .search-field {
+    flex: 1 1 260px;
+    min-width: 220px;
+    max-width: 380px;
     position: relative;
-    flex: 1 1 240px;
-    min-width: 200px;
-    max-width: 340px;
 }
 
-.panel-filters-group .mainbox {
+.panel-filters-group .search-field__input {
     width: 100%;
     height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 4px 0 16px;
-    border-radius: 40px;
-    background: #ffffff;
-    border: 1.5px solid #d8e5dd;
-    transition: all 0.35s cubic-bezier(0.2, 0, 0.2, 1);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-/* Search Box Hover Effect */
-.panel-filters-group .mainbox:hover {
-    border-color: #2c5e47;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(44, 94, 71, 0.15);
-}
-
-/* Search Box Focus Within Effect */
-.panel-filters-group .mainbox:focus-within {
-    border-color: #2c5e47;
-    box-shadow:
-        0 0 0 3px rgba(44, 94, 71, 0.15),
-        0 8px 20px rgba(44, 94, 71, 0.16);
-}
-
-.panel-filters-group .search_input {
-    flex: 1;
-    height: 100%;
-    border: none;
-    outline: none;
-    background: transparent;
     font-size: 0.82rem;
+    padding: 0 14px 0 38px;
+    border-radius: var(--radius-md, 8px);
+    border: 1.5px solid rgba(44, 94, 71, 0.22);
+    background: #ffffff;
     color: #1e293b;
-    font-family: inherit;
-    font-weight: 500;
+    outline: none;
+    transition: all 0.18s ease;
 }
 
-.panel-filters-group .search_input::placeholder {
-    color: #94a3b8;
+.panel-filters-group .search-field__input:focus {
+    background: #ffffff;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
 }
 
-.panel-filters-group .iconContainer {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
+.panel-filters-group .search-field__icon {
+    position: absolute;
+    left: 12px;
+    right: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: #64748b;
+    pointer-events: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #2c5e47;
-    color: #ffffff;
-    transition: all 0.35s cubic-bezier(0.2, 0, 0.2, 1);
-    flex-shrink: 0;
 }
 
-.panel-filters-group .search_icon {
-    font-size: 12px;
+.panel-filters-group .search-field__icon svg {
+    width: 16px;
+    height: 16px;
 }
 
-/* Search Icon Animation */
-.panel-filters-group .mainbox:hover .iconContainer {
-    transform: rotate(15deg) scale(1.08);
-    background: #214c39;
+.panel-filters-group .search-field__label {
+    position: absolute;
+    left: 38px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.80rem;
+    color: #64748b;
+    background: #ffffff;
+    padding: 0 4px;
+    pointer-events: none;
+    transition: all 0.18s ease;
+    max-width: calc(100% - 46px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.panel-filters-group .mainbox:focus-within .iconContainer {
-    transform: rotate(-15deg) scale(1.15);
-    background: #10b981;
+.panel-filters-group .search-field__input:focus ~ .search-field__label,
+.panel-filters-group .search-field__input:not(:placeholder-shown) ~ .search-field__label {
+    top: 0;
+    left: 12px;
+    transform: translateY(-50%) scale(0.85);
+    color: #059669;
+    font-weight: 700;
 }
 
 .filter-select {
-    height: 34px;
+    height: 36px;
     padding: 0 28px 0 10px;
-    border: 1px solid var(--color-border, #d8e5dd);
-    border-radius: var(--radius-sm, 7px);
+    border: 1.5px solid rgba(44, 94, 71, 0.22);
+    border-radius: var(--radius-sm, 8px);
     background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2364748b'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E") no-repeat right 8px center/14px 14px;
     color: #1e293b;
     font-size: 0.80rem;
@@ -761,8 +740,8 @@
 
 .filter-select:focus {
     outline: none;
-    border-color: var(--color-primary-500, #2c5e47);
-    box-shadow: 0 0 0 3px rgba(44, 94, 71, 0.15);
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
 }
 
 .btn-outline-danger {
@@ -871,6 +850,50 @@
     color: #dc2626;
 }
 
+/* Responsive control panel adjustments */
+@media (max-width: 1180px) {
+    .panel-top-row {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .records-tabs-track {
+        overflow-x: auto;
+        max-width: 100%;
+        padding-bottom: 4px;
+    }
+
+    .panel-action-buttons {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 768px) {
+    .panel-bottom-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .panel-filters-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .panel-filters-group .search-field {
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .filter-select {
+        max-width: 100%;
+    }
+
+    .view-toggle-btns {
+        align-self: flex-start;
+    }
+}
+
 /* Dark mode overrides */
 [data-theme="dark"] .lot-control-panel {
     background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.90));
@@ -904,46 +927,45 @@
     color: #f1f5f9;
 }
 
-[data-theme="dark"] .button.type1.btn-add-lot {
-    border-color: #10b981;
-    color: #34d399;
+[data-theme="dark"] .btn-add.type1 {
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45);
 }
 
-[data-theme="dark"] .button.type1.btn-add-lot::after {
-    background: #10b981;
-}
-
-[data-theme="dark"] .button.type1.btn-add-lot:hover {
-    color: #ffffff;
-    border-color: #10b981;
-    box-shadow: 0 4px 18px rgba(16, 185, 129, 0.40);
-}
-
-[data-theme="dark"] .panel-filters-group .mainbox {
+[data-theme="dark"] .panel-action-buttons .btn-secondary {
     background: #1e293b;
     border-color: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    color: #cbd5e1;
 }
 
-[data-theme="dark"] .panel-filters-group .mainbox:hover {
-    border-color: #10b981;
+[data-theme="dark"] .panel-action-buttons .btn-secondary:hover {
+    background: #334155;
+    color: #ffffff;
 }
 
-[data-theme="dark"] .panel-filters-group .mainbox:focus-within {
+[data-theme="dark"] .panel-filters-group .search-field__input {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .panel-filters-group .search-field__input:focus {
+    background: #1e293b;
     border-color: #10b981;
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
 }
 
-[data-theme="dark"] .panel-filters-group .search_input {
-    color: #f1f5f9;
+[data-theme="dark"] .panel-filters-group .search-field__label {
+    background: #1e293b;
+    color: #94a3b8;
 }
 
-[data-theme="dark"] .panel-filters-group .search_input::placeholder {
-    color: #64748b;
+[data-theme="dark"] .panel-filters-group .search-field__input:focus ~ .search-field__label,
+[data-theme="dark"] .panel-filters-group .search-field__input:not(:placeholder-shown) ~ .search-field__label {
+    color: #34d399;
 }
 
-[data-theme="dark"] .panel-filters-group .iconContainer {
-    background: #10b981;
+[data-theme="dark"] .panel-filters-group .search-field__icon {
+    color: #94a3b8;
 }
 
 [data-theme="dark"] .view-toggle-btns {
