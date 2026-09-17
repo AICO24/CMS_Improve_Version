@@ -408,14 +408,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     // With no filters active it just reuses allLots — no extra round trip
     // for the common "no filter" case or right after Reset Filters.
     async function refreshVisibleLots() {
+        tableCurrentPage = 1;
         if (!hasActiveFilters()) {
             visibleLots = allLots;
-            renderHierarchyRoot();
+            updateViewDisplay();
             return;
         }
         try {
             visibleLots = await loadLots({ ...filters });
-            renderHierarchyRoot();
+            updateViewDisplay();
         } catch (error) {
             showErrorState(error.message);
         }
@@ -583,27 +584,273 @@ document.addEventListener('DOMContentLoaded', async function() {
             allSections.map(section => `<option value="${escapeHtml(section.section_name)}">${escapeHtml(section.section_name)}</option>`).join('');
     }
 
-    // ---------- View mode toggle (Card / Interactive Slot Grid) ----------
+    // ---------- Tri-View System (Card / Interactive Slot Grid / Polymorphic Data Table Registry) ----------
 
     const gridLegend = document.getElementById('gridLegend');
     const btnCardView = document.getElementById('btnCardView');
     const btnGridView = document.getElementById('btnGridView');
+    const btnTableView = document.getElementById('btnTableView');
+    const lotTableCard = document.getElementById('lotTableCard');
+    const lotTableBody = document.getElementById('lotTableBody');
+    const lotTableBadgeCount = document.getElementById('lotTableBadgeCount');
+    const lotTableFilterSummary = document.getElementById('lotTableFilterSummary');
+    const lotPaginationInfo = document.getElementById('lotPaginationInfo');
+    const lotPrevPage = document.getElementById('lotPrevPage');
+    const lotNextPage = document.getElementById('lotNextPage');
+    const lotPaginationJumpForm = document.getElementById('lotPaginationJumpForm');
+    const lotPageJumpInput = document.getElementById('lotPageJumpInput');
 
-    if (btnCardView && btnGridView) {
-        btnCardView.addEventListener('click', () => {
-            activeViewMode = 'card';
-            btnCardView.classList.add('active');
-            btnGridView.classList.remove('active');
-            gridLegend.style.display = 'none';
+    let tableCurrentPage = 1;
+    const tablePerPage = 10;
+
+    function updateViewDisplay() {
+        if (activeViewMode === 'table') {
+            if (hierarchyEl) hierarchyEl.style.display = 'none';
+            if (gridLegend) gridLegend.style.display = 'none';
+            if (lotTableCard) lotTableCard.style.display = 'block';
+            renderDataTable();
+        } else if (activeViewMode === 'grid') {
+            if (lotTableCard) lotTableCard.style.display = 'none';
+            if (hierarchyEl) hierarchyEl.style.display = 'block';
+            if (gridLegend) gridLegend.style.display = 'flex';
             renderHierarchyRoot();
+        } else {
+            if (lotTableCard) lotTableCard.style.display = 'none';
+            if (hierarchyEl) hierarchyEl.style.display = 'block';
+            if (gridLegend) gridLegend.style.display = 'none';
+            renderHierarchyRoot();
+        }
+    }
+
+    function setViewMode(mode) {
+        activeViewMode = mode;
+        if (btnCardView) btnCardView.classList.toggle('active', mode === 'card');
+        if (btnGridView) btnGridView.classList.toggle('active', mode === 'grid');
+        if (btnTableView) btnTableView.classList.toggle('active', mode === 'table');
+        updateViewDisplay();
+    }
+
+    if (btnCardView) btnCardView.addEventListener('click', () => setViewMode('card'));
+    if (btnGridView) btnGridView.addEventListener('click', () => setViewMode('grid'));
+    if (btnTableView) btnTableView.addEventListener('click', () => setViewMode('table'));
+
+    function renderDataTable() {
+        if (!lotTableBody) return;
+
+        const totalItems = visibleLots.length;
+        const totalPages = Math.max(1, Math.ceil(totalItems / tablePerPage));
+
+        if (tableCurrentPage > totalPages) tableCurrentPage = totalPages;
+        if (tableCurrentPage < 1) tableCurrentPage = 1;
+
+        const startIndex = (tableCurrentPage - 1) * tablePerPage;
+        const endIndex = Math.min(startIndex + tablePerPage, totalItems);
+        const pageLots = visibleLots.slice(startIndex, endIndex);
+
+        // Update badge and filter summary
+        if (lotTableBadgeCount) {
+            lotTableBadgeCount.innerText = `${totalItems} ${totalItems === 1 ? 'lot' : 'lots'}`;
+        }
+        if (lotTableFilterSummary) {
+            if (hasActiveFilters()) {
+                const parts = [];
+                if (filters.status) parts.push(`Status: ${filters.status}`);
+                if (filters.section) parts.push(`Section: ${filters.section}`);
+                if (filters.category) parts.push(`Category: ${filters.category}`);
+                if (filters.search) parts.push(`Search: "${filters.search}"`);
+                lotTableFilterSummary.innerText = `Filtered by: ${parts.join(' | ')}`;
+            } else {
+                lotTableFilterSummary.innerText = `Showing all ${totalItems} registered lots`;
+            }
+        }
+
+        // Render rows
+        if (!pageLots.length) {
+            lotTableBody.innerHTML = `
+                <tr>
+                    <td colspan="8">
+                        <div class="lot-empty-state">
+                            <i class="fas fa-filter-circle-xmark"></i>
+                            <strong>No matching lots found</strong>
+                            <span>Try adjusting your search query or reset the active filters.</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        } else {
+            lotTableBody.innerHTML = pageLots.map(lot => {
+                const occupantHtml = lot.occupant_name
+                    ? `<div class="occupant-cell">
+                        <span class="occupant-name"><i class="fas fa-user"></i> ${escapeHtml(lot.occupant_name)}</span>
+                        <span class="location-block">${lot.burial_date ? 'Interred: ' + escapeHtml(lot.burial_date) : (lot.date_of_death ? 'DOD: ' + escapeHtml(lot.date_of_death) : 'Occupied Record')}</span>
+                       </div>`
+                    : (lot.reserved_for_name
+                        ? `<div class="occupant-cell">
+                            <span class="occupant-reserved"><i class="fas fa-user-clock"></i> ${escapeHtml(lot.reserved_for_name)}</span>
+                            <span class="location-block">${lot.burial_status ? 'Status: ' + escapeHtml(lot.burial_status) : 'Reservation Active'}</span>
+                           </div>`
+                        : `<span class="occupant-vacant"><i class="fas fa-circle-check"></i> Vacant / Available</span>`
+                    );
+
+                const leaseHtml = lot.lease_end_date
+                    ? `<div class="location-cell">
+                        <span class="location-section" style="font-size:0.8rem;"><i class="fas fa-calendar-alt"></i> ${escapeHtml(lot.lease_end_date)}</span>
+                        <span class="location-block ${lot.days_until_expiration !== null && lot.days_until_expiration <= 30 ? 'text-danger' : ''}">${lot.days_until_expiration !== null ? (lot.days_until_expiration <= 0 ? 'Expired' : lot.days_until_expiration + ' days left') : ''}</span>
+                       </div>`
+                    : `<span class="occupant-vacant" style="color:#94a3b8;">—</span>`;
+
+                const isAvailable = lot.status === 'Available';
+                const quickActions = isAvailable ? `
+                    <button type="button" class="table-action-btn table-action-btn--reserve" title="Quick Reserve" data-id="${lot.lot_id}" data-number="${escapeHtml(lot.lot_number)}">
+                        <i class="fas fa-calendar-check"></i>
+                    </button>
+                    <button type="button" class="table-action-btn table-action-btn--pay" title="Quick Payment" data-id="${lot.lot_id}" data-number="${escapeHtml(lot.lot_number)}" data-price="${lot.price}">
+                        <i class="fas fa-receipt"></i>
+                    </button>
+                ` : '';
+
+                return `
+                    <tr data-id="${lot.lot_id}">
+                        <td>
+                            <div class="lot-id-cell">
+                                <div class="lot-number-title">
+                                    <i class="fas fa-monument"></i>
+                                    <span>${escapeHtml(lot.lot_number)}</span>
+                                </div>
+                                <span class="location-block">Plot ID #${lot.lot_id}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="location-cell">
+                                <span class="location-section"><i class="fas fa-map-pin"></i> ${escapeHtml(lot.section_name || 'Unassigned')}</span>
+                                <span class="location-block">Block: ${escapeHtml(lot.block_name || 'N/A')}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="lot-pill"><i class="fas ${categoryIcon(lot.lot_type_name)}"></i> ${escapeHtml(lot.lot_type_name || 'Standard')}</span>
+                        </td>
+                        <td>${occupantHtml}</td>
+                        <td>${leaseHtml}</td>
+                        <td>
+                            <div class="location-cell">
+                                <span class="location-section" style="color:var(--color-primary-700, #047857);">₱${formatPrice(lot.price)}</span>
+                                <span class="location-block">${escapeHtml(lot.dimensions || 'Standard')}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-pill status-${(lot.status || '').toLowerCase()}">
+                                <span class="dot"></span>
+                                ${escapeHtml(lot.status)}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="table-action-buttons">
+                                <button type="button" class="table-action-btn table-action-btn--view" title="View details" data-id="${lot.lot_id}">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button type="button" class="table-action-btn table-action-btn--edit" title="Edit lot" data-id="${lot.lot_id}">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                                ${quickActions}
+                                <button type="button" class="table-action-btn table-action-btn--delete" title="Delete lot" data-id="${lot.lot_id}" data-number="${escapeHtml(lot.lot_number)}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Update pagination controls
+        if (lotPaginationInfo) {
+            lotPaginationInfo.innerText = totalItems > 0
+                ? `Showing ${startIndex + 1} to ${endIndex} of ${totalItems} lots (Page ${tableCurrentPage} of ${totalPages})`
+                : `Showing 0 of 0 lots`;
+        }
+        if (lotPrevPage) {
+            lotPrevPage.disabled = tableCurrentPage <= 1;
+        }
+        if (lotNextPage) {
+            lotNextPage.disabled = tableCurrentPage >= totalPages;
+        }
+        if (lotPageJumpInput) {
+            lotPageJumpInput.max = totalPages;
+            lotPageJumpInput.placeholder = `Page ${tableCurrentPage}`;
+        }
+    }
+
+    // Table row action delegation and click handling
+    if (lotTableBody) {
+        lotTableBody.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.table-action-btn');
+            if (btn) {
+                const id = btn.dataset.id;
+                if (btn.classList.contains('table-action-btn--view')) {
+                    showViewModal(id);
+                } else if (btn.classList.contains('table-action-btn--edit')) {
+                    openEditModal(id);
+                } else if (btn.classList.contains('table-action-btn--reserve')) {
+                    const lotNumber = btn.dataset.number;
+                    window.location.href = `booking-assistant.html?service=burial&lot_id=${id}&lot_number=${encodeURIComponent(lotNumber)}`;
+                } else if (btn.classList.contains('table-action-btn--pay')) {
+                    const lotNumber = btn.dataset.number;
+                    const price = btn.dataset.price;
+                    window.location.href = `payments.html?lot_id=${id}&lot_number=${encodeURIComponent(lotNumber)}&price=${price}&reference_kind=lot`;
+                } else if (btn.classList.contains('table-action-btn--delete')) {
+                    const lotNumber = btn.dataset.number;
+                    if (confirm(`Delete lot ${lotNumber}? This cannot be undone.`)) {
+                        try {
+                            await apiRequest(`lots/${id}`, { method: 'DELETE' });
+                            await refreshAll();
+                        } catch (error) {
+                            alert('Failed to delete lot: ' + error.message);
+                        }
+                    }
+                }
+                return;
+            }
+
+            const tr = e.target.closest('tr[data-id]');
+            if (tr && !e.target.closest('a, button, input, select')) {
+                showViewModal(tr.dataset.id);
+            }
         });
+    }
 
-        btnGridView.addEventListener('click', () => {
-            activeViewMode = 'grid';
-            btnGridView.classList.add('active');
-            btnCardView.classList.remove('active');
-            gridLegend.style.display = 'flex';
-            renderHierarchyRoot();
+    // Pagination controls event listeners
+    if (lotPrevPage) {
+        lotPrevPage.addEventListener('click', () => {
+            if (tableCurrentPage > 1) {
+                tableCurrentPage--;
+                renderDataTable();
+            }
+        });
+    }
+
+    if (lotNextPage) {
+        lotNextPage.addEventListener('click', () => {
+            const totalPages = Math.max(1, Math.ceil(visibleLots.length / tablePerPage));
+            if (tableCurrentPage < totalPages) {
+                tableCurrentPage++;
+                renderDataTable();
+            }
+        });
+    }
+
+    if (lotPaginationJumpForm) {
+        lotPaginationJumpForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!lotPageJumpInput) return;
+            const totalPages = Math.max(1, Math.ceil(visibleLots.length / tablePerPage));
+            const targetPage = parseInt(lotPageJumpInput.value, 10);
+            if (!isNaN(targetPage) && targetPage >= 1 && targetPage <= totalPages) {
+                tableCurrentPage = targetPage;
+                renderDataTable();
+                lotPageJumpInput.value = '';
+            } else {
+                alert(`Please enter a valid page number between 1 and ${totalPages}`);
+            }
         });
     }
 

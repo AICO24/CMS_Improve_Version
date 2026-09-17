@@ -1704,4 +1704,474 @@
     width: 100%;
 }
 
-/* Replaced by .modal-action-row / .modal-action-btn above. */
+/* Replaced by .modal-action-row / .modal-action-btn above. */
+
+/* ========================================================
+   HIGH-DENSITY DATA TABLE REGISTRY (LOT MANAGEMENT)
+   ======================================================== */
+.chart-card.lot-table-card {
+    background: var(--color-surface, #ffffff);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    overflow: hidden;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-card .chart-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(248, 250, 252, 0.8));
+}
+
+.chart-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.chart-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--color-text, #1e293b);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chart-title i {
+    color: var(--color-primary-600, #059669);
+}
+
+.badge-emerald {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+
+.table-subtitle {
+    font-size: 0.82rem;
+    color: var(--color-text-muted, #64748b);
+    font-weight: 600;
+}
+
+.lot-data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 900px;
+}
+
+.lot-data-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.lot-data-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    font-size: 0.85rem;
+    color: #334155;
+}
+
+.lot-data-table tbody tr {
+    transition: background 0.15s ease;
+}
+
+.lot-data-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* Lot Plot Identifier Cell */
+.lot-id-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.lot-number-title {
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.lot-number-title i {
+    color: var(--color-primary-600, #059669);
+    font-size: 0.82rem;
+}
+
+/* Location Cell */
+.location-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 0.82rem;
+}
+
+.location-section {
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.location-block {
+    color: #64748b;
+    font-size: 0.76rem;
+}
+
+/* Occupant Cell */
+.occupant-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.occupant-name {
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.occupant-name i {
+    color: #94a3b8;
+    font-size: 0.75rem;
+}
+
+.occupant-vacant {
+    color: #94a3b8;
+    font-style: italic;
+    font-size: 0.82rem;
+}
+
+.occupant-reserved {
+    color: #b45309;
+    font-weight: 600;
+    font-size: 0.82rem;
+}
+
+/* Status Pills with Dots */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.status-pill .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-pill.status-available {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+.status-pill.status-available .dot {
+    background: #10b981;
+}
+
+.status-pill.status-reserved {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+.status-pill.status-reserved .dot {
+    background: #f59e0b;
+}
+
+.status-pill.status-occupied {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+.status-pill.status-occupied .dot {
+    background: #ef4444;
+}
+
+.status-pill.status-expired {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+.status-pill.status-expired .dot {
+    background: #64748b;
+}
+
+/* Circular Action Buttons (Matching Operations Standard) */
+.table-action-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.table-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05);
+    background: #ffffff;
+    padding: 0;
+}
+
+.table-action-btn i {
+    font-size: 12px;
+    transition: transform 0.2s ease;
+}
+
+/* 1. View Button (Blue) */
+.table-action-btn--view {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
+}
+.table-action-btn--view:hover {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* 2. Edit Button (Teal) */
+.table-action-btn--edit {
+    background: #f0fdfa;
+    color: #0d9488;
+    border-color: #99f6e4;
+}
+.table-action-btn--edit:hover {
+    background: #0d9488;
+    color: #ffffff;
+    border-color: #0d9488;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(13, 148, 136, 0.3);
+}
+
+/* 3. Quick Reserve Button (Amber) */
+.table-action-btn--reserve {
+    background: #fffbeb;
+    color: #d97706;
+    border-color: #fde68a;
+}
+.table-action-btn--reserve:hover {
+    background: #d97706;
+    color: #ffffff;
+    border-color: #d97706;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(217, 119, 6, 0.3);
+}
+
+/* 4. Quick Pay Button (Emerald) */
+.table-action-btn--pay {
+    background: #ecfdf5;
+    color: #059669;
+    border-color: #a7f3d0;
+}
+.table-action-btn--pay:hover {
+    background: #059669;
+    color: #ffffff;
+    border-color: #059669;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(5, 150, 105, 0.3);
+}
+
+/* 5. Delete Button (Red) */
+.table-action-btn--delete {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+}
+.table-action-btn--delete:hover {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(220, 38, 38, 0.3);
+}
+
+/* Docked Pagination Controls */
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 20px;
+    background: #ffffff;
+    border-top: 1px solid var(--color-border, #e2e8f0);
+}
+
+.pagination-info {
+    color: #64748b;
+    font-size: 0.84rem;
+    font-weight: 600;
+}
+
+.pagination-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.pagination-actions > button {
+    min-width: 90px;
+    height: 36px;
+    border-radius: var(--radius-md, 8px);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.pagination-divider {
+    width: 1px;
+    height: 28px;
+    background: #e2e8f0;
+    display: inline-block;
+}
+
+.pagination-jump {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.pagination-jump label {
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.pagination-jump input {
+    width: 70px;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid #d6dbe6;
+    border-radius: var(--radius-md, 8px);
+    background: #fff;
+    color: #1e293b;
+    font-size: 0.86rem;
+    text-align: center;
+}
+
+.pagination-jump button {
+    min-width: 50px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: var(--radius-md, 8px);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.lot-empty-state {
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #64748b;
+    padding: 24px;
+}
+
+.lot-empty-state i {
+    font-size: 24px;
+    color: #10b981;
+}
+
+/* Dark mode overrides for data table and pagination */
+[data-theme="dark"] .chart-card.lot-table-card {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .chart-card .chart-header {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .chart-title {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .lot-data-table th {
+    background: #0f172a;
+    color: #94a3b8;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .lot-data-table td {
+    border-color: rgba(255, 255, 255, 0.06);
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .lot-data-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .lot-number-title {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .location-section {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .occupant-name {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .pagination-controls {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .pagination-jump input {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f1f5f9;
+}

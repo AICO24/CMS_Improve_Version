@@ -220,8 +220,75 @@
                     <div class="legend-item"><span class="legend-badge expired">E</span> Expired</div>
                 </div>
 
-                <!-- Category -> Section -> Lot hierarchy -->
+                <!-- Category -> Section -> Lot hierarchy (Card View & Interactive Matrix Grid) -->
                 <div id="lotHierarchy" class="lot-hierarchy" aria-live="polite"></div>
+
+                <!-- ── High-Density Polymorphic Data Table Registry (View Mode: Registry Table) ── -->
+                <div class="chart-card lot-table-card" id="lotTableCard" style="display: none;">
+                    <div class="chart-header">
+                        <div class="chart-header-left">
+                            <h4 class="chart-title">
+                                <i class="fas fa-table-list"></i>
+                                <span>Cemetery Lot &amp; Plot Registry</span>
+                            </h4>
+                            <span class="badge badge-emerald" id="lotTableBadgeCount">0 lots</span>
+                        </div>
+                        <div class="chart-actions">
+                            <span class="table-subtitle" id="lotTableFilterSummary">Showing all cemetery plots</span>
+                        </div>
+                    </div>
+
+                    <div class="table-scroll">
+                        <table class="data-table lot-data-table" id="lotDataTable">
+                            <thead>
+                                <tr>
+                                    <th>Plot / Lot Number</th>
+                                    <th>Section &amp; Block</th>
+                                    <th>Type / Category</th>
+                                    <th>Current Occupant / Reservation</th>
+                                    <th>Lease / Expiration</th>
+                                    <th>Price &amp; Dimensions</th>
+                                    <th>Status</th>
+                                    <th class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lotTableBody">
+                                <tr>
+                                    <td colspan="8">
+                                        <div class="lot-empty-state">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                            <strong>Loading cemetery lots...</strong>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Docked Pagination Controls -->
+                    <div class="pagination-controls" id="lotPaginationControls">
+                        <span class="pagination-info" id="lotPaginationInfo"></span>
+                        <div class="pagination-actions">
+                            <form class="pagination-jump" id="lotPaginationJumpForm">
+                                <label for="lotPageJumpInput">Jump to</label>
+                                <input type="number" id="lotPageJumpInput" min="1" step="1" placeholder="Page #">
+                                <button class="btn-secondary" id="lotPageJumpBtn" type="submit">
+                                    <i class="fas fa-arrow-right-to-bracket"></i>
+                                    <span>Go</span>
+                                </button>
+                            </form>
+                            <span class="pagination-divider" aria-hidden="true"></span>
+                            <button class="btn-secondary" id="lotPrevPage" type="button">
+                                <i class="fas fa-chevron-left"></i>
+                                <span>Previous</span>
+                            </button>
+                            <button class="btn-secondary" id="lotNextPage" type="button">
+                                <span>Next</span>
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
