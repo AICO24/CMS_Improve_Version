@@ -1287,7 +1287,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     // Close Modals
-    document.querySelectorAll('.close, .close-view').forEach(el => {
+    document.querySelectorAll('.close, .close-view, .close-modal-btn').forEach(el => {
         el.addEventListener('click', closeAllModals);
     });
 

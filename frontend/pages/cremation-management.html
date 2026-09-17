@@ -234,118 +234,174 @@
         </main>
     </div>
 
-    <!-- Add/Edit Modal -->
+    <!-- Add/Edit Modal (No-Scroll 2-Column Executive Form) -->
     <div id="cremationModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="modal-content">
-            <button type="button" class="close" aria-label="Close">&times;</button>
-            <h3 id="modalTitle">Record Cremation &amp; Assign Niche</h3>
+        <div class="modal-content modal-content--wide">
+            <div class="modal-header-custom">
+                <div class="modal-title-group">
+                    <span class="modal-subtitle-chip"><i class="fas fa-monument"></i> Columbarium Registry</span>
+                    <h3 id="modalTitle" class="modal-heading-main">Record Cremation &amp; Assign Niche</h3>
+                </div>
+                <button type="button" class="close" aria-label="Close">&times;</button>
+            </div>
             <form id="cremationForm">
                 <input type="hidden" id="cremationId">
-                <div class="form-group">
-                    <label for="deceasedId">Decedent <span class="required">*</span></label>
-                    <select id="deceasedId" required></select>
-                </div>
-                <div class="form-group">
-                    <label for="columbarium">Columbarium</label>
-                    <select id="columbarium"></select>
-                    <input type="text" id="columbariumNew" placeholder="New columbarium name" style="display:none; margin-top:8px;">
-                </div>
-                <div class="form-group">
-                    <label for="nicheNumber">Niche Number</label>
-                    <div class="niche-suggest-row" style="display: flex; gap: 8px;">
-                        <input type="text" id="nicheNumber" placeholder="e.g., SJ-L3-05" style="flex: 1;">
-                        <button type="button" class="btn-secondary" id="suggestNicheBtn" title="Suggest next available niche">
-                            <i class="fas fa-wand-magic-sparkles"></i> Suggest
-                        </button>
+                <div class="modal-body-custom">
+                    <div class="form-grid-2">
+                        <!-- Left Column: Sanctuary & Niche Assignment -->
+                        <div class="form-col">
+                            <div class="form-group">
+                                <label for="deceasedId">Decedent <span class="required">*</span></label>
+                                <select id="deceasedId" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label for="columbarium">Columbarium Sanctuary</label>
+                                <select id="columbarium"></select>
+                                <input type="text" id="columbariumNew" placeholder="New sanctuary wing name" style="display:none; margin-top:8px;">
+                            </div>
+                            <div class="form-group">
+                                <label for="nicheNumber">Niche Number</label>
+                                <div class="niche-suggest-row" style="display: flex; gap: 8px;">
+                                    <input type="text" id="nicheNumber" placeholder="e.g., SJ-L3-05" style="flex: 1;">
+                                    <button type="button" class="btn-secondary" id="suggestNicheBtn" title="Suggest next available niche">
+                                        <i class="fas fa-wand-magic-sparkles"></i> Suggest
+                                    </button>
+                                </div>
+                                <div class="suggest-tier-selector" style="display: flex; gap: 6px; margin-top: 8px;">
+                                    <button type="button" class="tier-pill-btn active" data-tier="prime" id="tierBtnPrime" title="Prioritize Prime Eye-Level (Levels 3 &amp; 4)">
+                                        <i class="fas fa-crown"></i> Prime Eye-Level (L3-4)
+                                    </button>
+                                    <button type="button" class="tier-pill-btn" data-tier="any" id="tierBtnAny" title="Suggest next available in any level">
+                                        <i class="fas fa-arrows-split-up-and-left"></i> Any Available
+                                    </button>
+                                </div>
+                                <div class="help" id="suggestNicheHint" style="display:none; margin-top: 6px;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Level, Date, Status, Location -->
+                        <div class="form-col">
+                            <div class="form-row" style="display: flex; gap: 12px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="level">Level</label>
+                                    <input type="number" id="level" min="1" max="10" value="1">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="cremationDate">Cremation Date</label>
+                                    <input type="date" id="cremationDate">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="cremationStatus">Lifecycle Status</label>
+                                <select id="cremationStatus">
+                                    <option value="Scheduled">Scheduled</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="ashStorage" style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>Ash Storage Location</span>
+                                    <span style="font-size: 0.70rem; color: #059669; font-weight: 700;"><i class="fas fa-check-double"></i> Auto-Formatted</span>
+                                </label>
+                                <input type="text" id="ashStorage" placeholder="Auto-generated storage locator...">
+                            </div>
+                        </div>
                     </div>
-                    <div class="suggest-tier-selector" style="display: flex; gap: 6px; margin-top: 8px;">
-                        <button type="button" class="tier-pill-btn active" data-tier="prime" id="tierBtnPrime" title="Prioritize Prime Eye-Level (Levels 3 &amp; 4)">
-                            <i class="fas fa-crown"></i> Prime Eye-Level (L3-4)
-                        </button>
-                        <button type="button" class="tier-pill-btn" data-tier="any" id="tierBtnAny" title="Suggest next available in any level">
-                            <i class="fas fa-arrows-split-up-and-left"></i> Any Available
-                        </button>
-                    </div>
-                    <div class="help" id="suggestNicheHint" style="display:none; margin-top: 6px;"></div>
-                </div>
-                <div class="form-row" style="display: flex; gap: 12px;">
-                    <div class="form-group" style="flex: 1;">
-                        <label for="level">Level</label>
-                        <input type="number" id="level" min="1" max="10" value="1">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label for="cremationDate">Cremation Date</label>
-                        <input type="date" id="cremationDate">
+
+                    <!-- Bottom Full-Width Row: Notes -->
+                    <div class="form-group" style="margin-top: 2px;">
+                        <label for="cremationNotes">Notes / Special Instructions</label>
+                        <textarea id="cremationNotes" rows="2" placeholder="Optional notes, family requests, urn specifications..."></textarea>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="cremationStatus">Status</label>
-                    <select id="cremationStatus">
-                        <option value="Scheduled">Scheduled</option>
-                        <option value="Completed">Completed</option>
-                        <option value="Cancelled">Cancelled</option>
-                    </select>
+
+                <div class="modal-footer-custom modal-footer-actions">
+                    <button type="button" class="btn-secondary close-modal-btn">Cancel</button>
+                    <button type="submit" class="btn-save">
+                        <span class="IconContainer"><i class="fas fa-save"></i></span>
+                        <span class="text">Save Record</span>
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label for="ashStorage" style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>Ash Storage Location</span>
-                        <span style="font-size: 0.70rem; color: #059669; font-weight: 700;"><i class="fas fa-check-double"></i> Auto-Formatted</span>
-                    </label>
-                    <input type="text" id="ashStorage" placeholder="e.g., [SJ-L3-05] St. Jude Thaddeus Sanctuary — Level 3 (Prime Eye-Level), Niche SJ-L3-05">
-                </div>
-                <div class="form-group">
-                    <label for="cremationNotes">Notes</label>
-                    <textarea id="cremationNotes" rows="2" placeholder="Optional notes..."></textarea>
-                </div>
-                <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span></button>
             </form>
         </div>
     </div>
 
-    <!-- Assign Modal -->
+    <!-- Assign Modal (No-Scroll 2-Column Compact Form) -->
     <div id="assignModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="assignModalTitle">
-        <div class="modal-content">
-            <button type="button" class="close" aria-label="Close">&times;</button>
-            <h3 id="assignModalTitle">Assign Decedent to Niche</h3>
+        <div class="modal-content modal-content--wide" style="max-width: 720px;">
+            <div class="modal-header-custom">
+                <div class="modal-title-group">
+                    <span class="modal-subtitle-chip"><i class="fas fa-user-tag"></i> Quick Placement</span>
+                    <h3 id="assignModalTitle" class="modal-heading-main">Assign Decedent to Niche</h3>
+                </div>
+                <button type="button" class="close" aria-label="Close">&times;</button>
+            </div>
             <form id="assignForm">
-                <div class="form-group">
-                    <label for="assignDecedentId">Decedent <span class="required">*</span></label>
-                    <select id="assignDecedentId" required></select>
-                </div>
-                <div class="form-group">
-                    <label for="assignNicheNumber">Niche Number</label>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="text" id="assignNicheNumber" readonly style="flex: 1;">
-                        <span id="assignTierBadge" style="display: none; padding: 4px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;"></span>
+                <div class="modal-body-custom">
+                    <div class="form-grid-2">
+                        <!-- Left Column: Decedent & Niche -->
+                        <div class="form-col">
+                            <div class="form-group">
+                                <label for="assignDecedentId">Decedent <span class="required">*</span></label>
+                                <select id="assignDecedentId" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label for="assignNicheNumber">Niche Number</label>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="text" id="assignNicheNumber" readonly style="flex: 1; font-weight: 700; color: #0f172a; background: #f8fafc;">
+                                    <span id="assignTierBadge" style="display: none; padding: 4px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Sanctuary & Level -->
+                        <div class="form-col">
+                            <div class="form-group">
+                                <label for="assignColumbarium">Sanctuary Wing</label>
+                                <input type="text" id="assignColumbarium" readonly style="background: #f8fafc; color: #334155;">
+                            </div>
+                            <div class="form-group">
+                                <label for="assignLevel">Level</label>
+                                <input type="number" id="assignLevel" min="1" max="10" value="1" readonly style="background: #f8fafc; color: #334155;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Full-Width Storage Locator -->
+                    <div class="form-group" style="margin-top: 2px;">
+                        <label for="assignAshStorage">Storage Location Code</label>
+                        <input type="text" id="assignAshStorage" readonly style="background: #f8fafc; font-size: 0.82rem; color: #334155; font-family: monospace;">
                     </div>
                 </div>
-                <div class="form-row" style="display: flex; gap: 12px;">
-                    <div class="form-group" style="flex: 1;">
-                        <label for="assignColumbarium">Columbarium</label>
-                        <input type="text" id="assignColumbarium" readonly>
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label for="assignLevel">Level</label>
-                        <input type="number" id="assignLevel" min="1" max="10" value="1" readonly>
-                    </div>
+
+                <div class="modal-footer-custom modal-footer-actions">
+                    <button type="button" class="btn-secondary close-modal-btn">Cancel</button>
+                    <button type="submit" class="btn-save">
+                        <span class="IconContainer"><i class="fas fa-check"></i></span>
+                        <span class="text">Confirm Assignment</span>
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label for="assignAshStorage">Storage Location Code</label>
-                    <input type="text" id="assignAshStorage" readonly style="background: #f8fafc; font-size: 0.82rem; color: #334155;">
-                </div>
-                <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span></button>
             </form>
         </div>
     </div>
 
-    <!-- View Modal -->
+    <!-- View Modal (Executive Details) -->
     <div id="viewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
-        <div class="modal-content">
-            <button type="button" class="close-view" aria-label="Close">&times;</button>
-            <h3 id="viewModalTitle">Niche Details</h3>
-            <div id="viewDetails"></div>
-            <div style="margin-top: 12px;"><div id="aiAssistantMountRecord"></div></div>
-            <div class="modal-actions-footer" style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px;">
+        <div class="modal-content modal-content--wide" style="max-width: 680px;">
+            <div class="modal-header-custom">
+                <div class="modal-title-group">
+                    <span class="modal-subtitle-chip"><i class="fas fa-monument"></i> Columbarium Niche</span>
+                    <h3 id="viewModalTitle" class="modal-heading-main">Niche Details</h3>
+                </div>
+                <button type="button" class="close-view" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body-custom">
+                <div id="viewDetails"></div>
+                <div style="margin-top: 12px;"><div id="aiAssistantMountRecord"></div></div>
+            </div>
+            <div class="modal-footer-custom modal-footer-actions">
+                <button type="button" class="btn-secondary close-view">Close</button>
                 <button type="button" class="btn-edit" id="editFromView"><span class="edit-text">Edit Record</span><i class="fas fa-pen edit-icon"></i></button>
                 <button type="button" class="btn-assign" id="assignFromView">Assign Decedent</button>
                 <button type="button" class="btn-delete" id="deleteFromView">Delete Record</button>
@@ -355,51 +411,50 @@
 
     <!-- Batch Niche Generator Modal (Automation Wizard) -->
     <div id="batchNicheModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="batchNicheModalTitle">
-        <div class="modal-content" style="max-width: 580px;">
-            <button type="button" class="close" id="closeBatchNicheModal" aria-label="Close">&times;</button>
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
-                <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(16, 185, 129, 0.15); color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.15rem;">
-                    <i class="fas fa-cubes"></i>
+        <div class="modal-content modal-content--wide" style="max-width: 640px;">
+            <div class="modal-header-custom">
+                <div class="modal-title-group">
+                    <span class="modal-subtitle-chip"><i class="fas fa-cubes"></i> Automation Wizard</span>
+                    <h3 id="batchNicheModalTitle" class="modal-heading-main">Batch Niche Generator</h3>
                 </div>
-                <div>
-                    <h3 id="batchNicheModalTitle" style="margin: 0; font-size: 1.2rem; font-weight: 800; color: #0f172a;">Batch Niche Generator</h3>
-                    <small style="color: #64748b; font-size: 0.76rem;">Automatically structure sequential niches for a sanctuary wing</small>
-                </div>
+                <button type="button" class="close" id="closeBatchNicheModal" aria-label="Close">&times;</button>
             </div>
             <form id="batchNicheForm">
-                <div class="form-group">
-                    <label for="batchColumbarium">Target Sanctuary / Wing <span class="required">*</span></label>
-                    <select id="batchColumbarium" required></select>
-                    <input type="text" id="batchColumbariumNew" placeholder="Enter new sanctuary or wing name..." style="display:none; margin-top:8px;">
+                <div class="modal-body-custom">
+                    <div class="form-group">
+                        <label for="batchColumbarium">Target Sanctuary Wing <span class="required">*</span></label>
+                        <select id="batchColumbarium" required></select>
+                        <input type="text" id="batchColumbariumNew" placeholder="Enter new sanctuary wing name" style="display: none; margin-top: 8px;">
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 12px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="batchNichePrefix">Niche Prefix <span class="required">*</span></label>
+                            <input type="text" id="batchNichePrefix" value="SJ-L" required>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="batchLevelsCount">Number of Levels <span class="required">*</span></label>
+                            <input type="number" id="batchLevelsCount" min="1" max="10" value="5" required>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="batchNichesPerLevel">Niches per Level <span class="required">*</span></label>
+                            <input type="number" id="batchNichesPerLevel" min="1" max="25" value="10" required>
+                        </div>
+                    </div>
+
+                    <!-- Live Generation Preview Box -->
+                    <div class="batch-preview-box" id="batchPreviewBox" style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 14px 18px;">
+                        <div style="font-size: 0.76rem; font-weight: 700; text-transform: uppercase; color: #475569; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                            <span><i class="fas fa-eye"></i> Generator Output Preview</span>
+                            <span id="batchTotalCountBadge" style="background: #10b981; color: white; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 700;">50 Niches Total</span>
+                        </div>
+                        <div id="batchPreviewList" style="font-size: 0.80rem; color: #334155; line-height: 1.6;">
+                            <!-- Dynamically populated sample preview -->
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-row" style="display: flex; gap: 12px; margin-bottom: 14px;">
-                    <div class="form-group" style="flex: 1;">
-                        <label for="batchNichePrefix">Niche Prefix <span class="required">*</span></label>
-                        <input type="text" id="batchNichePrefix" placeholder="e.g. SJ-L or OLP-L" value="SJ-L" required>
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label for="batchLevelsCount">Number of Levels <span class="required">*</span></label>
-                        <input type="number" id="batchLevelsCount" min="1" max="10" value="5" required>
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label for="batchNichesPerLevel">Niches per Level <span class="required">*</span></label>
-                        <input type="number" id="batchNichesPerLevel" min="1" max="25" value="10" required>
-                    </div>
-                </div>
-
-                <!-- Live Generation Preview Box -->
-                <div class="batch-preview-box" id="batchPreviewBox" style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 14px 18px; margin-bottom: 18px;">
-                    <div style="font-size: 0.76rem; font-weight: 700; text-transform: uppercase; color: #475569; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
-                        <span><i class="fas fa-eye"></i> Generator Output Preview</span>
-                        <span id="batchTotalCountBadge" style="background: #10b981; color: white; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 700;">50 Niches Total</span>
-                    </div>
-                    <div id="batchPreviewList" style="font-size: 0.80rem; color: #334155; line-height: 1.6;">
-                        <!-- Dynamically populated sample preview -->
-                    </div>
-                </div>
-
-                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <div class="modal-footer-custom modal-footer-actions">
                     <button type="button" class="btn-secondary" id="cancelBatchNicheBtn">Cancel</button>
                     <button type="submit" class="btn-save" id="submitBatchNicheBtn">
                         <span class="IconContainer"><i class="fas fa-magic"></i></span>
