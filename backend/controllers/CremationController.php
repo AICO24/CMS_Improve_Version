@@ -295,7 +295,7 @@ class CremationController {
                 function () use ($cremationModel, $columbarium, &$suggestion) {
                     $suggestion = $cremationModel->findNextAvailableNiche($columbarium);
                     if (!$suggestion) {
-                        return ['No available niches in columbarium ' . ($columbarium ?: 'Columbarium A') . ' — assign one manually once space opens up, or choose another columbarium'];
+                        return ['No available niches in columbarium ' . ($columbarium ?: 'St. Jude Thaddeus Sanctuary') . ' — assign one manually once space opens up, or choose another columbarium'];
                     }
                     return true;
                 },
@@ -812,10 +812,8 @@ class CremationController {
 
     public function columbariums() {
         $list = $this->cremationModel->getDistinctColumbariums();
-        // Always offer the default even before any real record uses it —
-        // otherwise a brand-new install would show an empty dropdown.
-        if (!in_array('Columbarium A', $list, true)) {
-            array_unshift($list, 'Columbarium A');
+        if (empty($list)) {
+            $list = ['St. Jude Thaddeus Sanctuary'];
         }
         return $list;
     }
@@ -861,8 +859,8 @@ class CremationController {
     }
 
     public function suggestNiche($columbarium = null, $tierPreference = 'any') {
-        // Pin to a real columbarium, defaulting to 'Columbarium A'
-        $columbarium = $columbarium ?: 'Columbarium A';
+        // Pin to a real columbarium, defaulting to first sanctuary
+        $columbarium = $columbarium ?: 'St. Jude Thaddeus Sanctuary';
         $suggestion = $this->cremationModel->findNextAvailableNiche($columbarium, $tierPreference ?: 'any');
         if (!$suggestion) {
             return [

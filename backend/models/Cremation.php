@@ -203,7 +203,6 @@ class Cremation {
             'Our Lady of Peace Gallery' => ['levels' => 5, 'niches_per_level' => 10, 'prefix' => 'OLP-L'],
             'San Lorenzo Ruiz Wing' => ['levels' => 4, 'niches_per_level' => 8, 'prefix' => 'SLR-L'],
             'Ascension Gallery' => ['levels' => 4, 'niches_per_level' => 8, 'prefix' => 'ASC-L'],
-            'Columbarium A' => ['levels' => 3, 'niches_per_level' => 10, 'prefix' => 'N-'],
         ];
     }
 
@@ -221,7 +220,7 @@ class Cremation {
     }
 
     public function getNichesForColumbarium($columbarium) {
-        $targetColumbarium = $columbarium ?: 'Columbarium A';
+        $targetColumbarium = $columbarium ?: 'St. Jude Thaddeus Sanctuary';
         $structures = $this->getColumbariumStructures();
         $config = $structures[$targetColumbarium] ?? null;
 
@@ -230,7 +229,7 @@ class Cremation {
                    d.first_name, d.last_name
             FROM cremation_records c
             LEFT JOIN decedent_records d ON c.deceased_id = d.decedent_id
-            WHERE (c.columbarium = ? " . ($targetColumbarium === 'Columbarium A' ? "OR c.columbarium IS NULL OR c.columbarium = ''" : "") . ")
+            WHERE c.columbarium = ?
             ORDER BY c.created_at DESC
         ";
         $stmt = $this->db->prepare($sql);
@@ -518,7 +517,7 @@ class Cremation {
                 SELECT COUNT(*) as total,
                        SUM(CASE WHEN status != 'Cancelled' THEN 1 ELSE 0 END) as occupied
                 FROM cremation_records
-                WHERE (columbarium = ? " . ($columbarium === 'Columbarium A' ? "OR columbarium IS NULL OR columbarium = ''" : "") . ")
+                WHERE columbarium = ?
             ";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([$columbarium]);

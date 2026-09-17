@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const perPage = 10;
     const expandedSanctuaries = new Set();
     const expandedLevels = new Set();
+    let hasInitializedHierarchy = false;
 
     // --- DOM Elements ---
     const statsEls = {
@@ -354,7 +355,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const map = new Map();
 
         niches.forEach(niche => {
-            const sanctuaryName = niche.columbarium || 'Columbarium A';
+            const sanctuaryName = niche.columbarium || (distinctColumbariums[0] || 'St. Jude Thaddeus Sanctuary');
             if (!map.has(sanctuaryName)) {
                 map.set(sanctuaryName, {
                     name: sanctuaryName,
@@ -432,7 +433,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // If active filters or search, auto-expand matching wings and levels so results are visible
         if (searchQuery || currentStatusFilter || currentColumbarium || currentLevel) {
             filteredNiches.forEach(n => {
-                const colName = n.columbarium || 'Columbarium A';
+                const colName = n.columbarium || (distinctColumbariums[0] || 'St. Jude Thaddeus Sanctuary');
                 expandedSanctuaries.add(colName);
                 expandedLevels.add(`${colName}__L${n.level || 1}`);
             });
@@ -468,11 +469,14 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         const groups = groupNichesBySanctuaryAndLevel(niches);
 
-        // By default, if nothing is expanded yet, expand the first sanctuary and its levels
-        if (expandedSanctuaries.size === 0 && groups.length > 0) {
-            expandedSanctuaries.add(groups[0].name);
-            groups[0].levels.forEach(lvl => {
-                expandedLevels.add(`${groups[0].name}__L${lvl.level}`);
+        // Auto-expand all wings and levels on initial render so user sees all sections
+        if (!hasInitializedHierarchy) {
+            hasInitializedHierarchy = true;
+            groups.forEach(g => {
+                expandedSanctuaries.add(g.name);
+                g.levels.forEach(lvl => {
+                    expandedLevels.add(`${g.name}__L${lvl.level}`);
+                });
             });
         }
 
@@ -782,7 +786,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function updateAshStorageLocation() {
-        const columbarium = currentModalColumbariumValue() || 'Columbarium A';
+        const columbarium = currentModalColumbariumValue() || (distinctColumbariums[0] || 'St. Jude Thaddeus Sanctuary');
         const nicheNum = (nicheNumberInput.value || '').trim();
         const lvl = parseInt(levelInput.value, 10) || 1;
         if (!nicheNum) return;
@@ -793,7 +797,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function triggerSmartSuggestion() {
-        const columbarium = currentModalColumbariumValue() || 'Columbarium A';
+        const columbarium = currentModalColumbariumValue() || (distinctColumbariums[0] || 'St. Jude Thaddeus Sanctuary');
         await withButtonLoading(suggestNicheBtn, async () => {
             try {
                 const result = await apiRequest(`cremations/suggest-niche?columbarium=${encodeURIComponent(columbarium)}&tier=${encodeURIComponent(currentSuggestTier)}`);
@@ -858,7 +862,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             tierBtnAny.classList.remove('active');
         }
 
-        const preferredCol = currentColumbarium || (distinctColumbariums[0] || 'Columbarium A');
+        const preferredCol = currentColumbarium || (distinctColumbariums[0] || 'St. Jude Thaddeus Sanctuary');
         populateModalColumbariums(preferredCol);
 
         await populateDecedents();
@@ -899,7 +903,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function openAssignModal(niche) {
         assignNicheNumber.value = niche.niche_number;
-        assignColumbarium.value = niche.columbarium || 'Columbarium A';
+        assignColumbarium.value = niche.columbarium || (distinctColumbariums[0] || 'St. Jude Thaddeus Sanctuary');
         const lvl = parseInt(niche.level, 10) || 1;
         assignLevel.value = lvl;
 
@@ -920,7 +924,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (assignAshStorage) {
             const isPrime = (lvl === 3 || lvl === 4);
             const tierTag = isPrime ? ' (Prime Eye-Level)' : '';
-            assignAshStorage.value = `[${niche.niche_number}] ${niche.columbarium || 'Columbarium A'} — Level ${lvl}${tierTag}, Niche ${niche.niche_number}`;
+            assignAshStorage.value = `[${niche.niche_number}] ${niche.columbarium || (distinctColumbariums[0] || 'St. Jude Thaddeus Sanctuary')} — Level ${lvl}${tierTag}, Niche ${niche.niche_number}`;
         }
 
         populateDecedentsForAssign();
@@ -1320,29 +1324,64 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // --- Hierarchical Grid Interactions (Sanctuary & Level Accordions, Card View) ---
     gridContainer.addEventListener('click', (e) => {
-        // 1. Sanctuary Header click
-        const sanctuaryBtn = e.target.closest('.sanctuary-header');
-        if (sanctuaryBtn) {
-            const sName = sanctuaryBtn.dataset.sanctuary;
-            if (expandedSanctuaries.has(sName)) {
-                expandedSanctuaries.delete(sName);
+        // 1. Level Header click
+        const levelBtn = e.target.closest('.level-header');
+        if (levelBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const lvlGroupEl = levelBtn.closest('.level-group');
+            if (!lvlGroupEl) return;
+            const lvlBodyEl = lvlGroupEl.querySelector('.level-body');
+            const lvlChevronEl = levelBtn.querySelector('.level-chevron-btn');
+            const lKey = levelBtn.dataset.levelKey;
+
+            const isCurrentlyHidden = !lvlBodyEl || lvlBodyEl.style.display === 'none';
+            if (isCurrentlyHidden) {
+                if (lvlBodyEl) lvlBodyEl.style.display = 'block';
+                lvlChevronEl?.classList.add('expanded');
+                levelBtn.setAttribute('aria-expanded', 'true');
+                if (lKey) expandedLevels.add(lKey);
             } else {
-                expandedSanctuaries.add(sName);
+                if (lvlBodyEl) lvlBodyEl.style.display = 'none';
+                lvlChevronEl?.classList.remove('expanded');
+                levelBtn.setAttribute('aria-expanded', 'false');
+                if (lKey) expandedLevels.delete(lKey);
             }
-            renderHierarchy(filteredNiches);
             return;
         }
 
-        // 2. Level Header click
-        const levelBtn = e.target.closest('.level-header');
-        if (levelBtn) {
-            const lKey = levelBtn.dataset.levelKey;
-            if (expandedLevels.has(lKey)) {
-                expandedLevels.delete(lKey);
+        // 2. Sanctuary Header click
+        const sanctuaryBtn = e.target.closest('.sanctuary-header');
+        if (sanctuaryBtn) {
+            e.preventDefault();
+            const groupEl = sanctuaryBtn.closest('.sanctuary-group');
+            if (!groupEl) return;
+            const bodyEl = groupEl.querySelector('.sanctuary-body');
+            const chevronEl = sanctuaryBtn.querySelector('.sanctuary-chevron-btn');
+            const sName = sanctuaryBtn.dataset.sanctuary;
+
+            const isCurrentlyHidden = !bodyEl || bodyEl.style.display === 'none';
+            if (isCurrentlyHidden) {
+                // Expand wing
+                if (bodyEl) bodyEl.style.display = 'flex';
+                chevronEl?.classList.add('expanded');
+                sanctuaryBtn.setAttribute('aria-expanded', 'true');
+                if (sName) expandedSanctuaries.add(sName);
+
+                // Ensure levels are also displayed inside this wing
+                groupEl.querySelectorAll('.level-body').forEach(lb => lb.style.display = 'block');
+                groupEl.querySelectorAll('.level-chevron-btn').forEach(lc => lc.classList.add('expanded'));
+                groupEl.querySelectorAll('.level-header').forEach(lh => {
+                    lh.setAttribute('aria-expanded', 'true');
+                    if (lh.dataset.levelKey) expandedLevels.add(lh.dataset.levelKey);
+                });
             } else {
-                expandedLevels.add(lKey);
+                // Collapse wing
+                if (bodyEl) bodyEl.style.display = 'none';
+                chevronEl?.classList.remove('expanded');
+                sanctuaryBtn.setAttribute('aria-expanded', 'false');
+                if (sName) expandedSanctuaries.delete(sName);
             }
-            renderHierarchy(filteredNiches);
             return;
         }
 

@@ -18,10 +18,5 @@
         "levels": 4,
         "niches_per_level": 8,
         "prefix": "ASC-L"
-    },
-    "Columbarium A": {
-        "levels": 3,
-        "niches_per_level": 10,
-        "prefix": "N-"
     }
 }
