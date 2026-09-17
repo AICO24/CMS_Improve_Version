@@ -398,15 +398,29 @@
 
 /* ========== INTELLIGENCE & CONTROL SECTION ========== */
 .intelligence-section {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
     margin-bottom: 14px;
+}
+
+/* When exceptions exist, JS adds .has-attention — switch to side-by-side */
+.intelligence-section.has-attention {
+    grid-template-columns: 1fr 1fr;
 }
 
 .intelligence-section .attention-row,
 .intelligence-section .ai-briefing-row {
     margin-bottom: 0;
+    min-width: 0; /* prevent grid blowout */
+}
+
+/* Ensure the inner cards fill their grid cell */
+.intelligence-section .attention-row > .card,
+.intelligence-section .ai-briefing-row > .card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Needs Attention Card */
@@ -1720,6 +1734,14 @@
     }
     .chart-canvas-wrapper {
         height: 210px;
+    }
+}
+
+/* Intelligence section: stack vertically on smaller screens */
+@media (max-width: 860px) {
+    .intelligence-section,
+    .intelligence-section.has-attention {
+        grid-template-columns: 1fr;
     }
 }
 

@@ -52,20 +52,25 @@ document.addEventListener('DOMContentLoaded', async function() {
         const attentionRow = document.getElementById('attentionRow');
         const attentionSummary = document.getElementById('attentionSummary');
         if (!attentionRow || !attentionSummary) return;
+        const section = attentionRow.closest('.intelligence-section');
         try {
             const exceptions = await api.request('exceptions?status=open', { method: 'GET' });
             const count = Array.isArray(exceptions) ? exceptions.length : 0;
             if (count > 0) {
                 attentionSummary.textContent = `${count} item${count === 1 ? '' : 's'} couldn't be handled automatically and need${count === 1 ? 's' : ''} your review.`;
                 attentionRow.style.display = '';
+                if (section) section.classList.add('has-attention');
             } else {
                 attentionRow.style.display = 'none';
+                if (section) section.classList.remove('has-attention');
             }
         } catch (e) {
             attentionRow.style.display = 'none';
+            if (section) section.classList.remove('has-attention');
         }
     }
     updateAttentionCard();
+
 
     async function updateBookingSummary() {
         const pendingEl = document.getElementById('bookingPendingCount');
