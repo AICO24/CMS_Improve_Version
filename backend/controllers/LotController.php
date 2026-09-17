@@ -490,4 +490,141 @@ class LotController {
         $result = $this->lotModel->deleteCategory($id);
         return $result ? ['success' => true, 'message' => 'Category deleted'] : ['error' => 'Failed to delete category', 'code' => 500];
     }
+
+    public function batchGenerate($data, $actor = null) {
+        if (empty($data['block_id']) || empty($data['lot_type_id']) || empty($data['count'])) {
+            return ['error' => 'Block ID, lot type ID, and count are required', 'code' => 400];
+        }
+        $count = (int) $data['count'];
+        if ($count < 1 || $count > 100) {
+            return ['error' => 'Batch count must be between 1 and 100', 'code' => 400];
+        }
+        $price = isset($data['price']) ? (float) $data['price'] : 0.00;
+        if ($price < 0) {
+            return ['error' => 'Price cannot be negative', 'code' => 400];
+        }
+
+        $prefix = isset($data['prefix']) ? trim((string) $data['prefix']) : 'L';
+        $startNum = !empty($data['start_number']) ? (int) $data['start_number'] : null;
+        $dimensions = !empty($data['dimensions']) ? trim((string) $data['dimensions']) : null;
+        $notes = !empty($data['location_notes']) ? trim((string) $data['location_notes']) : null;
+
+        $result = $this->lotModel->batchCreateLots(
+            (int) $data['block_id'],
+            (int) $data['lot_type_id'],
+            $count,
+            $prefix,
+            $startNum,
+            $price,
+            $dimensions,
+            $notes
+        );
+
+        if (!empty($result['success'])) {
+            $this->auditLogModel->log(
+                'Batch lots generated',
+                self::actorId($actor),
+                self::actorUsername($actor),
+                'Block',
+                (int) $data['block_id'],
+                [
+                    'count' => $result['count'],
+                    'lot_numbers' => $result['lot_numbers'],
+                    'prefix' => $prefix,
+                    'price' => $price,
+                ]
+            );
+            return [
+                'success' => true,
+                'message' => "Successfully generated {$result['count']} lots",
+                'data' => $result
+            ];
+        }
+
+        return ['error' => $result['error'] ?? 'Failed to generate lots in batch', 'code' => 500];
+    }
+
+    public function syncStatus($actor = null) {
+        $lotModel = $this->lotModel;
+        $stats = null;
+        $automationResult = AutomationEngine::run(
+            'lot.sync_status',
+            'System',
+            0,
+            $actor,
+            function() {
+                return true;
+            },
+            function() use ($lotModel, &$stats) {
+                $stats = $lotModel->syncAllLotMetrics();
+                return true;
+            }
+        );
+
+        if (!empty($automationResult['success'])) {
+            $this->auditLogModel->log(
+                'Lot metrics and expiration synced',
+                self::actorId($actor),
+                self::actorUsername($actor),
+                'Lot',
+                null,
+                ['stats' => $stats]
+            );
+            return [
+                'success' => true,
+                'message' => 'Lot statuses, expiration sweeps, and section metrics successfully synchronized',
+                'stats' => $stats
+            ];
+        }
+
+        return ['error' => 'Failed to synchronize lot metrics', 'code' => 500];
+    }
+
+    public function exportCsv($filters = []) {
+        $lots = $this->lotModel->findAll($filters);
+        
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="lots_registry_' . date('Y-m-d_His') . '.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $output = fopen('php://output', 'w');
+        // Output UTF-8 BOM for Excel compatibility
+        fputs($output, "\xEF\xBB\xBF");
+
+        fputcsv($output, [
+            'Lot ID',
+            'Lot Number',
+            'Section',
+            'Block',
+            'Type / Category',
+            'Status',
+            'Price (PHP)',
+            'Dimensions',
+            'Current Occupant',
+            'Lease End Date',
+            'Reserved For',
+            'Location Notes'
+        ]);
+
+        foreach ($lots as $lot) {
+            fputcsv($output, [
+                $lot['lot_id'],
+                $lot['lot_number'],
+                $lot['section_name'],
+                $lot['block_name'] ?? 'N/A',
+                $lot['lot_type_name'] ?? 'Uncategorized',
+                $lot['status'],
+                number_format((float) ($lot['price'] ?? 0), 2, '.', ''),
+                $lot['dimensions'] ?? '',
+                $lot['occupant_name'] ?? '',
+                $lot['lease_end_date'] ?? '',
+                $lot['reserved_for_name'] ?? '',
+                $lot['location_notes'] ?? ''
+            ]);
+        }
+
+        fclose($output);
+        exit;
+    }
 }

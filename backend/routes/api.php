@@ -380,6 +380,36 @@ if ($path === 'lots/stats' && $requestMethod === 'GET') {
     echo json_encode($lotController->getStats());
     exit;
 }
+if ($path === 'lots/export' && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
+    $filters = [];
+    if (isset($_GET['section'])) $filters['section'] = $_GET['section'];
+    if (isset($_GET['lot_number'])) $filters['lot_number'] = $_GET['lot_number'];
+    if (isset($_GET['lot_type'])) $filters['lot_type'] = $_GET['lot_type'];
+    if (isset($_GET['category'])) $filters['lot_type'] = $_GET['category'];
+    if (isset($_GET['status'])) $filters['status'] = $_GET['status'];
+    if (isset($_GET['block_id'])) $filters['block_id'] = $_GET['block_id'];
+    if (isset($_GET['search'])) $filters['search'] = $_GET['search'];
+    $lotController->exportCsv($filters);
+    exit;
+}
+if ($path === 'lots/batch-generate' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $result = $lotController->batchGenerate($input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+if ($path === 'lots/sync-status' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $result = $lotController->syncStatus($user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
 if (preg_match('/^lots\/(\d+)$/', $path, $matches) && $requestMethod === 'GET') {
     echo json_encode($lotController->getLot($matches[1]));
     exit;

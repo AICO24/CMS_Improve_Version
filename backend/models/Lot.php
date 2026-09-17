@@ -123,24 +123,84 @@ class Lot {
             $sql .= " AND l.block_id = ?";
             $params[] = $filters['block_id'];
         }
-        // L3.3: backs the Lot Management page's free-text search box, moved
-        // server-side — matches the same lot_number/type/section/block OR
-        // logic the frontend used to run in-browser over the full dataset.
+        // Free-text search matching lot number, type, section, block, occupant name, or reservation name
         if (!empty($filters['search'])) {
-            $sql .= " AND (l.lot_number LIKE ? OR t.type_name LIKE ? OR s.section_name LIKE ? OR b.block_name LIKE ?)";
+            $sql .= " AND (l.lot_number LIKE ? OR t.type_name LIKE ? OR s.section_name LIKE ? OR b.block_name LIKE ? OR occ.occupant_name LIKE ? OR rsv.reserved_for_name LIKE ?)";
             $term = '%' . $filters['search'] . '%';
-            array_push($params, $term, $term, $term, $term);
+            array_push($params, $term, $term, $term, $term, $term, $term);
         }
+    }
+
+    private function getEnrichedLotJoins() {
+        return "
+            JOIN blocks b ON l.block_id = b.block_id
+            JOIN sections s ON b.section_id = s.section_id
+            JOIN lot_types t ON l.lot_type_id = t.type_id
+            LEFT JOIN (
+                SELECT d.lot_id, 
+                       TRIM(CONCAT(d.first_name, ' ', COALESCE(CONCAT(d.middle_name, ' '), ''), d.last_name, COALESCE(CONCAT(' ', d.suffix), ''))) AS occupant_name,
+                       d.decedent_id,
+                       d.dob,
+                       d.dod,
+                       d.contact_name,
+                       d.contact_number,
+                       d.is_cremated
+                FROM decedent_records d
+                INNER JOIN (
+                    SELECT lot_id, MAX(decedent_id) AS max_did
+                    FROM decedent_records
+                    WHERE deleted_at IS NULL AND lot_id IS NOT NULL
+                    GROUP BY lot_id
+                ) md ON d.lot_id = md.lot_id AND d.decedent_id = md.max_did
+            ) occ ON occ.lot_id = l.lot_id
+            LEFT JOIN (
+                SELECT er.lot_id,
+                       er.expiration_id,
+                       er.start_date AS lease_start_date,
+                       er.end_date AS lease_end_date,
+                       er.renewed AS lease_renewed,
+                       er.exhumation_status,
+                       er.notified_at AS lease_notified_at
+                FROM expiration_records er
+                INNER JOIN (
+                    SELECT lot_id, MAX(expiration_id) AS max_eid
+                    FROM expiration_records
+                    GROUP BY lot_id
+                ) me ON er.lot_id = me.lot_id AND er.expiration_id = me.max_eid
+            ) exp ON exp.lot_id = l.lot_id
+            LEFT JOIN (
+                SELECT bs.lot_id,
+                       bs.schedule_id,
+                       bs.schedule_date,
+                       bs.schedule_time,
+                       bs.status AS schedule_status,
+                       COALESCE(
+                           TRIM(CONCAT(sd.first_name, ' ', sd.last_name)),
+                           sr.full_name
+                       ) AS reserved_for_name
+                FROM burial_schedules bs
+                INNER JOIN (
+                    SELECT lot_id, MAX(schedule_id) AS max_sid
+                    FROM burial_schedules
+                    WHERE status IN ('Pending', 'Confirmed')
+                    GROUP BY lot_id
+                ) mbs ON bs.lot_id = mbs.lot_id AND bs.schedule_id = mbs.max_sid
+                LEFT JOIN decedent_records sd ON bs.deceased_id = sd.decedent_id
+                LEFT JOIN decedent_requests sr ON bs.decedent_request_id = sr.request_id
+            ) rsv ON rsv.lot_id = l.lot_id
+        ";
     }
 
     public function findAll($filters = [], $pagination = []) {
         $this->syncExpiredLots();
+        $joins = $this->getEnrichedLotJoins();
         $sql = "
-            SELECT l.*, b.block_name, s.section_name, t.type_name as lot_type_name
+            SELECT l.*, b.block_name, s.section_name, t.type_name as lot_type_name,
+                   occ.occupant_name, occ.decedent_id, occ.dob, occ.dod, occ.contact_name, occ.contact_number, occ.is_cremated,
+                   exp.lease_start_date, exp.lease_end_date, exp.lease_renewed, exp.exhumation_status, exp.lease_notified_at,
+                   rsv.schedule_id, rsv.schedule_date, rsv.schedule_time, rsv.schedule_status, rsv.reserved_for_name
             FROM lots l
-            JOIN blocks b ON l.block_id = b.block_id
-            JOIN sections s ON b.section_id = s.section_id
-            JOIN lot_types t ON l.lot_type_id = t.type_id
+            {$joins}
             WHERE 1=1
         ";
         $params = [];
@@ -169,12 +229,11 @@ class Lot {
 
     public function countAll($filters = []) {
         $this->syncExpiredLots();
+        $joins = $this->getEnrichedLotJoins();
         $sql = "
             SELECT COUNT(*) AS total
             FROM lots l
-            JOIN blocks b ON l.block_id = b.block_id
-            JOIN sections s ON b.section_id = s.section_id
-            JOIN lot_types t ON l.lot_type_id = t.type_id
+            {$joins}
             WHERE 1=1
         ";
         $params = [];
@@ -188,12 +247,14 @@ class Lot {
 
     public function findById($id) {
         $this->syncExpiredLots();
+        $joins = $this->getEnrichedLotJoins();
         $stmt = $this->db->prepare("
-            SELECT l.*, b.block_name, s.section_name, t.type_name as lot_type_name
+            SELECT l.*, b.block_name, s.section_name, t.type_name as lot_type_name,
+                   occ.occupant_name, occ.decedent_id, occ.dob, occ.dod, occ.contact_name, occ.contact_number, occ.is_cremated,
+                   exp.lease_start_date, exp.lease_end_date, exp.lease_renewed, exp.exhumation_status, exp.lease_notified_at,
+                   rsv.schedule_id, rsv.schedule_date, rsv.schedule_time, rsv.schedule_status, rsv.reserved_for_name
             FROM lots l
-            JOIN blocks b ON l.block_id = b.block_id
-            JOIN sections s ON b.section_id = s.section_id
-            JOIN lot_types t ON l.lot_type_id = t.type_id
+            {$joins}
             WHERE l.lot_id = ?
         ");
         $stmt->execute([$id]);
@@ -425,6 +486,139 @@ class Lot {
     public function deleteCategory($id) {
         $stmt = $this->db->prepare("DELETE FROM lot_types WHERE type_id = ?");
         return $stmt->execute([$id]);
+    }
+
+    /**
+     * Batch creates sequential lots in a block with automatic number assignment,
+     * uniqueness checks, and block/section count synchronization inside a transaction.
+     */
+    public function batchCreateLots($blockId, $lotTypeId, $count, $prefix = 'L', $startNum = null, $price = 0, $dimensions = null, $notes = null) {
+        $count = max(1, min(100, (int) $count));
+        $blockId = (int) $blockId;
+        $lotTypeId = (int) $lotTypeId;
+        $price = (float) $price;
+        $prefix = trim((string) $prefix);
+        if ($prefix === '') {
+            $prefix = 'L';
+        }
+
+        // Validate block exists
+        $blockStmt = $this->db->prepare("SELECT block_id, section_id FROM blocks WHERE block_id = ?");
+        $blockStmt->execute([$blockId]);
+        $block = $blockStmt->fetch();
+        if (!$block) {
+            return ['success' => false, 'error' => 'Invalid block specified'];
+        }
+
+        // Validate lot_type exists
+        $typeStmt = $this->db->prepare("SELECT type_id FROM lot_types WHERE type_id = ?");
+        $typeStmt->execute([$lotTypeId]);
+        if (!$typeStmt->fetch()) {
+            return ['success' => false, 'error' => 'Invalid lot type specified'];
+        }
+
+        // Determine starting number if not provided
+        if ($startNum === null || (int) $startNum <= 0) {
+            $countStmt = $this->db->prepare("SELECT COUNT(*) FROM lots WHERE block_id = ?");
+            $countStmt->execute([$blockId]);
+            $startNum = (int) $countStmt->fetchColumn() + 1;
+        } else {
+            $startNum = (int) $startNum;
+        }
+
+        $createdLotNumbers = [];
+        $createdIds = [];
+
+        Database::transaction(function() use ($blockId, $lotTypeId, $count, $prefix, $startNum, $price, $dimensions, $notes, $block, &$createdLotNumbers, &$createdIds) {
+            $insertStmt = $this->db->prepare("
+                INSERT INTO lots (block_id, lot_number, lot_type_id, status, price, dimensions, location_notes)
+                VALUES (?, ?, ?, 'Available', ?, ?, ?)
+            ");
+
+            $currNum = $startNum;
+            for ($i = 0; $i < $count; $i++) {
+                $lotNumber = $prefix . $currNum;
+
+                // Ensure unique within block
+                $checkStmt = $this->db->prepare("SELECT lot_id FROM lots WHERE block_id = ? AND lot_number = ?");
+                $checkStmt->execute([$blockId, $lotNumber]);
+                if ($checkStmt->fetch()) {
+                    // Try next number
+                    $currNum++;
+                    $i--;
+                    continue;
+                }
+
+                $insertStmt->execute([
+                    $blockId,
+                    $lotNumber,
+                    $lotTypeId,
+                    $price,
+                    $dimensions ?: null,
+                    $notes ?: null
+                ]);
+                $createdIds[] = (int) $this->db->lastInsertId();
+                $createdLotNumbers[] = $lotNumber;
+                $currNum++;
+            }
+
+            // Update block count
+            $updBlock = $this->db->prepare("
+                UPDATE blocks SET total_lots = (SELECT COUNT(*) FROM lots WHERE block_id = ?)
+                WHERE block_id = ?
+            ");
+            $updBlock->execute([$blockId, $blockId]);
+
+            // Update section count
+            $updSec = $this->db->prepare("
+                UPDATE sections s
+                SET total_blocks = (SELECT COUNT(*) FROM blocks WHERE section_id = s.section_id),
+                    total_lots = (SELECT COUNT(l.lot_id) FROM blocks b JOIN lots l ON b.block_id = l.block_id WHERE b.section_id = s.section_id)
+                WHERE s.section_id = ?
+            ");
+            $updSec->execute([$block['section_id']]);
+        });
+
+        return [
+            'success' => true,
+            'count' => count($createdIds),
+            'lot_numbers' => $createdLotNumbers,
+            'lot_ids' => $createdIds
+        ];
+    }
+
+    /**
+     * Proactively executes expiration sweeps, recalibrates block and section counts,
+     * and returns the updated cemetery-wide lot stats.
+     */
+    public function syncAllLotMetrics() {
+        // 1. Run expired lots sweep
+        $this->syncExpiredLots();
+
+        // 2. Refresh total_lots for all blocks
+        $this->db->exec("
+            UPDATE blocks b
+            SET total_lots = (
+                SELECT COUNT(*) FROM lots l WHERE l.block_id = b.block_id
+            )
+        ");
+
+        // 3. Refresh total_blocks & total_lots for all sections
+        $this->db->exec("
+            UPDATE sections s
+            SET total_blocks = (
+                SELECT COUNT(*) FROM blocks b WHERE b.section_id = s.section_id
+            ),
+            total_lots = (
+                SELECT COUNT(l.lot_id)
+                FROM blocks b
+                JOIN lots l ON b.block_id = l.block_id
+                WHERE b.section_id = s.section_id
+            )
+        ");
+
+        // 4. Return current fresh stats
+        return $this->getStats();
     }
 
     public function findCategories() {
