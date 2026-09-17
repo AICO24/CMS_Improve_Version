@@ -271,8 +271,41 @@
                 </div>
                 <p class="section-label"><i class="fas fa-chart-line"></i> Revenue &amp; Activity Analytics</p>
                 <div class="bottom-row">
-                    <div class="card chart-card"><canvas id="occChart" height="160"></canvas></div>
-                    <div class="card transactions"><h4>Recent Transactions</h4><ul id="recentList" class="recent-list"></ul></div>
+                    <div class="card chart-card revenue-chart-card">
+                        <div class="chart-card-header">
+                            <div class="chart-title-group">
+                                <span class="chart-icon-badge"><i class="fas fa-chart-column"></i></span>
+                                <div>
+                                    <h4>Monthly Revenue Trend</h4>
+                                    <span class="chart-card-subtitle">Financial performance &amp; collections overview</span>
+                                </div>
+                            </div>
+                            <a href="reports.html" class="btn-reports-link" title="View Full Financial Reports">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                                <span>Reports &rarr;</span>
+                            </a>
+                        </div>
+                        <div class="chart-canvas-wrapper">
+                            <canvas id="occChart" height="220"></canvas>
+                        </div>
+                    </div>
+                    <div class="card transactions transactions-card">
+                        <div class="transactions-card-header">
+                            <div class="transactions-title-group">
+                                <span class="transactions-icon-badge"><i class="fas fa-receipt"></i></span>
+                                <div>
+                                    <h4>Recent Transactions</h4>
+                                    <span class="transactions-card-subtitle">Latest payment records</span>
+                                </div>
+                            </div>
+                            <a href="payments.html" class="btn-transactions-link" title="View All Payment Transactions">
+                                <span>View All &rarr;</span>
+                            </a>
+                        </div>
+                        <div class="transactions-list-container">
+                            <ul id="recentList" class="recent-list"></ul>
+                        </div>
+                    </div>
                 </div>
             </div>
             <footer class="dashboard-footer">
