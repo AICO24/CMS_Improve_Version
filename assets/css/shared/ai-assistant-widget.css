@@ -31,8 +31,9 @@
    and read as a doubled icon once the .is-open ring appeared. */
 #aiAssistantMount.ai-assistant-mount {
     position: fixed;
-    right: 24px;
-    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
     z-index: 993;
 }
 #aiAssistantMount .ai-assistant-toggle {
