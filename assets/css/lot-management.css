@@ -233,37 +233,97 @@
    not redeclared here — this page uses the shared definitions from dashboard.css
    so its stats row matches the rest of the app. */
 
-/* Gradient stat cards (mirrors Payments' .payment-stats visual language). */
+/* ========================================================
+   EXECUTIVE 3D EMBOSSED STAT CARDS (LOT MANAGEMENT)
+   ======================================================== */
 .lotmgmt-stats {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 14px;
+    margin-bottom: 20px;
+    align-items: stretch;
 }
 
 .lotmgmt-stats > .stat-card {
     position: relative;
-    min-height: 136px;
-    padding: 18px 18px 16px;
+    min-height: 124px;
+    height: 100%;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     overflow: hidden;
     border: 1px solid rgba(22, 50, 41, 0.20);
     border-left: 8px solid #163229;
     background: linear-gradient(135deg, #2c5e47 0%, #3b7055 100%);
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.09);
-    transition: transform 260ms cubic-bezier(0.2, 0, 0.2, 1),
-                box-shadow 260ms cubic-bezier(0.2, 0, 0.2, 1);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    border-radius: var(--radius-lg, 14px);
+    contain: layout;
+    animation: statFloat 7s ease-in-out infinite alternate;
+    transition: transform 220ms cubic-bezier(0.2, 0, 0.2, 1),
+                box-shadow 220ms cubic-bezier(0.2, 0, 0.2, 1);
+    cursor: pointer;
+}
+
+.lotmgmt-stats > .stat-card::before {
+    content: "";
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    right: -40px;
+    top: -30px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 70%);
+    pointer-events: none;
 }
 
 .lotmgmt-stats > .stat-card::after {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 52%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 55%);
     pointer-events: none;
 }
 
 .lotmgmt-stats > .stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.13);
+    transform: translateY(-3px);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.14);
+}
+
+.lotmgmt-stats > .stat-card.accent-teal {
+    border-left-color: #0f766e;
+    background: linear-gradient(135deg, #0d9488 0%, #2fb5aa 100%);
+}
+
+.lotmgmt-stats > .stat-card.accent-emerald {
+    border-left-color: #047857;
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+}
+
+.lotmgmt-stats > .stat-card.accent-amber {
+    border-left-color: #92400e;
+    background: linear-gradient(135deg, #b45309 0%, #d08a28 100%);
+}
+
+.lotmgmt-stats > .stat-card.accent-navy {
+    border-left-color: #2b3658;
+    background: linear-gradient(135deg, #2b3658 0%, #465376 100%);
+}
+
+.lotmgmt-stats > .stat-card.accent-red {
+    border-left-color: #991b1b;
+    background: linear-gradient(135deg, #dc2626 0%, #e85757 100%);
+}
+
+.lotmgmt-stats > .stat-card.is-active-filter {
+    box-shadow: 0 0 0 3px #ffffff, 0 0 0 5px var(--color-primary-500, #10b981), 0 16px 32px rgba(15, 23, 42, 0.20);
+    transform: translateY(-3px) scale(1.02);
+}
+
+@keyframes statFloat {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-2px); }
+    100% { transform: translateY(0px); }
 }
 
 .lotmgmt-stats > .stat-card .stat-title,
@@ -276,156 +336,502 @@
 .lotmgmt-stats > .stat-card .stat-title {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    padding-right: 12px;
-    color: rgba(255, 255, 255, 0.88);
-    font-size: 0.82rem;
-    margin-bottom: 14px;
+    gap: 8px;
+    font-size: 0.80rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.92);
+    margin-bottom: 6px;
 }
 
-.lotmgmt-stats > .stat-card .stat-title i {
-    color: rgba(255, 255, 255, 0.9);
-}
-
-.lotmgmt-stats > .stat-card:nth-child(2) {
-    border-left-color: #7f1d1d;
-    background: linear-gradient(135deg, #b91c1c 0%, #d33f3f 100%);
-}
-
-.lotmgmt-stats > .stat-card:nth-child(3) {
-    border-left-color: #92400e;
-    background: linear-gradient(135deg, #b45309 0%, #d08a28 100%);
-}
-
-.lotmgmt-stats > .stat-card:nth-child(4) {
-    border-left-color: #334155;
-    background: linear-gradient(135deg, #475569 0%, #64748b 100%);
-}
-
-.lotmgmt-stats > .stat-card:nth-child(5) {
-    border-left-color: #2b3658;
-    background: linear-gradient(135deg, #2b3658 0%, #465376 100%);
+.lotmgmt-stats > .stat-card .card-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm, 6px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.20);
+    color: #ffffff;
+    font-size: 13px;
+    flex: 0 0 auto;
 }
 
 .lotmgmt-stats > .stat-card .stat-value {
-    max-width: 100%;
-    overflow-wrap: anywhere;
-    color: #fff;
-    font-size: 1.35rem;
-    line-height: 1.2;
-    text-shadow: 0 1px 1px rgba(15, 23, 42, 0.16);
+    font-size: 1.85rem;
+    font-weight: 800;
+    line-height: 1.15;
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(15, 23, 42, 0.20);
+    margin: 4px 0 2px;
 }
 
 .lotmgmt-stats > .stat-card .stat-sub {
-    color: rgba(255, 255, 255, 0.78);
-    font-size: 0.8rem;
-}
-
-/* L3.6: stat cards double as one-click status filters (see
-   lot-management.js's applyStatusQuickFilter()) — cursor/focus ring signal
-   that, and the active one gets a visible ring so it's clear which filter,
-   if any, is currently applied. */
-.lotmgmt-stats > .stat-card-filterable {
-    cursor: pointer;
-}
-
-.lotmgmt-stats > .stat-card-filterable:focus-visible {
-    outline: 3px solid rgba(255, 255, 255, 0.85);
-    outline-offset: 2px;
-}
-
-.lotmgmt-stats > .stat-card-filterable.is-active-filter {
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9), 0 14px 30px rgba(15, 23, 42, 0.13);
-}
-
-.toolbar-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.section-tabs {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 12px;
-    margin-bottom: 20px;
-}
-
-.tab-btn {
-    position: relative;
-    display: inline-block;
-
-    padding: 12px 28px;
-
-    border: none;
-    border-radius: 50px;
-
-    background: #ffffff;
-    color: #2c5e47;
-
-    font-family: inherit;
-    font-size: .9rem;
+    font-size: 0.76rem;
     font-weight: 600;
-
-    cursor: pointer;
-
-    transition: all .25s ease;
-
-    overflow: hidden;
-
-    z-index: 1;
+    color: rgba(255, 255, 255, 0.85);
 }
 
-.tab-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(0,0,0,.18);
-}
-
-.tab-btn:active {
-    transform: translateY(-1px);
-    box-shadow: 0 5px 10px rgba(0,0,0,.15);
-}
-
-.tab-btn::after {
-    content: "";
-
-    position: absolute;
-
-    top: 0;
-    left: 0;
-
+/* ========================================================
+   UNIFIED MASTER CONTROL PANEL (LOT MANAGEMENT)
+   ======================================================== */
+.lot-control-panel {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(238, 246, 241, 0.90)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.08), rgba(37, 99, 235, 0.04));
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-left: 6px solid var(--color-primary-500, #10b981);
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
     width: 100%;
-    height: 100%;
-
-    border-radius: 50px;
-
-    background: white;
-
-    z-index: -1;
-
-    transition: all .4s ease;
+    margin-bottom: 20px;
 }
 
-.tab-btn:hover::after {
-    transform: scale(1.4);
+.panel-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.records-tabs-track {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    border-radius: var(--radius-lg, 12px);
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(44, 94, 71, 0.14);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.records-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 110px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--color-primary-800, #1e3a2b);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: all 180ms cubic-bezier(0.2, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.records-tab-btn i {
+    font-size: 0.82rem;
+    opacity: 0.85;
+}
+
+.records-tab-btn:hover:not(.active) {
+    background: rgba(44, 94, 71, 0.08);
+    color: var(--color-primary-900, #163024);
+    transform: translateY(-1px);
+}
+
+.records-tab-btn.active {
+    background: linear-gradient(135deg, #1e3a2f 0%, #2c5e47 100%);
+    color: #ffffff;
+    box-shadow: 0 6px 16px rgba(22, 50, 41, 0.22);
+}
+
+.records-tab-btn.active i {
+    opacity: 1;
+    color: #34d399;
+}
+
+.records-tab-btn .tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 0.70rem;
+    font-weight: 800;
+    line-height: 1;
+    background: #10b981;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+}
+
+.panel-action-buttons {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.panel-action-buttons .btn-secondary,
+.panel-action-buttons .btn-primary {
+    height: 38px;
+    border-radius: var(--radius-md, 8px);
+    font-size: 0.82rem;
+    font-weight: 700;
+    gap: 8px;
+    padding: 0 16px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 180ms ease;
+}
+
+.panel-action-buttons .btn-primary {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #fff;
+    border: none;
+}
+
+.panel-action-buttons .btn-primary:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.panel-action-buttons .btn-secondary {
+    background: #fff;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+}
+
+.panel-action-buttons .btn-secondary:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    transform: translateY(-1px);
+}
+
+.report-export-button {
+    height: 38px;
+    padding: 0 16px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: var(--radius-md, 8px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    transition: all 180ms cubic-bezier(0.2, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+    white-space: nowrap;
+}
+
+.report-export-button:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+}
+
+.report-export-button--excel {
+    color: #15803d;
+    border-color: #86efac;
+    background: #ffffff;
+}
+
+.report-export-button--excel i {
+    color: #16a34a;
+    font-size: 0.92rem;
+}
+
+.report-export-button--excel:hover {
+    background: #f0fdf4;
+    border-color: #22c55e;
+    color: #166534;
+}
+
+.panel-divider {
+    height: 1px;
+    background: linear-gradient(90deg, rgba(44, 94, 71, 0.18) 0%, rgba(226, 232, 240, 0.9) 50%, rgba(44, 94, 71, 0.08) 100%);
+    width: 100%;
+}
+
+.panel-bottom-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.panel-filters-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    flex: 1 1 auto;
+}
+
+.filter-bar__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-primary-700, #047857);
+    white-space: nowrap;
+    align-self: center;
+}
+
+.filter-bar__label i {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm, 6px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary-50, #eef8f1);
+    color: var(--color-primary-600, #0f766e);
+}
+
+.panel-filters-group .search-field {
+    flex: 1 1 260px;
+    min-width: 220px;
+    max-width: 380px;
+    position: relative;
+}
+
+.panel-filters-group .search-field__input {
+    width: 100%;
+    height: 40px;
+    font-size: 0.86rem;
+    padding: 0 14px 0 40px;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid rgba(44, 94, 71, 0.22);
+    background: #ffffff;
+    color: #1e293b;
+    outline: none;
+    transition: all 0.18s ease;
+}
+
+.panel-filters-group .search-field__input:focus {
+    background: #ffffff;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
+}
+
+.panel-filters-group .search-field__label {
+    position: absolute;
+    left: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.82rem;
+    color: #94a3b8;
+    pointer-events: none;
+    transition: all 0.15s ease;
+}
+
+.panel-filters-group .search-field__input:focus ~ .search-field__label,
+.panel-filters-group .search-field__input:not(:placeholder-shown) ~ .search-field__label {
     opacity: 0;
+    visibility: hidden;
 }
 
-/* Active Section */
+.panel-filters-group .search-field__icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
 
-.tab-btn.active {
+.filter-select {
+    height: 40px;
+    padding: 0 32px 0 12px;
+    border: 1.5px solid var(--color-border, #d8e5dd);
+    border-radius: var(--radius-md, 8px);
+    background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2364748b'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E") no-repeat right 8px center/16px 16px;
+    color: #1e293b;
+    font-size: 0.86rem;
+    font-weight: 600;
+    cursor: pointer;
+    appearance: none;
+    transition: all 0.2s ease;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--color-primary-500, #2c5e47);
+    box-shadow: 0 0 0 3px rgba(44, 94, 71, 0.15);
+}
+
+.view-toggle-btns {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+    border-radius: var(--radius-md, 10px);
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+.btn-toggle-view {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm, 7px);
+    border: none;
+    background: transparent;
+    color: #475569;
+    font-size: 0.80rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 180ms ease;
+    white-space: nowrap;
+}
+
+.btn-toggle-view:hover:not(.active) {
+    background: rgba(44, 94, 71, 0.08);
+    color: #1e293b;
+}
+
+.btn-toggle-view.active {
     background: #2c5e47;
-    color: white;
-    box-shadow: 0 8px 18px rgba(44,94,71,.35);
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(44, 94, 71, 0.25);
 }
 
-.tab-btn.active::after {
+.btn-outline-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: var(--radius-md, 8px);
+    border: 1.5px solid #fecaca;
+    background: #fff;
+    color: #dc2626;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-outline-danger:hover {
+    background: #fee2e2;
+    border-color: #f87171;
+    transform: translateY(-1px);
+}
+
+/* Active Filter Chips */
+.active-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.active-filter-chips:empty {
     display: none;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(44, 94, 71, 0.08);
+    border: 1px solid rgba(44, 94, 71, 0.20);
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #1e3a2f;
+}
+
+.filter-chip-remove {
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.74rem;
+    transition: color 0.15s ease;
+}
+
+.filter-chip-remove:hover {
+    color: #dc2626;
+}
+
+/* Dark mode overrides */
+[data-theme="dark"] .lot-control-panel {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.90));
+    border-color: rgba(255, 255, 255, 0.08);
+    border-left-color: #10b981;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .records-tabs-track {
+    background: rgba(15, 23, 42, 0.8);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .records-tab-btn {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .records-tab-btn:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.06);
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .records-tab-btn.active {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+}
+
+[data-theme="dark"] .filter-select {
+    background-color: #1e293b;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .panel-filters-group .search-field__input {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .view-toggle-btns {
+    background: rgba(15, 23, 42, 0.8);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .btn-toggle-view {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .btn-toggle-view.active {
+    background: #10b981;
+    color: #ffffff;
 }
 
 .lot-grid{
@@ -817,98 +1223,7 @@
     border-bottom: 1px solid #edf2f7;
 }
 
-/* ---------- SEARCH + FILTER TOOLBAR ---------- */
-.filter-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
-    align-items: center;
-    justify-content: space-between;
-    background: #fff;
-    padding: 14px 18px;
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-    margin-bottom: 20px;
-}
 
-.filter-search {
-    position: relative;
-    flex: 1 1 260px;
-    min-width: 220px;
-}
-
-.filter-search i {
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #94a3b8;
-    font-size: 0.85rem;
-}
-
-.filter-search input {
-    width: 100%;
-    padding: 10px 14px 10px 36px;
-    border: 1px solid #cbd5e1;
-    border-radius: 30px;
-    font-family: inherit;
-    font-size: 0.85rem;
-    color: #243736;
-    background: #f8fafc;
-    transition: border-color .2s ease, background .2s ease;
-}
-
-.filter-search input:focus {
-    outline: none;
-    border-color: #2c5e47;
-    background: #fff;
-}
-
-.filter-controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-}
-
-.filter-controls select {
-    padding: 9px 14px;
-    border-radius: 30px;
-    border: 1px solid #cbd5e1;
-    background: #f8fafc;
-    color: #334155;
-    font-family: inherit;
-    font-size: 0.82rem;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.filter-controls select:focus {
-    outline: none;
-    border-color: #2c5e47;
-}
-
-.btn-reset-filters {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 9px 16px;
-    border-radius: 30px;
-    border: 1px solid #e2e8f0;
-    background: #fff;
-    color: #64748b;
-    font-family: inherit;
-    font-size: 0.82rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all .2s ease;
-}
-
-.btn-reset-filters:hover {
-    background: #fef2f2;
-    border-color: #fca5a5;
-    color: #b91c1c;
-}
 
 /* ---------- LOT HIERARCHY: CATEGORY -> SECTION -> LOT ---------- */
 .lot-hierarchy {

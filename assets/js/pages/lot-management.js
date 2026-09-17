@@ -132,12 +132,36 @@ document.addEventListener('DOMContentLoaded', async function() {
         return await apiRequest('lots/stats');
     }
 
+    const tabBadges = {
+        available: document.getElementById('availableTabBadge'),
+        reserved: document.getElementById('reservedTabBadge'),
+        occupied: document.getElementById('occupiedTabBadge'),
+        expired: document.getElementById('expiredTabBadge'),
+    };
+
     function renderStats(stats) {
         statsEl.available.innerText = stats.available || 0;
         statsEl.occupied.innerText = stats.occupied || 0;
         statsEl.reserved.innerText = stats.reserved || 0;
         statsEl.expired.innerText = stats.expired || 0;
         statsEl.total.innerText = stats.total || 0;
+
+        if (tabBadges.available) {
+            tabBadges.available.innerText = stats.available || 0;
+            tabBadges.available.style.display = (stats.available > 0) ? 'inline-flex' : 'none';
+        }
+        if (tabBadges.reserved) {
+            tabBadges.reserved.innerText = stats.reserved || 0;
+            tabBadges.reserved.style.display = (stats.reserved > 0) ? 'inline-flex' : 'none';
+        }
+        if (tabBadges.occupied) {
+            tabBadges.occupied.innerText = stats.occupied || 0;
+            tabBadges.occupied.style.display = (stats.occupied > 0) ? 'inline-flex' : 'none';
+        }
+        if (tabBadges.expired) {
+            tabBadges.expired.innerText = stats.expired || 0;
+            tabBadges.expired.style.display = (stats.expired > 0) ? 'inline-flex' : 'none';
+        }
     }
 
     // ---------- Filtering + grouping ----------
@@ -397,34 +421,114 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    // L3.6: highlights whichever stat card matches the currently active
-    // status filter (or none, if status filtering isn't in play) — kept in
-    // sync whether the filter was set by clicking a card, by the Status
-    // dropdown, or cleared via Reset Filters.
+    const activeChipsContainer = document.getElementById('activeFilterChips');
+
     function updateActiveStatCard() {
         document.querySelectorAll('.stat-card-filterable').forEach((card) => {
             card.classList.toggle('is-active-filter', card.dataset.statusFilter === filters.status);
         });
     }
 
+    function updateActiveSubTabs() {
+        document.querySelectorAll('.records-tab-btn').forEach((btn) => {
+            const tabStatus = btn.dataset.tab;
+            const isActive = tabStatus === filters.status;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+    }
+
+    function renderActiveFilterChips() {
+        if (!activeChipsContainer) return;
+        const chips = [];
+        if (filters.search) {
+            chips.push({
+                label: `Search: "${filters.search}"`,
+                clear: () => {
+                    filters.search = '';
+                    searchInput.value = '';
+                }
+            });
+        }
+        if (filters.section) {
+            chips.push({
+                label: `Section: ${filters.section}`,
+                clear: () => {
+                    filters.section = '';
+                    sectionFilterSelect.value = '';
+                }
+            });
+        }
+        if (filters.category) {
+            chips.push({
+                label: `Category: ${filters.category}`,
+                clear: () => {
+                    filters.category = '';
+                    categoryFilterSelect.value = '';
+                }
+            });
+        }
+        if (filters.status) {
+            chips.push({
+                label: `Status: ${filters.status}`,
+                clear: () => {
+                    filters.status = '';
+                    statusFilterSelect.value = '';
+                }
+            });
+        }
+
+        if (!chips.length) {
+            activeChipsContainer.innerHTML = '';
+            return;
+        }
+
+        activeChipsContainer.innerHTML = chips.map((c, idx) => `
+            <span class="filter-chip">
+                <span>${escapeHtml(c.label)}</span>
+                <button type="button" class="filter-chip-remove" data-chip-idx="${idx}" aria-label="Remove filter">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </span>
+        `).join('');
+
+        activeChipsContainer.querySelectorAll('.filter-chip-remove').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.dataset.chipIdx, 10);
+                if (chips[idx]) {
+                    chips[idx].clear();
+                    updateActiveStatCard();
+                    updateActiveSubTabs();
+                    renderActiveFilterChips();
+                    refreshVisibleLots();
+                }
+            });
+        });
+    }
+
     searchInput.addEventListener('input', debounce(() => {
         filters.search = searchInput.value;
+        renderActiveFilterChips();
         refreshVisibleLots();
     }, 200));
 
     categoryFilterSelect.addEventListener('change', () => {
         filters.category = categoryFilterSelect.value;
+        renderActiveFilterChips();
         refreshVisibleLots();
     });
 
     sectionFilterSelect.addEventListener('change', () => {
         filters.section = sectionFilterSelect.value;
+        renderActiveFilterChips();
         refreshVisibleLots();
     });
 
     statusFilterSelect.addEventListener('change', () => {
         filters.status = statusFilterSelect.value;
         updateActiveStatCard();
+        updateActiveSubTabs();
+        renderActiveFilterChips();
         refreshVisibleLots();
     });
 
@@ -438,17 +542,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         sectionFilterSelect.value = '';
         statusFilterSelect.value = '';
         updateActiveStatCard();
+        updateActiveSubTabs();
+        renderActiveFilterChips();
         refreshVisibleLots();
     });
 
-    // L3.6: clicking (or Enter/Space-activating) a stat card applies that
-    // status as a quick filter, mirroring what picking it from the Status
-    // dropdown would do — including keeping the dropdown itself in sync, so
-    // the two entry points never disagree about what's currently applied.
     function applyStatusQuickFilter(status) {
         filters.status = status;
         statusFilterSelect.value = status;
         updateActiveStatCard();
+        updateActiveSubTabs();
+        renderActiveFilterChips();
         refreshVisibleLots();
     }
 
@@ -461,7 +565,16 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         });
     });
+
+    document.querySelectorAll('.records-tab-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            applyStatusQuickFilter(btn.dataset.tab || '');
+        });
+    });
+
     updateActiveStatCard();
+    updateActiveSubTabs();
+    renderActiveFilterChips();
 
     function populateFilterDropdowns() {
         categoryFilterSelect.innerHTML = '<option value="">All Categories</option>' +
