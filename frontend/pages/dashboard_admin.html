@@ -280,13 +280,18 @@
                                     <span class="chart-card-subtitle">Financial performance &amp; collections overview</span>
                                 </div>
                             </div>
-                            <a href="reports.html" class="btn-reports-link" title="View Full Financial Reports">
-                                <i class="fas fa-file-invoice-dollar"></i>
-                                <span>Reports &rarr;</span>
-                            </a>
+                            <div class="chart-header-actions">
+                                <span class="chart-type-badge"><i class="fas fa-chart-simple"></i> Monthly Bar</span>
+                                <a href="reports.html" class="btn-reports-link" title="View Full Financial Reports">
+                                    <i class="fas fa-file-invoice-dollar"></i>
+                                    <span>Reports &rarr;</span>
+                                </a>
+                            </div>
                         </div>
                         <div class="chart-canvas-wrapper">
-                            <canvas id="occChart" height="220"></canvas>
+                            <div class="chart-frame">
+                                <canvas id="occChart" height="195"></canvas>
+                            </div>
                         </div>
                     </div>
                     <div class="card transactions transactions-card">
