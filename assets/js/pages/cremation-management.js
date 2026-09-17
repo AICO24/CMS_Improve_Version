@@ -430,8 +430,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             return true;
         });
 
-        // If active filters or search, auto-expand matching wings and levels so results are visible
-        if (searchQuery || currentStatusFilter || currentColumbarium || currentLevel) {
+        // If active search query, auto-expand matching wings and levels so matching results are visible
+        if (searchQuery) {
             filteredNiches.forEach(n => {
                 const colName = n.columbarium || (distinctColumbariums[0] || 'St. Jude Thaddeus Sanctuary');
                 expandedSanctuaries.add(colName);
@@ -468,18 +468,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         const groups = groupNichesBySanctuaryAndLevel(niches);
-
-        // Auto-expand all wings and levels on initial render so user sees all sections
-        if (!hasInitializedHierarchy) {
-            hasInitializedHierarchy = true;
-            groups.forEach(g => {
-                expandedSanctuaries.add(g.name);
-                g.levels.forEach(lvl => {
-                    expandedLevels.add(`${g.name}__L${lvl.level}`);
-                });
-            });
-        }
-
         gridContainer.innerHTML = groups.map(sGroup => renderSanctuaryHtml(sGroup)).join('');
     }
 
@@ -1362,19 +1350,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             const isCurrentlyHidden = !bodyEl || bodyEl.style.display === 'none';
             if (isCurrentlyHidden) {
-                // Expand wing
+                // Expand wing (showing its level rows; niches inside each level remain collapsed until clicked)
                 if (bodyEl) bodyEl.style.display = 'flex';
                 chevronEl?.classList.add('expanded');
                 sanctuaryBtn.setAttribute('aria-expanded', 'true');
                 if (sName) expandedSanctuaries.add(sName);
-
-                // Ensure levels are also displayed inside this wing
-                groupEl.querySelectorAll('.level-body').forEach(lb => lb.style.display = 'block');
-                groupEl.querySelectorAll('.level-chevron-btn').forEach(lc => lc.classList.add('expanded'));
-                groupEl.querySelectorAll('.level-header').forEach(lh => {
-                    lh.setAttribute('aria-expanded', 'true');
-                    if (lh.dataset.levelKey) expandedLevels.add(lh.dataset.levelKey);
-                });
             } else {
                 // Collapse wing
                 if (bodyEl) bodyEl.style.display = 'none';
