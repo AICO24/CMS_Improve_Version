@@ -1615,13 +1615,223 @@
    CSS (confirmed unreferenced by dashboard_admin.js) from an even
    earlier availability-map implementation. */
 /* Sidebar/rail responsive behavior now comes from the shared dashboard.css (Batch 3) */
-@media (max-width: 1024px) {
-    .stats-row { grid-template-columns: repeat(2,1fr); }
-    .mid-row { grid-template-columns: 1fr; }
-    .bottom-row { grid-template-columns: 1fr; }
+/* ========== BATCH 6: MICRO-INTERACTIONS, ACCESSIBILITY & RESPONSIVE POLISH ========== */
+
+/* Subtle staggered entrance animation for dashboard sections */
+@keyframes dashboardSectionFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
+
+.stats-row {
+    animation: dashboardSectionFadeIn 350ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.intelligence-section {
+    animation: dashboardSectionFadeIn 400ms cubic-bezier(0.16, 1, 0.3, 1) 60ms backwards;
+}
+
+.mid-row {
+    animation: dashboardSectionFadeIn 450ms cubic-bezier(0.16, 1, 0.3, 1) 120ms backwards;
+}
+
+.bottom-row {
+    animation: dashboardSectionFadeIn 500ms cubic-bezier(0.16, 1, 0.3, 1) 180ms backwards;
+}
+
+/* Enhanced keyboard focus indicators */
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-forecast-link:focus-visible,
+.btn-reports-link:focus-visible,
+.btn-transactions-link:focus-visible,
+.btn-queue-action:focus-visible,
+.btn-refresh-briefing:focus-visible,
+.btn-review-exceptions:focus-visible,
+.stat-card:focus-visible {
+    outline: 2px solid var(--color-primary-500, #2c5e47);
+    outline-offset: 2px;
+}
+
+.dashboard-body[data-theme="dark"] .btn-primary:focus-visible,
+.dashboard-body[data-theme="dark"] .btn-secondary:focus-visible,
+.dashboard-body[data-theme="dark"] .btn-forecast-link:focus-visible,
+.dashboard-body[data-theme="dark"] .btn-reports-link:focus-visible,
+.dashboard-body[data-theme="dark"] .btn-transactions-link:focus-visible,
+.dashboard-body[data-theme="dark"] .btn-queue-action:focus-visible,
+.dashboard-body[data-theme="dark"] .btn-refresh-briefing:focus-visible,
+.dashboard-body[data-theme="dark"] .btn-review-exceptions:focus-visible,
+.dashboard-body[data-theme="dark"] .stat-card:focus-visible {
+    outline: 2px solid var(--color-primary-400, #4f8467);
+    outline-offset: 2px;
+}
+
+/* Accessibility: Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
+    .stats-row > .stat-card:hover,
+    .card.attention-card:hover,
+    .card.ai-briefing-card:hover,
+    .card.availability:hover,
+    .card.operational-queues:hover,
+    .card.chart-card.revenue-chart-card:hover,
+    .card.transactions.transactions-card:hover,
+    .card.transactions .recent-item:hover,
+    .btn-forecast-link:hover,
+    .btn-reports-link:hover,
+    .btn-transactions-link:hover,
+    .btn-queue-action:hover,
+    .btn-refresh-briefing:hover {
+        transform: none !important;
+    }
+}
+
+/* Responsive adjustments: Large Tablets & Laptops (<= 1024px) */
+@media (max-width: 1024px) {
+    .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+    }
+    .mid-row {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    .bottom-row {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    .chart-canvas-wrapper {
+        height: 240px;
+    }
+}
+
+/* Responsive adjustments: Tablets & Mobile (<= 768px) */
 @media (max-width: 768px) {
-    .stats-row { grid-template-columns: 1fr; }
+    .content-area {
+        padding: 16px 14px 28px;
+    }
+    .stats-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .stats-row > .stat-card {
+        padding: 14px 18px;
+    }
+    .section-label {
+        margin: 16px 0 10px;
+        font-size: 0.72rem;
+    }
+    .attention-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .btn-review-exceptions {
+        align-self: flex-start;
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
+    .ai-briefing-header {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .availability-card-header,
+    .queues-card-header,
+    .chart-card-header,
+    .transactions-card-header {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .queues-action-group {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .btn-queue-action {
+        width: 100%;
+        justify-content: center;
+    }
+    .chart-canvas-wrapper {
+        height: 220px;
+    }
+    .transactions-list-container {
+        max-height: 280px;
+    }
+}
+
+/* Responsive adjustments: Small Mobile Devices (<= 480px) */
+@media (max-width: 480px) {
+    .top-bar {
+        padding: 0 12px;
+        height: 58px;
+    }
+    #pageTitle {
+        font-size: 1rem;
+    }
+    .profile-text {
+        display: none;
+    }
+    .stats-row > .stat-card .stat-value {
+        font-size: 1.5rem;
+    }
+    .queue-stat-pill {
+        padding: 6px 10px;
+        font-size: 0.78rem;
+    }
+    .card.transactions .recent-item {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "title"
+            "meta"
+            "amount";
+        row-gap: 6px;
+    }
+    .card.transactions .recent-item-amount {
+        justify-self: start;
+        margin-top: 2px;
+    }
+    .dashboard-footer__bottom::before,
+    .dashboard-footer__bottom::after {
+        display: none;
+    }
+}
+
+/* Print Optimization */
+@media print {
+    .top-bar,
+    .sidebar,
+    .btn-refresh-briefing,
+    .btn-forecast-link,
+    .btn-reports-link,
+    .btn-transactions-link,
+    .queues-action-group,
+    .btn-review-exceptions,
+    .theme-toggle-btn {
+        display: none !important;
+    }
+    .main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        break-inside: avoid;
+    }
 }
 
 
