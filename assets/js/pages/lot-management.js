@@ -440,21 +440,70 @@ document.addEventListener('DOMContentLoaded', async function() {
     // ---------- Event delegation over the hierarchy container ----------
 
     hierarchyEl.addEventListener('click', (e) => {
-        const catHeader = e.target.closest('.category-header');
-        if (catHeader) {
-            const name = catHeader.dataset.category;
-            if (expandedCategories.has(name)) expandedCategories.delete(name);
-            else expandedCategories.add(name);
-            renderHierarchyRoot();
+        // 1. Garden Zone (Section) Header Click
+        const secHeader = e.target.closest('.section-header');
+        if (secHeader) {
+            e.preventDefault();
+            e.stopPropagation();
+            const secGroupEl = secHeader.closest('.section-group');
+            if (!secGroupEl) return;
+            const secBodyEl = secGroupEl.querySelector('.section-body');
+            const chevronEl = secHeader.querySelector('.section-chevron-btn');
+            const key = secHeader.dataset.sectionKey;
+
+            const isCurrentlyHidden = !secBodyEl || secBodyEl.hasAttribute('hidden') || secBodyEl.style.display === 'none';
+            if (isCurrentlyHidden) {
+                // Reveal plots for this garden zone
+                if (secBodyEl) {
+                    secBodyEl.removeAttribute('hidden');
+                    secBodyEl.style.display = 'block';
+                }
+                chevronEl?.classList.add('expanded');
+                secHeader.setAttribute('aria-expanded', 'true');
+                if (key) expandedSections.add(key);
+            } else {
+                // Hide plots
+                if (secBodyEl) {
+                    secBodyEl.setAttribute('hidden', '');
+                    secBodyEl.style.display = 'none';
+                }
+                chevronEl?.classList.remove('expanded');
+                secHeader.setAttribute('aria-expanded', 'false');
+                if (key) expandedSections.delete(key);
+            }
             return;
         }
 
-        const secHeader = e.target.closest('.section-header');
-        if (secHeader) {
-            const key = secHeader.dataset.sectionKey;
-            if (expandedSections.has(key)) expandedSections.delete(key);
-            else expandedSections.add(key);
-            renderHierarchyRoot();
+        // 2. Category Header Click
+        const catHeader = e.target.closest('.category-header');
+        if (catHeader) {
+            e.preventDefault();
+            const groupEl = catHeader.closest('.category-group');
+            if (!groupEl) return;
+            const bodyEl = groupEl.querySelector('.category-body');
+            const chevronEl = catHeader.querySelector('.category-chevron-btn');
+            const name = catHeader.dataset.category;
+
+            const isCurrentlyHidden = !bodyEl || bodyEl.hasAttribute('hidden') || bodyEl.style.display === 'none';
+            if (isCurrentlyHidden) {
+                // Expand category (showing its garden zone section rows; plots inside each section remain collapsed until clicked)
+                if (bodyEl) {
+                    bodyEl.removeAttribute('hidden');
+                    bodyEl.style.display = 'block';
+                }
+                chevronEl?.classList.add('expanded');
+                catHeader.setAttribute('aria-expanded', 'true');
+                if (name) expandedCategories.add(name);
+            } else {
+                // Collapse category
+                if (bodyEl) {
+                    bodyEl.setAttribute('hidden', '');
+                    bodyEl.style.display = 'none';
+                }
+                chevronEl?.classList.remove('expanded');
+                catHeader.setAttribute('aria-expanded', 'false');
+                if (name) expandedCategories.delete(name);
+            }
             return;
         }
 
@@ -489,6 +538,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         try {
             visibleLots = await loadLots({ ...filters });
+            if (filters.search || filters.section || filters.category) {
+                visibleLots.forEach(lot => {
+                    const catName = lot.lot_type_name || 'Uncategorized';
+                    const secName = lot.section_name || 'Unassigned';
+                    expandedCategories.add(catName);
+                    expandedSections.add(`${catName}::${secName}`);
+                });
+            }
             updateViewDisplay();
         } catch (error) {
             showErrorState(error.message);
@@ -1440,13 +1497,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             populateFilterDropdowns();
 
             if (!hierarchyInitialized) {
-                const initialGroups = groupLotsByCategory(allLots);
-                if (initialGroups.length) {
-                    expandedCategories.add(initialGroups[0].name);
-                    if (initialGroups[0].sections && initialGroups[0].sections.length) {
-                        expandedSections.add(`${initialGroups[0].name}::${initialGroups[0].sections[0].name}`);
-                    }
-                }
+                // Keep categories and garden zones collapsed on initial load!
                 hierarchyInitialized = true;
             }
 
