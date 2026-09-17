@@ -172,8 +172,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (lot.status === 'Available') acc.available++;
             else if (lot.status === 'Occupied') acc.occupied++;
             else if (lot.status === 'Reserved') acc.reserved++;
+            else if (lot.status === 'Expired') acc.expired++;
             return acc;
-        }, { total: 0, available: 0, occupied: 0, reserved: 0 });
+        }, { total: 0, available: 0, occupied: 0, reserved: 0, expired: 0 });
     }
 
     function groupLotsByCategory(lots) {
@@ -270,12 +271,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     function computeCapacityPercentages(counts) {
         const total = counts.total || 0;
         if (total === 0) {
-            return { availPct: 0, rsvdPct: 0, occPct: 0 };
+            return { availPct: 0, rsvdPct: 0, occPct: 0, expPct: 0, total: 0 };
         }
         const availPct = Math.round((counts.available / total) * 100);
         const rsvdPct = Math.round((counts.reserved / total) * 100);
-        const occPct = Math.max(0, 100 - availPct - rsvdPct);
-        return { availPct, rsvdPct, occPct };
+        const occPct = Math.round((counts.occupied / total) * 100);
+        const expPct = Math.max(0, 100 - availPct - rsvdPct - occPct);
+        return { availPct, rsvdPct, occPct, expPct, total };
     }
 
     function renderSectionHtml(categoryName, sec) {
@@ -292,20 +294,32 @@ document.addEventListener('DOMContentLoaded', async function() {
                             <i class="fas fa-tree"></i>
                         </div>
                         <div class="section-title-meta">
-                            <span class="section-name">${escapeHtml(sec.name)}</span>
-                            <span class="section-subtext">${sec.counts.total} ${sec.counts.total === 1 ? 'plot' : 'plots'} registered</span>
+                            <div class="section-name-line">
+                                <span class="section-name">${escapeHtml(sec.name)}</span>
+                                ${sec.counts.available > 0
+                                    ? `<span class="sec-status-tag tag-open"><i class="fas fa-circle-check"></i> ${sec.counts.available} Open</span>`
+                                    : `<span class="sec-status-tag tag-full"><i class="fas fa-lock"></i> Fully Occupied</span>`
+                                }
+                            </div>
+                            <span class="section-subtext"><i class="fas fa-cubes"></i> ${sec.counts.total} ${sec.counts.total === 1 ? 'registered plot' : 'registered plots'} in this zone</span>
                         </div>
                     </div>
+
                     <div class="section-occupancy-wrap">
-                        <div class="mini-occupancy-meter" title="${sec.counts.available} Available, ${sec.counts.reserved} Reserved, ${sec.counts.occupied} Occupied">
+                        <div class="sec-meter-pod" title="${sec.counts.available} Available, ${sec.counts.reserved} Reserved, ${sec.counts.occupied} Occupied${sec.counts.expired ? ', ' + sec.counts.expired + ' Expired' : ''}">
+                            <div class="sec-meter-top">
+                                <span class="sec-meter-label"><i class="fas fa-gauge-high"></i> Availability</span>
+                                <span class="sec-meter-count"><strong>${sec.counts.available}</strong> / ${sec.counts.total} (${pct.availPct}%)</span>
+                            </div>
                             <div class="mini-occupancy-track">
                                 <div class="mini-bar avail" style="width: ${pct.availPct}%"></div>
                                 <div class="mini-bar rsvd" style="width: ${pct.rsvdPct}%"></div>
                                 <div class="mini-bar occ" style="width: ${pct.occPct}%"></div>
+                                ${pct.expPct > 0 ? `<div class="mini-bar exp" style="width: ${pct.expPct}%"></div>` : ''}
                             </div>
-                            <span class="mini-occupancy-label">${sec.counts.available} / ${sec.counts.total} Available (${pct.availPct}%)</span>
                         </div>
-                        <div class="section-chevron-btn ${isExpanded ? 'expanded' : ''}">
+
+                        <div class="section-chevron-btn ${isExpanded ? 'expanded' : ''}" title="${isExpanded ? 'Hide plots' : 'Show plots'}">
                             <i class="fas fa-chevron-down"></i>
                         </div>
                     </div>
@@ -331,29 +345,50 @@ document.addEventListener('DOMContentLoaded', async function() {
                             <i class="fas ${icon}"></i>
                         </div>
                         <div class="category-title-info">
-                            <h3 class="category-name">${escapeHtml(cat.name)}</h3>
-                            <span class="category-subtext">${cat.sections.length} ${cat.sections.length === 1 ? 'Garden Zone' : 'Garden Zones'} • ${cat.counts.total} Total Plots</span>
+                            <div class="category-name-row">
+                                <h3 class="category-name">${escapeHtml(cat.name)}</h3>
+                                ${pct.availPct > 0
+                                    ? `<span class="avail-hero-badge high"><i class="fas fa-check-circle"></i> ${pct.availPct}% Available</span>`
+                                    : `<span class="avail-hero-badge full"><i class="fas fa-ban"></i> 100% Occupied</span>`
+                                }
+                            </div>
+                            <div class="category-meta-row">
+                                <span class="cat-meta-pill"><i class="fas fa-map-marked-alt"></i> ${cat.sections.length} ${cat.sections.length === 1 ? 'Garden Zone' : 'Garden Zones'}</span>
+                                <span class="cat-meta-pill"><i class="fas fa-monument"></i> ${cat.counts.total} Total Plots</span>
+                            </div>
                         </div>
                     </div>
+
                     <div class="category-occupancy-wrap">
-                        <div class="occupancy-meter" title="${cat.counts.available} Available, ${cat.counts.reserved} Reserved, ${cat.counts.occupied} Occupied">
-                            <div class="occupancy-track">
+                        <div class="occupancy-dashboard-pod">
+                            <div class="pod-header">
+                                <span class="pod-title"><i class="fas fa-chart-pie"></i> Zone Capacity</span>
+                                <span class="pod-ratio"><strong>${cat.counts.available}</strong> / ${cat.counts.total} Plots Ready</span>
+                            </div>
+                            <div class="occupancy-track" title="${cat.counts.available} Available, ${cat.counts.reserved} Reserved, ${cat.counts.occupied} Occupied${cat.counts.expired ? ', ' + cat.counts.expired + ' Expired' : ''}">
                                 <div class="occupancy-bar avail" style="width: ${pct.availPct}%"></div>
                                 <div class="occupancy-bar rsvd" style="width: ${pct.rsvdPct}%"></div>
                                 <div class="occupancy-bar occ" style="width: ${pct.occPct}%"></div>
+                                ${pct.expPct > 0 ? `<div class="occupancy-bar exp" style="width: ${pct.expPct}%"></div>` : ''}
                             </div>
                             <div class="occupancy-legend">
-                                <span class="legend-stat avail"><i class="fas fa-circle"></i> <strong>${cat.counts.available}</strong> Avail (${pct.availPct}%)</span>
-                                <span class="legend-stat rsvd"><i class="fas fa-circle"></i> <strong>${cat.counts.reserved}</strong> Rsvd</span>
-                                <span class="legend-stat occ"><i class="fas fa-circle"></i> <strong>${cat.counts.occupied}</strong> Occ</span>
+                                <span class="legend-chip avail"><span class="chip-dot"></span><strong>${cat.counts.available}</strong> Avail</span>
+                                <span class="legend-chip rsvd"><span class="chip-dot"></span><strong>${cat.counts.reserved}</strong> Rsvd</span>
+                                <span class="legend-chip occ"><span class="chip-dot"></span><strong>${cat.counts.occupied}</strong> Occ</span>
+                                ${cat.counts.expired > 0 ? `<span class="legend-chip exp"><span class="chip-dot"></span><strong>${cat.counts.expired}</strong> Exp</span>` : ''}
                             </div>
                         </div>
-                        <div class="category-chevron-btn ${isExpanded ? 'expanded' : ''}">
+
+                        <div class="category-chevron-btn ${isExpanded ? 'expanded' : ''}" title="${isExpanded ? 'Collapse' : 'Expand'}">
                             <i class="fas fa-chevron-down"></i>
                         </div>
                     </div>
                 </button>
                 <div class="category-body" id="${catId}" ${isExpanded ? '' : 'hidden'}>
+                    <div class="category-body-header">
+                        <span class="body-header-title"><i class="fas fa-layer-group"></i> Active Memorial Gardens</span>
+                        <span class="body-header-sub">Click a garden zone to view plot slot matrices</span>
+                    </div>
                     ${cat.sections.length
                         ? cat.sections.map(sec => renderSectionHtml(cat.name, sec)).join('')
                         : emptyStateHtml('fa-map', 'No Sections', 'No sections are currently assigned to this category.', true)}
