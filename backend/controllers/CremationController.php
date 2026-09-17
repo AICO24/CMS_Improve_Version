@@ -197,7 +197,7 @@ class CremationController {
             return ['error' => "Invalid status '{$data['status']}'. Must be one of: " . implode(', ', self::ALLOWED_STATUSES), 'code' => 400];
         }
 
-        if (!empty($data['niche_number']) && !$this->cremationModel->isNicheAvailable($data['niche_number'])) {
+        if (!empty($data['niche_number']) && !$this->cremationModel->isNicheAvailable($data['niche_number'], $data['columbarium'] ?? null)) {
             return ['error' => 'This niche is already occupied', 'code' => 409];
         }
 
@@ -709,6 +709,8 @@ class CremationController {
 
     public function getStats($columbarium = null) {
         $stats = $this->cremationModel->getStats($columbarium);
+        $rate = (float) ($stats['occupancy_rate'] ?? 0);
+        $stats['capacity_status'] = $rate >= self::CAPACITY_CRITICAL_THRESHOLD ? 'critical' : ($rate >= self::CAPACITY_WARNING_THRESHOLD ? 'warning' : 'normal');
         $this->maybeAlertColumbariumCapacity();
         return $stats;
     }
@@ -856,7 +858,7 @@ class CremationController {
             return ['error' => 'Decedent not found', 'code' => 404];
         }
 
-        if (!$this->cremationModel->isNicheAvailable($data['niche_number'])) {
+        if (!$this->cremationModel->isNicheAvailable($data['niche_number'], $data['columbarium'] ?? null)) {
             return ['error' => 'This niche is already occupied', 'code' => 409];
         }
 
@@ -893,8 +895,8 @@ class CremationController {
                 'Decedent',
                 $deceasedId,
                 $userId,
-                function () use ($cremationModel, $nicheNumber) {
-                    if (!$cremationModel->isNicheAvailable($nicheNumber)) {
+                function () use ($cremationModel, $nicheNumber, $cremationData) {
+                    if (!$cremationModel->isNicheAvailable($nicheNumber, $cremationData['columbarium'] ?? null)) {
                         return ['Niche ' . $nicheNumber . ' was assigned to someone else before this could complete'];
                     }
                     return true;

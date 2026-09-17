@@ -164,12 +164,15 @@ class Cremation {
         return $stmt->fetchAll();
     }
 
-    public function findNiche($nicheNumber) {
-        $stmt = $this->db->prepare(" 
-            SELECT * FROM cremation_records 
-            WHERE niche_number = ? AND status != 'Cancelled'
-        ");
-        $stmt->execute([$nicheNumber]);
+    public function findNiche($nicheNumber, $columbarium = null) {
+        $sql = "SELECT * FROM cremation_records WHERE niche_number = ? AND status != 'Cancelled'";
+        $params = [$nicheNumber];
+        if (!empty($columbarium)) {
+            $sql .= " AND columbarium = ?";
+            $params[] = $columbarium;
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetch();
     }
 
@@ -177,20 +180,8 @@ class Cremation {
         $rows = [];
         $defaultColumbarium = $columbarium ?? 'Columbarium A';
 
-        for ($i = 1; $i <= self::DEFAULT_CAPACITY; $i++) {
-            $rows[] = [
-                'niche_number' => 'N-' . $i,
-                'columbarium' => $defaultColumbarium,
-                'level' => 1,
-                'status' => 'available',
-                'first_name' => null,
-                'last_name' => null,
-                'cremation_id' => null,
-            ];
-        }
-
         $sql = "
-            SELECT c.cremation_id, c.niche_number, c.columbarium, c.level, c.status,
+            SELECT c.cremation_id, c.niche_number, c.columbarium, c.level, c.status, c.cremation_date, c.ash_storage_location, c.notes,
                    d.first_name, d.last_name
             FROM cremation_records c
             LEFT JOIN decedent_records d ON c.deceased_id = d.decedent_id
@@ -208,6 +199,30 @@ class Cremation {
         $stmt->execute($params);
         $records = $stmt->fetchAll();
 
+        $maxIndex = self::DEFAULT_CAPACITY;
+        foreach ($records as $record) {
+            $suffix = preg_replace('/\D/', '', (string) ($record['niche_number'] ?? ''));
+            if ($suffix !== '') {
+                $maxIndex = max($maxIndex, (int) $suffix);
+            }
+        }
+
+        for ($i = 1; $i <= $maxIndex; $i++) {
+            $calcLevel = (int) ceil($i / 10);
+            $rows[] = [
+                'niche_number' => 'N-' . $i,
+                'columbarium' => $defaultColumbarium,
+                'level' => max(1, min(10, $calcLevel)),
+                'status' => 'available',
+                'first_name' => null,
+                'last_name' => null,
+                'cremation_id' => null,
+                'cremation_date' => null,
+                'ash_storage_location' => null,
+                'notes' => null,
+            ];
+        }
+
         foreach ($records as $record) {
             $nicheNumber = $record['niche_number'] ?? null;
             $suffix = preg_replace('/\D/', '', (string) $nicheNumber);
@@ -218,11 +233,14 @@ class Cremation {
             $row = [
                 'niche_number' => $nicheNumber ?: 'N-' . (count($rows) + 1),
                 'columbarium' => $record['columbarium'] ?? $defaultColumbarium,
-                'level' => $record['level'] ?? 1,
+                'level' => !empty($record['level']) ? (int) $record['level'] : 1,
                 'status' => $normalizedStatus,
                 'first_name' => $record['first_name'] ?? null,
                 'last_name' => $record['last_name'] ?? null,
                 'cremation_id' => $record['cremation_id'] ?? null,
+                'cremation_date' => $record['cremation_date'] ?? null,
+                'ash_storage_location' => $record['ash_storage_location'] ?? null,
+                'notes' => $record['notes'] ?? null,
             ];
 
             if ($index !== null && isset($rows[$index])) {
@@ -439,12 +457,15 @@ class Cremation {
         return array_column($stmt->fetchAll(), 'columbarium');
     }
 
-    public function isNicheAvailable($nicheNumber) {
-        $stmt = $this->db->prepare("
-            SELECT COUNT(*) as count FROM cremation_records
-            WHERE niche_number = ? AND status != 'Cancelled'
-        ");
-        $stmt->execute([$nicheNumber]);
+    public function isNicheAvailable($nicheNumber, $columbarium = null) {
+        $sql = "SELECT COUNT(*) as count FROM cremation_records WHERE niche_number = ? AND status != 'Cancelled'";
+        $params = [$nicheNumber];
+        if (!empty($columbarium)) {
+            $sql .= " AND columbarium = ?";
+            $params[] = $columbarium;
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         $result = $stmt->fetch();
         return isset($result['count']) ? ((int) $result['count'] === 0) : true;
     }
