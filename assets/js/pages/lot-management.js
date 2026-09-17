@@ -489,7 +489,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 // Expand category (showing its garden zone section rows; plots inside each section remain collapsed until clicked)
                 if (bodyEl) {
                     bodyEl.removeAttribute('hidden');
-                    bodyEl.style.display = 'block';
+                    bodyEl.style.display = 'flex';
                 }
                 chevronEl?.classList.add('expanded');
                 catHeader.setAttribute('aria-expanded', 'true');
@@ -1497,7 +1497,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             populateFilterDropdowns();
 
             if (!hierarchyInitialized) {
-                // Keep categories and garden zones collapsed on initial load!
+                // Expand categories so sections are immediately visible, while keeping plot contents collapsed
+                const initialGroups = groupLotsByCategory(allLots);
+                if (initialGroups.length) {
+                    initialGroups.forEach(g => expandedCategories.add(g.name));
+                }
+                // expandedSections stays EMPTY so all sections start collapsed!
                 hierarchyInitialized = true;
             }
 
