@@ -131,7 +131,6 @@
                         </svg>
                     </label>
                     <h3 id="pageTitle">Payment Recording</h3>
-                    <div id="aiAssistantMount"></div>
                 </div>
                 <div class="user-info">
                     <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
@@ -155,62 +154,89 @@
                 <div class="content-area">
                 <div id="checkoutStatusAlert" class="alert-banner" style="display:none; margin-bottom:1rem;" role="alert"></div>
                 <div class="stats-row payment-stats">
-                    <div class="stat-card"><div class="stat-title">Total Revenue</div><div class="stat-value" id="totalRevenue">₱0</div><div class="stat-sub">All time</div></div>
-                    <div class="stat-card"><div class="stat-title">This Month</div><div class="stat-value" id="monthRevenue">₱0</div><div class="stat-sub">Current month</div></div>
-                    <div class="stat-card"><div class="stat-title">Transactions</div><div class="stat-value" id="transactionCount">0</div><div class="stat-sub">Total count</div></div>
-                    <div class="stat-card"><div class="stat-title">Last Payment</div><div class="stat-value" id="lastPayment">—</div><div class="stat-sub">Date</div></div>
+                    <div class="stat-card stat-card-filterable active" id="cardTotalRevenue" data-filter="all" role="button" tabindex="0" title="View all payments">
+                        <div class="stat-title">
+                            <span>Total Revenue</span>
+                            <span class="card-icon"><i class="fas fa-coins"></i></span>
+                        </div>
+                        <div class="stat-value" id="totalRevenue">₱0</div>
+                        <div class="stat-sub">All time collected</div>
+                    </div>
+                    <div class="stat-card stat-card-filterable" id="cardMonthRevenue" data-filter="month" role="button" tabindex="0" title="Filter to this month's payments">
+                        <div class="stat-title">
+                            <span>This Month</span>
+                            <span class="card-icon"><i class="fas fa-calendar-days"></i></span>
+                        </div>
+                        <div class="stat-value" id="monthRevenue">₱0</div>
+                        <div class="stat-sub">Current month revenue</div>
+                    </div>
+                    <div class="stat-card stat-card-filterable" id="cardPendingPayments" data-filter="pending" role="button" tabindex="0" title="Filter to Pending verification">
+                        <div class="stat-title">
+                            <span>Pending Review</span>
+                            <span class="card-icon"><i class="fas fa-clock"></i></span>
+                        </div>
+                        <div class="stat-value" id="transactionCount">0</div>
+                        <div class="stat-sub">Awaiting verification</div>
+                    </div>
+                    <div class="stat-card stat-card-filterable" id="cardVerifiedPayments" data-filter="verified" role="button" tabindex="0" title="Filter to Verified payments">
+                        <div class="stat-title">
+                            <span>Verified Total</span>
+                            <span class="card-icon"><i class="fas fa-circle-check"></i></span>
+                        </div>
+                        <div class="stat-value" id="lastPayment">0</div>
+                        <div class="stat-sub">Approved transactions</div>
+                    </div>
                 </div>
 
-                <div class="toolbar-row">
-                    <div class="toolbar-action-row">
-                        <div class="toolbar-section-label">
-                            <i class="fas fa-filter"></i>
-                            <span>Filters</span>
+                <div class="payment-control-panel">
+                    <div class="control-panel-header">
+                        <div class="control-panel-title">
+                            <i class="fas fa-sliders"></i>
+                            <span>Payment Filters & Actions</span>
+                        </div>
+                        <div class="control-panel-actions">
+                            <button class="btn-secondary btn-action-pill admin-only" id="verifyAllPaymentsBtn" title="Verify every pending payment"><i class="fas fa-check-double"></i><span>Verify All Pending</span></button>
+                            <button class="btn-secondary btn-action-pill is-danger admin-only" id="rejectAllPaymentsBtn" title="Reject every pending payment"><i class="fas fa-ban"></i><span>Reject All Pending</span></button>
+                            <button class="btn-primary btn-action-pill" id="openAddPayment"><i class="fas fa-plus"></i><span>Record Payment</span></button>
                         </div>
                     </div>
-                    <div class="toolbar-main-row">
-                        <div class="toolbar-filters">
-                            <div class="search-field">
-                                <input type="text" id="referenceFilter" class="search-field__input" placeholder=" ">
-                                <label for="referenceFilter" class="search-field__label">Reference #</label>
-                                <span class="search-field__icon" aria-hidden="true">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
-                                </span>
-                            </div>
-                            <select id="transactionTypeFilter">
-                                <option value="">All types</option>
+                    <div class="control-panel-body">
+                        <div class="search-field">
+                            <input type="text" id="referenceFilter" class="search-field__input" placeholder=" ">
+                            <label for="referenceFilter" class="search-field__label">Reference # or Receipt #</label>
+                            <span class="search-field__icon" aria-hidden="true">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
+                            </span>
+                        </div>
+                        <div class="select-wrapper">
+                            <select id="transactionTypeFilter" class="filter-select-styled">
+                                <option value="">All transaction types</option>
                                 <option value="Lot Purchase">Lot Purchase</option>
                                 <option value="Cremation">Cremation</option>
                                 <option value="Relocation">Relocation</option>
                                 <option value="Renewal">Renewal</option>
                                 <option value="Other">Other</option>
                             </select>
-                            <label class="status-select-field" for="statusFilter">
-                                <select id="statusFilter" aria-label="Payment status">
+                        </div>
+                        <div class="select-wrapper">
+                            <select id="statusFilter" class="filter-select-styled" aria-label="Payment status">
                                 <option value="">All statuses</option>
                                 <option value="Pending">Pending</option>
                                 <option value="Verified">Verified</option>
                                 <option value="Rejected">Rejected</option>
-                                </select>
-                            </label>
-                            <label class="date-filter-field">
-                                <span>From</span>
+                            </select>
+                        </div>
+                        <div class="date-range-cluster">
+                            <label class="date-chip">
+                                <span class="date-chip-label">From</span>
                                 <input type="date" id="dateFromFilter" aria-label="From date">
                             </label>
-                            <label class="date-filter-field">
-                                <span>To</span>
+                            <label class="date-chip">
+                                <span class="date-chip-label">To</span>
                                 <input type="date" id="dateToFilter" aria-label="To date">
                             </label>
-                            <button class="btn-secondary" id="clearFilters"><i class="fas fa-rotate-left"></i><span>Clear</span></button>
-                            <div class="toolbar-actions-panel">
-                                <span class="toolbar-actions-label">Payment actions</span>
-                                <div class="toolbar-actions" aria-label="Payment actions">
-                                <button class="btn-secondary btn-action-pill admin-only" id="verifyAllPaymentsBtn" title="Verify every pending payment"><i class="fas fa-check-double"></i><span>Verify All Pending</span></button>
-                                <button class="btn-secondary btn-action-pill is-danger admin-only" id="rejectAllPaymentsBtn" title="Reject every pending payment"><i class="fas fa-ban"></i><span>Reject All Pending</span></button>
-                                <button class="btn-secondary btn-action-pill" id="openAddPayment"><i class="fas fa-plus"></i><span>Record Payment</span></button>
-                                </div>
-                            </div>
                         </div>
+                        <button class="btn-secondary btn-reset-filters" id="clearFilters" title="Reset all filters"><i class="fas fa-rotate-left"></i><span>Reset</span></button>
                     </div>
                 </div>
 
@@ -354,6 +380,7 @@
             <div id="viewDetails"></div>
         </div>
     </div>
+    <div id="aiAssistantMount"></div>
 
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>

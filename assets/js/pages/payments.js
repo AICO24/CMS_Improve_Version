@@ -258,7 +258,44 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    function renderStats(revenue, monthRevenue, payments, meta) {
+    async function loadStatsCounts() {
+        if (currentUser.role === 'user') return { pending: 0, verified: 0 };
+        try {
+            const [pendingRes, verifiedRes] = await Promise.all([
+                api.request('payments?verification_status=Pending&per_page=1', { method: 'GET' }).catch(() => null),
+                api.request('payments?verification_status=Verified&per_page=1', { method: 'GET' }).catch(() => null)
+            ]);
+            return {
+                pending: pendingRes?.meta?.total ?? 0,
+                verified: verifiedRes?.meta?.total ?? 0
+            };
+        } catch (e) {
+            return { pending: 0, verified: 0 };
+        }
+    }
+
+    function syncStatCardActiveState() {
+        const status = statusFilterSelect.value;
+        const dateFrom = dateFromFilterInput.value;
+        const dateTo = dateToFilterInput.value;
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+
+        document.querySelectorAll('.stat-card-filterable').forEach(card => card.classList.remove('active'));
+
+        if (status === 'Pending') {
+            document.getElementById('cardPendingPayments')?.classList.add('active');
+        } else if (status === 'Verified') {
+            document.getElementById('cardVerifiedPayments')?.classList.add('active');
+        } else if (dateFrom === monthStart && dateTo === monthEnd && !status) {
+            document.getElementById('cardMonthRevenue')?.classList.add('active');
+        } else if (!status && !dateFrom && !dateTo && !referenceFilterInput.value && !transactionTypeFilterSelect.value) {
+            document.getElementById('cardTotalRevenue')?.classList.add('active');
+        }
+    }
+
+    function renderStats(revenue, monthRevenue, payments, meta, counts = { pending: 0, verified: 0 }) {
         if (currentUser.role === 'user') {
             const visiblePending = payments.filter((payment) => (payment.verification_status || 'Pending') === 'Pending').length;
             const visibleVerified = payments.filter((payment) => payment.verification_status === 'Verified').length;
@@ -274,32 +311,30 @@ document.addEventListener('DOMContentLoaded', async function() {
         } else {
             if (statParts.totalRevenueTitle) statParts.totalRevenueTitle.innerText = 'Total Revenue';
             if (statParts.monthRevenueTitle) statParts.monthRevenueTitle.innerText = 'This Month';
-            if (statParts.transactionCountTitle) statParts.transactionCountTitle.innerText = 'Transactions';
-            if (statParts.totalRevenueSub) statParts.totalRevenueSub.innerText = 'All time';
-            if (statParts.monthRevenueSub) statParts.monthRevenueSub.innerText = 'Current month';
-            if (statParts.transactionCountSub) statParts.transactionCountSub.innerText = 'Total count';
+            if (statParts.transactionCountTitle) statParts.transactionCountTitle.innerText = 'Pending Review';
+            if (statParts.totalRevenueSub) statParts.totalRevenueSub.innerText = 'All time collected';
+            if (statParts.monthRevenueSub) statParts.monthRevenueSub.innerText = 'Current month revenue';
+            if (statParts.transactionCountSub) statParts.transactionCountSub.innerText = 'Awaiting verification';
             statsEl.totalRevenue.innerText = formatCurrency(revenue.total || 0);
             statsEl.monthRevenue.innerText = formatCurrency(monthRevenue.total || 0);
-            statsEl.transactionCount.innerText = meta.total || 0;
+            statsEl.transactionCount.innerText = counts.pending;
+            statsEl.lastPayment.innerText = counts.verified;
         }
-        // Payments are already sorted newest-first by the backend, so the first
-        // row on page 1 is the most recent payment.
-        statsEl.lastPayment.innerText = pagination.page === 1 && payments.length > 0
-            ? (payments[0].payment_date || payments[0].created_at || '—')
-            : statsEl.lastPayment.innerText || '—';
     }
 
     async function refreshAll() {
         try {
-            const [paymentsResult, revenue, monthRevenue] = await Promise.all([
+            const [paymentsResult, revenue, monthRevenue, counts] = await Promise.all([
                 loadPayments(),
                 loadRevenue(),
                 loadMonthRevenue(),
+                loadStatsCounts(),
             ]);
             const payments = paymentsResult.data || [];
             const meta = paymentsResult.meta || { page: 1, pages: 1, total: payments.length };
-            renderStats(revenue, monthRevenue, payments, meta);
+            renderStats(revenue, monthRevenue, payments, meta, counts);
             renderActiveFilterChips();
+            syncStatCardActiveState();
             renderTable(payments);
             pagination.render(meta);
         } catch (error) {
@@ -865,8 +900,34 @@ document.addEventListener('DOMContentLoaded', async function() {
         statusFilterSelect.value = '';
         dateFromFilterInput.value = '';
         dateToFilterInput.value = '';
+        syncStatCardActiveState();
         pagination.reset();
         await refreshAll();
+    });
+
+    document.querySelectorAll('.stat-card-filterable').forEach(card => {
+        card.addEventListener('click', async () => {
+            const filterType = card.dataset.filter;
+            if (filterType === 'all') {
+                referenceFilterInput.value = '';
+                transactionTypeFilterSelect.value = '';
+                statusFilterSelect.value = '';
+                dateFromFilterInput.value = '';
+                dateToFilterInput.value = '';
+            } else if (filterType === 'month') {
+                const now = new Date();
+                dateFromFilterInput.value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+                dateToFilterInput.value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+                statusFilterSelect.value = '';
+            } else if (filterType === 'pending') {
+                statusFilterSelect.value = 'Pending';
+            } else if (filterType === 'verified') {
+                statusFilterSelect.value = 'Verified';
+            }
+            syncStatCardActiveState();
+            pagination.reset();
+            await refreshAll();
+        });
     });
 
     if (verifyAllPaymentsBtn) {

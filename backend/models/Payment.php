@@ -34,8 +34,14 @@ class Payment {
             $params[] = $filters['date_to'];
         }
         if (!empty($filters['reference_id'])) {
-            $sql .= " AND p.reference_id = ?";
-            $params[] = $filters['reference_id'];
+            if (is_numeric($filters['reference_id'])) {
+                $sql .= " AND (p.reference_id = ? OR p.receipt_number LIKE ?)";
+                $params[] = $filters['reference_id'];
+                $params[] = '%' . $filters['reference_id'] . '%';
+            } else {
+                $sql .= " AND p.receipt_number LIKE ?";
+                $params[] = '%' . $filters['reference_id'] . '%';
+            }
         }
         if (!empty($filters['received_by'])) {
             $sql .= " AND p.received_by = ?";
