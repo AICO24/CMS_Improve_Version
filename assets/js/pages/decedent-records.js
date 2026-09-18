@@ -2262,12 +2262,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     const toggleSetupBtn = document.getElementById('toggleSetupBtn');
     const changeActiveFileBtn = document.getElementById('changeActiveFileBtn');
     const cancelImportBtn = document.getElementById('cancelImportBtn');
+    const importFooterHintText = document.getElementById('importFooterHintText');
+    const confirmImportBtn = document.getElementById('confirmImportBtn');
+    const confirmImportBtnText = document.getElementById('confirmImportBtnText');
     const importPreviewSection = document.getElementById('importPreviewSection');
     const importSummaryEl = document.getElementById('importSummary');
     const importPreviewBody = document.getElementById('importPreviewBody');
     const selectAllImportRows = document.getElementById('selectAllImportRows');
-    const confirmImportBtn = document.getElementById('confirmImportBtn');
-
 
     function formatFileSize(bytes) {
         if (!bytes || bytes === 0) return '0 B';
@@ -2289,6 +2290,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (activeBarFileSize) activeBarFileSize.textContent = formatFileSize(file.size);
         if (dropzoneEmpty) dropzoneEmpty.hidden = true;
         if (importFileCard) importFileCard.hidden = false;
+        if (previewImportBtn) previewImportBtn.disabled = false;
+        if (confirmImportBtn) confirmImportBtn.disabled = false;
+        if (importFooterHintText) importFooterHintText.textContent = `Validating "${file.name}"...`;
+
+        // Automatically trigger preview validation for instant response
+        triggerPreviewValidation(file);
     }
 
     function clearImportFile() {
@@ -2301,6 +2308,10 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (importPreviewBody) importPreviewBody.innerHTML = '';
         if (selectAllImportRows) selectAllImportRows.checked = false;
         if (toggleSetupBtn) toggleSetupBtn.innerHTML = '<i class="fas fa-circle-info"></i> View Format Guide';
+        if (previewImportBtn) previewImportBtn.disabled = true;
+        if (confirmImportBtn) confirmImportBtn.disabled = true;
+        if (confirmImportBtnText) confirmImportBtnText.textContent = 'Save & Import Records';
+        if (importFooterHintText) importFooterHintText.textContent = 'Please choose a CSV file to validate and save records.';
         importPreviewRows = [];
     }
 
@@ -2368,8 +2379,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     document.getElementById('downloadImportTemplate').addEventListener('click', () => {
-        // A few varied example rows (not just one) so the template reads as
-        // an organized little table when opened, not a single crammed line.
         const columns = ['first_name', 'last_name', 'middle_name', 'suffix', 'dob', 'dod', 'lot_number', 'section_name', 'block_name', 'cause_of_death', 'contact_name', 'contact_number', 'is_cremated', 'ash_storage'];
         const sampleRows = [
             ['Juan', 'Dela Cruz', 'Santos', '', '1950-01-01', '2020-03-15', '1', 'Section A', 'Block 1', 'Natural causes', 'Maria Dela Cruz', '09171234567', 'no', ''],
@@ -2420,7 +2429,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 : (row.data.is_cremated === 'yes' ? '<span class="status-badge status-info">Cremation Only</span>' : '—');
             return `
                 <tr data-index="${index}">
-                    <td><input type="checkbox" class="import-row-check" ${checked} ${disabled}></td>
+                    <td style="text-align: center;"><input type="checkbox" class="import-row-check" ${checked} ${disabled}></td>
                     <td>${row.row_number}</td>
                     <td>${escapeHtml(`${row.data.first_name} ${row.data.last_name}`)}</td>
                     <td>${escapeHtml(row.data.dob)} — ${escapeHtml(row.data.dod)}</td>
@@ -2438,6 +2447,23 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (importActiveFileBar) importActiveFileBar.hidden = false;
         if (importPreviewSection) importPreviewSection.hidden = false;
         if (toggleSetupBtn) toggleSetupBtn.innerHTML = '<i class="fas fa-circle-info"></i> View Format Guide';
+
+        const readyCount = summary.ready || 0;
+        const reviewCount = summary.needs_review || 0;
+
+        if (readyCount > 0) {
+            if (confirmImportBtn) confirmImportBtn.disabled = false;
+            if (confirmImportBtnText) confirmImportBtnText.textContent = `Save ${readyCount} Valid Records`;
+            if (importFooterHintText) importFooterHintText.textContent = `${readyCount} valid record(s) ready to save! Click "Save ${readyCount} Valid Records" to import.`;
+        } else if (reviewCount > 0) {
+            if (confirmImportBtn) confirmImportBtn.disabled = false;
+            if (confirmImportBtnText) confirmImportBtnText.textContent = `Save Records (Review ${reviewCount})`;
+            if (importFooterHintText) importFooterHintText.textContent = `Review warning notes above. Checked rows will be saved.`;
+        } else {
+            if (confirmImportBtn) confirmImportBtn.disabled = true;
+            if (confirmImportBtnText) confirmImportBtnText.textContent = `No Valid Records to Save (0 Ready)`;
+            if (importFooterHintText) importFooterHintText.textContent = `All rows have errors (e.g. missing lot or duplicates). Fix the spreadsheet and re-upload.`;
+        }
     }
 
     if (toggleSetupBtn) {
@@ -2469,6 +2495,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             importPreviewBody.querySelectorAll('.import-row-check:not(:disabled)').forEach((cb) => {
                 cb.checked = isChecked;
             });
+            updateSaveButtonCount();
         });
 
         importPreviewBody.addEventListener('change', (e) => {
@@ -2477,12 +2504,24 @@ document.addEventListener('DOMContentLoaded', async function () {
                 if (allCheckable.length > 0) {
                     selectAllImportRows.checked = allCheckable.every((cb) => cb.checked);
                 }
+                updateSaveButtonCount();
             }
         });
     }
 
-    previewImportBtn.addEventListener('click', async () => {
-        const file = importFileInput.files ? importFileInput.files[0] : null;
+    function updateSaveButtonCount() {
+        const checkedCount = importPreviewBody.querySelectorAll('.import-row-check:checked').length;
+        if (checkedCount > 0) {
+            if (confirmImportBtn) confirmImportBtn.disabled = false;
+            if (confirmImportBtnText) confirmImportBtnText.textContent = `Save ${checkedCount} Selected Record${checkedCount > 1 ? 's' : ''}`;
+        } else {
+            if (confirmImportBtn) confirmImportBtn.disabled = true;
+            if (confirmImportBtnText) confirmImportBtnText.textContent = 'Save & Import Records';
+        }
+    }
+
+    async function triggerPreviewValidation(file, autoConfirm = false) {
+        if (!file) file = importFileInput.files ? importFileInput.files[0] : null;
         if (!file) {
             showToast('Please choose a CSV file first.', { type: 'error' });
             return;
@@ -2495,13 +2534,26 @@ document.addEventListener('DOMContentLoaded', async function () {
             try {
                 const preview = await api.request('decedents/import/preview', { method: 'POST', body: formData });
                 renderImportPreview(preview);
+                if (autoConfirm && (preview.summary?.ready || 0) > 0) {
+                    confirmImportBtn.click();
+                }
             } catch (error) {
                 showToast(error.message || 'Could not preview this file.', { type: 'error' });
+                if (importFooterHintText) importFooterHintText.textContent = error.message || 'Validation error.';
             }
         });
+    }
+
+    previewImportBtn.addEventListener('click', async () => {
+        await triggerPreviewValidation();
     });
 
     confirmImportBtn.addEventListener('click', async () => {
+        if (importPreviewRows.length === 0) {
+            await triggerPreviewValidation(null, true);
+            return;
+        }
+
         const checkedRows = [];
         importPreviewBody.querySelectorAll('tr').forEach((tr) => {
             const checkbox = tr.querySelector('.import-row-check');
@@ -2509,9 +2561,6 @@ document.addEventListener('DOMContentLoaded', async function () {
             const index = parseInt(tr.dataset.index, 10);
             const row = importPreviewRows[index];
             if (!row) return;
-            // A row still checked despite a near-duplicate warning is staff
-            // explicitly choosing to keep it — same confirm_duplicate
-            // contract the single-record Add form already uses (Batch B).
             checkedRows.push({
                 row_number: row.row_number,
                 data: row.data,
