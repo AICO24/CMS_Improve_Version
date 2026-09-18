@@ -342,16 +342,22 @@ document.addEventListener('DOMContentLoaded', async function () {
     const pendingBadge = document.getElementById('pendingRequestsBadge');
 
     function switchRecordsTab(tab) {
+        const bottomFilters = document.getElementById('decrecPanelBottomRow');
+        const divider = document.getElementById('decrecPanelDivider');
         if (tab === 'pending') {
             if (tabBtnPending) tabBtnPending.classList.add('active');
             if (tabBtnAll) tabBtnAll.classList.remove('active');
             if (panePending) panePending.style.display = 'block';
             if (paneAll) paneAll.style.display = 'none';
+            if (bottomFilters) bottomFilters.style.display = 'none';
+            if (divider) divider.style.display = 'none';
         } else {
             if (tabBtnAll) tabBtnAll.classList.add('active');
             if (tabBtnPending) tabBtnPending.classList.remove('active');
             if (paneAll) paneAll.style.display = 'block';
             if (panePending) panePending.style.display = 'none';
+            if (bottomFilters) bottomFilters.style.display = 'flex';
+            if (divider) divider.style.display = 'block';
         }
     }
 

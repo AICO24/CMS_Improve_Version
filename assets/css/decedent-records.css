@@ -4581,4 +4581,331 @@
 .dashboard-body[data-theme="dark"] .btn-print-cert i {
     color: #34d399;
 }
+
+/* ========================================================
+   UNIFIED MASTER CONTROL PANEL (DECEDENT RECORDS)
+   ======================================================== */
+.decrec-control-panel {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(240, 248, 243, 0.92)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.08), rgba(37, 99, 235, 0.04));
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-left: 5px solid var(--color-primary-500, #10b981);
+    border-radius: var(--radius-lg, 14px);
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 16px;
+    box-sizing: border-box;
+}
+
+.decrec-control-panel .panel-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: nowrap;
+}
+
+.decrec-control-panel .records-tabs-track {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px;
+    border-radius: var(--radius-md, 10px);
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(44, 94, 71, 0.14);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+    flex-shrink: 0;
+}
+
+.decrec-control-panel .records-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: auto;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm, 7px);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--color-primary-800, #1e3a2b);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: all 160ms cubic-bezier(0.2, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.decrec-control-panel .records-tab-btn i {
+    font-size: 0.76rem;
+    opacity: 0.85;
+}
+
+.decrec-control-panel .records-tab-btn:hover:not(.active) {
+    background: rgba(44, 94, 71, 0.08);
+    color: var(--color-primary-900, #163024);
+    transform: translateY(-1px);
+}
+
+.decrec-control-panel .records-tab-btn.active {
+    background: linear-gradient(135deg, #1e3a2f 0%, #2c5e47 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(22, 50, 41, 0.22);
+}
+
+.decrec-control-panel .records-tab-btn.active i {
+    opacity: 1;
+    color: #34d399;
+}
+
+.decrec-control-panel .records-tab-btn .tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1.2;
+    background: #ef4444;
+    color: #ffffff;
+    box-shadow: 0 1px 4px rgba(239, 68, 68, 0.35);
+}
+
+.decrec-control-panel .panel-action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+}
+
+.decrec-control-panel .btn-add.type1 {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    padding: 0 14px;
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+    color: #ffffff;
+    font-size: 0.80rem;
+    font-weight: 700;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    transition: all 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.decrec-control-panel .btn-add.type1:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.45);
+    background: linear-gradient(135deg, #059669 0%, #065f46 100%);
+    color: #ffffff;
+}
+
+.decrec-control-panel .btn-add.type1 .btn-txt {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.decrec-control-panel .panel-action-buttons .btn-secondary {
+    height: 36px;
+    border-radius: var(--radius-sm, 8px);
+    font-size: 0.78rem;
+    font-weight: 700;
+    gap: 6px;
+    padding: 0 12px;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.04);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: #fff;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    transition: all 160ms ease;
+    white-space: nowrap;
+}
+
+.decrec-control-panel .panel-action-buttons .btn-secondary:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+    transform: translateY(-1px);
+}
+
+.decrec-control-panel .panel-divider {
+    height: 1px;
+    background: linear-gradient(90deg, rgba(44, 94, 71, 0.15) 0%, rgba(226, 232, 240, 0.8) 50%, rgba(44, 94, 71, 0.15) 100%);
+    width: 100%;
+    margin: 2px 0;
+}
+
+.decrec-control-panel .panel-bottom-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.decrec-control-panel .panel-filters-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    flex: 1 1 auto;
+}
+
+.decrec-control-panel .panel-filters-group .filter-bar__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--color-primary-800, #1e3a2b);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding-right: 4px;
+    white-space: nowrap;
+}
+
+.decrec-control-panel .panel-filters-group .filter-bar__label i {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm, 5px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary-50, #eef8f1);
+    color: var(--color-primary-600, #0f766e);
+    font-size: 0.72rem;
+}
+
+.decrec-control-panel .search-field {
+    flex: 1 1 240px;
+    min-width: 200px;
+    max-width: 340px;
+    position: relative;
+    margin: 0;
+}
+
+.decrec-control-panel .search-field__input {
+    height: 36px;
+    font-size: 0.84rem;
+    padding-right: 30px;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid rgba(44, 94, 71, 0.22);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.decrec-control-panel .search-field__label {
+    font-size: 0.80rem;
+}
+
+.decrec-control-panel .filter-select {
+    height: 36px;
+    padding: 0 12px;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid rgba(44, 94, 71, 0.22);
+    background: rgba(255, 255, 255, 0.95);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #0f172a;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+.decrec-control-panel .filter-select:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+}
+
+.decrec-control-panel .attention-filter-toggle {
+    height: 36px;
+    padding: 0 12px;
+    font-size: 0.78rem;
+    border-radius: var(--radius-md, 8px);
+}
+
+/* Dark Mode Overrides for Unified Control Panel */
+.dashboard-body[data-theme="dark"] .decrec-control-panel {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(22, 36, 30, 0.92) 100%);
+    border-color: rgba(52, 211, 153, 0.2);
+    border-left-color: #34d399;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.dashboard-body[data-theme="dark"] .decrec-control-panel .records-tabs-track {
+    background: rgba(15, 23, 42, 0.8);
+    border-color: rgba(52, 211, 153, 0.2);
+}
+
+.dashboard-body[data-theme="dark"] .decrec-control-panel .records-tab-btn {
+    color: #94a3b8;
+}
+
+.dashboard-body[data-theme="dark"] .decrec-control-panel .records-tab-btn:hover:not(.active) {
+    background: rgba(52, 211, 153, 0.1);
+    color: #f1f5f9;
+}
+
+.dashboard-body[data-theme="dark"] .decrec-control-panel .records-tab-btn.active {
+    background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+    color: #ffffff;
+}
+
+.dashboard-body[data-theme="dark"] .decrec-control-panel .panel-action-buttons .btn-secondary {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+}
+
+.dashboard-body[data-theme="dark"] .decrec-control-panel .panel-action-buttons .btn-secondary:hover {
+    background: #334155;
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dashboard-body[data-theme="dark"] .decrec-control-panel .panel-divider {
+    background: linear-gradient(90deg, rgba(52, 211, 153, 0.15) 0%, rgba(51, 65, 85, 0.8) 50%, rgba(52, 211, 153, 0.15) 100%);
+}
+
+.dashboard-body[data-theme="dark"] .decrec-control-panel .panel-filters-group .filter-bar__label {
+    color: #e2e8f0;
+}
+
+.dashboard-body[data-theme="dark"] .decrec-control-panel .panel-filters-group .filter-bar__label i {
+    background: rgba(52, 211, 153, 0.15);
+    color: #34d399;
+}
+
+.dashboard-body[data-theme="dark"] .decrec-control-panel .search-field__input {
+    background: #1e293b;
+    border-color: rgba(52, 211, 153, 0.25);
+    color: #f1f5f9;
+}
+
+.dashboard-body[data-theme="dark"] .decrec-control-panel .filter-select {
+    background: #1e293b;
+    border-color: rgba(52, 211, 153, 0.25);
+    color: #f1f5f9;
+}
+
+.dashboard-body[data-theme="dark"] .decrec-control-panel .attention-filter-toggle {
+    background: rgba(159, 18, 57, 0.25);
+    border-color: rgba(244, 63, 94, 0.35);
+    color: #fda4af;
+}
+
 

@@ -178,26 +178,48 @@
                         <div class="stat-sub">Incomplete records</div>
                     </div>
                 </div>
-                <!-- ── Sub-Tabs Navigation (Reports Pattern) ── -->
-                <div class="records-tabs">
-                    <div class="records-tabs-track">
-                        <button type="button" class="records-tab-btn active" id="tabBtnAllRecords" data-tab="all">
-                            <i class="fas fa-table-list"></i>
-                            <span>All Records</span>
-                        </button>
-                        <button type="button" class="records-tab-btn" id="tabBtnPendingRequests" data-tab="pending">
-                            <i class="fas fa-inbox"></i>
-                            <span>Citizen Requests</span>
-                            <span class="tab-badge" id="pendingRequestsBadge" style="display: none;">0</span>
-                        </button>
-                    </div>
-                </div>
+                <!-- ── Unified Master Control Panel (Matching Lot & Columbarium) ── -->
+                <div class="decrec-control-panel">
+                    <!-- Top Tier: Sub-Tabs on Left + Action Buttons on Right -->
+                    <div class="panel-top-row">
+                        <div class="records-tabs-track" role="tablist">
+                            <button type="button" class="records-tab-btn active" id="tabBtnAllRecords" data-tab="all" role="tab">
+                                <i class="fas fa-table-list"></i>
+                                <span>All Records</span>
+                            </button>
+                            <button type="button" class="records-tab-btn" id="tabBtnPendingRequests" data-tab="pending" role="tab">
+                                <i class="fas fa-inbox"></i>
+                                <span>Citizen Requests</span>
+                                <span class="tab-badge" id="pendingRequestsBadge" style="display: none;">0</span>
+                            </button>
+                        </div>
 
-                <!-- ── Tab Pane 1: All Records (Filters + Table + Pagination) ── -->
-                <div id="allRecordsTabPane" class="records-tab-pane active">
-                    <!-- Search / Filters / Add / Export / Import Toolbar -->
-                    <div class="filter-bar records-header">
-                        <div class="filter-bar__search-group">
+                        <div class="panel-action-buttons">
+                            <button type="button" class="btn-add type1" id="openAddModal" title="Add a new decedent record">
+                                <span class="btn-txt">
+                                    <i class="fas fa-plus"></i>
+                                    Add New Record
+                                </span>
+                            </button>
+                            <button type="button" class="btn-secondary" id="exportCsvBtn" title="Export currently filtered records to CSV">
+                                <i class="fas fa-file-arrow-down"></i>
+                                <span>Export CSV</span>
+                            </button>
+                            <button type="button" class="btn-secondary" id="openImportModal" title="Bulk import records from CSV spreadsheet">
+                                <i class="fas fa-file-csv"></i>
+                                <span>Import CSV</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Subtle Horizontal Divider -->
+                    <div class="panel-divider" id="decrecPanelDivider"></div>
+
+                    <!-- Bottom Tier: Search & Multi-Filter Controls -->
+                    <div class="panel-bottom-row" id="decrecPanelBottomRow">
+                        <div class="panel-filters-group">
+                            <span class="filter-bar__label"><i class="fas fa-filter"></i> Filters</span>
+
                             <div class="search-field">
                                 <input type="text" id="searchInput" class="search-field__input" placeholder=" ">
                                 <label for="searchInput" class="search-field__label">Search by name, lot, or ID</label>
@@ -212,9 +234,7 @@
                                     </svg>
                                 </span>
                             </div>
-                        </div>
 
-                        <div class="filter-bar__controls-group">
                             <select id="sectionFilter" class="filter-select" aria-label="Filter by cemetery section">
                                 <option value="">All Sections</option>
                             </select>
@@ -230,24 +250,11 @@
                                 <span><i class="fas fa-triangle-exclamation"></i> Needs Attention</span>
                             </label>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="toolbar-actions" aria-label="Record actions">
-                            <button class="btn-add type1" id="openAddModal">
-                                <span class="btn-txt">
-                                    <i class="fas fa-plus"></i>
-                                    Add New Record
-                                </span>
-                            </button>
-                            <button class="btn-secondary" id="exportCsvBtn" type="button" title="Export currently filtered records to CSV">
-                                <i class="fas fa-file-arrow-down"></i>
-                                Export CSV
-                            </button>
-                            <button class="btn-secondary" id="openImportModal" type="button" title="Bulk import records from CSV spreadsheet">
-                                <i class="fas fa-file-csv"></i>
-                                Import CSV
-                            </button>
-                        </div>
-                    </div>            </div>
+                <!-- ── Tab Pane 1: All Records (Table + Pagination) ── -->
+                <div id="allRecordsTabPane" class="records-tab-pane active">
 
                     <!-- Active Filter Chips — right below toolbar -->
                     <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
