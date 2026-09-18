@@ -20,8 +20,11 @@ document.addEventListener('DOMContentLoaded', async function () {
     const lotSelect = document.getElementById('lotNumber');
     const sectionInput = document.getElementById('section');
     const searchInput = document.getElementById('searchInput');
+    const searchClearBtn = document.getElementById('searchClearBtn');
     const typeFilter = document.getElementById('typeFilter');
+    const sectionFilter = document.getElementById('sectionFilter');
     const attentionFilter = document.getElementById('attentionFilter');
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
     const tableBody = document.getElementById('tableBody');
     const recordModal = document.getElementById('recordModal');
     const viewModal = document.getElementById('viewModal');
@@ -36,6 +39,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     let currentEditId = null;
     let currentQuery = '';
     let currentTypeFilter = 'all';
+    let currentSectionFilter = '';
     let currentAttentionFilter = false;
     let pendingRequests = [];
     // Set only when "Approve" was clicked on a pending request — saveRecord()
@@ -89,7 +93,8 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     function renderActiveFilterChips() {
         const chips = [
-            { key: 'q', label: 'Search', value: currentQuery, clear: () => { searchInput.value = ''; currentQuery = ''; } },
+            { key: 'q', label: 'Search', value: currentQuery, clear: () => { searchInput.value = ''; currentQuery = ''; if (searchClearBtn) searchClearBtn.style.display = 'none'; } },
+            { key: 'section', label: 'Section', value: currentSectionFilter, clear: () => { if (sectionFilter) sectionFilter.value = ''; currentSectionFilter = ''; } },
             { key: 'type', label: 'Type', value: currentTypeFilter !== 'all' ? (TYPE_FILTER_LABELS[currentTypeFilter] || currentTypeFilter) : '', clear: () => { typeFilter.value = 'all'; currentTypeFilter = 'all'; } },
             { key: 'attention', label: 'Attention', value: currentAttentionFilter ? 'Needs attention only' : '', clear: () => { attentionFilter.checked = false; currentAttentionFilter = false; } },
         ].filter((chip) => chip.value);
@@ -184,20 +189,161 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
     const refreshFiltered = debounce(() => {
         currentQuery = searchInput.value.trim();
+        if (searchClearBtn) searchClearBtn.style.display = currentQuery ? 'block' : 'none';
+        updateActiveStatCards();
         pagination.reset();
         loadRecords();
     }, 300);
     searchInput.addEventListener('input', refreshFiltered);
+
+    if (searchClearBtn) {
+        searchClearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            currentQuery = '';
+            searchClearBtn.style.display = 'none';
+            updateActiveStatCards();
+            pagination.reset();
+            loadRecords();
+            searchInput.focus();
+        });
+    }
+
+    if (sectionFilter) {
+        sectionFilter.addEventListener('change', () => {
+            currentSectionFilter = sectionFilter.value;
+            updateActiveStatCards();
+            pagination.reset();
+            loadRecords();
+        });
+    }
+
     typeFilter.addEventListener('change', () => {
         currentTypeFilter = typeFilter.value;
+        updateActiveStatCards();
         pagination.reset();
         loadRecords();
     });
+
     attentionFilter.addEventListener('change', () => {
         currentAttentionFilter = attentionFilter.checked;
+        updateActiveStatCards();
         pagination.reset();
         loadRecords();
     });
+
+    // ── Interactive Stat Cards ──
+    function updateActiveStatCards() {
+        document.querySelectorAll('.stat-card-filterable').forEach(card => {
+            const filter = card.dataset.statusFilter;
+            let isActive = false;
+            if (filter === 'all') {
+                isActive = (currentTypeFilter === 'all' && !currentAttentionFilter && !currentSectionFilter && !currentQuery);
+            } else if (filter === 'no') {
+                isActive = (currentTypeFilter === 'no');
+            } else if (filter === 'yes') {
+                isActive = (currentTypeFilter === 'yes');
+            } else if (filter === 'attention') {
+                isActive = Boolean(currentAttentionFilter);
+            }
+            card.classList.toggle('is-active-filter', isActive);
+        });
+    }
+
+    document.querySelectorAll('.stat-card-filterable').forEach(card => {
+        card.addEventListener('click', () => {
+            const filter = card.dataset.statusFilter;
+            if (filter === 'all') {
+                currentTypeFilter = 'all';
+                currentAttentionFilter = false;
+                currentSectionFilter = '';
+                currentQuery = '';
+                typeFilter.value = 'all';
+                attentionFilter.checked = false;
+                if (sectionFilter) sectionFilter.value = '';
+                searchInput.value = '';
+                if (searchClearBtn) searchClearBtn.style.display = 'none';
+            } else if (filter === 'no') {
+                currentTypeFilter = (currentTypeFilter === 'no') ? 'all' : 'no';
+                typeFilter.value = currentTypeFilter;
+            } else if (filter === 'yes') {
+                currentTypeFilter = (currentTypeFilter === 'yes') ? 'all' : 'yes';
+                typeFilter.value = currentTypeFilter;
+            } else if (filter === 'attention') {
+                currentAttentionFilter = !currentAttentionFilter;
+                attentionFilter.checked = currentAttentionFilter;
+            }
+            updateActiveStatCards();
+            pagination.reset();
+            loadRecords();
+        });
+    });
+
+    // ── 1-Click CSV Export for Filtered Records ──
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', async () => {
+            await withButtonLoading(exportCsvBtn, async () => {
+                try {
+                    const exportParams = new URLSearchParams();
+                    if (currentQuery) exportParams.set('q', currentQuery);
+                    if (currentTypeFilter !== 'all') exportParams.set('is_cremated', currentTypeFilter);
+                    if (currentSectionFilter) exportParams.set('section', currentSectionFilter);
+                    if (currentAttentionFilter) exportParams.set('incomplete', '1');
+                    exportParams.set('per_page', '5000');
+
+                    const res = await api.request(`decedents?${exportParams.toString()}`, { method: 'GET' });
+                    const list = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+
+                    if (!list || list.length === 0) {
+                        if (typeof showToast === 'function') showToast('No records available to export.', { type: 'info' });
+                        return;
+                    }
+
+                    const headers = ['Record ID', 'First Name', 'Middle Name', 'Last Name', 'Suffix', 'Date of Birth', 'Date of Death', 'Type', 'Lot Number', 'Section', 'Cause of Death', 'Family Contact Name', 'Family Contact Phone', 'Ash Storage Location'];
+                    const csvRows = [headers.join(',')];
+
+                    list.forEach(r => {
+                        const typeLabel = r.is_cremated === 'yes' ? 'Cremation' : 'Burial';
+                        const row = [
+                            `"D-${r.decedent_id || ''}"`,
+                            `"${(r.first_name || '').replace(/"/g, '""')}"`,
+                            `"${(r.middle_name || '').replace(/"/g, '""')}"`,
+                            `"${(r.last_name || '').replace(/"/g, '""')}"`,
+                            `"${(r.suffix || '').replace(/"/g, '""')}"`,
+                            `"${r.dob || ''}"`,
+                            `"${r.dod || ''}"`,
+                            `"${typeLabel}"`,
+                            `"${(r.lot_number || '').replace(/"/g, '""')}"`,
+                            `"${(r.section_name || '').replace(/"/g, '""')}"`,
+                            `"${(r.cause_of_death || '').replace(/"/g, '""')}"`,
+                            `"${(r.contact_name || '').replace(/"/g, '""')}"`,
+                            `"${(r.contact_number || '').replace(/"/g, '""')}"`,
+                            `"${(r.ash_storage || '').replace(/"/g, '""')}"`,
+                        ];
+                        csvRows.push(row.join(','));
+                    });
+
+                    const csvBlob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(csvBlob);
+                    const a = document.createElement('a');
+                    const filename = `decedent_records_${new Date().toISOString().split('T')[0]}.csv`;
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    if (typeof showToast === 'function') {
+                        showToast(`Successfully exported ${list.length} decedent records to CSV.`, { type: 'success' });
+                    }
+                } catch (err) {
+                    if (typeof showToast === 'function') {
+                        showToast('Export failed: ' + (err.message || 'Error exporting'), { type: 'error' });
+                    }
+                }
+            });
+        });
+    }
 
     recordForm.addEventListener('submit', async function (event) {
         event.preventDefault();
@@ -622,6 +768,18 @@ document.addEventListener('DOMContentLoaded', async function () {
     async function loadLots() {
         lots = await api.request('lots', { method: 'GET' });
         populateLotDropdown();
+        populateSectionFilter();
+    }
+
+    function populateSectionFilter() {
+        if (!sectionFilter || !Array.isArray(lots)) return;
+        const currentVal = sectionFilter.value;
+        const sections = [...new Set(lots.map((l) => l.section_name).filter(Boolean))].sort();
+        sectionFilter.innerHTML = '<option value="">All Sections</option>' +
+            sections.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+        if (currentVal && sections.includes(currentVal)) {
+            sectionFilter.value = currentVal;
+        }
     }
 
     function populateLotDropdown() {
@@ -640,6 +798,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         const params = new URLSearchParams();
         if (currentQuery) params.set('q', currentQuery);
         if (currentTypeFilter !== 'all') params.set('is_cremated', currentTypeFilter);
+        if (currentSectionFilter) params.set('section', currentSectionFilter);
         if (currentAttentionFilter) params.set('incomplete', '1');
         params.set('page', pagination.page);
         params.set('per_page', perPage);
@@ -648,6 +807,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             records = Array.isArray(result.data) ? result.data : [];
             renderTable(records);
             renderActiveFilterChips();
+            updateActiveStatCards();
             pagination.render(result.meta || { page: 1, total_pages: 1, total: records.length });
         } catch (error) {
             console.error('Failed to load records', error);
