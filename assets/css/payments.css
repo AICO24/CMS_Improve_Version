@@ -3123,7 +3123,7 @@ body[data-theme="dark"] .aging-badge.aging-warning {
 .payment-widescreen-modal {
     max-width: 940px !important;
     width: 95% !important;
-    max-height: 90vh;
+    max-height: 92vh;
     display: flex;
     flex-direction: column;
     padding: 0 !important;
@@ -3131,16 +3131,78 @@ body[data-theme="dark"] .aging-badge.aging-warning {
     overflow: hidden;
     background: #ffffff;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    position: relative;
+}
+
+.payment-widescreen-modal .close {
+    position: absolute !important;
+    top: 16px !important;
+    right: 20px !important;
+    width: 38px !important;
+    height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    background: rgba(15, 23, 42, 0.08) !important;
+    border: none !important;
+    color: #475569 !important;
+    font-size: 1.5rem !important;
+    cursor: pointer !important;
+    z-index: 100 !important;
+    transition: all 0.2s cubic-bezier(0.2, 0, 0.2, 1) !important;
+    line-height: 1 !important;
+    padding: 0 !important;
+}
+
+.payment-widescreen-modal .close:hover {
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    transform: rotate(90deg) scale(1.08) !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35) !important;
 }
 
 .payment-widescreen-modal .modal-heading {
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 20px 24px 16px;
-    border-bottom: 1px solid rgba(44, 94, 71, 0.12);
-    background: linear-gradient(135deg, rgba(44, 94, 71, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+    padding: 18px 24px 16px;
+    border-bottom: 1px solid rgba(44, 94, 71, 0.14);
+    background: linear-gradient(135deg, rgba(44, 94, 71, 0.08) 0%, rgba(240, 248, 243, 0.5) 100%);
     position: relative;
+    border-radius: 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+.payment-widescreen-modal .modal-heading-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1e3a2f 0%, #2c5e47 100%);
+    color: #ffffff;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(44, 94, 71, 0.25);
+}
+
+.payment-widescreen-modal .modal-heading h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #0f172a !important;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.payment-widescreen-modal .modal-heading p {
+    margin: 3px 0 0;
+    font-size: 0.82rem;
+    color: #475569 !important;
+    font-weight: 500;
 }
 
 .payment-modal-form {
@@ -3154,8 +3216,8 @@ body[data-theme="dark"] .aging-badge.aging-warning {
 .payment-modal-grid-2col {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    padding: 20px 24px;
+    gap: 20px;
+    padding: 16px 24px;
     overflow-y: auto;
     flex: 1;
 }
@@ -3163,7 +3225,14 @@ body[data-theme="dark"] .aging-badge.aging-warning {
 .modal-col {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 10px;
+}
+
+.modal-col .form-group {
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .col-section-header {
@@ -3748,9 +3817,27 @@ body[data-theme="dark"] .dropzone-prompt {
     color: #f8fafc;
 }
 
-body[data-theme="dark"] .col-section-header {
-    color: #4ade80;
-    border-bottom-color: rgba(74, 222, 128, 0.2);
+body[data-theme="dark"] .payment-widescreen-modal .modal-heading {
+    background: rgba(15, 23, 42, 0.7);
+    border-bottom-color: #334155;
+}
+
+body[data-theme="dark"] .payment-widescreen-modal .modal-heading h3 {
+    color: #f8fafc !important;
+}
+
+body[data-theme="dark"] .payment-widescreen-modal .modal-heading p {
+    color: #94a3b8 !important;
+}
+
+body[data-theme="dark"] .payment-widescreen-modal .close {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #cbd5e1 !important;
+}
+
+body[data-theme="dark"] .payment-widescreen-modal .close:hover {
+    background: #ef4444 !important;
+    color: #ffffff !important;
 }
 
 @media (max-width: 768px) {

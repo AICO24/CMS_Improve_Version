@@ -1006,26 +1006,44 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 
-    document.getElementById('openAddPayment').addEventListener('click', openAddModal);
-    document.querySelector('#paymentModal .close')?.addEventListener('click', () => document.getElementById('paymentModal').style.display = 'none');
-    document.querySelector('#viewModal .close-view')?.addEventListener('click', () => document.getElementById('viewModal').style.display = 'none');
+    function closePaymentModal() {
+        const form = document.getElementById('paymentForm');
+        if (form) form.reset();
+        clearReferenceSelection();
+        expectedAmountForCurrentReference = null;
+        if (expectedAmountHint) expectedAmountHint.style.display = 'none';
+        if (amountMismatchWarning) amountMismatchWarning.style.display = 'none';
+        const receiptFilePrompt = document.getElementById('receiptFilePrompt');
+        if (receiptFilePrompt) receiptFilePrompt.textContent = 'Click or drag receipt file here';
+        document.getElementById('paymentModal').style.display = 'none';
+    }
+
+    document.getElementById('openAddPayment')?.addEventListener('click', openAddModal);
+    document.getElementById('closePaymentModalBtn')?.addEventListener('click', closePaymentModal);
+    document.querySelector('#paymentModal .close')?.addEventListener('click', closePaymentModal);
+    document.querySelector('#viewModal .close-view')?.addEventListener('click', () => {
+        document.getElementById('viewModal').style.display = 'none';
+    });
 
     const cancelPaymentBtn = document.getElementById('cancelPaymentBtn');
     if (cancelPaymentBtn) {
-        cancelPaymentBtn.addEventListener('click', () => {
-            const form = document.getElementById('paymentForm');
-            if (form) form.reset();
-            clearReferenceSelection();
-            expectedAmountForCurrentReference = null;
-            if (expectedAmountHint) expectedAmountHint.style.display = 'none';
-            if (amountMismatchWarning) amountMismatchWarning.style.display = 'none';
-            document.getElementById('paymentModal').style.display = 'none';
-        });
+        cancelPaymentBtn.addEventListener('click', closePaymentModal);
     }
 
     window.addEventListener('click', (e) => {
-        if (e.target === document.getElementById('paymentModal')) document.getElementById('paymentModal').style.display = 'none';
+        if (e.target === document.getElementById('paymentModal')) closePaymentModal();
         if (e.target === document.getElementById('viewModal')) document.getElementById('viewModal').style.display = 'none';
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (document.getElementById('paymentModal')?.style.display === 'flex') {
+                closePaymentModal();
+            }
+            if (document.getElementById('viewModal')?.style.display === 'flex') {
+                document.getElementById('viewModal').style.display = 'none';
+            }
+        }
     });
 
     function debounce(fn, delay = 300) {
