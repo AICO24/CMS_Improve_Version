@@ -364,10 +364,23 @@ document.addEventListener('DOMContentLoaded', async function () {
         approvingRequestId = null;
         openAddModal();
     });
-    document.querySelector('.close').addEventListener('click', () => {
-        approvingRequestId = null;
-        recordModal.style.display = 'none';
+    document.querySelectorAll('.close, .close-record-modal-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            approvingRequestId = null;
+            recordModal.style.display = 'none';
+        });
     });
+
+    const toggleAiDocBtn = document.getElementById('toggleAiDocBtn');
+    const aiDocDrawer = document.getElementById('aiDocDrawer');
+    const aiToggleCaret = document.getElementById('aiToggleCaret');
+    if (toggleAiDocBtn && aiDocDrawer) {
+        toggleAiDocBtn.addEventListener('click', () => {
+            const isOpen = aiDocDrawer.style.display !== 'none';
+            aiDocDrawer.style.display = isOpen ? 'none' : 'block';
+            if (aiToggleCaret) aiToggleCaret.classList.toggle('is-open', !isOpen);
+        });
+    }
     document.querySelector('.close-view').addEventListener('click', () => viewModal.style.display = 'none');
     document.getElementById('openImportModal').addEventListener('click', () => openImportModal());
     document.querySelector('.close-import').addEventListener('click', () => { importModal.style.display = 'none'; });
@@ -1167,14 +1180,20 @@ document.addEventListener('DOMContentLoaded', async function () {
     const extractionStatusChips = document.getElementById('extractionStatusChips');
 
     function resetCertificateUpload() {
-        certificateFileInput.value = '';
-        certificateDocType.value = 'death_certificate';
-        certificateUploadHint.textContent = 'This file will be attached to the record automatically once you save.';
+        if (certificateFileInput) certificateFileInput.value = '';
+        if (certificateDocType) certificateDocType.value = 'death_certificate';
+        if (certificateUploadHint) certificateUploadHint.textContent = 'This file will be attached to the record automatically once you save.';
         if (certPreviewContainer) certPreviewContainer.style.display = 'none';
         if (certDropzonePlaceholder) certDropzonePlaceholder.style.display = 'flex';
         if (certPreviewImg) { certPreviewImg.src = ''; certPreviewImg.style.display = 'none'; }
         if (certPreviewPdf) certPreviewPdf.style.display = 'none';
         if (extractionStatusChips) { extractionStatusChips.innerHTML = ''; extractionStatusChips.style.display = 'none'; }
+        const drawer = document.getElementById('aiDocDrawer');
+        const caret = document.getElementById('aiToggleCaret');
+        if (drawer) {
+            drawer.style.display = 'none';
+            if (caret) caret.classList.remove('is-open');
+        }
     }
 
     if (certificateFileInput) {
@@ -1566,6 +1585,12 @@ document.addEventListener('DOMContentLoaded', async function () {
             document.getElementById('viewModal').style.display = 'none';
             openEditModal(id);
         };
+        const printBtn = document.getElementById('printCertificateBtn');
+        if (printBtn) {
+            printBtn.onclick = () => {
+                printMemorialCertificate(record);
+            };
+        }
 
         const timelineEl = document.getElementById('viewActivityTimeline');
         if (timelineEl) {
@@ -1580,6 +1605,336 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
 
         await loadDocumentsList(id);
+    }
+
+    // ── Batch 3: 1-Click Memorial & Burial Certificate Print Generator ──
+    function printMemorialCertificate(record) {
+        if (!record) return;
+        const fullName = `${record.first_name || ''} ${record.middle_name ? record.middle_name + ' ' : ''}${record.last_name || ''}${record.suffix ? ' ' + record.suffix : ''}`.trim().toUpperCase();
+        const ageInfo = computeAgeInfo(record.dob, record.dod);
+        const ageStr = (ageInfo && ageInfo.isValid) ? `${ageInfo.formatted} (${ageInfo.milestone})` : (calculateAge(record.dob, record.dod) || '—');
+        const eligibility = computeExhumationEligibility(record.dod, record.is_cremated);
+        const currentDateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        const isCremated = record.is_cremated === 'yes';
+        const intermentType = isCremated ? 'Cremation & Columbarium Inurnment' : 'Traditional In-Ground Burial';
+        const locationInfo = isCremated
+            ? (record.ash_storage ? escapeHtml(record.ash_storage) : 'Columbarium Sanctuary')
+            : `${escapeHtml(record.section_name || 'General Section')} — Lot ${escapeHtml(record.lot_number || 'Unassigned')}`;
+
+        const certHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Memorial Certificate - ${escapeHtml(fullName)}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 10mm 12mm;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f1f5f9;
+            color: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 24px;
+        }
+        .cert-container {
+            width: 100%;
+            max-width: 800px;
+            background: #ffffff;
+            padding: 36px 42px;
+            border: 12px double #1e3a2f;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+            position: relative;
+        }
+        .cert-inner-border {
+            border: 1.5px solid #d97706;
+            padding: 28px 32px;
+            position: relative;
+        }
+        .cert-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .republic-text {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: #475569;
+            margin-bottom: 4px;
+        }
+        .agency-text {
+            font-family: 'Cinzel', serif;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #1e3a2f;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        .sub-agency-text {
+            font-size: 11px;
+            color: #64748b;
+            letter-spacing: 0.04em;
+            margin-bottom: 14px;
+        }
+        .cert-divider {
+            width: 150px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #d97706, transparent);
+            margin: 0 auto 14px;
+        }
+        .cert-title {
+            font-family: 'Cinzel', serif;
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 0.06em;
+            color: #1e3a2f;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .cert-record-id {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #b45309;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+        .cert-preamble {
+            font-family: 'Playfair Display', serif;
+            font-size: 13.5px;
+            font-style: italic;
+            text-align: center;
+            color: #475569;
+            line-height: 1.55;
+            margin-bottom: 18px;
+        }
+        .decedent-name-box {
+            text-align: center;
+            margin: 12px 0 20px;
+            padding: 10px 8px;
+            border-bottom: 2px solid #1e3a2f;
+            border-top: 1px dashed rgba(30, 58, 47, 0.25);
+        }
+        .decedent-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            color: #0f172a;
+        }
+        .decedent-lifespan {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #047857;
+            margin-top: 4px;
+            letter-spacing: 0.04em;
+        }
+        .cert-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px 22px;
+            margin: 20px 0 24px;
+            font-size: 12.5px;
+        }
+        .cert-item {
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px dotted #cbd5e1;
+            padding-bottom: 5px;
+        }
+        .cert-item-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-bottom: 2px;
+        }
+        .cert-item-val {
+            font-weight: 600;
+            color: #0f172a;
+        }
+        .cert-sanitation-note {
+            background: #f8fafc;
+            border-left: 3px solid #059669;
+            padding: 9px 12px;
+            font-size: 11px;
+            color: #334155;
+            line-height: 1.45;
+            margin-bottom: 24px;
+        }
+        .cert-issuance {
+            font-size: 11.5px;
+            color: #475569;
+            text-align: center;
+            font-style: italic;
+            margin-bottom: 30px;
+        }
+        .cert-signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 14px;
+            padding: 0 16px;
+        }
+        .sig-block {
+            text-align: center;
+            width: 210px;
+        }
+        .sig-line {
+            width: 100%;
+            border-top: 1.5px solid #1e293b;
+            margin-bottom: 5px;
+        }
+        .sig-name {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #0f172a;
+            text-transform: uppercase;
+        }
+        .sig-title {
+            font-size: 10px;
+            color: #64748b;
+        }
+        .cert-footer-seal {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 9.5px;
+            color: #94a3b8;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .no-print-toolbar {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 10px;
+            z-index: 999;
+        }
+        .btn-print-action {
+            background: #1e3a2f;
+            color: #ffffff;
+            border: none;
+            padding: 9px 18px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        @media print {
+            body {
+                background: none;
+                padding: 0;
+            }
+            .cert-container {
+                box-shadow: none;
+                max-width: 100%;
+                padding: 16px 20px;
+                border-width: 8px;
+            }
+            .no-print-toolbar {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print-toolbar">
+        <button type="button" class="btn-print-action" onclick="window.print()">Print Official Certificate</button>
+    </div>
+
+    <div class="cert-container">
+        <div class="cert-inner-border">
+            <div class="cert-header">
+                <div class="republic-text">Republic of the Philippines</div>
+                <div class="agency-text">Office of the Cemetery &amp; Memorial Park Administration</div>
+                <div class="sub-agency-text">Registry of Decedents &bull; Vital Statistics &amp; Interment Archives</div>
+                <div class="cert-divider"></div>
+                <div class="cert-title">Certificate of Memorial Record</div>
+                <div class="cert-record-id">Official Record No: D-${escapeHtml(String(record.decedent_id))}</div>
+            </div>
+
+            <p class="cert-preamble">
+                This is to officially certify that according to the authenticated registries, plot allocation records, and archives of this Memorial Cemetery, the following decedent information is duly documented on permanent file:
+            </p>
+
+            <div class="decedent-name-box">
+                <div class="decedent-name">${escapeHtml(fullName)}</div>
+                <div class="decedent-lifespan">${escapeHtml(record.dob || '—')} &bull; ${escapeHtml(record.dod || '—')} &bull; ${escapeHtml(ageStr)}</div>
+            </div>
+
+            <div class="cert-grid">
+                <div class="cert-item">
+                    <span class="cert-item-label">Interment / Memorial Type</span>
+                    <span class="cert-item-val">${intermentType}</span>
+                </div>
+                <div class="cert-item">
+                    <span class="cert-item-label">Resting Location / Plot</span>
+                    <span class="cert-item-val">${locationInfo}</span>
+                </div>
+                <div class="cert-item">
+                    <span class="cert-item-label">Cause of Passing</span>
+                    <span class="cert-item-val">${escapeHtml(record.cause_of_death || 'Not Specified')}</span>
+                </div>
+                <div class="cert-item">
+                    <span class="cert-item-label">Registered Next of Kin</span>
+                    <span class="cert-item-val">${escapeHtml(record.contact_name || 'Family on Record')} ${record.contact_number ? '(' + escapeHtml(record.contact_number) + ')' : ''}</span>
+                </div>
+            </div>
+
+            <div class="cert-sanitation-note">
+                <strong>Regulatory Compliance (PD 856 Sanitation Code):</strong> ${escapeHtml(eligibility.desc)}
+            </div>
+
+            <div class="cert-issuance">
+                Issued this ${currentDateStr} upon request of the registered kin for legal, familial, and archival documentation purposes.
+            </div>
+
+            <div class="cert-signatures">
+                <div class="sig-block">
+                    <div class="sig-line"></div>
+                    <div class="sig-name">Cemetery Registrar</div>
+                    <div class="sig-title">Records &amp; Archives Officer</div>
+                </div>
+                <div class="sig-block">
+                    <div class="sig-line"></div>
+                    <div class="sig-name">Superintendent</div>
+                    <div class="sig-title">Memorial Park Administration</div>
+                </div>
+            </div>
+
+            <div class="cert-footer-seal">
+                Official Cemetery Documentation &bull; Valid Without Erasures &bull; Archive Copy
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+
+        const printWindow = window.open('', '_blank', 'width=950,height=1000,menubar=no,toolbar=no,location=no');
+        if (printWindow) {
+            printWindow.document.open();
+            printWindow.document.write(certHtml);
+            printWindow.document.close();
+            printWindow.focus();
+        } else {
+            showToast('Popup was blocked by the browser. Please allow popups to preview and print the certificate.', { type: 'error' });
+        }
     }
 
     // ---------- Batch K1: document/certificate upload ----------

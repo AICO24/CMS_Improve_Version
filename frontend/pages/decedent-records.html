@@ -340,134 +340,161 @@
         </main>
     </div>
 
-    <!-- Add/Edit Modal -->
+    <!-- Add/Edit Modal (No-Scroll 2-Column Executive Form) -->
     <div id="recordModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="modal-content modal-content--split">
-            <button type="button" class="close" aria-label="Close"><i class="fas fa-xmark"></i></button>
-            <h3 id="modalTitle">Add Decedent Record</h3>
+        <div class="modal-content modal-content--wide decrec-modal-executive">
+            <div class="modal-header-custom">
+                <div class="modal-title-group">
+                    <span class="modal-subtitle-chip"><i class="fas fa-id-card-clip"></i> Registry Form</span>
+                    <h3 id="modalTitle" class="modal-heading-main">Add Decedent Record</h3>
+                </div>
+                <button type="button" class="close" aria-label="Close"><i class="fas fa-xmark"></i></button>
+            </div>
+
             <form id="recordForm">
                 <input type="hidden" id="recordId">
 
-                <div class="split-modal-layout">
-                    <!-- Left Column: AI Document Assistant & Live Preview -->
-                    <div class="split-modal-ai-pane">
-                        <div class="ai-pane-header">
-                            <span class="ai-pane-title"><i class="fas fa-wand-magic-sparkles"></i> AI Document
-                                Assistant</span>
-                            <span class="ai-pane-badge">Optional</span>
-                        </div>
-                        <p class="ai-pane-desc">Upload a death certificate or burial permit to auto-fill record fields.
-                        </p>
-
-                        <div class="ai-doc-selector-group">
-                            <label for="certificateDocType" class="field-label-sm">Document Type</label>
-                            <select id="certificateDocType" aria-label="Document type">
-                                <option value="death_certificate">Death Certificate</option>
-                                <option value="burial_permit">Burial Permit</option>
-                                <option value="other">Other Document</option>
-                            </select>
-                        </div>
-
-                        <div class="ai-dropzone" id="certDropzone">
-                            <input type="file" id="certificateFileInput"
-                                accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
-                            <div class="ai-dropzone-placeholder" id="certDropzonePlaceholder">
-                                <i class="fas fa-cloud-arrow-up"></i>
-                                <span>Click or drag certificate here</span>
-                                <small>JPG, PNG, or PDF</small>
+                <!-- Collapsible AI Document Assistant Strip -->
+                <div class="ai-assistant-toggle-strip">
+                    <button type="button" class="btn-toggle-ai" id="toggleAiDocBtn">
+                        <span class="ai-toggle-left">
+                            <i class="fas fa-wand-magic-sparkles"></i>
+                            <span>AI Document Assistant (Auto-fill from Certificate or Permit)</span>
+                        </span>
+                        <span class="ai-toggle-right">
+                            <span class="ai-optional-pill">Optional</span>
+                            <i class="fas fa-chevron-down toggle-caret" id="aiToggleCaret"></i>
+                        </span>
+                    </button>
+                    
+                    <div class="ai-collapsible-drawer" id="aiDocDrawer" style="display: none;">
+                        <div class="ai-drawer-inner">
+                            <div class="ai-doc-selector-group">
+                                <label for="certificateDocType" class="field-label-sm">Document Type</label>
+                                <select id="certificateDocType" aria-label="Document type">
+                                    <option value="death_certificate">Death Certificate</option>
+                                    <option value="burial_permit">Burial Permit</option>
+                                    <option value="other">Other Document</option>
+                                </select>
                             </div>
-                            <div class="ai-preview-container" id="certPreviewContainer" style="display: none;">
-                                <img id="certPreviewImg" src="" alt="Document Preview" style="display: none;">
-                                <div id="certPreviewPdf" class="cert-pdf-preview" style="display: none;">
-                                    <i class="fas fa-file-pdf"></i>
-                                    <span id="certPdfName">document.pdf</span>
+
+                            <div class="ai-dropzone" id="certDropzone">
+                                <input type="file" id="certificateFileInput"
+                                    accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
+                                <div class="ai-dropzone-placeholder" id="certDropzonePlaceholder">
+                                    <i class="fas fa-cloud-arrow-up"></i>
+                                    <span>Click or drag certificate here</span>
+                                    <small>JPG, PNG, or PDF</small>
                                 </div>
-                                <button type="button" class="btn-clear-preview" id="clearCertFileBtn"
-                                    title="Remove file">&times;</button>
+                                <div class="ai-preview-container" id="certPreviewContainer" style="display: none;">
+                                    <img id="certPreviewImg" src="" alt="Document Preview" style="display: none;">
+                                    <div id="certPreviewPdf" class="cert-pdf-preview" style="display: none;">
+                                        <i class="fas fa-file-pdf"></i>
+                                        <span id="certPdfName">document.pdf</span>
+                                    </div>
+                                    <button type="button" class="btn-clear-preview" id="clearCertFileBtn"
+                                        title="Remove file">&times;</button>
+                                </div>
+                            </div>
+
+                            <div class="ai-drawer-actions">
+                                <button type="button" class="btn-extract-ai" id="extractCertificateBtn">
+                                    <i class="fas fa-sparkles"></i>
+                                    <span>Extract &amp; Auto-Fill Fields</span>
+                                </button>
+                                <div class="extraction-status-chips" id="extractionStatusChips" style="display: none;"></div>
+                                <p class="certificate-upload-hint" id="certificateUploadHint">File will be attached automatically once saved.</p>
                             </div>
                         </div>
-
-                        <button type="button" class="btn-extract-ai" id="extractCertificateBtn">
-                            <i class="fas fa-sparkles"></i>
-                            <span>Extract &amp; Auto-Fill Fields</span>
-                        </button>
-
-                        <div class="extraction-status-chips" id="extractionStatusChips" style="display: none;"></div>
-                        <p class="certificate-upload-hint" id="certificateUploadHint">File will be attached
-                            automatically once saved.</p>
                     </div>
+                </div>
 
-                    <!-- Right Column: Structured Record Fields -->
-                    <div class="split-modal-form-pane">
-                        <div id="requestApprovalBanner" class="request-approval-banner" style="display: none;"></div>
-                        <div class="form-pane-content">
-                            <div class="form-section-header">
-                                <i class="fas fa-user-circle"></i> Personal Details
-                            </div>
-                            <div class="decrec-form-grid">
-                                <div class="form-group"><label>First Name</label><input type="text" id="firstName"
-                                        required></div>
-                                <div class="form-group"><label>Last Name</label><input type="text" id="lastName"
-                                        required></div>
-                                <div class="form-group"><label>Middle Name</label><input type="text" id="middleName">
-                                </div>
-                                <div class="form-group"><label>Suffix (Jr., Sr.)</label><input type="text" id="suffix">
-                                </div>
-                                <div class="form-group"><label>Date of Birth</label><input type="date" id="dob"
-                                        required></div>
-                                <div class="form-group"><label>Date of Death</label><input type="date" id="dod"
-                                        required></div>
-                                <div class="form-group full-width" id="ageCalculationBanner" style="display: none;">
-                                    <div class="age-calc-box">
-                                        <div class="age-calc-main">
-                                            <span class="age-calc-icon"><i class="fas fa-calculator"></i></span>
-                                            <div class="age-calc-text-group">
-                                                <span class="age-calc-label">Age at Passing</span>
-                                                <span class="age-calc-val" id="ageCalcText">--</span>
-                                            </div>
-                                        </div>
-                                        <div class="age-calc-milestone" id="ageCalcMilestone"></div>
+                <div id="requestApprovalBanner" class="request-approval-banner" style="display: none;"></div>
+
+                <!-- 2-Column Balanced Form Grid (Zero Scrolling Required) -->
+                <div class="decrec-no-scroll-grid">
+                    <!-- Column 1: Personal & Vital Details -->
+                    <div class="decrec-form-col">
+                        <div class="form-section-header">
+                            <i class="fas fa-user-circle"></i> Personal &amp; Vital Details
+                        </div>
+                        <div class="field-row-2">
+                            <div class="form-group"><label>First Name <span class="required">*</span></label><input type="text" id="firstName" required placeholder="Given name"></div>
+                            <div class="form-group"><label>Last Name <span class="required">*</span></label><input type="text" id="lastName" required placeholder="Family name"></div>
+                        </div>
+                        <div class="field-row-2">
+                            <div class="form-group"><label>Middle Name</label><input type="text" id="middleName" placeholder="Optional"></div>
+                            <div class="form-group"><label>Suffix</label><input type="text" id="suffix" placeholder="Jr., Sr., III"></div>
+                        </div>
+                        <div class="field-row-2">
+                            <div class="form-group"><label>Date of Birth <span class="required">*</span></label><input type="date" id="dob" required></div>
+                            <div class="form-group"><label>Date of Death <span class="required">*</span></label><input type="date" id="dod" required></div>
+                        </div>
+                        <div class="form-group full-width" id="ageCalculationBanner" style="display: none;">
+                            <div class="age-calc-box">
+                                <div class="age-calc-main">
+                                    <span class="age-calc-icon"><i class="fas fa-calculator"></i></span>
+                                    <div class="age-calc-text-group">
+                                        <span class="age-calc-label">Age at Passing</span>
+                                        <span class="age-calc-val" id="ageCalcText">--</span>
                                     </div>
                                 </div>
-                                <div class="form-group full-width"><label>Cause of Death</label><input type="text"
-                                        id="cause" placeholder="e.g. Cardiopulmonary arrest"></div>
-                            </div>
-
-                            <div class="form-section-header">
-                                <i class="fas fa-monument"></i> Cemetery &amp; Family Information
-                            </div>
-                            <div class="decrec-form-grid">
-                                <div class="form-group"><label>Lot Number</label><select id="lotNumber" required>
-                                        <option value="">Select a lot</option>
-                                    </select></div>
-                                <div class="form-group"><label>Section</label><input type="text" id="section" readonly>
-                                </div>
-                                <div class="form-group"><label>Family Contact Name</label><input type="text"
-                                        id="contactName"></div>
-                                <div class="form-group"><label>Family Contact Number</label><input type="text"
-                                        id="contactNumber"></div>
-                                <div class="form-group"><label>Cremated?</label>
-                                    <select id="isCremated">
-                                        <option value="no">No</option>
-                                        <option value="yes">Yes</option>
-                                    </select>
-                                </div>
-                                <div class="form-group" id="ashStorageGroup" style="display:none;"><label>Ash Storage
-                                        Location</label><input type="text" id="ashStorage"></div>
+                                <div class="age-calc-milestone" id="ageCalcMilestone"></div>
                             </div>
                         </div>
-
-                        <div class="modal-form-actions">
-                            <button type="submit" class="btn-save bookmarkBtn">
-                                <span class="IconContainer">
-                                    <i class="fas fa-save icon"></i>
-                                </span>
-                                <span class="text">
-                                    Save Record
-                                </span>
-                            </button>
+                        <div class="form-group full-width">
+                            <label>Cause of Death</label>
+                            <input type="text" id="cause" placeholder="e.g. Cardiopulmonary arrest">
                         </div>
                     </div>
+
+                    <!-- Column 2: Plot & Family Information -->
+                    <div class="decrec-form-col">
+                        <div class="form-section-header">
+                            <i class="fas fa-monument"></i> Plot &amp; Family Information
+                        </div>
+                        <div class="field-row-2">
+                            <div class="form-group">
+                                <label>Lot Number <span id="lotRequiredMarker" class="required">*</span></label>
+                                <select id="lotNumber" required>
+                                    <option value="">Select a lot</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Section</label>
+                                <input type="text" id="section" readonly placeholder="Auto-populated">
+                            </div>
+                        </div>
+                        <div class="field-row-2">
+                            <div class="form-group"><label>Family Contact Name</label><input type="text" id="contactName" placeholder="Primary relative"></div>
+                            <div class="form-group"><label>Family Contact Number</label><input type="text" id="contactNumber" placeholder="09XX-XXX-XXXX"></div>
+                        </div>
+                        <div class="field-row-2">
+                            <div class="form-group">
+                                <label>Cremated?</label>
+                                <select id="isCremated">
+                                    <option value="no">No (Burial Plot)</option>
+                                    <option value="yes">Yes (Cremation)</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="ashStorageGroup" style="display:none;">
+                                <label>Ash Storage Location</label>
+                                <input type="text" id="ashStorage" placeholder="e.g. Columbarium Niche / Home">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer-custom modal-form-actions">
+                    <button type="button" class="btn-secondary close-record-modal-btn">Cancel</button>
+                    <button type="submit" class="btn-save bookmarkBtn">
+                        <span class="IconContainer">
+                            <i class="fas fa-save icon"></i>
+                        </span>
+                        <span class="text">
+                            Save Record
+                        </span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -523,6 +550,9 @@
             </div>
 
             <div class="view-modal-footer">
+                <button type="button" class="btn-secondary btn-print-cert" id="printCertificateBtn" title="Print official memorial & burial certificate">
+                    <i class="fas fa-print"></i> Print Memorial Certificate
+                </button>
                 <button class="btn-edit" id="editFromView">
                     <span class="edit-text">Edit Record</span>
                     <span class="edit-icon">
