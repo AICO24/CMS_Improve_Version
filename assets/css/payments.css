@@ -2762,3 +2762,35 @@ body[data-theme="dark"] .date-chip input[type="date"] {
     color-scheme: dark;
 }
 
+/* ── Payment Overdue / Aging Badge ── */
+.aging-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    font-size: 0.70rem;
+    font-weight: 700;
+    border-radius: 999px;
+    vertical-align: middle;
+    margin-left: 4px;
+    letter-spacing: 0.02em;
+    animation: pulseSlow 3s infinite ease-in-out;
+}
+
+.aging-badge.aging-warning {
+    background: #fff1f2;
+    color: #e11d48;
+    border: 1px solid #fecdd3;
+}
+
+body[data-theme="dark"] .aging-badge.aging-warning {
+    background: rgba(225, 29, 72, 0.15);
+    color: #fda4af;
+    border-color: rgba(225, 29, 72, 0.35);
+}
+
+@keyframes pulseSlow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.75; }
+}
+

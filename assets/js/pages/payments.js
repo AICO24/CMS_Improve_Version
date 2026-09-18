@@ -189,6 +189,22 @@ document.addEventListener('DOMContentLoaded', async function() {
             const highConfidenceBadge = isHighConfidence
                 ? ' <span class="status-badge status-info" title="Amount matches the lot price and a receipt was uploaded — not verified, just worth checking first">Likely valid</span>'
                 : '';
+
+            const isPending = (p.verification_status || 'Pending') === 'Pending';
+            let isAgingOverdue = false;
+            if (isPending) {
+                const rawDateStr = p.created_at || p.payment_date;
+                if (rawDateStr) {
+                    const timestamp = new Date(rawDateStr.replace(' ', 'T')).getTime();
+                    if (timestamp && (Date.now() - timestamp) > 48 * 60 * 60 * 1000) {
+                        isAgingOverdue = true;
+                    }
+                }
+            }
+            const agingBadge = isAgingOverdue
+                ? ' <span class="aging-badge aging-warning" title="Pending review for over 48 hours — requires staff attention"><i class="fas fa-hourglass-half"></i> &gt;48h</span>'
+                : '';
+
             return `
                 <tr data-id="${p.payment_id}" data-status="${p.verification_status || 'Pending'}">
                     <td><span class="receipt-chip">${p.receipt_number || '—'}</span></td>
@@ -196,7 +212,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <td class="amount-cell">${formatCurrency(p.amount)}</td>
                     <td class="date-cell">${date}</td>
                     <td><span class="method-chip">${p.payment_method || '—'}</span></td>
-                    <td><span class="status-badge ${statusBadgeClass(p.verification_status || 'Pending')}">${p.verification_status || 'Pending'}</span>${highConfidenceBadge}</td>
+                    <td><span class="status-badge ${statusBadgeClass(p.verification_status || 'Pending')}">${p.verification_status || 'Pending'}</span>${agingBadge}${highConfidenceBadge}</td>
                     <td class="received-by-cell">${p.received_by_name || 'N/A'}</td>
                     <td class="action-buttons">
                         <button class="btn-view" title="View"><i class="fas fa-eye"></i></button>

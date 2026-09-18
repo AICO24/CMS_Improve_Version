@@ -725,6 +725,10 @@ class PaymentController {
                 // autoConfirmScheduleForVerifiedPurchase() calls above.
                 $this->autoConfirmCremationForVerifiedPayment($payment, $adminId);
                 $this->autoUpdateCremationForVerifiedPayment($payment, $adminId);
+            } elseif ($status === 'Verified' && $payment['transaction_type'] === 'Relocation') {
+                $this->autoConfirmRelocationForVerifiedPayment($payment, $adminId);
+            } elseif ($status === 'Verified' && $payment['transaction_type'] === 'Renewal') {
+                $this->autoRenewLeaseForVerifiedPayment($payment, $adminId);
             }
 
             return true;
@@ -1053,6 +1057,106 @@ class PaymentController {
                     'notes' => $current['notes'],
                     '_auditedByAutomationEngine' => true,
                 ], $adminActor);
+            }
+        );
+    }
+
+    /**
+     * Batch 2: Auto-confirm relocation requests upon verified payment.
+     */
+    private function autoConfirmRelocationForVerifiedPayment($payment, $adminId) {
+        if (empty($payment['reference_id'])) {
+            return;
+        }
+
+        $relocationModel = new Relocation();
+        $relocation = $relocationModel->findById((int) $payment['reference_id']);
+        if (!$relocation || $relocation['status'] !== 'Pending') {
+            return;
+        }
+
+        $requestId = (int) $relocation['request_id'];
+        $toLotId = (int) ($relocation['to_lot_id'] ?? 0);
+        $adminActor = ['user_id' => $adminId, 'role' => 'admin'];
+        $lotModel = new Lot();
+
+        if ($toLotId > 0) {
+            $this->syncLotStatusForVerifiedPurchase(['reference_id' => $toLotId, 'reference_kind' => 'lot'], $adminId);
+        }
+
+        AutomationEngine::run(
+            'payment.verified',
+            'Relocation',
+            $requestId,
+            $adminActor,
+            function () use ($relocationModel, $requestId, $lotModel, $toLotId) {
+                $current = $relocationModel->findById($requestId);
+                if (!$current) {
+                    return ['Relocation request no longer exists'];
+                }
+                if ($current['status'] !== 'Pending') {
+                    return ['Relocation request is no longer Pending (current: ' . $current['status'] . ')'];
+                }
+                if ($toLotId > 0) {
+                    $toLot = $lotModel->findById($toLotId);
+                    if ($toLot && !in_array($toLot['status'], ['Available', 'Reserved'], true)) {
+                        return ['Destination lot ' . ($toLot['lot_number'] ?? $toLot['lot_id']) . ' is not available (status: ' . $toLot['status'] . ')'];
+                    }
+                }
+                return true;
+            },
+            function () use ($relocationModel, $requestId, $adminId) {
+                return $relocationModel->updateStatus($requestId, 'Approved', $adminId);
+            }
+        );
+    }
+
+    /**
+     * Batch 2: Auto-renew 5-year cemetery lease upon verified renewal payment.
+     */
+    private function autoRenewLeaseForVerifiedPayment($payment, $adminId) {
+        if (empty($payment['reference_id'])) {
+            return;
+        }
+
+        $expirationModel = new ExpirationRecord();
+        $expiration = $expirationModel->findById((int) $payment['reference_id']);
+        if (!$expiration || ($expiration['renewed'] ?? 'no') === 'yes') {
+            return;
+        }
+
+        $expirationId = (int) $expiration['expiration_id'];
+        $adminActor = ['user_id' => $adminId, 'role' => 'admin'];
+
+        AutomationEngine::run(
+            'payment.verified',
+            'Expiration',
+            $expirationId,
+            $adminActor,
+            function () use ($expirationModel, $expirationId) {
+                $current = $expirationModel->findById($expirationId);
+                if (!$current) {
+                    return ['Expiration record no longer exists'];
+                }
+                if (($current['renewed'] ?? 'no') === 'yes') {
+                    return ['Expiration record was already renewed'];
+                }
+                return true;
+            },
+            function () use ($expirationModel, $expiration, $expirationId, $payment) {
+                $baseDate = !empty($expiration['end_date']) && strtotime($expiration['end_date']) > time()
+                    ? $expiration['end_date']
+                    : date('Y-m-d');
+                $newEndDate = date('Y-m-d', strtotime('+5 years', strtotime($baseDate)));
+                $notes = trim(($expiration['notes'] ?? '') . ' | Auto-renewed 5 yrs via payment verification (Receipt: ' . ($payment['receipt_number'] ?? 'N/A') . ')');
+                return $expirationModel->update($expirationId, [
+                    'lot_id' => $expiration['lot_id'],
+                    'start_date' => $expiration['start_date'] ?? date('Y-m-d'),
+                    'end_date' => $newEndDate,
+                    'renewed' => 'yes',
+                    'exhumation_status' => 'Pending',
+                    'notes' => $notes,
+                ]);
             }
         );
     }
