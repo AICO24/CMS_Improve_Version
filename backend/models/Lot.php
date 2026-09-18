@@ -416,6 +416,7 @@ class Lot {
         'payment.verified::Reserved' => ['Available'],
         'booking.allocation_changed::Available' => ['Available', 'Reserved'],
         'booking.allocation_changed::Reserved' => ['Available'],
+        'decedent.registered::Occupied' => ['Available', 'Reserved', 'Occupied'],
     ];
 
     // lot.admin_override's newStatus is whatever the admin picked, so it

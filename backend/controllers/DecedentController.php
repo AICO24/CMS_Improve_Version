@@ -2,11 +2,14 @@
 require_once __DIR__ . '/../models/Decedent.php';
 require_once __DIR__ . '/../models/AuditLog.php';
 require_once __DIR__ . '/../models/Schedule.php';
+require_once __DIR__ . '/../models/Lot.php';
+require_once __DIR__ . '/../services/AutomationEngine.php';
 
 class DecedentController {
     private $decedentModel;
     private $auditLogModel;
     private $scheduleModel;
+    private $lotModel;
 
     // Fields never written to audit_logs.details verbatim — the audit only
     // needs to show a sensitive field changed, not its value.
@@ -16,6 +19,7 @@ class DecedentController {
         $this->decedentModel = new Decedent();
         $this->auditLogModel = new AuditLog();
         $this->scheduleModel = new Schedule();
+        $this->lotModel = new Lot();
     }
 
     private static function actorId($actor) {
@@ -198,6 +202,28 @@ class DecedentController {
 
             $response = ['success' => true, 'message' => 'Decedent record created', 'decedent_id' => $result];
 
+            // Batch 2 (automated lot occupancy sync): when a decedent is
+            // registered with an assigned burial plot, auto-transition the lot's
+            // status to Occupied via AutomationEngine so staff does not need to
+            // navigate to Lot Management to manually update it.
+            if (!empty($data['lot_id']) && $data['is_cremated'] !== 'yes') {
+                $lotId = (int) $data['lot_id'];
+                AutomationEngine::run(
+                    'decedent.registered',
+                    'Lot',
+                    $lotId,
+                    $actor,
+                    function () use ($lotId) {
+                        $lot = $this->lotModel->findById($lotId);
+                        if (!$lot) return ['Lot not found'];
+                        return true;
+                    },
+                    function () use ($lotId) {
+                        return $this->lotModel->transitionStatus($lotId, 'Occupied', Lot::allowedFromStatusesFor('decedent.registered', 'Occupied'));
+                    }
+                );
+            }
+
             // Batch F (suggested schedule linking): Tier 2 automation — the
             // system notices, staff decides. Only surfaces schedules the
             // request-approval flow wouldn't already auto-link on its own
@@ -239,6 +265,25 @@ class DecedentController {
 
         $result = $this->decedentModel->update($id, $data);
         if ($result) {
+            // Auto-sync lot status to Occupied if lot is specified
+            if (!empty($data['lot_id']) && $data['is_cremated'] !== 'yes') {
+                $lotId = (int) $data['lot_id'];
+                AutomationEngine::run(
+                    'decedent.registered',
+                    'Lot',
+                    $lotId,
+                    $actor,
+                    function () use ($lotId) {
+                        $lot = $this->lotModel->findById($lotId);
+                        if (!$lot) return ['Lot not found'];
+                        return true;
+                    },
+                    function () use ($lotId) {
+                        return $this->lotModel->transitionStatus($lotId, 'Occupied', Lot::allowedFromStatusesFor('decedent.registered', 'Occupied'));
+                    }
+                );
+            }
+
             $changed = [];
             foreach (['lot_id', 'first_name', 'last_name', 'middle_name', 'suffix', 'dob', 'dod', 'cause_of_death', 'contact_name', 'contact_number', 'is_cremated', 'ash_storage'] as $field) {
                 if (!array_key_exists($field, $data)) {

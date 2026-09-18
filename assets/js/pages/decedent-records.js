@@ -31,8 +31,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     const importModal = document.getElementById('importModal');
     const recordForm = document.getElementById('recordForm');
     const ashStorageGroup = document.getElementById('ashStorageGroup');
-    const modalTitle = document.getElementById('modalTitle');
     const viewDetails = document.getElementById('viewDetails');
+    const dobInput = document.getElementById('dob');
+    const dodInput = document.getElementById('dod');
+    const ageCalculationBanner = document.getElementById('ageCalculationBanner');
+    const ageCalcText = document.getElementById('ageCalcText');
+    const ageCalcMilestone = document.getElementById('ageCalcMilestone');
 
     let lots = [];
     let records = [];
@@ -89,6 +93,194 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (!record.cause_of_death) missing.push('Cause of death');
         if (record.is_cremated === 'yes' && !record.ash_storage) missing.push('Ash storage location');
         return missing;
+    }
+
+    // Batch 2: Real-time Age at Death & Milestone Calculator
+    function computeAgeInfo(dobStr, dodStr) {
+        if (!dobStr || !dodStr) return null;
+        const dob = new Date(dobStr);
+        const dod = new Date(dodStr);
+        if (isNaN(dob.getTime()) || isNaN(dod.getTime())) return null;
+        if (dod < dob) {
+            return { isValid: false, message: 'Date of Death cannot be earlier than Date of Birth' };
+        }
+
+        let years = dod.getFullYear() - dob.getFullYear();
+        let months = dod.getMonth() - dob.getMonth();
+        let days = dod.getDate() - dob.getDate();
+
+        if (days < 0) {
+            months--;
+            const prevMonth = new Date(dod.getFullYear(), dod.getMonth(), 0);
+            days += prevMonth.getDate();
+        }
+        if (months < 0) {
+            years--;
+            months += 12;
+        }
+
+        let milestone = '';
+        let milestoneClass = '';
+        let milestoneIcon = '';
+
+        if (years >= 100) {
+            milestone = 'Centenarian';
+            milestoneClass = 'milestone-centenarian';
+            milestoneIcon = 'fa-crown';
+        } else if (years >= 60) {
+            milestone = 'Senior Citizen';
+            milestoneClass = 'milestone-senior';
+            milestoneIcon = 'fa-user-clock';
+        } else if (years >= 18) {
+            milestone = 'Adult';
+            milestoneClass = 'milestone-adult';
+            milestoneIcon = 'fa-user';
+        } else if (years >= 1) {
+            milestone = 'Minor';
+            milestoneClass = 'milestone-child';
+            milestoneIcon = 'fa-child';
+        } else {
+            milestone = 'Infant';
+            milestoneClass = 'milestone-infant';
+            milestoneIcon = 'fa-baby';
+        }
+
+        let formatted = '';
+        if (years > 0) {
+            formatted = `${years} ${years === 1 ? 'yr' : 'yrs'} old`;
+            if (months > 0 && years < 5) {
+                formatted += `, ${months} ${months === 1 ? 'mo' : 'mos'}`;
+            }
+        } else if (months > 0) {
+            formatted = `${months} ${months === 1 ? 'mo' : 'mos'} old`;
+            if (days > 0) {
+                formatted += `, ${days} ${days === 1 ? 'day' : 'days'}`;
+            }
+        } else {
+            formatted = `${days} ${days === 1 ? 'day' : 'days'} old`;
+        }
+
+        return {
+            isValid: true,
+            years,
+            months,
+            days,
+            formatted,
+            shortAge: years > 0 ? `${years}y` : (months > 0 ? `${months}m` : `${days}d`),
+            milestone,
+            milestoneClass,
+            milestoneIcon
+        };
+    }
+
+    // Batch 2: Exhumation / Bone Transfer Eligibility (PD 856 5-Year Standard)
+    function computeExhumationEligibility(dodStr, isCremated) {
+        if (isCremated === 'yes') {
+            return {
+                status: 'cremated',
+                cardClass: 'is-cremated',
+                tag: 'Cremated Remains',
+                icon: 'fa-fire-burner',
+                title: 'Exempt from Waiting Period',
+                desc: 'Cremated remains are exempt from the standard 5-year burial sanitation waiting period. Niche placement or ossuary relocation can proceed anytime upon request.'
+            };
+        }
+
+        if (!dodStr) {
+            return {
+                status: 'unknown',
+                cardClass: 'is-locked',
+                tag: 'Date Pending',
+                icon: 'fa-calendar-xmark',
+                title: 'Eligibility Unknown',
+                desc: 'Date of death is required to compute exhumation and bone transfer clearance.'
+            };
+        }
+
+        const dod = new Date(dodStr);
+        if (isNaN(dod.getTime())) {
+            return {
+                status: 'unknown',
+                cardClass: 'is-locked',
+                tag: 'Invalid Date',
+                icon: 'fa-triangle-exclamation',
+                title: 'Unparseable Date of Death',
+                desc: 'Date of death is not formatted correctly.'
+            };
+        }
+
+        const now = new Date();
+        const diffTime = now.getTime() - dod.getTime();
+        const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
+
+        const eligibleDate = new Date(dod);
+        eligibleDate.setFullYear(eligibleDate.getFullYear() + 5);
+        const eligibleDateStr = eligibleDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+        if (diffYears >= 5) {
+            const elapsedYears = diffYears.toFixed(1);
+            return {
+                status: 'eligible',
+                cardClass: 'is-eligible',
+                tag: 'Eligible for Transfer',
+                icon: 'fa-check-double',
+                title: 'Bone Transfer / Exhumation Clearance Ready',
+                desc: `Standard sanitary burial requirement met under PD 856 (${elapsedYears} years elapsed since burial). Remains are legally eligible for exhumation, bone crypt placement, or ossuary transfer.`
+            };
+        } else {
+            const remainingYears = (5 - diffYears).toFixed(1);
+            return {
+                status: 'locked',
+                cardClass: 'is-locked',
+                tag: 'Burial Period Active',
+                icon: 'fa-hourglass-half',
+                title: 'Standard Burial Period In Progress',
+                desc: `Standard 5-year sanitation waiting period is ongoing (${remainingYears} years remaining until ~${eligibleDateStr}). Early exhumation requires special permit from the City Health Office.`
+            };
+        }
+    }
+
+    function updateAgeCalculationBanner() {
+        if (!ageCalculationBanner || !ageCalcText || !ageCalcMilestone) return;
+
+        const dobVal = dobInput ? dobInput.value : '';
+        const dodVal = dodInput ? dodInput.value : '';
+
+        if (!dobVal || !dodVal) {
+            ageCalculationBanner.style.display = 'none';
+            if (dodInput) dodInput.style.borderColor = '';
+            return;
+        }
+
+        const info = computeAgeInfo(dobVal, dodVal);
+        if (!info) {
+            ageCalculationBanner.style.display = 'none';
+            return;
+        }
+
+        ageCalculationBanner.style.display = 'block';
+        const box = ageCalculationBanner.querySelector('.age-calc-box');
+
+        if (!info.isValid) {
+            if (box) box.classList.add('is-invalid');
+            if (dodInput) dodInput.style.borderColor = '#ef4444';
+            ageCalcText.innerText = 'Invalid Dates: DOD cannot be earlier than DOB';
+            ageCalcMilestone.innerHTML = `<span class="age-milestone" style="background: rgba(239, 68, 68, 0.15); color: #dc2626;"><i class="fas fa-circle-exclamation"></i> Error</span>`;
+        } else {
+            if (box) box.classList.remove('is-invalid');
+            if (dodInput) dodInput.style.borderColor = '';
+            ageCalcText.innerText = info.formatted;
+            ageCalcMilestone.innerHTML = `<span class="age-milestone ${info.milestoneClass}"><i class="fas ${info.milestoneIcon}"></i> ${escapeHtml(info.milestone)}</span>`;
+        }
+    }
+
+    if (dobInput) {
+        dobInput.addEventListener('input', updateAgeCalculationBanner);
+        dobInput.addEventListener('change', updateAgeCalculationBanner);
+    }
+    if (dodInput) {
+        dodInput.addEventListener('input', updateAgeCalculationBanner);
+        dodInput.addEventListener('change', updateAgeCalculationBanner);
     }
 
     function renderActiveFilterChips() {
@@ -846,12 +1038,21 @@ document.addEventListener('DOMContentLoaded', async function () {
             const attentionBadge = missing.length
                 ? `<i class="fas fa-triangle-exclamation attention-icon" title="Needs attention — missing: ${escapeHtml(missing.join(', '))}"></i>`
                 : '';
+            const ageInfo = computeAgeInfo(item.dob, item.dod);
+            const tableAgePill = (ageInfo && ageInfo.isValid)
+                ? `<span class="table-age-pill ${ageInfo.milestoneClass}" title="${escapeHtml(ageInfo.formatted)} (${escapeHtml(ageInfo.milestone)})">${escapeHtml(ageInfo.shortAge)}</span>`
+                : '';
             return `
             <tr data-id="${item.decedent_id}">
                 <td>D-${item.decedent_id}</td>
                 <td>${escapeHtml(`${item.first_name} ${item.last_name}${item.suffix ? ' ' + item.suffix : ''}`)}${attentionBadge}</td>
                 <td>${escapeHtml(item.dob)}</td>
-                <td>${escapeHtml(item.dod)}</td>
+                <td>
+                    <div class="dod-cell-wrap">
+                        <span>${escapeHtml(item.dod)}</span>
+                        ${tableAgePill}
+                    </div>
+                </td>
                 <td>${escapeHtml(item.lot_number)}</td>
                 <td>${escapeHtml(item.section_name)}</td>
                 <td><span class="status-badge ${item.is_cremated === 'yes' ? 'status-warning' : 'status-success'}">${item.is_cremated === 'yes' ? 'Cremation' : 'Burial'}</span></td>
@@ -909,6 +1110,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
         updateLotRequirement('no');
         resetCertificateUpload();
+        updateAgeCalculationBanner();
         const banner = document.getElementById('requestApprovalBanner');
         if (banner) {
             banner.innerHTML = '';
@@ -947,6 +1149,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         ashStorageGroup.style.display = record.is_cremated === 'yes' ? 'block' : 'none';
         updateLotRequirement(record.is_cremated);
         resetCertificateUpload();
+        updateAgeCalculationBanner();
         recordModal.style.display = 'flex';
     }
 
@@ -1080,6 +1283,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 fillAndHighlight('dob', result.dob, 'DOB');
                 fillAndHighlight('dod', result.dod, 'DOD');
                 fillAndHighlight('cause', result.cause_of_death, 'Cause of Death');
+                updateAgeCalculationBanner();
 
                 if (extractionStatusChips && extractedFields.length) {
                     extractionStatusChips.style.display = 'flex';
@@ -1256,7 +1460,26 @@ document.addEventListener('DOMContentLoaded', async function () {
                </div>`;
 
         const fullName = `${escapeHtml(record.first_name)} ${record.middle_name ? escapeHtml(record.middle_name) + ' ' : ''}${escapeHtml(record.last_name)}${record.suffix ? ' ' + escapeHtml(record.suffix) : ''}`;
-        const ageText = calculateAge(record.dob, record.dod);
+        const ageInfo = computeAgeInfo(record.dob, record.dod);
+        const ageBadgeHtml = (ageInfo && ageInfo.isValid)
+            ? `<span class="view-lifespan-pill ${ageInfo.milestoneClass}"><i class="fas ${ageInfo.milestoneIcon}"></i> ${escapeHtml(ageInfo.formatted)} (${escapeHtml(ageInfo.milestone)})</span>`
+            : '';
+
+        const eligibility = computeExhumationEligibility(record.dod, record.is_cremated);
+        const eligibilityHtml = `
+            <div class="view-exhumation-card ${eligibility.cardClass}">
+                <div class="view-exhumation-icon">
+                    <i class="fas ${eligibility.icon}"></i>
+                </div>
+                <div class="view-exhumation-content">
+                    <div class="view-exhumation-header">
+                        <span class="view-exhumation-title">${escapeHtml(eligibility.title)}</span>
+                        <span class="view-exhumation-tag">${escapeHtml(eligibility.tag)}</span>
+                    </div>
+                    <p class="view-exhumation-desc">${escapeHtml(eligibility.desc)}</p>
+                </div>
+            </div>
+        `;
 
         const details = `
             <div class="view-hero-card">
@@ -1271,10 +1494,12 @@ document.addEventListener('DOMContentLoaded', async function () {
                     <div class="view-hero-lifespan">
                         <i class="fas fa-calendar-day"></i>
                         <span>${escapeHtml(record.dob || '—')} — ${escapeHtml(record.dod || '—')}</span>
-                        ${ageText ? `<span class="view-lifespan-pill">${escapeHtml(ageText)}</span>` : ''}
+                        ${ageBadgeHtml}
                     </div>
                 </div>
             </div>
+
+            ${eligibilityHtml}
 
             <div class="view-details-grid">
                 <!-- Card 1: Vital & Burial Information -->
@@ -1519,6 +1744,11 @@ document.addEventListener('DOMContentLoaded', async function () {
             is_cremated: document.getElementById('isCremated').value,
             ash_storage: document.getElementById('ashStorage').value.trim() || null,
         };
+
+        if (payload.dob && payload.dod && new Date(payload.dod) < new Date(payload.dob)) {
+            showToast('Date of Death cannot be earlier than Date of Birth.', { type: 'error' });
+            return;
+        }
 
         const save = () => id
             ? api.request(`decedents/${id}`, { method: 'PUT', body: payload })
