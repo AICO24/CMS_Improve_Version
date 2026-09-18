@@ -290,7 +290,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    function syncSubTabsActiveState() {
+        const status = statusFilterSelect.value;
+        document.querySelectorAll('.records-tab-btn').forEach(btn => {
+            const tabStatus = btn.dataset.tab;
+            const isActive = tabStatus === status;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+    }
+
     function syncStatCardActiveState() {
+        syncSubTabsActiveState();
         const status = statusFilterSelect.value;
         const dateFrom = dateFromFilterInput.value;
         const dateTo = dateToFilterInput.value;
@@ -312,9 +323,24 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function renderStats(revenue, monthRevenue, payments, meta, counts = { pending: 0, verified: 0 }) {
+        const visiblePending = payments.filter((payment) => (payment.verification_status || 'Pending') === 'Pending').length;
+        const visibleVerified = payments.filter((payment) => payment.verification_status === 'Verified').length;
+
+        // Sync Sub-Tabs Badge Counts
+        const pendingBadge = document.getElementById('pendingTabBadge');
+        const verifiedBadge = document.getElementById('verifiedTabBadge');
+        const pVal = currentUser.role === 'user' ? visiblePending : (counts.pending || 0);
+        const vVal = currentUser.role === 'user' ? visibleVerified : (counts.verified || 0);
+        if (pendingBadge) {
+            pendingBadge.textContent = pVal;
+            pendingBadge.style.display = pVal > 0 ? 'inline-flex' : 'none';
+        }
+        if (verifiedBadge) {
+            verifiedBadge.textContent = vVal;
+            verifiedBadge.style.display = vVal > 0 ? 'inline-flex' : 'none';
+        }
+
         if (currentUser.role === 'user') {
-            const visiblePending = payments.filter((payment) => (payment.verification_status || 'Pending') === 'Pending').length;
-            const visibleVerified = payments.filter((payment) => payment.verification_status === 'Verified').length;
             if (statParts.totalRevenueTitle) statParts.totalRevenueTitle.innerText = 'My Payments';
             if (statParts.monthRevenueTitle) statParts.monthRevenueTitle.innerText = 'Pending';
             if (statParts.transactionCountTitle) statParts.transactionCountTitle.innerText = 'Verified';
@@ -1030,6 +1056,85 @@ document.addEventListener('DOMContentLoaded', async function() {
         pagination.reset();
         await refreshAll();
     });
+
+    document.querySelectorAll('.records-tab-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            statusFilterSelect.value = btn.dataset.tab || '';
+            syncStatCardActiveState();
+            pagination.reset();
+            await refreshAll();
+        });
+    });
+
+    const searchClearBtn = document.getElementById('searchClearBtn');
+    if (searchClearBtn) {
+        referenceFilterInput.addEventListener('input', () => {
+            searchClearBtn.style.display = referenceFilterInput.value ? 'block' : 'none';
+        });
+        searchClearBtn.addEventListener('click', async () => {
+            referenceFilterInput.value = '';
+            searchClearBtn.style.display = 'none';
+            pagination.reset();
+            await refreshAll();
+        });
+    }
+
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', async () => {
+            await withButtonLoading(exportCsvBtn, async () => {
+                try {
+                    const params = new URLSearchParams();
+                    if (referenceFilterInput.value) params.set('reference_id', referenceFilterInput.value);
+                    if (transactionTypeFilterSelect.value) params.set('transaction_type', transactionTypeFilterSelect.value);
+                    if (statusFilterSelect.value) params.set('verification_status', statusFilterSelect.value);
+                    if (dateFromFilterInput.value) params.set('date_from', dateFromFilterInput.value);
+                    if (dateToFilterInput.value) params.set('date_to', dateToFilterInput.value);
+                    params.set('per_page', '1000');
+
+                    const response = await api.request(`payments?${params.toString()}`, { method: 'GET' });
+                    const exportData = response.data || [];
+                    if (exportData.length === 0) {
+                        alert('No payment records found to export.');
+                        return;
+                    }
+
+                    const headers = ['Receipt Number', 'Transaction Type', 'Reference ID', 'Amount (PHP)', 'Payment Date', 'Payment Method', 'Verification Status', 'Verified By', 'Verified At', 'Recorded By', 'Notes'];
+                    const csvRows = [headers.join(',')];
+
+                    exportData.forEach(p => {
+                        const row = [
+                            `"${(p.receipt_number || '').replace(/"/g, '""')}"`,
+                            `"${(p.transaction_type || '').replace(/"/g, '""')}"`,
+                            `"${(p.reference_id || '').replace(/"/g, '""')}"`,
+                            `"${(p.amount || 0)}"`,
+                            `"${(p.payment_date || '').replace(/"/g, '""')}"`,
+                            `"${(p.payment_method || '').replace(/"/g, '""')}"`,
+                            `"${(p.verification_status || 'Pending').replace(/"/g, '""')}"`,
+                            `"${(p.verified_by_name || p.verified_by || '').replace(/"/g, '""')}"`,
+                            `"${(p.verified_at || '').replace(/"/g, '""')}"`,
+                            `"${(p.received_by_name || '').replace(/"/g, '""')}"`,
+                            `"${(p.notes || '').replace(/"/g, '""')}"`
+                        ];
+                        csvRows.push(row.join(','));
+                    });
+
+                    const csvBlob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(csvBlob);
+                    const a = document.createElement('a');
+                    const dateStr = new Date().toISOString().split('T')[0];
+                    a.href = url;
+                    a.download = `payments_ledger_${dateStr}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                } catch (err) {
+                    alert('Export failed: ' + (err.message || err));
+                }
+            });
+        });
+    }
 
     document.querySelectorAll('.stat-card-filterable').forEach(card => {
         card.addEventListener('click', async () => {
