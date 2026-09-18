@@ -585,75 +585,100 @@
                 </div>
             </div>
 
-            <!-- Template Download Strip -->
-            <div class="template-download-card">
-                <div class="template-card-text">
-                    <div class="template-card-title"><i class="fas fa-file-excel"></i> Pre-formatted Spreadsheet Template</div>
-                    <p class="template-card-desc">Download our ready-made CSV template with all the required and optional headers already set up.</p>
-                </div>
-                <button type="button" class="btn-secondary download-template-btn" id="downloadImportTemplate">
-                    <i class="fas fa-arrow-down-to-line"></i> Download Template (.csv)
-                </button>
-            </div>
-
-            <!-- Human-Friendly Field Guidance (No database snake_case) -->
-            <div class="import-fields-guide">
-                <div class="guide-group guide-group--required">
-                    <div class="guide-group-header">
-                        <span class="guide-badge guide-badge--required">Required Fields</span>
-                    </div>
-                    <ul class="guide-list">
-                        <li><strong>First Name</strong> & <strong>Last Name</strong></li>
-                        <li><strong>Date of Birth</strong> & <strong>Date of Death</strong> <span class="guide-sub">(e.g. YYYY-MM-DD or MM/DD/YYYY)</span></li>
-                        <li><strong>Lot Number</strong> & <strong>Section</strong> <span class="guide-sub">(Required for burials; optional if Cremated is Yes)</span></li>
-                    </ul>
-                </div>
-                <div class="guide-group guide-group--optional">
-                    <div class="guide-group-header">
-                        <span class="guide-badge guide-badge--optional">Optional Fields</span>
-                    </div>
-                    <ul class="guide-list">
-                        <li><strong>Block</strong> <span class="guide-sub">(e.g. Block 1 — resolves ambiguous lot numbers across blocks)</span></li>
-                        <li><strong>Middle Name</strong> & <strong>Suffix</strong> <span class="guide-sub">(e.g. Jr., Sr., III)</span></li>
-                        <li><strong>Cause of Death</strong></li>
-                        <li><strong>Family Contact Name</strong> & <strong>Phone Number</strong></li>
-                        <li><strong>Cremated</strong> <span class="guide-sub">(Yes/No)</span> & <strong>Ash Storage Location</strong></li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Modern File Upload Zone -->
-            <div class="import-upload-container">
-                <div class="csv-upload-box" id="importDropzone" tabindex="0" role="button" aria-label="Upload CSV File">
-                    <input type="file" id="importFileInput" accept=".csv,text/csv" hidden>
-                    <div class="upload-empty-state" id="dropzoneEmpty">
-                        <div class="upload-icon-circle"><i class="fas fa-cloud-arrow-up"></i></div>
-                        <div class="upload-text-wrap">
-                            <span class="upload-main-text">Click to choose a CSV file, or drag and drop</span>
-                            <span class="upload-sub-text">Supports standard .csv format up to 5MB</span>
+            <!-- Step 1: Setup & Upload Grid (Side-by-side to avoid vertical scrolling) -->
+            <div class="import-setup-grid" id="importSetupGrid">
+                <div class="import-setup-left">
+                    <!-- Template Download Strip -->
+                    <div class="template-download-card">
+                        <div class="template-card-text">
+                            <div class="template-card-title"><i class="fas fa-file-excel"></i> Pre-formatted Spreadsheet Template</div>
+                            <p class="template-card-desc">Download our ready-made CSV template with all required and optional headers.</p>
                         </div>
-                    </div>
-                    <div class="upload-selected-state" id="importFileCard" hidden>
-                        <div class="selected-file-details">
-                            <div class="selected-file-icon"><i class="fas fa-file-csv"></i></div>
-                            <div class="selected-file-meta">
-                                <span class="selected-file-name" id="importFileName">records.csv</span>
-                                <span class="selected-file-size" id="importFileSize">0 KB</span>
-                            </div>
-                        </div>
-                        <button type="button" class="btn-change-file" id="removeImportFileBtn" title="Choose another file">
-                            <i class="fas fa-rotate"></i> Change File
+                        <button type="button" class="btn-secondary download-template-btn" id="downloadImportTemplate">
+                            <i class="fas fa-arrow-down-to-line"></i> Download (.csv)
                         </button>
                     </div>
+
+                    <!-- Human-Friendly Field Guidance -->
+                    <div class="import-fields-guide">
+                        <div class="guide-group guide-group--required">
+                            <div class="guide-group-header">
+                                <span class="guide-badge guide-badge--required">Required Fields</span>
+                            </div>
+                            <ul class="guide-list">
+                                <li><strong>First Name</strong> & <strong>Last Name</strong></li>
+                                <li><strong>Date of Birth</strong> & <strong>Date of Death</strong> <span class="guide-sub">(YYYY-MM-DD or MM/DD/YYYY)</span></li>
+                                <li><strong>Lot Number</strong> & <strong>Section</strong> <span class="guide-sub">(For burials; optional if Cremated)</span></li>
+                            </ul>
+                        </div>
+                        <div class="guide-group guide-group--optional">
+                            <div class="guide-group-header">
+                                <span class="guide-badge guide-badge--optional">Optional Fields</span>
+                            </div>
+                            <ul class="guide-list">
+                                <li><strong>Block</strong> <span class="guide-sub">(e.g. Block 1 — resolves ambiguous lots)</span></li>
+                                <li><strong>Middle Name</strong> & <strong>Suffix</strong> <span class="guide-sub">(e.g. Jr., Sr., III)</span></li>
+                                <li><strong>Cause of Death</strong> & <strong>Family Contact / Phone</strong></li>
+                                <li><strong>Cremated</strong> <span class="guide-sub">(Yes/No)</span> & <strong>Ash Storage Location</strong></li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-                <div class="import-actions-row">
-                    <button type="button" class="btn-secondary" id="previewImportBtn">
-                        <i class="fas fa-magnifying-glass-chart"></i> Preview & Validate Records
+
+                <div class="import-setup-right">
+                    <!-- Modern File Upload Zone -->
+                    <div class="import-upload-container">
+                        <div class="csv-upload-box" id="importDropzone" tabindex="0" role="button" aria-label="Upload CSV File">
+                            <input type="file" id="importFileInput" accept=".csv,text/csv" hidden>
+                            <div class="upload-empty-state" id="dropzoneEmpty">
+                                <div class="upload-icon-circle"><i class="fas fa-cloud-arrow-up"></i></div>
+                                <div class="upload-text-wrap">
+                                    <span class="upload-main-text">Click to choose a CSV file, or drag and drop</span>
+                                    <span class="upload-sub-text">Supports standard .csv format up to 5MB</span>
+                                </div>
+                            </div>
+                            <div class="upload-selected-state" id="importFileCard" hidden>
+                                <div class="selected-file-details">
+                                    <div class="selected-file-icon"><i class="fas fa-file-csv"></i></div>
+                                    <div class="selected-file-meta">
+                                        <span class="selected-file-name" id="importFileName">records.csv</span>
+                                        <span class="selected-file-size" id="importFileSize">0 KB</span>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-change-file" id="removeImportFileBtn" title="Choose another file">
+                                    <i class="fas fa-rotate"></i> Change File
+                                </button>
+                            </div>
+                        </div>
+                        <div class="import-actions-row">
+                            <button type="button" class="btn-preview-action" id="previewImportBtn">
+                                <i class="fas fa-magnifying-glass-chart"></i> Preview & Validate Records
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compact Active File Bar (Visible during Preview Mode to preserve vertical space) -->
+            <div class="import-active-file-bar" id="importActiveFileBar" hidden>
+                <div class="active-file-left">
+                    <div class="active-file-badge"><i class="fas fa-file-csv"></i></div>
+                    <div class="active-file-info">
+                        <span class="active-file-name" id="activeBarFileName">records.csv</span>
+                        <span class="active-file-size" id="activeBarFileSize">0 KB</span>
+                    </div>
+                </div>
+                <div class="active-file-actions">
+                    <button type="button" class="btn-toggle-setup" id="toggleSetupBtn">
+                        <i class="fas fa-circle-info"></i> View Format Guide
+                    </button>
+                    <button type="button" class="btn-change-file-sm" id="changeActiveFileBtn">
+                        <i class="fas fa-rotate"></i> Change File
                     </button>
                 </div>
             </div>
 
-            <!-- Preview & Validation Inspection Table -->
+            <!-- Preview & Validation Inspection Table (Full space utilization) -->
             <div id="importPreviewSection" class="import-preview-section" hidden>
                 <div class="import-preview-header">
                     <div>
@@ -666,11 +691,11 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th style="width: 42px;"><input type="checkbox" id="selectAllImportRows" title="Toggle all ready rows"></th>
-                                <th>Row</th>
-                                <th>Full Name</th>
-                                <th>Life Dates (DOB — DOD)</th>
-                                <th>Lot & Section</th>
+                                <th style="width: 44px; text-align: center;"><input type="checkbox" id="selectAllImportRows" title="Toggle all ready rows"></th>
+                                <th style="width: 55px;">Row</th>
+                                <th style="width: 220px;">Full Name</th>
+                                <th style="width: 170px;">Life Dates (DOB — DOD)</th>
+                                <th style="width: 180px;">Lot & Section</th>
                                 <th>Validation Status & Notes</th>
                             </tr>
                         </thead>
@@ -678,9 +703,10 @@
                     </table>
                 </div>
                 <div class="import-modal-footer">
-                    <button type="button" class="btn-save bookmarkBtn" id="confirmImportBtn">
-                        <span class="IconContainer"><i class="fas fa-upload icon"></i></span>
-                        <span class="text">Import Selected Rows</span>
+                    <button type="button" class="btn-secondary" id="cancelImportBtn">Cancel</button>
+                    <button type="button" class="btn-import-confirm" id="confirmImportBtn">
+                        <i class="fas fa-file-import"></i>
+                        <span>Import Selected Rows</span>
                     </button>
                 </div>
             </div>

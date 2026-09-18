@@ -2255,6 +2255,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     const importFileSize = document.getElementById('importFileSize');
     const removeImportFileBtn = document.getElementById('removeImportFileBtn');
     const previewImportBtn = document.getElementById('previewImportBtn');
+    const importSetupGrid = document.getElementById('importSetupGrid');
+    const importActiveFileBar = document.getElementById('importActiveFileBar');
+    const activeBarFileName = document.getElementById('activeBarFileName');
+    const activeBarFileSize = document.getElementById('activeBarFileSize');
+    const toggleSetupBtn = document.getElementById('toggleSetupBtn');
+    const changeActiveFileBtn = document.getElementById('changeActiveFileBtn');
+    const cancelImportBtn = document.getElementById('cancelImportBtn');
     const importPreviewSection = document.getElementById('importPreviewSection');
     const importSummaryEl = document.getElementById('importSummary');
     const importPreviewBody = document.getElementById('importPreviewBody');
@@ -2278,6 +2285,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
         if (importFileName) importFileName.textContent = file.name;
         if (importFileSize) importFileSize.textContent = formatFileSize(file.size);
+        if (activeBarFileName) activeBarFileName.textContent = file.name;
+        if (activeBarFileSize) activeBarFileSize.textContent = formatFileSize(file.size);
         if (dropzoneEmpty) dropzoneEmpty.hidden = true;
         if (importFileCard) importFileCard.hidden = false;
     }
@@ -2286,9 +2295,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (importFileInput) importFileInput.value = '';
         if (dropzoneEmpty) dropzoneEmpty.hidden = false;
         if (importFileCard) importFileCard.hidden = true;
+        if (importSetupGrid) importSetupGrid.hidden = false;
+        if (importActiveFileBar) importActiveFileBar.hidden = true;
         if (importPreviewSection) importPreviewSection.hidden = true;
         if (importPreviewBody) importPreviewBody.innerHTML = '';
         if (selectAllImportRows) selectAllImportRows.checked = false;
+        if (toggleSetupBtn) toggleSetupBtn.innerHTML = '<i class="fas fa-circle-info"></i> View Format Guide';
         importPreviewRows = [];
     }
 
@@ -2422,7 +2434,33 @@ document.addEventListener('DOMContentLoaded', async function () {
             selectAllImportRows.checked = hasCheckableRows && ((summary.ready || 0) > 0);
         }
 
-        importPreviewSection.hidden = false;
+        if (importSetupGrid) importSetupGrid.hidden = true;
+        if (importActiveFileBar) importActiveFileBar.hidden = false;
+        if (importPreviewSection) importPreviewSection.hidden = false;
+        if (toggleSetupBtn) toggleSetupBtn.innerHTML = '<i class="fas fa-circle-info"></i> View Format Guide';
+    }
+
+    if (toggleSetupBtn) {
+        toggleSetupBtn.addEventListener('click', () => {
+            if (!importSetupGrid) return;
+            const willShow = importSetupGrid.hidden;
+            importSetupGrid.hidden = !willShow;
+            toggleSetupBtn.innerHTML = willShow
+                ? '<i class="fas fa-chevron-up"></i> Hide Format Guide'
+                : '<i class="fas fa-circle-info"></i> View Format Guide';
+        });
+    }
+
+    if (changeActiveFileBtn) {
+        changeActiveFileBtn.addEventListener('click', () => {
+            if (importFileInput) importFileInput.click();
+        });
+    }
+
+    if (cancelImportBtn) {
+        cancelImportBtn.addEventListener('click', () => {
+            importModal.style.display = 'none';
+        });
     }
 
     if (selectAllImportRows) {
