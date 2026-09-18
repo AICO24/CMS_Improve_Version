@@ -29,12 +29,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         lastPayment: document.getElementById('lastPayment')
     };
     const statParts = {
-        totalRevenueTitle: statsEl.totalRevenue.closest('.stat-card')?.querySelector('.stat-title'),
-        totalRevenueSub: statsEl.totalRevenue.closest('.stat-card')?.querySelector('.stat-sub'),
-        monthRevenueTitle: statsEl.monthRevenue.closest('.stat-card')?.querySelector('.stat-title'),
-        monthRevenueSub: statsEl.monthRevenue.closest('.stat-card')?.querySelector('.stat-sub'),
-        transactionCountTitle: statsEl.transactionCount.closest('.stat-card')?.querySelector('.stat-title'),
-        transactionCountSub: statsEl.transactionCount.closest('.stat-card')?.querySelector('.stat-sub'),
+        totalRevenueTitle: statsEl.totalRevenue?.closest('.stat-card')?.querySelector('.stat-title-label') || statsEl.totalRevenue?.closest('.stat-card')?.querySelector('.stat-title span:first-child'),
+        totalRevenueSub: statsEl.totalRevenue?.closest('.stat-card')?.querySelector('.stat-sub'),
+        monthRevenueTitle: statsEl.monthRevenue?.closest('.stat-card')?.querySelector('.stat-title-label') || statsEl.monthRevenue?.closest('.stat-card')?.querySelector('.stat-title span:first-child'),
+        monthRevenueSub: statsEl.monthRevenue?.closest('.stat-card')?.querySelector('.stat-sub'),
+        transactionCountTitle: statsEl.transactionCount?.closest('.stat-card')?.querySelector('.stat-title-label') || statsEl.transactionCount?.closest('.stat-card')?.querySelector('.stat-title span:first-child'),
+        transactionCountSub: statsEl.transactionCount?.closest('.stat-card')?.querySelector('.stat-sub'),
+        verifiedPaymentTitle: statsEl.lastPayment?.closest('.stat-card')?.querySelector('.stat-title-label') || statsEl.lastPayment?.closest('.stat-card')?.querySelector('.stat-title span:first-child'),
+        verifiedPaymentSub: statsEl.lastPayment?.closest('.stat-card')?.querySelector('.stat-sub'),
     };
 
     const referenceFilterInput = document.getElementById('referenceFilter');
@@ -341,22 +343,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         if (currentUser.role === 'user') {
-            if (statParts.totalRevenueTitle) statParts.totalRevenueTitle.innerText = 'My Payments';
-            if (statParts.monthRevenueTitle) statParts.monthRevenueTitle.innerText = 'Pending';
-            if (statParts.transactionCountTitle) statParts.transactionCountTitle.innerText = 'Verified';
-            if (statParts.totalRevenueSub) statParts.totalRevenueSub.innerText = 'Matching filters';
-            if (statParts.monthRevenueSub) statParts.monthRevenueSub.innerText = 'Visible page';
-            if (statParts.transactionCountSub) statParts.transactionCountSub.innerText = 'Visible page';
+            if (statParts.totalRevenueTitle) statParts.totalRevenueTitle.textContent = 'My Payments';
+            if (statParts.monthRevenueTitle) statParts.monthRevenueTitle.textContent = 'Pending';
+            if (statParts.transactionCountTitle) statParts.transactionCountTitle.textContent = 'Verified';
+            if (statParts.verifiedPaymentTitle) statParts.verifiedPaymentTitle.textContent = 'Last Payment';
+            if (statParts.totalRevenueSub) statParts.totalRevenueSub.textContent = 'Matching filters';
+            if (statParts.monthRevenueSub) statParts.monthRevenueSub.textContent = 'Visible page';
+            if (statParts.transactionCountSub) statParts.transactionCountSub.textContent = 'Visible page';
+            if (statParts.verifiedPaymentSub) statParts.verifiedPaymentSub.textContent = 'Latest record';
             statsEl.totalRevenue.innerText = meta.total || 0;
             statsEl.monthRevenue.innerText = visiblePending;
             statsEl.transactionCount.innerText = visibleVerified;
         } else {
-            if (statParts.totalRevenueTitle) statParts.totalRevenueTitle.innerText = 'Total Revenue';
-            if (statParts.monthRevenueTitle) statParts.monthRevenueTitle.innerText = 'This Month';
-            if (statParts.transactionCountTitle) statParts.transactionCountTitle.innerText = 'Pending Review';
-            if (statParts.totalRevenueSub) statParts.totalRevenueSub.innerText = 'All time collected';
-            if (statParts.monthRevenueSub) statParts.monthRevenueSub.innerText = 'Current month revenue';
-            if (statParts.transactionCountSub) statParts.transactionCountSub.innerText = 'Awaiting verification';
+            if (statParts.totalRevenueTitle) statParts.totalRevenueTitle.textContent = 'Total Revenue';
+            if (statParts.monthRevenueTitle) statParts.monthRevenueTitle.textContent = 'This Month';
+            if (statParts.transactionCountTitle) statParts.transactionCountTitle.textContent = 'Pending Review';
+            if (statParts.verifiedPaymentTitle) statParts.verifiedPaymentTitle.textContent = 'Verified Total';
+            if (statParts.totalRevenueSub) statParts.totalRevenueSub.textContent = 'All time collected';
+            if (statParts.monthRevenueSub) statParts.monthRevenueSub.textContent = 'Current month revenue';
+            if (statParts.transactionCountSub) statParts.transactionCountSub.textContent = 'Awaiting verification';
+            if (statParts.verifiedPaymentSub) statParts.verifiedPaymentSub.textContent = 'Approved transactions';
             statsEl.totalRevenue.innerText = formatCurrency(revenue.total || 0);
             statsEl.monthRevenue.innerText = formatCurrency(monthRevenue.total || 0);
             statsEl.transactionCount.innerText = counts.pending;
