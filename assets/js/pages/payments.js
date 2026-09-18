@@ -426,6 +426,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             const isRejected = (payment.verification_status || 'Pending') === 'Rejected';
             const statusLabel = payment.verification_status || 'Pending';
 
+            const headerBadge = document.getElementById('viewHeaderStatusBadge');
+            if (headerBadge) {
+                headerBadge.className = `status-pill ${statusBadgeClass(statusLabel)}`;
+                headerBadge.innerHTML = `<span class="dot"></span>${escapeHtml(statusLabel)}`;
+            }
+
             const details = `
                 <div class="official-receipt-sheet" id="printableReceipt">
                     <!-- Receipt Header -->
@@ -533,8 +539,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                     </div>
                 </div>
 
-                <!-- Modal Action Bar (Hidden during Print) -->
-                <div class="receipt-modal-actions no-print">
+                ${currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff') ? `
+                    <div class="no-print" style="margin-top: 16px;"><div id="aiAssistantMountRecord"></div></div>
+                ` : ''}
+            `;
+            document.getElementById('viewDetails').innerHTML = details;
+
+            const footerActions = document.getElementById('viewModalFooterActions');
+            if (footerActions) {
+                footerActions.innerHTML = `
                     <button type="button" class="btn-primary btn-print" id="printReceiptBtn">
                         <i class="fas fa-print"></i>
                         <span>Print Official Voucher</span>
@@ -545,13 +558,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                             <button id="rejectPaymentBtn" class="btn-reject"><i class="fas fa-times"></i> Reject</button>
                         </div>
                     ` : ''}
-                </div>
-
-                ${currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff') ? `
-                    <div class="no-print" style="margin-top: 14px;"><div id="aiAssistantMountRecord"></div></div>
-                ` : ''}
-            `;
-            document.getElementById('viewDetails').innerHTML = details;
+                `;
+            }
 
             document.getElementById('printReceiptBtn')?.addEventListener('click', () => {
                 window.print();
@@ -1027,8 +1035,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('openAddPayment')?.addEventListener('click', openAddModal);
     document.getElementById('closePaymentModalBtn')?.addEventListener('click', closePaymentModal);
     document.querySelector('#paymentModal .close')?.addEventListener('click', closePaymentModal);
-    document.querySelector('#viewModal .close-view')?.addEventListener('click', () => {
-        document.getElementById('viewModal').style.display = 'none';
+    document.querySelectorAll('#viewModal .close-view, #closeViewFooterBtn, #closeViewModalBtn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('viewModal').style.display = 'none';
+        });
     });
 
     const cancelPaymentBtn = document.getElementById('cancelPaymentBtn');

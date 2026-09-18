@@ -471,15 +471,32 @@
 
     <div id="viewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
         <div class="modal-content payment-detail-modal">
-            <button type="button" class="close-view" aria-label="Close">&times;</button>
-            <div class="modal-heading">
-                <div class="modal-heading-icon"><i class="fas fa-file-invoice"></i></div>
-                <div>
-                    <h3 id="viewModalTitle">Payment Details</h3>
-                    <p>Review receipt, reference, and verification details.</p>
+            <!-- Modern Executive Header matching Lot/Cremation/Decedent -->
+            <div class="modal-header-custom no-print">
+                <div class="modal-title-group">
+                    <span class="modal-subtitle-chip"><i class="fas fa-file-invoice"></i> Finance Department</span>
+                    <h3 id="viewModalTitle" class="modal-heading-main"><i class="fas fa-receipt"></i> Payment Details</h3>
+                </div>
+                <div class="modal-header-actions">
+                    <span id="viewHeaderStatusBadge" class="status-pill status-verified"><span class="dot"></span>Verified</span>
+                    <button type="button" class="close-view" id="closeViewModalBtn" aria-label="Close">&times;</button>
                 </div>
             </div>
-            <div id="viewDetails"></div>
+
+            <!-- Scrollable Body with full contents -->
+            <div class="payment-view-body">
+                <div id="viewDetails"></div>
+            </div>
+
+            <!-- Modal Action Footer (Print, Verify, Reject, Close) -->
+            <div class="payment-view-footer no-print" id="viewModalFooter">
+                <div class="payment-view-footer-left" id="viewModalFooterActions"></div>
+                <div class="payment-view-footer-right">
+                    <button type="button" class="btn-close-view-footer" id="closeViewFooterBtn">
+                        <i class="fas fa-xmark"></i> Close
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
     <div id="aiAssistantMount"></div>
