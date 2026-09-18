@@ -390,45 +390,141 @@ document.addEventListener('DOMContentLoaded', async function() {
             const schedule = await loadReservationDetails(payment);
             const isPayMongo = (payment.payment_method && payment.payment_method.toLowerCase() === 'paymongo') ||
                                (payment.gateway_provider && payment.gateway_provider.toLowerCase() === 'paymongo');
+            const isVerified = (payment.verification_status || 'Pending') === 'Verified';
+            const isRejected = (payment.verification_status || 'Pending') === 'Rejected';
+            const statusLabel = payment.verification_status || 'Pending';
+
             const details = `
-                <div class="payment-detail-summary">
-                    <div>
-                        <span>Amount</span>
-                        <strong>${formatCurrency(payment.amount)}</strong>
+                <div class="official-receipt-sheet" id="printableReceipt">
+                    <!-- Receipt Header -->
+                    <div class="receipt-header">
+                        <div class="receipt-brand">
+                            <div class="receipt-logo"><i class="fas fa-tree"></i></div>
+                            <div>
+                                <h4>Cemetery Management System</h4>
+                                <p>Finance Department · Official Payment Voucher</p>
+                            </div>
+                        </div>
+                        <div class="receipt-meta-box">
+                            <span class="receipt-no-label">RECEIPT #</span>
+                            <span class="receipt-no-value">${escapeHtml(payment.receipt_number || 'RCPT-PENDING')}</span>
+                            <span class="receipt-date-label">Date: ${escapeHtml(payment.payment_date || payment.created_at || '—')}</span>
+                        </div>
                     </div>
-                    <div>
-                        <span>Status</span>
-                        <span class="status-badge ${statusBadgeClass(payment.verification_status || 'Pending')}">${payment.verification_status || 'Pending'}</span>
+
+                    <!-- Status Stamp -->
+                    <div class="receipt-status-banner ${statusBadgeClass(statusLabel)}">
+                        <div class="receipt-status-left">
+                            <i class="fas ${isVerified ? 'fa-circle-check' : (isRejected ? 'fa-ban' : 'fa-clock')}"></i>
+                            <span>STATUS: <strong>${escapeHtml(statusLabel.toUpperCase())}</strong></span>
+                        </div>
+                        <div class="receipt-status-right">
+                            <span>Transaction ID: #${escapeHtml(payment.payment_id)}</span>
+                        </div>
                     </div>
-                    <div>
-                        <span>Receipt</span>
-                        <strong>${payment.receipt_number || '—'}</strong>
+
+                    <!-- Key Details Grid -->
+                    <div class="receipt-grid">
+                        <div class="receipt-grid-col">
+                            <div class="receipt-field">
+                                <span class="field-title">Transaction Type</span>
+                                <span class="field-data transaction-type-pill">${escapeHtml(payment.transaction_type || '—')}</span>
+                            </div>
+                            <div class="receipt-field">
+                                <span class="field-title">Payment Method</span>
+                                <span class="field-data">${escapeHtml(payment.payment_method || '—')}</span>
+                            </div>
+                            <div class="receipt-field">
+                                <span class="field-title">Received / Handled By</span>
+                                <span class="field-data">${escapeHtml(payment.received_by_name || 'Staff / System')}</span>
+                            </div>
+                        </div>
+                        <div class="receipt-grid-col">
+                            <div class="receipt-field">
+                                <span class="field-title">Service Reference</span>
+                                <span class="field-data highlight-ref">${escapeHtml(payment.reference_label || (payment.reference_id ? 'Ref #' + payment.reference_id : 'Direct Payment'))}</span>
+                            </div>
+                            <div class="receipt-field">
+                                <span class="field-title">Verification Info</span>
+                                <span class="field-data">${payment.verified_by_name ? escapeHtml(payment.verified_by_name) + ' (' + escapeHtml(payment.verified_at || '') + ')' : 'Awaiting admin review'}</span>
+                            </div>
+                            <div class="receipt-field">
+                                <span class="field-title">Proof of Payment</span>
+                                <span class="field-data">${payment.receipt_url ? `<a href="${escapeHtml(payment.receipt_url)}" target="_blank" class="receipt-download-link"><i class="fas fa-arrow-up-right-from-square"></i> View Uploaded Proof</a>` : '<span class="text-muted">None attached</span>'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${schedule ? `
+                    <!-- Linked Reservation Details -->
+                    <div class="receipt-linked-section">
+                        <div class="linked-section-title"><i class="fas fa-calendar-check"></i> Linked Reservation Particulars</div>
+                        <div class="linked-details-grid">
+                            <div><span>Lot #:</span> <strong>${escapeHtml(schedule.lot_number || 'N/A')}</strong></div>
+                            <div><span>Section:</span> <strong>${escapeHtml(schedule.section_name || 'N/A')}</strong></div>
+                            <div><span>Decedent:</span> <strong>${escapeHtml((schedule.first_name ? schedule.first_name + ' ' + (schedule.last_name || '') : 'N/A').trim())}</strong></div>
+                            <div><span>Burial Date:</span> <strong>${escapeHtml(schedule.schedule_date || 'N/A')}</strong></div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- Financial Summary Box -->
+                    <div class="receipt-amount-card">
+                        <div class="amount-card-left">
+                            <span>TOTAL AMOUNT RECEIVED</span>
+                            <small>Philippine Peso (PHP · ₱)</small>
+                        </div>
+                        <div class="amount-card-right">
+                            ${formatCurrency(payment.amount)}
+                        </div>
+                    </div>
+
+                    ${payment.notes ? `
+                    <div class="receipt-notes-box">
+                        <strong>Notes & Remarks:</strong>
+                        <span>${escapeHtml(payment.notes)}</span>
+                    </div>
+                    ` : ''}
+
+                    <!-- Receipt Footer & Stamp Placeholder -->
+                    <div class="receipt-footer">
+                        <div class="receipt-signature-area">
+                            <div class="signature-line"></div>
+                            <span class="signature-label">Authorized Signature / Cashier</span>
+                        </div>
+                        <div class="receipt-stamp-area">
+                            <div class="security-seal">
+                                <i class="fas fa-shield-halved"></i>
+                                <span>SYSTEM VERIFIED</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                ${renderReservationSection(schedule)}
-                <div class="detail-row"><span>Receipt Number</span><strong>${payment.receipt_number || '—'}</strong></div>
-                <div class="detail-row"><span>Transaction Type</span><strong>${payment.transaction_type || '—'}</strong></div>
-                <div class="detail-row"><span>Reference ID</span><strong>${payment.reference_id || '—'}</strong></div>
-                <div class="detail-row"><span>Amount</span><strong>${formatCurrency(payment.amount)}</strong></div>
-                <div class="detail-row"><span>Payment Date</span><strong>${payment.payment_date || '—'}</strong></div>
-                <div class="detail-row"><span>Payment Method</span><strong>${payment.payment_method || '—'}</strong></div>
-                <div class="detail-row"><span>Verification Status</span><span class="status-badge ${statusBadgeClass(payment.verification_status || 'Pending')}">${payment.verification_status || 'Pending'}</span></div>
-                <div class="detail-row"><span>Verified By</span><strong>${payment.verified_by_name || payment.verified_by || '—'}</strong></div>
-                <div class="detail-row"><span>Verified At</span><strong>${payment.verified_at || '—'}</strong></div>
-                <div class="detail-row"><span>Receipt</span><strong>${payment.receipt_url ? `<a href="${payment.receipt_url}" target="_blank">Download</a>` : 'Not attached'}</strong></div>
-                <div class="detail-row"><span>Received By</span><strong>${payment.received_by_name || 'N/A'}</strong></div>
-                <div class="detail-row"><span>Notes</span><strong>${payment.notes || '—'}</strong></div>
+
+                <!-- Modal Action Bar (Hidden during Print) -->
+                <div class="receipt-modal-actions no-print">
+                    <button type="button" class="btn-primary btn-print" id="printReceiptBtn">
+                        <i class="fas fa-print"></i>
+                        <span>Print Official Voucher</span>
+                    </button>
+                    ${currentUser && currentUser.role === 'admin' && payment.verification_status === 'Pending' ? `
+                        <div class="admin-verification-actions">
+                            ${!isPayMongo ? '<button id="verifyPaymentBtn" class="btn-verify"><i class="fas fa-check"></i> Verify Payment</button>' : '<button class="btn-verify" disabled title="PayMongo payments cannot be manually verified (automated via webhook)"><i class="fas fa-lock"></i> Gateway Managed</button>'}
+                            <button id="rejectPaymentBtn" class="btn-reject"><i class="fas fa-times"></i> Reject</button>
+                        </div>
+                    ` : ''}
+                </div>
+
                 ${currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff') ? `
-                    <div style="margin-top: 10px;"><div id="aiAssistantMountRecord"></div></div>
-                ` : ''}
-                ${currentUser && currentUser.role === 'admin' && payment.verification_status === 'Pending' ? `
-                    <div class="action-buttons admin-verification-actions">
-                        ${!isPayMongo ? '<button id="verifyPaymentBtn" class="btn-verify"><i class="fas fa-check"></i> Verify</button>' : '<button class="btn-verify" disabled title="PayMongo payments cannot be manually verified (automated via webhook)" style="opacity: 0.5; cursor: not-allowed;"><i class="fas fa-lock"></i> Gateway Managed</button>'}
-                        <button id="rejectPaymentBtn" class="btn-reject"><i class="fas fa-times"></i> Reject</button>
-                    </div>
+                    <div class="no-print" style="margin-top: 14px;"><div id="aiAssistantMountRecord"></div></div>
                 ` : ''}
             `;
             document.getElementById('viewDetails').innerHTML = details;
+
+            document.getElementById('printReceiptBtn')?.addEventListener('click', () => {
+                window.print();
+            });
+
             document.getElementById('viewModal').style.display = 'flex';
 
             // System-Wide AI Assistant (Phase 4): mounts with this record's
@@ -811,9 +907,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         expectedAmountForCurrentReference = null;
         expectedAmountHint.style.display = 'none';
         amountMismatchWarning.style.display = 'none';
+        const receiptFilePrompt = document.getElementById('receiptFilePrompt');
+        if (receiptFilePrompt) receiptFilePrompt.textContent = 'Click or drag receipt file here';
         updateReferenceModeForType();
         document.getElementById('paymentModal').style.display = 'flex';
         requestAnimationFrame(updateModalScrollButtons);
+    }
+
+    const receiptFileInput = document.getElementById('receiptFile');
+    const receiptFilePrompt = document.getElementById('receiptFilePrompt');
+    if (receiptFileInput && receiptFilePrompt) {
+        receiptFileInput.addEventListener('change', () => {
+            if (receiptFileInput.files && receiptFileInput.files[0]) {
+                receiptFilePrompt.innerHTML = `<i class="fas fa-file-circle-check" style="color: #2c5e47; margin-right: 6px;"></i> <strong>${escapeHtml(receiptFileInput.files[0].name)}</strong>`;
+            } else {
+                receiptFilePrompt.textContent = 'Click or drag receipt file here';
+            }
+        });
     }
 
     document.getElementById('paymentForm').addEventListener('submit', async function(e) {

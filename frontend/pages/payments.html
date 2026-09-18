@@ -286,82 +286,128 @@
     </div>
 
     <div id="paymentModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="modal-content payment-form-modal">
+        <div class="modal-content payment-widescreen-modal">
             <button type="button" class="close" aria-label="Close">&times;</button>
-            <div class="modal-scroll-controls" aria-label="Modal scroll controls">
-                <button type="button" class="modal-scroll-btn modal-scroll-btn--up" data-scroll-dir="up" aria-label="Scroll up"><i class="fas fa-chevron-up"></i></button>
-                <button type="button" class="modal-scroll-btn modal-scroll-btn--down" data-scroll-dir="down" aria-label="Scroll down"><i class="fas fa-chevron-down"></i></button>
-            </div>
             <div class="modal-heading">
-                <div class="modal-heading-icon"><i class="fas fa-receipt"></i></div>
+                <div class="modal-heading-icon"><i class="fas fa-file-invoice-dollar"></i></div>
                 <div>
                     <h3 id="modalTitle">Record Payment</h3>
-                    <p>Capture payment details, receipt attachment, and reference information.</p>
+                    <p>Capture payment details, linked service reference, and proof of payment.</p>
                 </div>
             </div>
-            <form id="paymentForm">
+            <form id="paymentForm" class="payment-modal-form">
                 <input type="hidden" id="paymentId">
-                <div class="payment-form-grid">
-                <div class="form-group payment-reference-group">
-                    <label>Reference</label>
-                    <div class="reference-search" id="referenceSearchWrap">
-                        <input type="text" id="referenceSearchInput" placeholder="Search by decedent name or lot number..." autocomplete="off">
-                        <div id="referenceSearchResults" class="reference-search-results" hidden></div>
-                    </div>
-                    <div class="form-group reference-selected-card" id="referenceSelectedLabel" style="display:none;">
-                        <div>
-                            <strong id="referenceSelectedText">Selected:</strong>
+                <div class="payment-modal-grid-2col">
+                    <!-- ── Left Column: Service & Reference Details ── -->
+                    <div class="modal-col modal-col-left">
+                        <div class="col-section-header">
+                            <i class="fas fa-link"></i>
+                            <span>Transaction & Reference</span>
                         </div>
-                        <div>
-                            <button type="button" class="clear-ref" id="clearReferenceSelectionBtn">Clear</button>
+
+                        <div class="form-group">
+                            <label for="transactionType">Transaction Type <span class="req-star">*</span></label>
+                            <div class="select-shell">
+                                <select id="transactionType" required>
+                                    <option value="Lot Purchase">Lot Purchase</option>
+                                    <option value="Cremation">Cremation</option>
+                                    <option value="Relocation">Relocation</option>
+                                    <option value="Renewal">Renewal</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group payment-reference-group">
+                            <label>Service Reference <span class="req-star">*</span></label>
+                            <div class="reference-search" id="referenceSearchWrap">
+                                <input type="text" id="referenceSearchInput" placeholder="Search by decedent name or lot number..." autocomplete="off">
+                                <div id="referenceSearchResults" class="reference-search-results" hidden></div>
+                            </div>
+                            <div class="reference-selected-card" id="referenceSelectedLabel" style="display:none;">
+                                <div>
+                                    <strong id="referenceSelectedText">Selected:</strong>
+                                </div>
+                                <div>
+                                    <button type="button" class="clear-ref" id="clearReferenceSelectionBtn"><i class="fas fa-times"></i> Clear</button>
+                                </div>
+                            </div>
+                            <details class="reference-manual-toggle" id="referenceManualToggle">
+                                <summary>Enter reference ID manually</summary>
+                                <input type="number" id="referenceId" placeholder="Numeric ID" required>
+                            </details>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="paymentDate">Payment Date <span class="req-star">*</span></label>
+                            <input type="date" id="paymentDate" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="paymentMethod">Payment Method <span class="req-star">*</span></label>
+                            <div class="select-shell">
+                                <select id="paymentMethod" required>
+                                    <option value="Cash">Cash</option>
+                                    <option value="GCash">GCash</option>
+                                    <option value="PayMaya">PayMaya</option>
+                                    <option value="Bank Transfer">Bank Transfer</option>
+                                    <option value="Card">Card</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="payment-method-hint">
+                                <i class="fas fa-circle-info"></i>
+                                <span>For GCash/Bank Transfer, ensure customer uploads receipt screenshot for verification.</span>
+                            </div>
                         </div>
                     </div>
-                    <details class="reference-manual-toggle" id="referenceManualToggle">
-                        <summary>Enter reference ID manually</summary>
-                        <input type="number" id="referenceId" placeholder="Numeric ID" required>
-                    </details>
-                </div>
-                <div class="form-group">
-                    <label>Amount (₱)</label>
-                    <input type="number" id="amount" step="0.01" placeholder="Enter amount" required>
-                    <div class="help" id="expectedAmountHint" style="display:none;"></div>
-                    <div class="help" id="amountMismatchWarning" style="display:none; color: var(--color-warning-strong);"></div>
-                </div>
-                <div class="form-group"><label>Payment Date</label><input type="date" id="paymentDate" required></div>
-                <div class="form-group">
-                    <label>Payment Method</label>
-                    <div class="select-shell">
-                        <select id="paymentMethod" required>
-                            <option value="Cash">Cash</option>
-                            <option value="Card">Card</option>
-                            <option value="Bank Transfer">Bank Transfer</option>
-                            <option value="GCash">GCash</option>
-                            <option value="PayMaya">PayMaya</option>
-                            <option value="Other">Other</option>
-                        </select>
+
+                    <!-- ── Right Column: Amount, Receipt Upload & Notes ── -->
+                    <div class="modal-col modal-col-right">
+                        <div class="col-section-header">
+                            <i class="fas fa-receipt"></i>
+                            <span>Financials & Proof</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="amount">Amount (₱) <span class="req-star">*</span></label>
+                            <div class="amount-input-wrapper">
+                                <span class="currency-symbol">₱</span>
+                                <input type="number" id="amount" step="0.01" min="0.01" placeholder="0.00" required>
+                            </div>
+                            <div class="help" id="expectedAmountHint" style="display:none;"></div>
+                            <div class="help" id="amountMismatchWarning" style="display:none; color: var(--color-warning-strong);"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="receiptNumber">Receipt Number</label>
+                            <input type="text" id="receiptNumber" placeholder="Leave blank to auto-generate (e.g. RCPT-2026-xxx)">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="receiptFile">Upload Receipt / Proof (Image or PDF)</label>
+                            <div class="file-upload-dropzone">
+                                <input type="file" id="receiptFile" accept="image/*,.pdf" class="file-input-hidden">
+                                <label for="receiptFile" class="dropzone-label">
+                                    <i class="fas fa-cloud-arrow-up dropzone-icon"></i>
+                                    <span class="dropzone-prompt" id="receiptFilePrompt">Click or drag receipt file here</span>
+                                    <span class="dropzone-sub">Supports PNG, JPG, or PDF (up to 10MB)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group payment-notes-group">
+                            <label for="paymentNotes">Notes & Remarks</label>
+                            <textarea id="paymentNotes" rows="2" placeholder="Add optional remarks or payee contact..."></textarea>
+                        </div>
                     </div>
-                    <!-- PLACEHOLDER: replace with the cemetery's real GCash/PayMaya number and bank account details before going live. There is no payment gateway integration — the system cannot receive or confirm a payment on its own, so a citizen paying via GCash/Bank Transfer/PayMaya must be told exactly where to send it before uploading proof below. -->
-                    <div class="help">Cash: pay directly at the cemetery office. GCash: send to 0917-000-0000 (PLACEHOLDER NAME). PayMaya: 0917-000-0000 (PLACEHOLDER NAME). Bank Transfer: BDO 0000-0000-0000 (PLACEHOLDER ACCOUNT NAME). After sending payment, upload your receipt/screenshot below and staff will verify it.</div>
                 </div>
-                <div class="form-group"><label>Receipt Number</label><input type="text" id="receiptNumber" placeholder="Leave blank to auto-generate"></div>
-                <div class="form-group"><label>Transaction Type</label>
-                    <div class="select-shell">
-                        <select id="transactionType" required>
-                            <option value="Lot Purchase">Lot Purchase</option>
-                            <option value="Cremation">Cremation</option>
-                            <option value="Relocation">Relocation</option>
-                            <option value="Renewal">Renewal</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group"><label>Receipt Upload</label><input type="file" id="receiptFile" accept="image/*,.pdf"></div>
-                <div class="form-group payment-notes-group"><label>Notes</label><textarea id="paymentNotes" rows="2" placeholder="Add payment notes"></textarea></div>
-                </div>
-                <div class="modal-actions">
+
+                <!-- ── Sticky Modal Action Bar ── -->
+                <div class="modal-actions-sticky">
                     <button type="button" class="btn-secondary" id="cancelPaymentBtn"><i class="fas fa-xmark"></i><span>Cancel</span></button>
                     <button type="button" class="btn-secondary btn-pay-online" id="payOnlineBtn" style="display:none;" title="Pay online with PayMongo sandbox hosted checkout"><i class="fas fa-credit-card"></i><span>Pay Online (Sandbox)</span></button>
-                    <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save</span></button>
+                    <button type="submit" class="btn-save"><span class="IconContainer"><i class="fas fa-save"></i></span><span class="text">Save Payment</span></button>
                 </div>
             </form>
         </div>
