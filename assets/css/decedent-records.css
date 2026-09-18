@@ -2061,8 +2061,9 @@
 .modal-content.modal--import {
     max-width: 1240px !important;
     width: min(1240px, 96vw);
-    max-height: 92vh;
-    padding: 24px 28px;
+    height: 88vh;
+    max-height: 88vh;
+    padding: 24px 28px 18px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -2073,7 +2074,7 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     flex-shrink: 0;
 }
 
@@ -2101,6 +2102,16 @@
     margin: 3px 0 0;
     font-size: 0.82rem;
     color: var(--color-text-muted);
+}
+
+/* Force CSS hidden rule so display: grid does not override [hidden] */
+#importSetupGrid[hidden],
+.import-setup-grid[hidden],
+#importActiveFileBar[hidden],
+.import-active-file-bar[hidden],
+#importPreviewSection[hidden],
+.import-preview-section[hidden] {
+    display: none !important;
 }
 
 /* Step 1 Setup Grid (Left: Template & Fields, Right: Upload Dropzone) */
@@ -2592,15 +2603,15 @@
 
 /* Table Container (The only element that scrolls internally!) */
 .import-preview-table-container {
-    flex: 1;
-    min-height: 240px;
-    max-height: calc(88vh - 240px);
+    flex: 1 1 auto;
+    min-height: 180px;
+    max-height: calc(88vh - 290px);
     overflow-y: auto;
     overflow-x: auto;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background: var(--color-surface);
-    margin-bottom: 12px;
+    margin-bottom: 6px;
 }
 
 .import-preview-table-container table {
@@ -2638,13 +2649,13 @@
 }
 
 .import-modal-body {
-    flex: 1;
+    flex: 1 1 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
     overflow-x: hidden;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
 .import-modal-footer {
@@ -2652,10 +2663,12 @@
     justify-content: space-between;
     align-items: center;
     gap: 16px;
-    padding-top: 14px;
+    padding-top: 12px;
     border-top: 1px solid var(--color-border);
     flex-shrink: 0;
     margin-top: auto;
+    background: var(--color-surface);
+    z-index: 10;
 }
 
 .import-footer-hint {
