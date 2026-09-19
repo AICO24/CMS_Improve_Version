@@ -179,12 +179,13 @@ CREATE TABLE `decedent_records` (
   `last_name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
   `middle_name` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `suffix` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `dob` date NOT NULL,
+  `dob` date DEFAULT NULL,
   `dod` date NOT NULL,
   `cause_of_death` text COLLATE utf8mb4_general_ci,
   `contact_name` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `contact_number` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `is_cremated` enum('no','yes') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'no',
+  `document_status` enum('pending_requirements','verified') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pending_requirements',
   `ash_storage` text COLLATE utf8mb4_general_ci,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -194,6 +195,7 @@ CREATE TABLE `decedent_records` (
   KEY `idx_decedent_deleted_at` (`deleted_at`),
   KEY `idx_decedent_name` (`last_name`,`first_name`),
   KEY `idx_decedent_dod` (`dod`),
+  KEY `idx_decedent_document_status` (`document_status`),
   CONSTRAINT `fk_decedent_lot` FOREIGN KEY (`lot_id`) REFERENCES `lots` (`lot_id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
