@@ -172,6 +172,11 @@
                         <div class="stat-value" id="avgAge">0</div>
                         <div class="stat-sub">Years old</div>
                     </div>
+                    <div class="stat-card accent-amber stat-card-filterable" data-status-filter="pending_requirements" title="Click to filter records with pending requirements / to follow">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-clock"></i></span> To Follow</div>
+                        <div class="stat-value" id="pendingReqCount">0</div>
+                        <div class="stat-sub">Pending requirements</div>
+                    </div>
                     <div class="stat-card accent-red stat-card-filterable" data-status-filter="attention" title="Click to filter records needing attention">
                         <div class="stat-title"><span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span> Needs Attention</div>
                         <div class="stat-value" id="attentionCount">0</div>
@@ -277,12 +282,13 @@
                                         <th>Lot Number</th>
                                         <th>Section</th>
                                         <th>Type</th>
+                                        <th>Compliance</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tableBody">
                                     <tr>
-                                        <td colspan="8">Loading records...</td>
+                                        <td colspan="9">Loading records...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -720,6 +726,70 @@
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Verify Requirements Modal -->
+    <div id="verifyRequirementsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="verifyModalTitle" style="display: none;">
+        <div class="modal-content" style="max-width: 540px;">
+            <div class="modal-header">
+                <h3 id="verifyModalTitle"><i class="fas fa-file-circle-check" style="color: var(--color-primary-600, #2c5e47);"></i> Verify Decedent Requirements</h3>
+                <button type="button" class="close-modal" id="closeVerifyModalBtn">&times;</button>
+            </div>
+            <form id="verifyRequirementsForm">
+                <input type="hidden" id="verifyDecedentId">
+                <div class="modal-body" style="padding: 20px;">
+                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; color: #92400e;">
+                        <i class="fas fa-circle-info"></i> <strong>Compliance Verification:</strong> This record was auto-created upon payment with requirements to follow. Complete the verified civil registry data below to advance it to <strong>Verified</strong>.
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Decedent Name</label>
+                        <input type="text" id="verifyDecedentName" class="form-input" readonly style="background: #f8fafc; font-weight: 600;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label for="verifyDob">Verified Date of Birth (DOB) <span style="color: #ef4444;">*</span></label>
+                        <input type="date" id="verifyDob" class="form-input" required>
+                        <small style="color: #64748b;">Official birthdate stated on Death Certificate</small>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label for="verifyCause">Verified Cause of Death</label>
+                        <input type="text" id="verifyCause" class="form-input" placeholder="e.g. Cardiopulmonary Arrest / Acute Myocardial Infarction">
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 12px; margin-bottom: 14px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="verifyContactName">Contact / Next-of-Kin</label>
+                            <input type="text" id="verifyContactName" class="form-input">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="verifyContactNumber">Contact Number</label>
+                            <input type="text" id="verifyContactNumber" class="form-input">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label for="verifyDocFile">Attach Death Certificate / Burial Permit (Optional)</label>
+                        <input type="file" id="verifyDocFile" class="form-input" accept=".pdf,image/*">
+                        <small style="color: #64748b;">Upload scanned or photographed document to archive with this record.</small>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 16px;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
+                            <input type="checkbox" id="verifyConfirmCheckbox" required>
+                            <span>I confirm that the official Death Certificate / Burial Permit has been reviewed.</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid #e2e8f0;">
+                    <button type="button" class="btn-secondary" id="cancelVerifyBtn">Cancel</button>
+                    <button type="submit" class="btn-primary" id="submitVerifyBtn" style="background: var(--color-primary-600, #2c5e47); color: white;">
+                        <i class="fas fa-check-circle"></i> Save & Mark Verified
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

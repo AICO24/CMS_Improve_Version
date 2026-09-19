@@ -29,6 +29,19 @@ document.addEventListener('DOMContentLoaded', async function () {
     const recordModal = document.getElementById('recordModal');
     const viewModal = document.getElementById('viewModal');
     const importModal = document.getElementById('importModal');
+    const verifyModal = document.getElementById('verifyRequirementsModal');
+    const verifyForm = document.getElementById('verifyRequirementsForm');
+    const closeVerifyModalBtn = document.getElementById('closeVerifyModalBtn');
+    const cancelVerifyBtn = document.getElementById('cancelVerifyBtn');
+    const submitVerifyBtn = document.getElementById('submitVerifyBtn');
+    const verifyDecedentId = document.getElementById('verifyDecedentId');
+    const verifyDecedentName = document.getElementById('verifyDecedentName');
+    const verifyDob = document.getElementById('verifyDob');
+    const verifyCause = document.getElementById('verifyCause');
+    const verifyContactName = document.getElementById('verifyContactName');
+    const verifyContactNumber = document.getElementById('verifyContactNumber');
+    const verifyDocFile = document.getElementById('verifyDocFile');
+    const verifyConfirmCheckbox = document.getElementById('verifyConfirmCheckbox');
     const recordForm = document.getElementById('recordForm');
     const ashStorageGroup = document.getElementById('ashStorageGroup');
     const viewDetails = document.getElementById('viewDetails');
@@ -45,6 +58,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     let currentTypeFilter = 'all';
     let currentSectionFilter = '';
     let currentAttentionFilter = false;
+    let currentDocumentStatusFilter = '';
     let pendingRequests = [];
     // Set only when "Approve" was clicked on a pending request — saveRecord()
     // checks this after a successful CREATE (never on edit) and links the new
@@ -397,6 +411,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
         if (e.target === viewModal) viewModal.style.display = 'none';
         if (e.target === importModal) importModal.style.display = 'none';
+        if (e.target === verifyModal) verifyModal.style.display = 'none';
     });
     const refreshFiltered = debounce(() => {
         currentQuery = searchInput.value.trim();
@@ -448,11 +463,13 @@ document.addEventListener('DOMContentLoaded', async function () {
             const filter = card.dataset.statusFilter;
             let isActive = false;
             if (filter === 'all') {
-                isActive = (currentTypeFilter === 'all' && !currentAttentionFilter && !currentSectionFilter && !currentQuery);
+                isActive = (currentTypeFilter === 'all' && !currentAttentionFilter && !currentSectionFilter && !currentQuery && !currentDocumentStatusFilter);
             } else if (filter === 'no') {
                 isActive = (currentTypeFilter === 'no');
             } else if (filter === 'yes') {
                 isActive = (currentTypeFilter === 'yes');
+            } else if (filter === 'pending_requirements') {
+                isActive = (currentDocumentStatusFilter === 'pending_requirements');
             } else if (filter === 'attention') {
                 isActive = Boolean(currentAttentionFilter);
             }
@@ -466,6 +483,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (filter === 'all') {
                 currentTypeFilter = 'all';
                 currentAttentionFilter = false;
+                currentDocumentStatusFilter = '';
                 currentSectionFilter = '';
                 currentQuery = '';
                 typeFilter.value = 'all';
@@ -479,6 +497,8 @@ document.addEventListener('DOMContentLoaded', async function () {
             } else if (filter === 'yes') {
                 currentTypeFilter = (currentTypeFilter === 'yes') ? 'all' : 'yes';
                 typeFilter.value = currentTypeFilter;
+            } else if (filter === 'pending_requirements') {
+                currentDocumentStatusFilter = (currentDocumentStatusFilter === 'pending_requirements') ? '' : 'pending_requirements';
             } else if (filter === 'attention') {
                 currentAttentionFilter = !currentAttentionFilter;
                 attentionFilter.checked = currentAttentionFilter;
@@ -1011,6 +1031,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (currentTypeFilter !== 'all') params.set('is_cremated', currentTypeFilter);
         if (currentSectionFilter) params.set('section', currentSectionFilter);
         if (currentAttentionFilter) params.set('incomplete', '1');
+        if (currentDocumentStatusFilter) params.set('document_status', currentDocumentStatusFilter);
         params.set('page', pagination.page);
         params.set('per_page', perPage);
         try {
@@ -1022,7 +1043,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             pagination.render(result.meta || { page: 1, total_pages: 1, total: records.length });
         } catch (error) {
             console.error('Failed to load records', error);
-            tableBody.innerHTML = '<tr><td colspan="8">Could not load records. Please refresh.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="9">Could not load records. Please refresh.</td></tr>';
             pagination.render({ page: 1, total_pages: 1, total: 0 });
         }
     }
@@ -1034,13 +1055,15 @@ document.addEventListener('DOMContentLoaded', async function () {
         document.getElementById('cremationCount').innerText = stats.cremations || 0;
         document.getElementById('avgAge').innerText = stats.avg_age || 0;
         document.getElementById('attentionCount').innerText = stats.needs_attention || 0;
+        const pendingReqEl = document.getElementById('pendingReqCount');
+        if (pendingReqEl) pendingReqEl.innerText = stats.pending_requirements || 0;
     }
 
     function renderTable(items) {
         if (!items || items.length === 0) {
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="8">
+                    <td colspan="9">
                         <div class="decrec-empty-state">
                             <i class="fas fa-folder-open"></i>
                             <strong>No records found</strong>
@@ -1061,21 +1084,29 @@ document.addEventListener('DOMContentLoaded', async function () {
             const tableAgePill = (ageInfo && ageInfo.isValid)
                 ? `<span class="table-age-pill ${ageInfo.milestoneClass}" title="${escapeHtml(ageInfo.formatted)} (${escapeHtml(ageInfo.milestone)})">${escapeHtml(ageInfo.shortAge)}</span>`
                 : '';
+
+            const isPendingReq = (item.document_status === 'pending_requirements');
+            const complianceBadge = isPendingReq
+                ? `<span class="status-badge" style="background:#fef3c7; color:#b45309; border: 1px solid #fde68a; font-weight:600;"><i class="fas fa-clock"></i> To Follow</span>`
+                : `<span class="status-badge" style="background:#d1fae5; color:#065f46; border: 1px solid #a7f3d0; font-weight:600;"><i class="fas fa-check-circle"></i> Verified</span>`;
+
             return `
             <tr data-id="${item.decedent_id}">
                 <td>D-${item.decedent_id}</td>
                 <td>${escapeHtml(`${item.first_name} ${item.last_name}${item.suffix ? ' ' + item.suffix : ''}`)}${attentionBadge}</td>
-                <td>${escapeHtml(item.dob)}</td>
+                <td>${item.dob ? escapeHtml(item.dob) : '<span style="color:#888; font-style: italic;">To follow</span>'}</td>
                 <td>
                     <div class="dod-cell-wrap">
                         <span>${escapeHtml(item.dod)}</span>
                         ${tableAgePill}
                     </div>
                 </td>
-                <td>${escapeHtml(item.lot_number)}</td>
-                <td>${escapeHtml(item.section_name)}</td>
+                <td>${item.lot_number ? escapeHtml(item.lot_number) : '—'}</td>
+                <td>${item.section_name ? escapeHtml(item.section_name) : '—'}</td>
                 <td><span class="status-badge ${item.is_cremated === 'yes' ? 'status-warning' : 'status-success'}">${item.is_cremated === 'yes' ? 'Cremation' : 'Burial'}</span></td>
+                <td>${complianceBadge}</td>
                 <td class="action-buttons">
+                    ${isPendingReq ? `<button class="btn-verify-req btn-secondary" title="Verify Requirements (Complete DOB & Certificate)" style="color: #b45309; border-color: #fde68a; font-size: 11px; padding: 4px 8px;"><i class="fas fa-file-circle-check"></i> <span>Verify</span></button>` : ''}
                     <button class="btn-view" title="View"><i class="fas fa-eye"></i></button>
                     <button class="btn-edit-row" title="Edit"><i class="fas fa-pen"></i></button>
                     <button class="btn-delete-row delete-btn" title="Delete Record">
@@ -1092,6 +1123,14 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     function attachTableButtons() {
+        document.querySelectorAll('.btn-verify-req').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const row = btn.closest('tr');
+                const id = parseInt(row.dataset.id, 10);
+                openVerifyModal(id);
+            });
+        });
+
         document.querySelectorAll('.btn-view').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const row = btn.closest('tr');
@@ -2238,6 +2277,97 @@ document.addEventListener('DOMContentLoaded', async function () {
         } catch (error) {
             showToast(error.message || 'Could not delete record.', { type: 'error' });
         }
+    }
+
+    // ── Batch Compliance: Requirements Verification Modal Handlers ──
+    async function openVerifyModal(id) {
+        let record = records.find((item) => item.decedent_id === id);
+        if (!record) {
+            try {
+                record = await api.request(`decedents/${id}`, { method: 'GET' });
+            } catch (e) {
+                showToast('Could not load decedent details.', { type: 'error' });
+                return;
+            }
+        }
+        if (!record) return;
+
+        if (verifyDecedentId) verifyDecedentId.value = record.decedent_id;
+        if (verifyDecedentName) verifyDecedentName.value = `${record.first_name} ${record.last_name}${record.suffix ? ' ' + record.suffix : ''}`;
+        if (verifyDob) verifyDob.value = record.dob || '';
+        if (verifyCause) verifyCause.value = record.cause_of_death || '';
+        if (verifyContactName) verifyContactName.value = record.contact_name || '';
+        if (verifyContactNumber) verifyContactNumber.value = record.contact_number || '';
+        if (verifyDocFile) verifyDocFile.value = '';
+        if (verifyConfirmCheckbox) verifyConfirmCheckbox.checked = false;
+
+        if (verifyModal) verifyModal.style.display = 'flex';
+    }
+
+    if (closeVerifyModalBtn) {
+        closeVerifyModalBtn.addEventListener('click', () => {
+            if (verifyModal) verifyModal.style.display = 'none';
+        });
+    }
+
+    if (cancelVerifyBtn) {
+        cancelVerifyBtn.addEventListener('click', () => {
+            if (verifyModal) verifyModal.style.display = 'none';
+        });
+    }
+
+    if (verifyForm) {
+        verifyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = verifyDecedentId.value;
+            if (!id) return;
+            if (!verifyDob.value) {
+                showToast('Date of Birth is required for verification.', { type: 'error' });
+                return;
+            }
+            if (verifyConfirmCheckbox && !verifyConfirmCheckbox.checked) {
+                showToast('Please confirm review of the Death Certificate / Burial Permit.', { type: 'error' });
+                return;
+            }
+
+            const payload = {
+                dob: verifyDob.value,
+                cause_of_death: verifyCause.value.trim() || null,
+                contact_name: verifyContactName.value.trim() || null,
+                contact_number: verifyContactNumber.value.trim() || null
+            };
+
+            await withButtonLoading(submitVerifyBtn, async () => {
+                try {
+                    const result = await api.request(`decedents/${id}/verify-requirements`, {
+                        method: 'POST',
+                        body: payload
+                    });
+
+                    if (result.success) {
+                        // Optional document attachment if chosen
+                        if (verifyDocFile && verifyDocFile.files && verifyDocFile.files[0]) {
+                            try {
+                                const formData = new FormData();
+                                formData.append('document_file', verifyDocFile.files[0]);
+                                formData.append('document_type', 'death_certificate');
+                                await api.request(`decedents/${id}/documents`, { method: 'POST', body: formData });
+                            } catch (docErr) {
+                                console.error('Verification succeeded but document upload failed', docErr);
+                            }
+                        }
+
+                        showToast(result.message || 'Requirements verified successfully! Record is now complete.', { type: 'success' });
+                        if (verifyModal) verifyModal.style.display = 'none';
+                        await refreshPage();
+                    } else {
+                        showToast(result.error || 'Failed to verify requirements.', { type: 'error' });
+                    }
+                } catch (err) {
+                    showToast(err.message || 'Failed to verify requirements.', { type: 'error' });
+                }
+            });
+        });
     }
 
     // ---------- Batch J: bulk CSV import ----------
