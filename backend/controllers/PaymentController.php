@@ -712,6 +712,7 @@ class PaymentController {
             if ($status === 'Verified' && $payment['transaction_type'] === 'Lot Purchase') {
                 $this->syncLotStatusForVerifiedPurchase($payment, $adminId);
                 $this->autoConfirmScheduleForVerifiedPurchase($payment, $adminId);
+                $this->autoFormalizeDecedentOnPayment($payment, $adminId);
             } elseif ($status === 'Verified' && $payment['transaction_type'] === 'Cremation') {
                 // Cremation Phase B: the citizen-intake counterpart to
                 // autoUpdateCremationForVerifiedPayment() below — that method
@@ -725,6 +726,7 @@ class PaymentController {
                 // autoConfirmScheduleForVerifiedPurchase() calls above.
                 $this->autoConfirmCremationForVerifiedPayment($payment, $adminId);
                 $this->autoUpdateCremationForVerifiedPayment($payment, $adminId);
+                $this->autoFormalizeDecedentOnPayment($payment, $adminId);
             } elseif ($status === 'Verified' && $payment['transaction_type'] === 'Relocation') {
                 $this->autoConfirmRelocationForVerifiedPayment($payment, $adminId);
             } elseif ($status === 'Verified' && $payment['transaction_type'] === 'Renewal') {
@@ -2649,9 +2651,11 @@ class PaymentController {
                 $this->handleResourceCollisionRefund($payment, 'Schedule confirmation automation failed: ' . ($schedResult['reason'] ?? 'status change'), $adminId);
                 return;
             }
+            $this->autoFormalizeDecedentOnPayment($payment, $adminId);
         } elseif ($payment['transaction_type'] === 'Cremation') {
             $this->autoConfirmCremationForVerifiedPayment($payment, $adminId);
             $this->autoUpdateCremationForVerifiedPayment($payment, $adminId);
+            $this->autoFormalizeDecedentOnPayment($payment, $adminId);
         }
 
         if (!empty($payment['received_by'])) {
@@ -3016,5 +3020,157 @@ class PaymentController {
             'config_errors' => $configValidation['errors'] ?? [],
             'code' => 200,
         ];
+    }
+
+    /**
+     * Auto-formalizes a provisional decedent request into decedent_records upon successful payment.
+     * Marks document_status as 'pending_requirements' so the decedent immediately appears in
+     * Decedent Records and My Records with a 'To Follow / Pending Requirements' badge.
+     */
+    public function autoFormalizeDecedentOnPayment(array $payment, ?int $adminId = null): void {
+        $referenceKind = $payment['reference_kind'] ?? null;
+        $referenceId = $payment['reference_id'] ?? null;
+        $txType = $payment['transaction_type'] ?? '';
+
+        if (empty($referenceId)) {
+            return;
+        }
+
+        require_once __DIR__ . '/../models/Decedent.php';
+        require_once __DIR__ . '/../models/DecedentRequest.php';
+        require_once __DIR__ . '/../models/Schedule.php';
+        require_once __DIR__ . '/../models/Cremation.php';
+        require_once __DIR__ . '/../models/User.php';
+        require_once __DIR__ . '/../controllers/DecedentRequestController.php';
+        require_once __DIR__ . '/../controllers/DecedentDocumentController.php';
+
+        $decedentModel = new Decedent();
+        $requestModel = new DecedentRequest();
+        $scheduleModel = new Schedule();
+        $cremationModel = new Cremation();
+
+        $targetRecord = null;
+        $isBurial = ($txType === 'Lot Purchase' && ($referenceKind === 'schedule' || $referenceKind === null));
+        $isCremation = ($txType === 'Cremation');
+
+        if ($isBurial) {
+            $targetRecord = $scheduleModel->findById($referenceId);
+        } elseif ($isCremation) {
+            $targetRecord = $cremationModel->findById($referenceId);
+        }
+
+        if (!$targetRecord) {
+            return;
+        }
+
+        // If it already has a formal deceased_id linked, nothing to formalize
+        if (!empty($targetRecord['deceased_id'])) {
+            return;
+        }
+
+        $requestId = $targetRecord['decedent_request_id'] ?? null;
+        if (empty($requestId)) {
+            return;
+        }
+
+        $request = $requestModel->findById($requestId);
+        if (!$request) {
+            return;
+        }
+
+        // If request is already linked to a decedent, link it to the booking
+        if (!empty($request['decedent_id'])) {
+            if ($isBurial) {
+                $scheduleModel->update($referenceId, ['deceased_id' => (int) $request['decedent_id']]);
+            } elseif ($isCremation) {
+                $cremationModel->update($referenceId, ['deceased_id' => (int) $request['decedent_id']]);
+            }
+            return;
+        }
+
+        // Parse name components from provisional full_name
+        $parsed = DecedentRequestController::parseFullName($request['full_name'] ?? '');
+        $firstName = !empty($parsed['first_name']) ? $parsed['first_name'] : trim((string) ($request['full_name'] ?? ''));
+        $lastName = !empty($parsed['last_name']) ? $parsed['last_name'] : 'N/A';
+        $middleName = !empty($parsed['middle_name']) ? $parsed['middle_name'] : null;
+        $suffix = !empty($parsed['suffix']) ? $parsed['suffix'] : null;
+
+        // Contact info
+        $contactName = $request['requested_by_name'] ?? null;
+        $contactNumber = null;
+        if (!empty($request['requested_by'])) {
+            $userModel = new User();
+            $user = $userModel->findById($request['requested_by']);
+            if ($user) {
+                $contactName = $contactName ?: ($user['name'] ?? $user['username'] ?? null);
+                $contactNumber = $user['contact_number'] ?? null;
+            }
+        }
+
+        $dod = !empty($request['approximate_dod']) ? $request['approximate_dod'] : date('Y-m-d');
+        $lotId = $isBurial ? ($targetRecord['lot_id'] ?? null) : null;
+
+        // Create decedent record with document_status = 'pending_requirements'
+        $decedentData = [
+            'lot_id' => $lotId,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'middle_name' => $middleName,
+            'suffix' => $suffix,
+            'dob' => null, // To follow
+            'dod' => $dod,
+            'cause_of_death' => null, // To follow
+            'contact_name' => $contactName,
+            'contact_number' => $contactNumber,
+            'is_cremated' => $isCremation ? 'yes' : 'no',
+            'ash_storage' => null,
+            'document_status' => 'pending_requirements',
+        ];
+
+        $decedentId = $decedentModel->create($decedentData);
+        if (!$decedentId) {
+            return;
+        }
+
+        // Link to booking
+        if ($isBurial) {
+            $scheduleModel->update($referenceId, ['deceased_id' => $decedentId]);
+        } elseif ($isCremation) {
+            $cremationModel->update($referenceId, ['deceased_id' => $decedentId]);
+        }
+
+        // Link & approve request
+        $requestModel->approve($requestId, $decedentId, $adminId ?: 1);
+
+        // If request had an attachment uploaded by citizen, attach it to decedent_documents
+        if (!empty($request['attachment_path'])) {
+            $docController = new DecedentDocumentController();
+            $actorUser = ['user_id' => $adminId ?: 1, 'role' => 'admin', 'username' => 'system'];
+            $docController->attachExistingFile(
+                $decedentId,
+                $request['attachment_path'],
+                $request['attachment_original_filename'] ?? 'Death_Certificate.pdf',
+                'death_certificate',
+                $actorUser,
+                'Attached from citizen booking provisional request'
+            );
+            $requestModel->clearAttachment($requestId);
+        }
+
+        // Audit log
+        $this->auditLogModel->log(
+            'Decedent record auto-created on payment verification',
+            $adminId,
+            null,
+            'Decedent',
+            $decedentId,
+            [
+                'payment_id' => $payment['payment_id'] ?? null,
+                'receipt_number' => $payment['receipt_number'] ?? null,
+                'document_status' => 'pending_requirements',
+                'service_type' => $isBurial ? 'burial' : 'cremation',
+                'reference_id' => $referenceId,
+            ]
+        );
     }
 }

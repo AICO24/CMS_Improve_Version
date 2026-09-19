@@ -504,6 +504,16 @@ class ScheduleController {
             if (empty($resolvedDeceasedId)) {
                 return ['error' => 'This booking still needs a formal decedent record before it can be marked Completed. Finish it from Decedent Records first.', 'code' => 422];
             }
+            $decedentModel = new Decedent();
+            $decedent = $decedentModel->findById($resolvedDeceasedId);
+            if ($decedent && ($decedent['document_status'] ?? '') === 'pending_requirements' && empty($data['allow_unverified_decedent'])) {
+                return [
+                    'error' => 'This booking has unverified requirements (Death Certificate / Permit to follow). Please verify requirements in Decedent Records first, or confirm supervisory override.',
+                    'code' => 422,
+                    'requirements_pending' => true,
+                    'decedent_id' => (int) $resolvedDeceasedId,
+                ];
+            }
         }
 
         // F.1 (confirmed 2026-09-02): staff genuinely need to mark a Pending
