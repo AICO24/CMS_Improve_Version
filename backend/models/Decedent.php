@@ -54,6 +54,11 @@ class Decedent {
             $sql .= " AND " . self::INCOMPLETE_CONDITION;
         }
 
+        if (!empty($filters['document_status']) && in_array($filters['document_status'], ['pending_requirements', 'verified'], true)) {
+            $sql .= " AND dr.document_status = ?";
+            $params[] = $filters['document_status'];
+        }
+
         if (!empty($filters['owner_id'])) {
             $sql .= " AND dr.decedent_id IN (" . self::OWNED_DECEDENT_IDS_SUBQUERY . ")";
             array_push($params, (int) $filters['owner_id'], (int) $filters['owner_id'], (int) $filters['owner_id']);
@@ -225,8 +230,9 @@ class Decedent {
                 contact_name,
                 contact_number,
                 is_cremated,
-                ash_storage
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ash_storage,
+                document_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
         $success = $stmt->execute([
@@ -235,16 +241,22 @@ class Decedent {
             $data['last_name'],
             $data['middle_name'] ?? null,
             $data['suffix'] ?? null,
-            $data['dob'],
+            !empty($data['dob']) ? $data['dob'] : null,
             $data['dod'],
             $data['cause_of_death'] ?? null,
             $data['contact_name'] ?? null,
             $data['contact_number'] ?? null,
             $data['is_cremated'] ?? 'no',
             $data['ash_storage'] ?? null,
+            $data['document_status'] ?? 'pending_requirements',
         ]);
 
         return $success ? (int) $this->db->lastInsertId() : false;
+    }
+
+    public function updateDocumentStatus($id, $status) {
+        $stmt = $this->db->prepare("UPDATE decedent_records SET document_status = ? WHERE decedent_id = ?");
+        return $stmt->execute([$status, (int) $id]);
     }
 
     public function update($id, $data) {
@@ -261,7 +273,8 @@ class Decedent {
                 contact_name = ?,
                 contact_number = ?,
                 is_cremated = ?,
-                ash_storage = ?
+                ash_storage = ?,
+                document_status = COALESCE(?, document_status)
             WHERE decedent_id = ?
         ");
 
@@ -271,13 +284,14 @@ class Decedent {
             $data['last_name'],
             $data['middle_name'] ?? null,
             $data['suffix'] ?? null,
-            $data['dob'],
+            !empty($data['dob']) ? $data['dob'] : null,
             $data['dod'],
             $data['cause_of_death'] ?? null,
             $data['contact_name'] ?? null,
             $data['contact_number'] ?? null,
             $data['is_cremated'] ?? 'no',
             $data['ash_storage'] ?? null,
+            $data['document_status'] ?? null,
             (int) $id,
         ]);
     }
@@ -354,6 +368,7 @@ class Decedent {
                 SUM(CASE WHEN TIMESTAMPDIFF(YEAR, dob, dod) BETWEEN 36 AND 55 THEN 1 ELSE 0 END) AS age_36_55,
                 SUM(CASE WHEN TIMESTAMPDIFF(YEAR, dob, dod) BETWEEN 56 AND 75 THEN 1 ELSE 0 END) AS age_56_75,
                 SUM(CASE WHEN TIMESTAMPDIFF(YEAR, dob, dod) > 75 THEN 1 ELSE 0 END) AS age_75_plus,
+                SUM(CASE WHEN document_status = 'pending_requirements' THEN 1 ELSE 0 END) AS pending_requirements,
                 SUM(CASE WHEN $condition THEN 1 ELSE 0 END) AS needs_attention
             FROM decedent_records
             WHERE deleted_at IS NULL

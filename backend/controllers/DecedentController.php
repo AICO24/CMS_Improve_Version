@@ -99,8 +99,10 @@ class DecedentController {
     // same 5 fields and the same dob/dod ordering — shared so the two
     // checks can never drift apart.
     private function validateDates($data) {
-        if (strtotime($data['dod']) < strtotime($data['dob'])) {
-            return "Field 'dod' cannot be before 'dob'";
+        if (!empty($data['dob']) && !empty($data['dod'])) {
+            if (strtotime($data['dod']) < strtotime($data['dob'])) {
+                return "Field 'dod' cannot be before 'dob'";
+            }
         }
         return null;
     }
@@ -159,8 +161,15 @@ class DecedentController {
     // legitimately has none; forcing one meant staff had to consume a real,
     // otherwise-unused burial lot just to register a purely-cremated person.
     // See migration_20260903_make_decedent_lot_optional.sql.
+    //
+    // Compliance update: 'dob' is optional when document_status is 'pending_requirements'
+    // allowing provisional auto-creation on booking payment.
     private function requiredFieldsError($data) {
-        foreach (['first_name', 'last_name', 'dob', 'dod'] as $field) {
+        $required = ['first_name', 'last_name', 'dod'];
+        if (empty($data['document_status']) || $data['document_status'] !== 'pending_requirements') {
+            $required[] = 'dob';
+        }
+        foreach ($required as $field) {
             if (empty($data[$field])) {
                 return "Field '$field' is required";
             }
@@ -336,6 +345,57 @@ class DecedentController {
             return ['success' => true, 'message' => 'Decedent record deleted'];
         }
         return ['error' => 'Failed to delete decedent record', 'code' => 500];
+    }
+
+    public function verifyRequirements($id, $data = [], $actor = null) {
+        if (!$this->isFullAccessRole($actor)) {
+            return ['error' => 'Only administrators and staff may verify decedent requirements', 'code' => 403];
+        }
+
+        $decedent = $this->decedentModel->findById($id);
+        if (!$decedent) {
+            return ['error' => 'Decedent record not found', 'code' => 404];
+        }
+
+        if (empty($data['dob']) && empty($decedent['dob'])) {
+            return ['error' => 'Date of birth (DOB) is required to complete requirements verification', 'code' => 400];
+        }
+
+        $updateData = [
+            'dob' => !empty($data['dob']) ? $data['dob'] : $decedent['dob'],
+            'cause_of_death' => !empty($data['cause_of_death']) ? $data['cause_of_death'] : $decedent['cause_of_death'],
+            'contact_name' => !empty($data['contact_name']) ? $data['contact_name'] : $decedent['contact_name'],
+            'contact_number' => !empty($data['contact_number']) ? $data['contact_number'] : $decedent['contact_number'],
+            'document_status' => 'verified',
+        ];
+
+        $merged = array_merge($decedent, $updateData);
+        if ($dateError = $this->validateDates($merged)) {
+            return ['error' => $dateError, 'code' => 400];
+        }
+
+        $result = $this->decedentModel->update($id, $merged);
+        if ($result) {
+            $this->auditLogModel->log(
+                'Decedent requirements verified',
+                self::actorId($actor),
+                self::actorUsername($actor),
+                'Decedent',
+                $id,
+                [
+                    'previous_status' => $decedent['document_status'] ?? 'pending_requirements',
+                    'new_status' => 'verified',
+                    'verified_fields' => array_keys($updateData)
+                ]
+            );
+            return [
+                'success' => true,
+                'message' => 'Decedent requirements successfully verified and record completed',
+                'decedent_id' => (int) $id,
+            ];
+        }
+
+        return ['error' => 'Failed to verify decedent requirements', 'code' => 500];
     }
 
     // Privacy audit (2026-09-04): $user added so My Records' stat row shows

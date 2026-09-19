@@ -1776,6 +1776,7 @@ if ($path === 'decedents' && $requestMethod === 'GET') {
     if (isset($_GET['section'])) $filters['section'] = $_GET['section'];
     if (isset($_GET['is_cremated'])) $filters['is_cremated'] = $_GET['is_cremated'];
     if (isset($_GET['incomplete'])) $filters['incomplete'] = $_GET['incomplete'];
+    if (isset($_GET['document_status'])) $filters['document_status'] = $_GET['document_status'];
     $pagination = [];
     if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
     if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];
@@ -1798,6 +1799,15 @@ if ($path === 'decedents' && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
     $result = $decedentController->store($input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+if (preg_match('/^decedents\/(\d+)\/verify-requirements$/', $path, $matches) && in_array($requestMethod, ['POST', 'PUT'], true)) {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $result = $decedentController->verifyRequirements($matches[1], $input, $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
