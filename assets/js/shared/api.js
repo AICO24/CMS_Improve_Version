@@ -534,3 +534,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// Global safe no-op stub for deprecated floating AI widget to ensure no console errors
+if (typeof window !== 'undefined' && typeof window.initAiAssistant !== 'function') {
+    window.initAiAssistant = function() { return null; };
+}
