@@ -260,6 +260,40 @@
                                 </div>
                             </div>
 
+                            <!-- Documentary Requirements Card -->
+                            <div class="blueprint-card" id="hudCardDocuments">
+                                <div class="hud-card-header">
+                                    <span class="hud-label"><i class="fas fa-file-shield"></i> Documentary Requirements</span>
+                                    <button type="button" class="btn-hud-edit" id="btnOpenDocModal" title="Manage documents"><i class="fas fa-paperclip"></i></button>
+                                </div>
+                                <div class="hud-card-body">
+                                    <div class="doc-requirement-item" id="docItemDeathCert">
+                                        <div class="doc-req-info">
+                                            <span class="doc-req-name"><i class="fas fa-file-medical text-primary"></i> Death Certificate</span>
+                                            <span class="doc-req-status pending" id="statusDeathCert"><i class="fas fa-clock"></i> Required</span>
+                                        </div>
+                                        <div class="doc-req-filename" id="fileDeathCert"></div>
+                                    </div>
+                                    <div class="doc-requirement-item" id="docItemPermit">
+                                        <div class="doc-req-info">
+                                            <span class="doc-req-name"><i class="fas fa-file-contract text-primary"></i> <span id="labelPermit">Burial Permit</span></span>
+                                            <span class="doc-req-status pending" id="statusPermit"><i class="fas fa-clock"></i> Required</span>
+                                        </div>
+                                        <div class="doc-req-filename" id="filePermit"></div>
+                                    </div>
+                                    <div class="doc-requirement-item" id="docItemId">
+                                        <div class="doc-req-info">
+                                            <span class="doc-req-name"><i class="fas fa-id-card text-primary"></i> Valid Govt ID</span>
+                                            <span class="doc-req-status pending" id="statusId"><i class="fas fa-clock"></i> Required</span>
+                                        </div>
+                                        <div class="doc-req-filename" id="fileId"></div>
+                                    </div>
+                                    <button type="button" class="select-lot-btn" id="btnUploadDocsBlueprint" style="margin-top: 10px; width: 100%; padding: 8px 12px; font-size: 0.82rem; background: linear-gradient(135deg, #1e3a8a, #2563eb);">
+                                        <i class="fas fa-cloud-arrow-up"></i> Submit Documents
+                                    </button>
+                                </div>
+                            </div>
+
                             <!-- Missing Fields Callout -->
                             <div class="blueprint-card missing-alert" id="hudMissingAlert" style="display: none;">
                                 <div class="hud-card-header">
@@ -348,6 +382,82 @@
                     <button type="submit" class="btn-primary" id="btnSubmitFieldEdit">Save Changes</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Documentary Requirements Upload Modal -->
+    <div class="lot-picker-modal-overlay" id="docUploadModal" style="display: none;">
+        <div class="lot-picker-dialog doc-upload-dialog" role="dialog" aria-modal="true" aria-labelledby="docUploadTitle" style="max-width: 620px;">
+            <div class="lot-picker-header">
+                <div class="lot-picker-title" id="docUploadTitle">
+                    <i class="fas fa-file-shield"></i>
+                    <span>Submit Documentary Requirements</span>
+                </div>
+                <button type="button" class="btn-close-modal" id="btnCloseDocModal" aria-label="Close document upload"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body-custom" style="padding: 20px;">
+                <p style="font-size: 0.85rem; color: #64748b; margin-top: 0; margin-bottom: 16px;">
+                    Please upload the required documents for the deceased person. Accepted formats: <strong>PDF, JPG, PNG</strong> (up to 10MB each).
+                </p>
+
+                <!-- Document 1: Death Certificate -->
+                <div class="doc-upload-card" id="cardUploadDeathCert" style="background: rgba(248, 250, 252, 0.8); border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 14px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="font-size: 0.92rem; color: #0f172a;"><i class="fas fa-file-medical text-primary"></i> Death Certificate</strong>
+                            <span style="display: block; font-size: 0.75rem; color: #64748b;">PSA or Local Civil Registrar Certified True Copy</span>
+                        </div>
+                        <span class="score-badge" id="modalBadgeDeathCert" style="font-size: 0.75rem; padding: 3px 8px;"><i class="fas fa-clock"></i> Pending</span>
+                    </div>
+                    <div class="doc-upload-actions" style="margin-top: 10px; display: flex; gap: 8px; align-items: center;">
+                        <input type="file" id="inputFileDeathCert" accept=".pdf,.jpg,.jpeg,.png" style="display: none;" />
+                        <button type="button" class="btn-secondary btn-sm" id="btnChooseDeathCert"><i class="fas fa-folder-open"></i> Choose File</button>
+                        <span class="file-name-preview" id="fileNameDeathCert" style="font-size: 0.8rem; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">No file selected</span>
+                        <button type="button" class="btn-primary btn-sm" id="btnUploadDeathCert" style="margin-left: auto; display: none;"><i class="fas fa-upload"></i> Upload</button>
+                        <button type="button" class="btn-sm" id="btnDeleteDeathCert" style="display: none; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px;" title="Remove document"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+
+                <!-- Document 2: Burial / Cremation Permit -->
+                <div class="doc-upload-card" id="cardUploadPermit" style="background: rgba(248, 250, 252, 0.8); border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 14px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="font-size: 0.92rem; color: #0f172a;"><i class="fas fa-file-contract text-primary"></i> <span id="modalTitlePermit">Burial Permit</span></strong>
+                            <span style="display: block; font-size: 0.75rem; color: #64748b;">City Health Office or Local Government Unit Permit</span>
+                        </div>
+                        <span class="score-badge" id="modalBadgePermit" style="font-size: 0.75rem; padding: 3px 8px;"><i class="fas fa-clock"></i> Pending</span>
+                    </div>
+                    <div class="doc-upload-actions" style="margin-top: 10px; display: flex; gap: 8px; align-items: center;">
+                        <input type="file" id="inputFilePermit" accept=".pdf,.jpg,.jpeg,.png" style="display: none;" />
+                        <button type="button" class="btn-secondary btn-sm" id="btnChoosePermit"><i class="fas fa-folder-open"></i> Choose File</button>
+                        <span class="file-name-preview" id="fileNamePermit" style="font-size: 0.8rem; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">No file selected</span>
+                        <button type="button" class="btn-primary btn-sm" id="btnUploadPermit" style="margin-left: auto; display: none;"><i class="fas fa-upload"></i> Upload</button>
+                        <button type="button" class="btn-sm" id="btnDeletePermit" style="display: none; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px;" title="Remove document"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+
+                <!-- Document 3: Valid Government ID -->
+                <div class="doc-upload-card" id="cardUploadId" style="background: rgba(248, 250, 252, 0.8); border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="font-size: 0.92rem; color: #0f172a;"><i class="fas fa-id-card text-primary"></i> Valid Government ID</strong>
+                            <span style="display: block; font-size: 0.75rem; color: #64748b;">Government-issued ID of Informant / Claimant (e.g. UMID, Driver's License, Passport, PhilSys)</span>
+                        </div>
+                        <span class="score-badge" id="modalBadgeId" style="font-size: 0.75rem; padding: 3px 8px;"><i class="fas fa-clock"></i> Pending</span>
+                    </div>
+                    <div class="doc-upload-actions" style="margin-top: 10px; display: flex; gap: 8px; align-items: center;">
+                        <input type="file" id="inputFileId" accept=".pdf,.jpg,.jpeg,.png" style="display: none;" />
+                        <button type="button" class="btn-secondary btn-sm" id="btnChooseId"><i class="fas fa-folder-open"></i> Choose File</button>
+                        <span class="file-name-preview" id="fileNameId" style="font-size: 0.8rem; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">No file selected</span>
+                        <button type="button" class="btn-primary btn-sm" id="btnUploadId" style="margin-left: auto; display: none;"><i class="fas fa-upload"></i> Upload</button>
+                        <button type="button" class="btn-sm" id="btnDeleteId" style="display: none; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px;" title="Remove document"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer-custom" style="padding: 14px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                <span id="modalDocSummaryText" style="font-size: 0.82rem; color: #64748b;">0 of 3 documents submitted</span>
+                <button type="button" class="btn-primary" id="btnDoneDocModal" style="padding: 8px 18px;">Done</button>
+            </div>
         </div>
     </div>
 

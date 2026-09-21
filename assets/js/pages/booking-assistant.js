@@ -214,6 +214,9 @@
         if (btnCancelFieldEdit) btnCancelFieldEdit.addEventListener('click', closeFieldEditor);
         if (fieldEditForm) fieldEditForm.addEventListener('submit', onSubmitFieldEdit);
 
+        // Documentary Requirements modal & uploads
+        setupDocUploadControls();
+
         // Close modals on backdrop click
         if (lotPickerModal) {
             lotPickerModal.addEventListener('click', (e) => {
@@ -229,7 +232,10 @@
         // Accessibility: Dismiss modals with Escape key
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' || e.key === 'Esc') {
-                if (lotPickerModal && lotPickerModal.style.display === 'flex') {
+                const docModal = document.getElementById('docUploadModal');
+                if (docModal && docModal.style.display === 'flex') {
+                    closeDocModal();
+                } else if (lotPickerModal && lotPickerModal.style.display === 'flex') {
                     closeLotPicker();
                 } else if (fieldEditModal && fieldEditModal.style.display === 'flex') {
                     closeFieldEditor();
@@ -733,6 +739,18 @@
             btnConfirmBooking.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Booking Reservation';
             btnConfirmBooking.style.background = '';
         }
+
+        // Documentary Requirements HUD
+        const docs = state.extractedData.documents || {};
+        const isCrem = state.serviceType === 'cremation';
+        const labelPermitEl = document.getElementById('labelPermit');
+        if (labelPermitEl) labelPermitEl.textContent = isCrem ? 'Cremation Permit' : 'Burial Permit';
+        const modalTitlePermitEl = document.getElementById('modalTitlePermit');
+        if (modalTitlePermitEl) modalTitlePermitEl.textContent = isCrem ? 'Cremation Permit' : 'Burial Permit';
+
+        updateDocItemUI('DeathCert', docs.death_certificate);
+        updateDocItemUI('Permit', docs.burial_permit);
+        updateDocItemUI('Id', docs.valid_id);
     }
 
     /**
@@ -831,6 +849,17 @@
         } else {
             chips.push({ text: 'ℹ️ What information is needed?', action: () => sendChatTurn('What information do you still need from me?') });
         }
+
+        chips.push({
+            text: '📄 Requirements',
+            action: () => {
+                if (!state.draftId) {
+                    sendChatTurn('Ano ang mga documentary requirements para sa booking?');
+                } else {
+                    openDocModal();
+                }
+            }
+        });
 
         chips.forEach(chip => {
             const btn = createChip(chip.text, chip.action);
@@ -1587,6 +1616,259 @@
         // line breaks
         escaped = escaped.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
         return escaped;
+    }
+
+    // =========================================================================
+    // DOCUMENTARY REQUIREMENTS ATTACHMENT & UPLOAD HANDLERS
+    // =========================================================================
+
+    function updateDocItemUI(key, docObj) {
+        const statusEl = document.getElementById(`status${key}`);
+        const fileEl = document.getElementById(`file${key}`);
+        const modalBadge = document.getElementById(`modalBadge${key}`);
+        const fileNameModal = document.getElementById(`fileName${key}`);
+        const btnUploadModal = document.getElementById(`btnUpload${key}`);
+        const btnDeleteModal = document.getElementById(`btnDelete${key}`);
+
+        if (docObj && docObj.file_path) {
+            const fname = docObj.original_filename || 'Uploaded Document';
+            if (statusEl) {
+                statusEl.className = 'doc-req-status uploaded';
+                statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Uploaded';
+            }
+            if (fileEl) {
+                fileEl.className = 'doc-req-filename visible';
+                fileEl.textContent = fname;
+                fileEl.title = fname;
+            }
+            if (modalBadge) {
+                modalBadge.className = 'score-badge';
+                modalBadge.style.background = '#dcfce7';
+                modalBadge.style.color = '#15803d';
+                modalBadge.style.border = '1px solid #bbf7d0';
+                modalBadge.innerHTML = '<i class="fas fa-check-circle"></i> Uploaded';
+            }
+            if (fileNameModal) {
+                fileNameModal.textContent = fname;
+                fileNameModal.style.color = '#166534';
+                fileNameModal.style.fontWeight = '600';
+            }
+            if (btnUploadModal) btnUploadModal.style.display = 'none';
+            if (btnDeleteModal) btnDeleteModal.style.display = 'inline-block';
+        } else {
+            if (statusEl) {
+                statusEl.className = 'doc-req-status pending';
+                statusEl.innerHTML = '<i class="fas fa-clock"></i> Required';
+            }
+            if (fileEl) {
+                fileEl.className = 'doc-req-filename';
+                fileEl.textContent = '';
+            }
+            if (modalBadge) {
+                modalBadge.className = 'score-badge';
+                modalBadge.style.background = '#fef3c7';
+                modalBadge.style.color = '#b45309';
+                modalBadge.style.border = '1px solid #fde68a';
+                modalBadge.innerHTML = '<i class="fas fa-clock"></i> Pending';
+            }
+            if (fileNameModal) {
+                fileNameModal.textContent = 'No file selected';
+                fileNameModal.style.color = '#475569';
+                fileNameModal.style.fontWeight = 'normal';
+            }
+            if (btnDeleteModal) btnDeleteModal.style.display = 'none';
+        }
+    }
+
+    function openDocModal() {
+        if (!state.draftId) {
+            appendAssistantMessage("Pakibigay muna po ang pangalan ng yumao o pumili ng serbisyo bago mag-upload ng mga dokumento upang maiugnay ito sa inyong booking.");
+            if (typeof showToast === 'function') showToast('Please start a booking draft first', 'warning');
+            return;
+        }
+        lastFocusedElementBeforeModal = (document.activeElement && typeof document.activeElement.focus === 'function') ? document.activeElement : null;
+        document.body.style.overflow = 'hidden';
+        const modal = document.getElementById('docUploadModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            refreshDocModalState();
+        }
+    }
+
+    function closeDocModal() {
+        const modal = document.getElementById('docUploadModal');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+        if (lastFocusedElementBeforeModal && typeof lastFocusedElementBeforeModal.focus === 'function') {
+            lastFocusedElementBeforeModal.focus();
+        } else if (userInputMsg) {
+            userInputMsg.focus();
+        }
+        lastFocusedElementBeforeModal = null;
+    }
+
+    async function refreshDocModalState() {
+        if (!state.draftId) return;
+        try {
+            const res = await api.request(`booking-agent/drafts/${state.draftId}/documents`, { method: 'GET' });
+            if (res && res.success && Array.isArray(res.documents)) {
+                if (!state.extractedData.documents) state.extractedData.documents = {};
+                res.documents.forEach(doc => {
+                    if (doc.file) {
+                        state.extractedData.documents[doc.doc_type] = doc.file;
+                    } else {
+                        delete state.extractedData.documents[doc.doc_type];
+                    }
+                });
+                updateBlueprintHUD();
+                const summaryEl = document.getElementById('modalDocSummaryText');
+                if (summaryEl) {
+                    summaryEl.textContent = `${res.uploaded_count || 0} of ${res.total_count || 3} documents submitted`;
+                }
+            }
+        } catch (e) {
+            console.warn('Could not refresh documents:', e);
+        }
+    }
+
+    function setupDocUploadControls() {
+        const docs = [
+            { key: 'DeathCert', type: 'death_certificate' },
+            { key: 'Permit', type: 'burial_permit' },
+            { key: 'Id', type: 'valid_id' }
+        ];
+
+        docs.forEach(({ key, type }) => {
+            const btnChoose = document.getElementById(`btnChoose${key}`);
+            const input = document.getElementById(`inputFile${key}`);
+            const fileNameEl = document.getElementById(`fileName${key}`);
+            const btnUpload = document.getElementById(`btnUpload${key}`);
+            const btnDelete = document.getElementById(`btnDelete${key}`);
+
+            if (btnChoose && input) {
+                btnChoose.addEventListener('click', () => input.click());
+            }
+
+            if (input) {
+                input.addEventListener('change', () => {
+                    const file = input.files && input.files[0];
+                    if (file) {
+                        if (fileNameEl) {
+                            fileNameEl.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                            fileNameEl.style.color = '#0284c7';
+                        }
+                        if (btnUpload) btnUpload.style.display = 'inline-block';
+                    } else {
+                        if (btnUpload) btnUpload.style.display = 'none';
+                    }
+                });
+            }
+
+            if (btnUpload && input) {
+                btnUpload.addEventListener('click', async () => {
+                    const file = input.files && input.files[0];
+                    if (!file) return;
+                    await uploadDocFile(type, file, key);
+                });
+            }
+
+            if (btnDelete) {
+                btnDelete.addEventListener('click', async () => {
+                    if (!confirm(`Are you sure you want to remove this uploaded document?`)) return;
+                    await deleteDocFile(type, key);
+                });
+            }
+        });
+
+        const btnOpen1 = document.getElementById('btnOpenDocModal');
+        const btnOpen2 = document.getElementById('btnUploadDocsBlueprint');
+        const btnClose = document.getElementById('btnCloseDocModal');
+        const btnDone = document.getElementById('btnDoneDocModal');
+        const modal = document.getElementById('docUploadModal');
+
+        if (btnOpen1) btnOpen1.addEventListener('click', openDocModal);
+        if (btnOpen2) btnOpen2.addEventListener('click', openDocModal);
+        if (btnClose) btnClose.addEventListener('click', closeDocModal);
+        if (btnDone) btnDone.addEventListener('click', closeDocModal);
+
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeDocModal();
+            });
+        }
+    }
+
+    async function uploadDocFile(docType, file, key) {
+        if (!state.draftId) return;
+        const btnUpload = document.getElementById(`btnUpload${key}`);
+        if (btnUpload) {
+            btnUpload.disabled = true;
+            btnUpload.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('document_file', file);
+            formData.append('document_type', docType);
+
+            const token = api.getToken ? api.getToken() : localStorage.getItem('token');
+            const resRaw = await fetch(`/CMS/backend/routes/api.php?path=booking-agent/drafts/${state.draftId}/documents`, {
+                method: 'POST',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                body: formData
+            });
+            const res = await resRaw.json();
+
+            if (res && res.success) {
+                const label = docType.replace(/_/g, ' ');
+                if (typeof showToast === 'function') showToast(`${label} uploaded successfully!`, 'success');
+                appendAssistantMessage(`📄 Natanggap na po ang inyong ${label} (${res.original_filename || file.name}). Naitala na po ito sa inyong reservation draft.`);
+                if (!state.extractedData.documents) state.extractedData.documents = {};
+                state.extractedData.documents[docType] = {
+                    file_path: res.file_path,
+                    original_filename: res.original_filename || file.name,
+                    uploaded_at: new Date().toISOString()
+                };
+                const inputEl = document.getElementById(`inputFile${key}`);
+                if (inputEl) inputEl.value = '';
+                updateBlueprintHUD();
+                refreshDocModalState();
+            } else {
+                const err = res?.error || 'Failed to upload document';
+                if (typeof showToast === 'function') showToast(err, 'error');
+                appendAssistantMessage(`⚠️ Hindi na-upload ang dokumento: ${err}`);
+            }
+        } catch (err) {
+            if (typeof showToast === 'function') showToast(err.message || 'Upload failed', 'error');
+        } finally {
+            if (btnUpload) {
+                btnUpload.disabled = false;
+                btnUpload.innerHTML = '<i class="fas fa-upload"></i> Upload';
+            }
+        }
+    }
+
+    async function deleteDocFile(docType, key) {
+        if (!state.draftId) return;
+        try {
+            const res = await api.request(`booking-agent/drafts/${state.draftId}/documents/${docType}`, {
+                method: 'DELETE'
+            });
+            if (res && res.success) {
+                if (typeof showToast === 'function') showToast('Document removed', 'info');
+                if (state.extractedData.documents) {
+                    delete state.extractedData.documents[docType];
+                }
+                const inputEl = document.getElementById(`inputFile${key}`);
+                if (inputEl) inputEl.value = '';
+                updateBlueprintHUD();
+                refreshDocModalState();
+            } else {
+                if (typeof showToast === 'function') showToast(res?.error || 'Failed to remove document', 'error');
+            }
+        } catch (err) {
+            if (typeof showToast === 'function') showToast(err.message || 'Delete failed', 'error');
+        }
     }
 
     // Auto-init on DOMContentLoaded
