@@ -709,6 +709,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             mapResult: (s) => ({
                 id: s.schedule_id,
                 label: `Lot ${s.lot_number || '—'} — ${s.section_name || 'N/A'} — ${[s.first_name, s.last_name].filter(Boolean).join(' ') || 'Unknown'} — ${s.schedule_date || 'No date'}`,
+                customerName: s.contact_name || s.requested_by_name || s.created_by_name || [s.first_name, s.last_name].filter(Boolean).join(' ') || 'Client',
+                contactNumber: s.contact_number || s.requested_by_contact_number || '',
             }),
         },
         'Cremation': {
@@ -717,6 +719,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             mapResult: (c) => ({
                 id: c.cremation_id,
                 label: `Niche ${c.niche_number || '—'} — ${c.columbarium || 'N/A'} — ${[c.first_name, c.last_name].filter(Boolean).join(' ') || 'Unknown'}`,
+                customerName: c.contact_name || c.requested_by_name || [c.first_name, c.last_name].filter(Boolean).join(' ') || 'Client',
+                contactNumber: c.contact_number || c.requested_by_contact_number || '',
             }),
         },
         'Relocation': {
@@ -725,6 +729,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             mapResult: (r) => ({
                 id: r.request_id,
                 label: `${[r.first_name, r.last_name].filter(Boolean).join(' ') || 'Unknown'} — ${r.from_lot_number || '—'} → ${r.to_lot_number || '—'} (${r.status || 'Pending'})`,
+                customerName: r.contact_name || [r.first_name, r.last_name].filter(Boolean).join(' ') || 'Client',
+                contactNumber: r.contact_number || '',
             }),
         },
     };
@@ -740,7 +746,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // fall back to the backend's original guess, unchanged.
     let currentReferenceKind = null;
 
-    function setReferenceValue(id, label, kind = null) {
+    function setReferenceValue(id, label, kind = null, extra = null) {
         referenceIdInput.value = id;
         referenceIdInput.dispatchEvent(new Event('input', { bubbles: true }));
         currentReferenceKind = kind;
@@ -752,8 +758,26 @@ document.addEventListener('DOMContentLoaded', async function() {
                 referenceSelectedLabel.textContent = `Selected: ${label}`;
             }
             referenceSelectedLabel.style.display = 'flex';
+
+            // Automated Customer Info Hooking (Adviser Item #1)
+            const customerHookCard = document.getElementById('customerHookCard');
+            const customerHookDetails = document.getElementById('customerHookDetails');
+            if (customerHookCard && customerHookDetails) {
+                if (extra && (extra.customerName || extra.contactNumber)) {
+                    customerHookDetails.innerHTML = `
+                        <strong>Payer / Account:</strong> ${escapeHtml(extra.customerName || 'Client')}<br>
+                        <strong>Contact Number:</strong> ${escapeHtml(extra.contactNumber || 'Available on account')}<br>
+                        <span style="font-size: 0.78rem; color: #16a34a;"><i class="fas fa-link"></i> Customer details automatically hooked</span>
+                    `;
+                    customerHookCard.style.display = 'block';
+                } else {
+                    customerHookCard.style.display = 'none';
+                }
+            }
         } else {
             referenceSelectedLabel.style.display = 'none';
+            const customerHookCard = document.getElementById('customerHookCard');
+            if (customerHookCard) customerHookCard.style.display = 'none';
         }
     }
 
@@ -762,6 +786,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         referenceSearchResults.hidden = true;
         referenceSearchResults.innerHTML = '';
         referenceSelectedLabel.style.display = 'none';
+        const customerHookCard = document.getElementById('customerHookCard');
+        if (customerHookCard) customerHookCard.style.display = 'none';
         referenceIdInput.value = '';
         currentReferenceKind = null;
         const selectedTextEl = document.getElementById('referenceSelectedText');
@@ -795,7 +821,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 // 'schedules' — a result picked here is always a schedule_id,
                 // never a raw lot_id, so this can state that with certainty.
                 const kind = transactionTypeSelect.value === 'Lot Purchase' ? 'schedule' : null;
-                setReferenceValue(item.id, item.label, kind);
+                setReferenceValue(item.id, item.label, kind, item);
                 referenceSearchInput.value = item.label;
                 referenceSearchResults.hidden = true;
                 referenceSearchResults.innerHTML = '';
