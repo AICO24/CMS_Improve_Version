@@ -461,6 +461,66 @@
         </div>
     </div>
 
+    <!-- Booking Finalize Confirmation Modal -->
+    <div class="lot-picker-modal-overlay" id="bookingConfirmModal" style="display: none;">
+        <div class="lot-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="bookingConfirmTitle" style="max-width: 520px;">
+            <div class="lot-picker-header">
+                <div class="lot-picker-title" id="bookingConfirmTitle">
+                    <i class="fas fa-calendar-check text-primary"></i>
+                    <span>Confirm Booking Reservation</span>
+                </div>
+                <button type="button" class="btn-close-modal" id="btnCloseBookingConfirm" aria-label="Close confirmation dialog"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body-custom" style="padding: 22px;">
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(15, 118, 110, 0.12); color: #0f766e; display: inline-flex; align-items: center; justify-content: center; font-size: 1.45rem; margin-bottom: 10px;">
+                        <i class="fas fa-file-circle-check"></i>
+                    </div>
+                    <h4 style="margin: 0; font-size: 1.08rem; color: #0f172a; font-weight: 700;">Finalize & Submit Reservation</h4>
+                    <p style="margin: 6px 0 0; font-size: 0.85rem; color: #64748b; line-height: 1.45;">
+                        Please verify the reservation details below before submitting to cemetery administration.
+                    </p>
+                </div>
+
+                <!-- Structured Reservation Summary Box -->
+                <div style="background: rgba(248, 250, 252, 0.95); border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px;">
+                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Service Type</span>
+                        <strong id="confirmModalService" style="font-size: 0.88rem; color: #0f172a;">Burial Service</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px;">
+                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Decedent Name</span>
+                        <strong id="confirmModalDecedent" style="font-size: 0.88rem; color: #0f172a;">--</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px;">
+                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Scheduled Date</span>
+                        <strong id="confirmModalDate" style="font-size: 0.88rem; color: #0f172a;">--</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px;">
+                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;" id="confirmModalAllocationLabel">Burial Lot</span>
+                        <strong id="confirmModalLot" style="font-size: 0.88rem; color: #0f172a;">--</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Documentary Requirements</span>
+                        <span id="confirmModalDocsBadge" class="doc-req-status pending" style="font-size: 0.75rem;">Pending</span>
+                    </div>
+                </div>
+
+                <div style="background: rgba(254, 243, 199, 0.6); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 8px; padding: 10px 12px; margin-bottom: 18px; font-size: 0.8rem; color: #92400e; display: flex; gap: 8px; align-items: flex-start;">
+                    <i class="fas fa-info-circle" style="margin-top: 2px; color: #d97706;"></i>
+                    <span>Once confirmed, your booking will be officially locked and submitted to the cemetery staff.</span>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn-secondary" id="btnCancelBookingConfirm" style="padding: 9px 18px;">Cancel</button>
+                    <button type="button" class="btn-primary" id="btnSubmitBookingConfirm" style="padding: 9px 20px; font-weight: 600;">
+                        <i class="fas fa-check"></i> Yes, Finalize Booking
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/shared/toast.js"></script>

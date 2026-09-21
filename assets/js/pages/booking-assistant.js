@@ -36,6 +36,8 @@
     let btnConfirmBooking, blueprintPanel, btnToggleBlueprintMobile;
     let lotPickerModal, btnCloseLotPicker, lotSearchFilter, lotSectionFilter, lotPickerSpinner, lotGridContainer, lotPickerEmpty;
     let fieldEditModal, btnCloseFieldEdit, btnCancelFieldEdit, fieldEditForm, fieldEditTitle, fieldEditLabel, fieldEditInput, fieldEditHint;
+    let bookingConfirmModal, btnCloseBookingConfirm, btnCancelBookingConfirm, btnSubmitBookingConfirm;
+    let confirmModalService, confirmModalDecedent, confirmModalDate, confirmModalLot, confirmModalAllocationLabel, confirmModalDocsBadge;
 
     let activeEditField = null;
     let isInitialized = false;
@@ -124,6 +126,17 @@
         fieldEditLabel = document.getElementById('fieldEditLabel');
         fieldEditInput = document.getElementById('fieldEditInput');
         fieldEditHint = document.getElementById('fieldEditHint');
+
+        bookingConfirmModal = document.getElementById('bookingConfirmModal');
+        btnCloseBookingConfirm = document.getElementById('btnCloseBookingConfirm');
+        btnCancelBookingConfirm = document.getElementById('btnCancelBookingConfirm');
+        btnSubmitBookingConfirm = document.getElementById('btnSubmitBookingConfirm');
+        confirmModalService = document.getElementById('confirmModalService');
+        confirmModalDecedent = document.getElementById('confirmModalDecedent');
+        confirmModalDate = document.getElementById('confirmModalDate');
+        confirmModalLot = document.getElementById('confirmModalLot');
+        confirmModalAllocationLabel = document.getElementById('confirmModalAllocationLabel');
+        confirmModalDocsBadge = document.getElementById('confirmModalDocsBadge');
     }
 
     /**
@@ -214,6 +227,11 @@
         if (btnCancelFieldEdit) btnCancelFieldEdit.addEventListener('click', closeFieldEditor);
         if (fieldEditForm) fieldEditForm.addEventListener('submit', onSubmitFieldEdit);
 
+        // Booking Finalize Confirmation modal
+        if (btnCloseBookingConfirm) btnCloseBookingConfirm.addEventListener('click', closeBookingConfirmModal);
+        if (btnCancelBookingConfirm) btnCancelBookingConfirm.addEventListener('click', closeBookingConfirmModal);
+        if (btnSubmitBookingConfirm) btnSubmitBookingConfirm.addEventListener('click', executeFinalizeBooking);
+
         // Documentary Requirements modal & uploads
         setupDocUploadControls();
 
@@ -228,6 +246,11 @@
                 if (e.target === fieldEditModal) closeFieldEditor();
             });
         }
+        if (bookingConfirmModal) {
+            bookingConfirmModal.addEventListener('click', (e) => {
+                if (e.target === bookingConfirmModal) closeBookingConfirmModal();
+            });
+        }
 
         // Accessibility: Dismiss modals with Escape key
         document.addEventListener('keydown', (e) => {
@@ -235,6 +258,8 @@
                 const docModal = document.getElementById('docUploadModal');
                 if (docModal && docModal.style.display === 'flex') {
                     closeDocModal();
+                } else if (bookingConfirmModal && bookingConfirmModal.style.display === 'flex') {
+                    closeBookingConfirmModal();
                 } else if (lotPickerModal && lotPickerModal.style.display === 'flex') {
                     closeLotPicker();
                 } else if (fieldEditModal && fieldEditModal.style.display === 'flex') {
@@ -1257,15 +1282,111 @@
     }
 
     /**
-     * Confirmation Workflow via POST /api/booking-agent/drafts/{id}/confirm
+     * Open custom styled Booking Finalize Confirmation Modal
      */
-    async function onConfirmBooking() {
-        if (!state.draftId) return;
+    function openBookingConfirmModal() {
+        if (!bookingConfirmModal) return;
+        const isCremation = state.serviceType === 'cremation';
 
-        if (!confirm('Are you ready to finalize and submit your booking reservation?')) {
-            return;
+        // Service Type
+        if (confirmModalService) {
+            confirmModalService.textContent = isCremation ? 'Cremation Service' : 'Standard Burial Service';
         }
 
+        // Decedent Name
+        if (confirmModalDecedent) {
+            confirmModalDecedent.textContent = state.extractedData.decedent_name || 'N/A';
+        }
+
+        // Scheduled Date & Time
+        if (confirmModalDate) {
+            const dateVal = isCremation ? state.extractedData.cremation_date : (state.extractedData.preferred_date || state.extractedData.schedule_date);
+            const timeVal = state.extractedData.preferred_time || state.extractedData.schedule_time;
+            if (dateVal && timeVal) {
+                confirmModalDate.textContent = `${formatDate(dateVal)} at ${formatTime(timeVal)}`;
+            } else if (dateVal) {
+                confirmModalDate.textContent = formatDate(dateVal);
+            } else {
+                confirmModalDate.textContent = 'Pending Schedule';
+            }
+        }
+
+        // Allocation / Lot
+        if (confirmModalAllocationLabel && confirmModalLot) {
+            if (isCremation) {
+                confirmModalAllocationLabel.textContent = 'Columbarium:';
+                confirmModalLot.textContent = state.extractedData.preferred_columbarium || 'Assigned upon arrival';
+            } else {
+                confirmModalAllocationLabel.textContent = 'Burial Lot:';
+                if (state.selectedLotDetails) {
+                    const l = state.selectedLotDetails;
+                    confirmModalLot.textContent = `Lot ${l.lot_number || l.lot_id} (${l.section_name || 'Section'}, ${l.block_name || 'Block'})`;
+                } else if (state.extractedData.lot_id) {
+                    confirmModalLot.textContent = `Lot #${state.extractedData.lot_id}`;
+                } else {
+                    confirmModalLot.textContent = 'Not Selected';
+                }
+            }
+        }
+
+        // Documentary Requirements status
+        if (confirmModalDocsBadge) {
+            const docs = state.extractedData.documents || {};
+            const count = [docs.death_certificate, docs.burial_permit, docs.valid_id].filter(Boolean).length;
+            if (count === 3) {
+                confirmModalDocsBadge.textContent = 'Complete (3/3)';
+                confirmModalDocsBadge.className = 'doc-req-status uploaded';
+                confirmModalDocsBadge.style.color = '#047857';
+                confirmModalDocsBadge.style.background = '#d1fae5';
+            } else if (count > 0) {
+                confirmModalDocsBadge.textContent = `Partial (${count}/3 uploaded)`;
+                confirmModalDocsBadge.className = 'doc-req-status pending';
+                confirmModalDocsBadge.style.color = '#b45309';
+                confirmModalDocsBadge.style.background = '#fef3c7';
+            } else {
+                confirmModalDocsBadge.textContent = 'Follow-up at Office';
+                confirmModalDocsBadge.className = 'doc-req-status pending';
+                confirmModalDocsBadge.style.color = '#64748b';
+                confirmModalDocsBadge.style.background = '#f1f5f9';
+            }
+        }
+
+        if (btnSubmitBookingConfirm) {
+            btnSubmitBookingConfirm.disabled = false;
+            btnSubmitBookingConfirm.innerHTML = '<i class="fas fa-check"></i> Yes, Finalize Booking';
+        }
+
+        bookingConfirmModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    /**
+     * Close custom styled Booking Finalize Confirmation Modal
+     */
+    function closeBookingConfirmModal() {
+        if (!bookingConfirmModal) return;
+        bookingConfirmModal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    /**
+     * Confirmation entry point: Opens modal instead of native browser confirm
+     */
+    function onConfirmBooking() {
+        if (!state.draftId) return;
+        openBookingConfirmModal();
+    }
+
+    /**
+     * Finalize & Commit reservation via POST /api/booking-agent/drafts/{id}/confirm
+     */
+    async function executeFinalizeBooking() {
+        if (!state.draftId) return;
+
+        if (btnSubmitBookingConfirm) {
+            btnSubmitBookingConfirm.disabled = true;
+            btnSubmitBookingConfirm.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finalizing...';
+        }
         setLoading(true);
         btnConfirmBooking.disabled = true;
         btnConfirmBooking.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finalizing...';
@@ -1281,6 +1402,8 @@
                     origin: appOrigin
                 }
             });
+
+            closeBookingConfirmModal();
 
             if (res && res.success) {
                 state.status = res.status || 'COMMITTED';
@@ -1311,10 +1434,11 @@
                     if (typeof showToast === 'function') showToast(successMsg, 'success');
                 }
             } else {
-                appendAssistantMessage(res.error || 'Failed to confirm reservation.');
-                if (typeof showToast === 'function') showToast(res.error || 'Failed to confirm', 'error');
+                appendAssistantMessage(res?.error || 'Failed to confirm reservation.');
+                if (typeof showToast === 'function') showToast(res?.error || 'Failed to confirm', 'error');
             }
         } catch (e) {
+            closeBookingConfirmModal();
             appendAssistantMessage(`Error confirming booking: ${e.message}`);
         } finally {
             setLoading(false);
