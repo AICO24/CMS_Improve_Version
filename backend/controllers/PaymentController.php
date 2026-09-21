@@ -1579,6 +1579,73 @@ class PaymentController {
         }
 
         $receiptNumber = $payment['receipt_number'] ?? ('RCPT-' . date('Y') . '-' . $paymentId);
+
+        // 8.5 Automated Payer Info Hooking (Adviser Recommendation Item #1)
+        // Automatically hook customer profile & booking contact info into PayMongo billing
+        $userModel = new User();
+        $userRecord = $userId > 0 ? $userModel->findById($userId) : null;
+
+        $customerName = trim((string) ($userRecord['full_name'] ?? ($user['full_name'] ?? ($user['username'] ?? 'Citizen Payer'))));
+        $customerEmail = trim((string) ($userRecord['email'] ?? ($user['email'] ?? '')));
+        $customerPhone = trim((string) ($userRecord['contact_number'] ?? ($user['contact_number'] ?? '')));
+        $customerAddress = trim((string) ($userRecord['address'] ?? ($user['address'] ?? '')));
+
+        // If contact details are missing on user profile, fallback to booking / decedent request records
+        if (empty($customerPhone) || empty($customerName)) {
+            if ($referenceKind === 'schedule') {
+                $schedModel = new Schedule();
+                $schedRecord = $schedModel->findById($referenceId);
+                if ($schedRecord) {
+                    if (empty($customerPhone) && !empty($schedRecord['contact_number'])) {
+                        $customerPhone = trim((string) $schedRecord['contact_number']);
+                    }
+                    if (empty($customerName) && !empty($schedRecord['contact_name'])) {
+                        $customerName = trim((string) $schedRecord['contact_name']);
+                    }
+                }
+            } elseif ($transactionType === 'Cremation') {
+                $cremModel = new Cremation();
+                $cremRecord = $cremModel->findById($referenceId);
+                if ($cremRecord) {
+                    if (empty($customerPhone) && !empty($cremRecord['contact_number'])) {
+                        $customerPhone = trim((string) $cremRecord['contact_number']);
+                    }
+                    if (empty($customerName) && !empty($cremRecord['contact_name'])) {
+                        $customerName = trim((string) $cremRecord['contact_name']);
+                    }
+                }
+            }
+        }
+
+        // Clean & format Philippine mobile number (+639XXXXXXXXX or 09XXXXXXXXX)
+        if (!empty($customerPhone)) {
+            $cleanPhone = preg_replace('/[^\d+]/', '', $customerPhone);
+            if (str_starts_with($cleanPhone, '09') && strlen($cleanPhone) === 11) {
+                $customerPhone = '+63' . substr($cleanPhone, 1);
+            } elseif (str_starts_with($cleanPhone, '9') && strlen($cleanPhone) === 10) {
+                $customerPhone = '+63' . $cleanPhone;
+            } else {
+                $customerPhone = $cleanPhone;
+            }
+        }
+
+        $billing = [
+            'name' => $customerName ?: 'Citizen Payer',
+        ];
+        if (!empty($customerEmail) && filter_var($customerEmail, FILTER_VALIDATE_EMAIL)) {
+            $billing['email'] = $customerEmail;
+        }
+        if (!empty($customerPhone) && strlen($customerPhone) >= 7) {
+            $billing['phone'] = $customerPhone;
+        }
+        $billing['address'] = [
+            'line1'       => !empty($customerAddress) ? $customerAddress : 'General Santos City',
+            'city'        => 'General Santos City',
+            'state'       => 'South Cotabato',
+            'postal_code' => '9500',
+            'country'     => 'PH',
+        ];
+
         $sessionAttributes = [
             'line_items' => [
                 [
@@ -1592,9 +1659,10 @@ class PaymentController {
             'payment_method_types' => ['card', 'gcash', 'paymaya'],
             'description' => 'Payment for ' . $referenceLabel . ' (' . $receiptNumber . ')',
             'reference_number' => $receiptNumber,
-            'send_email_receipt' => false,
+            'send_email_receipt' => !empty($billing['email']),
             'show_description' => true,
             'show_line_items' => true,
+            'billing' => $billing,
             'success_url' => $successUrl,
             'cancel_url' => $cancelUrl,
         ];
@@ -1631,6 +1699,12 @@ class PaymentController {
             'gateway_status' => $gatewayStatus,
             'amount' => $authoritativeAmount,
             'currency' => 'PHP',
+            'payer_info' => [
+                'name'    => $customerName ?: 'Citizen Payer',
+                'email'   => $customerEmail,
+                'phone'   => $customerPhone,
+                'address' => $customerAddress,
+            ],
             'code' => 200,
         ];
     }
