@@ -352,14 +352,35 @@ class BookingAgentController {
 
         // Safety fallback: if decedent_name is still null, extract from message
         if (empty($slots['decedent_name']) && empty($extractedFields['decedent_name']) && empty($draftContext['extracted_data']['decedent_name'])) {
-            if (preg_match('/(?:para\s+(?:po\s+)?kay|kay|si|pangalan\s+(?:po\s+)?(?:ay|ni)?|decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s]{2,40})/i', $message, $nm)) {
-                $cName = trim($nm[1]);
-                $cName = preg_replace('/^(?:nanay|tatay|ina|ama|kapatid|kuya|ate|asawa|lolo|lola)\s+/i', '', $cName);
-                $cName = preg_replace('/\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$/i', '', $cName);
-                $cName = trim($cName, " \t\n\r\0\x0B:.,");
-                if (strlen($cName) >= 2 && !in_array(strtolower($cName), ['burial', 'cremation', 'service', 'schedule', 'date', 'reservation'], true)) {
-                    $slots['decedent_name'] = $cName;
-                    $extractedFields['decedent_name'] = $cName;
+            $cand = null;
+            if (preg_match('/(?:para\s+(?:po\s+)?kay|kay|si|pangalan\s+(?:po\s+)?(?:ay|ni)?|decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s,]{2,50})/i', $message, $nm)) {
+                $cand = trim($nm[1]);
+            } elseif (preg_match('/\b([A-Z][a-z]{1,20}(?:[,\s]+\s*[A-Z][a-z]{1,20}){1,3})\b/', $message, $dm)) {
+                $cand = trim($dm[1]);
+            }
+
+            if ($cand) {
+                $cand = preg_replace('/^(?:nanay|tatay|ina|ama|kapatid|kuya|ate|asawa|lolo|lola)\s+/i', '', $cand);
+                $cand = preg_replace('/\s+(?:nanay|tatay|ina|ama|kapatid|asawa|lolo|lola|po|siya|ko|my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$/i', '', $cand);
+                $cand = preg_replace('/\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$/i', '', $cand);
+                $cand = preg_replace('/\s+(?:po|opo)$/i', '', $cand);
+                $cand = trim($cand, " \t\n\r\0\x0B:.,");
+
+                // Inverted comma format "Last, First" (e.g. "Nicolas, Nicolas") -> "First Last"
+                if (strpos($cand, ',') !== false) {
+                    require_once __DIR__ . '/DecedentRequestController.php';
+                    $parsed = DecedentRequestController::parseFullName($cand);
+                    if (!empty($parsed['first_name']) && !empty($parsed['last_name'])) {
+                        $cand = trim($parsed['first_name'] . ' ' . $parsed['last_name']);
+                    }
+                }
+
+                $domainKeywords = ['burial', 'cremation', 'service', 'schedule', 'date', 'reservation', 'lot', 'plot', 'grave', 'columbarium', 'niche'];
+                $calendarKeywords = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+                $candLower = strtolower($cand);
+                if (strlen($cand) >= 2 && !in_array($candLower, $domainKeywords, true) && !in_array($candLower, $calendarKeywords, true)) {
+                    $slots['decedent_name'] = $cand;
+                    $extractedFields['decedent_name'] = $cand;
                 }
             }
         }
@@ -1015,15 +1036,31 @@ class BookingAgentController {
                 $slots['relationship'] = $slots['corrected_value'];
             }
             // B. Decedent Name (Tagalog: "Kevin Mando dapat")
-            elseif (preg_match('/([A-Z][a-zA-Z\.\s]{1,35})\s+dapat\b/i', $message, $dm)) {
+            elseif (preg_match('/([A-Z][a-zA-Z\.\s,]{1,35})\s+dapat\b/i', $message, $dm)) {
                 $slots['correction_field'] = 'decedent_name';
-                $slots['corrected_value'] = trim($dm[1]);
+                $cVal = trim($dm[1]);
+                if (strpos($cVal, ',') !== false) {
+                    require_once __DIR__ . '/DecedentRequestController.php';
+                    $parsed = DecedentRequestController::parseFullName($cVal);
+                    if (!empty($parsed['first_name']) && !empty($parsed['last_name'])) {
+                        $cVal = trim($parsed['first_name'] . ' ' . $parsed['last_name']);
+                    }
+                }
+                $slots['corrected_value'] = $cVal;
                 $slots['decedent_name'] = $slots['corrected_value'];
             }
             // C. English name corrections
-            elseif (preg_match('/(?:should be|it is|actually|surname is|name is)\s+([A-Z][a-zA-Z\.\s]{1,30})/i', $message, $nm) && !preg_match('/\b(daughter|son|father|mother|brother|sister)\b/i', $nm[1])) {
+            elseif (preg_match('/(?:should be|it is|actually|surname is|name is)\s+([A-Z][a-zA-Z\.\s,]{1,35})/i', $message, $nm) && !preg_match('/\b(daughter|son|father|mother|brother|sister)\b/i', $nm[1])) {
                 $slots['correction_field'] = 'decedent_name';
-                $slots['corrected_value'] = rtrim(trim($nm[1]), '.');
+                $cVal = rtrim(trim($nm[1]), '.');
+                if (strpos($cVal, ',') !== false) {
+                    require_once __DIR__ . '/DecedentRequestController.php';
+                    $parsed = DecedentRequestController::parseFullName($cVal);
+                    if (!empty($parsed['first_name']) && !empty($parsed['last_name'])) {
+                        $cVal = trim($parsed['first_name'] . ' ' . $parsed['last_name']);
+                    }
+                }
+                $slots['corrected_value'] = $cVal;
                 $slots['decedent_name'] = $slots['corrected_value'];
             }
             // D. Notes
@@ -1044,22 +1081,34 @@ class BookingAgentController {
             $isSupplyingDateOrLot = (bool) preg_match('/\b(date|schedule|time|lot|section|columbarium|niche|sunday|monday|tuesday|wednesday|thursday|friday|saturday|tomorrow|week|month)\b/i', $message);
 
             if (!$existingName || !$isSupplyingDateOrLot) {
-                if (preg_match('/(?:para\s+(?:po\s+)?kay|kay|si|pangalan\s+(?:po\s+)?(?:ay|ni)?|decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s]{2,40})/i', $message, $m)) {
+                $cand = null;
+                if (preg_match('/(?:para\s+(?:po\s+)?kay|kay|si|pangalan\s+(?:po\s+)?(?:ay|ni)?|decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s,]{2,50})/i', $message, $m)) {
                     $cand = trim($m[1]);
+                } elseif (empty($existingName) && preg_match('/\b([A-Z][a-z]{1,20}(?:[,\s]+\s*[A-Z][a-z]{1,20}){1,3})\b/', $message, $dm)) {
+                    $cand = trim($dm[1]);
+                }
+
+                if ($cand) {
                     $cand = preg_replace('/^(?:nanay|tatay|ina|ama|kapatid|kuya|ate|asawa|lolo|lola)\s+/i', '', $cand);
                     $cand = preg_replace('/\s+(?:nanay|tatay|ina|ama|kapatid|asawa|lolo|lola|po|siya|ko|my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$/i', '', $cand);
                     $cand = preg_replace('/\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$/i', '', $cand);
+                    $cand = preg_replace('/\s+(?:po|opo)$/i', '', $cand);
                     $cand = trim($cand, " \t\n\r\0\x0B:.,");
 
-                    // Stop words check: candidate name cannot be a cemetery domain keyword
-                    $domainKeywords = ['burial', 'cremation', 'service', 'schedule', 'date', 'reservation', 'lot', 'plot', 'grave', 'columbarium', 'niche'];
-                    if (strlen($cand) >= 2 && !in_array(strtolower($cand), $domainKeywords, true)) {
-                        $slots['decedent_name'] = $cand;
+                    // Inverted comma format "Last, First" (e.g. "Nicolas, Nicolas") -> "First Last"
+                    if (strpos($cand, ',') !== false) {
+                        require_once __DIR__ . '/DecedentRequestController.php';
+                        $parsed = DecedentRequestController::parseFullName($cand);
+                        if (!empty($parsed['first_name']) && !empty($parsed['last_name'])) {
+                            $cand = trim($parsed['first_name'] . ' ' . $parsed['last_name']);
+                        }
                     }
-                } elseif (empty($existingName) && preg_match('/\b([A-Z][a-z]{1,20}(?:\s+[A-Z][a-z]{1,20}){1,3})\b/', $message, $dm)) {
-                    $cand = trim($dm[1]);
+
+                    // Stop words check: candidate name cannot be a cemetery domain keyword or calendar name
                     $domainKeywords = ['burial', 'cremation', 'service', 'schedule', 'date', 'reservation', 'lot', 'plot', 'grave', 'columbarium', 'niche'];
-                    if (!in_array(strtolower($cand), $domainKeywords, true) && !preg_match('/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december)\b/i', $cand)) {
+                    $calendarKeywords = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+                    $candLower = strtolower($cand);
+                    if (strlen($cand) >= 2 && !in_array($candLower, $domainKeywords, true) && !in_array($candLower, $calendarKeywords, true)) {
                         $slots['decedent_name'] = $cand;
                     }
                 }
@@ -1882,5 +1931,134 @@ class BookingAgentController {
         return $isTag
             ? "Magandang araw po! Ako po ang inyong AI Booking Assistant sa sementeryo. Paano ko po kayo matutulungan sa inyong booking o katanungan ngayon?"
             : "Good day! I am your Cemetery AI Booking Assistant. How may I assist you with your booking or inquiries today?";
+    }
+
+    /**
+     * POST /api/booking-agent/drafts/{id}/documents
+     * Upload mandatory booking requirement documents (death_certificate, burial_permit, valid_id).
+     */
+    public function uploadDocument(int $draftId, string $docType, $file, $user): array {
+        [$userId, $username] = $this->resolveUserContext($user);
+        if ($userId <= 0) {
+            return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
+        }
+
+        $validTypes = ['death_certificate', 'burial_permit', 'valid_id'];
+        if (!in_array($docType, $validTypes, true)) {
+            return ['success' => false, 'error' => "Invalid document type '{$docType}'. Allowed types: " . implode(', ', $validTypes), 'code' => 400];
+        }
+
+        if (empty($file) || !is_array($file) || empty($file['tmp_name'])) {
+            return ['success' => false, 'error' => 'No file provided for upload', 'code' => 400];
+        }
+
+        try {
+            $draft = $this->draftModel->requireOwnership($draftId, $userId);
+
+            if (BookingDraft::isTerminalState($draft['status'])) {
+                return ['success' => false, 'error' => "Cannot upload documents to a draft in status '{$draft['status']}'.", 'code' => 400];
+            }
+
+            require_once __DIR__ . '/DecedentDocumentController.php';
+            $saved = DecedentDocumentController::saveUploadedFile($file);
+            if (!empty($saved['error'])) {
+                return ['success' => false, 'error' => $saved['error'], 'code' => $saved['code'] ?? 400];
+            }
+
+            $docs = $this->agentService->saveDraftDocument($draftId, $docType, $saved['file_path'], $saved['original_filename']);
+
+            return [
+                'success'           => true,
+                'doc_type'          => $docType,
+                'file_path'         => $saved['file_path'],
+                'original_filename' => $saved['original_filename'],
+                'documents'         => $docs,
+                'message'           => 'Document requirement uploaded successfully.',
+                'code'              => 200
+            ];
+        } catch (BookingDraftException $e) {
+            return [
+                'success'    => false,
+                'error'      => $e->getMessage(),
+                'error_type' => $e->getErrorType(),
+                'code'       => $this->mapExceptionToHttpCode($e)
+            ];
+        } catch (Throwable $t) {
+            return [
+                'success' => false,
+                'error'   => 'Failed to upload document: ' . $t->getMessage(),
+                'code'    => 500
+            ];
+        }
+    }
+
+    /**
+     * GET /api/booking-agent/drafts/{id}/documents
+     * Retrieve documentary requirement status for this draft.
+     */
+    public function getDocuments(int $draftId, $user): array {
+        [$userId, $username] = $this->resolveUserContext($user);
+        if ($userId <= 0) {
+            return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
+        }
+
+        try {
+            $draft = $this->draftModel->requireOwnership($draftId, $userId);
+            $docsInfo = $this->agentService->getDraftDocuments($draftId);
+            return array_merge(['success' => true, 'code' => 200], $docsInfo);
+        } catch (BookingDraftException $e) {
+            return [
+                'success'    => false,
+                'error'      => $e->getMessage(),
+                'error_type' => $e->getErrorType(),
+                'code'       => $this->mapExceptionToHttpCode($e)
+            ];
+        } catch (Throwable $t) {
+            return [
+                'success' => false,
+                'error'   => 'Failed to load documents: ' . $t->getMessage(),
+                'code'    => 500
+            ];
+        }
+    }
+
+    /**
+     * DELETE /api/booking-agent/drafts/{id}/documents/{type}
+     * Remove an uploaded document from the draft.
+     */
+    public function deleteDocument(int $draftId, string $docType, $user): array {
+        [$userId, $username] = $this->resolveUserContext($user);
+        if ($userId <= 0) {
+            return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
+        }
+
+        try {
+            $draft = $this->draftModel->requireOwnership($draftId, $userId);
+            if (BookingDraft::isTerminalState($draft['status'])) {
+                return ['success' => false, 'error' => "Cannot remove documents from draft in status '{$draft['status']}'.", 'code' => 400];
+            }
+
+            $docs = $this->agentService->deleteDraftDocument($draftId, $docType);
+            return [
+                'success'   => true,
+                'doc_type'  => $docType,
+                'documents' => $docs,
+                'message'   => 'Document removed successfully.',
+                'code'      => 200
+            ];
+        } catch (BookingDraftException $e) {
+            return [
+                'success'    => false,
+                'error'      => $e->getMessage(),
+                'error_type' => $e->getErrorType(),
+                'code'       => $this->mapExceptionToHttpCode($e)
+            ];
+        } catch (Throwable $t) {
+            return [
+                'success' => false,
+                'error'   => 'Failed to delete document: ' . $t->getMessage(),
+                'code'    => 500
+            ];
+        }
     }
 }

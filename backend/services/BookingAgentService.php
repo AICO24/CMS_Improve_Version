@@ -672,6 +672,19 @@ class BookingAgentService {
                 }
             }
 
+            // Normalize decedent_name if formatted with comma ("Last, First" like "Nicolas, Nicolas" or "Dela Cruz, Juan")
+            if ($k === 'decedent_name' && is_string($v) && trim($v) !== '') {
+                $cleanName = trim($v);
+                if (strpos($cleanName, ',') !== false) {
+                    require_once __DIR__ . '/../controllers/DecedentRequestController.php';
+                    $parsed = DecedentRequestController::parseFullName($cleanName);
+                    if (!empty($parsed['first_name']) && !empty($parsed['last_name'])) {
+                        $cleanName = trim($parsed['first_name'] . ' ' . (!empty($parsed['middle_name']) ? $parsed['middle_name'] . ' ' : '') . $parsed['last_name'] . (!empty($parsed['suffix']) ? ' ' . $parsed['suffix'] : ''));
+                    }
+                }
+                $v = $cleanName;
+            }
+
             if ($intent === self::INTENT_UPDATE_FIELD) {
                 // Corrections may explicitly set or clear fields
                 $sanitizedIncoming[$k] = is_string($v) ? trim($v) : $v;
@@ -1070,6 +1083,15 @@ class BookingAgentService {
                     if (!$decedentRequestId) {
                         throw new BookingDraftException("Failed to record provisional decedent information.", 'DECEDENT_CREATION_FAILED', 500);
                     }
+
+                    // Automatically attach uploaded Death Certificate to provisional decedent request
+                    if (!empty($extracted['documents']['death_certificate']['file_path'])) {
+                        $this->decedentRequestModel->setAttachment(
+                            $decedentRequestId,
+                            $extracted['documents']['death_certificate']['file_path'],
+                            $extracted['documents']['death_certificate']['original_filename'] ?? 'Death_Certificate.pdf'
+                        );
+                    }
                 }
 
                 // 6. Schedule Creation (Citizens forced to Pending)
@@ -1312,6 +1334,15 @@ class BookingAgentService {
                 if (!$decedentRequestId) {
                     throw new BookingDraftException("Failed to record provisional decedent information.", 'DECEDENT_CREATION_FAILED', 500);
                 }
+
+                // Automatically attach uploaded Death Certificate to provisional decedent request
+                if (!empty($extracted['documents']['death_certificate']['file_path'])) {
+                    $this->decedentRequestModel->setAttachment(
+                        $decedentRequestId,
+                        $extracted['documents']['death_certificate']['file_path'],
+                        $extracted['documents']['death_certificate']['original_filename'] ?? 'Death_Certificate.pdf'
+                    );
+                }
             }
 
             // 3. Status & Columbarium determination
@@ -1462,5 +1493,129 @@ class BookingAgentService {
         }
 
         return $result;
+    }
+
+    /**
+     * Save uploaded document metadata into draft extracted_data.
+     */
+    public function saveDraftDocument(int $draftId, string $docType, string $filePath, string $originalFilename): array {
+        $draft = $this->draftModel->findById($draftId);
+        if (!$draft) {
+            throw new BookingDraftException("Draft not found", 'DRAFT_NOT_FOUND', 404);
+        }
+
+        $extracted = !empty($draft['extracted_data'])
+            ? (is_array($draft['extracted_data']) ? $draft['extracted_data'] : json_decode($draft['extracted_data'], true))
+            : [];
+        if (!is_array($extracted)) {
+            $extracted = [];
+        }
+
+        if (!isset($extracted['documents']) || !is_array($extracted['documents'])) {
+            $extracted['documents'] = [];
+        }
+
+        // If replacing existing, delete old physical file
+        if (!empty($extracted['documents'][$docType]['file_path'])) {
+            require_once __DIR__ . '/../controllers/DecedentDocumentController.php';
+            DecedentDocumentController::deleteUploadedFile($extracted['documents'][$docType]['file_path']);
+        }
+
+        $extracted['documents'][$docType] = [
+            'doc_type'          => $docType,
+            'file_path'         => $filePath,
+            'original_filename' => $originalFilename,
+            'uploaded_at'       => date('Y-m-d H:i:s'),
+        ];
+
+        $this->draftModel->updateExtractedData($draftId, $extracted);
+        return $extracted['documents'];
+    }
+
+    /**
+     * Get document checklist and upload status for a draft.
+     */
+    public function getDraftDocuments(int $draftId): array {
+        $draft = $this->draftModel->findById($draftId);
+        if (!$draft) {
+            throw new BookingDraftException("Draft not found", 'DRAFT_NOT_FOUND', 404);
+        }
+
+        $extracted = !empty($draft['extracted_data'])
+            ? (is_array($draft['extracted_data']) ? $draft['extracted_data'] : json_decode($draft['extracted_data'], true))
+            : [];
+        $docs = $extracted['documents'] ?? [];
+
+        $isCremation = ($draft['service_type'] ?? '') === 'cremation';
+
+        $definitions = [
+            'death_certificate' => [
+                'doc_type'    => 'death_certificate',
+                'title'       => 'Death Certificate',
+                'description' => 'PSA or Local Civil Registrar Certified True Copy',
+                'required'    => true,
+                'uploaded'    => !empty($docs['death_certificate']),
+                'file'        => $docs['death_certificate'] ?? null,
+            ],
+            'burial_permit' => [
+                'doc_type'    => 'burial_permit',
+                'title'       => $isCremation ? 'Cremation Permit' : 'Burial Permit',
+                'description' => 'City Health Office / Local Government Unit Permit',
+                'required'    => true,
+                'uploaded'    => !empty($docs['burial_permit']),
+                'file'        => $docs['burial_permit'] ?? null,
+            ],
+            'valid_id' => [
+                'doc_type'    => 'valid_id',
+                'title'       => 'Valid Government ID',
+                'description' => 'Valid ID of Informant / Next-of-Kin (Claimant)',
+                'required'    => true,
+                'uploaded'    => !empty($docs['valid_id']),
+                'file'        => $docs['valid_id'] ?? null,
+            ],
+        ];
+
+        $uploadedCount = 0;
+        foreach ($definitions as $item) {
+            if ($item['uploaded']) {
+                $uploadedCount++;
+            }
+        }
+
+        return [
+            'draft_id'       => $draftId,
+            'service_type'   => $draft['service_type'] ?? 'burial',
+            'documents'      => array_values($definitions),
+            'uploaded_count' => $uploadedCount,
+            'total_count'    => count($definitions),
+            'all_uploaded'   => ($uploadedCount === count($definitions)),
+        ];
+    }
+
+    /**
+     * Delete an uploaded document from draft.
+     */
+    public function deleteDraftDocument(int $draftId, string $docType): array {
+        $draft = $this->draftModel->findById($draftId);
+        if (!$draft) {
+            throw new BookingDraftException("Draft not found", 'DRAFT_NOT_FOUND', 404);
+        }
+
+        $extracted = !empty($draft['extracted_data'])
+            ? (is_array($draft['extracted_data']) ? $draft['extracted_data'] : json_decode($draft['extracted_data'], true))
+            : [];
+        if (!is_array($extracted) || empty($extracted['documents'][$docType])) {
+            return $extracted['documents'] ?? [];
+        }
+
+        $oldPath = $extracted['documents'][$docType]['file_path'] ?? null;
+        if ($oldPath) {
+            require_once __DIR__ . '/../controllers/DecedentDocumentController.php';
+            DecedentDocumentController::deleteUploadedFile($oldPath);
+        }
+
+        unset($extracted['documents'][$docType]);
+        $this->draftModel->updateExtractedData($draftId, $extracted);
+        return $extracted['documents'] ?? [];
     }
 }
