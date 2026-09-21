@@ -127,15 +127,15 @@ report(8, 'Re-uploading replaces existing Death Certificate cleanly', $t8Success
 
 // TEST 9: Finalize burial draft attaches uploaded Death Certificate to provisional decedent request
 // Pick an available lot without active leases
-$availableLot = $db->query("SELECT lot_id FROM lots WHERE status = 'Available' LIMIT 1")->fetchColumn() ?: 101;
+$availableLot = (int) ($db->query("SELECT lot_id FROM lots WHERE status = 'Available' ORDER BY lot_id DESC LIMIT 1")->fetchColumn() ?: 101);
+$db->prepare("DELETE FROM payments WHERE reference_kind = 'lot' AND reference_id = ?")->execute([$availableLot]);
+$db->prepare("DELETE FROM burial_schedules WHERE lot_id = ? AND schedule_date = '2026-11-20'")->execute([$availableLot]);
 $draftModel->updateExtractedData($draftId, [
     'service_type' => 'burial',
-    'lot_id' => (int) $availableLot,
+    'lot_id' => $availableLot,
     'preferred_date' => '2026-11-20',
     'status' => 'Pending'
 ]);
-// Clear conflicting test schedules on that lot/date
-$db->prepare("DELETE FROM burial_schedules WHERE lot_id = ? AND schedule_date = '2026-11-20'")->execute([(int) $availableLot]);
 $draftModel->transitionStatus($draftId, BookingDraft::STATUS_COLLECTING_INFO);
 $draftModel->transitionStatus($draftId, BookingDraft::STATUS_READY_FOR_REVIEW);
 

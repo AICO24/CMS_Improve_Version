@@ -1006,7 +1006,7 @@
 /* ── Stat cards grid (Reports-style KPI executive cards) ──────── */
 .decrec-stats {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 12px;
     align-items: stretch;
     margin-bottom: 4px;
@@ -1137,6 +1137,11 @@
     background: linear-gradient(135deg, #dc2626 0%, #e85757 100%);
 }
 
+.decrec-stats>.stat-card.accent-orange {
+    border-left-color: #c2410c;
+    background: linear-gradient(135deg, #ea580c 0%, #fb923c 100%);
+}
+
 @keyframes statFloat {
     0% {
         transform: translateY(0px);
@@ -1155,9 +1160,81 @@
 
 /* .data-table base styling now comes from assets/css/components/tables.css (Batch 5) */
 
+/* Table column alignment & fixed widths — prevents shifting ("nauurong") */
+#recordsTable th:nth-child(8),
+#recordsTable td:nth-child(8) {
+    text-align: center;
+    width: 130px;
+    min-width: 130px;
+}
+
+#recordsTable th:last-child,
+#recordsTable td.action-buttons {
+    width: 150px;
+    min-width: 150px;
+}
+
+.compliance-action-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    line-height: 1.2;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.compliance-action-badge.pending {
+    background: #fef3c7;
+    color: #b45309;
+    border-color: #fde68a;
+    box-shadow: 0 1px 3px rgba(180, 83, 9, 0.10);
+}
+
+.compliance-action-badge.pending:hover {
+    background: #fde68a;
+    color: #78350f;
+    border-color: #f59e0b;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(180, 83, 9, 0.20);
+}
+
+.compliance-action-badge.pending:active {
+    transform: translateY(0);
+}
+
+.compliance-action-badge.pending .pill-icon {
+    font-size: 9.5px;
+    opacity: 0.85;
+    transition: transform 0.2s ease;
+}
+
+.compliance-action-badge.pending:hover .pill-icon {
+    transform: translate(1px, -1px);
+}
+
+.compliance-action-badge.verified {
+    background: #d1fae5;
+    color: #065f46;
+    border-color: #a7f3d0;
+    cursor: default;
+    box-shadow: none;
+}
+
 .action-buttons {
     display: flex;
     gap: 8px;
+    align-items: center;
+    justify-content: flex-start;
+    white-space: nowrap;
 }
 
 .btn-view {
@@ -2992,7 +3069,7 @@
 
 /* ---------- RESPONSIVE ---------- */
 /* Sidebar/rail responsive behavior now comes from the shared dashboard.css (Batch 3) */
-@media (max-width: 1200px) {
+@media (max-width: 1360px) {
     .decrec-stats {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
@@ -5222,9 +5299,28 @@
 }
 
 .dashboard-body[data-theme="dark"] .decrec-control-panel .attention-filter-toggle {
-    background: rgba(159, 18, 57, 0.25);
+    background: rgba(159, 18, 18, 0.25);
     border-color: rgba(244, 63, 94, 0.35);
     color: #fda4af;
 }
+
+.dashboard-body[data-theme="dark"] .compliance-action-badge.pending {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fcd34d;
+    border-color: rgba(245, 158, 11, 0.4);
+}
+
+.dashboard-body[data-theme="dark"] .compliance-action-badge.pending:hover {
+    background: rgba(245, 158, 11, 0.3);
+    color: #fef3c7;
+    border-color: rgba(245, 158, 11, 0.6);
+}
+
+.dashboard-body[data-theme="dark"] .compliance-action-badge.verified {
+    background: rgba(16, 185, 129, 0.16);
+    color: #6ee7b7;
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
 
 

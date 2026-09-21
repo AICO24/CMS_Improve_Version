@@ -1087,8 +1087,8 @@ document.addEventListener('DOMContentLoaded', async function () {
 
             const isPendingReq = (item.document_status === 'pending_requirements');
             const complianceBadge = isPendingReq
-                ? `<span class="status-badge" style="background:#fef3c7; color:#b45309; border: 1px solid #fde68a; font-weight:600;"><i class="fas fa-clock"></i> To Follow</span>`
-                : `<span class="status-badge" style="background:#d1fae5; color:#065f46; border: 1px solid #a7f3d0; font-weight:600;"><i class="fas fa-check-circle"></i> Verified</span>`;
+                ? `<button type="button" class="btn-verify-req compliance-action-badge pending" title="Pending requirements from booking — Click to review and verify documents"><i class="fas fa-clock"></i> To Follow <i class="fas fa-arrow-up-right-from-square pill-icon"></i></button>`
+                : `<span class="compliance-action-badge verified" title="Documentary requirements verified and complete"><i class="fas fa-circle-check"></i> Complete</span>`;
 
             return `
             <tr data-id="${item.decedent_id}">
@@ -1106,7 +1106,6 @@ document.addEventListener('DOMContentLoaded', async function () {
                 <td><span class="status-badge ${item.is_cremated === 'yes' ? 'status-warning' : 'status-success'}">${item.is_cremated === 'yes' ? 'Cremation' : 'Burial'}</span></td>
                 <td>${complianceBadge}</td>
                 <td class="action-buttons">
-                    ${isPendingReq ? `<button class="btn-verify-req btn-secondary" title="Verify Requirements (Complete DOB & Certificate)" style="color: #b45309; border-color: #fde68a; font-size: 11px; padding: 4px 8px;"><i class="fas fa-file-circle-check"></i> <span>Verify</span></button>` : ''}
                     <button class="btn-view" title="View"><i class="fas fa-eye"></i></button>
                     <button class="btn-edit-row" title="Edit"><i class="fas fa-pen"></i></button>
                     <button class="btn-delete-row delete-btn" title="Delete Record">
@@ -1124,7 +1123,8 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     function attachTableButtons() {
         document.querySelectorAll('.btn-verify-req').forEach((btn) => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const row = btn.closest('tr');
                 const id = parseInt(row.dataset.id, 10);
                 openVerifyModal(id);
@@ -1514,14 +1514,19 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
 
         const missing = getMissingFields(record);
-        const statusBadgeHtml = missing.length
+        const isPendingReq = (record.document_status === 'pending_requirements');
+        const statusBadgeHtml = isPendingReq
             ? `<div class="view-status-wrap">
-                 <span class="view-status-badge badge--warning"><i class="fas fa-triangle-exclamation"></i> Needs Attention</span>
-                 <span class="view-missing-note">Missing: ${escapeHtml(missing.join(', '))}</span>
+                 <button type="button" class="compliance-action-badge pending" id="viewModalVerifyBtn" style="font-size: 0.78rem; padding: 6px 14px;"><i class="fas fa-clock"></i> To Follow — Review &amp; Verify <i class="fas fa-arrow-up-right-from-square pill-icon"></i></button>
                </div>`
-            : `<div class="view-status-wrap">
-                 <span class="view-status-badge badge--complete"><i class="fas fa-circle-check"></i> Complete & Verified</span>
-               </div>`;
+            : (missing.length
+                ? `<div class="view-status-wrap">
+                     <span class="view-status-badge badge--warning"><i class="fas fa-triangle-exclamation"></i> Needs Attention</span>
+                     <span class="view-missing-note">Missing: ${escapeHtml(missing.join(', '))}</span>
+                   </div>`
+                : `<div class="view-status-wrap">
+                     <span class="view-status-badge badge--complete"><i class="fas fa-circle-check"></i> Complete &amp; Verified</span>
+                   </div>`);
 
         const fullName = `${escapeHtml(record.first_name)} ${record.middle_name ? escapeHtml(record.middle_name) + ' ' : ''}${escapeHtml(record.last_name)}${record.suffix ? ' ' + escapeHtml(record.suffix) : ''}`;
         const ageInfo = computeAgeInfo(record.dob, record.dod);
@@ -1630,6 +1635,13 @@ document.addEventListener('DOMContentLoaded', async function () {
             document.getElementById('viewModal').style.display = 'none';
             openEditModal(id);
         };
+        const viewVerifyBtn = document.getElementById('viewModalVerifyBtn');
+        if (viewVerifyBtn) {
+            viewVerifyBtn.onclick = () => {
+                document.getElementById('viewModal').style.display = 'none';
+                openVerifyModal(id);
+            };
+        }
         const printBtn = document.getElementById('printCertificateBtn');
         if (printBtn) {
             printBtn.onclick = () => {
