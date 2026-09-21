@@ -53,6 +53,7 @@ $userB['role'] = 'user';
 $db->exec("DELETE FROM burial_schedules WHERE notes LIKE '%AI Booking Assistant Draft%' OR notes LIKE '%Manuel Quezon%' OR notes LIKE '%Two Phase%'");
 $db->exec("DELETE FROM booking_drafts WHERE user_id IN ({$userA['user_id']}, {$userB['user_id']})");
 $db->exec("DELETE FROM decedent_requests WHERE requested_by IN ({$userA['user_id']}, {$userB['user_id']}) AND request_id NOT IN (SELECT decedent_request_id FROM burial_schedules WHERE decedent_request_id IS NOT NULL) AND request_id NOT IN (SELECT decedent_request_id FROM cremation_records WHERE decedent_request_id IS NOT NULL)");
+$db->exec("DELETE FROM payments WHERE transaction_type = 'Lot Purchase' AND (notes LIKE '%Test%' OR notes LIKE '%AI Booking%' OR verification_status = 'Pending')");
 
 // Pick available lot
 $availableLotId = (int) $db->query("SELECT lot_id FROM lots WHERE status = 'Available' ORDER BY lot_id ASC LIMIT 1")->fetchColumn();
@@ -254,6 +255,7 @@ while ((int) $monday->format('N') !== 1) {
 }
 $mondayStr = $monday->format('Y-m-d');
 
+$db->exec("DELETE FROM booking_drafts WHERE user_id IN ({$userA['user_id']}, {$userB['user_id']})");
 $mondayDraft = $service->processStructuredInput($userA['user_id'], [
     'intent' => BookingAgentService::INTENT_CREATE_BOOKING,
     'service_type' => 'burial',
@@ -275,6 +277,7 @@ report(8, "Monday booking date is rejected with HTTP 400", $test8Ok);
 // ----------------------------------------------------------------------
 // TEST 9: Past date booking is rejected with HTTP 400
 // ----------------------------------------------------------------------
+$db->exec("DELETE FROM booking_drafts WHERE user_id IN ({$userA['user_id']}, {$userB['user_id']})");
 $pastDraft = $service->processStructuredInput($userA['user_id'], [
     'intent' => BookingAgentService::INTENT_CREATE_BOOKING,
     'service_type' => 'burial',
