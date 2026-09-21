@@ -933,6 +933,8 @@ BOOKING_AGENT_SYSTEM_PROMPT = (
     "- Dates: Normalize ALL dates to YYYY-MM-DD. For relative dates like 'tomorrow', 'in 2 weeks', or 'next Friday', compute against today's date provided in context.\n"
     "- Rescheduling vs Draft Editing: If citizen is in an active draft and changes date, set preferred_date/cremation_date and intent CORRECT_BOOKING_DETAILS. For committed bookings, set target_date and intent RESCHEDULE_BOOKING.\n"
     "- Corrections: If citizen corrects a field (e.g. 'spelled Kevin's surname incorrectly. It should be Mando'), set correction_field (e.g. 'decedent_name') and corrected_value (e.g. 'Mando').\n"
+    "- Identical or Near-Identical First and Last Names: Citizens and decedents may legitimately have identical or near-identical first and last names (e.g. 'Nicolas Nicolas', 'Nicolas, Nicolas', 'Nicolas Nicolos', 'Juan Juan', 'Jose Jose'). You MUST accept these as 100% valid decedent names and extract them into decedent_name. NEVER reject, dismiss as a placeholder/error, or clear decedent_name when first and last names are identical or similar.\n"
+    "- Comma-Separated & Standalone Names: Citizens often provide the deceased's name in inverted format with a comma ('Last, First' like 'Nicolas, Nicolas' or 'Dela Cruz, Juan') or as a standalone reply (e.g. 'Nicolas Nicolas', 'Nicolas, Nicolas po'). Extract the name into decedent_name and normalize inverted comma formats into standard 'First Last' order (e.g. 'Nicolas Nicolas', 'Juan Dela Cruz').\n"
     "- Multi-slot Extraction: Extract ALL details mentioned in the message (service, name, relation, dates, lot, section) rather than discarding them.\n"
     "- Missing slots should be omitted or null. Never invent IDs or bookings.\n"
     "- Conversational & Guidance Rules for 'reply':\n"
@@ -1233,17 +1235,35 @@ def _extract_booking_deterministic(
         existing_name = existing_data.get('decedent_name')
         is_supplying_date_or_lot = bool(re.search(r'\b(date|schedule|time|lot|section|columbarium|niche|sunday|monday|tuesday|wednesday|thursday|friday|saturday|tomorrow|week|month)\b', msg_lower))
         if not existing_name or not is_supplying_date_or_lot:
-            name_match = re.search(r'(?:(?:para\s+(?:po\s+)?kay|kay|si|pangalan\s+(?:po\s+)?(?:ay|ni)?|decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?))\s+([A-Z][a-zA-Z\.\s]{2,40})', message)
+            candidate_name = None
+            name_match = re.search(r'(?:(?:para\s+(?:po\s+)?kay|kay|si|pangalan\s+(?:po\s+)?(?:ay|ni)?|decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?))\s+([A-Z][a-zA-Z\.\s,]{2,50})', message)
             if name_match:
                 candidate_name = name_match.group(1).strip()
+            elif not existing_name:
+                # Standalone name match (e.g. "Nicolas Nicolas", "Nicolas, Nicolas", "Nicolas Nicolos", "Nicolas Nicolas po")
+                standalone_match = re.search(r'\b([A-Z][a-z]{1,20}(?:[,\s]+\s*[A-Z][a-z]{1,20}){1,3})\b', message)
+                if standalone_match:
+                    candidate_name = standalone_match.group(1).strip()
+
+            if candidate_name:
                 # Strip leading kinship prefixes like "Nanay Gloria Romero" -> "Gloria Romero"
                 candidate_name = re.sub(r'^(?:nanay|tatay|ina|ama|kuya|ate|lolo|lola|asawa)\s+', '', candidate_name, flags=re.IGNORECASE).strip()
-                # Clean off trailing clauses
+                # Clean off trailing clauses and Tagalog politeness
                 candidate_name = re.sub(r'\s+(?:my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$', '', candidate_name, flags=re.IGNORECASE).strip()
                 candidate_name = re.sub(r'\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$', '', candidate_name, flags=re.IGNORECASE).strip()
+                candidate_name = re.sub(r'\s+(?:po|opo)$', '', candidate_name, flags=re.IGNORECASE).strip()
+
+                # Normalize inverted "Last, First" comma format (e.g. "Nicolas, Nicolas" -> "Nicolas Nicolas")
+                if ',' in candidate_name:
+                    parts = [p.strip() for p in candidate_name.split(',') if p.strip()]
+                    if len(parts) >= 2:
+                        candidate_name = f"{parts[1]} {parts[0]}".strip()
+
                 candidate_name = candidate_name.strip(" \t\n\r:.,")
                 domain_keywords = {'burial', 'cremation', 'service', 'schedule', 'date', 'reservation', 'lot', 'plot', 'grave', 'columbarium', 'niche'}
-                if len(candidate_name) >= 2 and candidate_name.lower() not in domain_keywords:
+                calendar_keywords = {'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'}
+                cand_lower = candidate_name.lower()
+                if len(candidate_name) >= 2 and cand_lower not in domain_keywords and cand_lower not in calendar_keywords:
                     slots['decedent_name'] = candidate_name
 
     # 8. Backward-compatible extracted_fields map
