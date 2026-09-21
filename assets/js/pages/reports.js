@@ -797,6 +797,39 @@ document.addEventListener('DOMContentLoaded', async function() {
                 })
             });
             updateOccupancyAnalysis(data, trendItems);
+
+            // Section Capacity & Space Utilization Matrix Table
+            const sectionTbody = document.getElementById('sectionCapacityTableBody');
+            if (sectionTbody) {
+                if (!sections.length) {
+                    sectionTbody.innerHTML = '<tr><td colspan="7" class="text-center">No section capacity data available.</td></tr>';
+                } else {
+                    sectionTbody.innerHTML = sections.map(sec => {
+                        const totalPlots = Number(sec.total || 0);
+                        const occ = Number(sec.occupied || 0);
+                        const res = Number(sec.reserved || 0);
+                        const avl = Number(sec.available || 0);
+                        const rate = Number(sec.capacity_rate ?? (totalPlots > 0 ? ((occ + res) / totalPlots * 100).toFixed(1) : 0));
+                        let statusBadge = '<span class="capacity-status-badge capacity-status-badge--optimal"><i class="fas fa-circle-check"></i> Optimal Capacity</span>';
+                        if (avl <= 0) {
+                            statusBadge = '<span class="capacity-status-badge capacity-status-badge--critical"><i class="fas fa-circle-exclamation"></i> Critical / Full</span>';
+                        } else if (rate >= 85) {
+                            statusBadge = '<span class="capacity-status-badge capacity-status-badge--tight"><i class="fas fa-triangle-exclamation"></i> Tight Capacity</span>';
+                        }
+                        return `
+                            <tr>
+                                <td><strong>${sec.section_name || 'Unnamed Section'}</strong></td>
+                                <td class="text-right">${totalPlots.toLocaleString()}</td>
+                                <td class="text-right" style="color: #b91c1c; font-weight: 600;">${occ.toLocaleString()}</td>
+                                <td class="text-right" style="color: #b45309;">${res.toLocaleString()}</td>
+                                <td class="text-right" style="color: #047857; font-weight: 600;">${avl.toLocaleString()}</td>
+                                <td class="text-right"><strong>${rate}%</strong></td>
+                                <td>${statusBadge}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            }
         } catch (error) {
             console.error('Failed to load occupancy:', error);
         }
@@ -818,6 +851,41 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('revTotalSub').innerText = hasDateRange ? 'Filtered period' : 'All payments';
             document.getElementById('revCount').innerText = data.total?.count || 0;
             document.getElementById('revCountSub').innerText = hasDateRange ? 'Filtered count' : 'All transactions';
+
+            // Service Revenue Stream Breakdown Matrix Table
+            const serviceBreakdown = Array.isArray(data.service_breakdown) ? data.service_breakdown : [];
+            const serviceTbody = document.getElementById('serviceRevenueTableBody');
+            if (serviceTbody) {
+                if (!serviceBreakdown.length) {
+                    serviceTbody.innerHTML = '<tr><td colspan="6" class="text-center">No service revenue records found for selected period.</td></tr>';
+                } else {
+                    serviceTbody.innerHTML = serviceBreakdown.map(item => {
+                        const count = Number(item.count || 0);
+                        const total = Number(item.total || 0);
+                        const avg = Number(item.average_amount || (count > 0 ? total / count : 0));
+                        const pct = Number(item.percentage || 0);
+                        return `
+                            <tr>
+                                <td>
+                                    <strong>${item.service_label || item.transaction_type}</strong>
+                                    <br><small style="color: #64748b; font-size: 0.76rem;">Category: ${item.transaction_type}</small>
+                                </td>
+                                <td class="text-right">${count.toLocaleString()}</td>
+                                <td class="text-right"><strong>${formatPeso(total)}</strong></td>
+                                <td class="text-right">${formatPeso(avg)}</td>
+                                <td class="text-right"><strong>${pct}%</strong></td>
+                                <td>
+                                    <div class="share-progress-wrap">
+                                        <div class="share-progress-bar">
+                                            <div class="share-progress-fill" style="width: ${Math.min(100, Math.max(3, pct))}%;"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            }
 
             // Use the selected date range when present; otherwise, keep the chart on the
             // current calendar year while the stat card stays based on the actual no-filter total.
@@ -1669,11 +1737,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     function generateExcelExport() {
         const wb = XLSX.utils.book_new();
         const container = getActiveReportTab();
+
         const tables = container.querySelectorAll('table');
         if (tables.length > 0) {
             tables.forEach((tbl, idx) => {
+                const cardTitle = tbl.closest('.chart-card')?.querySelector('.chart-card__title')?.textContent?.trim();
+                const sheetName = (cardTitle ? cardTitle.replace(/[:\\/?*\[\]]/g, '').slice(0, 30) : `Data_${idx + 1}`);
                 const ws = XLSX.utils.table_to_sheet(tbl);
-                XLSX.utils.book_append_sheet(wb, ws, `Report_Data_${idx + 1}`);
+                XLSX.utils.book_append_sheet(wb, ws, sheetName);
             });
         } else {
             const ws = buildStatSheet(getActiveStatsContainer() || container);

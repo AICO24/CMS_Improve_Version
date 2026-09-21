@@ -319,7 +319,7 @@
                 <div id="reportExportContainer">
 
                     <div id="occupancyTab" class="report-content active">
-                        <p class="section-label"><i class="fas fa-chart-bar"></i> Occupancy Breakdown</p>
+                        <p class="section-label"><i class="fas fa-chart-bar"></i> Occupancy Visualizations</p>
                         <div class="occupancy-analysis-grid">
                             <div class="chart-card chart-card--compact occupancy-card">
                                 <div class="chart-card__header">
@@ -364,6 +364,33 @@
                             <div class="forecast-strip" id="occupancyForecast"></div>
                         </div>
                         </div>
+
+                        <!-- Section Capacity & Space Utilization Matrix -->
+                        <p class="section-label"><i class="fas fa-table-cells"></i> Section Capacity & Utilization Matrix</p>
+                        <div class="chart-card chart-card--focus section-capacity-card" id="sectionCapacityMatrixCard">
+                            <div class="chart-card__header">
+                                <span class="chart-card__title">Section Capacity & Space Utilization Details</span>
+                                <span class="chart-card__badge">Panel-Ready Matrix</span>
+                            </div>
+                            <div class="table-wrap">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Section Name</th>
+                                            <th class="text-right">Total Plots</th>
+                                            <th class="text-right">Occupied</th>
+                                            <th class="text-right">Reserved</th>
+                                            <th class="text-right">Available</th>
+                                            <th class="text-right">Utilization (%)</th>
+                                            <th>Capacity Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="sectionCapacityTableBody">
+                                        <tr><td colspan="7">Loading section capacity data...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="revenueTab" class="report-content">
@@ -380,7 +407,8 @@
                             <button class="btn-filter" id="applyRevenueFilter">Apply</button>
                             <button class="btn-secondary" id="clearRevenueFilter"><i class="fas fa-rotate-left"></i><span>Clear</span></button>
                         </div>
-                        <p class="section-label"><i class="fas fa-chart-line"></i> Revenue Analysis</p>
+
+                        <p class="section-label"><i class="fas fa-chart-line"></i> Revenue Visualizations</p>
                         <div class="revenue-line-grid">
                             <div class="chart-card chart-card--focus">
                                 <div class="chart-card__header">
@@ -428,6 +456,32 @@
                             </div>
                             <div class="chart-frame chart-frame--revenue-method">
                                 <canvas id="revenueByMethodChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Service Revenue Stream Matrix -->
+                        <p class="section-label"><i class="fas fa-money-check-dollar"></i> Service Revenue Stream Breakdown</p>
+                        <div class="chart-card chart-card--focus service-revenue-card" id="serviceRevenueMatrixCard">
+                            <div class="chart-card__header">
+                                <span class="chart-card__title">Detailed Service Revenue Matrix</span>
+                                <span class="chart-card__badge">Panel-Ready Breakdown</span>
+                            </div>
+                            <div class="table-wrap">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Service Stream / Category</th>
+                                            <th class="text-right">Transactions</th>
+                                            <th class="text-right">Gross Collections (₱)</th>
+                                            <th class="text-right">Average / Txn (₱)</th>
+                                            <th class="text-right">Revenue Share (%)</th>
+                                            <th style="width: 140px;">Contribution</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="serviceRevenueTableBody">
+                                        <tr><td colspan="6">Loading service revenue data...</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                         <p class="section-label"><i class="fas fa-table-list"></i> Recent Transactions</p>

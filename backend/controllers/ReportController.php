@@ -34,13 +34,101 @@ class ReportController {
             // intentionally swallowed
         }
 
+        // Enrich section data with capacity and utilization rates
+        $enrichedSections = [];
+        $criticalSections = [];
+        $tightSections = [];
+        $highestCongested = null;
+        $highestRate = -1.0;
+        $mostAvailable = null;
+        $mostAvailableCount = -1;
+
+        foreach ($bySection as $sec) {
+            $tot = (int) ($sec['total'] ?? 0);
+            $occ = (int) ($sec['occupied'] ?? 0);
+            $res = (int) ($sec['reserved'] ?? 0);
+            $avl = (int) ($sec['available'] ?? 0);
+            $exp = (int) ($sec['expired'] ?? 0);
+
+            $utilized = $occ + $res;
+            $utilizationRate = $tot > 0 ? round(($utilized / $tot) * 100, 1) : 0.0;
+            $occupiedRate = $tot > 0 ? round(($occ / $tot) * 100, 1) : 0.0;
+            $availableRate = $tot > 0 ? round(($avl / $tot) * 100, 1) : 0.0;
+
+            if ($avl <= 0) {
+                $status = 'Critical / Full';
+                $criticalSections[] = $sec['section_name'];
+            } elseif ($utilizationRate >= 85.0) {
+                $status = 'Tight Capacity';
+                $tightSections[] = $sec['section_name'];
+            } else {
+                $status = 'Optimal Capacity';
+            }
+
+            if ($utilizationRate > $highestRate) {
+                $highestRate = $utilizationRate;
+                $highestCongested = $sec['section_name'];
+            }
+
+            if ($avl > $mostAvailableCount) {
+                $mostAvailableCount = $avl;
+                $mostAvailable = $sec['section_name'];
+            }
+
+            $sec['utilized'] = $utilized;
+            $sec['capacity_rate'] = $utilizationRate;
+            $sec['occupied_rate'] = $occupiedRate;
+            $sec['available_rate'] = $availableRate;
+            $sec['utilization_status'] = $status;
+            $enrichedSections[] = $sec;
+        }
+
+        $grandTotal = (int) ($stats['total'] ?? 0);
+        $grandOccupied = (int) ($stats['occupied'] ?? 0);
+        $grandReserved = (int) ($stats['reserved'] ?? 0);
+        $grandAvailable = (int) ($stats['available'] ?? 0);
+        $grandUtilized = $grandOccupied + $grandReserved;
+        $overallUtilizationRate = $grandTotal > 0 ? round(($grandUtilized / $grandTotal) * 100, 1) : 0.0;
+
+        $occupancyNarrative = "As of " . date('F j, Y') . ", the cemetery infrastructure encompasses a total capacity of {$grandTotal} plots across " . count($enrichedSections) . " designated sections. Current space utilization stands at {$overallUtilizationRate}% ({$grandOccupied} occupied and {$grandReserved} reserved), leaving {$grandAvailable} active available lots for future assignment.";
+        if (!empty($criticalSections)) {
+            $occupancyNarrative .= " Critical capacity (0 available plots) has been reached in: " . implode(', ', $criticalSections) . ". Operational attention is required to direct upcoming interments toward sections with remaining capacity.";
+        } else {
+            $occupancyNarrative .= " Space allocation remains distributed with optimal capacity across active grounds.";
+        }
+
+        $keyRecommendations = [
+            "Total cemetery capacity stands at {$grandTotal} plots with an overall utilization rate of {$overallUtilizationRate}%.",
+            $highestCongested ? "Section '{$highestCongested}' exhibits highest utilization at {$highestRate}%." : "All sections exhibit balanced space distribution.",
+            $mostAvailable ? "Section '{$mostAvailable}' provides the highest relief inventory with {$mostAvailableCount} open lots." : "Inventory levels are uniform across sections.",
+            !empty($criticalSections) ? "Immediate re-zoning or capacity expansion recommended for critical sections: " . implode(', ', $criticalSections) . "." : "No sections currently at zero-lot critical thresholds."
+        ];
+
+        $executiveSummary = [
+            'total_lots' => $grandTotal,
+            'occupied_lots' => $grandOccupied,
+            'reserved_lots' => $grandReserved,
+            'available_lots' => $grandAvailable,
+            'utilized_lots' => $grandUtilized,
+            'utilization_rate' => $overallUtilizationRate,
+            'critical_sections_count' => count($criticalSections),
+            'critical_sections' => $criticalSections,
+            'highest_congested_section' => $highestCongested,
+            'highest_congestion_rate' => $highestRate,
+            'most_available_section' => $mostAvailable,
+            'most_available_count' => $mostAvailableCount,
+            'summary_narrative' => $occupancyNarrative,
+            'key_recommendations' => $keyRecommendations,
+        ];
+
         return [
             'domain' => 'occupancy',
             'source' => 'lots',
             'summary' => $stats,
-            'by_section' => $bySection,
+            'by_section' => $enrichedSections,
             'by_block' => $this->getOccupancyByBlock(),
             'by_lot_type' => $this->getOccupancyByLotType(),
+            'executive_summary' => $executiveSummary,
         ];
     }
 
@@ -51,7 +139,87 @@ class ReportController {
     public function revenue($filters = []) {
         $total = $this->paymentModel->getRevenue($filters);
         $breakdown = $this->paymentModel->getRevenueBreakdown($filters);
-        return ['total' => $total, 'breakdown' => $breakdown];
+
+        $grossTotal = (float) ($total['total'] ?? 0);
+        $totalCount = (int) ($total['count'] ?? 0);
+
+        $serviceLabels = [
+            'Lot Purchase' => 'Traditional Burial & Lot Assignment',
+            'Cremation' => 'Cremation & Columbarium Services',
+            'Relocation' => 'Transfer & Relocation Services',
+            'Renewal' => 'Lease Renewal & Maintenance Fees',
+            'Other' => 'Administrative & Miscellaneous Fees',
+        ];
+
+        $serviceBreakdown = [];
+        $topRevenueStream = null;
+        $topRevenueAmount = -1.0;
+        $topVolumeStream = null;
+        $topVolumeCount = -1;
+
+        foreach ($breakdown as $item) {
+            $type = $item['transaction_type'] ?: 'Other';
+            $itemTotal = (float) ($item['total'] ?? 0);
+            $itemCount = (int) ($item['count'] ?? 0);
+            $label = $serviceLabels[$type] ?? ($type . ' Services');
+            $percentage = $grossTotal > 0 ? round(($itemTotal / $grossTotal) * 100, 1) : 0.0;
+            $avgAmount = $itemCount > 0 ? round($itemTotal / $itemCount, 2) : 0.0;
+
+            if ($itemTotal > $topRevenueAmount) {
+                $topRevenueAmount = $itemTotal;
+                $topRevenueStream = $label;
+            }
+
+            if ($itemCount > $topVolumeCount) {
+                $topVolumeCount = $itemCount;
+                $topVolumeStream = $label;
+            }
+
+            $serviceBreakdown[] = [
+                'transaction_type' => $type,
+                'service_label' => $label,
+                'total' => $itemTotal,
+                'count' => $itemCount,
+                'percentage' => $percentage,
+                'average_amount' => $avgAmount,
+            ];
+        }
+
+        $avgTicket = $totalCount > 0 ? round($grossTotal / $totalCount, 2) : 0.0;
+
+        $revNarrative = "Total gross revenue generated across the evaluated period amounts to ₱" . number_format($grossTotal, 2) . " across {$totalCount} verified and processed transactions, yielding an average transaction value of ₱" . number_format($avgTicket, 2) . ".";
+        if ($topRevenueStream) {
+            $revNarrative .= " The primary revenue driver is {$topRevenueStream}, generating ₱" . number_format($topRevenueAmount, 2) . " (" . ($grossTotal > 0 ? round(($topRevenueAmount / $grossTotal) * 100, 1) : 0) . "% of total revenue).";
+        }
+        if ($topVolumeStream && $topVolumeStream !== $topRevenueStream) {
+            $revNarrative .= " In terms of transaction volume, {$topVolumeStream} leads with {$topVolumeCount} processed operations.";
+        }
+
+        $financialTakeaways = [
+            "Gross cemetery collections stand at ₱" . number_format($grossTotal, 2) . " across {$totalCount} recorded payment transactions.",
+            $topRevenueStream ? "Leading revenue contributor is {$topRevenueStream} (₱" . number_format($topRevenueAmount, 2) . ")." : "Collections are evenly distributed.",
+            $topVolumeStream ? "Highest transaction volume is driven by {$topVolumeStream} ({$topVolumeCount} transactions)." : "Transaction volume is consistent across services.",
+            "Average revenue per transaction is ₱" . number_format($avgTicket, 2) . "."
+        ];
+
+        $financialExecutiveSummary = [
+            'total_revenue' => $grossTotal,
+            'transaction_count' => $totalCount,
+            'average_ticket_size' => $avgTicket,
+            'top_revenue_stream' => $topRevenueStream,
+            'top_revenue_amount' => $topRevenueAmount,
+            'top_volume_stream' => $topVolumeStream,
+            'top_volume_count' => $topVolumeCount,
+            'summary_narrative' => $revNarrative,
+            'financial_takeaways' => $financialTakeaways,
+        ];
+
+        return [
+            'total' => $total,
+            'breakdown' => $breakdown,
+            'service_breakdown' => $serviceBreakdown,
+            'executive_summary' => $financialExecutiveSummary,
+        ];
     }
 
     public function recentPayments($pagination = []) {
