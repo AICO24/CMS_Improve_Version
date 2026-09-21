@@ -4,6 +4,8 @@
 .env.*.local
 
 # Python virtual environments
+venv/
+.venv/
 python-ai/venv/
 python-ai/.venv/
 __pycache__/
