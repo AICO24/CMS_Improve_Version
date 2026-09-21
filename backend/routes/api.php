@@ -2074,6 +2074,39 @@ if (preg_match('/^booking-agent\/drafts?\/(\d+)$/', $path, $matches) && $request
     exit;
 }
 
+// Documentary Requirements: Upload requirement document for booking draft
+if (preg_match('/^booking-agent\/drafts?\/(\d+)\/documents$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $input = readRequestBody();
+    $file = $input['files']['document_file'] ?? ($_FILES['document_file'] ?? null);
+    $docType = $input['document_type'] ?? ($_POST['document_type'] ?? ($input['doc_type'] ?? ($_POST['doc_type'] ?? 'death_certificate')));
+    $result = $bookingAgentController->uploadDocument((int) $matches[1], $docType, $file, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+// Documentary Requirements: Get requirements checklist and status for draft
+if (preg_match('/^booking-agent\/drafts?\/(\d+)\/documents$/', $path, $matches) && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $bookingAgentController->getDocuments((int) $matches[1], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+// Documentary Requirements: Delete uploaded requirement document from draft
+if (preg_match('/^booking-agent\/drafts?\/(\d+)\/documents\/([a-z_]+)$/', $path, $matches) && $requestMethod === 'DELETE') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $bookingAgentController->deleteDocument((int) $matches[1], $matches[2], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 // BMS-9: Unified booking history (burials, cremations, active drafts)
 if ($path === 'bookings/mine' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
