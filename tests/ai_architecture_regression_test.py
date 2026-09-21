@@ -76,12 +76,16 @@ if "module: 'Schedule'" not in my_bookings_js:
 payment_history_js = read('assets/js/pages/payment-history.js')
 if "module: 'Payment'" not in payment_history_js:
     errors.append('AI-4 regression: payment-history.js is missing its citizen-scoped assistant mount')
+# Adviser Directive: Floating AI Chat removed from history & admin pages, kept exclusively in Booking Assistant
+booking_assistant_html = read('frontend/pages/booking-assistant.html')
+if 'id="bookingAppMount"' not in booking_assistant_html or 'booking-assistant.js' not in booking_assistant_html:
+    errors.append('AI-4 regression: booking-assistant.html is missing bookingAppMount or booking-assistant.js')
 for html_file in ['frontend/pages/my-bookings.html', 'frontend/pages/payment-history.html']:
     html_text = read(html_file)
-    if 'id="aiAssistantMount"' not in html_text:
-        errors.append(f'AI-4 regression: {html_file} is missing the #aiAssistantMount div')
-    if 'ai-assistant-widget.js' not in html_text:
-        errors.append(f'AI-4 regression: {html_file} no longer loads ai-assistant-widget.js')
+    if 'id="aiAssistantMount"' in html_text:
+        errors.append(f'AI-4 regression: {html_file} must not contain #aiAssistantMount div (floating AI removed per adviser)')
+    if 'ai-assistant-widget.js' in html_text:
+        errors.append(f'AI-4 regression: {html_file} must not load ai-assistant-widget.js')
 
 # ---------- BATCH AI-5: Q&A conversation history ----------
 app_py = read('python-ai/app.py')
@@ -101,15 +105,13 @@ for key in ['ai_forecast_', 'ai_narrate_', 'ai_extract_', 'ai_chat_']:
     if f"RateLimiter::allow('{key}" not in api_routes:
         errors.append(f'AI-7 regression: routes/api.php is missing the RateLimiter guard for {key}*')
 
-# ---------- BATCH AI-8: escalated-answer badge ----------
+# ---------- BATCH AI-8: safe no-op retirement for legacy widget ----------
 widget_js = read('assets/js/shared/ai-assistant-widget.js')
-if 'ai-assistant-escalated-badge' not in widget_js:
-    errors.append('AI-8 regression: ai-assistant-widget.js no longer renders the escalated-answer badge')
-if 'appendMessage(\'ai\', result.message, result.suggested_action, result.escalated)' not in widget_js:
-    errors.append('AI-8 regression: ai-assistant-widget.js no longer passes result.escalated into appendMessage()')
+if 'initAiAssistant' not in widget_js:
+    errors.append('AI-8 regression: ai-assistant-widget.js missing safe initAiAssistant stub')
 widget_css = read('assets/css/shared/ai-assistant-widget.css')
-if '.ai-assistant-escalated-badge' not in widget_css:
-    errors.append('AI-8 regression: ai-assistant-widget.css is missing the .ai-assistant-escalated-badge style')
+if 'display: none !important' not in widget_css:
+    errors.append('AI-8 regression: ai-assistant-widget.css is missing display: none !important rule')
 
 if errors:
     print('AI ARCHITECTURE REGRESSION TEST FAILED')

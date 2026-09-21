@@ -22,7 +22,6 @@
     <link rel="stylesheet" href="../../assets/css/components/tables.css?v=2">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/shared/ai-assistant-widget.css">
 
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=4">
@@ -59,7 +58,6 @@
                         </svg>
                     </label>
                     <h3 id="pageTitle">Lot Management</h3>
-                    <div id="aiAssistantMount"></div>
                 </div>
                 <div class="user-info">
                     <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
@@ -380,10 +378,6 @@
                 <!-- 2-Column Responsive Card System: Plot Specs & Occupancy Timeline -->
                 <div class="lot-view-grid" id="viewDetails"></div>
                 
-                <!-- System-Wide AI Assistant Mount for this Specific Lot Record -->
-                <div class="lot-ai-assistant-wrapper">
-                    <div id="aiAssistantMountRecord"></div>
-                </div>
             </div>
 
             <div class="modal-footer-custom">
@@ -498,7 +492,6 @@
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/shared/button-loading.js"></script>
-    <script src="../../assets/js/shared/ai-assistant-widget.js"></script>
     <script src="../../assets/js/pages/lot-management.js"></script>
     <script>
         // Sidebar toggle

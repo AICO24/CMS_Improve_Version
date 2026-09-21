@@ -238,18 +238,18 @@ assertCondition(
 );
 
 // -------------------------------------------------------------
-// TEST 11: AI architecture regression coverage remains meaningful and aligned with canonical architecture
+// TEST 11: AI architecture is dedicated to booking-assistant and removed from non-booking floating widgets
 // -------------------------------------------------------------
-$aiRegressionScript = file_get_contents($rootDir . '/tests/ai_architecture_regression_test.py');
-$hasCanonicalAiCheck = strpos($aiRegressionScript, "my_bookings_js = read('assets/js/pages/my-bookings.js')") !== false &&
-                       strpos($aiRegressionScript, "'frontend/pages/my-bookings.html'") !== false;
-$hasAiMountInHtml = strpos($myBookingsHtml, 'id="aiAssistantMount"') !== false && strpos($myBookingsHtml, 'ai-assistant-widget.js') !== false;
-$hasAiWidgetInJs = strpos($myBookingsJs, "module: 'Schedule'") !== false && strpos($myBookingsJs, 'initAiAssistant') !== false;
+$bookingAssistantHtml = file_get_contents($rootDir . '/frontend/pages/booking-assistant.html');
+$hasBookingAssistant = strpos($bookingAssistantHtml, 'id="bookingAppMount"') !== false &&
+                       strpos($bookingAssistantHtml, 'booking-assistant.js') !== false;
+$floatingWidgetRemovedFromHistory = strpos($myBookingsHtml, 'id="aiAssistantMount"') === false &&
+                                   strpos($myBookingsHtml, 'ai-assistant-widget.js') === false;
 
 assertCondition(
-    "TEST 11: AI architecture regression coverage remains meaningful and aligned with the current canonical architecture",
-    $hasCanonicalAiCheck && $hasAiMountInHtml && $hasAiWidgetInJs,
-    "AI regression test and canonical my-bookings files must verify the Schedule-scoped citizen AI assistant"
+    "TEST 11: AI architecture is dedicated to booking-assistant and removed from non-booking floating widgets",
+    $hasBookingAssistant && $floatingWidgetRemovedFromHistory,
+    "AI assistant must be dedicated to booking-assistant.html and absent as a floating widget from my-bookings.html"
 );
 
 // -------------------------------------------------------------
