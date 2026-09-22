@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     const session = await requireRole(['admin', 'staff']);
     if (!session) return;
 
@@ -395,11 +395,11 @@ document.addEventListener('DOMContentLoaded', async function() {
                             <div class="category-name-row">
                                 <h3 class="category-name">${escapeHtml(cat.name)}</h3>
                                 ${pct.availPct > 0
-                                    ? (pct.availPct <= 20
-                                        ? `<span class="avail-hero-badge low"><i class="fas fa-triangle-exclamation"></i> Low (${pct.availPct}%)</span>`
-                                        : `<span class="avail-hero-badge high"><i class="fas fa-check-circle"></i> ${pct.availPct}% Available</span>`)
-                                    : `<span class="avail-hero-badge full"><i class="fas fa-ban"></i> 100% Occupied</span>`
-                                }
+                ? (pct.availPct <= 20
+                    ? `<span class="avail-hero-badge low"><i class="fas fa-triangle-exclamation"></i> Low (${pct.availPct}%)</span>`
+                    : `<span class="avail-hero-badge high"><i class="fas fa-check-circle"></i> ${pct.availPct}% Available</span>`)
+                : `<span class="avail-hero-badge full"><i class="fas fa-ban"></i> 100% Occupied</span>`
+            }
                             </div>
                             <div class="category-meta-row">
                                 <span class="cat-meta-pill"><i class="fas fa-map-marked-alt"></i> ${cat.sections.length} ${cat.sections.length === 1 ? 'Garden Zone' : 'Garden Zones'}</span>
@@ -439,8 +439,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <span class="body-header-sub">Click a garden zone to view plot slot matrices</span>
                     </div>
                     ${cat.sections.length
-                        ? cat.sections.map(sec => renderSectionHtml(cat.name, sec)).join('')
-                        : emptyStateHtml('fa-map', 'No Sections', 'No sections are currently assigned to this category.', true)}
+                ? cat.sections.map(sec => renderSectionHtml(cat.name, sec)).join('')
+                : emptyStateHtml('fa-map', 'No Sections', 'No sections are currently assigned to this category.', true)}
                 </div>
             </div>
         `;
@@ -1126,49 +1126,54 @@ document.addEventListener('DOMContentLoaded', async function() {
             let occupancyContent = '';
             if (lot.occupant_name) {
                 occupancyContent = `
-                    <div class="lot-view-item">
-                        <span class="lot-view-label">Current Occupant</span>
-                        <strong class="lot-view-value" style="color: #0284c7;"><i class="fas fa-user"></i> ${escapeHtml(lot.occupant_name)}</strong>
-                    </div>
-                    <div class="lot-view-item">
-                        <span class="lot-view-label">Life Dates</span>
-                        <span class="lot-view-value">${lot.date_of_birth ? 'DOB: ' + escapeHtml(lot.date_of_birth) : ''} ${lot.date_of_death ? '&bull; DOD: ' + escapeHtml(lot.date_of_death) : ''}</span>
-                    </div>
-                    <div class="lot-view-item">
-                        <span class="lot-view-label">Interment Date</span>
-                        <span class="lot-view-value">${escapeHtml(lot.burial_date || 'None recorded')}</span>
-                    </div>
-                    <div class="lot-view-item lot-view-item--action">
-                        <a href="decedent-records.html?search=${encodeURIComponent(lot.occupant_name)}" class="btn-decedent-profile-link" title="Open Decedent Profile">
+                    <div class="dossier-occupant-card">
+                        <div class="dossier-occupant-header">
+                            <div class="dossier-occupant-avatar"><i class="fas fa-user"></i></div>
+                            <div>
+                                <div class="dossier-occupant-name">${escapeHtml(lot.occupant_name)}</div>
+                                <div style="font-size: 0.72rem; color: #64748b;">
+                                    ${lot.date_of_birth ? 'DOB: ' + escapeHtml(lot.date_of_birth) : ''} ${lot.date_of_death ? '&bull; DOD: ' + escapeHtml(lot.date_of_death) : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dossier-tile" style="margin-top: 4px;">
+                            <span class="dossier-tile-label">Interment Date</span>
+                            <span class="dossier-tile-value">${escapeHtml(lot.burial_date || 'None recorded')}</span>
+                        </div>
+                        <a href="decedent-records.html?search=${encodeURIComponent(lot.occupant_name)}" class="btn-decedent-profile-link" style="margin-top: 4px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 700; color: #0284c7; text-decoration: none;" title="Open Decedent Profile">
                             <i class="fas fa-id-card"></i>
                             <span>View Decedent Profile</span>
-                            <i class="fas fa-arrow-up-right-from-square"></i>
+                            <i class="fas fa-arrow-up-right-from-square" style="font-size: 0.7rem;"></i>
                         </a>
                     </div>
                 `;
             } else if (lot.reserved_for_name) {
                 occupancyContent = `
-                    <div class="lot-view-item">
-                        <span class="lot-view-label">Reserved Beneficiary</span>
-                        <strong class="lot-view-value" style="color: #b45309;"><i class="fas fa-user-clock"></i> ${escapeHtml(lot.reserved_for_name)}</strong>
-                    </div>
-                    <div class="lot-view-item">
-                        <span class="lot-view-label">Burial Schedule</span>
-                        <span class="lot-view-value">#${lot.schedule_id || 'N/A'} (${escapeHtml(lot.burial_status || 'Reserved')})</span>
-                    </div>
-                    <div class="lot-view-item lot-view-item--action">
-                        <a href="manage-reservations.html?search=${encodeURIComponent(lot.lot_number)}" class="btn-decedent-profile-link" style="border-color: #fde68a; background: #fefce8; color: #b45309;" title="Open Reservation Details">
+                    <div class="dossier-occupant-card" style="background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.3);">
+                        <div class="dossier-occupant-header">
+                            <div class="dossier-occupant-avatar" style="background: #d97706; color: #fff;"><i class="fas fa-user-clock"></i></div>
+                            <div>
+                                <div class="dossier-occupant-name" style="color: #b45309;">${escapeHtml(lot.reserved_for_name)}</div>
+                                <div style="font-size: 0.72rem; color: #78716c;">Reserved Beneficiary</div>
+                            </div>
+                        </div>
+                        <div class="dossier-tile" style="margin-top: 4px;">
+                            <span class="dossier-tile-label">Burial Schedule</span>
+                            <span class="dossier-tile-value">#${lot.schedule_id || 'N/A'} (${escapeHtml(lot.burial_status || 'Reserved')})</span>
+                        </div>
+                        <a href="manage-reservations.html?search=${encodeURIComponent(lot.lot_number)}" class="btn-decedent-profile-link" style="margin-top: 4px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 700; color: #b45309; text-decoration: none;" title="Open Reservation Details">
                             <i class="fas fa-calendar-check"></i>
                             <span>View Reservation Details</span>
-                            <i class="fas fa-arrow-up-right-from-square"></i>
+                            <i class="fas fa-arrow-up-right-from-square" style="font-size: 0.7rem;"></i>
                         </a>
                     </div>
                 `;
             } else {
                 occupancyContent = `
-                    <div class="lot-view-item">
-                        <span class="lot-view-label">Occupancy Status</span>
-                        <span class="occupant-vacant" style="font-size: 0.88rem;"><i class="fas fa-circle-check"></i> Vacant &amp; Available for Burial</span>
+                    <div class="dossier-vacant-card">
+                        <div class="dossier-vacant-icon"><i class="fas fa-circle-check"></i></div>
+                        <strong style="font-size: 0.85rem;">Vacant &amp; Available</strong>
+                        <span style="font-size: 0.72rem; opacity: 0.85;">Plot is ready for immediate allocation or burial service.</span>
                     </div>
                 `;
             }
@@ -1185,57 +1190,58 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             }
 
-            const leaseContent = `
-                <div class="lot-view-item">
-                    <span class="lot-view-label">Lease Duration</span>
-                    <span class="lot-view-value">${lot.lease_start_date ? escapeHtml(lot.lease_start_date) : 'N/A'} &rarr; ${lot.lease_end_date ? escapeHtml(lot.lease_end_date) : 'N/A'}</span>
-                </div>
-                <div class="lot-view-item">
-                    <span class="lot-view-label">Lease Status</span>
-                    ${leaseHealthBadge}
-                </div>
-            `;
-
             const detailsHtml = `
+                <!-- Left Dossier Column: Physical Plot Specifications -->
                 <div class="lot-view-card">
                     <div class="lot-view-card-title">
-                        <i class="fas fa-monument"></i>
-                        <span>Plot Specifications</span>
+                        <i class="fas fa-compass-drafting"></i>
+                        <span>Physical &amp; Commercial Specs</span>
                     </div>
-                    <div class="lot-view-item">
-                        <span class="lot-view-label">Plot Number</span>
-                        <strong class="lot-view-value" style="color: var(--color-primary-700, #047857);">${escapeHtml(lot.lot_number)}</strong>
-                    </div>
-                    <div class="lot-view-item">
-                        <span class="lot-view-label">Section &amp; Block</span>
-                        <span class="lot-view-value"><i class="fas fa-map-pin text-muted"></i> ${escapeHtml(lot.section_name)} &bull; Block: ${escapeHtml(lot.block_name || 'N/A')}</span>
-                    </div>
-                    <div class="lot-view-item">
-                        <span class="lot-view-label">Lot Type / Category</span>
-                        <span class="lot-pill"><i class="fas ${categoryIcon(lot.lot_type_name)}"></i> ${escapeHtml(lot.lot_type_name || 'Standard')}</span>
-                    </div>
-                    <div class="lot-view-item">
-                        <span class="lot-view-label">Base Price</span>
-                        <strong class="lot-view-value" style="color: var(--color-primary-700, #047857); font-size: 1rem;">₱${formatPrice(lot.price)}</strong>
-                    </div>
-                    <div class="lot-view-item">
-                        <span class="lot-view-label">Dimensions</span>
-                        <span class="lot-view-value">${escapeHtml(lot.dimensions || 'Standard')}</span>
-                    </div>
-                    <div class="lot-view-item">
-                        <span class="lot-view-label">Notes &amp; Vicinity</span>
-                        <span class="lot-view-value text-muted">${escapeHtml(lot.location_notes || 'None recorded')}</span>
+                    <div class="dossier-tiles-grid">
+                        <div class="dossier-tile">
+                            <span class="dossier-tile-label">Plot Number</span>
+                            <span class="dossier-tile-value dossier-tile-value--highlight">${escapeHtml(lot.lot_number)}</span>
+                        </div>
+                        <div class="dossier-tile">
+                            <span class="dossier-tile-label">Base Valuation</span>
+                            <span class="dossier-tile-value dossier-tile-value--highlight">₱${formatPrice(lot.price)}</span>
+                        </div>
+                        <div class="dossier-tile">
+                            <span class="dossier-tile-label">Section &amp; Block</span>
+                            <span class="dossier-tile-value">${escapeHtml(lot.section_name)} &bull; Blk ${escapeHtml(lot.block_name || 'N/A')}</span>
+                        </div>
+                        <div class="dossier-tile">
+                            <span class="dossier-tile-label">Category</span>
+                            <span class="dossier-tile-value"><i class="fas ${categoryIcon(lot.lot_type_name)} text-emerald"></i> ${escapeHtml(lot.lot_type_name || 'Standard')}</span>
+                        </div>
+                        <div class="dossier-tile">
+                            <span class="dossier-tile-label">Dimensions</span>
+                            <span class="dossier-tile-value">${escapeHtml(lot.dimensions || '1.0m x 2.44m')}</span>
+                        </div>
+                        <div class="dossier-tile">
+                            <span class="dossier-tile-label">Vicinity / Notes</span>
+                            <span class="dossier-tile-value text-muted">${escapeHtml(lot.location_notes || 'Standard plot')}</span>
+                        </div>
                     </div>
                 </div>
 
+                <!-- Right Dossier Column: Occupancy & Lease Tenure -->
                 <div class="lot-view-card">
                     <div class="lot-view-card-title">
-                        <i class="fas fa-address-card"></i>
-                        <span>Occupancy &amp; Lease Records</span>
+                        <i class="fas fa-id-card-clip"></i>
+                        <span>Occupancy &amp; Lease Tenure</span>
                     </div>
                     ${occupancyContent}
-                    <div class="panel-divider" style="margin: 4px 0;"></div>
-                    ${leaseContent}
+                    <div class="dossier-tiles-grid" style="margin-top: 4px;">
+                        <div class="dossier-tile">
+                            <span class="dossier-tile-label">Lease Duration</span>
+                            <span class="dossier-tile-value" style="font-size: 0.76rem;">${lot.lease_start_date ? escapeHtml(lot.lease_start_date) : 'N/A'} &rarr; ${lot.lease_end_date ? escapeHtml(lot.lease_end_date) : 'N/A'}</span>
+                        </div>
+                        <div class="dossier-tile">
+                            <span class="dossier-tile-label">Tenure Health</span>
+                            <span class="dossier-tile-value">${leaseHealthBadge}</span>
+                        </div>
+                    </div>
                 </div>
             `;
             document.getElementById('viewDetails').innerHTML = detailsHtml;
@@ -1264,11 +1270,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('viewModal').style.display = 'flex';
             lockBodyScroll();
 
-            initAiAssistant({
-                mountSelector: '#aiAssistantMountRecord',
-                context: { scope: 'entity', entity_type: 'Lot', entity_id: lotId },
-                label: 'Ask AI About This Lot',
-            });
+            if (typeof initAiAssistant === 'function' && document.getElementById('aiAssistantMountRecord')) {
+                initAiAssistant({
+                    mountSelector: '#aiAssistantMountRecord',
+                    context: { scope: 'entity', entity_type: 'Lot', entity_id: lotId },
+                    label: 'Ask AI About This Lot',
+                });
+            }
 
             document.getElementById('editFromView').onclick = () => {
                 document.getElementById('viewModal').style.display = 'none';
@@ -1345,10 +1353,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function openAddModal() {
-        document.getElementById('modalTitle').innerText = 'Add New Lot';
+        document.getElementById('modalTitle').innerText = 'Add Cemetery Plot';
         document.getElementById('lotForm').reset();
         document.getElementById('lotId').value = '';
         editingOriginalStatus = null;
+
+        const modeBadge = document.getElementById('lotModalModeBadge');
+        if (modeBadge) modeBadge.innerText = 'New Record';
 
         // Hide lifecycle status override in Add mode to keep modal sleek and avoid inner scrolling
         const overrideGroup = document.getElementById('lotStatusOverrideGroup');
@@ -1392,6 +1403,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('lotNotes').value = 'Standard cemetery plot';
 
         updateLotNumberPreview();
+        updateLotModalLivePreview();
         document.getElementById('lotModal').style.display = 'flex';
         lockBodyScroll();
     }
@@ -1399,7 +1411,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     async function openEditModal(lotId) {
         try {
             const lot = await apiRequest(`lots/${lotId}`);
-            document.getElementById('modalTitle').innerText = 'Edit Lot';
+            document.getElementById('modalTitle').innerText = 'Edit Plot Parameters';
             document.getElementById('lotId').value = lot.lot_id;
             document.getElementById('lotNumber').value = lot.lot_number;
             document.getElementById('lotSection').value = lot.section_name || '';
@@ -1410,15 +1422,69 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('lotNotes').value = lot.location_notes || '';
             editingOriginalStatus = lot.status;
 
+            const modeBadge = document.getElementById('lotModalModeBadge');
+            if (modeBadge) modeBadge.innerText = 'Edit Record';
+
             // Show lifecycle status override in Edit mode
             const overrideGroup = document.getElementById('lotStatusOverrideGroup');
             if (overrideGroup) overrideGroup.style.display = 'block';
 
             await populateFormDropdowns(lot.section_name, lot.block_id);
+            updateLotModalLivePreview();
             document.getElementById('lotModal').style.display = 'flex';
             lockBodyScroll();
         } catch (error) {
             alert('Failed to load lot: ' + error.message);
+        }
+    }
+
+    function updateLotModalLivePreview() {
+        const isEditMode = !!document.getElementById('lotId')?.value;
+        const modeBadge = document.getElementById('lotModalModeBadge');
+        if (modeBadge) {
+            modeBadge.innerText = isEditMode ? 'Edit Record' : 'New Record';
+        }
+
+        const lotNumber = (document.getElementById('lotNumber')?.value || '').trim() || (isEditMode ? 'L-PLOT' : 'L-AUTO');
+        const twinPlotTitle = document.getElementById('twinPlotTitle');
+        if (twinPlotTitle) twinPlotTitle.innerText = lotNumber;
+
+        const sectionSelect = document.getElementById('lotSection');
+        const blockSelect = document.getElementById('lotBlock');
+        const secName = sectionSelect?.selectedOptions?.[0]?.text || 'Section';
+        const blkName = blockSelect?.selectedOptions?.[0]?.text || 'Block';
+        const twinLocationDisplay = document.getElementById('twinLocationDisplay');
+        if (twinLocationDisplay) {
+            twinLocationDisplay.innerHTML = `${escapeHtml(secName)} &bull; ${escapeHtml(blkName)}`;
+        }
+
+        const typeSelect = document.getElementById('lotType');
+        const typeName = typeSelect?.selectedOptions?.[0]?.text || 'Standard Plot';
+        const twinCategoryText = document.getElementById('twinCategoryText');
+        if (twinCategoryText) twinCategoryText.innerText = typeName;
+
+        const dimensions = (document.getElementById('lotDimensions')?.value || '').trim() || '1.0m x 2.44m';
+        const twinDimensionsVal = document.getElementById('twinDimensionsVal');
+        if (twinDimensionsVal) twinDimensionsVal.innerText = dimensions;
+
+        const price = parseFloat(document.getElementById('lotPrice')?.value || 0);
+        const twinPriceVal = document.getElementById('twinPriceVal');
+        if (twinPriceVal) {
+            twinPriceVal.innerText = isNaN(price) ? '₱0.00' : `₱${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        const status = document.getElementById('lotStatus')?.value || 'Available';
+        const twinStatusBeacon = document.getElementById('twinStatusBeacon');
+        const twinStatusText = document.getElementById('twinStatusText');
+        if (twinStatusText) twinStatusText.innerText = status.toUpperCase();
+        if (twinStatusBeacon) {
+            twinStatusBeacon.className = `twin-beacon-pill twin-beacon-pill--${status.toLowerCase()}`;
+        }
+
+        const twinHash = document.getElementById('twinHash');
+        if (twinHash) {
+            const cleanLot = lotNumber.replace(/[^A-Za-z0-9]/g, '');
+            twinHash.innerText = isEditMode ? `LOT-${cleanLot || 'REC'}` : (cleanLot && cleanLot !== 'LAUTO' ? `LOT-${cleanLot}` : 'LOT-AUTO');
         }
     }
 
@@ -1433,6 +1499,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!blockId) {
             lotNumberInput.placeholder = 'Leave blank to auto-generate';
             if (hint) hint.innerText = 'Leave blank to auto-generate sequentially';
+            updateLotModalLivePreview();
             return;
         }
         const blockName = blockSelect.selectedOptions[0]?.text || '';
@@ -1441,6 +1508,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         lotNumberInput.value = lotName;
         lotNumberInput.placeholder = `e.g. ${lotName}`;
         if (hint) hint.innerText = `Auto-generated sequential plot: ${lotName}`;
+        updateLotModalLivePreview();
     }
 
     async function populateFormDropdowns(selectedSection = '', selectedBlockId = '') {
@@ -1470,7 +1538,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         const typeSelect = document.getElementById('lotType');
-        typeSelect.innerHTML = lotTypes.map(type => 
+        typeSelect.innerHTML = lotTypes.map(type =>
             `<option value="${type.lot_type_id || type.type_id}" data-price="${type.base_price || 50000}">${type.type_name}</option>`
         ).join('');
 
@@ -1482,8 +1550,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         sectionSelect.onchange = async () => {
             await populateFormDropdowns(sectionSelect.value);
             updateLotNumberPreview();
+            updateLotModalLivePreview();
         };
-        blockSelect.onchange = () => updateLotNumberPreview();
+        blockSelect.onchange = () => {
+            updateLotNumberPreview();
+            updateLotModalLivePreview();
+        };
         typeSelect.onchange = () => {
             const isEditMode = !!document.getElementById('lotId').value;
             if (!isEditMode) {
@@ -1492,12 +1564,27 @@ document.addEventListener('DOMContentLoaded', async function() {
                     document.getElementById('lotPrice').value = parseFloat(opt.dataset.price).toFixed(2);
                 }
             }
+            updateLotModalLivePreview();
         };
 
         updateLotNumberPreview();
+        updateLotModalLivePreview();
     }
 
-    document.getElementById('lotForm').addEventListener('submit', async function(e) {
+    // Live reactive bindings for Digital Twin artifact
+    ['lotNumber', 'lotPrice', 'lotDimensions', 'lotNotes'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', updateLotModalLivePreview);
+            el.addEventListener('change', updateLotModalLivePreview);
+        }
+    });
+    const lotStatusEl = document.getElementById('lotStatus');
+    if (lotStatusEl) {
+        lotStatusEl.addEventListener('change', updateLotModalLivePreview);
+    }
+
+    document.getElementById('lotForm').addEventListener('submit', async function (e) {
         e.preventDefault();
         const id = document.getElementById('lotId').value;
         const data = {
@@ -1603,7 +1690,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Automatically prefill lot type (respect active category filter if set)
         if (batchType && lotTypes.length) {
-            batchType.innerHTML = lotTypes.map(t => 
+            batchType.innerHTML = lotTypes.map(t =>
                 `<option value="${t.lot_type_id || t.type_id}" data-price="${t.base_price || 50000}">${escapeHtml(t.type_name)}</option>`
             ).join('');
             if (filters.category) {
@@ -1971,14 +2058,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         unlockBodyScroll();
     };
 
-    document.querySelector('.close')?.addEventListener('click', closeLotModal);
-    document.querySelector('.close-lot-modal-btn')?.addEventListener('click', closeLotModal);
-
-    document.querySelector('.close-view')?.addEventListener('click', closeViewModal);
-    document.getElementById('closeViewModalBtn')?.addEventListener('click', closeViewModal);
-
-    document.getElementById('closeBatchModalTop')?.addEventListener('click', closeBatchModal);
-    document.getElementById('closeBatchModalBottom')?.addEventListener('click', closeBatchModal);
+    document.querySelectorAll('.close, .close-lot-modal-btn, #closeLotModalTop').forEach(el => el.addEventListener('click', closeLotModal));
+    document.querySelectorAll('.close-view, .close-view-modal-btn, #closeViewModalTop, #closeViewModalBtn').forEach(el => el.addEventListener('click', closeViewModal));
+    document.querySelectorAll('.close-batch, .close-batch-modal-btn, #closeBatchModalTop, #closeBatchModalBottom').forEach(el => el.addEventListener('click', closeBatchModal));
 
     window.addEventListener('click', (e) => {
         const lotModal = document.getElementById('lotModal');
