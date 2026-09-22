@@ -325,71 +325,169 @@
         </main>
     </div>
 
-    <!-- Premium Cremation Details Modal -->
-    <div class="modal" id="cremationDetailModal">
-        <div class="modal-content modal--md resmodal-window">
-            <button type="button" class="close-view" id="closeDetailModal" aria-label="Close">&times;</button>
-            <div class="modal-header">
-                <div class="modal-header__title-group">
-                    <div class="modal-header__icon"><i class="fas fa-fire-burner"></i></div>
-                    <div>
-                        <h3 class="modal-title">Cremation Request Details</h3>
-                        <p class="modal-subtitle">Service schedule, niche allocation, and payment overview</p>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         ANTIGRAVITY ORIGINAL: ZERO-SCROLL CREMATION COMMAND CENTER
+         Horizontal Split-Deck Architecture: Ceremonial Dossier & Columbarium Sanctuary Twin
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="modal modal-deck-overlay" id="cremationDetailModal" role="dialog" aria-modal="true" aria-labelledby="cremDetailModalTitle">
+        <div class="modal-deck-card modal-deck-card--view resmodal-window">
+            <div class="deck-header">
+                <div class="deck-header-info">
+                    <div class="deck-avatar-halo deck-avatar-halo--teal">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <div class="deck-title-block">
+                        <div class="deck-meta-strip">
+                            <span class="deck-kicker"><i class="fas fa-place-of-worship"></i> Columbarium Sanctuary Service</span>
+                            <span class="deck-badge deck-badge--teal" id="detailCremationBadge">Request Record</span>
+                        </div>
+                        <h3 id="cremDetailModalTitle" class="deck-heading">Cremation Details &amp; Niche Matrix</h3>
                     </div>
                 </div>
-            </div>
-            <div class="modal-body" id="cremationDetailBody">
-                <p>Loading...</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-secondary btn-action-pill" id="printDetailModalBtn" onclick="window.print()">
-                    <i class="fas fa-print"></i> Print Record
+                <button type="button" class="deck-close-btn" id="closeDetailModal" aria-label="Close modal">
+                    <i class="fas fa-xmark"></i>
                 </button>
-                <button type="button" class="btn-primary btn-action-pill" id="closeDetailModalBtn">
-                    <i class="fas fa-check"></i> Done
-                </button>
+            </div>
+            
+            <div class="modal-body modal-body--no-pad" id="cremationDetailBody">
+                <div class="resmodal-loading">
+                    <i class="fas fa-circle-notch fa-spin"></i>
+                    <span>Loading cremation details...</span>
+                </div>
+            </div>
+
+            <div class="deck-footer">
+                <div class="deck-footer-left">
+                    <button type="button" class="btn-deck-secondary" id="printDetailModalBtn" onclick="window.print()">
+                        <i class="fas fa-print"></i>
+                        <span>Print Record</span>
+                    </button>
+                </div>
+                <div class="deck-footer-right" id="detailModalActionsRight">
+                    <button type="button" class="btn-deck-primary btn-deck-teal" id="closeDetailModalBtn">
+                        <i class="fas fa-check"></i>
+                        <span>Done</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Premium Cash Payment Modal -->
-    <div class="modal" id="cashPaymentModal">
-        <div class="modal-content modal--sm modal-cash resmodal-window">
-            <button type="button" class="close-view" id="closeCashModal" aria-label="Close">&times;</button>
-            <div class="modal-header">
-                <div class="modal-header__title-group">
-                    <div class="modal-header__icon modal-header__icon--cash"><i class="fas fa-hand-holding-dollar"></i></div>
-                    <div>
-                        <h3 class="modal-title">Record Counter Payment</h3>
-                        <p class="modal-subtitle">Direct cash settlement &amp; niche assignment</p>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         ANTIGRAVITY ORIGINAL: HIGH-PRECISION CREMATION CASHIERING COMMAND CENTER
+         Horizontal Split-Deck Cashiering Engine with Live Change Calculator
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="modal modal-deck-overlay" id="cashPaymentModal" role="dialog" aria-modal="true" aria-labelledby="cremCashModalTitle">
+        <div class="modal-deck-card modal-deck-card--cash resmodal-window">
+            <div class="deck-header">
+                <div class="deck-header-info">
+                    <div class="deck-avatar-halo deck-avatar-halo--gold">
+                        <i class="fas fa-hand-holding-dollar"></i>
+                    </div>
+                    <div class="deck-title-block">
+                        <div class="deck-meta-strip">
+                            <span class="deck-kicker"><i class="fas fa-cash-register"></i> Columbarium Cashiering Dispatch</span>
+                            <span class="deck-badge deck-badge--gold">Counter Settlement</span>
+                        </div>
+                        <h3 id="cremCashModalTitle" class="deck-heading">Settle Cremation Fee &amp; Assign Niche</h3>
                     </div>
                 </div>
+                <button type="button" class="deck-close-btn" id="closeCashModal" aria-label="Close modal">
+                    <i class="fas fa-xmark"></i>
+                </button>
             </div>
-            <form id="cashPaymentForm">
-                <div class="modal-body">
-                    <input type="hidden" id="cashPaymentCremationId">
-                    <div class="form-group">
-                        <label for="cashPaymentAmount">Amount received (&#8369;)</label>
-                        <input type="number" id="cashPaymentAmount" min="0.01" step="0.01" required>
+
+            <form id="cashPaymentForm" class="deck-form-engine">
+                <input type="hidden" id="cashPaymentCremationId">
+                <div class="split-deck-body">
+                    <!-- LEFT DECK: Cashiering Input Engine -->
+                    <div class="deck-col deck-col--cashier">
+                        <div class="deck-section-title">
+                            <i class="fas fa-receipt"></i>
+                            <span>Settlement Parameters</span>
+                        </div>
+
+                        <div class="deck-field">
+                            <label for="cashPaymentAmount" class="deck-label">Amount Received (PHP) <span class="deck-req">*</span></label>
+                            <div class="input-currency-wrap">
+                                <span class="input-currency-prefix">&#8369;</span>
+                                <input type="number" id="cashPaymentAmount" class="modal-input deck-input-highlight deck-input-highlight--teal" min="0.01" step="0.01" placeholder="0.00" required>
+                            </div>
+                        </div>
+
+                        <!-- Quick Denomination Chips -->
+                        <div class="denomination-chips-row">
+                            <span class="denom-label">Quick Tender:</span>
+                            <button type="button" class="btn-denom-chip" data-amount="500">+₱500</button>
+                            <button type="button" class="btn-denom-chip" data-amount="1000">+₱1,000</button>
+                            <button type="button" class="btn-denom-chip" data-amount="5000">+₱5,000</button>
+                            <button type="button" class="btn-denom-chip" data-amount="10000">+₱10,000</button>
+                            <button type="button" class="btn-denom-chip btn-denom-chip--exact" id="btnExactAmount">Exact</button>
+                        </div>
+
+                        <div class="deck-form-grid-2">
+                            <div class="deck-field">
+                                <label for="cashPaymentMethod" class="deck-label">Payment Method</label>
+                                <select id="cashPaymentMethod" class="modal-select">
+                                    <option value="Cash">Cash</option>
+                                    <option value="Check">Check</option>
+                                    <option value="Bank Transfer">Bank Transfer</option>
+                                    <option value="GCash">GCash / Online</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+
+                            <div class="deck-field">
+                                <label for="cashPaymentReceipt" class="deck-label">Receipt Number (OR#)</label>
+                                <input type="text" id="cashPaymentReceipt" class="modal-input" placeholder="Auto-generated if blank">
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="cashPaymentMethod">Payment method</label>
-                        <select id="cashPaymentMethod">
-                            <option value="Cash">Cash</option>
-                            <option value="Check">Check</option>
-                            <option value="Bank Transfer">Bank Transfer</option>
-                            <option value="Other">Other</option>
-                        </select>
+
+                    <!-- RIGHT DECK: Live Settlement Twin & Stub Preview -->
+                    <div class="deck-col deck-col--twin">
+                        <div class="deck-section-title">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                            <span>Columbarium Settlement Stub</span>
+                        </div>
+
+                        <div class="cash-stub-card cash-stub-card--teal">
+                            <div class="cash-stub-watermark"><i class="fas fa-place-of-worship"></i></div>
+                            <div class="cash-stub-header">
+                                <div class="cash-stub-brand">
+                                    <strong>COLUMBARIUM REVENUE DISPATCH</strong>
+                                    <span>Municipal Cremation &amp; Niche Registry</span>
+                                </div>
+                                <span class="cash-stub-stamp cash-stub-stamp--teal">VERIFIED CASHIER</span>
+                            </div>
+
+                            <div class="cash-stub-calc-row">
+                                <span>Amount Tendered:</span>
+                                <strong id="cashStubTenderedDisplay">₱0.00</strong>
+                            </div>
+
+                            <div class="cash-stub-change-box cash-stub-change-box--teal">
+                                <span class="change-label">Change Due</span>
+                                <strong class="change-value change-value--teal" id="cashStubChangeDisplay">₱0.00</strong>
+                            </div>
+
+                            <div class="cash-stub-callout">
+                                <i class="fas fa-circle-check"></i>
+                                <span>Marks the cremation <strong>Completed</strong>, auto-assigns a niche, and records a verified revenue entry.</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="cashPaymentReceipt">Receipt number <span class="muted">(optional — leave blank to auto-generate)</span></label>
-                        <input type="text" id="cashPaymentReceipt" placeholder="Leave blank to auto-generate">
-                    </div>
-                    <p class="help">Marks the cremation Completed, auto-assigns a niche, and creates a Verified payment record so it appears in Revenue Reports.</p>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary btn-action-pill" id="cancelCashModal">Cancel</button>
-                    <button type="submit" class="btn-primary btn-action-pill" id="submitCashPayment"><i class="fas fa-check"></i> Confirm Payment &amp; Complete</button>
+
+                <div class="deck-footer">
+                    <button type="button" class="btn-deck-secondary" id="cancelCashModal">
+                        <i class="fas fa-xmark"></i>
+                        <span>Cancel</span>
+                    </button>
+                    <button type="submit" class="btn-deck-primary btn-deck-teal" id="submitCashPayment">
+                        <i class="fas fa-circle-check"></i>
+                        <span>Confirm Payment &amp; Complete Service</span>
+                    </button>
                 </div>
             </form>
         </div>

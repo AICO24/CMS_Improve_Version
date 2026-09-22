@@ -206,7 +206,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         // manage-reservations.js's identical convention — resolve that
         // first rather than offering two competing actions on the same row.
         if (cremation.status === 'Pending' && !openExceptionIds.has(cremation.cremation_id)) {
-            buttons.push(`<button class="btn-row-action btn-row-action--cash" data-action="complete-cash" data-id="${cremation.cremation_id}" title="Complete request via cash payment"><i class="fas fa-money-bill-wave"></i> Complete (Cash)</button>`);
+            const rowDue = cremation.payment_amount || cremation.price || cremation.total_amount || '';
+            buttons.push(`<button class="btn-row-action btn-row-action--cash" data-action="complete-cash" data-id="${cremation.cremation_id}" data-amount="${rowDue}" title="Complete request via cash payment"><i class="fas fa-money-bill-wave"></i> Complete (Cash)</button>`);
         }
         if (cremation.status === 'Pending' || cremation.status === 'Scheduled') {
             buttons.push(`<button class="btn-row-action btn-row-action--cancel" data-action="cancel" data-id="${cremation.cremation_id}" title="Cancel request"><i class="fas fa-xmark"></i> Cancel</button>`);
@@ -346,11 +347,56 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    function openCashPaymentModal(id) {
+    // F.1: High-Precision Split-Deck Counter Payment Engine
+    let currentAmountDue = 0;
+
+    const cashStubTenderedDisplay = document.getElementById('cashStubTenderedDisplay');
+    const cashStubChangeDisplay = document.getElementById('cashStubChangeDisplay');
+
+    function updateCashCalculation() {
+        const tendered = parseFloat(cashPaymentAmount.value) || 0;
+        if (cashStubTenderedDisplay) {
+            cashStubTenderedDisplay.textContent = `₱${tendered.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+        if (cashStubChangeDisplay) {
+            const change = Math.max(0, tendered - currentAmountDue);
+            cashStubChangeDisplay.textContent = `₱${change.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (tendered < currentAmountDue && tendered > 0) {
+                const diff = currentAmountDue - tendered;
+                cashStubChangeDisplay.innerHTML = `<span style="font-size:0.85rem; color:#dc2626;">Underpaid: -₱${diff.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
+            }
+        }
+    }
+
+    cashPaymentAmount.addEventListener('input', updateCashCalculation);
+
+    // Wire up denomination chips
+    document.querySelectorAll('.btn-denom-chip[data-amount]').forEach((chip) => {
+        chip.addEventListener('click', () => {
+            const addVal = parseFloat(chip.getAttribute('data-amount')) || 0;
+            const curVal = parseFloat(cashPaymentAmount.value) || 0;
+            cashPaymentAmount.value = (curVal + addVal).toFixed(2);
+            updateCashCalculation();
+        });
+    });
+
+    const btnExact = document.getElementById('btnExactAmount');
+    if (btnExact) {
+        btnExact.addEventListener('click', () => {
+            if (currentAmountDue > 0) {
+                cashPaymentAmount.value = currentAmountDue.toFixed(2);
+                updateCashCalculation();
+            }
+        });
+    }
+
+    function openCashPaymentModal(id, amountDue = 0) {
         cashPaymentCremationId.value = id;
-        cashPaymentAmount.value = '';
+        currentAmountDue = parseFloat(amountDue) || 0;
+        cashPaymentAmount.value = currentAmountDue > 0 ? currentAmountDue.toFixed(2) : '';
         cashPaymentMethod.value = 'Cash';
         cashPaymentReceipt.value = '';
+        updateCashCalculation();
         cashModal.style.display = 'flex';
         cashPaymentAmount.focus();
     }
@@ -401,19 +447,44 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (event.target === cashModal) closeCashPaymentModal();
     });
 
+    function computeCremationCountdown(cremationDateStr) {
+        if (!cremationDateStr) return 'Date Pending';
+        const parts = String(cremationDateStr).split('-');
+        if (parts.length !== 3) return 'Scheduled';
+        const sched = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        sched.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((sched.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays < 0) return `${Math.abs(diffDays)} days past`;
+        if (diffDays === 0) return 'Today';
+        if (diffDays === 1) return 'Tomorrow';
+        return `In ${diffDays} days`;
+    }
+
     async function viewCremation(id) {
-        detailModalBody.innerHTML = '<p>Loading...</p>';
+        detailModalBody.innerHTML = `
+            <div class="resmodal-loading" style="padding: 40px 20px; text-align: center; color: #0f766e;">
+                <i class="fas fa-circle-notch fa-spin" style="font-size: 2rem; margin-bottom: 12px; display: block;"></i>
+                <span style="font-weight: 700;">Loading cremation dossier...</span>
+            </div>
+        `;
         detailModal.style.display = 'flex';
         try {
             const cremation = await api.request(`cremations/${id}`, { method: 'GET' });
             if (cremation.error) {
-                detailModalBody.innerHTML = `<p class="text-danger">${escapeHtml(cremation.error)}</p>`;
+                detailModalBody.innerHTML = `
+                    <div class="resmodal-error" style="padding: 40px 20px; text-align: center; color: #dc2626;">
+                        <i class="fas fa-triangle-exclamation" style="font-size: 2rem; margin-bottom: 8px;"></i>
+                        <span style="display: block; font-weight: 700;">${escapeHtml(cremation.error)}</span>
+                    </div>
+                `;
                 return;
             }
 
             const decedentFullName = (cremation.first_name || cremation.last_name)
                 ? `${cremation.first_name || ''} ${cremation.last_name || ''}`.trim()
-                : (cremation.provisional_name || 'Unspecified Decedent');
+                : (cremation.provisional_name || 'Unassigned Decedent');
             const isProvisional = !cremation.first_name && !cremation.last_name && Boolean(cremation.provisional_name);
 
             const paymentStatus = cremation.payment_status || 'Unpaid';
@@ -422,10 +493,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             const isPending = normalizedPayment === 'pending';
             const formattedAmount = cremation.payment_amount
                 ? `₱${Number(cremation.payment_amount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                : '₱0.00';
+                : (cremation.price ? `₱${Number(cremation.price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '₱0.00');
 
-            const receiptNumber = cremation.payment_receipt_number || 'None on file';
-            const paymentDate = cremation.payment_date || 'None';
+            const receiptNumber = cremation.payment_receipt_number || 'Auto-generated upon cashiering';
+            const paymentDate = cremation.payment_date || 'Pending';
             const paymentMethod = cremation.payment_method || 'Standard';
 
             // Clean, readable date formatting
@@ -435,7 +506,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (parts.length === 3) {
                     const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
                     if (!isNaN(d.getTime())) {
-                        formattedDate = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                        formattedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                     }
                 }
             }
@@ -454,104 +525,147 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             }
 
+            const countdownText = computeCremationCountdown(cremation.cremation_date);
+            const detailBadge = document.getElementById('detailCremationBadge');
+            if (detailBadge) {
+                detailBadge.textContent = `Request #${cremation.cremation_id}`;
+            }
+
+            const nicheDisplay = cremation.niche_number ? `NICHE ${escapeHtml(cremation.niche_number)}` : 'PENDING ALLOCATION';
+            const columbariumName = cremation.columbarium || 'General Sanctuary Wing';
+
             detailModalBody.innerHTML = `
-                <div class="res-modal-content">
-                    <!-- Top Summary Card: Decedent & Status -->
-                    <div class="res-hero-card">
-                        <div class="res-hero-main">
-                            <span class="res-hero-booking">Request #${escapeHtml(cremation.cremation_id)}</span>
-                            <h3 class="res-hero-name">${escapeHtml(decedentFullName)}</h3>
-                            <span class="res-hero-type ${isProvisional ? 'is-provisional' : 'is-registered'}">
-                                ${isProvisional ? 'Provisional Intake Request' : 'Registered Cemetery Record'}
-                            </span>
+                <div class="split-deck-body">
+                    <!-- LEFT DECK: Profile & Ceremonial Dossier -->
+                    <div class="deck-col deck-col--dossier">
+                        <div class="deck-section-title">
+                            <i class="fas fa-id-card"></i>
+                            <span>Cremation &amp; Decedent Dossier</span>
                         </div>
-                        <div class="res-hero-badges">
-                            ${buildStatusBadge(cremation.status)}
+
+                        <div class="res-dossier-card">
+                            <div class="res-profile-header">
+                                <div class="res-profile-avatar" style="background: rgba(20, 184, 166, 0.15); color: #0f766e;">
+                                    <i class="fas fa-fire-burner"></i>
+                                </div>
+                                <div class="res-profile-meta">
+                                    <h4 class="res-profile-name">${escapeHtml(decedentFullName)}</h4>
+                                    <span class="res-type-pill ${isProvisional ? 'res-type-pill--provisional' : 'res-type-pill--registered'}">
+                                        <i class="fas ${isProvisional ? 'fa-hourglass-half' : 'fa-certificate'}"></i>
+                                        ${isProvisional ? 'Provisional Request' : 'Registered Record'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="res-data-grid">
+                                <div class="res-data-item">
+                                    <span class="res-data-label">Applicant / Kin</span>
+                                    <strong class="res-data-value">${escapeHtml(cremation.created_by_name || 'Direct Entry')}</strong>
+                                </div>
+                                <div class="res-data-item">
+                                    <span class="res-data-label">Ash Storage</span>
+                                    <span class="res-data-value">${escapeHtml(cremation.ash_storage_location || 'Columbarium Niche')}</span>
+                                </div>
+                                <div class="res-data-item">
+                                    <span class="res-data-label">Intake Date</span>
+                                    <span class="res-data-value">${escapeHtml(bookedDate)}</span>
+                                </div>
+                                <div class="res-data-item">
+                                    <span class="res-data-label">Cremation Status</span>
+                                    <span class="res-data-value">${buildStatusBadge(cremation.status)}</span>
+                                </div>
+                            </div>
+
+                            ${cremation.notes ? `
+                                <div class="res-notes-box">
+                                    <i class="fas fa-quote-left"></i>
+                                    <span>${escapeHtml(cremation.notes)}</span>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
 
-                    <!-- 1. Cremation & Columbarium Information -->
-                    <div class="res-section-card">
-                        <h4 class="res-section-title">Cremation &amp; Niche Allocation</h4>
-                        <div class="res-grid-fields">
-                            <div class="res-field">
-                                <span class="res-field-label">Scheduled Cremation Date</span>
-                                <strong class="res-field-value res-field-value--highlight">${escapeHtml(formattedDate)}</strong>
+                    <!-- RIGHT DECK: Columbarium Sanctuary Digital Twin -->
+                    <div class="deck-col deck-col--twin">
+                        <div class="deck-section-title">
+                            <i class="fas fa-place-of-worship"></i>
+                            <span>Sanctuary Twin &amp; Niche Locator</span>
+                        </div>
+
+                        <div class="crem-twin-card">
+                            <div class="res-twin-top">
+                                <div class="res-twin-locator" style="color: #0f766e;">
+                                    <i class="fas fa-layer-group"></i>
+                                    <span>${escapeHtml(columbariumName)}</span>
+                                </div>
+                                <span class="res-countdown-chip" style="color: #0f766e; border-color: #2dd4bf;">
+                                    <i class="fas fa-clock"></i>
+                                    <span>${escapeHtml(countdownText)}</span>
+                                </span>
                             </div>
-                            <div class="res-field">
-                                <span class="res-field-label">Columbarium &amp; Niche</span>
-                                <strong class="res-field-value">${escapeHtml(cremation.columbarium || 'Unspecified')} &mdash; ${escapeHtml(cremation.niche_number ? 'Niche ' + cremation.niche_number : 'Not yet assigned')}</strong>
+
+                            <div class="res-twin-plot-badge">
+                                <span class="crem-plot-monogram">${escapeHtml(nicheDisplay)}</span>
                             </div>
-                            <div class="res-field">
-                                <span class="res-field-label">Ash Storage Location</span>
-                                <span class="res-field-value">${escapeHtml(cremation.ash_storage_location || 'Not specified')}</span>
+
+                            <div class="res-twin-schedule-strip">
+                                <i class="fas fa-calendar-day" style="color: #0d9488;"></i>
+                                <div>
+                                    <strong>Scheduled Service:</strong>
+                                    <span> ${escapeHtml(formattedDate)}</span>
+                                </div>
                             </div>
-                            <div class="res-field">
-                                <span class="res-field-label">Applicant Name</span>
-                                <span class="res-field-value">${escapeHtml(cremation.created_by_name || 'Direct Entry')}</span>
-                            </div>
-                            <div class="res-field">
-                                <span class="res-field-label">Date Booked</span>
-                                <span class="res-field-value">${escapeHtml(bookedDate)}</span>
+
+                            <div class="res-twin-valuation-card">
+                                <div>
+                                    <span class="deck-kicker" style="color: #0f766e;">Settlement Fee</span>
+                                    <div class="res-val-amount">${formattedAmount}</div>
+                                </div>
+                                <div class="res-val-meta">
+                                    <span class="deck-badge ${isVerified ? 'deck-badge--teal' : 'deck-badge--gold'}">
+                                        <i class="fas ${isVerified ? 'fa-circle-check' : 'fa-receipt'}"></i>
+                                        ${escapeHtml(paymentStatus)}
+                                    </span>
+                                    <span class="small muted" style="font-family: monospace; font-size: 0.72rem; margin-top: 4px;">OR# ${escapeHtml(receiptNumber)}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- 2. Payment Summary -->
-                    <div class="res-section-card">
-                        <div class="res-section-header">
-                            <h4 class="res-section-title">Payment Information</h4>
-                            <span class="res-payment-badge ${isVerified ? 'verified' : (isPending ? 'pending' : 'unpaid')}">
-                                ${escapeHtml(paymentStatus)}
-                            </span>
-                        </div>
-                        <div class="res-grid-fields">
-                            <div class="res-field">
-                                <span class="res-field-label">Settlement Amount</span>
-                                <strong class="res-field-value res-field-value--amount ${isVerified ? 'text-verified' : ''}">${formattedAmount}</strong>
-                            </div>
-                            <div class="res-field">
-                                <span class="res-field-label">Payment Method</span>
-                                <span class="res-field-value">${escapeHtml(paymentMethod)}</span>
-                            </div>
-                            <div class="res-field">
-                                <span class="res-field-label">Official Receipt (OR#)</span>
-                                <span class="res-field-value font-mono">${escapeHtml(receiptNumber)}</span>
-                            </div>
-                            <div class="res-field">
-                                <span class="res-field-label">Transaction Date</span>
-                                <span class="res-field-value">${escapeHtml(paymentDate)}</span>
-                            </div>
-                        </div>
-                        ${(cremation.status === 'Pending' && !isVerified) ? `
-                            <div class="res-inline-action">
-                                <span>No verified payment on record yet.</span>
-                                <button type="button" class="btn btn-sm btn-primary" id="detailQuickPayBtn">
-                                    Record Payment
-                                </button>
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    <!-- 3. Notes / Remarks (Only if provided) -->
-                    ${cremation.notes ? `
-                        <div class="res-section-card res-section-card--notes">
-                            <h4 class="res-section-title">Notes &amp; Special Instructions</h4>
-                            <p class="res-notes-content">${escapeHtml(cremation.notes)}</p>
-                        </div>
-                    ` : ''}
                 </div>
             `;
 
-            const quickPayBtn = document.getElementById('detailQuickPayBtn');
-            if (quickPayBtn) {
-                quickPayBtn.addEventListener('click', () => {
-                    closeDetailModal();
-                    openCashPaymentModal(cremation.cremation_id);
-                });
+            // Setup footer actions
+            const actionsRight = document.getElementById('detailModalActionsRight');
+            if (actionsRight) {
+                actionsRight.innerHTML = '';
+                if (cremation.status === 'Pending' && !isVerified) {
+                    const payBtn = document.createElement('button');
+                    payBtn.type = 'button';
+                    payBtn.className = 'btn-deck-primary btn-deck-teal';
+                    payBtn.innerHTML = '<i class="fas fa-hand-holding-dollar"></i> <span>Settle Payment</span>';
+                    payBtn.addEventListener('click', () => {
+                        closeDetailModal();
+                        const rawAmt = cremation.payment_amount || cremation.price || 0;
+                        openCashPaymentModal(cremation.cremation_id, rawAmt);
+                    });
+                    actionsRight.appendChild(payBtn);
+                }
+
+                const closeBtn = document.createElement('button');
+                closeBtn.type = 'button';
+                closeBtn.className = 'btn-deck-primary btn-deck-teal';
+                closeBtn.innerHTML = '<i class="fas fa-check"></i> <span>Done</span>';
+                closeBtn.addEventListener('click', closeDetailModal);
+                actionsRight.appendChild(closeBtn);
             }
         } catch (error) {
-            detailModalBody.innerHTML = '<p class="text-danger">Unable to load cremation details right now.</p>';
+            console.error('Failed to load cremation details', error);
+            detailModalBody.innerHTML = `
+                <div class="resmodal-error" style="padding: 40px 20px; text-align: center; color: #dc2626;">
+                    <i class="fas fa-circle-exclamation" style="font-size: 2rem; margin-bottom: 8px;"></i>
+                    <span style="display: block; font-weight: 700;">Unable to load cremation details right now.</span>
+                </div>
+            `;
         }
     }
 
@@ -559,8 +673,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         detailModal.style.display = 'none';
     }
 
-    document.getElementById('closeDetailModal').addEventListener('click', closeDetailModal);
-    document.getElementById('closeDetailModalBtn').addEventListener('click', closeDetailModal);
+    const closeDetailModalTop = document.getElementById('closeDetailModal');
+    if (closeDetailModalTop) {
+        closeDetailModalTop.addEventListener('click', closeDetailModal);
+    }
+    const closeDetailModalBtn = document.getElementById('closeDetailModalBtn');
+    if (closeDetailModalBtn) {
+        closeDetailModalBtn.addEventListener('click', closeDetailModal);
+    }
     detailModal.addEventListener('click', (event) => {
         if (event.target === detailModal) closeDetailModal();
     });
@@ -602,7 +722,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         if (action === 'view') await viewCremation(id);
         else if (action === 'complete') await completeCremation(id, button);
-        else if (action === 'complete-cash') openCashPaymentModal(id);
+        else if (action === 'complete-cash') {
+            const rowAmt = parseFloat(button.getAttribute('data-amount')) || 0;
+            openCashPaymentModal(id, rowAmt);
+        }
         else if (action === 'cancel') await cancelCremation(id, button);
     });
 

@@ -2728,4 +2728,295 @@
     color: #ffffff;
 }
 
+/* =========================================================================
+   ANTIGRAVITY ZERO-SCROLL SPLIT-DECK ARCHITECTURE: LOGISTICS COBALT
+   Dual Spatial Transit Hologram & Executive Relocation Protocol
+   ========================================================================= */
+
+.deck-avatar-halo--cobalt {
+    background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+}
+
+.btn-deck-cobalt {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid #1d4ed8 !important;
+    padding: 10px 22px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.30);
+    transition: all 0.2s ease;
+}
+
+.btn-deck-cobalt:hover {
+    background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.40);
+}
+
+/* Modal Window Constraint: Zero-Scroll Guarantee */
+#requestModal .modal-deck-card,
+#viewModal .modal-deck-card {
+    max-height: 94vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#requestModal .split-deck-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#requestModal .split-deck-body,
+#viewModal .split-deck-body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    background: #f8fafc;
+}
+
+#requestModal .deck-pane,
+#viewModal .deck-pane {
+    padding: 20px 22px;
+    overflow-y: auto;
+    max-height: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(37, 99, 235, 0.2) transparent;
+}
+
+#requestModal .deck-pane--left,
+#viewModal .deck-pane--left {
+    border-right: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+/* ── Dual Spatial Transit Deck Hologram ── */
+.reloc-transit-deck {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(241, 245, 249, 0.9) 100%);
+    border: 1.5px solid rgba(37, 99, 235, 0.22);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.06);
+    position: relative;
+    overflow: hidden;
+}
+
+.reloc-transit-deck::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #1d4ed8, #60a5fa, #1d4ed8);
+}
+
+.transit-deck-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #1d4ed8;
+    margin-bottom: 12px;
+}
+
+.transit-cards-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+}
+
+.transit-plot-box {
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 10px 12px;
+    text-align: center;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.transit-plot-box.transit-active {
+    border-color: #2563eb;
+    background: #eff6ff;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+}
+
+.transit-box-sub {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    margin-bottom: 4px;
+}
+
+.transit-box-lot {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f172a;
+    font-family: 'Fraunces', Georgia, serif;
+    line-height: 1.2;
+}
+
+.transit-box-sec {
+    font-size: 0.72rem;
+    color: #2563eb;
+    font-weight: 600;
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.transit-arrow-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0 4px;
+}
+
+.transit-truck-icon {
+    font-size: 0.95rem;
+    color: #2563eb;
+}
+
+.transit-vector-line {
+    width: 42px;
+    height: 3px;
+    background: #cbd5e1;
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+}
+
+.transit-vector-pulse {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 16px;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, #2563eb, transparent);
+    animation: transitVectorFlow 1.6s infinite linear;
+}
+
+@keyframes transitVectorFlow {
+    0% { transform: translateX(-16px); }
+    100% { transform: translateX(42px); }
+}
+
+.transit-arrow-icon {
+    font-size: 0.8rem;
+    color: #2563eb;
+}
+
+/* AI Dropzone inside Split-Deck Left Pane */
+#requestModal .split-modal-ai-pane {
+    padding: 12px 14px;
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 12px;
+}
+
+#requestModal .ai-dropzone {
+    margin: 8px 0;
+    padding: 14px 10px;
+}
+
+/* View Modal Dossier Layout Adjustments */
+#viewModal .view-hero-card {
+    margin-bottom: 12px;
+}
+
+#viewModal .view-details-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+#viewModal .documents-section {
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+
+#viewModal .activity-timeline-section {
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+
+/* Dark Mode Overrides for Relocation Deck */
+[data-theme="dark"] #requestModal .split-deck-body,
+[data-theme="dark"] #viewModal .split-deck-body {
+    background: #090e17 !important;
+}
+
+[data-theme="dark"] #requestModal .deck-pane--left,
+[data-theme="dark"] #viewModal .deck-pane--left {
+    border-right-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .reloc-transit-deck {
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.25) 0%, rgba(15, 23, 42, 0.8) 100%) !important;
+    border-color: rgba(59, 130, 246, 0.35) !important;
+}
+
+[data-theme="dark"] .transit-plot-box {
+    background: #0f172a !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-theme="dark"] .transit-plot-box.transit-active {
+    background: rgba(37, 99, 235, 0.18) !important;
+    border-color: #3b82f6 !important;
+}
+
+[data-theme="dark"] .transit-box-lot {
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .transit-box-sub {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .transit-box-sec {
+    color: #60a5fa !important;
+}
+
+[data-theme="dark"] .transit-vector-line {
+    background: #334155 !important;
+}
+
+[data-theme="dark"] #requestModal .split-modal-ai-pane,
+[data-theme="dark"] #viewModal .documents-section,
+[data-theme="dark"] #viewModal .activity-timeline-section {
+    background: #0f172a !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+
 

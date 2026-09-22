@@ -356,67 +356,113 @@
         </main>
     </div>
 
-    <!-- Add/Edit Request Modal -->
-    <div id="requestModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="modal-content modal-content--split">
-            <button type="button" class="close" id="closeModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
-            <h3 id="modalTitle">New Relocation Request</h3>
-            <form id="requestForm">
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         ANTIGRAVITY ZERO-SCROLL SPLIT-DECK ARCHITECTURE: RELOCATION PROTOCOL
+         Left: Dual Spatial Transit Hologram & AI Document Clearance
+         Right: Structured Relocation Request & Exhumation Logistics
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div id="requestModal" class="modal modal-deck-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-deck-card modal-deck-card--request resmodal-window">
+            <div class="deck-header">
+                <div class="deck-header-info">
+                    <div class="deck-avatar-halo deck-avatar-halo--cobalt">
+                        <i class="fas fa-truck-moving"></i>
+                    </div>
+                    <div class="deck-title-block">
+                        <div class="deck-meta-strip">
+                            <span class="deck-kicker" style="color: #2563eb;"><i class="fas fa-route"></i> LOGISTICS &amp; EXHUMATION PROTOCOL</span>
+                        </div>
+                        <h3 id="modalTitle" class="deck-title">New Relocation Request</h3>
+                    </div>
+                </div>
+                <button type="button" class="deck-close-btn" id="closeModal" aria-label="Close modal"><i class="fas fa-xmark"></i></button>
+            </div>
+
+            <form id="requestForm" class="split-deck-form">
                 <input type="hidden" id="requestId">
 
-                <div class="split-modal-layout">
-                    <!-- Left Column: AI Document Assistant & Live Preview -->
-                    <div class="split-modal-ai-pane">
-                        <div class="ai-pane-header">
-                            <span class="ai-pane-title">
-                                <i class="fas fa-wand-magic-sparkles"></i> AI Document Assistant
-                            </span>
-                            <span class="ai-pane-badge">Optional</span>
-                        </div>
-                        <p class="ai-pane-desc">Upload an exhumation permit, transfer clearance, or death certificate to auto-fill or attach.</p>
-
-                        <div class="ai-doc-selector-group">
-                            <label for="relocationDocType" class="field-label-sm">Document Type</label>
-                            <select id="relocationDocType" aria-label="Document type">
-                                <option value="exhumation_permit">Exhumation Permit</option>
-                                <option value="transfer_clearance">Transfer Clearance</option>
-                                <option value="family_consent">Family Consent Form</option>
-                                <option value="other">Other Document</option>
-                            </select>
-                        </div>
-
-                        <div class="ai-dropzone" id="relocDropzone">
-                            <input type="file" id="relocFileInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
-                            <div class="ai-dropzone-placeholder" id="relocDropzonePlaceholder">
-                                <i class="fas fa-cloud-arrow-up"></i>
-                                <span>Click or drag permit document here</span>
-                                <small>JPG, PNG, or PDF (Max 10MB)</small>
+                <div class="split-deck-body">
+                    <!-- Left Column: Spatial Transit Vector & AI Document Clearance -->
+                    <div class="deck-pane deck-pane--left">
+                        <!-- Dual Spatial Transit Vector -->
+                        <div class="reloc-transit-deck">
+                            <div class="transit-deck-header">
+                                <i class="fas fa-compass"></i> Live Spatial Transfer Vector
                             </div>
-                            <div class="ai-preview-container" id="relocPreviewContainer" style="display: none;">
-                                <img id="relocPreviewImg" src="" alt="Document Preview" style="display: none;">
-                                <div id="relocPreviewPdf" class="cert-pdf-preview" style="display: none;">
-                                    <i class="fas fa-file-pdf"></i>
-                                    <span id="relocPdfName">document.pdf</span>
+                            <div class="transit-cards-row">
+                                <div class="transit-plot-box" id="originPlotBox">
+                                    <span class="transit-box-sub">Origin Resting Place</span>
+                                    <div class="transit-box-lot" id="originLotCardDisplay">Not Selected</div>
+                                    <div class="transit-box-sec" id="originSecCardDisplay">Select decedent</div>
                                 </div>
-                                <button type="button" class="btn-clear-preview" id="clearRelocFileBtn" title="Remove file">&times;</button>
+                                <div class="transit-arrow-wrap" title="Ground Transfer En Route">
+                                    <i class="fas fa-truck-moving fa-bounce transit-truck-icon"></i>
+                                    <div class="transit-vector-line">
+                                        <span class="transit-vector-pulse"></span>
+                                    </div>
+                                    <i class="fas fa-angles-right transit-arrow-icon"></i>
+                                </div>
+                                <div class="transit-plot-box" id="destPlotBox">
+                                    <span class="transit-box-sub">Target Ground Lot</span>
+                                    <div class="transit-box-lot" id="destLotCardDisplay">Not Selected</div>
+                                    <div class="transit-box-sec" id="destSecCardDisplay">Select destination</div>
+                                </div>
                             </div>
                         </div>
 
-                        <button type="button" class="btn-extract-ai" id="extractRelocDocBtn">
-                            <i class="fas fa-wand-magic-sparkles"></i>
-                            <span>Extract &amp; Auto-Fill Decedent</span>
-                        </button>
+                        <!-- AI Document Clearance Assistant -->
+                        <div class="split-modal-ai-pane">
+                            <div class="ai-pane-header">
+                                <span class="ai-pane-title">
+                                    <i class="fas fa-wand-magic-sparkles"></i> AI Document Assistant
+                                </span>
+                                <span class="ai-pane-badge">Optional</span>
+                            </div>
+                            <p class="ai-pane-desc">Upload an exhumation permit or clearance to auto-fill or attach.</p>
 
-                        <div class="extraction-status-chips" id="relocExtractionChips" style="display: none;"></div>
-                        <p class="certificate-upload-hint" id="relocUploadHint">Permit file will be attached automatically to this relocation record upon save.</p>
+                            <div class="ai-doc-selector-group">
+                                <label for="relocationDocType" class="field-label-sm">Document Type</label>
+                                <select id="relocationDocType" aria-label="Document type">
+                                    <option value="exhumation_permit">Exhumation Permit</option>
+                                    <option value="transfer_clearance">Transfer Clearance</option>
+                                    <option value="family_consent">Family Consent Form</option>
+                                    <option value="other">Other Document</option>
+                                </select>
+                            </div>
+
+                            <div class="ai-dropzone" id="relocDropzone">
+                                <input type="file" id="relocFileInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
+                                <div class="ai-dropzone-placeholder" id="relocDropzonePlaceholder">
+                                    <i class="fas fa-cloud-arrow-up"></i>
+                                    <span>Click or drag permit document here</span>
+                                    <small>JPG, PNG, or PDF (Max 10MB)</small>
+                                </div>
+                                <div class="ai-preview-container" id="relocPreviewContainer" style="display: none;">
+                                    <img id="relocPreviewImg" src="" alt="Document Preview" style="display: none;">
+                                    <div id="relocPreviewPdf" class="cert-pdf-preview" style="display: none;">
+                                        <i class="fas fa-file-pdf"></i>
+                                        <span id="relocPdfName">document.pdf</span>
+                                    </div>
+                                    <button type="button" class="btn-clear-preview" id="clearRelocFileBtn" title="Remove file">&times;</button>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn-extract-ai" id="extractRelocDocBtn">
+                                <i class="fas fa-wand-magic-sparkles"></i>
+                                <span>Extract &amp; Auto-Fill Decedent</span>
+                            </button>
+
+                            <div class="extraction-status-chips" id="relocExtractionChips" style="display: none;"></div>
+                            <p class="certificate-upload-hint" id="relocUploadHint">Permit file will be attached automatically to this relocation record upon save.</p>
+                        </div>
                     </div>
 
                     <!-- Right Column: Structured Relocation Form -->
-                    <div class="split-modal-form-pane">
+                    <div class="deck-pane deck-pane--right">
                         <div class="form-pane-content">
-                            <!-- Section 1: Decedent & Current Location (Automated) -->
+                            <!-- Section 1: Decedent & Origin -->
                             <div class="form-section-header">
-                                <i class="fas fa-user-tag"></i> Decedent &amp; Origin Lot (Automated)
+                                <i class="fas fa-user-tag"></i> Decedent &amp; Origin Lot (Auto-Locked)
                             </div>
                             <div class="reloc-form-grid">
                                 <div class="form-group full-width">
@@ -427,19 +473,14 @@
                                     <small class="field-hint" id="decedentHint">Current burial lot and section will be detected and locked automatically.</small>
                                 </div>
 
-                                <div class="form-group">
-                                    <label for="fromLotDisplay">Origin Lot (Current)</label>
+                                <div class="form-group" style="display: none;">
                                     <input type="text" id="fromLotDisplay" readonly placeholder="Auto-detected upon selection" class="input-locked">
                                     <input type="hidden" id="fromLotId">
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="fromSectionDisplay">Origin Section</label>
                                     <input type="text" id="fromSectionDisplay" readonly placeholder="Auto-detected" class="input-locked">
                                 </div>
                             </div>
 
-                            <!-- Section 2: Destination & Route Logistics -->
+                            <!-- Section 2: Destination Ground Lot -->
                             <div class="form-section-header">
                                 <i class="fas fa-map-location-dot"></i> Destination Lot &amp; Logistics
                             </div>
@@ -453,7 +494,7 @@
                                 </div>
                             </div>
 
-                            <!-- Section 3: Transfer Reason & Justification -->
+                            <!-- Section 3: Justification -->
                             <div class="form-section-header">
                                 <i class="fas fa-file-lines"></i> Relocation Reason &amp; Justification
                             </div>
@@ -463,7 +504,7 @@
                                     <textarea id="reason" rows="3" required placeholder="e.g. Family request for consolidation, lease term completed, court-ordered transfer..."></textarea>
                                 </div>
 
-                                <div class="form-group" id="statusGroup" style="display: none;">
+                                <div class="form-group full-width" id="statusGroup" style="display: none;">
                                     <label for="requestStatus">Status</label>
                                     <select id="requestStatus">
                                         <option value="Pending">Pending</option>
@@ -474,91 +515,108 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="modal-form-actions">
-                            <button type="button" class="btn-secondary" id="cancelRequestBtn">Cancel</button>
-                            <button type="submit" class="btn-save bookmarkBtn" id="saveRequestBtn">
-                                <span class="IconContainer">
-                                    <i class="fas fa-save icon"></i>
-                                </span>
-                                <span class="text">Save Request</span>
-                            </button>
-                        </div>
+                <div class="deck-footer">
+                    <div class="deck-footer-status" style="font-size: 0.8rem; color: #64748b; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-shield-halved" style="color: #2563eb;"></i> Exhumation clearance &amp; records verified upon save.
+                    </div>
+                    <div class="modal-form-actions" style="border-top: none; padding-top: 0; margin-top: 0;">
+                        <button type="button" class="btn-deck-cancel" id="cancelRequestBtn">Cancel</button>
+                        <button type="submit" class="btn-deck-submit btn-deck-cobalt" id="saveRequestBtn">
+                            <i class="fas fa-save"></i> Save Request
+                        </button>
                     </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- View/Approve Modal (Organized Decedent Records Reference Layout) -->
-    <div id="viewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
-        <div class="modal-content modal--view">
-            <button type="button" class="close-view" aria-label="Close"><i class="fas fa-xmark"></i></button>
-            <div class="modal-header-compact view-modal-header">
-                <div class="modal-header-icon-wrap view-header-icon">
-                    <i class="fas fa-truck-moving"></i>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         ANTIGRAVITY ZERO-SCROLL SPLIT-DECK ARCHITECTURE: VIEW RELOCATION DOSSIER
+         Left: Clearance Details & Spatial Transfer Logistics
+         Right: Attached Permits & Audit Activity Stream
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div id="viewModal" class="modal modal-deck-overlay" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
+        <div class="modal-deck-card modal-deck-card--view resmodal-window">
+            <div class="deck-header">
+                <div class="deck-header-info">
+                    <div class="deck-avatar-halo deck-avatar-halo--cobalt">
+                        <i class="fas fa-truck-moving"></i>
+                    </div>
+                    <div class="deck-title-block">
+                        <div class="deck-meta-strip">
+                            <span class="deck-kicker" style="color: #2563eb;"><i class="fas fa-file-invoice"></i> OFFICIAL LOGISTICS DOSSIER</span>
+                        </div>
+                        <h3 id="viewModalTitle" class="deck-title">Relocation Request Details</h3>
+                    </div>
                 </div>
-                <div>
-                    <h3 id="viewModalTitle">Relocation Request Details</h3>
-                    <p class="modal-header-subtitle">Exhumation clearance, lot transfer, and authorized documentation</p>
-                </div>
+                <button type="button" class="deck-close-btn close-view" aria-label="Close modal"><i class="fas fa-xmark"></i></button>
             </div>
 
-            <!-- View Details Container (Hero Card + 2-Column Details Grid) -->
-            <div id="viewDetails"></div>
+            <div class="split-deck-body">
+                <!-- Left Column: Dossier Hero Card & Logistics Grid -->
+                <div class="deck-pane deck-pane--left">
+                    <div id="viewDetails"></div>
+                </div>
 
-            <!-- Attached Documents & Permits -->
-            <div class="documents-section">
-                <div class="section-title-wrap">
-                    <h4 class="view-section-title"><i class="fas fa-folder-open"></i> Attached Documents & Permits</h4>
-                </div>
-                <div id="viewDocumentsList" class="documents-list"></div>
-                <div class="documents-upload-bar">
-                    <select id="documentTypeSelect" aria-label="Document type" class="document-type-select">
-                        <option value="relocation_permit">Relocation Permit</option>
-                        <option value="exhumation_permit">Exhumation Permit</option>
-                        <option value="transfer_clearance">Transfer Clearance</option>
-                        <option value="family_consent">Family Consent</option>
-                        <option value="death_certificate">Death Certificate</option>
-                        <option value="other">Other Document</option>
-                    </select>
-                    <label for="documentFileInput" class="custom-file-picker" id="documentFileLabel" tabindex="0" role="button">
-                        <i class="fas fa-paperclip"></i>
-                        <span id="documentFileText">Select file (.pdf, .jpg, .png)</span>
-                    </label>
-                    <input type="file" id="documentFileInput"
-                        accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" hidden>
-                    <button type="button" class="btn-secondary upload-doc-btn" id="uploadDocumentBtn">
-                        <i class="fas fa-arrow-up-from-bracket"></i> Upload
-                    </button>
-                </div>
-            </div>
+                <!-- Right Column: Attached Permits & Audit Timeline -->
+                <div class="deck-pane deck-pane--right">
+                    <!-- Attached Documents & Permits -->
+                    <div class="documents-section">
+                        <div class="section-title-wrap">
+                            <h4 class="view-section-title"><i class="fas fa-folder-open"></i> Attached Documents &amp; Permits</h4>
+                        </div>
+                        <div id="viewDocumentsList" class="documents-list"></div>
+                        <div class="documents-upload-bar">
+                            <select id="documentTypeSelect" aria-label="Document type" class="document-type-select">
+                                <option value="relocation_permit">Relocation Permit</option>
+                                <option value="exhumation_permit">Exhumation Permit</option>
+                                <option value="transfer_clearance">Transfer Clearance</option>
+                                <option value="family_consent">Family Consent</option>
+                                <option value="death_certificate">Death Certificate</option>
+                                <option value="other">Other Document</option>
+                            </select>
+                            <label for="documentFileInput" class="custom-file-picker" id="documentFileLabel" tabindex="0" role="button">
+                                <i class="fas fa-paperclip"></i>
+                                <span id="documentFileText">Select file (.pdf, .jpg, .png)</span>
+                            </label>
+                            <input type="file" id="documentFileInput"
+                                accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" hidden>
+                            <button type="button" class="btn-secondary upload-doc-btn" id="uploadDocumentBtn">
+                                <i class="fas fa-arrow-up-from-bracket"></i> Upload
+                            </button>
+                        </div>
+                    </div>
 
-            <!-- Activity & Audit Trail -->
-            <div class="activity-timeline-section">
-                <div class="section-title-wrap">
-                    <h4 class="view-section-title"><i class="fas fa-clock-rotate-left"></i> Activity & Audit Trail</h4>
+                    <!-- Activity & Audit Trail -->
+                    <div class="activity-timeline-section" style="margin-top: 14px;">
+                        <div class="section-title-wrap">
+                            <h4 class="view-section-title"><i class="fas fa-clock-rotate-left"></i> Activity &amp; Audit Trail</h4>
+                        </div>
+                        <div id="viewActivityTimeline" class="activity-timeline"></div>
+                    </div>
                 </div>
-                <div id="viewActivityTimeline" class="activity-timeline"></div>
             </div>
 
             <!-- Modal Action Footer -->
-            <div class="view-modal-footer">
+            <div class="deck-footer">
                 <div class="modal-actions-left">
                     <button type="button" class="btn-print-clearance" id="printClearanceBtn">
                         <i class="fas fa-print"></i>
                         <span>Print Clearance Slip</span>
                     </button>
                 </div>
-                <div class="modal-actions-right">
-                    <button type="button" class="btn-approve" id="approveBtn" style="display:none;">Approve</button>
-                    <button type="button" class="btn-complete" id="completeBtn" style="display:none;">Mark Complete</button>
-                    <button type="button" class="btn-deny" id="denyBtn" style="display:none;">Deny</button>
+                <div class="modal-actions-right" style="display: flex; gap: 8px; align-items: center;">
+                    <button type="button" class="btn-approve" id="approveBtn" style="display:none;"><i class="fas fa-check"></i> Approve</button>
+                    <button type="button" class="btn-complete" id="completeBtn" style="display:none;"><i class="fas fa-circle-check"></i> Mark Complete</button>
+                    <button type="button" class="btn-deny" id="denyBtn" style="display:none;"><i class="fas fa-ban"></i> Deny</button>
                     <button type="button" class="btn-edit" id="editFromView" style="display:none;">
-                        <span class="edit-text">Edit Request</span>
                         <span class="edit-icon"><i class="fas fa-pen"></i></span>
+                        <span class="edit-text">Edit Request</span>
                     </button>
-                    <button type="button" class="btn-deny" id="deleteFromView" style="display:none;">Delete</button>
+                    <button type="button" class="btn-deny" id="deleteFromView" style="display:none;"><i class="fas fa-trash"></i> Delete</button>
                 </div>
             </div>
         </div>

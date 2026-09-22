@@ -572,6 +572,31 @@ document.addEventListener('DOMContentLoaded', async function() {
             decedentHint.textContent = 'Current burial lot and section will be detected and locked automatically.';
             decedentHint.style.color = '';
         }
+
+        const originLotCardDisplay = document.getElementById('originLotCardDisplay');
+        const originSecCardDisplay = document.getElementById('originSecCardDisplay');
+        const originPlotBox = document.getElementById('originPlotBox');
+        if (originLotCardDisplay) originLotCardDisplay.textContent = 'Not Selected';
+        if (originSecCardDisplay) originSecCardDisplay.textContent = 'Select decedent';
+        if (originPlotBox) originPlotBox.classList.remove('transit-active');
+    }
+
+    function updateDestinationLotDisplay(lotId) {
+        const destLotCardDisplay = document.getElementById('destLotCardDisplay');
+        const destSecCardDisplay = document.getElementById('destSecCardDisplay');
+        const destPlotBox = document.getElementById('destPlotBox');
+        if (!destLotCardDisplay) return;
+
+        const lot = cachedLots.find(l => Number(l.lot_id) === Number(lotId));
+        if (lot) {
+            destLotCardDisplay.textContent = `Lot ${lot.lot_number}`;
+            if (destSecCardDisplay) destSecCardDisplay.textContent = lot.section_name || 'General Section';
+            if (destPlotBox) destPlotBox.classList.add('transit-active');
+        } else {
+            destLotCardDisplay.textContent = 'Not Selected';
+            if (destSecCardDisplay) destSecCardDisplay.textContent = 'Select destination';
+            if (destPlotBox) destPlotBox.classList.remove('transit-active');
+        }
     }
 
     function populateDestinationLots(excludeLotId = null, selectedLotId = null) {
@@ -586,6 +611,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         if (availableLots.length === 0) {
             toLotSelect.innerHTML = '<option value="">No available destination lots found</option>';
+            updateDestinationLotDisplay(null);
             return;
         }
 
@@ -597,6 +623,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (selectedLotId) {
             toLotSelect.value = selectedLotId;
         }
+        updateDestinationLotDisplay(toLotSelect.value);
     }
 
     function handleDecedentSelection(decedentId, preserveToLotId = null) {
@@ -605,6 +632,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         const fromLotId = document.getElementById('fromLotId');
         const fromSectionDisplay = document.getElementById('fromSectionDisplay');
         const decedentHint = document.getElementById('decedentHint');
+        const originLotCardDisplay = document.getElementById('originLotCardDisplay');
+        const originSecCardDisplay = document.getElementById('originSecCardDisplay');
+        const originPlotBox = document.getElementById('originPlotBox');
 
         if (!decedent || !decedent.lot_id) {
             resetOriginLotFields();
@@ -620,6 +650,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (fromLotId) fromLotId.value = decedent.lot_id;
         if (fromLotDisplay) fromLotDisplay.value = `Lot ${decedent.lot_number || decedent.lot_id}`;
         if (fromSectionDisplay) fromSectionDisplay.value = decedent.section_name || 'General Section';
+
+        if (originLotCardDisplay) originLotCardDisplay.textContent = `Lot ${decedent.lot_number || decedent.lot_id}`;
+        if (originSecCardDisplay) originSecCardDisplay.textContent = decedent.section_name || 'General Section';
+        if (originPlotBox) originPlotBox.classList.add('transit-active');
 
         if (decedentHint) {
             decedentHint.innerHTML = `<i class="fas fa-circle-check" style="color: #10b981;"></i> Current resting place verified: <strong>Lot ${escapeHtml(decedent.lot_number || '')} (${escapeHtml(decedent.section_name || '')})</strong>.`;
@@ -1337,6 +1371,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (statusGroup) statusGroup.style.display = 'none';
         resetDocumentUpload();
         resetOriginLotFields();
+        updateDestinationLotDisplay(null);
         populateDropdowns();
         requestModal.style.display = 'flex';
     }
@@ -1384,6 +1419,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (decedentSelectEl) {
         decedentSelectEl.addEventListener('change', (e) => {
             handleDecedentSelection(e.target.value);
+        });
+    }
+
+    // Destination lot selection change listener (Live Transit Hologram)
+    const toLotSelectEl = document.getElementById('toLotId');
+    if (toLotSelectEl) {
+        toLotSelectEl.addEventListener('change', (e) => {
+            updateDestinationLotDisplay(e.target.value);
         });
     }
 
