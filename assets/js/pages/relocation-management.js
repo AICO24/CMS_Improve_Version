@@ -5,17 +5,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     // System-Wide AI Assistant: page-level, always visible in the header —
     // the per-request one below (mounted fresh in the view modal) is a
     // separate instance for "explain this specific relocation request".
-    initAiAssistant({
-        mountSelector: '#aiAssistantMount',
-        context: { scope: 'module', module: 'Relocation' },
-        greeting: "Hello! I'm your AI assistant for Relocation & Exhumation. How can I help you today?",
-        suggestions: [
-            { icon: 'fa-truck-moving', label: 'Recent requests', question: 'What relocation requests have been made recently, and what is their status?' },
-            { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions related to relocation?' },
-            { icon: 'fa-circle-question', label: 'How does auto-approval work?', question: 'How does relocation auto-approval work?' },
-            { icon: 'fa-list-check', label: 'Pending vs completed', question: 'How many relocation requests are pending versus completed?' },
-        ],
-    });
+    if (typeof initAiAssistant === 'function' && document.querySelector('#aiAssistantMount')) {
+        initAiAssistant({
+            mountSelector: '#aiAssistantMount',
+            context: { scope: 'module', module: 'Relocation' },
+            greeting: "Hello! I'm your AI assistant for Relocation & Exhumation. How can I help you today?",
+            suggestions: [
+                { icon: 'fa-truck-moving', label: 'Recent requests', question: 'What relocation requests have been made recently, and what is their status?' },
+                { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions related to relocation?' },
+                { icon: 'fa-circle-question', label: 'How does auto-approval work?', question: 'How does relocation auto-approval work?' },
+                { icon: 'fa-list-check', label: 'Pending vs completed', question: 'How many relocation requests are pending versus completed?' },
+            ],
+        });
+    }
 
     document.getElementById('logoutBtn').addEventListener('click', () => {
         api.logout();
@@ -1669,3 +1671,21 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     await refreshAll();
 });
+
+(function initFooter() {
+    const yearEl = document.getElementById('footerYear');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
+    const timeEl = document.getElementById('footerLiveTime');
+    const pulseEl = document.querySelector('.footer-pulse-ring');
+    function stampFooterTime() {
+        const now = new Date();
+        const formatted = now.toLocaleString('en-PH', {
+            weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true
+        });
+        if (timeEl) timeEl.textContent = formatted;
+        if (pulseEl) pulseEl.style.display = 'block';
+    }
+    stampFooterTime();
+    window.stampFooterTime = stampFooterTime;
+})();

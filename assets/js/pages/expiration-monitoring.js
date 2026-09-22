@@ -3,17 +3,19 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (!user) return;
 
     // AI Assistant widget
-    initAiAssistant({
-        mountSelector: '#aiAssistantMount',
-        context: { scope: 'module', module: 'Expiration' },
-        greeting: "Hello! I'm your AI assistant for Expiration Monitoring. How can I help you today?",
-        suggestions: [
-            { icon: 'fa-calendar-week', label: "What's expiring next week?", question: 'Which lot leases are expiring next week, and on what exact dates?' },
-            { icon: 'fa-hourglass-half', label: 'Expiring this month', question: 'Which leases are expiring within the next 30 days?' },
-            { icon: 'fa-rotate', label: 'Renewal status', question: 'How many leases have been renewed versus not renewed?' },
-            { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions related to expiration or leases?' },
-        ],
-    });
+    if (typeof initAiAssistant === 'function' && document.querySelector('#aiAssistantMount')) {
+        initAiAssistant({
+            mountSelector: '#aiAssistantMount',
+            context: { scope: 'module', module: 'Expiration' },
+            greeting: "Hello! I'm your AI assistant for Expiration Monitoring. How can I help you today?",
+            suggestions: [
+                { icon: 'fa-calendar-week', label: "What's expiring next week?", question: 'Which lot leases are expiring next week, and on what exact dates?' },
+                { icon: 'fa-hourglass-half', label: 'Expiring this month', question: 'Which leases are expiring within the next 30 days?' },
+                { icon: 'fa-rotate', label: 'Renewal status', question: 'How many leases have been renewed versus not renewed?' },
+                { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions related to expiration or leases?' },
+            ],
+        });
+    }
 
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.querySelector('.sidebar');
@@ -1111,3 +1113,21 @@ document.addEventListener('DOMContentLoaded', async function () {
     await updateNotificationBadge();
     setInterval(updateNotificationBadge, 30000);
 });
+
+(function initFooter() {
+    const yearEl = document.getElementById('footerYear');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
+    const timeEl = document.getElementById('footerLiveTime');
+    const pulseEl = document.querySelector('.footer-pulse-ring');
+    function stampFooterTime() {
+        const now = new Date();
+        const formatted = now.toLocaleString('en-PH', {
+            weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true
+        });
+        if (timeEl) timeEl.textContent = formatted;
+        if (pulseEl) pulseEl.style.display = 'block';
+    }
+    stampFooterTime();
+    window.stampFooterTime = stampFooterTime;
+})();
