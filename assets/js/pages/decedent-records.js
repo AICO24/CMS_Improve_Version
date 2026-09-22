@@ -603,6 +603,15 @@ document.addEventListener('DOMContentLoaded', async function () {
         sectionInput.value = selectedLot ? selectedLot.section_name : '';
     });
 
+    // Check for query parameters (e.g. redirected from Lot Management "View Decedent Profile")
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialSearch = urlParams.get('search');
+    if (initialSearch) {
+        currentQuery = initialSearch.trim();
+        if (searchInput) searchInput.value = currentQuery;
+        if (searchClearBtn) searchClearBtn.style.display = 'block';
+    }
+
     await refreshPage();
 
     async function refreshPage() {

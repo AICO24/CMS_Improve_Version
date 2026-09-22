@@ -2278,6 +2278,181 @@
     width: 100%;
 }
 
+/* ── Interactive Slot Matrix Hover Popover Tooltip ── */
+.slot-tooltip {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(6px);
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: #f8fafc;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.4), 0 4px 10px -2px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.18s;
+    z-index: 9999;
+    min-width: 170px;
+    text-align: left;
+}
+
+.slot-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: rgba(15, 23, 42, 0.96) transparent transparent transparent;
+}
+
+.slot-box:hover .slot-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+.slot-tooltip-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.slot-tooltip-lot {
+    font-weight: 800;
+    font-size: 0.82rem;
+    color: #ffffff;
+    letter-spacing: 0.02em;
+}
+
+.slot-tooltip-badge {
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.slot-tooltip-badge.status-available {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.slot-tooltip-badge.status-occupied {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.slot-tooltip-badge.status-reserved {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.slot-tooltip-badge.status-expired {
+    background: rgba(148, 163, 184, 0.2);
+    color: #cbd5e1;
+    border: 1px solid rgba(203, 213, 225, 0.3);
+}
+
+.slot-tooltip-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.slot-tooltip-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: #cbd5e1;
+}
+
+.slot-tooltip-row i {
+    width: 14px;
+    text-align: center;
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+.slot-tooltip-row.occupant {
+    color: #38bdf8;
+    font-weight: 600;
+}
+
+.slot-tooltip-row.reserved {
+    color: #fbbf24;
+    font-weight: 600;
+}
+
+.slot-tooltip-row.expired {
+    color: #f87171;
+    font-weight: 600;
+}
+
+.slot-tooltip-row.ready {
+    color: #4ade80;
+}
+
+.slot-tooltip-footer {
+    margin-top: 6px;
+    padding-top: 5px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    font-size: 0.65rem;
+    color: #94a3b8;
+    text-align: center;
+    font-style: italic;
+}
+
+/* ── Direct Decedent Link in View Modal ── */
+.lot-view-item--action {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.btn-decedent-profile-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 14px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    color: #0284c7;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(2, 132, 199, 0.08);
+}
+
+.btn-decedent-profile-link:hover {
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    color: #0369a1;
+    border-color: #7dd3fc;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(2, 132, 199, 0.15);
+}
+
 /* Replaced by .modal-action-row / .modal-action-btn above. */
 
 /* ========================================================

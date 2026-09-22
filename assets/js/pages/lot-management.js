@@ -264,14 +264,37 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function buildMatrixBoxHtml(lot) {
         let code = 'O';
-        if (lot.status === 'Occupied') code = 'X';
-        else if (lot.status === 'Reserved') code = 'R';
-        else if (lot.status === 'Expired') code = 'E';
+        let statusClass = 'available';
+        if (lot.status === 'Occupied') { code = 'X'; statusClass = 'occupied'; }
+        else if (lot.status === 'Reserved') { code = 'R'; statusClass = 'reserved'; }
+        else if (lot.status === 'Expired') { code = 'E'; statusClass = 'expired'; }
+
+        let extraMetaHtml = '';
+        if (lot.status === 'Occupied' && lot.occupant_name) {
+            extraMetaHtml = `<div class="slot-tooltip-row occupant"><i class="fas fa-user"></i> <span>${escapeHtml(lot.occupant_name)}</span></div>`;
+        } else if (lot.status === 'Reserved' && lot.reserved_for_name) {
+            extraMetaHtml = `<div class="slot-tooltip-row reserved"><i class="fas fa-clock"></i> <span>${escapeHtml(lot.reserved_for_name)}</span></div>`;
+        } else if (lot.status === 'Expired') {
+            extraMetaHtml = `<div class="slot-tooltip-row expired"><i class="fas fa-hourglass-end"></i> <span>Lease Expired</span></div>`;
+        } else {
+            extraMetaHtml = `<div class="slot-tooltip-row ready"><i class="fas fa-check"></i> <span>Ready for assignment</span></div>`;
+        }
 
         return `
             <div class="slot-box status-${lot.status}" data-id="${lot.lot_id}" title="Lot ${escapeHtml(lot.lot_number)} (${escapeHtml(lot.status)}) - ₱${formatPrice(lot.price)}">
                 <div class="slot-icon">${code}</div>
                 <div class="slot-num">${escapeHtml(lot.lot_number)}</div>
+                <div class="slot-tooltip" role="tooltip">
+                    <div class="slot-tooltip-header">
+                        <span class="slot-tooltip-lot">${escapeHtml(lot.lot_number)}</span>
+                        <span class="slot-tooltip-badge status-${statusClass}">${escapeHtml(lot.status)}</span>
+                    </div>
+                    <div class="slot-tooltip-body">
+                        <div class="slot-tooltip-row type"><i class="fas fa-tag"></i> <span>${escapeHtml(lot.lot_type_name || 'Standard')} &bull; ₱${formatPrice(lot.price)}</span></div>
+                        ${extraMetaHtml}
+                    </div>
+                    <div class="slot-tooltip-footer">Click to view full details</div>
+                </div>
             </div>
         `;
     }
@@ -1081,6 +1104,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <span class="lot-view-label">Interment Date</span>
                         <span class="lot-view-value">${escapeHtml(lot.burial_date || 'None recorded')}</span>
                     </div>
+                    <div class="lot-view-item lot-view-item--action">
+                        <a href="decedent-records.html?search=${encodeURIComponent(lot.occupant_name)}" class="btn-decedent-profile-link" title="Open Decedent Profile">
+                            <i class="fas fa-id-card"></i>
+                            <span>View Decedent Profile</span>
+                            <i class="fas fa-arrow-up-right-from-square"></i>
+                        </a>
+                    </div>
                 `;
             } else if (lot.reserved_for_name) {
                 occupancyContent = `
@@ -1091,6 +1121,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <div class="lot-view-item">
                         <span class="lot-view-label">Burial Schedule</span>
                         <span class="lot-view-value">#${lot.schedule_id || 'N/A'} (${escapeHtml(lot.burial_status || 'Reserved')})</span>
+                    </div>
+                    <div class="lot-view-item lot-view-item--action">
+                        <a href="manage-reservations.html?search=${encodeURIComponent(lot.lot_number)}" class="btn-decedent-profile-link" style="border-color: #fde68a; background: #fefce8; color: #b45309;" title="Open Reservation Details">
+                            <i class="fas fa-calendar-check"></i>
+                            <span>View Reservation Details</span>
+                            <i class="fas fa-arrow-up-right-from-square"></i>
+                        </a>
                     </div>
                 `;
             } else {
