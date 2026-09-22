@@ -2067,3 +2067,176 @@ body[data-theme="dark"].dashboard-body,
     background: #0f172a;
     color: #f8fafc;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   BATCH 3 EXECUTIVE POLISH: BOOKING ASSISTANT HUD & CONVERSATION UI
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Active Stepper Glow Pulse */
+.blueprint-step.active .step-num {
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.25), 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+    position: relative;
+    animation: stepPulseRing 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes stepPulseRing {
+    0%, 100% {
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25), 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.12), 0 4px 16px rgba(16, 185, 129, 0.45);
+    }
+}
+
+.blueprint-step.completed .step-num {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+    color: #ffffff !important;
+    border-color: #34d399 !important;
+}
+
+/* Modernized Contextual Prompt Chips */
+.prompt-chip {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    border: 1px solid rgba(44, 94, 71, 0.18) !important;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+.prompt-chip:hover:not(:disabled) {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+    border-color: #10b981 !important;
+    color: #065f46 !important;
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.18) !important;
+}
+
+.prompt-chip i {
+    color: #10b981 !important;
+    transition: transform 0.2s ease;
+}
+
+.prompt-chip:hover:not(:disabled) i {
+    transform: scale(1.15);
+}
+
+/* Chat Input Wrapper Focus Ring */
+.chat-input-wrapper:focus-within {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.22);
+    border-radius: 12px;
+}
+
+/* Dark Mode Overrides for Booking Assistant */
+[data-theme="dark"] .ai-chat-main {
+    background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+    border-color: rgba(255, 255, 255, 0.08);
+    border-left-color: #10b981;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .ai-assistant-header {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .ai-assistant-name {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .chat-window {
+    background: #090d16;
+}
+
+[data-theme="dark"] .chat-message.assistant {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .chat-message.assistant::before {
+    background: #10b981;
+}
+
+[data-theme="dark"] .chat-message--rich {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .recommendation-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .recommendation-card:hover {
+    border-color: #10b981;
+    box-shadow: 0 12px 24px -6px rgba(16, 185, 129, 0.2);
+}
+
+[data-theme="dark"] .recommendation-card .lot-num-title {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .meta-pill {
+    background: #334155;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .chat-prompt-suggestions {
+    background: #111827;
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .prompt-chip {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .prompt-chip:hover:not(:disabled) {
+    background: rgba(16, 185, 129, 0.18) !important;
+    border-color: #10b981 !important;
+    color: #34d399 !important;
+}
+
+[data-theme="dark"] .chat-input-row {
+    background: #111827;
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .chat-input-wrapper input[type="text"] {
+    background: #1e293b;
+    border-color: #334155;
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .ai-booking-blueprint {
+    background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+    border-color: rgba(255, 255, 255, 0.08);
+    border-top-color: #10b981;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .blueprint-header {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .blueprint-title {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .blueprint-step .step-value {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .blueprint-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .hud-detail-row strong {
+    color: #f8fafc;
+}
+

@@ -608,7 +608,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             `;
         }
 
-        // Set default +5 years from current end_date or today
+        // Calculate new date projection
         function calculateNewDate(years) {
             let baseDate = new Date();
             if (record.end_date) {
@@ -622,12 +622,35 @@ document.addEventListener('DOMContentLoaded', async function () {
             return baseDate.toISOString().slice(0, 10);
         }
 
+        // Tenure Timeline Hologram elements
+        const currentExpDisplay = document.getElementById('tenureCurrentExpiryDisplay');
+        const projectedExpDisplay = document.getElementById('tenureProjectedExpiryDisplay');
+        const yearsTag = document.getElementById('tenureYearsTag');
         const endDateInput = document.getElementById('renewEndDate');
-        if (endDateInput) {
-            endDateInput.value = calculateNewDate(5);
+
+        if (currentExpDisplay) {
+            currentExpDisplay.textContent = formatDate(record.end_date) || record.end_date || 'N/A';
         }
 
-        // Wire term buttons
+        function updateProjectedDisplays(years, dateVal) {
+            if (yearsTag) {
+                yearsTag.textContent = years ? `+${years} Year${years > 1 ? 's' : ''}` : 'Custom';
+            }
+            if (projectedExpDisplay) {
+                projectedExpDisplay.textContent = formatDate(dateVal) || dateVal || '—';
+            }
+        }
+
+        const initialDate = calculateNewDate(5);
+        if (endDateInput) {
+            endDateInput.value = initialDate;
+            endDateInput.oninput = () => {
+                updateProjectedDisplays(null, endDateInput.value);
+            };
+        }
+        updateProjectedDisplays(5, initialDate);
+
+        // Wire quick extension term buttons (+1, +5, +10, +25)
         document.querySelectorAll('.quick-terms-row .btn-term').forEach(btn => {
             btn.classList.remove('active');
             if (btn.dataset.years === '5') btn.classList.add('active');
@@ -635,7 +658,9 @@ document.addEventListener('DOMContentLoaded', async function () {
                 document.querySelectorAll('.quick-terms-row .btn-term').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 const y = parseInt(btn.dataset.years, 10) || 5;
-                if (endDateInput) endDateInput.value = calculateNewDate(y);
+                const newDate = calculateNewDate(y);
+                if (endDateInput) endDateInput.value = newDate;
+                updateProjectedDisplays(y, newDate);
             };
         });
 
@@ -774,7 +799,11 @@ document.addEventListener('DOMContentLoaded', async function () {
             allModals.forEach(m => m.style.display = 'none');
         }
 
-        // Close buttons
+        // Close & cancel buttons
+        document.querySelectorAll('.close, .close-view, .deck-close-btn, .btn-deck-cancel').forEach(btn => {
+            btn.addEventListener('click', closeAllModals);
+        });
+
         document.getElementById('closeViewModal')?.addEventListener('click', closeAllModals);
         document.getElementById('closeRenewModal')?.addEventListener('click', closeAllModals);
         document.getElementById('closeRelocateModal')?.addEventListener('click', closeAllModals);

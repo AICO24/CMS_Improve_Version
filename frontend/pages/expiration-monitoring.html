@@ -317,47 +317,63 @@
     </div>
 
     <!-- ── Organized View Modal (Decedent Records Style Standard) ── -->
-    <div id="viewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
-        <div class="modal-content modal--view">
-            <button type="button" class="close-view" id="closeViewModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
-            <div class="modal-header-compact view-modal-header">
-                <div class="modal-header-icon-wrap view-header-icon">
-                    <i class="fas fa-hourglass-half"></i>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         ANTIGRAVITY ZERO-SCROLL SPLIT-DECK ARCHITECTURE: VIEW LEASE DOSSIER
+         Left: Tenure Monitoring & Occupant Profile
+         Right: Notices & Communication Log, Relocation Audit Trail
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div id="viewModal" class="modal modal-deck-overlay" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
+        <div class="modal-deck-card modal-deck-card--view resmodal-window">
+            <div class="deck-header">
+                <div class="deck-header-info">
+                    <div class="deck-avatar-halo deck-avatar-halo--amber">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
+                    <div class="deck-title-block">
+                        <div class="deck-meta-strip">
+                            <span class="deck-kicker" style="color: #d97706;"><i class="fas fa-file-contract"></i> TENURE MONITORING DOSSIER</span>
+                        </div>
+                        <h3 id="viewModalTitle" class="deck-title">Lease Expiration Record Details</h3>
+                    </div>
                 </div>
-                <div>
-                    <h3 id="viewModalTitle">Lease Expiration Record Details</h3>
-                    <p class="modal-header-subtitle">Tenure monitoring, deceased occupant, family contact &amp; renewal history</p>
-                </div>
+                <button type="button" class="close close-view deck-close-btn" id="closeViewModal" aria-label="Close modal"><i class="fas fa-xmark"></i></button>
             </div>
 
-            <!-- Hero Card + 2-Column Info Grid container -->
-            <div id="viewDetails"></div>
-
-            <!-- Notice & Communication History -->
-            <div class="documents-section">
-                <div class="section-title-wrap">
-                    <h4 class="view-section-title"><i class="fas fa-envelope-open-text"></i> Expiration Notices &amp; Delivery Log</h4>
+            <div class="split-deck-body">
+                <!-- Left Column: Hero Card + 2-Column Info Grid container -->
+                <div class="deck-pane deck-pane--left">
+                    <div id="viewDetails"></div>
                 </div>
-                <div id="viewNoticesList" class="notices-list"></div>
-            </div>
 
-            <!-- Activity & Audit Trail -->
-            <div class="activity-timeline-section">
-                <div class="section-title-wrap">
-                    <h4 class="view-section-title"><i class="fas fa-clock-rotate-left"></i> Tenure &amp; Relocation Audit Trail</h4>
+                <!-- Right Column: Notice Log & Timeline -->
+                <div class="deck-pane deck-pane--right">
+                    <!-- Notice & Communication History -->
+                    <div class="documents-section">
+                        <div class="section-title-wrap">
+                            <h4 class="view-section-title"><i class="fas fa-envelope-open-text"></i> Expiration Notices &amp; Delivery Log</h4>
+                        </div>
+                        <div id="viewNoticesList" class="notices-list"></div>
+                    </div>
+
+                    <!-- Activity & Audit Trail -->
+                    <div class="activity-timeline-section" style="margin-top: 14px;">
+                        <div class="section-title-wrap">
+                            <h4 class="view-section-title"><i class="fas fa-clock-rotate-left"></i> Tenure &amp; Relocation Audit Trail</h4>
+                        </div>
+                        <div id="viewActivityTimeline" class="activity-timeline"></div>
+                    </div>
                 </div>
-                <div id="viewActivityTimeline" class="activity-timeline"></div>
             </div>
 
             <!-- Modal Action Footer -->
-            <div class="view-modal-footer">
+            <div class="deck-footer">
                 <div class="modal-actions-left">
                     <button type="button" class="btn-print-clearance" id="printLeaseSlipBtn">
                         <i class="fas fa-print"></i>
                         <span>Print Lease Summary</span>
                     </button>
                 </div>
-                <div class="modal-actions-right">
+                <div class="modal-actions-right" style="display: flex; gap: 8px; align-items: center;">
                     <button type="button" class="btn-renew-action" id="renewFromViewBtn">
                         <i class="fas fa-rotate"></i>
                         <span>Renew Lease</span>
@@ -379,50 +395,110 @@
         </div>
     </div>
 
-    <!-- ── Renew Lease Modal ── -->
-    <div id="renewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="renewModalTitle">
-        <div class="modal-content modal--form">
-            <button type="button" class="close" id="closeRenewModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
-            <div class="modal-header-compact">
-                <div class="modal-header-icon-wrap icon-renew">
-                    <i class="fas fa-rotate"></i>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         ANTIGRAVITY ZERO-SCROLL SPLIT-DECK ARCHITECTURE: RENEW LEASE DECK
+         Left: Tenure Timeline Hologram (Original vs Extended Period Preview)
+         Right: Extension Term Selection, Fee, & Agreement Logging
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div id="renewModal" class="modal modal-deck-overlay" role="dialog" aria-modal="true" aria-labelledby="renewModalTitle">
+        <div class="modal-deck-card modal-deck-card--renew resmodal-window">
+            <div class="deck-header">
+                <div class="deck-header-info">
+                    <div class="deck-avatar-halo deck-avatar-halo--amber">
+                        <i class="fas fa-rotate"></i>
+                    </div>
+                    <div class="deck-title-block">
+                        <div class="deck-meta-strip">
+                            <span class="deck-kicker" style="color: #d97706;"><i class="fas fa-hourglass-half"></i> LEASE TENURE EXTENSION PROTOCOL</span>
+                        </div>
+                        <h3 id="renewModalTitle" class="deck-title">Renew Lot Lease</h3>
+                    </div>
                 </div>
-                <div>
-                    <h3 id="renewModalTitle">Renew Lot Lease</h3>
-                    <p class="modal-header-subtitle">Extend lot lease tenure and log renewal terms</p>
-                </div>
+                <button type="button" class="close deck-close-btn" id="closeRenewModal" aria-label="Close modal"><i class="fas fa-xmark"></i></button>
             </div>
-            <form id="renewForm" class="expiration-action-form">
+
+            <form id="renewForm" class="split-deck-form">
                 <input type="hidden" id="renewExpirationId">
-                <div class="form-lot-summary" id="renewLotSummary"></div>
-                <div class="form-group">
-                    <label>Quick Extension Term</label>
-                    <div class="quick-terms-row">
-                        <button type="button" class="btn-term" data-years="1">+1 Year</button>
-                        <button type="button" class="btn-term active" data-years="5">+5 Years</button>
-                        <button type="button" class="btn-term" data-years="10">+10 Years</button>
-                        <button type="button" class="btn-term" data-years="25">+25 Years</button>
+
+                <div class="split-deck-body">
+                    <!-- Left Column: Tenure Timeline Hologram -->
+                    <div class="deck-pane deck-pane--left">
+                        <div class="tenure-timeline-deck">
+                            <div class="tenure-deck-header">
+                                <i class="fas fa-timeline"></i> Tenure Extension Projection
+                            </div>
+                            <div class="form-lot-summary" id="renewLotSummary"></div>
+
+                            <div class="tenure-projection-box">
+                                <div class="tenure-vector-track">
+                                    <div class="tenure-point tenure-point--start">
+                                        <span class="tenure-point-label">Current Expiry</span>
+                                        <strong id="tenureCurrentExpiryDisplay">—</strong>
+                                    </div>
+                                    <div class="tenure-bridge">
+                                        <span class="tenure-bridge-tag" id="tenureYearsTag">+5 Years</span>
+                                        <div class="tenure-bridge-bar">
+                                            <span class="tenure-bridge-pulse"></span>
+                                        </div>
+                                    </div>
+                                    <div class="tenure-point tenure-point--target">
+                                        <span class="tenure-point-label">Projected Expiry</span>
+                                        <strong id="tenureProjectedExpiryDisplay">—</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tenure-advisory-card">
+                                <i class="fas fa-shield-halved"></i>
+                                <span>Renewing registers official tenure extension on deed registry and resets expiration countdown tickers.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Term Selection & Form Inputs -->
+                    <div class="deck-pane deck-pane--right">
+                        <div class="form-pane-content">
+                            <div class="form-section-header">
+                                <i class="fas fa-clock"></i> Quick Extension Term
+                            </div>
+                            <div class="quick-terms-row">
+                                <button type="button" class="btn-term" data-years="1">+1 Year</button>
+                                <button type="button" class="btn-term active" data-years="5">+5 Years</button>
+                                <button type="button" class="btn-term" data-years="10">+10 Years</button>
+                                <button type="button" class="btn-term" data-years="25">+25 Years</button>
+                            </div>
+
+                            <div class="form-section-header" style="margin-top: 14px;">
+                                <i class="fas fa-calendar-check"></i> Renewal Parameters
+                            </div>
+                            <div class="form-grid-2">
+                                <div class="form-group">
+                                    <label for="renewEndDate">New Expiration Date <span class="required">*</span></label>
+                                    <input type="date" id="renewEndDate" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="renewFee">Renewal Fee (₱)</label>
+                                    <input type="number" id="renewFee" class="form-control" placeholder="0.00" min="0" step="0.01">
+                                </div>
+                            </div>
+                            <div class="form-group full-width" style="margin-top: 8px;">
+                                <label for="renewNotes">Renewal Notes / Remarks</label>
+                                <textarea id="renewNotes" class="form-control" rows="3" placeholder="Receipt #, agreement terms, or family instructions..."></textarea>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="form-grid-2">
-                    <div class="form-group">
-                        <label for="renewEndDate">New Expiration Date <span class="required">*</span></label>
-                        <input type="date" id="renewEndDate" class="form-control" required>
+
+                <div class="deck-footer">
+                    <div class="deck-footer-status" style="font-size:0.8rem;color:#64748b;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-check-double" style="color:#d97706;"></i> Instant expiration monitoring update upon save.
                     </div>
-                    <div class="form-group">
-                        <label for="renewFee">Renewal Fee (₱)</label>
-                        <input type="number" id="renewFee" class="form-control" placeholder="0.00" min="0" step="0.01">
+                    <div class="modal-form-actions" style="border-top:none;padding-top:0;margin-top:0;">
+                        <button type="button" class="btn-deck-cancel" id="cancelRenewBtn"><i class="fas fa-xmark"></i> Cancel</button>
+                        <button type="submit" class="btn-deck-submit btn-deck-amber" id="confirmRenewSubmitBtn">
+                            <i class="fas fa-check-circle"></i> Confirm Renewal
+                        </button>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="renewNotes">Renewal Notes / Remarks</label>
-                    <textarea id="renewNotes" class="form-control" rows="3" placeholder="Receipt #, agreement terms, or family instructions..."></textarea>
-                </div>
-                <div class="modal-footer-compact">
-                    <button type="button" class="btn-secondary" id="cancelRenewBtn">Cancel</button>
-                    <button type="submit" class="btn-primary" id="confirmRenewSubmitBtn">
-                        <i class="fas fa-check-circle"></i> Confirm Renewal
-                    </button>
                 </div>
             </form>
         </div>
@@ -431,7 +507,7 @@
     <!-- ── Relocation / Exhumation Handoff Modal ── -->
     <div id="relocateModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="relocateModalTitle">
         <div class="modal-content modal--form">
-            <button type="button" class="close" id="closeRelocateModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
+            <button type="button" class="close deck-close-btn" id="closeRelocateModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
             <div class="modal-header-compact">
                 <div class="modal-header-icon-wrap icon-relocate">
                     <i class="fas fa-truck-moving"></i>
@@ -469,7 +545,7 @@
                     <textarea id="relocateNotes" class="form-control" rows="3" placeholder="Authorized kin, permit references, or special handling..."></textarea>
                 </div>
                 <div class="modal-footer-compact">
-                    <button type="button" class="btn-secondary" id="cancelRelocateBtn">Cancel</button>
+                    <button type="button" class="btn-deck-cancel" id="cancelRelocateBtn"><i class="fas fa-xmark"></i> Cancel</button>
                     <button type="submit" class="btn-warning-solid" id="confirmRelocateSubmitBtn">
                         <i class="fas fa-truck-moving"></i> Submit Relocation Request
                     </button>
@@ -481,7 +557,7 @@
     <!-- ── Dispatch Expiration Notice Modal ── -->
     <div id="notifyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="notifyModalTitle">
         <div class="modal-content modal--form">
-            <button type="button" class="close" id="closeNotifyModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
+            <button type="button" class="close deck-close-btn" id="closeNotifyModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
             <div class="modal-header-compact">
                 <div class="modal-header-icon-wrap icon-notify">
                     <i class="fas fa-paper-plane"></i>
@@ -517,7 +593,7 @@
                     <textarea id="noticeNotes" class="form-control" rows="3" placeholder="Reference number, kin response, or notes..."></textarea>
                 </div>
                 <div class="modal-footer-compact">
-                    <button type="button" class="btn-secondary" id="cancelNotifyBtn">Cancel</button>
+                    <button type="button" class="btn-deck-cancel" id="cancelNotifyBtn"><i class="fas fa-xmark"></i> Cancel</button>
                     <button type="submit" class="btn-primary" id="confirmNotifySubmitBtn">
                         <i class="fas fa-paper-plane"></i> Dispatch Notice
                     </button>
