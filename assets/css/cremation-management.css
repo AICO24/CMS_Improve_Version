@@ -752,6 +752,7 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
+    overflow: visible;
 }
 
 /* Level Sub-Group */
@@ -759,8 +760,25 @@
     background: #ffffff;
     border-radius: 12px;
     border: 1px solid #e2e8f0;
-    overflow: hidden;
+    overflow: visible;
     box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.level-group.prime-eye-level {
+    border-left: 5px solid #f59e0b;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.08);
+}
+
+.level-group.prime-eye-level .level-header {
+    background: linear-gradient(90deg, #fffbeb 0%, #ffffff 100%);
+    border-bottom: 1px solid #fef3c7;
+}
+
+.level-group.prime-eye-level .level-badge {
+    background: #f59e0b;
+    color: #ffffff;
+    font-weight: 800;
 }
 
 .level-header {
@@ -863,18 +881,23 @@
 .level-body {
     padding: 14px;
     background: #ffffff;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    overflow: visible;
 }
 
 .level-niches-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
     gap: 12px;
+    overflow: visible;
 }
 
 .columbarium-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 16px;
+    overflow: visible;
 }
 
 .niche-card {
@@ -886,7 +909,7 @@
     cursor: pointer;
     text-align: center;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
     display: flex;
     flex-direction: column;
@@ -898,11 +921,168 @@
     transform: translateY(-3px);
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
     border-color: var(--color-primary-400, #34d399);
+    z-index: 1000;
+}
+
+.niche-card.is-prime {
+    border-color: #fde68a;
+}
+
+.niche-card.is-prime:hover {
+    border-color: #f59e0b;
+    box-shadow: 0 10px 24px rgba(245, 158, 11, 0.14);
 }
 
 .niche-card:focus-visible {
     outline: 2px solid var(--color-primary-500, #10b981);
     outline-offset: 2px;
+    z-index: 1000;
+}
+
+/* ========================================================
+   INTERACTIVE NICHE HOVER TOOLTIP (Batch 1)
+   ======================================================== */
+.niche-tooltip {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: #0f172a;
+    color: #ffffff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.40);
+    z-index: 1001;
+    pointer-events: none;
+    transition: opacity 160ms ease, transform 160ms ease, visibility 160ms;
+    min-width: 210px;
+    max-width: 280px;
+    font-size: 0.76rem;
+    line-height: 1.45;
+    text-align: left;
+    white-space: normal;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.niche-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: #0f172a transparent transparent transparent;
+}
+
+/* Smart downward flip */
+.niche-tooltip.tooltip-bottom {
+    bottom: auto;
+    top: calc(100% + 10px);
+    transform: translateX(-50%) translateY(-4px);
+}
+
+.niche-tooltip.tooltip-bottom::after {
+    top: auto;
+    bottom: 100%;
+    border-color: transparent transparent #0f172a transparent;
+}
+
+.niche-card:hover .niche-tooltip,
+.niche-card:focus-within .niche-tooltip {
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.niche-tooltip-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+}
+
+.tooltip-niche-num {
+    font-weight: 800;
+    font-size: 0.82rem;
+    color: #38bdf8;
+    letter-spacing: 0.02em;
+}
+
+.tooltip-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.tooltip-badge.badge-avail {
+    background: rgba(16, 185, 129, 0.22);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.40);
+}
+
+.tooltip-badge.badge-occ {
+    background: rgba(239, 68, 68, 0.22);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.40);
+}
+
+.niche-tooltip-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.niche-tooltip-body .tooltip-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 0.74rem;
+    color: #cbd5e1;
+    word-break: break-word;
+}
+
+.niche-tooltip-body .tooltip-row i {
+    width: 13px;
+    margin-top: 2px;
+    text-align: center;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.niche-tooltip-body .tooltip-row strong {
+    color: #ffffff;
+}
+
+.niche-tooltip-body .tooltip-code {
+    background: rgba(255, 255, 255, 0.12);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.72rem;
+    color: #a7f3d0;
+}
+
+.niche-tooltip-body .text-amber {
+    color: #fbbf24 !important;
+}
+
+.niche-tooltip-body .text-emerald {
+    color: #34d399 !important;
+}
+
+.niche-tooltip-body .text-muted {
+    color: #94a3b8 !important;
 }
 
 .niche-header {
@@ -1441,6 +1621,21 @@
     border-color: #334155;
 }
 
+[data-theme="dark"] .level-group.prime-eye-level {
+    border-left-color: #f59e0b;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.16);
+}
+
+[data-theme="dark"] .level-group.prime-eye-level .level-header {
+    background: linear-gradient(90deg, #2a2418 0%, #1e293b 100%);
+    border-bottom-color: #3b301c;
+}
+
+[data-theme="dark"] .level-group.prime-eye-level .level-badge {
+    background: #f59e0b;
+    color: #ffffff;
+}
+
 [data-theme="dark"] .level-header {
     background: #1e293b;
     border-bottom-color: #334155;
@@ -1466,6 +1661,15 @@
 [data-theme="dark"] .niche-card {
     background: #172033;
     border-color: #334155;
+}
+
+[data-theme="dark"] .niche-card.is-prime {
+    border-color: #4a3c1a;
+}
+
+[data-theme="dark"] .niche-card.is-prime:hover {
+    border-color: #f59e0b;
+    box-shadow: 0 10px 24px rgba(245, 158, 11, 0.20);
 }
 
 [data-theme="dark"] .niche-number {

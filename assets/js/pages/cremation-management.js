@@ -63,6 +63,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     const viewTableBtn = document.getElementById('viewTableBtn');
     const autoSyncBtn = document.getElementById('autoSyncBtn');
     const exportCsvBtn = document.getElementById('exportCsvBtn');
+    const expandAllWallBtn = document.getElementById('expandAllWallBtn');
+    const expandAllWallTxt = document.getElementById('expandAllWallTxt');
 
     // Modals
     const viewModal = document.getElementById('viewModal');
@@ -443,6 +445,33 @@ document.addEventListener('DOMContentLoaded', async function() {
         renderCurrentView();
     }
 
+    function isAllWallExpanded() {
+        if (!Array.isArray(filteredNiches) || filteredNiches.length === 0) return false;
+        const groups = groupNichesBySanctuaryAndLevel(filteredNiches);
+        if (groups.length === 0) return false;
+        return groups.every(sGroup => {
+            if (!expandedSanctuaries.has(sGroup.name)) return false;
+            return sGroup.levels.every(lvl => expandedLevels.has(`${sGroup.name}__L${lvl.level}`));
+        });
+    }
+
+    function updateExpandAllButtonState() {
+        if (!expandAllWallBtn) return;
+        if (currentViewMode !== 'grid') {
+            expandAllWallBtn.style.display = 'none';
+            return;
+        }
+        expandAllWallBtn.style.display = 'inline-flex';
+        const allExpanded = isAllWallExpanded();
+        if (allExpanded) {
+            expandAllWallBtn.innerHTML = '<i class="fas fa-compress"></i> <span id="expandAllWallTxt">Collapse All</span>';
+            expandAllWallBtn.title = 'Collapse all sanctuaries and levels';
+        } else {
+            expandAllWallBtn.innerHTML = '<i class="fas fa-arrows-up-down"></i> <span id="expandAllWallTxt">Expand All</span>';
+            expandAllWallBtn.title = 'Expand all sanctuaries and levels';
+        }
+    }
+
     function renderCurrentView() {
         if (currentViewMode === 'grid') {
             gridWrapper.style.display = 'block';
@@ -453,6 +482,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             tableWrapper.style.display = 'block';
             renderTable(filteredNiches);
         }
+        updateExpandAllButtonState();
     }
 
     function renderHierarchy(niches) {
@@ -536,7 +566,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const isAllOcc = lvl.counts.available === 0;
 
         return `
-            <div class="level-group">
+            <div class="level-group ${lvl.isEyeLevel ? 'prime-eye-level' : ''}">
                 <button type="button" class="level-header" data-level-key="${escapeHtml(levelKey)}" aria-expanded="${isExpanded}">
                     <div class="level-title">
                         <div class="level-badge">L${lvl.level}</div>
@@ -557,22 +587,23 @@ document.addEventListener('DOMContentLoaded', async function() {
 
                 <div class="level-body" style="display: ${isExpanded ? 'block' : 'none'};">
                     <div class="level-niches-grid">
-                        ${lvl.niches.map(renderNicheCardHtml).join('')}
+                        ${lvl.niches.map((niche, idx) => renderNicheCardHtml(niche, idx)).join('')}
                     </div>
                 </div>
             </div>
         `;
     }
 
-    function renderNicheCardHtml(niche) {
+    function renderNicheCardHtml(niche, idx = 0) {
         const isOccupied = niche.status === 'occupied';
         const statusClass = isOccupied ? 'status-occupied' : 'status-available';
         const statusLabel = isOccupied ? 'Occupied' : 'Available';
         const decedentName = niche.first_name ? `${escapeHtml(niche.first_name)} ${escapeHtml(niche.last_name || '')}` : '';
         const isEyeLevel = parseInt(niche.level, 10) === 3 || parseInt(niche.level, 10) === 4;
+        const isFirstRow = idx < 4;
 
         return `
-            <div class="niche-card" data-id="${escapeHtml(niche.cremation_id || niche.niche_number)}" tabindex="0" role="button" aria-label="View niche ${escapeHtml(niche.niche_number)}">
+            <div class="niche-card ${isEyeLevel ? 'is-prime' : ''}" data-id="${escapeHtml(niche.cremation_id || niche.niche_number)}" tabindex="0" role="button" aria-label="View niche ${escapeHtml(niche.niche_number)}">
                 <div class="niche-header">
                     <span class="niche-level-tag">L${escapeHtml(niche.level || 1)}</span>
                     ${isEyeLevel ? `<span class="prime-eye-level-tag" style="font-size: 0.62rem; padding: 1px 5px;"><i class="fas fa-crown"></i> Prime</span>` : ''}
@@ -581,6 +612,28 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <div class="niche-location"><i class="fas fa-building-columns"></i> ${escapeHtml(niche.columbarium || 'N/A')}</div>
                 ${decedentName ? `<div class="deceased-name" title="${decedentName}"><i class="fas fa-user"></i> ${decedentName}</div>` : ''}
                 <span class="niche-status ${statusClass}"><i class="fas ${isOccupied ? 'fa-jar' : 'fa-check'}"></i> ${statusLabel}</span>
+
+                <!-- Interactive Hover Tooltip -->
+                <div class="niche-tooltip ${isFirstRow ? 'tooltip-bottom' : ''}">
+                    <div class="niche-tooltip-header">
+                        <span class="tooltip-niche-num">${escapeHtml(niche.niche_number)}</span>
+                        <span class="tooltip-badge ${isOccupied ? 'badge-occ' : 'badge-avail'}">
+                            <i class="fas ${isOccupied ? 'fa-jar' : 'fa-check'}"></i> ${statusLabel}
+                        </span>
+                    </div>
+                    <div class="niche-tooltip-body">
+                        ${isOccupied ? `
+                            <div class="tooltip-row"><i class="fas fa-user"></i> <span><strong>${decedentName}</strong></span></div>
+                            <div class="tooltip-row"><i class="fas fa-calendar-alt"></i> <span>Cremated: <strong>${escapeHtml(niche.cremation_date || 'Recorded')}</strong></span></div>
+                            <div class="tooltip-row"><i class="fas fa-location-dot"></i> <code class="tooltip-code">${escapeHtml(niche.ash_storage_location || (niche.columbarium + ' - L' + (niche.level || 1)))}</code></div>
+                            <div class="tooltip-row text-muted" style="font-size: 0.70rem; margin-top: 2px;"><i class="fas fa-arrow-pointer"></i> Click card to view details</div>
+                        ` : `
+                            <div class="tooltip-row"><i class="fas ${isEyeLevel ? 'fa-crown text-amber' : 'fa-layer-group'}"></i> <strong>${isEyeLevel ? 'Prime Eye-Level Tier' : 'Standard Level Slot'}</strong></div>
+                            <div class="tooltip-row"><i class="fas fa-circle-check text-emerald"></i> <span>Ready for Urn Placement</span></div>
+                            <div class="tooltip-row text-muted" style="font-size: 0.70rem; margin-top: 2px;"><i class="fas fa-arrow-pointer"></i> Click card to assign decedent</div>
+                        `}
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -1233,6 +1286,28 @@ document.addEventListener('DOMContentLoaded', async function() {
         renderCurrentView();
     });
 
+    // Expand All / Collapse All Wall Grid
+    if (expandAllWallBtn) {
+        expandAllWallBtn.addEventListener('click', () => {
+            const groups = groupNichesBySanctuaryAndLevel(filteredNiches);
+            const allExpanded = isAllWallExpanded();
+
+            if (allExpanded) {
+                expandedSanctuaries.clear();
+                expandedLevels.clear();
+            } else {
+                groups.forEach(sGroup => {
+                    expandedSanctuaries.add(sGroup.name);
+                    sGroup.levels.forEach(lvl => {
+                        expandedLevels.add(`${sGroup.name}__L${lvl.level}`);
+                    });
+                });
+            }
+
+            renderCurrentView();
+        });
+    }
+
     // Toolbar Buttons
     document.getElementById('openAddModal').addEventListener('click', openAddModal);
 
@@ -1335,6 +1410,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 levelBtn.setAttribute('aria-expanded', 'false');
                 if (lKey) expandedLevels.delete(lKey);
             }
+            updateExpandAllButtonState();
             return;
         }
 
@@ -1362,6 +1438,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 sanctuaryBtn.setAttribute('aria-expanded', 'false');
                 if (sName) expandedSanctuaries.delete(sName);
             }
+            updateExpandAllButtonState();
             return;
         }
 

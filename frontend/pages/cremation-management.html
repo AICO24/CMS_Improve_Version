@@ -184,16 +184,24 @@
                             </div>
                         </div>
 
-                        <!-- View Mode Switcher -->
-                        <div class="view-mode-toggle-group" role="group" aria-label="View mode">
-                            <button type="button" class="view-toggle-btn active" id="viewGridBtn" title="Wall Grid View">
-                                <i class="fas fa-border-all"></i>
-                                <span>Grid</span>
+                        <!-- Wall View Actions & View Mode Switcher -->
+                        <div class="wall-view-controls" style="display: flex; align-items: center; gap: 8px;">
+                            <button type="button" class="btn-secondary" id="expandAllWallBtn" title="Expand or collapse all sanctuaries and levels" style="padding: 7px 12px; font-size: 0.80rem; border-radius: var(--radius-sm, 8px);">
+                                <i class="fas fa-arrows-up-down"></i>
+                                <span id="expandAllWallTxt">Expand All</span>
                             </button>
-                            <button type="button" class="view-toggle-btn" id="viewTableBtn" title="Data Table View">
-                                <i class="fas fa-list"></i>
-                                <span>Table</span>
-                            </button>
+
+                            <!-- View Mode Switcher -->
+                            <div class="view-mode-toggle-group" role="group" aria-label="View mode">
+                                <button type="button" class="view-toggle-btn active" id="viewGridBtn" title="Wall Grid View">
+                                    <i class="fas fa-border-all"></i>
+                                    <span>Grid</span>
+                                </button>
+                                <button type="button" class="view-toggle-btn" id="viewTableBtn" title="Data Table View">
+                                    <i class="fas fa-list"></i>
+                                    <span>Table</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
