@@ -45,6 +45,24 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
+    // Notification badge & navigation
+    async function updateNotificationBadge() {
+        try {
+            const result = await api.request('notifications/unread-count', { method: 'GET' });
+            const badge = document.getElementById('notificationBadge');
+            if (badge) {
+                badge.innerText = result.count || 0;
+                badge.style.display = result.count > 0 ? 'flex' : 'none';
+            }
+        } catch (e) { /* silent — non-critical UI */ }
+    }
+    updateNotificationBadge();
+    setInterval(updateNotificationBadge, 30000);
+
+    document.getElementById('notificationIcon')?.addEventListener('click', () => {
+        window.location.href = `${getFrontendBasePath()}/pages/notifications.html`;
+    });
+
     const statsEls = {
         pending: document.getElementById('pendingCount'),
         confirmed: document.getElementById('confirmedCount'),
@@ -84,6 +102,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     let currentStatus = '';
     let awaitingConfirmationOnly = false;
 
+    // Deep link query parameters support (e.g. from admin dashboard cards)
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialStatus = urlParams.get('status');
+    const initialAwaiting = urlParams.get('awaiting_confirmation');
+    const initialQuery = urlParams.get('q');
+
+    if (initialQuery) {
+        currentQuery = initialQuery;
+        searchQuery.value = initialQuery;
+    }
+    if (initialAwaiting === '1' || initialAwaiting === 'true') {
+        awaitingConfirmationOnly = true;
+        toggleAwaitingBtn.setAttribute('aria-pressed', 'true');
+        statusFilter.disabled = true;
+    } else if (initialStatus) {
+        currentStatus = initialStatus;
+        statusFilter.value = initialStatus;
+    }
+
     const pagination = createPagination({
         prevBtn: prevPageBtn,
         nextBtn: nextPageBtn,
@@ -101,14 +138,43 @@ document.addEventListener('DOMContentLoaded', async function() {
     // my-reservations.js — now shared via reservation-ui.js.
     const { escapeHtml, buildStatusBadge, debounce, renderFilterChips } = window.reservationUI;
 
+    // Single source of truth: sync active stat card highlight with current status filter
+    function updateActiveStatCards() {
+        const activeStatus = awaitingConfirmationOnly ? '' : currentStatus;
+        document.querySelectorAll('.mgmtres-stats .stat-card').forEach((card) => {
+            const cardStatus = card.getAttribute('data-status');
+            const isActive = Boolean(activeStatus) && cardStatus === activeStatus;
+            card.classList.toggle('is-active-filter', isActive);
+            card.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
+    async function setStatusFilter(newStatus) {
+        if (awaitingConfirmationOnly) {
+            awaitingConfirmationOnly = false;
+            toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+            statusFilter.disabled = false;
+        }
+        currentStatus = newStatus || '';
+        statusFilter.value = currentStatus;
+        updateActiveStatCards();
+        pagination.reset();
+        await loadAndRenderReservations();
+    }
+
     function renderActiveFilterChips() {
         renderFilterChips(activeFilterChips, [
             { key: 'q', label: 'Search', value: currentQuery, clear: () => { searchQuery.value = ''; currentQuery = ''; } },
-            { key: 'status', label: 'Status', value: currentStatus, clear: () => { statusFilter.value = ''; currentStatus = ''; } },
+            { key: 'status', label: 'Status', value: currentStatus, clear: () => {
+                currentStatus = '';
+                statusFilter.value = '';
+                updateActiveStatCards();
+            } },
             { key: 'awaiting', label: 'Filter', value: awaitingConfirmationOnly ? 'Needs Review' : '', clear: () => {
                 awaitingConfirmationOnly = false;
                 toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
                 statusFilter.disabled = false;
+                updateActiveStatCards();
             } },
         ], async () => {
             pagination.reset();
@@ -163,17 +229,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Batch E: available regardless of status — previously the only way
         // to see anything about a reservation beyond this row's own columns
         // was to leave the page entirely (or query the DB directly).
-        buttons.push(`<button class="btn-row-action" data-action="view" data-id="${schedule.schedule_id}">View</button>`);
+        buttons.push(`<button class="btn-row-action" data-action="view" data-id="${schedule.schedule_id}" title="View reservation details"><i class="fas fa-eye"></i> View</button>`);
 
-        if (schedule.status === 'Pending' && openExceptionIds.has(schedule.schedule_id)) {
+        if (openExceptionIds.has(schedule.schedule_id)) {
             // Batch H (reservation module audit): deep-links straight to
             // this schedule's exception in the resolve modal (see
             // exceptions.js's matching addition) instead of dumping the
             // admin into the full open-exceptions list to find it themselves.
-            buttons.push(`<a class="btn-row-action btn-row-action--confirm" href="exceptions.html?entity_type=Schedule&entity_id=${schedule.schedule_id}">Review Exception</a>`);
+            buttons.push(`<a class="btn-row-action btn-row-action--confirm" href="exceptions.html?entity_type=Schedule&entity_id=${schedule.schedule_id}" title="Review reservation exception"><i class="fas fa-triangle-exclamation"></i> Review</a>`);
         }
         if (schedule.status === 'Confirmed') {
-            buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete" data-id="${schedule.schedule_id}">Complete</button>`);
+            buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete" data-id="${schedule.schedule_id}" title="Mark reservation completed"><i class="fas fa-circle-check"></i> Complete</button>`);
         }
         // F.1: a Pending booking paid in cash/offline never goes through
         // Payment verification, so it never auto-confirms — this is the
@@ -184,13 +250,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         // server-side (creates a real, Verified Payment record too, so it
         // still shows up in Revenue Reports).
         if (schedule.status === 'Pending' && !openExceptionIds.has(schedule.schedule_id)) {
-            buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete-cash" data-id="${schedule.schedule_id}">Complete (Cash)</button>`);
+            buttons.push(`<button class="btn-row-action btn-row-action--cash" data-action="complete-cash" data-id="${schedule.schedule_id}" title="Complete reservation via cash payment"><i class="fas fa-money-bill-wave"></i> Complete (Cash)</button>`);
         }
         // Cancel mirrors ScheduleController::destroy()'s server-side rule: admin
         // may cancel any Pending/Confirmed reservation; staff only their own
         // still-Pending one. Hiding it otherwise avoids a confusing 403.
         if ((schedule.status === 'Pending' || schedule.status === 'Confirmed') && (isAdmin || isOwnPending)) {
-            buttons.push(`<button class="btn-row-action btn-row-action--cancel" data-action="cancel" data-id="${schedule.schedule_id}">Cancel</button>`);
+            buttons.push(`<button class="btn-row-action btn-row-action--cancel" data-action="cancel" data-id="${schedule.schedule_id}" title="Cancel reservation"><i class="fas fa-xmark"></i> Cancel</button>`);
         }
 
         return buttons.length ? buttons.join('') : '<span class="muted">No actions</span>';
@@ -212,7 +278,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <td>${schedule.section_name || 'N/A'}</td>
                 <td>${schedule.schedule_date || 'N/A'} ${schedule.schedule_time ? schedule.schedule_time : ''}</td>
                 <td>${schedule.created_by_name || 'N/A'}</td>
-                <td>${buildStatusBadge(schedule.status)}${buildUrgencyTag(schedule)}</td>
+                <td>${buildStatusBadge(schedule.status)}</td>
                 <td>${buildPaymentBadge(schedule)}</td>
                 <td class="action-buttons">${buildActionButtons(schedule, openExceptionIds)}</td>
             </tr>
@@ -249,10 +315,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function renderStats(stats) {
-        statsEls.pending.innerText = stats.pending || 0;
-        statsEls.confirmed.innerText = stats.confirmed || 0;
-        statsEls.completed.innerText = stats.completed || 0;
-        statsEls.cancelled.innerText = stats.cancelled || 0;
+        if (!statsEls.pending) return;
+        statsEls.pending.textContent = Number(stats && stats.pending) || 0;
+        statsEls.confirmed.textContent = Number(stats && stats.confirmed) || 0;
+        statsEls.completed.textContent = Number(stats && stats.completed) || 0;
+        statsEls.cancelled.textContent = Number(stats && stats.cancelled) || 0;
     }
 
     async function refreshAwaitingConfirmationCount() {
@@ -300,6 +367,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             refreshAwaitingConfirmationCount(),
             loadAndRenderReservations(),
         ]);
+        updateActiveStatCards();
+        if (typeof window.stampFooterTime === 'function') {
+            window.stampFooterTime();
+        }
     }
 
     async function completeReservation(id, button) {
@@ -390,33 +461,183 @@ document.addEventListener('DOMContentLoaded', async function() {
     // this page (the audit found no detail-view consumer of it at all).
     // Fetches fresh rather than reusing the row's already-loaded data so
     // the modal always reflects the latest state, including notes and
-    // exact timestamps not otherwise rendered in the table.
+    // Batch E: wires up GET schedules/{id} with executive visual hierarchy
     async function viewReservation(id) {
-        detailModalBody.innerHTML = '<p>Loading...</p>';
+        detailModalBody.innerHTML = `
+            <div class="resmodal-loading">
+                <i class="fas fa-circle-notch fa-spin"></i>
+                <span>Loading reservation details...</span>
+            </div>
+        `;
         detailModal.style.display = 'flex';
         try {
             const schedule = await api.request(`schedules/${id}`, { method: 'GET' });
             if (schedule.error) {
-                detailModalBody.innerHTML = `<p>${escapeHtml(schedule.error)}</p>`;
+                detailModalBody.innerHTML = `
+                    <div class="resmodal-error">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <span>${escapeHtml(schedule.error)}</span>
+                    </div>
+                `;
                 return;
             }
-            const nameCell = (schedule.first_name || schedule.last_name)
-                ? `${schedule.first_name || ''} ${schedule.last_name || ''}`
-                : (schedule.provisional_name ? `${schedule.provisional_name} (unregistered)` : 'N/A');
-            const paymentLine = schedule.payment_status
-                ? `${escapeHtml(schedule.payment_status)} &mdash; &#8369;${escapeHtml(schedule.payment_amount || 'N/A')} on ${escapeHtml(schedule.payment_date || 'N/A')} (receipt ${escapeHtml(schedule.payment_receipt_number || 'N/A')})`
-                : 'No payment on file';
+
+            const decedentFullName = (schedule.first_name || schedule.last_name)
+                ? `${schedule.first_name || ''} ${schedule.last_name || ''}`.trim()
+                : (schedule.provisional_name ? `${schedule.provisional_name}` : 'Unassigned Decedent');
+
+            const isProvisional = !schedule.first_name && !schedule.last_name && Boolean(schedule.provisional_name);
+
+            const paymentStatus = schedule.payment_status || 'Unpaid';
+            const normalizedPayment = String(paymentStatus).toLowerCase();
+            const isVerified = normalizedPayment === 'verified';
+            const isPending = normalizedPayment === 'pending';
+            const formattedAmount = schedule.payment_amount
+                ? `₱${Number(schedule.payment_amount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : '₱0.00';
+
+            const receiptNumber = schedule.payment_receipt_number || 'None on file';
+            const paymentDate = schedule.payment_date || 'None';
+            const paymentMethod = schedule.payment_method || 'Standard';
+
+            // Clean, readable date & time formatting
+            let formattedDate = schedule.schedule_date || 'Not specified';
+            if (schedule.schedule_date) {
+                const parts = String(schedule.schedule_date).split('-');
+                if (parts.length === 3) {
+                    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                    if (!isNaN(d.getTime())) {
+                        formattedDate = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                    }
+                }
+            }
+
+            let formattedTime = '';
+            if (schedule.schedule_time) {
+                const tParts = String(schedule.schedule_time).split(':');
+                if (tParts.length >= 2) {
+                    const h = parseInt(tParts[0], 10);
+                    const ampm = h >= 12 ? 'PM' : 'AM';
+                    const displayH = h % 12 || 12;
+                    formattedTime = `${displayH}:${tParts[1]} ${ampm}`;
+                }
+            }
+            const scheduleDateTime = formattedTime ? `${formattedDate} at ${formattedTime}` : formattedDate;
+
+            let bookedDate = schedule.created_at || 'Not recorded';
+            if (schedule.created_at) {
+                const bParts = String(schedule.created_at).split(' ');
+                if (bParts.length > 0) {
+                    const dParts = bParts[0].split('-');
+                    if (dParts.length === 3) {
+                        const d = new Date(parseInt(dParts[0], 10), parseInt(dParts[1], 10) - 1, parseInt(dParts[2], 10));
+                        if (!isNaN(d.getTime())) {
+                            bookedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        }
+                    }
+                }
+            }
+
             detailModalBody.innerHTML = `
-                <div class="form-group"><label>Booking</label>#${escapeHtml(schedule.schedule_id)} &mdash; ${buildStatusBadge(schedule.status)}${buildUrgencyTag(schedule)}</div>
-                <div class="form-group"><label>Decedent</label>${escapeHtml(nameCell)}</div>
-                <div class="form-group"><label>Lot</label>${escapeHtml(schedule.lot_number || 'N/A')} &mdash; ${escapeHtml(schedule.section_name || 'N/A')}</div>
-                <div class="form-group"><label>Burial date</label>${escapeHtml(schedule.schedule_date || 'N/A')} ${escapeHtml(schedule.schedule_time || '')}</div>
-                <div class="form-group"><label>Requested by</label>${escapeHtml(schedule.created_by_name || 'N/A')}</div>
-                <div class="form-group"><label>Payment</label>${paymentLine}</div>
-                <div class="form-group"><label>Notes</label>${escapeHtml(schedule.notes || 'None')}</div>
+                <div class="res-modal-content">
+                    <!-- Top Summary Card: Decedent & Status -->
+                    <div class="res-hero-card">
+                        <div class="res-hero-main">
+                            <span class="res-hero-booking">Booking #${escapeHtml(schedule.schedule_id)}</span>
+                            <h3 class="res-hero-name">${escapeHtml(decedentFullName)}</h3>
+                            <span class="res-hero-type ${isProvisional ? 'is-provisional' : 'is-registered'}">
+                                ${isProvisional ? 'Provisional Intake Request' : 'Registered Cemetery Record'}
+                            </span>
+                        </div>
+                        <div class="res-hero-badges">
+                            ${buildStatusBadge(schedule.status)}
+                        </div>
+                    </div>
+
+                    <!-- 1. Burial & Plot Information -->
+                    <div class="res-section-card">
+                        <h4 class="res-section-title">Burial &amp; Lot Information</h4>
+                        <div class="res-grid-fields">
+                            <div class="res-field">
+                                <span class="res-field-label">Scheduled Date &amp; Time</span>
+                                <strong class="res-field-value res-field-value--highlight">${escapeHtml(scheduleDateTime)}</strong>
+                            </div>
+                            <div class="res-field">
+                                <span class="res-field-label">Assigned Lot</span>
+                                <strong class="res-field-value">Lot ${escapeHtml(schedule.lot_number || 'N/A')}, Section ${escapeHtml(schedule.section_name || 'N/A')}</strong>
+                            </div>
+                            <div class="res-field">
+                                <span class="res-field-label">Applicant Name</span>
+                                <span class="res-field-value">${escapeHtml(schedule.created_by_name || 'Direct Entry')}</span>
+                            </div>
+                            <div class="res-field">
+                                <span class="res-field-label">Date Booked</span>
+                                <span class="res-field-value">${escapeHtml(bookedDate)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Payment Summary -->
+                    <div class="res-section-card">
+                        <div class="res-section-header">
+                            <h4 class="res-section-title">Payment Information</h4>
+                            <span class="res-payment-badge ${isVerified ? 'verified' : (isPending ? 'pending' : 'unpaid')}">
+                                ${escapeHtml(paymentStatus)}
+                            </span>
+                        </div>
+                        <div class="res-grid-fields">
+                            <div class="res-field">
+                                <span class="res-field-label">Settlement Amount</span>
+                                <strong class="res-field-value res-field-value--amount ${isVerified ? 'text-verified' : ''}">${formattedAmount}</strong>
+                            </div>
+                            <div class="res-field">
+                                <span class="res-field-label">Payment Method</span>
+                                <span class="res-field-value">${escapeHtml(paymentMethod)}</span>
+                            </div>
+                            <div class="res-field">
+                                <span class="res-field-label">Official Receipt (OR#)</span>
+                                <span class="res-field-value font-mono">${escapeHtml(receiptNumber)}</span>
+                            </div>
+                            <div class="res-field">
+                                <span class="res-field-label">Transaction Date</span>
+                                <span class="res-field-value">${escapeHtml(paymentDate)}</span>
+                            </div>
+                        </div>
+                        ${(schedule.status === 'Pending' && !isVerified) ? `
+                            <div class="res-inline-action">
+                                <span>No verified payment on record yet.</span>
+                                <button type="button" class="btn btn-sm btn-primary" id="detailQuickPayBtn">
+                                    Record Payment
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- 3. Notes / Remarks (Only if provided) -->
+                    ${schedule.notes ? `
+                        <div class="res-section-card res-section-card--notes">
+                            <h4 class="res-section-title">Notes / Remarks</h4>
+                            <p class="res-notes-content">${escapeHtml(schedule.notes)}</p>
+                        </div>
+                    ` : ''}
+                </div>
             `;
+
+            const quickPayBtn = detailModalBody.querySelector('#detailQuickPayBtn');
+            if (quickPayBtn) {
+                quickPayBtn.addEventListener('click', () => {
+                    closeDetailModal();
+                    openCashPaymentModal(schedule.schedule_id);
+                });
+            }
         } catch (error) {
-            detailModalBody.innerHTML = '<p>Unable to load reservation details right now.</p>';
+            console.error('Failed to load reservation details', error);
+            detailModalBody.innerHTML = `
+                <div class="resmodal-error">
+                    <i class="fas fa-circle-exclamation"></i>
+                    <span>Unable to load reservation details right now. Please try again later.</span>
+                </div>
+            `;
         }
     }
 
@@ -471,11 +692,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         pagination.reset();
         currentQuery = searchQuery.value || '';
         currentStatus = statusFilter.value || '';
+        updateActiveStatCards();
         await loadAndRenderReservations();
     }, 250);
 
     searchQuery.addEventListener('input', refreshFiltered);
-    statusFilter.addEventListener('change', refreshFiltered);
+    statusFilter.addEventListener('change', () => {
+        currentStatus = statusFilter.value || '';
+        updateActiveStatCards();
+        pagination.reset();
+        loadAndRenderReservations();
+    });
 
     toggleAwaitingBtn.addEventListener('click', async () => {
         awaitingConfirmationOnly = !awaitingConfirmationOnly;
@@ -483,6 +710,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // The filter is inherently Pending-only server-side; disable the status
         // dropdown while active so it can't silently conflict with the toggle.
         statusFilter.disabled = awaitingConfirmationOnly;
+        updateActiveStatCards();
         pagination.reset();
         await loadAndRenderReservations();
     });
@@ -495,9 +723,48 @@ document.addEventListener('DOMContentLoaded', async function() {
         currentStatus = '';
         awaitingConfirmationOnly = false;
         toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+        updateActiveStatCards();
         pagination.reset();
         await loadAndRenderReservations();
     });
 
+    // Quick-filter via stat cards (One Source of Truth — synchronized with statusFilter dropdown & chips)
+    document.querySelectorAll('.mgmtres-stats .stat-card').forEach((card) => {
+        const cardStatus = card.getAttribute('data-status');
+        if (!cardStatus) return;
+
+        function triggerQuickFilter() {
+            const targetStatus = (!awaitingConfirmationOnly && currentStatus === cardStatus) ? '' : cardStatus;
+            setStatusFilter(targetStatus);
+        }
+
+        card.addEventListener('click', triggerQuickFilter);
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                triggerQuickFilter();
+            }
+        });
+    });
+
     await refreshAll();
 });
+
+(function initFooter() {
+    const yearEl = document.getElementById('footerYear');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
+    const timeEl = document.getElementById('footerLiveTime');
+    const pulseEl = document.querySelector('.footer-pulse-ring');
+    function stampFooterTime() {
+        const now = new Date();
+        const formatted = now.toLocaleString('en-PH', {
+            weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true
+        });
+        if (timeEl) timeEl.textContent = formatted;
+        if (pulseEl) pulseEl.style.display = 'block';
+    }
+    stampFooterTime();
+    window.stampFooterTime = stampFooterTime;
+})();
+

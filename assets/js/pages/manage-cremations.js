@@ -73,6 +73,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     let currentStatus = '';
     let awaitingConfirmationOnly = false;
 
+    // Deep link query parameters support (e.g. from admin dashboard cards)
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialStatus = urlParams.get('status');
+    const initialAwaiting = urlParams.get('awaiting_confirmation');
+    const initialQuery = urlParams.get('q');
+
+    if (initialQuery) {
+        currentQuery = initialQuery;
+        searchQuery.value = initialQuery;
+    }
+    if (initialAwaiting === '1' || initialAwaiting === 'true') {
+        awaitingConfirmationOnly = true;
+        toggleAwaitingBtn.setAttribute('aria-pressed', 'true');
+        statusFilter.disabled = true;
+    } else if (initialStatus) {
+        currentStatus = initialStatus;
+        statusFilter.value = initialStatus;
+    }
+
     const pagination = createPagination({
         prevBtn: prevPageBtn,
         nextBtn: nextPageBtn,
@@ -86,14 +105,43 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     const { escapeHtml, buildStatusBadge, debounce, renderFilterChips } = window.reservationUI;
 
+    // Single source of truth: sync active stat card highlight with current status filter
+    function updateActiveStatCards() {
+        const activeStatus = awaitingConfirmationOnly ? '' : currentStatus;
+        document.querySelectorAll('.mgmtres-stats .stat-card').forEach((card) => {
+            const cardStatus = card.getAttribute('data-status');
+            const isActive = Boolean(activeStatus) && cardStatus === activeStatus;
+            card.classList.toggle('is-active-filter', isActive);
+            card.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
+    async function setStatusFilter(newStatus) {
+        if (awaitingConfirmationOnly) {
+            awaitingConfirmationOnly = false;
+            toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+            statusFilter.disabled = false;
+        }
+        currentStatus = newStatus || '';
+        statusFilter.value = currentStatus;
+        updateActiveStatCards();
+        pagination.reset();
+        await loadAndRenderCremations();
+    }
+
     function renderActiveFilterChips() {
         renderFilterChips(activeFilterChips, [
             { key: 'q', label: 'Search', value: currentQuery, clear: () => { searchQuery.value = ''; currentQuery = ''; } },
-            { key: 'status', label: 'Status', value: currentStatus, clear: () => { statusFilter.value = ''; currentStatus = ''; } },
+            { key: 'status', label: 'Status', value: currentStatus, clear: () => {
+                currentStatus = '';
+                statusFilter.value = '';
+                updateActiveStatCards();
+            } },
             { key: 'awaiting', label: 'Filter', value: awaitingConfirmationOnly ? 'Needs Review' : '', clear: () => {
                 awaitingConfirmationOnly = false;
                 toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
                 statusFilter.disabled = false;
+                updateActiveStatCards();
             } },
         ], async () => {
             pagination.reset();
@@ -140,13 +188,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     // mirrors manage-reservations.js's identical buildActionButtons() logic.
     function buildActionButtons(cremation, openExceptionIds) {
         const buttons = [];
-        buttons.push(`<button class="btn-row-action" data-action="view" data-id="${cremation.cremation_id}">View</button>`);
+        buttons.push(`<button class="btn-row-action" data-action="view" data-id="${cremation.cremation_id}" title="View cremation details"><i class="fas fa-eye"></i> View</button>`);
 
-        if (cremation.status === 'Pending' && openExceptionIds.has(cremation.cremation_id)) {
-            buttons.push(`<a class="btn-row-action btn-row-action--confirm" href="exceptions.html?entity_type=Cremation&entity_id=${cremation.cremation_id}">Review Exception</a>`);
+        if (openExceptionIds.has(cremation.cremation_id)) {
+            buttons.push(`<a class="btn-row-action btn-row-action--confirm" href="exceptions.html?entity_type=Cremation&entity_id=${cremation.cremation_id}" title="Review cremation exception"><i class="fas fa-triangle-exclamation"></i> Review</a>`);
         }
         if (cremation.status === 'Scheduled') {
-            buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete" data-id="${cremation.cremation_id}">Complete</button>`);
+            buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete" data-id="${cremation.cremation_id}" title="Mark cremation completed"><i class="fas fa-circle-check"></i> Complete</button>`);
         }
         // F.1 parity: a Pending request paid in cash/offline never goes
         // through Payment verification, so it never auto-confirms — this is
@@ -158,10 +206,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         // manage-reservations.js's identical convention — resolve that
         // first rather than offering two competing actions on the same row.
         if (cremation.status === 'Pending' && !openExceptionIds.has(cremation.cremation_id)) {
-            buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete-cash" data-id="${cremation.cremation_id}">Complete (Cash)</button>`);
+            buttons.push(`<button class="btn-row-action btn-row-action--cash" data-action="complete-cash" data-id="${cremation.cremation_id}" title="Complete request via cash payment"><i class="fas fa-money-bill-wave"></i> Complete (Cash)</button>`);
         }
         if (cremation.status === 'Pending' || cremation.status === 'Scheduled') {
-            buttons.push(`<button class="btn-row-action btn-row-action--cancel" data-action="cancel" data-id="${cremation.cremation_id}">Cancel</button>`);
+            buttons.push(`<button class="btn-row-action btn-row-action--cancel" data-action="cancel" data-id="${cremation.cremation_id}" title="Cancel request"><i class="fas fa-xmark"></i> Cancel</button>`);
         }
 
         return buttons.length ? buttons.join('') : '<span class="muted">No actions</span>';
@@ -176,10 +224,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <td><strong>Request #${cremation.cremation_id}</strong></td>
                 <td>${nameCell}</td>
                 <td>${cremation.columbarium || 'N/A'}</td>
-                <td>${cremation.niche_number || '&mdash;'}</td>
+                <td>${cremation.niche_number ? `<strong>${escapeHtml(cremation.niche_number)}</strong>` : '<span style="color:#64748b;font-size:0.82rem;font-style:italic;">Not assigned</span>'}</td>
                 <td>${cremation.cremation_date || 'N/A'}</td>
                 <td>${cremation.created_by_name || 'N/A'}</td>
-                <td>${buildStatusBadge(cremation.status)}${buildUrgencyTag(cremation)}</td>
+                <td>${buildStatusBadge(cremation.status)}</td>
                 <td>${buildPaymentBadge(cremation)}</td>
                 <td class="action-buttons">${buildActionButtons(cremation, openExceptionIds)}</td>
             </tr>
@@ -204,10 +252,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function renderStats(stats) {
-        statsEls.pending.innerText = stats.pending || 0;
-        statsEls.scheduled.innerText = stats.scheduled || 0;
-        statsEls.completed.innerText = stats.completed || 0;
-        statsEls.cancelled.innerText = stats.cancelled || 0;
+        if (!statsEls.pending) return;
+        statsEls.pending.textContent = Number(stats && stats.pending) || 0;
+        statsEls.scheduled.textContent = Number(stats && stats.scheduled) || 0;
+        statsEls.completed.textContent = Number(stats && stats.completed) || 0;
+        statsEls.cancelled.textContent = Number(stats && stats.cancelled) || 0;
     }
 
     // Set of cremation_ids with an OPEN system_exceptions entry — the only
@@ -223,8 +272,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function refreshAwaitingConfirmationCount() {
-        const openExceptionIds = await loadOpenCremationExceptionIds();
-        awaitingCountBadge.textContent = openExceptionIds.size;
+        try {
+            const res = await api.request('cremations?awaiting_confirmation=1&per_page=1', { method: 'GET' });
+            const count = (res && res.meta && typeof res.meta.total === 'number') ? res.meta.total : 0;
+            awaitingCountBadge.textContent = count;
+        } catch (e) {
+            const openExceptionIds = await loadOpenCremationExceptionIds();
+            awaitingCountBadge.textContent = openExceptionIds.size;
+        }
     }
 
     async function loadAndRenderCremations() {
@@ -260,11 +315,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     // isn't gated on three round-trips back to back, mirroring
     // manage-reservations.js's identical refreshAll().
     async function refreshAll() {
+        updateActiveStatCards();
         await Promise.all([
             loadStats().then(renderStats).catch((error) => console.error('Failed to load cremation stats', error)),
             refreshAwaitingConfirmationCount(),
             loadAndRenderCremations(),
         ]);
+        updateActiveStatCards();
     }
 
     async function completeCremation(id, button) {
@@ -350,27 +407,151 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             const cremation = await api.request(`cremations/${id}`, { method: 'GET' });
             if (cremation.error) {
-                detailModalBody.innerHTML = `<p>${escapeHtml(cremation.error)}</p>`;
+                detailModalBody.innerHTML = `<p class="text-danger">${escapeHtml(cremation.error)}</p>`;
                 return;
             }
-            const nameCell = (cremation.first_name || cremation.last_name)
-                ? `${cremation.first_name || ''} ${cremation.last_name || ''}`
-                : (cremation.provisional_name ? `${cremation.provisional_name} (unregistered)` : 'N/A');
-            const paymentLine = cremation.payment_status
-                ? `${escapeHtml(cremation.payment_status)} &mdash; &#8369;${escapeHtml(cremation.payment_amount || 'N/A')} on ${escapeHtml(cremation.payment_date || 'N/A')} (receipt ${escapeHtml(cremation.payment_receipt_number || 'N/A')})`
-                : 'No payment on file';
+
+            const decedentFullName = (cremation.first_name || cremation.last_name)
+                ? `${cremation.first_name || ''} ${cremation.last_name || ''}`.trim()
+                : (cremation.provisional_name || 'Unspecified Decedent');
+            const isProvisional = !cremation.first_name && !cremation.last_name && Boolean(cremation.provisional_name);
+
+            const paymentStatus = cremation.payment_status || 'Unpaid';
+            const normalizedPayment = String(paymentStatus).toLowerCase();
+            const isVerified = normalizedPayment === 'verified';
+            const isPending = normalizedPayment === 'pending';
+            const formattedAmount = cremation.payment_amount
+                ? `₱${Number(cremation.payment_amount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : '₱0.00';
+
+            const receiptNumber = cremation.payment_receipt_number || 'None on file';
+            const paymentDate = cremation.payment_date || 'None';
+            const paymentMethod = cremation.payment_method || 'Standard';
+
+            // Clean, readable date formatting
+            let formattedDate = cremation.cremation_date || 'Not specified';
+            if (cremation.cremation_date) {
+                const parts = String(cremation.cremation_date).split('-');
+                if (parts.length === 3) {
+                    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                    if (!isNaN(d.getTime())) {
+                        formattedDate = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                    }
+                }
+            }
+
+            let bookedDate = cremation.created_at || 'Not recorded';
+            if (cremation.created_at) {
+                const bParts = String(cremation.created_at).split(' ');
+                if (bParts.length > 0) {
+                    const dParts = bParts[0].split('-');
+                    if (dParts.length === 3) {
+                        const d = new Date(parseInt(dParts[0], 10), parseInt(dParts[1], 10) - 1, parseInt(dParts[2], 10));
+                        if (!isNaN(d.getTime())) {
+                            bookedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        }
+                    }
+                }
+            }
+
             detailModalBody.innerHTML = `
-                <div class="form-group"><label>Request</label>#${escapeHtml(cremation.cremation_id)} &mdash; ${buildStatusBadge(cremation.status)}</div>
-                <div class="form-group"><label>Decedent</label>${escapeHtml(nameCell)}</div>
-                <div class="form-group"><label>Columbarium</label>${escapeHtml(cremation.columbarium || 'N/A')}</div>
-                <div class="form-group"><label>Niche</label>${escapeHtml(cremation.niche_number || 'Not yet assigned')}</div>
-                <div class="form-group"><label>Cremation date</label>${escapeHtml(cremation.cremation_date || 'N/A')}</div>
-                <div class="form-group"><label>Requested by</label>${escapeHtml(cremation.created_by_name || 'N/A')}</div>
-                <div class="form-group"><label>Payment</label>${paymentLine}</div>
-                <div class="form-group"><label>Notes</label>${escapeHtml(cremation.notes || 'None')}</div>
+                <div class="res-modal-content">
+                    <!-- Top Summary Card: Decedent & Status -->
+                    <div class="res-hero-card">
+                        <div class="res-hero-main">
+                            <span class="res-hero-booking">Request #${escapeHtml(cremation.cremation_id)}</span>
+                            <h3 class="res-hero-name">${escapeHtml(decedentFullName)}</h3>
+                            <span class="res-hero-type ${isProvisional ? 'is-provisional' : 'is-registered'}">
+                                ${isProvisional ? 'Provisional Intake Request' : 'Registered Cemetery Record'}
+                            </span>
+                        </div>
+                        <div class="res-hero-badges">
+                            ${buildStatusBadge(cremation.status)}
+                        </div>
+                    </div>
+
+                    <!-- 1. Cremation & Columbarium Information -->
+                    <div class="res-section-card">
+                        <h4 class="res-section-title">Cremation &amp; Niche Allocation</h4>
+                        <div class="res-grid-fields">
+                            <div class="res-field">
+                                <span class="res-field-label">Scheduled Cremation Date</span>
+                                <strong class="res-field-value res-field-value--highlight">${escapeHtml(formattedDate)}</strong>
+                            </div>
+                            <div class="res-field">
+                                <span class="res-field-label">Columbarium &amp; Niche</span>
+                                <strong class="res-field-value">${escapeHtml(cremation.columbarium || 'Unspecified')} &mdash; ${escapeHtml(cremation.niche_number ? 'Niche ' + cremation.niche_number : 'Not yet assigned')}</strong>
+                            </div>
+                            <div class="res-field">
+                                <span class="res-field-label">Ash Storage Location</span>
+                                <span class="res-field-value">${escapeHtml(cremation.ash_storage_location || 'Not specified')}</span>
+                            </div>
+                            <div class="res-field">
+                                <span class="res-field-label">Applicant Name</span>
+                                <span class="res-field-value">${escapeHtml(cremation.created_by_name || 'Direct Entry')}</span>
+                            </div>
+                            <div class="res-field">
+                                <span class="res-field-label">Date Booked</span>
+                                <span class="res-field-value">${escapeHtml(bookedDate)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Payment Summary -->
+                    <div class="res-section-card">
+                        <div class="res-section-header">
+                            <h4 class="res-section-title">Payment Information</h4>
+                            <span class="res-payment-badge ${isVerified ? 'verified' : (isPending ? 'pending' : 'unpaid')}">
+                                ${escapeHtml(paymentStatus)}
+                            </span>
+                        </div>
+                        <div class="res-grid-fields">
+                            <div class="res-field">
+                                <span class="res-field-label">Settlement Amount</span>
+                                <strong class="res-field-value res-field-value--amount ${isVerified ? 'text-verified' : ''}">${formattedAmount}</strong>
+                            </div>
+                            <div class="res-field">
+                                <span class="res-field-label">Payment Method</span>
+                                <span class="res-field-value">${escapeHtml(paymentMethod)}</span>
+                            </div>
+                            <div class="res-field">
+                                <span class="res-field-label">Official Receipt (OR#)</span>
+                                <span class="res-field-value font-mono">${escapeHtml(receiptNumber)}</span>
+                            </div>
+                            <div class="res-field">
+                                <span class="res-field-label">Transaction Date</span>
+                                <span class="res-field-value">${escapeHtml(paymentDate)}</span>
+                            </div>
+                        </div>
+                        ${(cremation.status === 'Pending' && !isVerified) ? `
+                            <div class="res-inline-action">
+                                <span>No verified payment on record yet.</span>
+                                <button type="button" class="btn btn-sm btn-primary" id="detailQuickPayBtn">
+                                    Record Payment
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- 3. Notes / Remarks (Only if provided) -->
+                    ${cremation.notes ? `
+                        <div class="res-section-card res-section-card--notes">
+                            <h4 class="res-section-title">Notes &amp; Special Instructions</h4>
+                            <p class="res-notes-content">${escapeHtml(cremation.notes)}</p>
+                        </div>
+                    ` : ''}
+                </div>
             `;
+
+            const quickPayBtn = document.getElementById('detailQuickPayBtn');
+            if (quickPayBtn) {
+                quickPayBtn.addEventListener('click', () => {
+                    closeDetailModal();
+                    openCashPaymentModal(cremation.cremation_id);
+                });
+            }
         } catch (error) {
-            detailModalBody.innerHTML = '<p>Unable to load cremation details right now.</p>';
+            detailModalBody.innerHTML = '<p class="text-danger">Unable to load cremation details right now.</p>';
         }
     }
 
@@ -429,11 +610,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         pagination.reset();
         currentQuery = searchQuery.value || '';
         currentStatus = statusFilter.value || '';
+        updateActiveStatCards();
         await loadAndRenderCremations();
     }, 250);
 
     searchQuery.addEventListener('input', refreshFiltered);
-    statusFilter.addEventListener('change', refreshFiltered);
+    statusFilter.addEventListener('change', () => {
+        currentStatus = statusFilter.value || '';
+        updateActiveStatCards();
+        pagination.reset();
+        loadAndRenderCremations();
+    });
 
     toggleAwaitingBtn.addEventListener('click', async () => {
         awaitingConfirmationOnly = !awaitingConfirmationOnly;
@@ -441,6 +628,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // The filter is inherently Pending-only server-side; disable the status
         // dropdown while active so it can't silently conflict with the toggle.
         statusFilter.disabled = awaitingConfirmationOnly;
+        updateActiveStatCards();
         pagination.reset();
         await loadAndRenderCremations();
     });
@@ -453,9 +641,47 @@ document.addEventListener('DOMContentLoaded', async function() {
         currentStatus = '';
         awaitingConfirmationOnly = false;
         toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+        updateActiveStatCards();
         pagination.reset();
         await loadAndRenderCremations();
     });
 
+    // Quick-filter via stat cards (One Source of Truth — synchronized with statusFilter dropdown & chips)
+    document.querySelectorAll('.mgmtres-stats .stat-card').forEach((card) => {
+        const cardStatus = card.getAttribute('data-status');
+        if (!cardStatus) return;
+
+        function triggerQuickFilter() {
+            const targetStatus = (!awaitingConfirmationOnly && currentStatus === cardStatus) ? '' : cardStatus;
+            setStatusFilter(targetStatus);
+        }
+
+        card.addEventListener('click', triggerQuickFilter);
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                triggerQuickFilter();
+            }
+        });
+    });
+
     await refreshAll();
 });
+
+(function initFooter() {
+    const yearEl = document.getElementById('footerYear');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
+    const timeEl = document.getElementById('footerLiveTime');
+    const pulseEl = document.querySelector('.footer-pulse-ring');
+    function stampFooterTime() {
+        const now = new Date();
+        const formatted = now.toLocaleString('en-PH', {
+            weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true
+        });
+        if (timeEl) timeEl.textContent = formatted;
+        if (pulseEl) pulseEl.style.display = 'block';
+    }
+    stampFooterTime();
+    window.stampFooterTime = stampFooterTime;
+})();
