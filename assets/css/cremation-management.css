@@ -1656,6 +1656,241 @@
 /* ========================================================
    DARK MODE OVERRIDES
    ======================================================== */
+
+/* Master Control Panel */
+[data-theme="dark"] .columbarium-control-panel {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.90));
+    border-color: rgba(255, 255, 255, 0.08);
+    border-left: 5px solid #10b981;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .panel-bottom-row {
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Sub-Tabs Track */
+[data-theme="dark"] .records-tabs-track {
+    background: rgba(15, 23, 42, 0.85);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .records-tab-btn {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .records-tab-btn:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.06);
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .records-tab-btn.active {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+
+[data-theme="dark"] .records-tab-btn.active i {
+    color: #ffffff;
+}
+
+/* Action Buttons */
+[data-theme="dark"] .panel-action-buttons .btn-secondary,
+[data-theme="dark"] #expandAllWallBtn {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .panel-action-buttons .btn-secondary:hover,
+[data-theme="dark"] #expandAllWallBtn:hover {
+    background: #334155;
+    border-color: rgba(255, 255, 255, 0.20);
+    color: #ffffff;
+}
+
+[data-theme="dark"] .report-export-button--excel {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: #34d399;
+}
+
+[data-theme="dark"] .report-export-button--excel i {
+    color: #34d399;
+}
+
+[data-theme="dark"] .report-export-button--excel:hover {
+    background: rgba(16, 185, 129, 0.22);
+    border-color: #34d399;
+    color: #6ee7b7;
+}
+
+/* Search Field */
+[data-theme="dark"] .search-input-wrap .search-field {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .search-input-wrap .search-field:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+}
+
+[data-theme="dark"] .search-input-wrap .search-icon {
+    color: #64748b;
+}
+
+[data-theme="dark"] .search-clear-btn {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .search-clear-btn:hover {
+    color: #f1f5f9;
+}
+
+/* Filter Dropdowns */
+[data-theme="dark"] .filter-select {
+    background-color: #1e293b;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f1f5f9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+[data-theme="dark"] .filter-select:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+}
+
+[data-theme="dark"] .select-field-wrap label {
+    color: #94a3b8;
+}
+
+/* View Mode Toggle Switcher */
+[data-theme="dark"] .view-mode-toggle-group {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .view-toggle-btn {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .view-toggle-btn:hover {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .view-toggle-btn.active {
+    background: #1e293b;
+    color: #34d399;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* Table View in Dark Mode */
+[data-theme="dark"] .columbarium-table-wrapper {
+    background: #172033;
+    border-color: #334155;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] #columbariumTable {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] #columbariumTable thead th {
+    background: #1e293b;
+    color: #94a3b8;
+    border-bottom-color: #334155;
+}
+
+[data-theme="dark"] #columbariumTable tbody tr {
+    border-bottom-color: #334155;
+}
+
+[data-theme="dark"] #columbariumTable tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .table-pagination {
+    background: #1e293b;
+    border-top-color: #334155;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .table-pagination strong {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .pagination-btn {
+    background: #172033;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .pagination-btn:hover:not(:disabled) {
+    background: #334155;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .btn-action-view {
+    background: #1e293b;
+    border-color: #334155;
+    color: #38bdf8;
+}
+
+[data-theme="dark"] .btn-action-view:hover {
+    background: #0369a1;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .btn-action-edit {
+    background: #1e293b;
+    border-color: #334155;
+    color: #f59e0b;
+}
+
+[data-theme="dark"] .btn-action-edit:hover {
+    background: #b45309;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .btn-action-assign {
+    background: #1e293b;
+    border-color: #334155;
+    color: #34d399;
+}
+
+[data-theme="dark"] .btn-action-assign:hover {
+    background: #059669;
+    color: #ffffff;
+}
+
+/* Alert Banners & Wizard */
+[data-theme="dark"] .columbarium-alert-banner.warning {
+    background: #451a03;
+    border-color: #78350f;
+    border-left-color: #f59e0b;
+    color: #fde68a;
+}
+
+[data-theme="dark"] .columbarium-alert-banner.critical {
+    background: #450a0a;
+    border-color: #7f1d1d;
+    border-left-color: #ef4444;
+    color: #fecaca;
+}
+
+[data-theme="dark"] .batch-preview-box {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+}
+
+[data-theme="dark"] #batchPreviewList {
+    color: #cbd5e1 !important;
+}
+
 [data-theme="dark"] .sanctuary-group {
     background: #1e293b;
     border-color: #334155;
