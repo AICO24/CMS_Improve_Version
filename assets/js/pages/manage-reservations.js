@@ -250,7 +250,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         // server-side (creates a real, Verified Payment record too, so it
         // still shows up in Revenue Reports).
         if (schedule.status === 'Pending' && !openExceptionIds.has(schedule.schedule_id)) {
-            buttons.push(`<button class="btn-row-action btn-row-action--cash" data-action="complete-cash" data-id="${schedule.schedule_id}" title="Complete reservation via cash payment"><i class="fas fa-money-bill-wave"></i> Complete (Cash)</button>`);
+            const rawAmt = schedule.payment_amount || schedule.price || '';
+            buttons.push(`<button class="btn-row-action btn-row-action--cash" data-action="complete-cash" data-id="${schedule.schedule_id}" data-amount="${rawAmt}" title="Complete reservation via cash payment"><i class="fas fa-money-bill-wave"></i> Complete (Cash)</button>`);
         }
         // Cancel mirrors ScheduleController::destroy()'s server-side rule: admin
         // may cancel any Pending/Confirmed reservation; staff only their own
@@ -402,11 +403,56 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Batch E (reservation module audit): replaces three chained
     // prompt()/confirm() dialogs with the shared modal markup — same
     // request body/shape as before, only the input UI changed.
-    function openCashPaymentModal(id) {
+    // F.1: High-Precision Split-Deck Counter Payment Engine
+    let currentAmountDue = 0;
+
+    const cashStubTenderedDisplay = document.getElementById('cashStubTenderedDisplay');
+    const cashStubChangeDisplay = document.getElementById('cashStubChangeDisplay');
+
+    function updateCashCalculation() {
+        const tendered = parseFloat(cashPaymentAmount.value) || 0;
+        if (cashStubTenderedDisplay) {
+            cashStubTenderedDisplay.textContent = `₱${tendered.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+        if (cashStubChangeDisplay) {
+            const change = Math.max(0, tendered - currentAmountDue);
+            cashStubChangeDisplay.textContent = `₱${change.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (tendered < currentAmountDue && tendered > 0) {
+                const diff = currentAmountDue - tendered;
+                cashStubChangeDisplay.innerHTML = `<span style="font-size:0.85rem; color:#dc2626;">Underpaid: -₱${diff.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
+            }
+        }
+    }
+
+    cashPaymentAmount.addEventListener('input', updateCashCalculation);
+
+    // Wire up denomination chips
+    document.querySelectorAll('.btn-denom-chip[data-amount]').forEach((chip) => {
+        chip.addEventListener('click', () => {
+            const addVal = parseFloat(chip.getAttribute('data-amount')) || 0;
+            const curVal = parseFloat(cashPaymentAmount.value) || 0;
+            cashPaymentAmount.value = (curVal + addVal).toFixed(2);
+            updateCashCalculation();
+        });
+    });
+
+    const btnExact = document.getElementById('btnExactAmount');
+    if (btnExact) {
+        btnExact.addEventListener('click', () => {
+            if (currentAmountDue > 0) {
+                cashPaymentAmount.value = currentAmountDue.toFixed(2);
+                updateCashCalculation();
+            }
+        });
+    }
+
+    function openCashPaymentModal(id, amountDue = 0) {
         cashPaymentScheduleId.value = id;
-        cashPaymentAmount.value = '';
+        currentAmountDue = parseFloat(amountDue) || 0;
+        cashPaymentAmount.value = currentAmountDue > 0 ? currentAmountDue.toFixed(2) : '';
         cashPaymentMethod.value = 'Cash';
         cashPaymentReceipt.value = '';
+        updateCashCalculation();
         cashModal.style.display = 'flex';
         cashPaymentAmount.focus();
     }
@@ -457,16 +503,28 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (event.target === cashModal) closeCashPaymentModal();
     });
 
-    // Batch E: wires up GET schedules/{id} — previously never called from
-    // this page (the audit found no detail-view consumer of it at all).
-    // Fetches fresh rather than reusing the row's already-loaded data so
-    // the modal always reflects the latest state, including notes and
-    // Batch E: wires up GET schedules/{id} with executive visual hierarchy
+    // Compute intuitive human countdown
+    function computeScheduleCountdown(scheduleDateStr) {
+        if (!scheduleDateStr) return 'Date Pending';
+        const parts = String(scheduleDateStr).split('-');
+        if (parts.length !== 3) return 'Scheduled';
+        const sched = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        sched.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((sched.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays < 0) return `${Math.abs(diffDays)} days past`;
+        if (diffDays === 0) return 'Today';
+        if (diffDays === 1) return 'Tomorrow';
+        return `In ${diffDays} days`;
+    }
+
+    // Zero-Scroll Split-Deck Reservation Dossier
     async function viewReservation(id) {
         detailModalBody.innerHTML = `
-            <div class="resmodal-loading">
-                <i class="fas fa-circle-notch fa-spin"></i>
-                <span>Loading reservation details...</span>
+            <div class="resmodal-loading" style="padding: 40px 20px; text-align: center; color: #047857;">
+                <i class="fas fa-circle-notch fa-spin" style="font-size: 2rem; margin-bottom: 12px; display: block;"></i>
+                <span style="font-weight: 700;">Loading reservation dossier...</span>
             </div>
         `;
         detailModal.style.display = 'flex';
@@ -474,9 +532,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             const schedule = await api.request(`schedules/${id}`, { method: 'GET' });
             if (schedule.error) {
                 detailModalBody.innerHTML = `
-                    <div class="resmodal-error">
-                        <i class="fas fa-triangle-exclamation"></i>
-                        <span>${escapeHtml(schedule.error)}</span>
+                    <div class="resmodal-error" style="padding: 40px 20px; text-align: center; color: #dc2626;">
+                        <i class="fas fa-triangle-exclamation" style="font-size: 2rem; margin-bottom: 8px;"></i>
+                        <span style="display: block; font-weight: 700;">${escapeHtml(schedule.error)}</span>
                     </div>
                 `;
                 return;
@@ -494,10 +552,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             const isPending = normalizedPayment === 'pending';
             const formattedAmount = schedule.payment_amount
                 ? `₱${Number(schedule.payment_amount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                : '₱0.00';
+                : (schedule.price ? `₱${Number(schedule.price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '₱0.00');
 
-            const receiptNumber = schedule.payment_receipt_number || 'None on file';
-            const paymentDate = schedule.payment_date || 'None';
+            const receiptNumber = schedule.payment_receipt_number || 'Auto-generated upon cashiering';
+            const paymentDate = schedule.payment_date || 'Pending';
             const paymentMethod = schedule.payment_method || 'Standard';
 
             // Clean, readable date & time formatting
@@ -507,7 +565,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (parts.length === 3) {
                     const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
                     if (!isNaN(d.getTime())) {
-                        formattedDate = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                        formattedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                     }
                 }
             }
@@ -522,7 +580,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                     formattedTime = `${displayH}:${tParts[1]} ${ampm}`;
                 }
             }
-            const scheduleDateTime = formattedTime ? `${formattedDate} at ${formattedTime}` : formattedDate;
 
             let bookedDate = schedule.created_at || 'Not recorded';
             if (schedule.created_at) {
@@ -538,104 +595,142 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             }
 
+            const countdownText = computeScheduleCountdown(schedule.schedule_date);
+            const bookingBadge = document.getElementById('detailBookingBadge');
+            if (bookingBadge) {
+                bookingBadge.textContent = `Booking #${schedule.schedule_id}`;
+            }
+
             detailModalBody.innerHTML = `
-                <div class="res-modal-content">
-                    <!-- Top Summary Card: Decedent & Status -->
-                    <div class="res-hero-card">
-                        <div class="res-hero-main">
-                            <span class="res-hero-booking">Booking #${escapeHtml(schedule.schedule_id)}</span>
-                            <h3 class="res-hero-name">${escapeHtml(decedentFullName)}</h3>
-                            <span class="res-hero-type ${isProvisional ? 'is-provisional' : 'is-registered'}">
-                                ${isProvisional ? 'Provisional Intake Request' : 'Registered Cemetery Record'}
-                            </span>
+                <div class="split-deck-body">
+                    <!-- LEFT DECK: Profile & Dossier Engine -->
+                    <div class="deck-col deck-col--dossier">
+                        <div class="deck-section-title">
+                            <i class="fas fa-id-card"></i>
+                            <span>Interment &amp; Applicant Dossier</span>
                         </div>
-                        <div class="res-hero-badges">
-                            ${buildStatusBadge(schedule.status)}
+
+                        <div class="res-dossier-card">
+                            <div class="res-profile-header">
+                                <div class="res-profile-avatar">
+                                    <i class="fas fa-user-tag"></i>
+                                </div>
+                                <div class="res-profile-meta">
+                                    <h4 class="res-profile-name">${escapeHtml(decedentFullName)}</h4>
+                                    <span class="res-type-pill ${isProvisional ? 'res-type-pill--provisional' : 'res-type-pill--registered'}">
+                                        <i class="fas ${isProvisional ? 'fa-hourglass-half' : 'fa-certificate'}"></i>
+                                        ${isProvisional ? 'Provisional Request' : 'Registered Decedent'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="res-data-grid">
+                                <div class="res-data-item">
+                                    <span class="res-data-label">Applicant / Kin</span>
+                                    <strong class="res-data-value">${escapeHtml(schedule.created_by_name || 'Direct Entry')}</strong>
+                                </div>
+                                <div class="res-data-item">
+                                    <span class="res-data-label">Contact / Phone</span>
+                                    <span class="res-data-value">${escapeHtml(schedule.contact_phone || schedule.phone || 'On file')}</span>
+                                </div>
+                                <div class="res-data-item">
+                                    <span class="res-data-label">Intake Date</span>
+                                    <span class="res-data-value">${escapeHtml(bookedDate)}</span>
+                                </div>
+                                <div class="res-data-item">
+                                    <span class="res-data-label">Schedule Status</span>
+                                    <span class="res-data-value">${buildStatusBadge(schedule.status)}</span>
+                                </div>
+                            </div>
+
+                            ${schedule.notes ? `
+                                <div class="res-notes-box">
+                                    <i class="fas fa-quote-left"></i>
+                                    <span>${escapeHtml(schedule.notes)}</span>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
 
-                    <!-- 1. Burial & Plot Information -->
-                    <div class="res-section-card">
-                        <h4 class="res-section-title">Burial &amp; Lot Information</h4>
-                        <div class="res-grid-fields">
-                            <div class="res-field">
-                                <span class="res-field-label">Scheduled Date &amp; Time</span>
-                                <strong class="res-field-value res-field-value--highlight">${escapeHtml(scheduleDateTime)}</strong>
+                    <!-- RIGHT DECK: Live Spatial Matrix & Digital Twin -->
+                    <div class="deck-col deck-col--twin">
+                        <div class="deck-section-title">
+                            <i class="fas fa-map-location-dot"></i>
+                            <span>Spatial Digital Twin &amp; Settlement</span>
+                        </div>
+
+                        <div class="res-twin-card">
+                            <div class="res-twin-top">
+                                <div class="res-twin-locator">
+                                    <i class="fas fa-location-crosshairs"></i>
+                                    <span>Section ${escapeHtml(schedule.section_name || 'A')} · Zone ${escapeHtml(schedule.block_name || 'Standard')}</span>
+                                </div>
+                                <span class="res-countdown-chip">
+                                    <i class="fas fa-clock"></i>
+                                    <span>${escapeHtml(countdownText)}</span>
+                                </span>
                             </div>
-                            <div class="res-field">
-                                <span class="res-field-label">Assigned Lot</span>
-                                <strong class="res-field-value">Lot ${escapeHtml(schedule.lot_number || 'N/A')}, Section ${escapeHtml(schedule.section_name || 'N/A')}</strong>
+
+                            <div class="res-twin-plot-badge">
+                                <span class="res-plot-monogram">LOT ${escapeHtml(schedule.lot_number || 'TBD')}</span>
                             </div>
-                            <div class="res-field">
-                                <span class="res-field-label">Applicant Name</span>
-                                <span class="res-field-value">${escapeHtml(schedule.created_by_name || 'Direct Entry')}</span>
+
+                            <div class="res-twin-schedule-strip">
+                                <i class="fas fa-calendar-check"></i>
+                                <div>
+                                    <strong>${escapeHtml(formattedDate)}</strong>
+                                    <span> at ${escapeHtml(formattedTime || 'Standard Morning Slot')}</span>
+                                </div>
                             </div>
-                            <div class="res-field">
-                                <span class="res-field-label">Date Booked</span>
-                                <span class="res-field-value">${escapeHtml(bookedDate)}</span>
+
+                            <div class="res-twin-valuation-card">
+                                <div>
+                                    <span class="deck-kicker">Settlement Fee</span>
+                                    <div class="res-val-amount">${formattedAmount}</div>
+                                </div>
+                                <div class="res-val-meta">
+                                    <span class="deck-badge ${isVerified ? '' : 'deck-badge--gold'}">
+                                        <i class="fas ${isVerified ? 'fa-circle-check' : 'fa-receipt'}"></i>
+                                        ${escapeHtml(paymentStatus)}
+                                    </span>
+                                    <span class="small muted" style="font-family: monospace; font-size: 0.72rem; margin-top: 4px;">OR# ${escapeHtml(receiptNumber)}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- 2. Payment Summary -->
-                    <div class="res-section-card">
-                        <div class="res-section-header">
-                            <h4 class="res-section-title">Payment Information</h4>
-                            <span class="res-payment-badge ${isVerified ? 'verified' : (isPending ? 'pending' : 'unpaid')}">
-                                ${escapeHtml(paymentStatus)}
-                            </span>
-                        </div>
-                        <div class="res-grid-fields">
-                            <div class="res-field">
-                                <span class="res-field-label">Settlement Amount</span>
-                                <strong class="res-field-value res-field-value--amount ${isVerified ? 'text-verified' : ''}">${formattedAmount}</strong>
-                            </div>
-                            <div class="res-field">
-                                <span class="res-field-label">Payment Method</span>
-                                <span class="res-field-value">${escapeHtml(paymentMethod)}</span>
-                            </div>
-                            <div class="res-field">
-                                <span class="res-field-label">Official Receipt (OR#)</span>
-                                <span class="res-field-value font-mono">${escapeHtml(receiptNumber)}</span>
-                            </div>
-                            <div class="res-field">
-                                <span class="res-field-label">Transaction Date</span>
-                                <span class="res-field-value">${escapeHtml(paymentDate)}</span>
-                            </div>
-                        </div>
-                        ${(schedule.status === 'Pending' && !isVerified) ? `
-                            <div class="res-inline-action">
-                                <span>No verified payment on record yet.</span>
-                                <button type="button" class="btn btn-sm btn-primary" id="detailQuickPayBtn">
-                                    Record Payment
-                                </button>
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    <!-- 3. Notes / Remarks (Only if provided) -->
-                    ${schedule.notes ? `
-                        <div class="res-section-card res-section-card--notes">
-                            <h4 class="res-section-title">Notes / Remarks</h4>
-                            <p class="res-notes-content">${escapeHtml(schedule.notes)}</p>
-                        </div>
-                    ` : ''}
                 </div>
             `;
 
-            const quickPayBtn = detailModalBody.querySelector('#detailQuickPayBtn');
-            if (quickPayBtn) {
-                quickPayBtn.addEventListener('click', () => {
-                    closeDetailModal();
-                    openCashPaymentModal(schedule.schedule_id);
-                });
+            // Setup footer actions dynamically
+            const actionsRight = document.getElementById('detailModalActionsRight');
+            if (actionsRight) {
+                actionsRight.innerHTML = '';
+                if (schedule.status === 'Pending' && !isVerified) {
+                    const payBtn = document.createElement('button');
+                    payBtn.type = 'button';
+                    payBtn.className = 'btn-deck-primary btn-deck-gold';
+                    payBtn.innerHTML = '<i class="fas fa-hand-holding-dollar"></i> <span>Settle Payment</span>';
+                    payBtn.addEventListener('click', () => {
+                        closeDetailModal();
+                        const rawAmount = schedule.payment_amount || schedule.price || 0;
+                        openCashPaymentModal(schedule.schedule_id, rawAmount);
+                    });
+                    actionsRight.appendChild(payBtn);
+                }
+
+                const closeBtn = document.createElement('button');
+                closeBtn.type = 'button';
+                closeBtn.className = 'btn-deck-primary';
+                closeBtn.innerHTML = '<i class="fas fa-check"></i> <span>Done</span>';
+                closeBtn.addEventListener('click', closeDetailModal);
+                actionsRight.appendChild(closeBtn);
             }
         } catch (error) {
             console.error('Failed to load reservation details', error);
             detailModalBody.innerHTML = `
-                <div class="resmodal-error">
-                    <i class="fas fa-circle-exclamation"></i>
-                    <span>Unable to load reservation details right now. Please try again later.</span>
+                <div class="resmodal-error" style="padding: 40px 20px; text-align: center; color: #dc2626;">
+                    <i class="fas fa-circle-exclamation" style="font-size: 2rem; margin-bottom: 8px;"></i>
+                    <span style="display: block; font-weight: 700;">Unable to load reservation details right now. Please try again later.</span>
                 </div>
             `;
         }
@@ -645,8 +740,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         detailModal.style.display = 'none';
     }
 
-    document.getElementById('closeDetailModal').addEventListener('click', closeDetailModal);
-    document.getElementById('closeDetailModalBtn').addEventListener('click', closeDetailModal);
+    const closeDetailModalTop = document.getElementById('closeDetailModal');
+    if (closeDetailModalTop) {
+        closeDetailModalTop.addEventListener('click', closeDetailModal);
+    }
+    const closeDetailModalBtn = document.getElementById('closeDetailModalBtn');
+    if (closeDetailModalBtn) {
+        closeDetailModalBtn.addEventListener('click', closeDetailModal);
+    }
     detailModal.addEventListener('click', (event) => {
         if (event.target === detailModal) closeDetailModal();
     });
@@ -684,7 +785,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         if (action === 'view') await viewReservation(id);
         else if (action === 'complete') await completeReservation(id, button);
-        else if (action === 'complete-cash') openCashPaymentModal(id);
+        else if (action === 'complete-cash') {
+            const rowAmt = button.getAttribute('data-amount') || 0;
+            openCashPaymentModal(id, rowAmt);
+        }
         else if (action === 'cancel') await cancelReservation(id, button);
     });
 

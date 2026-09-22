@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Book a Service | Cemetery Management</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../../assets/css/tokens.css?v=2">
@@ -19,58 +19,27 @@
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
     <link rel="stylesheet" href="../../assets/css/dashboard_user.css">
     <link rel="stylesheet" href="../../assets/css/book-a-service.css">
-
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
 </head>
 <body class="dashboard-body">
-<script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}window.location.replace('booking-assistant.html' + (window.location.search || ''));})();</script>
+<script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
                 <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
             </div>
-                                                <div class="sidebar-nav">
-                    <a href="dashboard_user.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
-                <div class="nav-group">
+            <div class="sidebar-nav" id="sidebarNav">
+                <a href="dashboard_user.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
+                <div class="nav-group open">
                     <button type="button" class="nav-group-header">
                         <span>Services</span>
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="book-a-service.html" class="nav-item active"><i class="fas fa-handshake icon"></i> <span>Book a Service</span></a>
-                    <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Records</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="my-bookings.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>My Bookings</span></a>
-                    <a href="my-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>My Records</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Finance</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
-                    <a href="payment-history.html" class="nav-item"><i class="fas fa-receipt icon"></i> <span>Payment History</span></a>
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <button type="button" class="nav-group-header">
-                        <span>Account</span>
-                        <i class="fas fa-chevron-down chev"></i>
-                    </button>
-                    <div class="nav-group-body">
-                    <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
-                    <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
+                        <a href="book-a-service.html" class="nav-item active"><i class="fas fa-handshake icon"></i> <span>Book a Service</span></a>
+                        <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
                     </div>
                 </div>
             </div>
@@ -103,7 +72,7 @@
                     <div class="profile">
                         <div class="profile-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
                         <div class="profile-text">
-                            <div class="user-name" id="userName">Client</div>
+                            <div class="user-name" id="userName">User</div>
                             <div class="user-role" id="userRole">Client</div>
                         </div>
                     </div>
@@ -113,26 +82,187 @@
                     </button>
                 </div>
             </div>
-                <div class="content-area">
-                <div class="user-welcome-card card">
-                    <p class="welcome-label">What would you like to arrange?</p>
-                    <p class="welcome-note">Choose a service below and we'll guide you through the rest — the requirements, schedule, and payment steps are specific to each one.</p>
-                </div>
-                <div class="service-choice-grid">
-                    <div class="card service-choice-card">
-                        <div class="service-choice-icon"><i class="fas fa-monument"></i></div>
-                        <h4>Burial Service</h4>
-                        <p class="muted">Reserve a burial lot. Chat with the AI Booking Assistant for a personalized lot type and specific lot suggestion based on budget, section, and current availability.</p>
-                        <a href="booking-assistant.html?service=burial" class="btn-primary">Reserve a Burial Slot &rarr;</a>
+
+            <div class="content-area">
+                <!-- Hero Command Center Banner -->
+                <div class="service-hero-deck">
+                    <div class="service-hero-content">
+                        <div class="service-eyebrow">
+                            <span class="service-kicker"><i class="fas fa-layer-group"></i> Operations &amp; Intake Command Center</span>
+                            <span class="service-pulse-beacon"><span class="pulse-dot"></span> Live Intake Active</span>
+                        </div>
+                        <h2 class="service-hero-title">Arrangement &amp; Memorial Service Dispatch</h2>
+                        <p class="service-hero-subtitle">Coordinate municipal ground burials, columbarium cremations, and memorial plots with automated conflict validation and instant clearance.</p>
                     </div>
-                    <div class="card service-choice-card">
-                        <div class="service-choice-icon"><i class="fas fa-fire"></i></div>
-                        <h4>Cremation Service</h4>
-                        <p class="muted">Book a cremation request for a columbarium niche. Provide who it's for and your preferred columbarium and date — the specific niche is assigned once the cremation is completed.</p>
-                        <a href="booking-assistant.html?service=cremation" class="btn-primary">Reserve a Cremation &rarr;</a>
+                    <!-- Quick Operational Ticker -->
+                    <div class="service-ticker-row">
+                        <div class="service-ticker-chip">
+                            <i class="fas fa-map-location-dot"></i>
+                            <div>
+                                <strong id="tickerLotsCount">Verified Active</strong>
+                                <span>Ground Lots Available</span>
+                            </div>
+                        </div>
+                        <div class="service-ticker-chip">
+                            <i class="fas fa-monument"></i>
+                            <div>
+                                <strong id="tickerNichesCount">Open Niches</strong>
+                                <span>Columbarium Wings</span>
+                            </div>
+                        </div>
+                        <div class="service-ticker-chip">
+                            <i class="fas fa-clock-rotate-left"></i>
+                            <div>
+                                <strong>&lt; 24 Hours</strong>
+                                <span>Intake Clearance</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <p class="muted small" style="margin-top:14px;">Already booked? Check <a href="my-bookings.html">My Bookings</a> for status updates.</p>
+
+                <!-- Dual Service Command Cards -->
+                <p class="section-label"><i class="fas fa-handshake"></i> Select Service Workflow</p>
+                <div class="service-command-grid">
+                    <!-- Ground Burial Card -->
+                    <div class="service-command-card service-command-card--burial">
+                        <div class="service-card-accent-bar"></div>
+                        <div class="service-card-header">
+                            <div class="service-card-icon-wrap service-card-icon-wrap--emerald">
+                                <i class="fas fa-monument"></i>
+                            </div>
+                            <div class="service-card-meta">
+                                <span class="service-category-tag"><i class="fas fa-tree"></i> Ground Interment</span>
+                                <h3 class="service-card-heading">Burial Service Arrangement</h3>
+                            </div>
+                        </div>
+                        <p class="service-card-desc">
+                            Complete ground burial lot reservation and schedule allocation for lawn lots, semi-estate, and family estate crypts. Real-time lot suggestion based on budget, section preference, and double-booking locks.
+                        </p>
+                        
+                        <div class="service-spec-matrix">
+                            <div class="service-spec-item">
+                                <span class="spec-label"><i class="fas fa-shapes"></i> Categories</span>
+                                <strong class="spec-val">Lawn, Semi-Estate, Family Estate</strong>
+                            </div>
+                            <div class="service-spec-item">
+                                <span class="spec-label"><i class="fas fa-tags"></i> Est. Pricing</span>
+                                <strong class="spec-val">₱25,000 — ₱120,000</strong>
+                            </div>
+                            <div class="service-spec-item">
+                                <span class="spec-label"><i class="fas fa-calendar-day"></i> Schedule Slots</span>
+                                <strong class="spec-val">Morning (9-11 AM) &amp; Afternoon (1-4 PM)</strong>
+                            </div>
+                        </div>
+
+                        <div class="service-card-actions">
+                            <a href="booking-assistant.html?service=burial" class="btn-service-primary btn-service-emerald">
+                                <i class="fas fa-robot"></i>
+                                <span>Start with Guided AI Assistant</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                            <a href="manage-reservations.html" class="btn-service-secondary">
+                                <i class="fas fa-bolt"></i>
+                                <span>Direct Staff Queue</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Cremation Service Card -->
+                    <div class="service-command-card service-command-card--cremation">
+                        <div class="service-card-accent-bar service-card-accent-bar--teal"></div>
+                        <div class="service-card-header">
+                            <div class="service-card-icon-wrap service-card-icon-wrap--teal">
+                                <i class="fas fa-fire"></i>
+                            </div>
+                            <div class="service-card-meta">
+                                <span class="service-category-tag service-category-tag--teal"><i class="fas fa-place-of-worship"></i> Columbarium Sanctuary</span>
+                                <h3 class="service-card-heading">Cremation &amp; Niche Booking</h3>
+                            </div>
+                        </div>
+                        <p class="service-card-desc">
+                            Dignified cremation service intake with automated columbarium niche allocation. Includes urn chamber reservation, certificate logging, and real-time urn vault assignment upon completion.
+                        </p>
+
+                        <div class="service-spec-matrix">
+                            <div class="service-spec-item">
+                                <span class="spec-label"><i class="fas fa-shapes"></i> Sanctuary Tiers</span>
+                                <strong class="spec-val">Prime Eye-Level (L3-4) &amp; Standard (L1-10)</strong>
+                            </div>
+                            <div class="service-spec-item">
+                                <span class="spec-label"><i class="fas fa-tags"></i> Est. Pricing</span>
+                                <strong class="spec-val">₱15,000 — ₱45,000</strong>
+                            </div>
+                            <div class="service-spec-item">
+                                <span class="spec-label"><i class="fas fa-fire-burner"></i> Chamber Protocol</span>
+                                <strong class="spec-val">Dedicated Retort Schedule Windows</strong>
+                            </div>
+                        </div>
+
+                        <div class="service-card-actions">
+                            <a href="booking-assistant.html?service=cremation" class="btn-service-primary btn-service-teal">
+                                <i class="fas fa-robot"></i>
+                                <span>Start with Guided AI Assistant</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                            <a href="manage-cremations.html" class="btn-service-secondary">
+                                <i class="fas fa-bolt"></i>
+                                <span>Direct Cremation Queue</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clearance Requirements Checklist -->
+                <p class="section-label"><i class="fas fa-clipboard-check"></i> Municipal Documentary Requirements</p>
+                <div class="service-requirements-card card">
+                    <div class="req-header">
+                        <div class="req-icon"><i class="fas fa-folder-closed"></i></div>
+                        <div>
+                            <h4 class="req-title">Pre-Clearance Checklist for Cemetery Bookings</h4>
+                            <p class="req-subtitle">Please prepare digital copies or physical copies of the following documents before proceeding:</p>
+                        </div>
+                    </div>
+                    <div class="req-grid">
+                        <div class="req-item">
+                            <div class="req-item-badge"><i class="fas fa-file-waveform"></i></div>
+                            <div class="req-item-body">
+                                <strong>Death Certificate</strong>
+                                <span>Civil Registry or PSA certified copy with cause of death.</span>
+                            </div>
+                        </div>
+                        <div class="req-item">
+                            <div class="req-item-badge"><i class="fas fa-stamp"></i></div>
+                            <div class="req-item-body">
+                                <strong>Burial / Transfer Permit</strong>
+                                <span>Municipal City Health Office (CHO) clearance permit.</span>
+                            </div>
+                        </div>
+                        <div class="req-item">
+                            <div class="req-item-badge"><i class="fas fa-id-card"></i></div>
+                            <div class="req-item-body">
+                                <strong>Government-Issued ID</strong>
+                                <span>Valid ID of next-of-kin, representative, or legal claimant.</span>
+                            </div>
+                        </div>
+                        <div class="req-item">
+                            <div class="req-item-badge"><i class="fas fa-receipt"></i></div>
+                            <div class="req-item-body">
+                                <strong>Payment / OR Slip</strong>
+                                <span>Counter official receipt or verified electronic deposit slip.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Quick Navigation Strip -->
+                <div class="service-quick-strip">
+                    <span class="muted"><i class="fas fa-info-circle"></i> Looking for an existing booking?</span>
+                    <div class="quick-links-group">
+                        <a href="my-bookings.html" class="quick-link-pill"><i class="fas fa-calendar-check"></i> My Bookings</a>
+                        <a href="manage-reservations.html" class="quick-link-pill"><i class="fas fa-table-list"></i> Reservation Manager</a>
+                        <a href="manage-cremations.html" class="quick-link-pill"><i class="fas fa-fire"></i> Cremation Manager</a>
+                    </div>
+                </div>
             </div>
         </main>
     </div>

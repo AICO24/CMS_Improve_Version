@@ -2488,5 +2488,804 @@
     box-shadow: 0 0 0 3px rgba(22, 56, 43, 0.12);
 }
 
+/* =========================================================================
+   ANTIGRAVITY ORIGINAL: ZERO-SCROLL SPLIT-DECK ARCHITECTURE
+   For Reservation Details & High-Precision Cashiering Modals
+   ========================================================================= */
 
+.modal-deck-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 200;
+}
 
+.modal-deck-card {
+    position: relative;
+    width: min(1040px, 96vw) !important;
+    max-width: 1040px !important;
+    border-radius: 16px;
+    background: #ffffff;
+    border: 1.5px solid rgba(226, 232, 240, 0.95);
+    box-shadow: 0 25px 60px -15px rgba(6, 78, 59, 0.22), 0 0 0 1px rgba(16, 185, 129, 0.12);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0 !important;
+    animation: deckPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modal-deck-card--cash {
+    width: min(880px, 95vw) !important;
+    max-width: 880px !important;
+}
+
+@keyframes deckPop {
+    0% { opacity: 0; transform: scale(0.96) translateY(8px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Header Deck */
+.deck-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    background: linear-gradient(135deg, #ffffff 0%, #fcfdfd 55%, #f0fdf4 100%);
+    border-bottom: 1.5px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.deck-header-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.deck-avatar-halo {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.deck-avatar-halo--emerald {
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+
+.deck-avatar-halo--gold {
+    background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+}
+
+.deck-title-block {
+    display: flex;
+    flex-direction: column;
+}
+
+.deck-meta-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.deck-kicker {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #047857;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.deck-badge {
+    font-size: 0.70rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+    border-radius: 9999px;
+}
+
+.deck-badge--gold {
+    background: #fffbeb;
+    color: #92400e;
+    border-color: #fde68a;
+}
+
+.deck-heading {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+.deck-close-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.15s ease;
+}
+
+.deck-close-btn:hover {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fca5a5;
+    transform: rotate(90deg);
+}
+
+/* Split Deck Body (Guaranteed Zero-Scroll) */
+.split-deck-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+    padding: 20px 28px;
+    background: #f8fafc;
+    flex: 1;
+    overflow: hidden;
+}
+
+.modal-body--no-pad {
+    padding: 0 !important;
+    background: #f8fafc;
+}
+
+.deck-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.deck-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #334155;
+    margin-bottom: 2px;
+}
+
+.deck-section-title i {
+    color: #10b981;
+}
+
+/* Dossier Profile Card (Left Deck) */
+.res-dossier-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+
+.res-profile-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.res-profile-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #eff6ff;
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.res-profile-meta {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.res-profile-name {
+    font-size: 1.10rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 4px;
+}
+
+.res-type-pill {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    display: inline-flex;
+    width: fit-content;
+}
+
+.res-type-pill--registered {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.res-type-pill--provisional {
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+
+.res-data-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.res-data-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.res-data-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.res-data-value {
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.res-notes-box {
+    background: #fdf8e6;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: #78350f;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.4;
+}
+
+.res-notes-box i {
+    color: #d97706;
+    margin-top: 2px;
+}
+
+/* Spatial Digital Twin Card (Right Deck) */
+.res-twin-card {
+    background: linear-gradient(135deg, #ffffff 0%, #fcfdfd 60%, #ecfdf5 100%);
+    border: 1.5px solid #a7f3d0;
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 4px 18px rgba(6, 78, 59, 0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.res-twin-card::after {
+    content: "";
+    position: absolute;
+    bottom: -30px;
+    right: -30px;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0) 70%);
+    pointer-events: none;
+}
+
+.res-twin-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.res-twin-locator {
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #047857;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.res-twin-plot-badge {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.res-plot-monogram {
+    font-size: 1.75rem;
+    font-weight: 900;
+    color: #064e3b;
+    letter-spacing: -0.03em;
+}
+
+.res-countdown-chip {
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    background: #ffffff;
+    border: 1px solid #10b981;
+    border-radius: 9999px;
+    color: #065f46;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15);
+}
+
+.res-twin-schedule-strip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.84rem;
+}
+
+.res-twin-schedule-strip i {
+    color: #10b981;
+    font-size: 1.1rem;
+}
+
+.res-twin-valuation-card {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.res-val-amount {
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+.res-val-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+/* High-Precision Cashiering Deck (Modal Cash) */
+.deck-col--cashier {
+    gap: 10px;
+}
+
+.deck-input-highlight {
+    font-size: 1.3rem !important;
+    font-weight: 900 !important;
+    color: #064e3b !important;
+    height: 48px !important;
+    background: #f0fdf4 !important;
+    border-color: #10b981 !important;
+}
+
+.denomination-chips-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 4px 0 6px;
+}
+
+.denom-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    margin-right: 2px;
+}
+
+.btn-denom-chip {
+    padding: 4px 10px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-denom-chip:hover {
+    background: #ecfdf5;
+    border-color: #10b981;
+    color: #065f46;
+    transform: translateY(-1px);
+}
+
+.btn-denom-chip--exact {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    color: #1d4ed8;
+}
+
+.deck-form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.cash-stub-card {
+    position: relative;
+    background: #ffffff;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+}
+
+.cash-stub-watermark {
+    position: absolute;
+    right: -15px;
+    bottom: -15px;
+    font-size: 6rem;
+    color: rgba(15, 23, 42, 0.03);
+    pointer-events: none;
+}
+
+.cash-stub-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #e2e8f0;
+}
+
+.cash-stub-brand strong {
+    font-size: 0.76rem;
+    color: #1e293b;
+    display: block;
+}
+
+.cash-stub-brand span {
+    font-size: 0.68rem;
+    color: #64748b;
+}
+
+.cash-stub-stamp {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
+    border: 1.5px solid #059669;
+    border-radius: 4px;
+    color: #059669;
+    transform: rotate(-3deg);
+}
+
+.cash-stub-calc-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.84rem;
+    color: #475569;
+}
+
+.cash-stub-change-box {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border: 1.5px solid #34d399;
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.change-label {
+    font-size: 0.80rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #065f46;
+}
+
+.change-value {
+    font-size: 1.45rem;
+    font-weight: 900;
+    color: #047857;
+}
+
+.cash-stub-callout {
+    font-size: 0.74rem;
+    color: #64748b;
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+    line-height: 1.35;
+}
+
+.cash-stub-callout i {
+    color: #059669;
+    margin-top: 2px;
+}
+
+/* Footer Action Dock */
+.deck-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    background: #ffffff;
+    border-top: 1.5px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.deck-footer-left,
+.deck-footer-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-deck-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 20px;
+    height: 40px;
+    border-radius: 9999px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #ffffff;
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    transition: all 0.15s ease;
+}
+
+.btn-deck-primary:hover {
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+    transform: translateY(-1px);
+}
+
+.btn-deck-gold {
+    background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%) !important;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35) !important;
+}
+
+.btn-deck-gold:hover {
+    box-shadow: 0 6px 18px rgba(245, 158, 11, 0.45) !important;
+}
+
+.btn-deck-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 16px;
+    height: 38px;
+    border-radius: 9999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-deck-secondary:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+/* =========================================================================
+   OBSIDIAN DARK MODE FOR SPLIT DECK MODALS ([data-theme="dark"])
+   ========================================================================= */
+[data-theme="dark"] .modal-deck-card {
+    background: #0d1518 !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 20px rgba(16, 185, 129, 0.12) !important;
+}
+
+[data-theme="dark"] .deck-header {
+    background: linear-gradient(135deg, #0d1518 0%, #081711 100%) !important;
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .deck-heading {
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .deck-kicker {
+    color: #34d399 !important;
+}
+
+[data-theme="dark"] .deck-close-btn {
+    background: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .deck-close-btn:hover {
+    background: #7f1d1d !important;
+    color: #fca5a5 !important;
+}
+
+[data-theme="dark"] .split-deck-body {
+    background: #081014 !important;
+}
+
+[data-theme="dark"] .modal-body--no-pad {
+    background: #081014 !important;
+}
+
+[data-theme="dark"] .deck-section-title {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .res-dossier-card {
+    background: #0f1a1f !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .res-profile-avatar {
+    background: rgba(37, 99, 235, 0.15) !important;
+    color: #60a5fa !important;
+}
+
+[data-theme="dark"] .res-profile-name {
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .res-data-label {
+    color: #64748b !important;
+}
+
+[data-theme="dark"] .res-data-value {
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .res-notes-box {
+    background: rgba(120, 53, 15, 0.2) !important;
+    border-color: rgba(217, 119, 6, 0.3) !important;
+    color: #fcd34d !important;
+}
+
+[data-theme="dark"] .res-twin-card {
+    background: linear-gradient(135deg, #0d1b16 0%, #061f17 100%) !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+[data-theme="dark"] .res-plot-monogram {
+    color: #34d399 !important;
+}
+
+[data-theme="dark"] .res-twin-schedule-strip {
+    background: #081711 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .res-twin-valuation-card {
+    background: #081711 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .res-val-amount {
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .cash-stub-card {
+    background: #0f1a1f !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+[data-theme="dark"] .cash-stub-header {
+    border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .cash-stub-brand strong {
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .cash-stub-brand span {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .cash-stub-calc-row {
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .cash-stub-change-box {
+    background: linear-gradient(135deg, #062b1e 0%, #083827 100%) !important;
+    border-color: #10b981 !important;
+}
+
+[data-theme="dark"] .change-label {
+    color: #6ee7b7 !important;
+}
+
+[data-theme="dark"] .change-value {
+    color: #34d399 !important;
+}
+
+[data-theme="dark"] .deck-footer {
+    background: #0d1518 !important;
+    border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .btn-deck-secondary {
+    background: rgba(30, 41, 59, 0.7) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .btn-deck-secondary:hover {
+    background: rgba(51, 65, 85, 0.8) !important;
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .deck-input-highlight {
+    background: #081f17 !important;
+    color: #34d399 !important;
+    border-color: #10b981 !important;
+}
+
+[data-theme="dark"] .btn-denom-chip {
+    background: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .btn-denom-chip:hover {
+    background: #064e3b !important;
+    border-color: #10b981 !important;
+    color: #6ee7b7 !important;
+}
