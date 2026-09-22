@@ -751,29 +751,91 @@ document.addEventListener('DOMContentLoaded', async function() {
     // --- Modal Logic ---
     function showViewModal(niche) {
         const isOccupied = niche.status === 'occupied';
+        const levelNum = parseInt(niche.level, 10) || 1;
+        const isPrime = (levelNum === 3 || levelNum === 4);
+        const tierBadgeHtml = isPrime
+            ? `<span class="tier-badge-prime"><i class="fas fa-crown"></i> Prime Eye-Level (L${levelNum})</span>`
+            : `<span class="tier-badge-standard"><i class="fas fa-layer-group"></i> Level ${levelNum}</span>`;
+
         const decedentFullName = `${niche.first_name || ''} ${niche.last_name || ''}`.trim();
         const decedentDisplay = decedentFullName ? `
-            <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-end;">
-                <strong style="color: var(--color-text-main, #0f172a); font-size: 0.90rem;">${escapeHtml(decedentFullName)}</strong>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <strong style="color: var(--color-text-main, #0f172a); font-size: 0.92rem;">${escapeHtml(decedentFullName)}</strong>
                 <a href="decedent-records.html?search=${encodeURIComponent(decedentFullName)}" target="_blank" class="decedent-link-pill" title="Open Decedent Profile in Decedent Records">
                     <i class="fas fa-id-card"></i>
-                    <span>View Profile</span>
+                    <span>Profile</span>
                     <i class="fas fa-arrow-up-right-from-square" style="font-size: 0.65rem;"></i>
                 </a>
             </div>
-        ` : '<strong>— (Vacant)</strong>';
+        ` : '<strong style="color: #64748b;">— (Vacant Niche)</strong>';
 
-        const details = `
-            <div class="detail-row"><span>Niche Number</span><strong>${escapeHtml(niche.niche_number)}</strong></div>
-            <div class="detail-row"><span>Columbarium</span><strong>${escapeHtml(niche.columbarium || 'N/A')}</strong></div>
-            <div class="detail-row"><span>Level</span><strong>Level ${escapeHtml(niche.level || 1)}</strong></div>
-            <div class="detail-row"><span>Status</span><strong class="${isOccupied ? 'status-occupied' : 'status-available'}" style="display:inline-block; padding: 2px 8px; border-radius: 999px;">${isOccupied ? 'Occupied' : 'Available'}</strong></div>
-            <div class="detail-row" style="align-items: center;"><span>Assigned Decedent</span>${decedentDisplay}</div>
-            <div class="detail-row"><span>Cremation Date</span><strong>${escapeHtml(niche.cremation_date || '—')}</strong></div>
-            <div class="detail-row"><span>Ash Storage Location</span><strong>${escapeHtml(niche.ash_storage_location || '—')}</strong></div>
-            ${niche.notes ? `<div class="detail-row"><span>Notes</span><strong>${escapeHtml(niche.notes)}</strong></div>` : ''}
+        // Update header badges
+        const viewSanctuaryChip = document.getElementById('viewSanctuaryChip');
+        if (viewSanctuaryChip) {
+            viewSanctuaryChip.innerHTML = `<i class="fas fa-monument"></i> ${escapeHtml(niche.columbarium || 'Columbarium Sanctuary')}`;
+        }
+        const viewStatusBadge = document.getElementById('viewStatusBadge');
+        if (viewStatusBadge) {
+            viewStatusBadge.className = `status-pill ${isOccupied ? 'status-occupied' : 'status-available'}`;
+            viewStatusBadge.innerHTML = `<span class="dot"></span>${isOccupied ? 'Occupied' : 'Available'}`;
+        }
+
+        const detailsHtml = `
+            <div class="lot-view-card">
+                <div class="lot-view-card-title">
+                    <i class="fas fa-cubes"></i>
+                    <span>Sanctuary &amp; Niche Coordinates</span>
+                </div>
+                <div class="dossier-tiles-grid">
+                    <div class="dossier-tile">
+                        <span class="dossier-tile-label">Niche Number</span>
+                        <span class="dossier-tile-value text-teal" style="font-size: 1.05rem;">${escapeHtml(niche.niche_number)}</span>
+                    </div>
+                    <div class="dossier-tile">
+                        <span class="dossier-tile-label">Sanctuary Wing</span>
+                        <span class="dossier-tile-value">${escapeHtml(niche.columbarium || 'N/A')}</span>
+                    </div>
+                    <div class="dossier-tile">
+                        <span class="dossier-tile-label">Tier Classification</span>
+                        <span class="dossier-tile-value">${tierBadgeHtml}</span>
+                    </div>
+                    <div class="dossier-tile">
+                        <span class="dossier-tile-label">Ash Storage Locator</span>
+                        <span class="dossier-tile-value" style="font-family: monospace; font-size: 0.78rem;">${escapeHtml(niche.ash_storage_location || '—')}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lot-view-card">
+                <div class="lot-view-card-title">
+                    <i class="fas fa-id-card-clip"></i>
+                    <span>Occupancy &amp; Placement Dossier</span>
+                </div>
+                <div class="dossier-tile" style="margin-bottom: 6px;">
+                    <span class="dossier-tile-label">Assigned Decedent</span>
+                    <div class="dossier-tile-value" style="margin-top: 2px;">${decedentDisplay}</div>
+                </div>
+                <div class="dossier-tiles-grid">
+                    <div class="dossier-tile">
+                        <span class="dossier-tile-label">Cremation Date</span>
+                        <span class="dossier-tile-value">${escapeHtml(niche.cremation_date || '—')}</span>
+                    </div>
+                    <div class="dossier-tile">
+                        <span class="dossier-tile-label">Lifecycle Status</span>
+                        <span class="dossier-tile-value">
+                            <strong class="${isOccupied ? 'status-occupied' : 'status-available'}" style="display:inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.74rem;">
+                                ${isOccupied ? 'Occupied' : 'Available'}
+                            </strong>
+                        </span>
+                    </div>
+                    <div class="dossier-tile" style="grid-column: span 2;">
+                        <span class="dossier-tile-label">Placement Notes</span>
+                        <span class="dossier-tile-value text-muted" style="font-weight: 500; font-size: 0.80rem;">${escapeHtml(niche.notes || 'No special instructions recorded')}</span>
+                    </div>
+                </div>
+            </div>
         `;
-        document.getElementById('viewDetails').innerHTML = details;
+        document.getElementById('viewDetails').innerHTML = detailsHtml;
         openModal(viewModal);
 
         const editBtn = document.getElementById('editFromView');
@@ -1295,15 +1357,88 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    // Auto-update ash storage when user edits inputs manually
-    nicheNumberInput.addEventListener('input', updateAshStorageLocation);
-    levelInput.addEventListener('change', updateAshStorageLocation);
-    modalColumbariumSelect.addEventListener('change', updateAshStorageLocation);
-    if (modalColumbariumNew) {
-        modalColumbariumNew.addEventListener('input', updateAshStorageLocation);
+    // Live Digital Twin Pod Reactive Preview Engine for Columbarium
+    function updateCremationModalLivePreview() {
+        const pod = document.getElementById('cremationPreviewPod');
+        if (!pod) return;
+
+        const nicheVal = (document.getElementById('nicheNumber')?.value || '').trim() || 'SJ-L1-01';
+        const colVal = currentModalColumbariumValue() || 'St. Jude Thaddeus Sanctuary';
+        const lvlVal = parseInt(document.getElementById('level')?.value, 10) || 1;
+        const statusVal = document.getElementById('cremationStatus')?.value || 'Scheduled';
+        const deceasedSelect = document.getElementById('deceasedId');
+        const selectedDecText = deceasedSelect && deceasedSelect.selectedIndex > 0
+            ? deceasedSelect.options[deceasedSelect.selectedIndex].text.replace(/\s*\(ID #\d+\)$/, '').trim()
+            : 'Unassigned';
+        const storageVal = (document.getElementById('ashStorage')?.value || '').trim() || `${colVal} — L${lvlVal}, Niche ${nicheVal}`;
+
+        const isPrime = (lvlVal === 3 || lvlVal === 4);
+
+        // Update Title & Location
+        const twinTitle = document.getElementById('nicheTwinTitle');
+        if (twinTitle) twinTitle.textContent = nicheVal;
+
+        const twinLoc = document.getElementById('nicheTwinLocation');
+        if (twinLoc) twinLoc.textContent = `${colVal} • Level ${lvlVal}`;
+
+        // Update Tier Badge
+        const twinTier = document.getElementById('nicheTwinTierBadge');
+        if (twinTier) {
+            if (isPrime) {
+                twinTier.innerHTML = '<i class="fas fa-crown text-amber"></i> <span>Prime Eye-Level (L3-4)</span>';
+                twinTier.style.background = 'rgba(245, 158, 11, 0.22)';
+                twinTier.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+            } else {
+                twinTier.innerHTML = `<i class="fas fa-layer-group"></i> <span>Standard Level ${lvlVal}</span>`;
+                twinTier.style.background = 'rgba(0, 0, 0, 0.22)';
+                twinTier.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            }
+        }
+
+        // Update Status Beacon
+        const beaconPill = document.getElementById('nicheTwinStatusBeacon');
+        const beaconText = document.getElementById('nicheTwinStatusText');
+        if (beaconPill && beaconText) {
+            beaconText.textContent = statusVal.toUpperCase();
+            if (statusVal === 'Completed') {
+                beaconPill.className = 'twin-beacon-pill twin-beacon-pill--emerald';
+            } else if (statusVal === 'Cancelled') {
+                beaconPill.className = 'twin-beacon-pill twin-beacon-pill--rose';
+            } else {
+                beaconPill.className = 'twin-beacon-pill twin-beacon-pill--teal';
+            }
+        }
+
+        // Update Specs
+        const twinDec = document.getElementById('nicheTwinDecedent');
+        if (twinDec) twinDec.textContent = selectedDecText;
+
+        const twinStorage = document.getElementById('nicheTwinStorageCode');
+        if (twinStorage) twinStorage.textContent = storageVal;
+
+        const twinRef = document.getElementById('nicheTwinRef');
+        if (twinRef) {
+            const cid = document.getElementById('cremationId')?.value;
+            twinRef.textContent = cid ? `CRM-${cid}` : 'NCH-AUTO';
+        }
     }
 
+    // Auto-update ash storage and live preview when user edits inputs manually
+    ['input', 'change'].forEach(evt => {
+        nicheNumberInput.addEventListener(evt, () => { updateAshStorageLocation(); updateCremationModalLivePreview(); });
+        levelInput.addEventListener(evt, () => { updateAshStorageLocation(); updateCremationModalLivePreview(); });
+        modalColumbariumSelect.addEventListener(evt, () => { updateAshStorageLocation(); updateCremationModalLivePreview(); });
+        if (modalColumbariumNew) {
+            modalColumbariumNew.addEventListener(evt, () => { updateAshStorageLocation(); updateCremationModalLivePreview(); });
+        }
+        document.getElementById('cremationStatus')?.addEventListener(evt, updateCremationModalLivePreview);
+        document.getElementById('deceasedId')?.addEventListener(evt, updateCremationModalLivePreview);
+        ashStorageInput?.addEventListener(evt, updateCremationModalLivePreview);
+    });
+
     async function openAddModal() {
+        const modeBadge = document.getElementById('cremationModalModeBadge');
+        if (modeBadge) modeBadge.textContent = 'New Record';
         document.getElementById('modalTitle').innerText = 'Record Cremation & Assign Niche';
         cremationForm.reset();
         document.getElementById('cremationId').value = '';
@@ -1324,6 +1459,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Auto-fetch next available suggestion on open with tier preference
         await triggerSmartSuggestion();
 
+        updateCremationModalLivePreview();
         openModal(cremationModal);
     }
 
@@ -1334,6 +1470,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (typeof showToast === 'function') showToast(record.error, { type: 'error' });
                 return;
             }
+            const modeBadge = document.getElementById('cremationModalModeBadge');
+            if (modeBadge) modeBadge.textContent = 'Edit Record';
             document.getElementById('modalTitle').innerText = 'Edit Cremation & Niche Record';
             document.getElementById('cremationId').value = record.cremation_id;
             document.getElementById('nicheNumber').value = record.niche_number || '';
@@ -1347,6 +1485,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             populateModalColumbariums(record.columbarium);
             await populateDecedents(record.deceased_id);
 
+            updateCremationModalLivePreview();
             openModal(cremationModal);
         } catch (error) {
             if (typeof showToast === 'function') {
@@ -1817,7 +1956,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     // Close Modals
-    document.querySelectorAll('.close, .close-view, .close-modal-btn').forEach(el => {
+    document.querySelectorAll('.deck-close-btn, .close-deck-btn, .btn-deck-cancel, .close, .close-view, .close-modal-btn, .close-view-modal-btn, .close-cremation-modal-btn, .close-assign-modal-btn, .close-batch-modal-btn').forEach(el => {
         el.addEventListener('click', closeAllModals);
     });
 

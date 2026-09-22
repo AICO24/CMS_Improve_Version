@@ -245,40 +245,72 @@
         </main>
     </div>
 
-    <!-- Add/Edit Modal (No-Scroll 2-Column Executive Form) -->
-    <div id="cremationModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="modal-content modal-content--wide">
-            <div class="modal-header-custom">
-                <div class="modal-title-group">
-                    <span class="modal-subtitle-chip"><i class="fas fa-monument"></i> Columbarium Registry</span>
-                    <h3 id="modalTitle" class="modal-heading-main">Record Cremation &amp; Assign Niche</h3>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         ANTIGRAVITY ORIGINAL: COLUMBARIUM SANCTUARY COMMAND CENTER
+         Guaranteed Zero-Scroll Architecture: Wide Horizontal Dual-Deck
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div id="cremationModal" class="modal modal-deck-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-deck-card">
+            <!-- Ambient Header Deck -->
+            <div class="deck-header">
+                <div class="deck-header-info">
+                    <div class="deck-avatar-halo deck-avatar-halo--teal">
+                        <i class="fas fa-monument"></i>
+                    </div>
+                    <div class="deck-title-block">
+                        <div class="deck-meta-strip">
+                            <span class="deck-kicker"><i class="fas fa-layer-group"></i> Columbarium Sanctuary Master</span>
+                            <span class="deck-badge" id="cremationModalModeBadge">New Record</span>
+                        </div>
+                        <h3 id="modalTitle" class="deck-heading">Record Cremation &amp; Assign Niche</h3>
+                    </div>
                 </div>
-                <button type="button" class="close" aria-label="Close">&times;</button>
+                <button type="button" class="deck-close-btn close-cremation-modal-btn" id="closeCremationModalTop" aria-label="Close modal">
+                    <i class="fas fa-xmark"></i>
+                </button>
             </div>
-            <form id="cremationForm">
+
+            <form id="cremationForm" class="deck-form-engine">
                 <input type="hidden" id="cremationId">
-                <div class="modal-body-custom">
-                    <div class="form-grid-2">
-                        <!-- Left Column: Sanctuary & Niche Assignment -->
-                        <div class="form-col">
-                            <div class="form-group">
-                                <label for="deceasedId">Decedent <span class="required">*</span></label>
-                                <select id="deceasedId" required></select>
+                <div class="split-deck-body">
+                    <!-- LEFT DECK: Form Entry Engine -->
+                    <div class="deck-col deck-col--form">
+                        <div class="deck-section-title">
+                            <i class="fas fa-pen-to-square"></i>
+                            <span>Sanctuary &amp; Niche Parameters</span>
+                        </div>
+
+                        <div class="deck-form-grid">
+                            <div class="deck-field">
+                                <label for="deceasedId">Decedent <span class="deck-req">*</span></label>
+                                <div class="deck-input-box">
+                                    <i class="deck-input-icon fas fa-user"></i>
+                                    <select id="deceasedId" required></select>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="columbarium">Columbarium Sanctuary</label>
-                                <select id="columbarium"></select>
-                                <input type="text" id="columbariumNew" placeholder="New sanctuary wing name" style="display:none; margin-top:8px;">
+
+                            <div class="deck-field">
+                                <label for="columbarium">Columbarium Sanctuary <span class="deck-req">*</span></label>
+                                <div class="deck-input-box">
+                                    <i class="deck-input-icon fas fa-place-of-worship"></i>
+                                    <select id="columbarium"></select>
+                                </div>
+                                <input type="text" id="columbariumNew" placeholder="New sanctuary wing name" style="display:none; margin-top:6px;" class="deck-input-standalone">
                             </div>
-                            <div class="form-group">
-                                <label for="nicheNumber">Niche Number</label>
+
+                            <div class="deck-field">
+                                <label for="nicheNumber">Niche Number <span class="deck-opt">(Optional)</span></label>
                                 <div class="niche-suggest-row" style="display: flex; gap: 8px;">
-                                    <input type="text" id="nicheNumber" placeholder="e.g., SJ-L3-05" style="flex: 1;">
-                                    <button type="button" class="btn-secondary" id="suggestNicheBtn" title="Suggest next available niche">
-                                        <i class="fas fa-wand-magic-sparkles"></i> Suggest
+                                    <div class="deck-input-box" style="flex: 1;">
+                                        <i class="deck-input-icon fas fa-hashtag"></i>
+                                        <input type="text" id="nicheNumber" placeholder="e.g. SJ-L3-05">
+                                    </div>
+                                    <button type="button" class="btn-deck-suggest" id="suggestNicheBtn" title="Suggest next available niche">
+                                        <i class="fas fa-wand-magic-sparkles"></i>
+                                        <span>Suggest</span>
                                     </button>
                                 </div>
-                                <div class="suggest-tier-selector" style="display: flex; gap: 6px; margin-top: 8px;">
+                                <div class="suggest-tier-selector" style="display: flex; gap: 6px; margin-top: 6px;">
                                     <button type="button" class="tier-pill-btn active" data-tier="prime" id="tierBtnPrime" title="Prioritize Prime Eye-Level (Levels 3 &amp; 4)">
                                         <i class="fas fa-crown"></i> Prime Eye-Level (L3-4)
                                     </button>
@@ -286,110 +318,225 @@
                                         <i class="fas fa-arrows-split-up-and-left"></i> Any Available
                                     </button>
                                 </div>
-                                <div class="help" id="suggestNicheHint" style="display:none; margin-top: 6px;"></div>
+                                <span class="deck-hint" id="suggestNicheHint" style="display:none;"></span>
+                            </div>
+
+                            <div class="deck-field">
+                                <div style="display: flex; gap: 10px;">
+                                    <div style="flex: 1;">
+                                        <label for="level">Level <span class="deck-req">*</span></label>
+                                        <div class="deck-input-box">
+                                            <i class="deck-input-icon fas fa-layer-group"></i>
+                                            <input type="number" id="level" min="1" max="10" value="1" required>
+                                        </div>
+                                    </div>
+                                    <div style="flex: 1.2;">
+                                        <label for="cremationDate">Cremation Date</label>
+                                        <div class="deck-input-box">
+                                            <i class="deck-input-icon fas fa-calendar-day"></i>
+                                            <input type="date" id="cremationDate">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="deck-field">
+                                <label for="cremationStatus">Lifecycle Status <span class="deck-req">*</span></label>
+                                <div class="deck-input-box">
+                                    <i class="deck-input-icon fas fa-shield-halved"></i>
+                                    <select id="cremationStatus">
+                                        <option value="Scheduled">Scheduled</option>
+                                        <option value="Completed">Completed</option>
+                                        <option value="Cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="deck-field">
+                                <label for="ashStorage" style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>Ash Storage Location</span>
+                                    <span style="font-size: 0.68rem; color: #0d9488; font-weight: 700;"><i class="fas fa-check-double"></i> Auto-Formatted</span>
+                                </label>
+                                <div class="deck-input-box">
+                                    <i class="deck-input-icon fas fa-box-archive"></i>
+                                    <input type="text" id="ashStorage" placeholder="Auto-generated storage locator...">
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Right Column: Level, Date, Status, Location -->
-                        <div class="form-col">
-                            <div class="form-row" style="display: flex; gap: 12px;">
-                                <div class="form-group" style="flex: 1;">
-                                    <label for="level">Level</label>
-                                    <input type="number" id="level" min="1" max="10" value="1">
-                                </div>
-                                <div class="form-group" style="flex: 1;">
-                                    <label for="cremationDate">Cremation Date</label>
-                                    <input type="date" id="cremationDate">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="cremationStatus">Lifecycle Status</label>
-                                <select id="cremationStatus">
-                                    <option value="Scheduled">Scheduled</option>
-                                    <option value="Completed">Completed</option>
-                                    <option value="Cancelled">Cancelled</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="ashStorage" style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span>Ash Storage Location</span>
-                                    <span style="font-size: 0.70rem; color: #059669; font-weight: 700;"><i class="fas fa-check-double"></i> Auto-Formatted</span>
-                                </label>
-                                <input type="text" id="ashStorage" placeholder="Auto-generated storage locator...">
+                        <!-- Special Notes & Instructions -->
+                        <div class="deck-field mt-1">
+                            <label for="cremationNotes">Special Instructions &amp; Family Notes</label>
+                            <div class="deck-input-box">
+                                <i class="deck-input-icon fas fa-quote-left"></i>
+                                <input type="text" id="cremationNotes" placeholder="Optional family requests, urn specifications...">
                             </div>
                         </div>
                     </div>
 
-                    <!-- Bottom Full-Width Row: Notes -->
-                    <div class="form-group" style="margin-top: 2px;">
-                        <label for="cremationNotes">Notes / Special Instructions</label>
-                        <textarea id="cremationNotes" rows="2" placeholder="Optional notes, family requests, urn specifications..."></textarea>
+                    <!-- RIGHT DECK: Live Digital Twin Artifact -->
+                    <div class="deck-col deck-col--twin">
+                        <div class="digital-twin-pod digital-twin-pod--teal" id="cremationPreviewPod">
+                            <div class="twin-pod-glow"></div>
+                            <div class="twin-header-bar">
+                                <div class="twin-coordinates" id="nicheTwinCoords">
+                                    <i class="fas fa-location-dot"></i>
+                                    <span id="nicheTwinLocation">Sanctuary Wing &bull; Level 1</span>
+                                </div>
+                                <div class="twin-beacon-pill twin-beacon-pill--teal" id="nicheTwinStatusBeacon">
+                                    <span class="twin-beacon-dot"></span>
+                                    <span id="nicheTwinStatusText">SCHEDULED</span>
+                                </div>
+                            </div>
+
+                            <!-- Sanctuary Identification Badge -->
+                            <div class="twin-monogram-stage">
+                                <div class="twin-monument-icon text-teal"><i class="fas fa-monument"></i></div>
+                                <div class="twin-plot-title" id="nicheTwinTitle">SJ-L1-01</div>
+                                <div class="twin-category-pill" id="nicheTwinTierBadge">
+                                    <i class="fas fa-layer-group"></i> <span id="nicheTwinTierText">Standard Level 1</span>
+                                </div>
+                            </div>
+
+                            <!-- Twin Live Specs -->
+                            <div class="twin-specs-row">
+                                <div class="twin-spec-tile">
+                                    <span class="twin-spec-lbl">Assigned Decedent</span>
+                                    <strong class="twin-spec-val" id="nicheTwinDecedent" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Unassigned</strong>
+                                </div>
+                                <div class="twin-spec-tile">
+                                    <span class="twin-spec-lbl">Storage Locator</span>
+                                    <strong class="twin-spec-val text-teal" id="nicheTwinStorageCode" style="font-size: 0.76rem; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Auto-formatted</strong>
+                                </div>
+                            </div>
+
+                            <!-- Enterprise Summary Stamp -->
+                            <div class="twin-archival-footer">
+                                <div class="twin-audit-meta">
+                                    <i class="fas fa-circle-check"></i>
+                                    <span>Columbarium Registry Master</span>
+                                </div>
+                                <div class="twin-ref-chip">
+                                    <span>Ref: </span><strong id="nicheTwinRef">NCH-AUTO</strong>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="modal-footer-custom modal-footer-actions">
-                    <button type="button" class="btn-secondary close-modal-btn">Cancel</button>
-                    <button type="submit" class="btn-save">
-                        <span class="IconContainer"><i class="fas fa-save"></i></span>
-                        <span class="text">Save Record</span>
+                <!-- Docked Action Deck -->
+                <div class="deck-footer">
+                    <button type="button" class="btn-deck-cancel close-cremation-modal-btn">
+                        <i class="fas fa-xmark"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn-deck-submit btn-deck-submit--teal">
+                        <i class="fas fa-floppy-disk"></i>
+                        <span class="text-save">Save Record</span>
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Assign Modal (No-Scroll 2-Column Compact Form) -->
-    <div id="assignModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="assignModalTitle">
-        <div class="modal-content modal-content--wide" style="max-width: 720px;">
-            <div class="modal-header-custom">
-                <div class="modal-title-group">
-                    <span class="modal-subtitle-chip"><i class="fas fa-user-tag"></i> Quick Placement</span>
-                    <h3 id="assignModalTitle" class="modal-heading-main">Assign Decedent to Niche</h3>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         ANTIGRAVITY ORIGINAL: QUICK PLACEMENT DECK (ASSIGN NICHE)
+         Guaranteed Zero-Scroll Architecture: Balanced Dual Panel
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div id="assignModal" class="modal modal-deck-overlay" role="dialog" aria-modal="true" aria-labelledby="assignModalTitle">
+        <div class="modal-deck-card" style="width: min(880px, 95vw) !important; max-width: 880px !important;">
+            <div class="deck-header">
+                <div class="deck-header-info">
+                    <div class="deck-avatar-halo deck-avatar-halo--teal">
+                        <i class="fas fa-user-tag"></i>
+                    </div>
+                    <div class="deck-title-block">
+                        <div class="deck-meta-strip">
+                            <span class="deck-kicker"><i class="fas fa-tag"></i> Quick Placement</span>
+                            <span class="deck-badge">Direct Assignment</span>
+                        </div>
+                        <h3 id="assignModalTitle" class="deck-heading">Assign Decedent to Niche</h3>
+                    </div>
                 </div>
-                <button type="button" class="close" aria-label="Close">&times;</button>
+                <button type="button" class="deck-close-btn close-assign-modal-btn" id="closeAssignModalTop" aria-label="Close modal">
+                    <i class="fas fa-xmark"></i>
+                </button>
             </div>
-            <form id="assignForm">
-                <div class="modal-body-custom">
-                    <div class="form-grid-2">
-                        <!-- Left Column: Decedent & Niche -->
-                        <div class="form-col">
-                            <div class="form-group">
-                                <label for="assignDecedentId">Decedent <span class="required">*</span></label>
+
+            <form id="assignForm" class="deck-form-engine">
+                <div class="split-deck-body" style="grid-template-columns: 1.15fr 1fr; gap: 20px;">
+                    <!-- Left Column: Decedent Picker & Guidance -->
+                    <div class="deck-col deck-col--form">
+                        <div class="deck-section-title">
+                            <i class="fas fa-user-check"></i>
+                            <span>Placement Target</span>
+                        </div>
+                        <div class="deck-field">
+                            <label for="assignDecedentId">Decedent Name <span class="deck-req">*</span></label>
+                            <div class="deck-input-box">
+                                <i class="deck-input-icon fas fa-user"></i>
                                 <select id="assignDecedentId" required></select>
                             </div>
-                            <div class="form-group">
-                                <label for="assignNicheNumber">Niche Number</label>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="text" id="assignNicheNumber" readonly style="flex: 1; font-weight: 700; color: #0f172a; background: #f8fafc;">
-                                    <span id="assignTierBadge" style="display: none; padding: 4px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;"></span>
+                            <span class="deck-hint">Only uncremated decedent records are eligible for assignment.</span>
+                        </div>
+                        <div class="deck-notice-box mt-2">
+                            <i class="fas fa-circle-info text-teal"></i>
+                            <span>Confirming this assignment locks the niche into the registry and prepares the official locator voucher.</span>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Target Niche Specifications -->
+                    <div class="deck-col deck-col--twin">
+                        <div class="digital-twin-pod digital-twin-pod--teal" style="padding: 14px 16px;">
+                            <div class="twin-header-bar">
+                                <div class="twin-coordinates">
+                                    <i class="fas fa-cubes"></i>
+                                    <span>TARGET NICHE SLOT</span>
+                                </div>
+                                <div id="assignTierBadge" class="tier-badge-prime" style="display: none;"></div>
+                            </div>
+
+                            <div class="twin-monogram-stage" style="margin: 6px 0;">
+                                <div class="twin-plot-title" style="font-size: 1.45rem;">
+                                    <input type="text" id="assignNicheNumber" readonly style="background: transparent; border: none; color: #ffffff; font-size: 1.45rem; font-weight: 800; text-align: center; width: 100%; outline: none; pointer-events: none;">
+                                </div>
+                                <div class="twin-category-pill" style="margin-top: 4px;">
+                                    <input type="text" id="assignColumbarium" readonly style="background: transparent; border: none; color: #ecfdf5; font-size: 0.74rem; font-weight: 700; text-align: center; width: 100%; outline: none; pointer-events: none;">
+                                </div>
+                            </div>
+
+                            <div class="twin-specs-row" style="gap: 8px;">
+                                <div class="twin-spec-tile">
+                                    <span class="twin-spec-lbl">Level Tier</span>
+                                    <div style="display: flex; align-items: center; gap: 4px;">
+                                        <span class="text-teal font-bold" style="font-size: 0.85rem;">Level</span>
+                                        <input type="number" id="assignLevel" min="1" max="10" value="1" readonly style="background: transparent; border: none; color: #ffffff; font-size: 0.90rem; font-weight: 800; width: 35px; outline: none; pointer-events: none;">
+                                    </div>
+                                </div>
+                                <div class="twin-spec-tile">
+                                    <span class="twin-spec-lbl">Storage Code</span>
+                                    <input type="text" id="assignAshStorage" readonly style="background: transparent; border: none; color: #99f6e4; font-size: 0.72rem; font-family: monospace; width: 100%; outline: none; pointer-events: none; overflow: hidden; text-overflow: ellipsis;">
+                                </div>
+                            </div>
+
+                            <div class="twin-archival-footer" style="margin-top: 6px; padding-top: 6px;">
+                                <div class="twin-audit-meta">
+                                    <i class="fas fa-circle-check"></i>
+                                    <span>Placement Ready</span>
+                                </div>
+                                <div class="twin-ref-chip">
+                                    <strong>Immediate Lock</strong>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Right Column: Sanctuary & Level -->
-                        <div class="form-col">
-                            <div class="form-group">
-                                <label for="assignColumbarium">Sanctuary Wing</label>
-                                <input type="text" id="assignColumbarium" readonly style="background: #f8fafc; color: #334155;">
-                            </div>
-                            <div class="form-group">
-                                <label for="assignLevel">Level</label>
-                                <input type="number" id="assignLevel" min="1" max="10" value="1" readonly style="background: #f8fafc; color: #334155;">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Full-Width Storage Locator -->
-                    <div class="form-group" style="margin-top: 2px;">
-                        <label for="assignAshStorage">Storage Location Code</label>
-                        <input type="text" id="assignAshStorage" readonly style="background: #f8fafc; font-size: 0.82rem; color: #334155; font-family: monospace;">
                     </div>
                 </div>
 
-                <div class="modal-footer-custom modal-footer-actions">
-                    <button type="button" class="btn-secondary close-modal-btn">Cancel</button>
-                    <button type="submit" class="btn-save">
-                        <span class="IconContainer"><i class="fas fa-check"></i></span>
+                <div class="deck-footer">
+                    <button type="button" class="btn-deck-cancel close-assign-modal-btn">
+                        <i class="fas fa-xmark"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn-deck-submit btn-deck-submit--teal">
+                        <i class="fas fa-check"></i>
                         <span class="text">Confirm Assignment</span>
                     </button>
                 </div>
@@ -397,81 +544,182 @@
         </div>
     </div>
 
-    <!-- View Modal (Executive Details) -->
-    <div id="viewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
-        <div class="modal-content modal-content--wide" style="max-width: 680px;">
-            <div class="modal-header-custom">
-                <div class="modal-title-group">
-                    <span class="modal-subtitle-chip"><i class="fas fa-monument"></i> Columbarium Niche</span>
-                    <h3 id="viewModalTitle" class="modal-heading-main">Niche Details</h3>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         ANTIGRAVITY ORIGINAL: EXECUTIVE ARCHIVAL DOSSIER (VIEW NICHE)
+         Guaranteed Zero-Scroll Architecture: Horizontal Dual-Deck
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div id="viewModal" class="modal modal-deck-overlay" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
+        <div class="modal-deck-card modal-deck-card--view">
+            <!-- Ambient Header Deck -->
+            <div class="deck-header">
+                <div class="deck-header-info">
+                    <div class="deck-avatar-halo deck-avatar-halo--teal">
+                        <i class="fas fa-passport"></i>
+                    </div>
+                    <div class="deck-title-block">
+                        <div class="deck-meta-strip">
+                            <span class="deck-kicker" id="viewSanctuaryChip"><i class="fas fa-monument"></i> Columbarium Niche</span>
+                            <span id="viewStatusBadge" class="status-pill status-available"><span class="dot"></span>Available</span>
+                        </div>
+                        <h3 id="viewModalTitle" class="deck-heading"><i class="fas fa-monument"></i> Niche Dossier &amp; Placement Details</h3>
+                    </div>
                 </div>
-                <button type="button" class="close-view" aria-label="Close">&times;</button>
-            </div>
-            <div class="modal-body-custom">
-                <div id="viewDetails"></div>
-            </div>
-            <div class="modal-footer-custom modal-footer-actions">
-                <button type="button" class="btn-secondary close-view">Close</button>
-                <button type="button" class="btn-print-slip" id="printNicheSlipBtn" style="display: none;" title="Print official columbarium niche locator certificate">
-                    <i class="fas fa-print"></i>
-                    <span>Print Locator Slip</span>
+                <button type="button" class="deck-close-btn close-view-modal-btn" id="closeViewModalTop" aria-label="Close modal">
+                    <i class="fas fa-xmark"></i>
                 </button>
-                <button type="button" class="btn-edit" id="editFromView"><span class="edit-text">Edit Record</span><i class="fas fa-pen edit-icon"></i></button>
-                <button type="button" class="btn-assign" id="assignFromView">Assign Decedent</button>
-                <button type="button" class="btn-delete" id="deleteFromView">Delete Record</button>
+            </div>
+
+            <div class="split-deck-body split-deck-body--view">
+                <div class="lot-view-grid" id="viewDetails"></div>
+            </div>
+
+            <!-- Docked Action Deck -->
+            <div class="deck-footer deck-footer--view">
+                <!-- Left: Certificate Print Action -->
+                <div class="deck-action-group">
+                    <button type="button" class="btn-deck-action btn-deck-action--teal" id="printNicheSlipBtn" style="display: none;" title="Print official columbarium niche locator certificate">
+                        <i class="fas fa-print"></i>
+                        <span>Print Locator Slip</span>
+                    </button>
+                </div>
+
+                <!-- Right: Management Actions -->
+                <div class="deck-action-group deck-action-group--mgmt">
+                    <button class="btn-deck-action btn-deck-action--edit" id="editFromView" type="button">
+                        <i class="fas fa-pen-to-square"></i>
+                        <span>Edit Record</span>
+                    </button>
+                    <button class="btn-deck-action btn-deck-action--booking" id="assignFromView" type="button">
+                        <i class="fas fa-user-tag"></i>
+                        <span>Assign Decedent</span>
+                    </button>
+                    <button class="btn-deck-action btn-deck-action--delete" id="deleteFromView" type="button">
+                        <i class="fas fa-trash-can"></i>
+                        <span>Delete Record</span>
+                    </button>
+                    <button class="btn-deck-action btn-deck-action--dismiss close-view-modal-btn" id="closeViewModalBtn" type="button">
+                        <i class="fas fa-xmark"></i>
+                        <span>Close</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Batch Niche Generator Modal (Automation Wizard) -->
-    <div id="batchNicheModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="batchNicheModalTitle">
-        <div class="modal-content modal-content--wide" style="max-width: 640px;">
-            <div class="modal-header-custom">
-                <div class="modal-title-group">
-                    <span class="modal-subtitle-chip"><i class="fas fa-cubes"></i> Automation Wizard</span>
-                    <h3 id="batchNicheModalTitle" class="modal-heading-main">Batch Niche Generator</h3>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         ANTIGRAVITY ORIGINAL: BATCH NICHE GENERATOR WIZARD
+         Guaranteed Zero-Scroll Architecture: Horizontal Dual-Deck
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div id="batchNicheModal" class="modal modal-deck-overlay" role="dialog" aria-modal="true" aria-labelledby="batchNicheModalTitle">
+        <div class="modal-deck-card">
+            <div class="deck-header">
+                <div class="deck-header-info">
+                    <div class="deck-avatar-halo deck-avatar-halo--purple">
+                        <i class="fas fa-wand-magic-sparkles"></i>
+                    </div>
+                    <div class="deck-title-block">
+                        <div class="deck-meta-strip">
+                            <span class="deck-kicker"><i class="fas fa-bolt"></i> Bulk Automation</span>
+                            <span class="deck-badge">Batch Engine</span>
+                        </div>
+                        <h3 id="batchNicheModalTitle" class="deck-heading">Batch Niche Generator</h3>
+                    </div>
                 </div>
-                <button type="button" class="close" id="closeBatchNicheModal" aria-label="Close">&times;</button>
+                <button type="button" class="deck-close-btn close-batch-modal-btn" id="closeBatchNicheModal" aria-label="Close modal">
+                    <i class="fas fa-xmark"></i>
+                </button>
             </div>
-            <form id="batchNicheForm">
-                <div class="modal-body-custom">
-                    <div class="form-group">
-                        <label for="batchColumbarium">Target Sanctuary Wing <span class="required">*</span></label>
-                        <select id="batchColumbarium" required></select>
-                        <input type="text" id="batchColumbariumNew" placeholder="Enter new sanctuary wing name" style="display: none; margin-top: 8px;">
+
+            <form id="batchNicheForm" class="deck-form-engine">
+                <div class="split-deck-body">
+                    <!-- Left Deck: Inputs -->
+                    <div class="deck-col deck-col--form">
+                        <div class="deck-section-title">
+                            <i class="fas fa-sliders"></i>
+                            <span>Generation Parameters</span>
+                        </div>
+
+                        <div class="deck-form-grid">
+                            <div class="deck-field" style="grid-column: span 2;">
+                                <label for="batchColumbarium">Target Sanctuary Wing <span class="deck-req">*</span></label>
+                                <div class="deck-input-box">
+                                    <i class="deck-input-icon fas fa-place-of-worship"></i>
+                                    <select id="batchColumbarium" required></select>
+                                </div>
+                                <input type="text" id="batchColumbariumNew" placeholder="Enter new sanctuary wing name" style="display: none; margin-top: 6px;" class="deck-input-standalone">
+                            </div>
+
+                            <div class="deck-field">
+                                <label for="batchNichePrefix">Niche Prefix <span class="deck-req">*</span></label>
+                                <div class="deck-input-box">
+                                    <i class="deck-input-icon fas fa-font"></i>
+                                    <input type="text" id="batchNichePrefix" value="SJ-L" required>
+                                </div>
+                            </div>
+
+                            <div class="deck-field">
+                                <label for="batchLevelsCount">Number of Levels <span class="deck-req">*</span></label>
+                                <div class="deck-input-box">
+                                    <i class="deck-input-icon fas fa-layer-group"></i>
+                                    <input type="number" id="batchLevelsCount" min="1" max="10" value="5" required>
+                                </div>
+                            </div>
+
+                            <div class="deck-field" style="grid-column: span 2;">
+                                <label for="batchNichesPerLevel">Niches per Level <span class="deck-req">*</span></label>
+                                <div class="deck-input-box">
+                                    <i class="deck-input-icon fas fa-hashtag"></i>
+                                    <input type="number" id="batchNichesPerLevel" min="1" max="25" value="10" required>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-row" style="display: flex; gap: 12px;">
-                        <div class="form-group" style="flex: 1;">
-                            <label for="batchNichePrefix">Niche Prefix <span class="required">*</span></label>
-                            <input type="text" id="batchNichePrefix" value="SJ-L" required>
-                        </div>
-                        <div class="form-group" style="flex: 1;">
-                            <label for="batchLevelsCount">Number of Levels <span class="required">*</span></label>
-                            <input type="number" id="batchLevelsCount" min="1" max="10" value="5" required>
-                        </div>
-                        <div class="form-group" style="flex: 1;">
-                            <label for="batchNichesPerLevel">Niches per Level <span class="required">*</span></label>
-                            <input type="number" id="batchNichesPerLevel" min="1" max="25" value="10" required>
-                        </div>
-                    </div>
+                    <!-- Right Deck: Live Matrix Preview -->
+                    <div class="deck-col deck-col--twin">
+                        <div class="digital-twin-pod digital-twin-pod--purple" id="batchPreviewBox">
+                            <div class="twin-header-bar">
+                                <div class="twin-coordinates">
+                                    <i class="fas fa-calculator"></i>
+                                    <span>SEQUENCE MATRIX PREVIEW</span>
+                                </div>
+                                <div class="twin-beacon-pill twin-beacon-pill--purple">
+                                    <span class="twin-beacon-dot"></span>
+                                    <span>AUTOMATION READY</span>
+                                </div>
+                            </div>
 
-                    <!-- Live Generation Preview Box -->
-                    <div class="batch-preview-box" id="batchPreviewBox" style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 14px 18px;">
-                        <div style="font-size: 0.76rem; font-weight: 700; text-transform: uppercase; color: #475569; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
-                            <span><i class="fas fa-eye"></i> Generator Output Preview</span>
-                            <span id="batchTotalCountBadge" style="background: #10b981; color: white; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 700;">50 Niches Total</span>
-                        </div>
-                        <div id="batchPreviewList" style="font-size: 0.80rem; color: #334155; line-height: 1.6;">
-                            <!-- Dynamically populated sample preview -->
+                            <div class="twin-monogram-stage" style="padding: 8px 10px; margin: 4px 0;">
+                                <div class="twin-monument-icon text-purple"><i class="fas fa-cubes"></i></div>
+                                <div class="twin-plot-title" id="batchPreviewTitle" style="font-size: 1.25rem;">Niche Generation</div>
+                                <div class="twin-category-pill" style="margin-top: 4px;">
+                                    <span id="batchTotalCountBadge" style="background: #10b981; color: white; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;">50 Niches Total</span>
+                                </div>
+                            </div>
+
+                            <div id="batchPreviewList" style="font-size: 0.75rem; color: #ede9fe; line-height: 1.5; background: rgba(0, 0, 0, 0.22); border-radius: 8px; padding: 8px 10px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                <!-- Dynamically populated sample preview -->
+                            </div>
+
+                            <div class="twin-archival-footer">
+                                <div class="twin-audit-meta">
+                                    <i class="fas fa-circle-check"></i>
+                                    <span>Sequence Check Ready</span>
+                                </div>
+                                <div class="twin-ref-chip">
+                                    <span>Mode: </span><strong>Bulk Allocation</strong>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="modal-footer-custom modal-footer-actions">
-                    <button type="button" class="btn-secondary" id="cancelBatchNicheBtn">Cancel</button>
-                    <button type="submit" class="btn-save" id="submitBatchNicheBtn">
-                        <span class="IconContainer"><i class="fas fa-magic"></i></span>
+                <div class="deck-footer">
+                    <button type="button" class="btn-deck-cancel close-batch-modal-btn" id="cancelBatchNicheBtn">
+                        <i class="fas fa-xmark"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn-deck-submit btn-deck-submit--purple" id="submitBatchNicheBtn">
+                        <i class="fas fa-wand-magic-sparkles"></i>
                         <span class="text">Generate Niches</span>
                     </button>
                 </div>

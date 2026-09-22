@@ -1365,7 +1365,7 @@
 /* ========================================================
    MODAL ACTIONS & FORM STYLES
    ======================================================== */
-.modal-content {
+.modal-content:not(.modal-deck-card) {
     max-width: 540px;
     width: 92%;
     border-radius: var(--radius-lg, 14px);
@@ -2313,5 +2313,1002 @@
 
 [data-theme="dark"] .modal-footer-custom .btn-secondary:hover {
     background: #334155;
+    color: #f8fafc;
+}
+
+/* ========================================================
+   ANTIGRAVITY ORIGINAL: COLUMBARIUM SPLIT-DECK COMMAND CENTER
+   Guaranteed Zero-Scroll Architecture: Horizontal Dual-Deck
+   Sanctuary Cyan/Teal Enterprise Theme
+   ======================================================== */
+.modal-deck-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1050;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 16px;
+}
+
+.modal-deck-overlay.show,
+.modal-deck-overlay[style*="display: flex"] {
+    display: flex !important;
+}
+
+.modal-deck-card {
+    position: relative;
+    width: min(1060px, 96vw) !important;
+    max-width: 1060px !important;
+    min-width: min(980px, 94vw);
+    max-height: 94vh;
+    border-radius: 16px;
+    background: #ffffff;
+    border: 1.5px solid rgba(226, 232, 240, 0.95);
+    box-shadow: 0 25px 60px -15px rgba(15, 118, 110, 0.22), 0 0 0 1px rgba(20, 184, 166, 0.12);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0 !important;
+}
+
+.modal-deck-card--view {
+    width: min(1040px, 96vw) !important;
+    max-width: 1040px !important;
+}
+
+/* --- Header Deck --- */
+.deck-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    background: linear-gradient(135deg, #ffffff 0%, #fcfdfd 55%, #f0fdfa 100%);
+    border-bottom: 1.5px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.deck-header-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.deck-avatar-halo {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.20rem;
+    flex-shrink: 0;
+}
+
+.deck-avatar-halo--teal {
+    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
+}
+
+.deck-avatar-halo--purple {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+}
+
+.deck-title-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.deck-meta-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.deck-kicker {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #0f766e;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.deck-badge {
+    font-size: 0.70rem;
+    font-weight: 700;
+    color: #115e59;
+    background: #f0fdfa;
+    border: 1px solid #99f6e4;
+    padding: 2px 9px;
+    border-radius: 999px;
+}
+
+.deck-heading {
+    font-size: 1.30rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Close Button Anchored Securely Inside Header */
+.deck-close-btn {
+    position: static !important;
+    top: auto !important;
+    right: auto !important;
+    left: auto !important;
+    bottom: auto !important;
+    margin: 0 !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    border: 1px solid #cbd5e1 !important;
+    background: #ffffff !important;
+    color: #64748b !important;
+    font-size: 1rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    flex-shrink: 0 !important;
+}
+
+.deck-close-btn:hover {
+    background: #fee2e2 !important;
+    color: #dc2626 !important;
+    border-color: #fca5a5 !important;
+    transform: rotate(90deg) !important;
+}
+
+/* --- Split-Deck Body (Side-by-Side Dual Engine) --- */
+.deck-form-engine {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    overflow: hidden;
+    margin: 0;
+}
+
+.split-deck-body {
+    display: grid;
+    grid-template-columns: 1.45fr 1fr;
+    gap: 24px;
+    padding: 20px 28px;
+    background: #f8fafc;
+    flex: 1 1 auto;
+    overflow: hidden;
+    align-items: stretch;
+}
+
+.split-deck-body--view {
+    display: block;
+    padding: 18px 28px;
+}
+
+/* Left Deck: Input Controls */
+.deck-col--form {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 18px 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
+}
+
+.deck-section-title {
+    font-size: 0.80rem;
+    font-weight: 800;
+    color: #1e293b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    margin-bottom: 12px;
+}
+
+.deck-section-title i {
+    color: #0d9488;
+    font-size: 0.86rem;
+}
+
+.deck-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px 18px;
+}
+
+.deck-field label {
+    display: block;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 4px;
+}
+
+.deck-req {
+    color: #dc2626;
+    font-weight: 800;
+}
+
+.deck-opt {
+    color: #94a3b8;
+    font-weight: 500;
+    font-size: 0.70rem;
+}
+
+.deck-input-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.deck-input-icon {
+    position: absolute;
+    left: 12px;
+    font-size: 0.86rem;
+    color: #94a3b8;
+    pointer-events: none;
+    transition: color 0.2s ease;
+    z-index: 2;
+}
+
+.deck-input-box input,
+.deck-input-box select {
+    width: 100%;
+    height: 40px;
+    padding: 6px 12px 6px 38px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #0f172a;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.deck-input-box input:focus,
+.deck-input-box select:focus {
+    border-color: #0d9488;
+    box-shadow: 0 0 0 2.5px rgba(13, 148, 136, 0.16);
+}
+
+.deck-input-box:focus-within .deck-input-icon {
+    color: #0f766e;
+}
+
+.deck-input-standalone {
+    width: 100%;
+    height: 38px;
+    padding: 6px 12px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: #0f172a;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.deck-input-standalone:focus {
+    border-color: #0d9488;
+    box-shadow: 0 0 0 2.5px rgba(13, 148, 136, 0.16);
+}
+
+.deck-hint {
+    display: block;
+    font-size: 0.68rem;
+    color: #64748b;
+    margin-top: 3px;
+}
+
+.deck-notice-box {
+    background: #f0fdfa;
+    border: 1px solid #ccfbf1;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.78rem;
+    color: #134e4a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.4;
+}
+
+/* Suggest Button & Tier Selectors */
+.btn-deck-suggest {
+    height: 40px;
+    padding: 0 14px;
+    border-radius: 8px;
+    border: 1.5px solid #ccfbf1;
+    background: #f0fdfa;
+    color: #0f766e;
+    font-size: 0.80rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-deck-suggest:hover {
+    background: #0d9488;
+    color: #ffffff;
+    border-color: #0d9488;
+}
+
+.tier-pill-btn {
+    font-size: 0.70rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+}
+
+.tier-pill-btn.active {
+    background: #0f766e;
+    color: #ffffff;
+    border-color: #0f766e;
+    box-shadow: 0 1px 4px rgba(15, 118, 110, 0.25);
+}
+
+.tier-badge-prime {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.tier-badge-standard {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+/* Right Deck: Live Digital Twin Artifact Card */
+.deck-col--twin {
+    display: flex;
+    flex-direction: column;
+}
+
+.digital-twin-pod {
+    flex: 1;
+    position: relative;
+    border-radius: 12px;
+    padding: 16px 18px;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+}
+
+.digital-twin-pod--teal {
+    background: linear-gradient(145deg, #134e4a 0%, #0f766e 55%, #0d9488 100%);
+    border: 1.5px solid rgba(45, 212, 191, 0.35);
+    box-shadow: 0 10px 25px -5px rgba(15, 118, 110, 0.35);
+}
+
+.digital-twin-pod--purple {
+    background: linear-gradient(145deg, #4c1d95 0%, #5b21b6 55%, #6d28d9 100%);
+    border: 1.5px solid rgba(167, 139, 250, 0.35);
+    box-shadow: 0 10px 25px -5px rgba(91, 33, 182, 0.35);
+}
+
+.twin-pod-glow {
+    position: absolute;
+    right: -25px;
+    top: -25px;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(45, 212, 191, 0.28) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.twin-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 2;
+}
+
+.twin-coordinates {
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #99f6e4;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.twin-beacon-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    color: #ffffff;
+}
+
+.twin-beacon-pill--teal {
+    background: rgba(20, 184, 166, 0.25);
+    border: 1px solid #5eead4;
+    color: #ccfbf1;
+}
+
+.twin-beacon-pill--emerald {
+    background: rgba(16, 185, 129, 0.25);
+    border: 1px solid #6ee7b7;
+    color: #d1fae5;
+}
+
+.twin-beacon-pill--rose {
+    background: rgba(244, 63, 94, 0.25);
+    border: 1px solid #fda4af;
+    color: #ffe4e6;
+}
+
+.twin-beacon-pill--purple {
+    background: rgba(139, 92, 246, 0.25);
+    border: 1px solid #c4b5fd;
+    color: #ede9fe;
+}
+
+.twin-beacon-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2dd4bf;
+    box-shadow: 0 0 6px #2dd4bf;
+    animation: columbariumBeaconPulse 1.8s infinite;
+}
+
+@keyframes columbariumBeaconPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.3); }
+}
+
+.twin-monogram-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: 8px 0;
+    position: relative;
+    z-index: 2;
+}
+
+.twin-monument-icon {
+    font-size: 1.65rem;
+    margin-bottom: 3px;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
+}
+
+.text-teal {
+    color: #2dd4bf !important;
+}
+
+.text-purple {
+    color: #c4b5fd !important;
+}
+
+.twin-plot-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+    line-height: 1.1;
+}
+
+.twin-category-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 3px 12px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #ccfbf1;
+    margin-top: 5px;
+}
+
+.twin-specs-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    position: relative;
+    z-index: 2;
+}
+
+.twin-spec-tile {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    padding: 7px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.twin-spec-lbl {
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #99f6e4;
+    letter-spacing: 0.3px;
+}
+
+.twin-spec-val {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.twin-archival-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    margin-top: 8px;
+    position: relative;
+    z-index: 2;
+}
+
+.twin-audit-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: #99f6e4;
+    font-weight: 700;
+}
+
+.twin-ref-chip {
+    font-size: 0.72rem;
+    color: #ccfbf1;
+    font-family: monospace;
+    font-weight: 600;
+}
+
+/* --- Action Dock Footer --- */
+.deck-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 12px 24px;
+    background: #ffffff;
+    border-top: 1.5px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.deck-footer--view {
+    justify-content: space-between;
+}
+
+.deck-action-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-deck-cancel,
+.btn-deck-action--dismiss {
+    height: 38px;
+    padding: 0 18px;
+    border-radius: 8px;
+    border: 1.5px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    font-size: 0.84rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-deck-cancel:hover,
+.btn-deck-action--dismiss:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+.btn-deck-submit {
+    height: 38px;
+    padding: 0 22px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.84rem;
+    font-weight: 800;
+    color: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-deck-submit--teal {
+    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+}
+
+.btn-deck-submit--teal:hover {
+    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.4);
+    transform: translateY(-1px);
+}
+
+.btn-deck-submit--purple {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+.btn-deck-submit--purple:hover {
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
+    transform: translateY(-1px);
+}
+
+.btn-deck-action {
+    height: 35px;
+    padding: 0 16px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.80rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-deck-action--teal {
+    background: #0f766e;
+    color: #ffffff;
+}
+
+.btn-deck-action--teal:hover {
+    background: #115e59;
+    box-shadow: 0 3px 10px rgba(15, 118, 110, 0.3);
+}
+
+.btn-deck-action--booking {
+    background: #0d9488;
+    color: #ffffff;
+}
+
+.btn-deck-action--booking:hover {
+    background: #0f766e;
+    box-shadow: 0 3px 10px rgba(13, 148, 136, 0.3);
+}
+
+.btn-deck-action--edit {
+    background: #f1f5f9;
+    color: #1e293b;
+    border: 1.5px solid #cbd5e1;
+}
+
+.btn-deck-action--edit:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+}
+
+.btn-deck-action--delete {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1.5px solid #fecaca;
+}
+
+.btn-deck-action--delete:hover {
+    background: #fee2e2;
+    border-color: #f87171;
+}
+
+/* --- View Modal: Tri-Quadrant Architecture --- */
+.lot-view-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 12px;
+    width: 100%;
+}
+
+.lot-view-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
+}
+
+.lot-view-card-title {
+    font-size: 0.76rem;
+    font-weight: 800;
+    color: #1e293b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.lot-view-card-title i {
+    color: #0f766e;
+    font-size: 0.82rem;
+}
+
+.dossier-tiles-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+}
+
+.dossier-tile {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.dossier-tile-label {
+    font-size: 0.63rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.dossier-tile-value {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #0f172a;
+    word-break: break-word;
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 900px) {
+    .modal-deck-card,
+    .modal-deck-card--view {
+        width: 96vw !important;
+        min-width: 0 !important;
+        max-height: 96vh;
+    }
+    .split-deck-body {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        overflow-y: auto;
+    }
+    .lot-view-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ========================================================
+   OBSIDIAN LUXURY DARK MODE FOR COLUMBARIUM SPLIT-DECK
+   ======================================================== */
+[data-theme="dark"] .modal-deck-card {
+    background: #0f172a;
+    border-color: #334155;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(20, 184, 166, 0.3);
+}
+
+[data-theme="dark"] .deck-header {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-bottom-color: #334155;
+}
+
+[data-theme="dark"] .deck-heading {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .deck-kicker {
+    color: #2dd4bf;
+}
+
+[data-theme="dark"] .deck-badge {
+    background: rgba(20, 184, 166, 0.15);
+    color: #5eead4;
+    border-color: rgba(20, 184, 166, 0.3);
+}
+
+[data-theme="dark"] .deck-close-btn {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .deck-close-btn:hover {
+    background: #7f1d1d;
+    color: #fca5a5;
+    border-color: #991b1b;
+}
+
+[data-theme="dark"] .split-deck-body {
+    background: #090d16;
+}
+
+[data-theme="dark"] .deck-col--form,
+[data-theme="dark"] .lot-view-card {
+    background: #111827;
+    border-color: #1f2937;
+}
+
+[data-theme="dark"] .deck-section-title,
+[data-theme="dark"] .lot-view-card-title {
+    color: #f1f5f9;
+    border-bottom-color: #1f2937;
+}
+
+[data-theme="dark"] .deck-field label {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .deck-input-box input,
+[data-theme="dark"] .deck-input-box select,
+[data-theme="dark"] .deck-input-standalone {
+    background: #0b1120;
+    border-color: #334155;
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .deck-input-box input:focus,
+[data-theme="dark"] .deck-input-box select:focus,
+[data-theme="dark"] .deck-input-standalone:focus {
+    border-color: #0d9488;
+    box-shadow: 0 0 0 2.5px rgba(13, 148, 136, 0.25);
+}
+
+[data-theme="dark"] .deck-input-icon {
+    color: #64748b;
+}
+
+[data-theme="dark"] .deck-input-box:focus-within .deck-input-icon {
+    color: #2dd4bf;
+}
+
+[data-theme="dark"] .btn-deck-suggest {
+    background: rgba(20, 184, 166, 0.15);
+    border-color: rgba(20, 184, 166, 0.35);
+    color: #5eead4;
+}
+
+[data-theme="dark"] .btn-deck-suggest:hover {
+    background: #0d9488;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .tier-pill-btn {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .tier-pill-btn.active {
+    background: #0f766e;
+    border-color: #14b8a6;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .deck-notice-box {
+    background: rgba(20, 184, 166, 0.1);
+    border-color: rgba(20, 184, 166, 0.25);
+    color: #ccfbf1;
+}
+
+[data-theme="dark"] .deck-footer {
+    background: #111827;
+    border-top-color: #1f2937;
+}
+
+[data-theme="dark"] .btn-deck-cancel,
+[data-theme="dark"] .btn-deck-action--dismiss {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .btn-deck-cancel:hover,
+[data-theme="dark"] .btn-deck-action--dismiss:hover {
+    background: #334155;
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .btn-deck-action--edit {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .btn-deck-action--edit:hover {
+    background: #334155;
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .btn-deck-action--delete {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .btn-deck-action--delete:hover {
+    background: #b91c1c;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .dossier-tile {
+    background: #0b1120;
+    border-color: #1f2937;
+}
+
+[data-theme="dark"] .dossier-tile-label {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .dossier-tile-value {
     color: #f8fafc;
 }
