@@ -779,8 +779,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         const editBtn = document.getElementById('editFromView');
         const assignBtn = document.getElementById('assignFromView');
         const deleteBtn = document.getElementById('deleteFromView');
+        const printSlipBtn = document.getElementById('printNicheSlipBtn');
         const aiMount = document.getElementById('aiAssistantMountRecord');
         if (aiMount) aiMount.innerHTML = '';
+
+        if (printSlipBtn) {
+            if (isOccupied && niche.first_name) {
+                printSlipBtn.style.display = 'inline-flex';
+                printSlipBtn.onclick = () => {
+                    printNicheLocatorSlip(niche);
+                };
+            } else {
+                printSlipBtn.style.display = 'none';
+            }
+        }
 
         if (niche.cremation_id) {
             editBtn.style.display = 'inline-flex';
@@ -837,6 +849,394 @@ document.addEventListener('DOMContentLoaded', async function() {
         } else {
             assignBtn.style.display = 'none';
         }
+    }
+
+    function printNicheLocatorSlip(niche) {
+        if (!niche) return;
+
+        const decedentFullName = `${niche.first_name || ''} ${niche.last_name || ''}`.trim() || 'Unspecified Decedent';
+        const columbariumName = niche.columbarium || 'Columbarium Sanctuary';
+        const levelNum = niche.level || 1;
+        const isPrime = (parseInt(levelNum, 10) === 3 || parseInt(levelNum, 10) === 4);
+        const nicheNum = niche.niche_number || 'N/A';
+        const ashStorage = niche.ash_storage_location || `${columbariumName} — Level ${levelNum}, Niche ${nicheNum}`;
+        const cremationDate = niche.cremation_date || 'N/A';
+        const notes = (niche.notes || '').trim();
+        const trackingNo = `CMS-COL-${String(niche.cremation_id || nicheNum).replace(/[^a-zA-Z0-9]/g, '')}`;
+        const issueDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        const printWindow = window.open('', '_blank', 'width=840,height=920');
+        if (!printWindow) {
+            if (typeof showToast === 'function') {
+                showToast('Please allow popups to print the official locator slip.', { type: 'warning' });
+            } else {
+                alert('Please allow popups to print the locator slip.');
+            }
+            return;
+        }
+
+        const slipHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Certificate of Niche Placement - ${escapeHtml(nicheNum)}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 15mm;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            color: #0f172a;
+            padding: 24px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .cert-border {
+            border: 2px solid #0f766e;
+            border-radius: 12px;
+            padding: 24px;
+            position: relative;
+            background: #ffffff;
+        }
+        .cert-inner-frame {
+            border: 1px dashed #99f6e4;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .cert-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #0f766e;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+        }
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header-logo-box {
+            width: 44px;
+            height: 44px;
+            background: #0f766e;
+            color: #ffffff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 800;
+        }
+        .brand-title {
+            font-family: 'Fraunces', serif;
+            font-size: 19px;
+            font-weight: 700;
+            color: #134e4a;
+            line-height: 1.2;
+        }
+        .brand-sub {
+            font-size: 11px;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 2px;
+        }
+        .header-meta {
+            text-align: right;
+            font-size: 11px;
+            color: #64748b;
+        }
+        .tracking-code {
+            font-family: monospace;
+            font-size: 13px;
+            font-weight: 800;
+            color: #0f766e;
+            background: #f0fdfa;
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid #ccfbf1;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+        .doc-title-row {
+            text-align: center;
+            margin-bottom: 22px;
+        }
+        .doc-title {
+            font-family: 'Fraunces', serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .doc-subtitle {
+            font-size: 11.5px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+        .cert-section {
+            background: #fafafa;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #0f766e;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .data-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .data-label {
+            font-size: 10.5px;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .data-value {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .niche-highlight-card {
+            background: #f0fdfa;
+            border: 1.5px solid #5eead4;
+            border-radius: 8px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        .niche-id-text {
+            font-size: 18px;
+            font-weight: 800;
+            color: #0f766e;
+            letter-spacing: 0.02em;
+        }
+        .tier-badge {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+            padding: 3px 9px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .notes-box {
+            font-size: 11.5px;
+            color: #334155;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-top: 6px;
+            font-style: italic;
+        }
+        .signatures-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 36px;
+            margin-top: 26px;
+            padding-top: 14px;
+        }
+        .signature-block {
+            text-align: center;
+        }
+        .sig-line {
+            border-bottom: 1.5px solid #0f172a;
+            height: 38px;
+            margin-bottom: 6px;
+        }
+        .sig-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .sig-role {
+            font-size: 10.5px;
+            color: #64748b;
+        }
+        .cert-footer {
+            margin-top: 22px;
+            border-top: 1px dashed #cbd5e1;
+            padding-top: 12px;
+            text-align: center;
+            font-size: 10px;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+        .no-print-bar {
+            background: #0f172a;
+            color: #ffffff;
+            padding: 10px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-radius: 8px;
+            margin-bottom: 18px;
+        }
+        .print-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 7px 16px;
+            border-radius: 6px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .print-btn:hover {
+            background: #059669;
+        }
+        @media print {
+            .no-print-bar {
+                display: none !important;
+            }
+            body {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print-bar">
+        <span>Official Columbarium Placement Certificate Preview</span>
+        <button class="print-btn" onclick="window.print()">Print Document</button>
+    </div>
+
+    <div class="cert-border">
+        <div class="cert-inner-frame">
+            <div class="cert-header">
+                <div class="header-brand">
+                    <div class="header-logo-box">&#9870;</div>
+                    <div>
+                        <div class="brand-title">Cemetery Management System</div>
+                        <div class="brand-sub">Columbarium Sanctuary & Memorial Archives</div>
+                    </div>
+                </div>
+                <div class="header-meta">
+                    <div class="tracking-code">${escapeHtml(trackingNo)}</div>
+                    <div>Issued: <strong>${escapeHtml(issueDate)}</strong></div>
+                </div>
+            </div>
+
+            <div class="doc-title-row">
+                <h1 class="doc-title">Certificate of Niche Placement</h1>
+                <div class="doc-subtitle">Official Ash Repository & Perpetual Memorial Locator Voucher</div>
+            </div>
+
+            <!-- Interred Decedent Information -->
+            <div class="cert-section">
+                <div class="section-title">
+                    <span>1. Interred Remains Details</span>
+                    <span style="color: #059669; font-weight: 700;">&#10003; Formally Registered</span>
+                </div>
+                <div class="grid-2">
+                    <div class="data-item">
+                        <span class="data-label">Name of Decedent</span>
+                        <span class="data-value" style="font-size: 15px; color: #047857;">${escapeHtml(decedentFullName)}</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Cremation Date</span>
+                        <span class="data-value">${escapeHtml(cremationDate)}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columbarium Niche Location -->
+            <div class="cert-section">
+                <div class="section-title">
+                    <span>2. Sanctuary Repository Specification</span>
+                    ${isPrime ? '<span class="tier-badge">&#9733; Prime Eye-Level</span>' : '<span style="font-size:10.5px;color:#64748b;">Standard Tier</span>'}
+                </div>
+                <div class="grid-2">
+                    <div class="data-item">
+                        <span class="data-label">Sanctuary Wing / Gallery</span>
+                        <span class="data-value">${escapeHtml(columbariumName)}</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Sanctuary Level</span>
+                        <span class="data-value">Level ${escapeHtml(levelNum)} ${isPrime ? '(Eye-Level / Heart-Level)' : ''}</span>
+                    </div>
+                </div>
+
+                <div class="niche-highlight-card">
+                    <div>
+                        <div style="font-size: 11px; font-weight: 700; color: #047857; text-transform: uppercase;">Niche Slot Number</div>
+                        <div class="niche-id-text">${escapeHtml(nicheNum)}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 11px; color: #64748b;">Storage Locator Code</div>
+                        <div style="font-family: monospace; font-size: 12px; font-weight: 700; color: #0f172a;">${escapeHtml(ashStorage)}</div>
+                    </div>
+                </div>
+            </div>
+
+            ${notes ? `
+            <div class="cert-section" style="padding: 10px 14px;">
+                <div class="section-title" style="margin-bottom: 4px;">3. Notes / Memorial Inscription Requests</div>
+                <div class="notes-box">${escapeHtml(notes)}</div>
+            </div>
+            ` : ''}
+
+            <!-- Verification & Signatures -->
+            <div class="signatures-area">
+                <div class="signature-block">
+                    <div class="sig-line"></div>
+                    <div class="sig-name">Columbarium Administrator</div>
+                    <div class="sig-role">Sanctuary Custodian / Records Officer</div>
+                </div>
+                <div class="signature-block">
+                    <div class="sig-line"></div>
+                    <div class="sig-name">Family Representative</div>
+                    <div class="sig-role">Authorized Claimant / Next of Kin</div>
+                </div>
+            </div>
+
+            <div class="cert-footer">
+                Please retain this certificate as official proof of urn placement. Present this slip to Sanctuary Security or Records Administration during visits or memorial marker installations.<br>
+                Sanctuary Visiting Hours: 6:00 AM – 6:00 PM Daily &bull; Cemetery Management System Archives
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+        `;
+
+        printWindow.document.open();
+        printWindow.document.write(slipHtml);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+            printWindow.print();
+        }, 400);
     }
 
     function updateAshStorageLocation() {
