@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // happens to still show its current value.
     let editingOriginalStatus = null;
 
-    const filters = { search: '', category: '', section: '', status: '' };
+    const filters = { search: '', category: '', section: '', block: '', status: '' };
     const expandedCategories = new Set();
     const expandedSections = new Set();
 
@@ -101,6 +101,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         return 'fa-map-location-dot';
     }
 
+    function getBlockPrefix(blockName) {
+        if (!blockName) return 'L';
+        const clean = blockName.trim();
+        const match = clean.match(/^Block\s*([A-Za-z0-9\-]+)$/i);
+        if (match) {
+            const code = match[1].toUpperCase();
+            return /^\d+$/.test(code) ? `B${code}-` : `${code}-`;
+        }
+        if (/^[A-Za-z]\d+$/i.test(clean)) {
+            return clean.toUpperCase() + '-';
+        }
+        return clean.replace(/\s+/g, '-') + '-';
+    }
+
     async function loadSections() {
         return await apiRequest('sections');
     }
@@ -119,13 +133,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (activeFilters.search) params.set('search', activeFilters.search);
         if (activeFilters.category) params.set('lot_type', activeFilters.category);
         if (activeFilters.section) params.set('section', activeFilters.section);
+        if (activeFilters.block) params.set('block_id', activeFilters.block);
         if (activeFilters.status) params.set('status', activeFilters.status);
         const query = params.toString();
         return await apiRequest(query ? `lots?${query}` : 'lots');
     }
 
     function hasActiveFilters() {
-        return Boolean(filters.search || filters.category || filters.section || filters.status);
+        return Boolean(filters.search || filters.category || filters.section || filters.block || filters.status);
     }
 
     async function loadStats() {
@@ -524,6 +539,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const searchInput = document.getElementById('lotSearchInput');
     const categoryFilterSelect = document.getElementById('filterCategory');
     const sectionFilterSelect = document.getElementById('filterSection');
+    const blockFilterSelect = document.getElementById('filterBlock');
 
     // L3.3: re-fetches from the server whenever a filter is active, instead
     // of re-filtering the already-fully-loaded allLots array in the browser.
@@ -538,7 +554,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         try {
             visibleLots = await loadLots({ ...filters });
-            if (filters.search || filters.section || filters.category) {
+            if (filters.search || filters.section || filters.block || filters.category) {
                 visibleLots.forEach(lot => {
                     const catName = lot.lot_type_name || 'Uncategorized';
                     const secName = lot.section_name || 'Unassigned';
@@ -587,6 +603,18 @@ document.addEventListener('DOMContentLoaded', async function() {
                 clear: () => {
                     filters.section = '';
                     sectionFilterSelect.value = '';
+                    updateBlockFilterDropdown();
+                }
+            });
+        }
+        if (filters.block) {
+            const blockOpt = blockFilterSelect?.selectedOptions[0];
+            const blockName = blockOpt && blockOpt.value ? blockOpt.text : `Block #${filters.block}`;
+            chips.push({
+                label: `Block: ${blockName}`,
+                clear: () => {
+                    filters.block = '';
+                    if (blockFilterSelect) blockFilterSelect.value = '';
                 }
             });
         }
@@ -636,6 +664,31 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
+    async function updateBlockFilterDropdown() {
+        if (!blockFilterSelect) return;
+        let endpoint = 'blocks';
+        if (filters.section) {
+            const sec = allSections.find(s => s.section_name === filters.section);
+            if (sec) {
+                endpoint = `blocks?section_id=${sec.section_id}`;
+            }
+        }
+        try {
+            const blocks = await apiRequest(endpoint);
+            let opts = '<option value="">All Blocks</option>';
+            if (Array.isArray(blocks) && blocks.length > 0) {
+                opts += blocks.map(b => `<option value="${b.block_id}" ${String(filters.block) === String(b.block_id) ? 'selected' : ''}>${escapeHtml(b.block_name)}</option>`).join('');
+            }
+            blockFilterSelect.innerHTML = opts;
+            if (filters.block && (!Array.isArray(blocks) || !blocks.some(b => String(b.block_id) === String(filters.block)))) {
+                filters.block = '';
+                blockFilterSelect.value = '';
+            }
+        } catch (e) {
+            blockFilterSelect.innerHTML = '<option value="">All Blocks</option>';
+        }
+    }
+
     searchInput.addEventListener('input', debounce(() => {
         filters.search = searchInput.value;
         renderActiveFilterChips();
@@ -648,20 +701,33 @@ document.addEventListener('DOMContentLoaded', async function() {
         refreshVisibleLots();
     });
 
-    sectionFilterSelect.addEventListener('change', () => {
+    sectionFilterSelect.addEventListener('change', async () => {
         filters.section = sectionFilterSelect.value;
+        filters.block = '';
+        await updateBlockFilterDropdown();
         renderActiveFilterChips();
         refreshVisibleLots();
     });
+
+    if (blockFilterSelect) {
+        blockFilterSelect.addEventListener('change', () => {
+            filters.block = blockFilterSelect.value;
+            renderActiveFilterChips();
+            refreshVisibleLots();
+        });
+    }
 
     document.getElementById('btnResetFilters').addEventListener('click', () => {
         filters.search = '';
         filters.category = '';
         filters.section = '';
+        filters.block = '';
         filters.status = '';
         searchInput.value = '';
         categoryFilterSelect.value = '';
         sectionFilterSelect.value = '';
+        if (blockFilterSelect) blockFilterSelect.value = '';
+        updateBlockFilterDropdown();
         updateActiveStatCard();
         updateActiveSubTabs();
         renderActiveFilterChips();
@@ -701,6 +767,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             lotTypes.map(type => `<option value="${escapeHtml(type.type_name)}">${escapeHtml(type.type_name)}</option>`).join('');
         sectionFilterSelect.innerHTML = '<option value="">All Sections</option>' +
             allSections.map(section => `<option value="${escapeHtml(section.section_name)}">${escapeHtml(section.section_name)}</option>`).join('');
+        updateBlockFilterDropdown();
     }
 
     // ---------- Tri-View System (Card / Interactive Slot Grid / Polymorphic Data Table Registry) ----------
@@ -1183,18 +1250,27 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function getNextLotNumberInBlock(blockId, prefix = 'L') {
-        if (!blockId) return { nextNumber: 1, lotName: `${prefix}1` };
+        if (!blockId) return { nextNumber: 1, lotName: `${prefix}01` };
         const lotsInBlock = allLots.filter(l => l.block_id === blockId);
         let maxNum = 0;
         lotsInBlock.forEach(l => {
-            const numStr = (l.lot_number || '').replace(/\D+/g, '');
-            const val = parseInt(numStr, 10);
-            if (!isNaN(val) && val > maxNum) {
-                maxNum = val;
+            const numMatch = (l.lot_number || '').match(/(\d+)$/);
+            if (numMatch) {
+                const val = parseInt(numMatch[1], 10);
+                if (!isNaN(val) && val > maxNum) {
+                    maxNum = val;
+                }
+            } else {
+                const numStr = (l.lot_number || '').replace(/\D+/g, '');
+                const val = parseInt(numStr, 10);
+                if (!isNaN(val) && val > maxNum) {
+                    maxNum = val;
+                }
             }
         });
         const nextNum = Math.max(maxNum, lotsInBlock.length) + 1;
-        return { nextNumber: nextNum, lotName: `${prefix}${nextNum}` };
+        const padded = nextNum < 10 ? `0${nextNum}` : `${nextNum}`;
+        return { nextNumber: nextNum, lotName: `${prefix}${padded}` };
     }
 
     async function openAddModal() {
@@ -1281,16 +1357,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         const isEditMode = !!document.getElementById('lotId').value;
         if (isEditMode) return;
 
-        const blockId = parseInt(document.getElementById('lotBlock').value, 10);
+        const blockSelect = document.getElementById('lotBlock');
+        const blockId = parseInt(blockSelect?.value, 10);
         if (!blockId) {
             lotNumberInput.placeholder = 'Leave blank to auto-generate';
             if (hint) hint.innerText = 'Leave blank to auto-generate sequentially';
             return;
         }
-        const { lotName } = getNextLotNumberInBlock(blockId, 'L');
-        if (!lotNumberInput.value || lotNumberInput.value.startsWith('L')) {
-            lotNumberInput.value = lotName;
-        }
+        const blockName = blockSelect.selectedOptions[0]?.text || '';
+        const prefix = getBlockPrefix(blockName);
+        const { lotName } = getNextLotNumberInBlock(blockId, prefix);
+        lotNumberInput.value = lotName;
         lotNumberInput.placeholder = `e.g. ${lotName}`;
         if (hint) hint.innerText = `Auto-generated sequential plot: ${lotName}`;
     }
@@ -1489,12 +1566,15 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     async function updateBatchBlocks(sectionId) {
         const batchBlock = document.getElementById('batchBlock');
+        const batchPrefix = document.getElementById('batchPrefix');
         if (!batchBlock) return;
+        let selectedBlockName = '';
         try {
             const blocks = await apiRequest(`blocks?section_id=${sectionId}`);
             if (blocks && blocks.length > 0) {
                 batchBlock.innerHTML = blocks.map(b => `<option value="${b.block_id}">${escapeHtml(b.block_name)}</option>`).join('');
                 batchBlock.value = blocks[0].block_id;
+                selectedBlockName = blocks[0].block_name;
             } else {
                 batchBlock.innerHTML = '<option value="">No blocks found</option>';
             }
@@ -1502,9 +1582,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             batchBlock.innerHTML = '<option value="">No blocks found</option>';
         }
 
+        // Auto-match prefix with block code
+        if (batchPrefix && selectedBlockName) {
+            batchPrefix.value = getBlockPrefix(selectedBlockName);
+        }
+
         // Auto-calculate starting number based on the selected block
         const blockId = parseInt(batchBlock.value, 10);
-        const prefix = (document.getElementById('batchPrefix')?.value || 'L').trim();
+        const prefix = (batchPrefix?.value || 'L').trim();
         const startInput = document.getElementById('batchStartNumber');
         if (startInput) {
             const { nextNumber } = getNextLotNumberInBlock(blockId, prefix);
@@ -1554,7 +1639,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (batchBlockSelect) {
         batchBlockSelect.addEventListener('change', () => {
             const blockId = parseInt(batchBlockSelect.value, 10);
-            const prefix = (document.getElementById('batchPrefix')?.value || 'L').trim();
+            const blockName = batchBlockSelect.selectedOptions[0]?.text || '';
+            const batchPrefix = document.getElementById('batchPrefix');
+            if (batchPrefix && blockName) {
+                batchPrefix.value = getBlockPrefix(blockName);
+            }
+            const prefix = (batchPrefix?.value || 'L').trim();
             const startInput = document.getElementById('batchStartNumber');
             if (startInput && blockId) {
                 const { nextNumber } = getNextLotNumberInBlock(blockId, prefix);
