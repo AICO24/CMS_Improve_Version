@@ -1514,6 +1514,156 @@ document.addEventListener('DOMContentLoaded', async function() {
         updateBatchPreview();
     }
 
+    function updateBatchPreview() {
+        const countInput = document.getElementById('batchCount');
+        const prefixInput = document.getElementById('batchPrefix');
+        const startInput = document.getElementById('batchStartNumber');
+        const blockSelect = document.getElementById('batchBlock');
+        const sectionSelect = document.getElementById('batchSection');
+        const previewTitle = document.getElementById('batchPreviewTitle');
+        const previewRange = document.getElementById('batchPreviewRange');
+        const previewText = document.getElementById('batchPreviewText');
+
+        if (!countInput || !previewTitle || !previewRange || !previewText) return;
+
+        const count = Math.max(1, Math.min(100, parseInt(countInput.value, 10) || 10));
+        const prefix = (prefixInput?.value ?? 'L').trim();
+        const blockId = parseInt(blockSelect?.value, 10);
+        let startNum = parseInt(startInput?.value, 10);
+
+        if (isNaN(startNum) || startNum < 1) {
+            const { nextNumber } = getNextLotNumberInBlock(blockId, prefix);
+            startNum = nextNumber;
+            if (startInput) startInput.value = startNum;
+        }
+
+        const endNum = startNum + count - 1;
+        previewTitle.innerText = `Generating ${count} Lots`;
+        previewRange.innerText = `${prefix}${startNum} to ${prefix}${endNum}`;
+
+        const secName = sectionSelect?.selectedOptions[0]?.text || 'Selected Section';
+        const blkName = blockSelect?.selectedOptions[0]?.text || 'Selected Block';
+        previewText.innerHTML = `Estimated range: <span class="badge badge-emerald">${prefix}${startNum} to ${prefix}${endNum}</span> in ${escapeHtml(secName)} - ${escapeHtml(blkName)}`;
+    }
+
+    const batchSectionSelect = document.getElementById('batchSection');
+    if (batchSectionSelect) {
+        batchSectionSelect.addEventListener('change', () => updateBatchBlocks(batchSectionSelect.value));
+    }
+    const batchBlockSelect = document.getElementById('batchBlock');
+    if (batchBlockSelect) {
+        batchBlockSelect.addEventListener('change', () => {
+            const blockId = parseInt(batchBlockSelect.value, 10);
+            const prefix = (document.getElementById('batchPrefix')?.value || 'L').trim();
+            const startInput = document.getElementById('batchStartNumber');
+            if (startInput && blockId) {
+                const { nextNumber } = getNextLotNumberInBlock(blockId, prefix);
+                startInput.value = nextNumber;
+            }
+            updateBatchPreview();
+        });
+    }
+    const batchTypeSelect = document.getElementById('batchType');
+    if (batchTypeSelect) {
+        batchTypeSelect.addEventListener('change', () => {
+            const batchPrice = document.getElementById('batchPrice');
+            if (batchPrice) {
+                const opt = batchTypeSelect.selectedOptions?.[0];
+                if (opt?.dataset?.price) {
+                    batchPrice.value = parseFloat(opt.dataset.price).toFixed(2);
+                }
+            }
+        });
+    }
+
+    ['batchCount', 'batchPrefix', 'batchStartNumber'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', () => updateBatchPreview());
+    });
+
+    const batchLotForm = document.getElementById('batchLotForm');
+    if (batchLotForm) {
+        batchLotForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('btnSubmitBatch');
+            const blockId = parseInt(document.getElementById('batchBlock').value, 10);
+            const lotTypeId = parseInt(document.getElementById('batchType').value, 10);
+            const count = parseInt(document.getElementById('batchCount').value, 10);
+            const price = parseFloat(document.getElementById('batchPrice').value);
+            const prefix = (document.getElementById('batchPrefix').value || 'L').trim();
+            const startNum = document.getElementById('batchStartNumber').value ? parseInt(document.getElementById('batchStartNumber').value, 10) : null;
+            const dimensions = document.getElementById('batchDimensions').value.trim();
+            const notes = document.getElementById('batchNotes').value.trim();
+
+            if (!blockId || !lotTypeId || isNaN(count) || isNaN(price)) {
+                if (typeof showToast === 'function') {
+                    showToast('Please fill in all required fields.', { type: 'error' });
+                } else {
+                    alert('Please fill in all required fields.');
+                }
+                return;
+            }
+
+            await withButtonLoading(submitBtn, async () => {
+                try {
+                    const result = await apiRequest('lots/batch-generate', {
+                        method: 'POST',
+                        body: {
+                            block_id: blockId,
+                            lot_type_id: lotTypeId,
+                            count: count,
+                            price: price,
+                            prefix: prefix,
+                            start_number: startNum,
+                            dimensions: dimensions || null,
+                            location_notes: notes || null
+                        }
+                    });
+
+                    if (result.success) {
+                        document.getElementById('batchLotModal').style.display = 'none';
+                        unlockBodyScroll();
+
+                        // Automatically expand target section so user sees the newly generated plots immediately
+                        const secName = document.getElementById('batchSection')?.selectedOptions[0]?.text;
+                        const typeName = document.getElementById('batchType')?.selectedOptions[0]?.text;
+                        if (typeName) expandedCategories.add(typeName);
+                        if (typeName && secName) expandedSections.add(`${typeName}::${secName}`);
+
+                        const startLot = result.data?.lot_numbers?.[0] || `${prefix}${startNum || 1}`;
+                        const endLot = result.data?.lot_numbers?.[result.data.lot_numbers.length - 1] || `${prefix}${(startNum || 1) + count - 1}`;
+                        const successMsg = `Successfully generated ${result.data?.count || count} lots (${startLot} to ${endLot})!`;
+
+                        if (typeof showToast === 'function') {
+                            showToast(successMsg, { type: 'success' });
+                        } else {
+                            alert(successMsg);
+                        }
+
+                        // Preserve scroll position to avoid page jumping or scroll disorientation
+                        const currentY = window.scrollY;
+                        await refreshAll({ silent: true });
+                        window.scrollTo({ top: currentY, behavior: 'instant' });
+                    } else {
+                        const errMsg = result.error || 'Failed to generate lots';
+                        if (typeof showToast === 'function') {
+                            showToast(errMsg, { type: 'error' });
+                        } else {
+                            alert(errMsg);
+                        }
+                    }
+                } catch (err) {
+                    const errMsg = 'Error: ' + err.message;
+                    if (typeof showToast === 'function') {
+                        showToast(errMsg, { type: 'error' });
+                    } else {
+                        alert(errMsg);
+                    }
+                }
+            });
+        });
+    }
+
     // ---------- Automation Endpoints: Auto-Sync & CSV Export ----------
 
     const autoSyncBtn = document.getElementById('autoSyncBtn');
