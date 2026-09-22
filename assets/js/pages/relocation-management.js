@@ -1686,15 +1686,24 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     document.getElementById('openAddModal').addEventListener('click', openAddModal);
 
-    const cancelRequestBtn = document.getElementById('cancelRequestBtn');
-    if (cancelRequestBtn) {
-        cancelRequestBtn.addEventListener('click', () => {
+    const closeModalBtn = document.getElementById('closeModal');
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', (e) => {
+            e.preventDefault();
             requestModal.style.display = 'none';
         });
     }
 
-    document.querySelectorAll('.close, .close-view').forEach(el => {
-        el.addEventListener('click', () => {
+    if (cancelRequestBtn) {
+        cancelRequestBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            requestModal.style.display = 'none';
+        });
+    }
+
+    document.querySelectorAll('.close, .close-view, .deck-close-btn').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
             document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
         });
     });

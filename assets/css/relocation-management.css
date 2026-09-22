@@ -2761,6 +2761,53 @@
     box-shadow: 0 6px 18px rgba(37, 99, 235, 0.40);
 }
 
+.btn-deck-cancel {
+    height: 40px;
+    padding: 0 20px;
+    border-radius: 999px;
+    border: 1.5px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.btn-deck-cancel:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+}
+
+.btn-deck-cancel:active {
+    transform: scale(0.97);
+}
+
+.btn-deck-submit {
+    height: 40px;
+    padding: 0 24px;
+    border-radius: 999px;
+    border: none;
+    font-size: 0.88rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.btn-deck-submit:active {
+    transform: scale(0.97);
+}
+
 /* Modal Window Constraint: Zero-Scroll Guarantee */
 #requestModal .modal-deck-card,
 #viewModal .modal-deck-card {
@@ -3009,6 +3056,18 @@
 
 [data-theme="dark"] .transit-vector-line {
     background: #334155 !important;
+}
+
+[data-theme="dark"] .btn-deck-cancel {
+    background: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .btn-deck-cancel:hover {
+    background: #334155 !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
 }
 
 [data-theme="dark"] #requestModal .split-modal-ai-pane,
