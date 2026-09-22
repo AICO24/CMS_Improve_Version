@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const searchClearBtn = document.getElementById('searchClearBtn');
     const columbariumSelect = document.getElementById('columbariumFilter');
     const levelSelect = document.getElementById('levelFilter');
+    const resetFiltersBtn = document.getElementById('resetFiltersBtn');
 
     const viewGridBtn = document.getElementById('viewGridBtn');
     const viewTableBtn = document.getElementById('viewTableBtn');
@@ -750,12 +751,24 @@ document.addEventListener('DOMContentLoaded', async function() {
     // --- Modal Logic ---
     function showViewModal(niche) {
         const isOccupied = niche.status === 'occupied';
+        const decedentFullName = `${niche.first_name || ''} ${niche.last_name || ''}`.trim();
+        const decedentDisplay = decedentFullName ? `
+            <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-end;">
+                <strong style="color: var(--color-text-main, #0f172a); font-size: 0.90rem;">${escapeHtml(decedentFullName)}</strong>
+                <a href="decedent-records.html?search=${encodeURIComponent(decedentFullName)}" target="_blank" class="decedent-link-pill" title="Open Decedent Profile in Decedent Records">
+                    <i class="fas fa-id-card"></i>
+                    <span>View Profile</span>
+                    <i class="fas fa-arrow-up-right-from-square" style="font-size: 0.65rem;"></i>
+                </a>
+            </div>
+        ` : '<strong>— (Vacant)</strong>';
+
         const details = `
             <div class="detail-row"><span>Niche Number</span><strong>${escapeHtml(niche.niche_number)}</strong></div>
             <div class="detail-row"><span>Columbarium</span><strong>${escapeHtml(niche.columbarium || 'N/A')}</strong></div>
             <div class="detail-row"><span>Level</span><strong>Level ${escapeHtml(niche.level || 1)}</strong></div>
             <div class="detail-row"><span>Status</span><strong class="${isOccupied ? 'status-occupied' : 'status-available'}" style="display:inline-block; padding: 2px 8px; border-radius: 999px;">${isOccupied ? 'Occupied' : 'Available'}</strong></div>
-            <div class="detail-row"><span>Assigned Decedent</span><strong>${niche.first_name ? `${escapeHtml(niche.first_name)} ${escapeHtml(niche.last_name || '')}` : '— (Vacant)'}</strong></div>
+            <div class="detail-row" style="align-items: center;"><span>Assigned Decedent</span>${decedentDisplay}</div>
             <div class="detail-row"><span>Cremation Date</span><strong>${escapeHtml(niche.cremation_date || '—')}</strong></div>
             <div class="detail-row"><span>Ash Storage Location</span><strong>${escapeHtml(niche.ash_storage_location || '—')}</strong></div>
             ${niche.notes ? `<div class="detail-row"><span>Notes</span><strong>${escapeHtml(niche.notes)}</strong></div>` : ''}
@@ -1270,6 +1283,48 @@ document.addEventListener('DOMContentLoaded', async function() {
         applyFilters();
         searchInput.focus();
     });
+
+    // Reset Filters Button
+    if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', async () => {
+            const hadChanges = searchQuery || currentColumbarium || currentLevel || currentStatusFilter;
+
+            searchInput.value = '';
+            searchQuery = '';
+            searchClearBtn.style.display = 'none';
+
+            const prevColumbarium = currentColumbarium;
+            currentColumbarium = '';
+            if (columbariumSelect) columbariumSelect.value = '';
+
+            currentLevel = '';
+            if (levelSelect) levelSelect.value = '';
+
+            currentStatusFilter = '';
+
+            // Reset tab switcher to All Niches
+            document.querySelectorAll('.records-tab-btn').forEach(b => {
+                const isAll = (b.dataset.tab || '') === '';
+                b.classList.toggle('active', isAll);
+                b.setAttribute('aria-selected', isAll ? 'true' : 'false');
+            });
+
+            // Reset stat card rings
+            document.querySelectorAll('.stat-card-filterable').forEach(c => {
+                c.classList.remove('is-active-filter');
+            });
+
+            if (prevColumbarium) {
+                await refreshAll();
+            } else {
+                applyFilters();
+            }
+
+            if (hadChanges && typeof showToast === 'function') {
+                showToast('Filters reset to default view.', { type: 'info' });
+            }
+        });
+    }
 
     // View Switcher
     viewGridBtn.addEventListener('click', () => {

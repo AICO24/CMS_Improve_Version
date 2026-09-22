@@ -453,6 +453,66 @@
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
 }
 
+/* Reset Filters Button */
+.btn-reset-filters {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm, 8px);
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #64748b;
+    font-size: 0.80rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 160ms ease;
+    white-space: nowrap;
+}
+
+.btn-reset-filters:hover {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.08);
+}
+
+.btn-reset-filters i {
+    font-size: 0.76rem;
+    transition: transform 200ms ease;
+}
+
+.btn-reset-filters:hover i {
+    transform: rotate(-90deg);
+}
+
+/* 1-Click Decedent Records Profile Link */
+.decedent-link-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    color: #15803d;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    margin-top: 3px;
+}
+
+.decedent-link-pill:hover {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border-color: #86efac;
+    color: #166534;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.08);
+}
+
 .view-mode-toggle-group {
     display: inline-flex;
     align-items: center;
@@ -1678,6 +1738,30 @@
 
 [data-theme="dark"] .deceased-name {
     color: #34d399;
+}
+
+[data-theme="dark"] .btn-reset-filters {
+    background: #1e293b;
+    border-color: #334155;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .btn-reset-filters:hover {
+    background: #451a1a;
+    border-color: #7f1d1d;
+    color: #f87171;
+}
+
+[data-theme="dark"] .decedent-link-pill {
+    background: #143527;
+    border-color: #1b533a;
+    color: #4ade80;
+}
+
+[data-theme="dark"] .decedent-link-pill:hover {
+    background: #194331;
+    border-color: #226b4a;
+    color: #86efac;
 }
 
 /* ========================================================
