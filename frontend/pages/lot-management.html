@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="../../assets/css/components/forms.css">
     <link rel="stylesheet" href="../../assets/css/components/tables.css?v=2">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
+    <link rel="stylesheet" href="../../assets/css/components/toast.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
 
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
@@ -330,7 +331,7 @@
                         </div>
                     </div>
 
-                    <div class="form-group form-group-warning mt-3">
+                    <div class="form-group form-group-warning mt-3" id="lotStatusOverrideGroup">
                         <label for="lotStatus"><i class="fas fa-shield-halved"></i> Lifecycle Status Override</label>
                         <select id="lotStatus">
                             <option value="Available">Available</option>
@@ -343,7 +344,7 @@
 
                     <div class="form-group mt-3">
                         <label for="lotNotes">Location Notes / Landmarks</label>
-                        <textarea id="lotNotes" rows="2" placeholder="Describe landmarks, tree vicinity, or plot orientation..."></textarea>
+                        <textarea id="lotNotes" rows="1" placeholder="Describe landmarks, tree vicinity, or plot orientation..."></textarea>
                     </div>
                 </div>
 
@@ -463,7 +464,7 @@
 
                     <div class="form-group mt-3">
                         <label for="batchNotes">Shared Notes / Description</label>
-                        <textarea id="batchNotes" rows="2" placeholder="Batch generated standard plots..."></textarea>
+                        <textarea id="batchNotes" rows="1" placeholder="Batch generated standard plots..."></textarea>
                     </div>
 
                     <!-- Reactive Live Preview Box -->
@@ -492,6 +493,7 @@
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/shared/button-loading.js"></script>
+    <script src="../../assets/js/shared/toast.js"></script>
     <script src="../../assets/js/pages/lot-management.js"></script>
     <script>
         // Sidebar toggle

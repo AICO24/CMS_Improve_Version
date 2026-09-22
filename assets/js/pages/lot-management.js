@@ -1124,6 +1124,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
 
             document.getElementById('viewModal').style.display = 'flex';
+            lockBodyScroll();
 
             initAiAssistant({
                 mountSelector: '#aiAssistantMountRecord',
@@ -1133,6 +1134,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             document.getElementById('editFromView').onclick = () => {
                 document.getElementById('viewModal').style.display = 'none';
+                unlockBodyScroll();
                 openEditModal(lotId);
             };
 
@@ -1140,6 +1142,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (closeViewBtn) {
                 closeViewBtn.onclick = () => {
                     document.getElementById('viewModal').style.display = 'none';
+                    unlockBodyScroll();
                 };
             }
 
@@ -1150,6 +1153,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         try {
                             await apiRequest(`lots/${lotId}`, { method: 'DELETE' });
                             document.getElementById('viewModal').style.display = 'none';
+                            unlockBodyScroll();
                             await refreshAll();
                         } catch (error) {
                             alert('Failed to delete lot: ' + error.message);
@@ -1162,13 +1166,87 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    // ---------- Smart Calculation & Modal Scroll-Lock Helpers ----------
+
+    function lockBodyScroll() {
+        document.body.classList.add('modal-scroll-lock');
+    }
+
+    function unlockBodyScroll() {
+        const anyModalOpen = ['lotModal', 'batchLotModal', 'viewModal'].some(id => {
+            const el = document.getElementById(id);
+            return el && el.style.display && el.style.display !== 'none';
+        });
+        if (!anyModalOpen) {
+            document.body.classList.remove('modal-scroll-lock');
+        }
+    }
+
+    function getNextLotNumberInBlock(blockId, prefix = 'L') {
+        if (!blockId) return { nextNumber: 1, lotName: `${prefix}1` };
+        const lotsInBlock = allLots.filter(l => l.block_id === blockId);
+        let maxNum = 0;
+        lotsInBlock.forEach(l => {
+            const numStr = (l.lot_number || '').replace(/\D+/g, '');
+            const val = parseInt(numStr, 10);
+            if (!isNaN(val) && val > maxNum) {
+                maxNum = val;
+            }
+        });
+        const nextNum = Math.max(maxNum, lotsInBlock.length) + 1;
+        return { nextNumber: nextNum, lotName: `${prefix}${nextNum}` };
+    }
+
     async function openAddModal() {
         document.getElementById('modalTitle').innerText = 'Add New Lot';
         document.getElementById('lotForm').reset();
         document.getElementById('lotId').value = '';
         editingOriginalStatus = null;
-        await populateFormDropdowns();
+
+        // Hide lifecycle status override in Add mode to keep modal sleek and avoid inner scrolling
+        const overrideGroup = document.getElementById('lotStatusOverrideGroup');
+        if (overrideGroup) overrideGroup.style.display = 'none';
+
+        // Auto-select section: respect active filter or pick first section
+        let defaultSec = filters.section;
+        if (!defaultSec && allSections.length > 0) {
+            defaultSec = allSections[0].section_name;
+        }
+
+        await populateFormDropdowns(defaultSec);
+
+        // Ensure block is automatically selected (never empty)
+        const blockSelect = document.getElementById('lotBlock');
+        if (blockSelect && blockSelect.options.length > 0 && !blockSelect.value) {
+            for (let i = 0; i < blockSelect.options.length; i++) {
+                if (blockSelect.options[i].value) {
+                    blockSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+
+        // Auto-calculate next sequential lot number
+        const blockId = parseInt(blockSelect?.value, 10);
+        const lotNumberInput = document.getElementById('lotNumber');
+        if (lotNumberInput && blockId) {
+            const { lotName } = getNextLotNumberInBlock(blockId, 'L');
+            lotNumberInput.value = lotName;
+        }
+
+        // Auto-fill all plot specifications so user can save immediately
+        const typeSelect = document.getElementById('lotType');
+        const selectedTypeOpt = typeSelect?.selectedOptions?.[0];
+        const defaultPrice = selectedTypeOpt?.dataset?.price || '50000.00';
+
+        document.getElementById('lotPrice').value = parseFloat(defaultPrice).toFixed(2);
+        document.getElementById('lotDimensions').value = '1.0m x 2.44m';
+        document.getElementById('lotStatus').value = 'Available';
+        document.getElementById('lotNotes').value = 'Standard cemetery plot';
+
+        updateLotNumberPreview();
         document.getElementById('lotModal').style.display = 'flex';
+        lockBodyScroll();
     }
 
     async function openEditModal(lotId) {
@@ -1184,8 +1262,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('lotDimensions').value = lot.dimensions || '';
             document.getElementById('lotNotes').value = lot.location_notes || '';
             editingOriginalStatus = lot.status;
+
+            // Show lifecycle status override in Edit mode
+            const overrideGroup = document.getElementById('lotStatusOverrideGroup');
+            if (overrideGroup) overrideGroup.style.display = 'block';
+
             await populateFormDropdowns(lot.section_name, lot.block_id);
             document.getElementById('lotModal').style.display = 'flex';
+            lockBodyScroll();
         } catch (error) {
             alert('Failed to load lot: ' + error.message);
         }
@@ -1203,10 +1287,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (hint) hint.innerText = 'Leave blank to auto-generate sequentially';
             return;
         }
-        const countInBlock = allLots.filter(lot => lot.block_id === blockId).length;
-        const autoNum = `L${countInBlock + 1}`;
-        lotNumberInput.placeholder = `e.g. ${autoNum} (leave blank to auto-generate)`;
-        if (hint) hint.innerText = `Auto-generated default will be: ${autoNum}`;
+        const { lotName } = getNextLotNumberInBlock(blockId, 'L');
+        if (!lotNumberInput.value || lotNumberInput.value.startsWith('L')) {
+            lotNumberInput.value = lotName;
+        }
+        lotNumberInput.placeholder = `e.g. ${lotName}`;
+        if (hint) hint.innerText = `Auto-generated sequential plot: ${lotName}`;
     }
 
     async function populateFormDropdowns(selectedSection = '', selectedBlockId = '') {
@@ -1221,19 +1307,45 @@ document.addEventListener('DOMContentLoaded', async function() {
             const section = allSections.find(item => item.section_name === sectionName);
             if (section) {
                 const blocks = await apiRequest(`blocks?section_id=${section.section_id}`);
-                blockSelect.innerHTML = '<option value="">Select a block</option>' + (blocks || []).map(block =>
+                const blockOpts = (blocks || []).map(block =>
                     `<option value="${block.block_id}" ${String(block.block_id) === String(selectedBlockId) ? 'selected' : ''}>${block.block_name}</option>`
                 ).join('');
+                blockSelect.innerHTML = blockOpts || '<option value="">No blocks found</option>';
+
+                // Automatically select first block if none was selected
+                if (!selectedBlockId && blocks && blocks.length > 0) {
+                    blockSelect.value = blocks[0].block_id;
+                }
             }
         } else {
             blockSelect.innerHTML = '<option value="">Select a block</option>';
         }
 
         const typeSelect = document.getElementById('lotType');
-        typeSelect.innerHTML = lotTypes.map(type => `<option value="${type.lot_type_id || type.type_id}">${type.type_name}</option>`).join('');
+        typeSelect.innerHTML = lotTypes.map(type => 
+            `<option value="${type.lot_type_id || type.type_id}" data-price="${type.base_price || 50000}">${type.type_name}</option>`
+        ).join('');
 
-        sectionSelect.onchange = () => populateFormDropdowns(sectionSelect.value);
+        if (filters.category) {
+            const match = lotTypes.find(t => t.type_name.toLowerCase() === filters.category.toLowerCase());
+            if (match) typeSelect.value = match.lot_type_id || match.type_id;
+        }
+
+        sectionSelect.onchange = async () => {
+            await populateFormDropdowns(sectionSelect.value);
+            updateLotNumberPreview();
+        };
         blockSelect.onchange = () => updateLotNumberPreview();
+        typeSelect.onchange = () => {
+            const isEditMode = !!document.getElementById('lotId').value;
+            if (!isEditMode) {
+                const opt = typeSelect.selectedOptions?.[0];
+                if (opt?.dataset?.price) {
+                    document.getElementById('lotPrice').value = parseFloat(opt.dataset.price).toFixed(2);
+                }
+            }
+        };
+
         updateLotNumberPreview();
     }
 
@@ -1251,7 +1363,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         };
 
         if (!data.block_id || !data.lot_type_id || isNaN(data.price)) {
-            alert('Please fill in all required fields.');
+            if (typeof showToast === 'function') {
+                showToast('Please fill in all required fields.', { type: 'error' });
+            } else {
+                alert('Please fill in all required fields.');
+            }
             return;
         }
 
@@ -1276,12 +1392,40 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
                 if (result.success) {
                     document.getElementById('lotModal').style.display = 'none';
-                    await refreshAll();
+                    unlockBodyScroll();
+
+                    // Automatically expand target section so user sees the newly saved lot
+                    const secName = document.getElementById('lotSection')?.selectedOptions[0]?.text;
+                    const typeName = document.getElementById('lotType')?.selectedOptions[0]?.text;
+                    if (typeName) expandedCategories.add(typeName);
+                    if (typeName && secName) expandedSections.add(`${typeName}::${secName}`);
+
+                    const successMsg = id ? 'Lot updated successfully!' : `Lot ${data.lot_number} created successfully!`;
+                    if (typeof showToast === 'function') {
+                        showToast(successMsg, { type: 'success' });
+                    } else {
+                        alert(successMsg);
+                    }
+
+                    // Preserve scroll position to avoid scroll disorientation
+                    const currentY = window.scrollY;
+                    await refreshAll({ silent: true });
+                    window.scrollTo({ top: currentY, behavior: 'instant' });
                 } else {
-                    alert(result.error || 'Failed to save lot');
+                    const errMsg = result.error || 'Failed to save lot';
+                    if (typeof showToast === 'function') {
+                        showToast(errMsg, { type: 'error' });
+                    } else {
+                        alert(errMsg);
+                    }
                 }
             } catch (error) {
-                alert('Error: ' + error.message);
+                const errMsg = 'Error: ' + error.message;
+                if (typeof showToast === 'function') {
+                    showToast(errMsg, { type: 'error' });
+                } else {
+                    alert(errMsg);
+                }
             }
         });
     });
@@ -1294,20 +1438,53 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         const batchSection = document.getElementById('batchSection');
         const batchType = document.getElementById('batchType');
+        const batchCount = document.getElementById('batchCount');
+        const batchPrefix = document.getElementById('batchPrefix');
+        const batchPrice = document.getElementById('batchPrice');
+        const batchDimensions = document.getElementById('batchDimensions');
+        const batchNotes = document.getElementById('batchNotes');
 
-        if (batchSection) {
+        // Automatically prefill section (respect active section filter if set)
+        if (batchSection && allSections.length) {
             batchSection.innerHTML = allSections.map(s => `<option value="${s.section_id}">${escapeHtml(s.section_name)}</option>`).join('');
-        }
-        if (batchType) {
-            batchType.innerHTML = lotTypes.map(t => `<option value="${t.lot_type_id || t.type_id}">${escapeHtml(t.type_name)}</option>`).join('');
+            if (filters.section) {
+                const matchedSec = allSections.find(s => s.section_name.toLowerCase() === filters.section.toLowerCase());
+                if (matchedSec) batchSection.value = matchedSec.section_id;
+            }
         }
 
+        // Automatically prefill lot type (respect active category filter if set)
+        if (batchType && lotTypes.length) {
+            batchType.innerHTML = lotTypes.map(t => 
+                `<option value="${t.lot_type_id || t.type_id}" data-price="${t.base_price || 50000}">${escapeHtml(t.type_name)}</option>`
+            ).join('');
+            if (filters.category) {
+                const matchedType = lotTypes.find(t => t.type_name.toLowerCase() === filters.category.toLowerCase());
+                if (matchedType) batchType.value = matchedType.lot_type_id || matchedType.type_id;
+            }
+        }
+
+        // Automatically prefill count, prefix, price, dimensions, and notes
+        if (batchCount) batchCount.value = '10';
+        if (batchPrefix) batchPrefix.value = 'L';
+
+        if (batchPrice) {
+            const selectedTypeOpt = batchType?.selectedOptions?.[0];
+            const defaultPrice = selectedTypeOpt?.dataset?.price || '50000.00';
+            batchPrice.value = parseFloat(defaultPrice).toFixed(2);
+        }
+
+        if (batchDimensions) batchDimensions.value = '1.0m x 2.44m';
+        if (batchNotes) batchNotes.value = 'Standard batch generated plots';
+
+        // Populate blocks and auto-calculate next start number
         if (allSections.length && batchSection) {
             await updateBatchBlocks(batchSection.value);
         }
 
         updateBatchPreview();
         batchModal.style.display = 'flex';
+        lockBodyScroll();
     }
 
     async function updateBatchBlocks(sectionId) {
@@ -1315,108 +1492,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!batchBlock) return;
         try {
             const blocks = await apiRequest(`blocks?section_id=${sectionId}`);
-            batchBlock.innerHTML = (blocks || []).map(b => `<option value="${b.block_id}">${escapeHtml(b.block_name)}</option>`).join('');
+            if (blocks && blocks.length > 0) {
+                batchBlock.innerHTML = blocks.map(b => `<option value="${b.block_id}">${escapeHtml(b.block_name)}</option>`).join('');
+                batchBlock.value = blocks[0].block_id;
+            } else {
+                batchBlock.innerHTML = '<option value="">No blocks found</option>';
+            }
         } catch (err) {
             batchBlock.innerHTML = '<option value="">No blocks found</option>';
         }
-        updateBatchPreview();
-    }
 
-    function updateBatchPreview() {
-        const countInput = document.getElementById('batchCount');
-        const prefixInput = document.getElementById('batchPrefix');
+        // Auto-calculate starting number based on the selected block
+        const blockId = parseInt(batchBlock.value, 10);
+        const prefix = (document.getElementById('batchPrefix')?.value || 'L').trim();
         const startInput = document.getElementById('batchStartNumber');
-        const blockSelect = document.getElementById('batchBlock');
-        const sectionSelect = document.getElementById('batchSection');
-        const previewTitle = document.getElementById('batchPreviewTitle');
-        const previewRange = document.getElementById('batchPreviewRange');
-        const previewText = document.getElementById('batchPreviewText');
-
-        if (!countInput || !previewTitle || !previewRange || !previewText) return;
-
-        const count = Math.max(1, Math.min(100, parseInt(countInput.value, 10) || 10));
-        const prefix = (prefixInput?.value ?? 'L').trim();
-        const blockId = parseInt(blockSelect?.value, 10);
-        let startNum = parseInt(startInput?.value, 10);
-
-        if (isNaN(startNum) || startNum < 1) {
-            if (blockId) {
-                const countInBlock = allLots.filter(l => l.block_id === blockId).length;
-                startNum = countInBlock + 1;
-            } else {
-                startNum = 1;
-            }
+        if (startInput) {
+            const { nextNumber } = getNextLotNumberInBlock(blockId, prefix);
+            startInput.value = nextNumber;
         }
 
-        const endNum = startNum + count - 1;
-        previewTitle.innerText = `Generating ${count} Lots`;
-        previewRange.innerText = `${prefix}${startNum} to ${prefix}${endNum}`;
-
-        const secName = sectionSelect?.selectedOptions[0]?.text || 'Selected Section';
-        const blkName = blockSelect?.selectedOptions[0]?.text || 'Selected Block';
-        previewText.innerHTML = `Estimated range: <span class="badge badge-emerald">${prefix}${startNum} to ${prefix}${endNum}</span> in ${escapeHtml(secName)} - ${escapeHtml(blkName)}`;
-    }
-
-    const batchSectionSelect = document.getElementById('batchSection');
-    if (batchSectionSelect) {
-        batchSectionSelect.addEventListener('change', () => updateBatchBlocks(batchSectionSelect.value));
-    }
-    const batchBlockSelect = document.getElementById('batchBlock');
-    if (batchBlockSelect) {
-        batchBlockSelect.addEventListener('change', () => updateBatchPreview());
-    }
-    ['batchCount', 'batchPrefix', 'batchStartNumber'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('input', () => updateBatchPreview());
-    });
-
-    const batchLotForm = document.getElementById('batchLotForm');
-    if (batchLotForm) {
-        batchLotForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitBtn = document.getElementById('btnSubmitBatch');
-            const blockId = parseInt(document.getElementById('batchBlock').value, 10);
-            const lotTypeId = parseInt(document.getElementById('batchType').value, 10);
-            const count = parseInt(document.getElementById('batchCount').value, 10);
-            const price = parseFloat(document.getElementById('batchPrice').value);
-            const prefix = (document.getElementById('batchPrefix').value || 'L').trim();
-            const startNum = document.getElementById('batchStartNumber').value ? parseInt(document.getElementById('batchStartNumber').value, 10) : null;
-            const dimensions = document.getElementById('batchDimensions').value.trim();
-            const notes = document.getElementById('batchNotes').value.trim();
-
-            if (!blockId || !lotTypeId || isNaN(count) || isNaN(price)) {
-                alert('Please fill in all required fields.');
-                return;
-            }
-
-            await withButtonLoading(submitBtn, async () => {
-                try {
-                    const result = await apiRequest('lots/batch-generate', {
-                        method: 'POST',
-                        body: {
-                            block_id: blockId,
-                            lot_type_id: lotTypeId,
-                            count: count,
-                            price: price,
-                            prefix: prefix,
-                            start_number: startNum,
-                            dimensions: dimensions || null,
-                            location_notes: notes || null
-                        }
-                    });
-
-                    if (result.success) {
-                        document.getElementById('batchLotModal').style.display = 'none';
-                        alert(`Success! Generated ${result.data?.count || count} lots (${result.data?.lot_numbers?.[0]} to ${result.data?.lot_numbers?.[result.data.lot_numbers.length - 1]}).`);
-                        await refreshAll();
-                    } else {
-                        alert(result.error || 'Failed to generate lots');
-                    }
-                } catch (err) {
-                    alert('Error: ' + err.message);
-                }
-            });
-        });
+        updateBatchPreview();
     }
 
     // ---------- Automation Endpoints: Auto-Sync & CSV Export ----------
@@ -1429,13 +1524,30 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const res = await apiRequest('lots/sync-status', { method: 'POST' });
                     if (res.success) {
                         const s = res.stats || {};
-                        alert(`Auto-Sync Complete!\n\n${res.message}\n• Marked Occupied: ${s.occupied_updated ?? 0}\n• Marked Expired: ${s.expired_updated ?? 0}\n• Sections Recounted: ${s.sections_updated ?? 0}`);
-                        await refreshAll();
+                        const msg = `Auto-Sync Complete!\n\n${res.message}\n• Marked Occupied: ${s.occupied_updated ?? 0}\n• Marked Expired: ${s.expired_updated ?? 0}\n• Sections Recounted: ${s.sections_updated ?? 0}`;
+                        if (typeof showToast === 'function') {
+                            showToast('Auto-Sync Complete! Lot metrics updated.', { type: 'success' });
+                        } else {
+                            alert(msg);
+                        }
+                        const currentY = window.scrollY;
+                        await refreshAll({ silent: true });
+                        window.scrollTo({ top: currentY, behavior: 'instant' });
                     } else {
-                        alert(res.error || 'Failed to sync statuses');
+                        const errMsg = res.error || 'Failed to sync statuses';
+                        if (typeof showToast === 'function') {
+                            showToast(errMsg, { type: 'error' });
+                        } else {
+                            alert(errMsg);
+                        }
                     }
                 } catch (err) {
-                    alert('Auto-Sync failed: ' + err.message);
+                    const errMsg = 'Auto-Sync failed: ' + err.message;
+                    if (typeof showToast === 'function') {
+                        showToast(errMsg, { type: 'error' });
+                    } else {
+                        alert(errMsg);
+                    }
                 }
             });
         });
@@ -1474,8 +1586,16 @@ document.addEventListener('DOMContentLoaded', async function() {
                     a.click();
                     document.body.removeChild(a);
                     window.URL.revokeObjectURL(downloadUrl);
+                    if (typeof showToast === 'function') {
+                        showToast('Lot records exported to CSV.', { type: 'success' });
+                    }
                 } catch (err) {
-                    alert('Export failed: ' + err.message);
+                    const errMsg = 'Export failed: ' + err.message;
+                    if (typeof showToast === 'function') {
+                        showToast(errMsg, { type: 'error' });
+                    } else {
+                        alert(errMsg);
+                    }
                 }
             });
         });
@@ -1483,8 +1603,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // ---------- Initial load / refresh ----------
 
-    async function refreshAll() {
-        showLoadingState();
+    async function refreshAll(options = {}) {
+        if (!options.silent) {
+            showLoadingState();
+        }
         try {
             const [stats, sections, types, lots] = await Promise.all([
                 loadStats(), loadSections(), loadLotTypes(), loadLots(),
@@ -1515,28 +1637,46 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     await refreshAll();
 
-    // ---------- Global Modal Controls Wiring ----------
+    // ---------- Global Modal Controls Wiring & Scroll-Lock ----------
 
     document.getElementById('openAddLotModal')?.addEventListener('click', openAddModal);
     document.getElementById('openBatchLotModal')?.addEventListener('click', openBatchModal);
 
-    document.querySelector('.close')?.addEventListener('click', () => document.getElementById('lotModal').style.display = 'none');
-    document.querySelector('.close-lot-modal-btn')?.addEventListener('click', () => document.getElementById('lotModal').style.display = 'none');
+    const closeLotModal = () => {
+        const modal = document.getElementById('lotModal');
+        if (modal) modal.style.display = 'none';
+        unlockBodyScroll();
+    };
 
-    document.querySelector('.close-view')?.addEventListener('click', () => document.getElementById('viewModal').style.display = 'none');
-    document.getElementById('closeViewModalBtn')?.addEventListener('click', () => document.getElementById('viewModal').style.display = 'none');
+    const closeViewModal = () => {
+        const modal = document.getElementById('viewModal');
+        if (modal) modal.style.display = 'none';
+        unlockBodyScroll();
+    };
 
-    document.getElementById('closeBatchModalTop')?.addEventListener('click', () => document.getElementById('batchLotModal').style.display = 'none');
-    document.getElementById('closeBatchModalBottom')?.addEventListener('click', () => document.getElementById('batchLotModal').style.display = 'none');
+    const closeBatchModal = () => {
+        const modal = document.getElementById('batchLotModal');
+        if (modal) modal.style.display = 'none';
+        unlockBodyScroll();
+    };
+
+    document.querySelector('.close')?.addEventListener('click', closeLotModal);
+    document.querySelector('.close-lot-modal-btn')?.addEventListener('click', closeLotModal);
+
+    document.querySelector('.close-view')?.addEventListener('click', closeViewModal);
+    document.getElementById('closeViewModalBtn')?.addEventListener('click', closeViewModal);
+
+    document.getElementById('closeBatchModalTop')?.addEventListener('click', closeBatchModal);
+    document.getElementById('closeBatchModalBottom')?.addEventListener('click', closeBatchModal);
 
     window.addEventListener('click', (e) => {
         const lotModal = document.getElementById('lotModal');
         const viewModal = document.getElementById('viewModal');
         const batchModal = document.getElementById('batchLotModal');
 
-        if (lotModal && e.target === lotModal) lotModal.style.display = 'none';
-        if (viewModal && e.target === viewModal) viewModal.style.display = 'none';
-        if (batchModal && e.target === batchModal) batchModal.style.display = 'none';
+        if (lotModal && e.target === lotModal) closeLotModal();
+        if (viewModal && e.target === viewModal) closeViewModal();
+        if (batchModal && e.target === batchModal) closeBatchModal();
     });
 });
 
