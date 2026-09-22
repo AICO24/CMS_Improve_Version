@@ -323,6 +323,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         const isExpanded = expandedSections.has(key);
         const secId = 'sec-' + encodeURIComponent(categoryName) + '-' + encodeURIComponent(sec.name);
         const pct = computeCapacityPercentages(sec.counts);
+        let capacityBadge = '';
+        if (sec.counts.total === 0) {
+            capacityBadge = `<span class="sec-status-tag tag-empty"><i class="fas fa-circle-notch"></i> No Plots</span>`;
+        } else if (sec.counts.available === 0) {
+            capacityBadge = `<span class="sec-status-tag tag-full"><i class="fas fa-lock"></i> 100% Full</span>`;
+        } else if (sec.counts.available <= 3) {
+            capacityBadge = `<span class="sec-status-tag tag-critical" title="Only ${sec.counts.available} plots remaining in this section"><i class="fas fa-triangle-exclamation"></i> Critical: ${sec.counts.available} Left</span>`;
+        } else if (pct.availPct <= 20) {
+            capacityBadge = `<span class="sec-status-tag tag-low-capacity" title="High occupancy: ${pct.occPct}% occupied"><i class="fas fa-battery-quarter"></i> Low Capacity (${sec.counts.available} Open)</span>`;
+        } else {
+            capacityBadge = `<span class="sec-status-tag tag-open"><i class="fas fa-circle-check"></i> ${sec.counts.available} Open</span>`;
+        }
 
         return `
             <div class="section-group">
@@ -334,10 +346,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <div class="section-title-meta">
                             <div class="section-name-line">
                                 <span class="section-name">${escapeHtml(sec.name)}</span>
-                                ${sec.counts.available > 0
-                                    ? `<span class="sec-status-tag tag-open"><i class="fas fa-circle-check"></i> ${sec.counts.available} Open</span>`
-                                    : `<span class="sec-status-tag tag-full"><i class="fas fa-lock"></i> Fully Occupied</span>`
-                                }
+                                ${capacityBadge}
                             </div>
                             <span class="section-subtext"><i class="fas fa-cubes"></i> ${sec.counts.total} ${sec.counts.total === 1 ? 'registered plot' : 'registered plots'} in this zone</span>
                         </div>
@@ -386,7 +395,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                             <div class="category-name-row">
                                 <h3 class="category-name">${escapeHtml(cat.name)}</h3>
                                 ${pct.availPct > 0
-                                    ? `<span class="avail-hero-badge high"><i class="fas fa-check-circle"></i> ${pct.availPct}% Available</span>`
+                                    ? (pct.availPct <= 20
+                                        ? `<span class="avail-hero-badge low"><i class="fas fa-triangle-exclamation"></i> Low (${pct.availPct}%)</span>`
+                                        : `<span class="avail-hero-badge high"><i class="fas fa-check-circle"></i> ${pct.availPct}% Available</span>`)
                                     : `<span class="avail-hero-badge full"><i class="fas fa-ban"></i> 100% Occupied</span>`
                                 }
                             </div>
