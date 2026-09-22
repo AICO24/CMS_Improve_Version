@@ -754,7 +754,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const levelNum = parseInt(niche.level, 10) || 1;
         const isPrime = (levelNum === 3 || levelNum === 4);
         const tierBadgeHtml = isPrime
-            ? `<span class="tier-badge-prime"><i class="fas fa-crown"></i> Prime Eye-Level (L${levelNum})</span>`
+            ? `<span class="tier-badge-prime"><i class="fas fa-crown"></i> Prime (L${levelNum})</span>`
             : `<span class="tier-badge-standard"><i class="fas fa-layer-group"></i> Level ${levelNum}</span>`;
 
         const decedentFullName = `${niche.first_name || ''} ${niche.last_name || ''}`.trim();
@@ -1385,11 +1385,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         const twinTier = document.getElementById('nicheTwinTierBadge');
         if (twinTier) {
             if (isPrime) {
-                twinTier.innerHTML = '<i class="fas fa-crown text-amber"></i> <span>Prime Eye-Level (L3-4)</span>';
+                twinTier.innerHTML = '<i class="fas fa-crown text-amber"></i> <span>Prime (L3-4)</span>';
                 twinTier.style.background = 'rgba(245, 158, 11, 0.22)';
                 twinTier.style.borderColor = 'rgba(245, 158, 11, 0.4)';
             } else {
-                twinTier.innerHTML = `<i class="fas fa-layer-group"></i> <span>Standard Level ${lvlVal}</span>`;
+                twinTier.innerHTML = `<i class="fas fa-layer-group"></i> <span>Level ${lvlVal}</span>`;
                 twinTier.style.background = 'rgba(0, 0, 0, 0.22)';
                 twinTier.style.borderColor = 'rgba(255, 255, 255, 0.2)';
             }
@@ -1506,7 +1506,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             assignTierBadge.style.display = 'inline-flex';
             if (isPrime) {
                 assignTierBadge.className = 'tier-badge-prime';
-                assignTierBadge.innerHTML = '<i class="fas fa-crown"></i> Prime Eye-Level';
+                assignTierBadge.innerHTML = '<i class="fas fa-crown"></i> Prime (L3-4)';
             } else {
                 assignTierBadge.className = 'tier-badge-standard';
                 assignTierBadge.innerHTML = `<i class="fas fa-layer-group"></i> Level ${lvl}`;

@@ -2026,63 +2026,93 @@
    TIER SELECTOR PILLS & BADGES (Batch 3)
    ======================================================== */
 .suggest-tier-selector {
-    display: flex;
-    gap: 8px;
-    margin-top: 8px;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    margin-top: 6px !important;
+    width: 100% !important;
 }
 
 .tier-pill-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 12px;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    cursor: pointer;
+    height: 28px !important;
+    min-height: 28px !important;
+    max-height: 28px !important;
+    padding: 0 10px !important;
+    border-radius: 999px !important;
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    line-height: 1 !important;
     border: 1px solid #cbd5e1;
-    background: #f8fafc;
+    background: #ffffff;
     color: #475569;
-    transition: all 160ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s ease;
+    width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 
 .tier-pill-btn:hover {
     background: #f1f5f9;
     border-color: #94a3b8;
     color: #0f172a;
-    transform: translateY(-1px);
 }
 
 .tier-pill-btn.active[data-tier="prime"] {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border-color: #d97706;
-    color: #92400e;
-    box-shadow: 0 2px 6px rgba(217, 119, 6, 0.22);
+    background: #fef3c7 !important;
+    border-color: #f59e0b !important;
+    color: #b45309 !important;
+    box-shadow: 0 1px 3px rgba(245, 158, 11, 0.2) !important;
 }
 
 .tier-pill-btn.active[data-tier="any"] {
-    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-    border-color: #6366f1;
-    color: #3730a3;
-    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.2);
+    background: #0f766e !important;
+    border-color: #0f766e !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(15, 118, 110, 0.25) !important;
+}
+
+.tier-badge-prime,
+.tier-badge-standard {
+    height: 24px !important;
+    min-height: 24px !important;
+    max-height: 24px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    padding: 0 9px !important;
+    border-radius: 999px !important;
+    font-size: 0.72rem !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    line-height: 1 !important;
 }
 
 .tier-badge-prime {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border: 1px solid #d97706;
-    color: #92400e;
+    background: #fef3c7 !important;
+    border: 1px solid #f59e0b !important;
+    color: #b45309 !important;
 }
 
 .tier-badge-standard {
-    background: #f1f5f9;
-    border: 1px solid #cbd5e1;
-    color: #475569;
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+    font-weight: 700 !important;
 }
 
 [data-theme="dark"] .tier-pill-btn {
     background: #1e293b;
     border-color: #334155;
-    color: #94a3b8;
+    color: #cbd5e1;
 }
 
 [data-theme="dark"] .tier-pill-btn:hover {
@@ -2092,27 +2122,27 @@
 }
 
 [data-theme="dark"] .tier-pill-btn.active[data-tier="prime"] {
-    background: rgba(217, 119, 6, 0.2);
-    border-color: #d97706;
-    color: #fcd34d;
+    background: rgba(245, 158, 11, 0.2) !important;
+    border-color: #f59e0b !important;
+    color: #fcd34d !important;
 }
 
 [data-theme="dark"] .tier-pill-btn.active[data-tier="any"] {
-    background: rgba(99, 102, 241, 0.2);
-    border-color: #6366f1;
-    color: #c7d2fe;
+    background: #0f766e !important;
+    border-color: #14b8a6 !important;
+    color: #ffffff !important;
 }
 
 [data-theme="dark"] .tier-badge-prime {
-    background: rgba(217, 119, 6, 0.2);
-    border-color: #d97706;
-    color: #fcd34d;
+    background: rgba(245, 158, 11, 0.2) !important;
+    border-color: #f59e0b !important;
+    color: #fcd34d !important;
 }
 
 [data-theme="dark"] .tier-badge-standard {
-    background: #334155;
-    border-color: #475569;
-    color: #cbd5e1;
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #cbd5e1 !important;
 }
 
 /* ========================================================
@@ -2664,54 +2694,6 @@
     border-color: #0d9488;
 }
 
-.tier-pill-btn {
-    font-size: 0.70rem;
-    font-weight: 700;
-    padding: 3px 9px;
-    border-radius: 999px;
-    border: 1px solid #cbd5e1;
-    background: #ffffff;
-    color: #475569;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    transition: all 0.15s ease;
-}
-
-.tier-pill-btn.active {
-    background: #0f766e;
-    color: #ffffff;
-    border-color: #0f766e;
-    box-shadow: 0 1px 4px rgba(15, 118, 110, 0.25);
-}
-
-.tier-badge-prime {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: #fef3c7;
-    color: #b45309;
-    border: 1px solid #fde68a;
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 800;
-}
-
-.tier-badge-standard {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: #f1f5f9;
-    color: #475569;
-    border: 1px solid #cbd5e1;
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 700;
-}
-
 /* Right Deck: Live Digital Twin Artifact Card */
 .deck-col--twin {
     display: flex;
@@ -2854,17 +2836,24 @@
 }
 
 .twin-category-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
     background: rgba(0, 0, 0, 0.22);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 3px 12px;
+    padding: 0 12px !important;
+    height: 26px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
+    box-sizing: border-box !important;
     border-radius: 999px;
     font-size: 0.74rem;
     font-weight: 700;
     color: #ccfbf1;
     margin-top: 5px;
+    white-space: nowrap !important;
+    line-height: 1 !important;
 }
 
 .twin-specs-row {
