@@ -568,6 +568,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 
+    // Smart Tooltip Orientation: Auto-flip tooltip downward if slot is in top row or near top boundary
+    document.addEventListener('mouseover', (e) => {
+        const slotBox = e.target.closest('.slot-box');
+        if (!slotBox) return;
+        const tooltip = slotBox.querySelector('.slot-tooltip');
+        if (!tooltip) return;
+
+        const rect = slotBox.getBoundingClientRect();
+        const sectionBody = slotBox.closest('.section-body');
+        const sectionBodyRect = sectionBody ? sectionBody.getBoundingClientRect() : null;
+        // If slot is in top row of section body (< 65px from section top) or near top viewport (< 140px)
+        const isNearTopEdge = rect.top < 140 || (sectionBodyRect && (rect.top - sectionBodyRect.top < 65));
+
+        if (isNearTopEdge) {
+            tooltip.classList.add('tooltip-bottom');
+        } else {
+            tooltip.classList.remove('tooltip-bottom');
+        }
+    });
+
     // ---------- Filter toolbar wiring ----------
 
     const searchInput = document.getElementById('lotSearchInput');

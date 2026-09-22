@@ -1529,7 +1529,8 @@
     border-left: 6px solid var(--color-primary-500, #10b981);
     border-radius: 20px;
     box-shadow: 0 6px 24px -4px rgba(15, 23, 42, 0.07), 0 2px 8px -2px rgba(0, 0, 0, 0.04);
-    overflow: hidden;
+    overflow: visible;
+    position: relative;
     margin-bottom: 8px;
     transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0.2, 1);
 }
@@ -1824,7 +1825,8 @@
     background: #ffffff;
     border: 1.5px solid #e2e8f0;
     border-radius: 14px;
-    overflow: hidden;
+    overflow: visible;
+    position: relative;
     margin-bottom: 6px;
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -2301,7 +2303,7 @@
 .slot-box:hover {
     transform: scale(1.08);
     box-shadow: 0 6px 16px rgba(0,0,0,0.12);
-    z-index: 5;
+    z-index: 1000;
 }
 
 .slot-box.status-Available {
@@ -2384,6 +2386,24 @@
     opacity: 1;
     visibility: visible;
     transform: translateX(-50%) translateY(0);
+}
+
+/* ── Smart Downward Flip (When Slot is Near Top Edge or in First Row) ── */
+.slot-tooltip.tooltip-bottom {
+    bottom: auto;
+    top: calc(100% + 10px);
+    transform: translateX(-50%) translateY(-6px);
+}
+
+.slot-box:hover .slot-tooltip.tooltip-bottom {
+    transform: translateX(-50%) translateY(0);
+}
+
+.slot-tooltip.tooltip-bottom::after {
+    top: auto;
+    bottom: 100%;
+    border-width: 6px;
+    border-color: transparent transparent rgba(15, 23, 42, 0.96) transparent;
 }
 
 .slot-tooltip-header {
