@@ -155,7 +155,7 @@ class LotController {
         if ($sectionId) {
             return $this->blockModel->findBySection($sectionId);
         }
-        return [];
+        return $this->blockModel->findAll();
     }
 
     public function getBlock($id) {

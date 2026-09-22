@@ -711,7 +711,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             const blocks = await apiRequest(endpoint);
             let opts = '<option value="">All Blocks</option>';
             if (Array.isArray(blocks) && blocks.length > 0) {
-                opts += blocks.map(b => `<option value="${b.block_id}" ${String(filters.block) === String(b.block_id) ? 'selected' : ''}>${escapeHtml(b.block_name)}</option>`).join('');
+                opts += blocks.map(b => {
+                    const label = filters.section ? b.block_name : (b.section_name ? `${b.section_name} - ${b.block_name}` : b.block_name);
+                    return `<option value="${b.block_id}" ${String(filters.block) === String(b.block_id) ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+                }).join('');
             }
             blockFilterSelect.innerHTML = opts;
             if (filters.block && (!Array.isArray(blocks) || !blocks.some(b => String(b.block_id) === String(filters.block)))) {

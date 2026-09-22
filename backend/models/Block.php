@@ -8,6 +8,16 @@ class Block {
         $this->db = Database::getInstance()->getConnection();
     }
 
+    public function findAll() {
+        $stmt = $this->db->query("
+            SELECT b.*, s.section_name 
+            FROM blocks b 
+            LEFT JOIN sections s ON b.section_id = s.section_id 
+            ORDER BY s.section_name, b.block_name
+        ");
+        return $stmt->fetchAll();
+    }
+
     public function findBySection($sectionId) {
         $stmt = $this->db->prepare("SELECT * FROM blocks WHERE section_id = ? ORDER BY block_name");
         $stmt->execute([$sectionId]);
