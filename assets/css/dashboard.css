@@ -206,6 +206,29 @@
     align-items: center;
 }
 
+/* Page title in top bar — left border divider line accent (Universal across all admin modules) */
+.top-bar #pageTitle,
+.top-bar .top-left h3,
+.top-left #pageTitle,
+.top-left h3 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin: 0;
+    border-left: 3px solid #16382b;
+    padding-left: 10px;
+}
+
+.dashboard-body:not([data-theme="dark"]) .top-bar #pageTitle,
+.dashboard-body:not([data-theme="dark"]) .top-bar .top-left h3,
+.dashboard-body:not([data-theme="dark"]) .top-left #pageTitle,
+.dashboard-body:not([data-theme="dark"]) .top-left h3 {
+    color: #0f172a;
+    border-left: 3px solid #16382b;
+    padding-left: 10px;
+}
+
 /*
   Hamburger toggle (Batch 6) — was previously duplicated per-page with
   `.hamburger input { display: none; }`, which removes the checkbox from
@@ -223,6 +246,11 @@
     cursor: pointer;
     user-select: none;
     border-radius: var(--radius-sm);
+    transition: background 0.15s ease;
+}
+
+.dashboard-body:not([data-theme="dark"]) .hamburger:hover {
+    background: rgba(44, 94, 71, 0.10);
 }
 
 .hamburger input {

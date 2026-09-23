@@ -193,3 +193,15 @@
 .modal-content {
     animation: reskinModalContentIn var(--duration-base) var(--easing-out);
 }
+
+/* ---------- Top Bar Page Title Left Border Divider Accent Line (App-wide Consistency) ---------- */
+.dashboard-body:not([data-theme="dark"]) .top-bar #pageTitle,
+.dashboard-body:not([data-theme="dark"]) .top-bar .top-left h3,
+.dashboard-body:not([data-theme="dark"]) .top-left #pageTitle,
+.dashboard-body:not([data-theme="dark"]) .top-left h3 {
+    border-left: 3px solid #16382b !important;
+    padding-left: 10px !important;
+    font-size: 1.1rem;
+    font-weight: 800;
+    line-height: 1.2;
+}

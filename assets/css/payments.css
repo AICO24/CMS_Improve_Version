@@ -129,8 +129,13 @@
 
 .top-left h3 {
     color: var(--color-primary-800);
+    font-size: 1.1rem;
     font-weight: 800;
-    letter-spacing: 0;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin: 0;
+    border-left: 3px solid #16382b;
+    padding-left: 10px;
 }
 
 /* .hamburger and its SVG icon states now come from assets/css/dashboard.css (Batch 6) -- the previous per-page copy had .hamburger input { display: none; }, which made the toggle unreachable by keyboard */
