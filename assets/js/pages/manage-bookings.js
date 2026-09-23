@@ -94,12 +94,17 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     if (currentQuery) searchQuery.value = currentQuery;
     if (currentStatus) statusFilter.value = currentStatus;
-    if (awaitingReviewOnly) {
+    function syncAwaitingReviewUI(val) {
+        awaitingReviewOnly = Boolean(val);
         if (toggleAwaitingBtn) {
-            toggleAwaitingBtn.checked = true;
-            toggleAwaitingBtn.setAttribute('aria-pressed', 'true');
+            if ('checked' in toggleAwaitingBtn) toggleAwaitingBtn.checked = awaitingReviewOnly;
+            toggleAwaitingBtn.setAttribute('aria-pressed', String(awaitingReviewOnly));
         }
-        statusFilter.disabled = true;
+        statusFilter.disabled = awaitingReviewOnly;
+    }
+
+    if (awaitingReviewOnly) {
+        syncAwaitingReviewUI(true);
     }
 
     const perPage = 10;
@@ -391,23 +396,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         const isAdmin = user.role === 'admin';
         const isOwnPending = item.status === 'Pending' && String(item.created_by_id) === String(user.user_id);
 
-        buttons.push(`<button class="btn-row-action btn-row-action--view" data-action="view" data-service="${item.service_type}" data-id="${item.id}" title="View Details" aria-label="View Details"><i class="fas fa-eye"></i></button>`);
+        buttons.push(`<button class="btn-row-action btn-row-action--view" data-action="view" data-service="${item.service_type}" data-id="${item.id}" title="View Details" aria-label="View Details"><i class="fas fa-eye"></i> View</button>`);
 
         if (item.has_exception) {
             const entityType = item.service_type === 'burial' ? 'Schedule' : 'Cremation';
-            buttons.push(`<a class="btn-row-action btn-row-action--exception" href="exceptions.html?entity_type=${entityType}&entity_id=${item.id}" title="Review Exception" aria-label="Review Exception"><i class="fas fa-triangle-exclamation"></i></a>`);
+            buttons.push(`<a class="btn-row-action btn-row-action--exception" href="exceptions.html?entity_type=${entityType}&entity_id=${item.id}" title="Review Exception" aria-label="Review Exception"><i class="fas fa-triangle-exclamation"></i> Review</a>`);
         }
 
         if (item.status === 'Confirmed' || item.status === 'Scheduled') {
-            buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete" data-service="${item.service_type}" data-id="${item.id}" title="Mark Ceremony Completed" aria-label="Complete"><i class="fas fa-check"></i></button>`);
+            buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete" data-service="${item.service_type}" data-id="${item.id}" title="Mark Ceremony Completed" aria-label="Complete"><i class="fas fa-check"></i> Complete</button>`);
         }
 
         if (item.status === 'Pending' && !item.has_exception) {
-            buttons.push(`<button class="btn-row-action btn-row-action--cash" data-action="complete-cash" data-service="${item.service_type}" data-id="${item.id}" title="Record Cash / Offline Payment & Complete" aria-label="Record Cash Payment"><i class="fas fa-money-bill-wave"></i></button>`);
+            buttons.push(`<button class="btn-row-action btn-row-action--cash" data-action="complete-cash" data-service="${item.service_type}" data-id="${item.id}" title="Record Cash / Offline Payment & Complete" aria-label="Record Cash Payment"><i class="fas fa-money-bill-wave"></i> Complete (Cash)</button>`);
         }
 
         if ((item.status === 'Pending' || item.status === 'Confirmed' || item.status === 'Scheduled') && (isAdmin || isOwnPending)) {
-            buttons.push(`<button class="btn-row-action btn-row-action--cancel" data-action="cancel" data-service="${item.service_type}" data-id="${item.id}" title="Cancel Booking" aria-label="Cancel"><i class="fas fa-xmark"></i></button>`);
+            buttons.push(`<button class="btn-row-action btn-row-action--cancel" data-action="cancel" data-service="${item.service_type}" data-id="${item.id}" title="Cancel Booking" aria-label="Cancel"><i class="fas fa-xmark"></i> Cancel</button>`);
         }
 
         return buttons.length ? buttons.join('') : '<span class="muted" style="font-size:0.8rem; color:#94a3b8;">No actions</span>';
@@ -1141,27 +1146,32 @@ document.addEventListener('DOMContentLoaded', async function() {
     statusFilter.addEventListener('change', debouncedFilter);
 
     if (toggleAwaitingBtn) {
-        toggleAwaitingBtn.addEventListener('change', async () => {
-            awaitingReviewOnly = toggleAwaitingBtn.checked;
-            toggleAwaitingBtn.setAttribute('aria-pressed', String(awaitingReviewOnly));
-            statusFilter.disabled = awaitingReviewOnly;
+        const handleAwaitingToggle = async () => {
+            const nextState = toggleAwaitingBtn.tagName === 'BUTTON' ? !awaitingReviewOnly : toggleAwaitingBtn.checked;
+            syncAwaitingReviewUI(nextState);
+            if (awaitingReviewOnly) {
+                currentStatus = '';
+                statusFilter.value = '';
+            }
             updateActiveStatCards();
             pagination.reset();
             await loadAndRenderBookings();
+        };
+
+        toggleAwaitingBtn.addEventListener('click', () => {
+            if (toggleAwaitingBtn.tagName === 'BUTTON') handleAwaitingToggle();
+        });
+        toggleAwaitingBtn.addEventListener('change', () => {
+            if (toggleAwaitingBtn.tagName !== 'BUTTON') handleAwaitingToggle();
         });
     }
 
     clearFilters.addEventListener('click', async () => {
         searchQuery.value = '';
         statusFilter.value = '';
-        statusFilter.disabled = false;
         currentQuery = '';
         currentStatus = '';
-        awaitingReviewOnly = false;
-        if (toggleAwaitingBtn) {
-            toggleAwaitingBtn.checked = false;
-            toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
-        }
+        syncAwaitingReviewUI(false);
         updateActiveStatCards();
         pagination.reset();
         await loadAndRenderBookings();
@@ -1180,14 +1190,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 currentTab = 'all';
                 currentStatus = '';
                 statusFilter.value = '';
-                statusFilter.disabled = false;
                 searchQuery.value = '';
                 currentQuery = '';
-                awaitingReviewOnly = false;
-                if (toggleAwaitingBtn) {
-                    toggleAwaitingBtn.checked = false;
-                    toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
-                }
+                syncAwaitingReviewUI(false);
                 tabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === 'all'));
                 const newUrl = new URL(window.location.href.split('?')[0]);
                 window.history.pushState({}, '', newUrl);
@@ -1199,12 +1204,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 currentTab = nextTab;
                 currentStatus = '';
                 statusFilter.value = '';
-                statusFilter.disabled = false;
-                awaitingReviewOnly = false;
-                if (toggleAwaitingBtn) {
-                    toggleAwaitingBtn.checked = false;
-                    toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
-                }
+                syncAwaitingReviewUI(false);
                 tabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === nextTab));
                 const newUrl = new URL(window.location.href.split('?')[0]);
                 if (nextTab !== 'all') newUrl.searchParams.set('service', nextTab);
@@ -1217,12 +1217,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 currentTab = nextTab;
                 currentStatus = '';
                 statusFilter.value = '';
-                statusFilter.disabled = false;
-                awaitingReviewOnly = false;
-                if (toggleAwaitingBtn) {
-                    toggleAwaitingBtn.checked = false;
-                    toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
-                }
+                syncAwaitingReviewUI(false);
                 tabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === nextTab));
                 const newUrl = new URL(window.location.href.split('?')[0]);
                 if (nextTab !== 'all') newUrl.searchParams.set('service', nextTab);
@@ -1238,12 +1233,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     currentStatus = 'Completed';
                     statusFilter.value = 'Completed';
                     if (awaitingReviewOnly) {
-                        awaitingReviewOnly = false;
-                        if (toggleAwaitingBtn) {
-                            toggleAwaitingBtn.checked = false;
-                            toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
-                        }
-                        statusFilter.disabled = false;
+                        syncAwaitingReviewUI(false);
                     }
                 }
                 const newUrl = new URL(window.location.href.split('?')[0]);
@@ -1254,12 +1244,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 pagination.reset();
                 await loadAndRenderBookings();
             } else if (action === 'review') {
-                awaitingReviewOnly = !awaitingReviewOnly;
-                if (toggleAwaitingBtn) {
-                    toggleAwaitingBtn.checked = awaitingReviewOnly;
-                    toggleAwaitingBtn.setAttribute('aria-pressed', String(awaitingReviewOnly));
-                }
-                statusFilter.disabled = awaitingReviewOnly;
+                const nextState = !awaitingReviewOnly;
+                syncAwaitingReviewUI(nextState);
                 if (awaitingReviewOnly) {
                     currentStatus = '';
                     statusFilter.value = '';
