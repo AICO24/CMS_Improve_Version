@@ -1551,8 +1551,21 @@
     max-width: 760px;
     width: min(760px, 95vw);
     max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    border-radius: var(--radius-lg, 16px);
+    border: 1.5px solid #cbd5e1;
+    border-top: 3.5px solid #16382b;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.22);
+}
+
+.modal-content.modal--view #bookingDetailBody {
+    padding: 16px 20px 8px;
     overflow-y: auto;
-    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(44, 94, 71, 0.25) transparent;
 }
 
 .modal-content.modal--lg {
@@ -1575,55 +1588,55 @@
 
 /* Modal Compact Header */
 .modal-header-compact {
-    padding: 16px 20px;
+    padding: 14px 20px;
     background:
         linear-gradient(135deg, rgba(240, 249, 244, 0.90), rgba(244, 247, 250, 0.96)),
         linear-gradient(90deg, rgba(44, 94, 71, 0.08), rgba(37, 99, 235, 0.05));
     border-bottom: 1px solid rgba(44, 94, 71, 0.14);
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
 }
 
 .modal-header-icon-wrap {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
     background: #2c5e47;
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
-    box-shadow: 0 4px 12px rgba(44, 94, 71, 0.25);
+    font-size: 1.15rem;
+    box-shadow: 0 3px 10px rgba(44, 94, 71, 0.25);
     flex-shrink: 0;
 }
 
 .modal-header-compact h3 {
     margin: 0;
-    font-size: 1.12rem;
+    font-size: 1.05rem;
     font-weight: 800;
     color: #1e3a2b;
     letter-spacing: -0.01em;
 }
 
 .modal-header-subtitle {
-    margin: 2px 0 0;
-    font-size: 0.78rem;
+    margin: 1px 0 0;
+    font-size: 0.74rem;
     color: #64748b;
 }
 
 .close-view {
     position: absolute;
-    top: 14px;
-    right: 16px;
+    top: 12px;
+    right: 14px;
     border: none;
     background: rgba(0, 0, 0, 0.04);
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     color: #64748b;
     cursor: pointer;
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -1645,54 +1658,50 @@
 
 .view-modal-footer,
 .modal-footer {
-    padding: 14px 20px;
+    padding: 12px 20px;
     background: #f8fafc;
     border-top: 1px solid #e2e8f0;
     display: flex;
     justify-content: flex-end;
-    gap: 10px;
+    gap: 8px;
 }
 
-/* ── View Hero Profile Card ───────────────────────────────── */
-.view-hero-card {
-    display: flex;
+.view-modal-footer button,
+.modal-footer button {
+    height: 34px;
+    padding: 0 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
     align-items: center;
-    gap: 16px;
-    background: linear-gradient(135deg, rgba(44, 94, 71, 0.08) 0%, rgba(44, 94, 71, 0.02) 100%);
-    border: 1px solid rgba(44, 94, 71, 0.18);
-    border-radius: var(--radius-md, 12px);
-    padding: 16px 20px;
-    margin-bottom: 18px;
+    gap: 6px;
+    transition: all 0.15s ease;
 }
 
-.view-hero-avatar {
-    width: 52px;
-    height: 52px;
-    border-radius: 14px;
-    background: #2c5e47;
+.view-modal-footer #modalActionComplete {
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%);
     color: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    box-shadow: 0 4px 12px rgba(44, 94, 71, 0.25);
-    flex-shrink: 0;
+    border: none;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
-.view-hero-avatar.avatar--burial {
-    background: linear-gradient(135deg, #0d9488 0%, #047857 100%);
+.view-modal-footer #modalActionComplete:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
-.view-hero-avatar.avatar--cremation {
-    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+/* ── Simplified View Modal Layout (Matches Table Aesthetics) ── */
+.view-summary-panel {
+    background: linear-gradient(135deg, rgba(237, 245, 241, 0.75) 0%, rgba(245, 250, 247, 0.85) 100%);
+    border: 1px solid #c2ded0;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
 }
 
-.view-hero-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.view-hero-title-row {
+.view-summary-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1700,172 +1709,184 @@
     gap: 10px;
 }
 
-.view-decedent-name {
+.view-summary-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.view-decedent-heading {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.12rem;
     font-weight: 800;
-    color: #0f172a;
+    color: #0f2e22;
     letter-spacing: -0.01em;
 }
 
-.view-status-wrap {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.view-hero-schedule {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.84rem;
-    color: #64748b;
-    margin-top: 6px;
-}
-
-.view-hero-schedule i {
-    color: #2c5e47;
-}
-
-.view-schedule-pill {
-    background: rgba(44, 94, 71, 0.12);
-    color: #2c5e47;
-    font-weight: 700;
-    font-size: 0.74rem;
-    padding: 2px 9px;
-    border-radius: 999px;
-}
-
-/* ── 4-Stage Stepper Tracker Wrapper ──────────────────────── */
-.booking-stepper-wrap {
-    margin-bottom: 20px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 14px 16px;
-}
-
-/* ── 2-Column Info Grid inside View Modal ─────────────────── */
-.view-details-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-    margin-bottom: 16px;
-}
-
-@media (max-width: 680px) {
-    .view-details-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-.view-info-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-.view-card-header {
-    background: rgba(44, 94, 71, 0.05);
-    border-bottom: 1px solid #e2e8f0;
-    padding: 10px 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.80rem;
-    font-weight: 700;
-    color: #1e4533;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
-.view-card-header i {
-    color: #2c5e47;
-    font-size: 0.88rem;
-}
-
-.view-card-body {
-    padding: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    flex: 1;
-}
-
-.view-prop-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px dashed rgba(0, 0, 0, 0.07);
-    font-size: 0.82rem;
-}
-
-.view-prop-row:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.prop-label {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    color: #64748b;
-    font-size: 0.78rem;
-    font-weight: 500;
-}
-
-.prop-label i {
-    color: #94a3b8;
-    font-size: 0.80rem;
-    width: 14px;
-    text-align: center;
-}
-
-.prop-value {
-    color: #0f172a;
-    font-weight: 600;
-    text-align: right;
-    word-break: break-word;
-}
-
-.booking-notes-box {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 12px 14px;
-    margin-bottom: 14px;
-}
-
-.booking-notes-label {
-    font-size: 0.74rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #64748b;
-    margin-bottom: 4px;
+.view-summary-badges {
     display: flex;
     align-items: center;
     gap: 6px;
 }
 
-.booking-notes-text {
-    font-size: 0.86rem;
-    color: #334155;
-    margin: 0;
-    line-height: 1.4;
+/* 3-Column Compact Specifications Grid */
+.view-compact-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 10px;
 }
 
-/* ---------- ACTIVITY TIMELINE (view modal, Decedent Records Spec) ---------- */
-.activity-timeline-section {
-    margin-top: 18px;
-    padding-top: 16px;
-    border-top: 1px solid #e2e8f0;
+@media (max-width: 700px) {
+    .view-compact-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}
+
+.compact-info-group {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.compact-group-title {
+    font-size: 0.73rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #16382b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #edf2f0;
+}
+
+.compact-group-title i {
+    color: #10b981;
+    font-size: 0.78rem;
+}
+
+.compact-kv-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.81rem;
+}
+
+.compact-key {
+    font-size: 0.70rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.compact-val {
+    color: #1e293b;
+    font-weight: 600;
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.compact-val strong {
+    color: #0f172a;
+}
+
+.compact-val code {
+    font-family: ui-monospace, monospace;
+    font-size: 0.76rem;
+    background: #f1f5f9;
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: #334155;
+}
+
+.compact-val a.phone-link {
+    color: #059669;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+}
+
+.compact-val a.phone-link:hover {
+    text-decoration: underline;
+}
+
+/* Note Pill */
+.view-note-pill {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #16382b;
+    border-radius: 6px;
+    font-size: 0.80rem;
+    color: #334155;
+    margin-bottom: 10px;
+    line-height: 1.35;
+}
+
+.view-note-pill i {
+    color: #10b981;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+/* Collapsible Activity Drawer */
+.activity-timeline-drawer {
+    margin: 0 20px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fbfdfc;
+    overflow: hidden;
+}
+
+.activity-drawer-summary {
+    padding: 8px 12px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    background: #f8fafc;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.activity-drawer-summary:hover {
+    background: #edf7f2;
+    color: #16382b;
+}
+
+.activity-drawer-summary i.drawer-icon {
+    font-size: 0.72rem;
+    transition: transform 0.2s ease;
+}
+
+.activity-timeline-drawer[open] .activity-drawer-summary i.drawer-icon {
+    transform: rotate(180deg);
+}
+
+.activity-timeline-drawer .activity-timeline {
+    padding: 10px 12px;
+    max-height: 150px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .view-section-title {
@@ -2379,17 +2400,66 @@ body[data-theme="dark"] .modal-footer {
     border-color: #334155;
 }
 
-body[data-theme="dark"] .view-hero-card {
+body[data-theme="dark"] .view-summary-panel {
     background: rgba(16, 185, 129, 0.08);
-    border-color: rgba(16, 185, 129, 0.25);
+    border-color: rgba(52, 211, 153, 0.25);
 }
 
-body[data-theme="dark"] .view-hero-schedule {
+body[data-theme="dark"] .view-decedent-heading {
+    color: #f1f5f9;
+}
+
+body[data-theme="dark"] .compact-info-group {
+    background: #111d2e;
+    border-color: #334155;
+}
+
+body[data-theme="dark"] .compact-group-title {
+    color: #34d399;
+    border-bottom-color: #1e293b;
+}
+
+body[data-theme="dark"] .compact-key {
     color: #94a3b8;
 }
 
-body[data-theme="dark"] .view-prop-row {
-    border-bottom-color: rgba(255, 255, 255, 0.06);
+body[data-theme="dark"] .compact-val {
+    color: #cbd5e1;
+}
+
+body[data-theme="dark"] .compact-val strong {
+    color: #f8fafc;
+}
+
+body[data-theme="dark"] .compact-val code {
+    background: #1e293b;
+    color: #e2e8f0;
+}
+
+body[data-theme="dark"] .compact-val a.phone-link {
+    color: #34d399;
+}
+
+body[data-theme="dark"] .view-note-pill {
+    background: #111d2e;
+    border-color: #334155;
+    border-left-color: #34d399;
+    color: #cbd5e1;
+}
+
+body[data-theme="dark"] .activity-timeline-drawer {
+    border-color: #334155;
+    background: #0b1320;
+}
+
+body[data-theme="dark"] .activity-drawer-summary {
+    background: #111d2e;
+    color: #94a3b8;
+}
+
+body[data-theme="dark"] .activity-drawer-summary:hover {
+    background: #1e293b;
+    color: #34d399;
 }
 
 body[data-theme="dark"] .activity-entry {
@@ -2414,15 +2484,6 @@ body[data-theme="dark"] .audit-chip {
 
 body[data-theme="dark"] .audit-chip strong {
     color: #f8fafc;
-}
-
-body[data-theme="dark"] .booking-notes-box {
-    background: #111d2e;
-    border-color: #334155;
-}
-
-body[data-theme="dark"] .booking-notes-text {
-    color: #cbd5e1;
 }
 
 body[data-theme="dark"] .bookings-stats > .stat-card .card-icon {

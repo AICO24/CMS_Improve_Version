@@ -684,7 +684,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         ]);
     }
 
-    // ── DETAIL VIEW MODAL (Decedent Records Hero & Grid Pattern) ──
+    // ── DETAIL VIEW MODAL (Simplified & Compact Executive Design) ──
     let currentViewBookingId = null;
     let currentViewServiceType = null;
 
@@ -694,176 +694,94 @@ document.addEventListener('DOMContentLoaded', async function() {
         const decedentDisplay = data.decedent_name || fullName || (data.provisional_name ? `${data.provisional_name} (unregistered)` : 'Unspecified Decedent');
         const isProvisional = !fullName && !!data.provisional_name;
 
-        const scheduleDisplay = isBurial
-            ? `${data.schedule_date || data.date_raw || 'Date TBD'}${data.schedule_time ? ` at ${data.schedule_time}` : ''}`
-            : (data.cremation_date || data.date_raw ? `${data.cremation_date || data.date_raw}` : 'Date TBD');
-
-        const statusTrackerHtml = window.reservationUI && typeof window.reservationUI.buildStatusTracker === 'function'
-            ? window.reservationUI.buildStatusTracker(data.status, data.payment_status, {
-                confirmedLabel: isBurial ? 'Confirmed' : 'Scheduled'
-            })
-            : '';
-
-        // Location string calculation
-        let locationDisplay = data.location_label;
-        if (!locationDisplay) {
-            locationDisplay = isBurial
-                ? (data.lot_number ? `Lot ${escapeHtml(data.lot_number)}, Section ${escapeHtml(data.section_name || 'Standard')}` : 'No lot assigned yet')
-                : `${escapeHtml(data.columbarium || 'Columbarium')} &bull; Niche ${escapeHtml(data.niche_number || 'Auto-allocated upon completion')}`;
-        }
-
         // Payment calculation
         const paymentStatusStr = data.payment_status || 'Unpaid';
         const paymentAmountVal = parseFloat(data.payment_amount || 0);
         const paymentAmountFormatted = isNaN(paymentAmountVal) || paymentAmountVal === 0 ? '0.00' : paymentAmountVal.toLocaleString('en-US', { minimumFractionDigits: 2 });
         const paymentMethodStr = data.payment_method || (data.raw && data.raw.payment_method) || 'Standard';
-        const paymentReceiptStr = data.payment_receipt_number || data.payment_receipt || (data.raw && data.raw.payment_receipt_number) || 'N/A';
-        const paymentDateStr = data.payment_date || (data.raw && data.raw.payment_date) || 'N/A';
+        const paymentReceiptStr = data.payment_receipt_number || data.payment_receipt || (data.raw && data.raw.payment_receipt_number) || '—';
+        const paymentDateStr = data.payment_date || (data.raw && data.raw.payment_date) || '—';
 
-        // Staff display
-        const handledByStr = user.full_name || user.username || 'Staff Console';
+        // Applicant calculation
+        const applicantName = data.created_by_name || (data.raw && data.raw.created_by_name) || 'Citizen User';
+        const contactPhone = data.contact_number || (data.raw && (data.raw.contact_number || data.raw.phone || data.raw.created_by_phone)) || '';
+        const relationship = data.relationship || (data.raw && data.raw.relationship) || 'Family / Next of Kin';
 
         detailModalBody.innerHTML = `
-            <!-- View Hero Profile Card -->
-            <div class="view-hero-card">
-                <div class="view-hero-avatar ${isBurial ? 'avatar--burial' : 'avatar--cremation'}">
-                    <i class="fas ${isBurial ? 'fa-monument' : 'fa-fire'}"></i>
-                </div>
-                <div class="view-hero-info">
-                    <div class="view-hero-title-row">
-                        <h2 class="view-decedent-name">${escapeHtml(decedentDisplay)}</h2>
-                        <div class="view-status-wrap">
-                            ${buildServiceBadge(serviceType)}
-                            ${buildStatusBadge(data.status)}
-                            ${isProvisional ? '<span class="view-schedule-pill" style="background:#fef3c7; color:#92400e;"><i class="fas fa-user-clock"></i> Provisional Request</span>' : ''}
-                        </div>
+            <!-- Simplified Executive Summary Banner -->
+            <div class="view-summary-panel">
+                <div class="view-summary-top">
+                    <div class="view-summary-title">
+                        <span class="ref-pill" title="${escapeHtml(data.ref_label || '')}">#${id}</span>
+                        ${buildServiceBadge(serviceType)}
+                        <h3 class="view-decedent-heading">${escapeHtml(decedentDisplay)}</h3>
+                        ${isProvisional ? '<span class="status-badge pending"><i class="fas fa-user-clock"></i> Provisional</span>' : ''}
                     </div>
-                    <div class="view-hero-schedule">
-                        <i class="fas fa-calendar-day"></i>
-                        <span>${escapeHtml(scheduleDisplay)}</span>
-                        <span class="view-schedule-pill">${isBurial ? 'Ground Interment' : 'Cremation Ceremony'}</span>
+                    <div class="view-summary-badges">
+                        ${buildStatusBadge(data.status)}
+                        ${buildPaymentBadge({ payment_status: paymentStatusStr })}
                     </div>
                 </div>
             </div>
 
-            <!-- 4-Stage Stepper Tracker -->
-            ${statusTrackerHtml ? `
-            <div class="booking-stepper-wrap">
-                ${statusTrackerHtml}
-            </div>` : ''}
-
-            <!-- 2-Column Info Cards Grid -->
-            <div class="view-details-grid">
-                <!-- Card 1: Ceremony & Slot Allocation -->
-                <div class="view-info-card">
-                    <div class="view-card-header">
-                        <i class="fas fa-calendar-check"></i>
-                        <span>Ceremony &amp; Allocation Details</span>
+            <!-- 3-Column Compact Specifications Grid (No Scrolling, Table-Compatible) -->
+            <div class="view-compact-grid">
+                <!-- Column 1: Service Allocation -->
+                <div class="compact-info-group">
+                    <span class="compact-group-title"><i class="fas fa-calendar-check"></i> Service Allocation</span>
+                    <div class="compact-kv-row">
+                        <span class="compact-key">Schedule</span>
+                        <div class="compact-val">${formatScheduleCell(data.schedule_date || data.date_raw || data.date_time, data.schedule_time || data.time_raw)}</div>
                     </div>
-                    <div class="view-card-body">
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas fa-hashtag"></i> Booking Ref</span>
-                            <strong class="prop-value">#${id} (${isBurial ? 'Burial' : 'Cremation'})</strong>
-                        </div>
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas fa-clock"></i> Schedule Date &amp; Time</span>
-                            <strong class="prop-value">${escapeHtml(scheduleDisplay)}</strong>
-                        </div>
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas ${isBurial ? 'fa-map-pin' : 'fa-box-archive'}"></i> ${isBurial ? 'Assigned Lot & Section' : 'Columbarium & Niche'}</span>
-                            <strong class="prop-value">${locationDisplay}</strong>
-                        </div>
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas fa-circle-nodes"></i> Operational Lifecycle</span>
-                            <strong class="prop-value">${data.status === 'Completed' ? '<span style="color:#059669; font-weight:700;"><i class="fas fa-circle-check"></i> Completed &amp; Synchronized</span>' : (data.status === 'Cancelled' ? '<span style="color:#dc2626;"><i class="fas fa-ban"></i> Cancelled &amp; Released</span>' : '<span style="color:#d97706;"><i class="fas fa-hourglass-half"></i> Active / In Progress</span>')}</strong>
-                        </div>
+                    <div class="compact-kv-row">
+                        <span class="compact-key">${isBurial ? 'Plot / Section' : 'Columbarium / Niche'}</span>
+                        <div class="compact-val">${formatLocationCell({ service_type: serviceType, lot_number: data.lot_number, section_name: data.section_name, niche_number: data.niche_number, columbarium: data.columbarium })}</div>
+                    </div>
+                    <div class="compact-kv-row">
+                        <span class="compact-key">Interment Mode</span>
+                        <div class="compact-val">${isBurial ? 'Ground Interment' : 'Columbarium Inurnment'}</div>
                     </div>
                 </div>
 
-                <!-- Card 2: Family & Client Information -->
-                <div class="view-info-card">
-                    <div class="view-card-header">
-                        <i class="fas fa-user-group"></i>
-                        <span>Applicant &amp; Family Record</span>
+                <!-- Column 2: Applicant & Contact -->
+                <div class="compact-info-group">
+                    <span class="compact-group-title"><i class="fas fa-user-group"></i> Applicant &amp; Contact</span>
+                    <div class="compact-kv-row">
+                        <span class="compact-key">Requested By</span>
+                        <div class="compact-val" title="${escapeHtml(applicantName)}"><strong>${escapeHtml(applicantName)}</strong></div>
                     </div>
-                    <div class="view-card-body">
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas fa-user"></i> Requested By</span>
-                            <strong class="prop-value">${escapeHtml(data.created_by_name || (data.raw && data.raw.created_by_name) || 'Citizen User')}</strong>
-                        </div>
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas fa-phone"></i> Contact Phone</span>
-                            <strong class="prop-value">${(data.contact_number || (data.raw && (data.raw.contact_number || data.raw.phone || data.raw.created_by_phone))) ? `<a href="tel:${escapeHtml(data.contact_number || (data.raw && (data.raw.contact_number || data.raw.phone || data.raw.created_by_phone)))}" class="prop-phone-link"><i class="fas fa-phone-volume"></i> ${escapeHtml(data.contact_number || (data.raw && (data.raw.contact_number || data.raw.phone || data.raw.created_by_phone)))}</a>` : 'On file'}</strong>
-                        </div>
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas fa-envelope"></i> Email Address</span>
-                            <strong class="prop-value">${(data.created_by_email || (data.raw && (data.raw.created_by_email || data.raw.email))) ? `<a href="mailto:${escapeHtml(data.created_by_email || (data.raw && (data.raw.created_by_email || data.raw.email)))}" style="color:#2c5e47; text-decoration:none;">${escapeHtml(data.created_by_email || (data.raw && (data.raw.created_by_email || data.raw.email)))}</a>` : 'Verified user'}</strong>
-                        </div>
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas fa-heart"></i> Kin Relationship</span>
-                            <strong class="prop-value">${escapeHtml(data.relationship || (data.raw && data.raw.relationship) || 'Next of kin / Representative')}</strong>
-                        </div>
+                    <div class="compact-kv-row">
+                        <span class="compact-key">Contact Phone</span>
+                        <div class="compact-val">${contactPhone ? `<a href="tel:${escapeHtml(contactPhone)}" class="phone-link"><i class="fas fa-phone"></i> ${escapeHtml(contactPhone)}</a>` : '—'}</div>
+                    </div>
+                    <div class="compact-kv-row">
+                        <span class="compact-key">Relationship</span>
+                        <div class="compact-val">${escapeHtml(relationship)}</div>
                     </div>
                 </div>
 
-                <!-- Card 3: Payment & Accounting Record -->
-                <div class="view-info-card">
-                    <div class="view-card-header">
-                        <i class="fas fa-credit-card"></i>
-                        <span>Payment &amp; Accounting Record</span>
+                <!-- Column 3: Accounting & Settlement -->
+                <div class="compact-info-group">
+                    <span class="compact-group-title"><i class="fas fa-receipt"></i> Accounting &amp; Settlement</span>
+                    <div class="compact-kv-row">
+                        <span class="compact-key">Settlement Fee</span>
+                        <div class="compact-val"><strong style="color:#0f2e22; font-size:0.92rem;">&#8369;${paymentAmountFormatted}</strong></div>
                     </div>
-                    <div class="view-card-body">
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas fa-shield-check"></i> Payment Status</span>
-                            <strong class="prop-value">${buildPaymentBadge({ payment_status: paymentStatusStr })}</strong>
-                        </div>
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas fa-peso-sign"></i> Amount</span>
-                            <strong class="prop-value">&#8369;${paymentAmountFormatted}</strong>
-                        </div>
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas fa-receipt"></i> Official Receipt</span>
-                            <strong class="prop-value">${escapeHtml(paymentReceiptStr)}</strong>
-                        </div>
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas fa-money-bill-transfer"></i> Payment Method</span>
-                            <strong class="prop-value">${escapeHtml(paymentMethodStr)}</strong>
-                        </div>
+                    <div class="compact-kv-row">
+                        <span class="compact-key">Payment Method</span>
+                        <div class="compact-val">${escapeHtml(paymentMethodStr)}</div>
                     </div>
-                </div>
-
-                <!-- Card 4: Audit & System Metadata -->
-                <div class="view-info-card">
-                    <div class="view-card-header">
-                        <i class="fas fa-shield-halved"></i>
-                        <span>System &amp; Verification Trail</span>
-                    </div>
-                    <div class="view-card-body">
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas fa-calendar-plus"></i> Creation Date</span>
-                            <strong class="prop-value">${escapeHtml(data.created_at || (data.raw && data.raw.created_at) || 'System record')}</strong>
-                        </div>
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas fa-file-invoice"></i> Settlement Date</span>
-                            <strong class="prop-value">${escapeHtml(paymentDateStr)}</strong>
-                        </div>
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas fa-user-shield"></i> Handled By</span>
-                            <strong class="prop-value">${escapeHtml(handledByStr)}</strong>
-                        </div>
-                        <div class="view-prop-row">
-                            <span class="prop-label"><i class="fas fa-bell"></i> Automation Trail</span>
-                            <strong class="prop-value"><span style="color:#0f766e;"><i class="fas fa-check-double"></i> Verified Sync</span></strong>
-                        </div>
+                    <div class="compact-kv-row">
+                        <span class="compact-key">Receipt / Date</span>
+                        <div class="compact-val"><code>${escapeHtml(paymentReceiptStr)}</code> &bull; <small style="color:#64748b;">${escapeHtml(paymentDateStr)}</small></div>
                     </div>
                 </div>
             </div>
 
             ${data.notes ? `
-            <!-- Special Instructions / Notes Box -->
-            <div class="booking-notes-box">
-                <div class="booking-notes-label"><i class="fas fa-note-sticky"></i> Special Instructions &amp; Requests</div>
-                <p class="booking-notes-text">${escapeHtml(data.notes)}</p>
+            <div class="view-note-pill">
+                <i class="fas fa-circle-info"></i>
+                <span><strong>Special Note:</strong> ${escapeHtml(data.notes)}</span>
             </div>
             ` : ''}
         `;
@@ -996,6 +914,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     async function viewBookingDetails(serviceType, id) {
         currentViewBookingId = id;
         currentViewServiceType = serviceType;
+
+        const drawer = document.getElementById('bookingActivityDrawer');
+        if (drawer) drawer.open = false;
 
         // 1. Instant Render from Cache if available (Zero Delay)
         const cached = cachedCurrentPageData.find(item => String(item.id) === String(id) && item.service_type === serviceType);
