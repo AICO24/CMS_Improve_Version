@@ -21,10 +21,10 @@
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
     <link rel="stylesheet" href="../../assets/css/components/search-input.css">
-    <link rel="stylesheet" href="../../assets/css/audit.css?v=4">
 
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/audit.css?v=6">
 </head>
 <body class="dashboard-body">
 <script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
@@ -155,35 +155,35 @@
             <div class="content-area" id="contentArea">
                 <p class="section-label"><i class="fas fa-shield-halved"></i> Security &amp; Immutable System Audit Trail</p>
 
-                <!-- 4 Interactive Filterable KPI Cards -->
+                <!-- 4 Executive Interactive KPI Filterable Cards -->
                 <div class="audit-summary-row audit-stats">
-                    <div class="stat-card audit-summary-card accent-blue stat-card-filterable active" id="cardTotal" role="button" tabindex="0" title="Click to view all audit events">
+                    <div class="stat-card stat-card-filterable is-active-filter active" id="cardTotal" role="button" tabindex="0" title="Click to view all audit events" data-filter="all" aria-pressed="true">
                         <div class="stat-title summary-topline">
-                            <span class="stat-title-label"><span>Total Events</span></span>
+                            <span class="stat-title-label">Total Events</span>
                             <span class="card-icon"><i class="fas fa-chart-bar"></i></span>
                         </div>
                         <div class="stat-value summary-value" id="auditSummaryTotal">0</div>
                         <div class="stat-sub summary-meta">All logged system records</div>
                     </div>
-                    <div class="stat-card audit-summary-card accent-red stat-card-filterable" id="cardAlerts" role="button" tabindex="0" title="Click to filter critical security alerts">
+                    <div class="stat-card stat-card-filterable" id="cardAlerts" role="button" tabindex="0" title="Click to filter critical security alerts" data-filter="alerts" aria-pressed="false">
                         <div class="stat-title summary-topline">
-                            <span class="stat-title-label"><span>Security Alerts</span></span>
+                            <span class="stat-title-label">Security Alerts</span>
                             <span class="card-icon"><i class="fas fa-shield-halved"></i></span>
                         </div>
                         <div class="stat-value summary-value" id="auditSummaryAlerts">0</div>
                         <div class="stat-sub summary-meta" id="auditSummaryAlertsMeta">Critical or flagged activity</div>
                     </div>
-                    <div class="stat-card audit-summary-card accent-teal stat-card-filterable" id="cardUsers" role="button" tabindex="0" title="Unique actors active in last 24h">
+                    <div class="stat-card stat-card-filterable" id="cardUsers" role="button" tabindex="0" title="Unique actors active in last 24h" data-filter="users" aria-pressed="false">
                         <div class="stat-title summary-topline">
-                            <span class="stat-title-label"><span>Active Users</span></span>
+                            <span class="stat-title-label">Active Users</span>
                             <span class="card-icon"><i class="fas fa-users"></i></span>
                         </div>
                         <div class="stat-value summary-value" id="auditSummaryUsers">0</div>
                         <div class="stat-sub summary-meta">Active in past 24 hours</div>
                     </div>
-                    <div class="stat-card audit-summary-card accent-navy stat-card-filterable" id="cardRecent" role="button" tabindex="0" title="Click to filter last 24h activity">
+                    <div class="stat-card stat-card-filterable" id="cardRecent" role="button" tabindex="0" title="Click to filter last 24h activity" data-filter="recent" aria-pressed="false">
                         <div class="stat-title summary-topline">
-                            <span class="stat-title-label"><span>Last 24 Hours</span></span>
+                            <span class="stat-title-label">Last 24 Hours</span>
                             <span class="card-icon"><i class="fas fa-clock"></i></span>
                         </div>
                         <div class="stat-value summary-value" id="auditSummaryRecent">0</div>
@@ -191,80 +191,125 @@
                     </div>
                 </div>
 
-                <!-- Unified Glassmorphic Audit Card -->
-                <div class="audit-card">
-                    <!-- Clean Single-Line Toolbar -->
-                    <div class="toolbar-row">
-                        <div class="toolbar-main-row">
-                            <div class="toolbar-filters">
-                                <div class="search-field search-field--with-action">
-                                    <input type="text" id="searchLogs" class="search-field__input" placeholder=" ">
-                                    <label for="searchLogs" class="search-field__label">Search action, user, IP, or details...</label>
-                                    <span class="search-field__icon" aria-hidden="true">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
-                                    </span>
-                                </div>
-                                <label class="status-select-field" for="filterAction">
-                                    <span>Action</span>
-                                    <select id="filterAction" aria-label="Filter by action category">
-                                        <option value="">All Actions</option>
-                                        <option value="login">Logins &amp; Auth</option>
-                                        <option value="create">Creations</option>
-                                        <option value="update">Updates &amp; Edits</option>
-                                        <option value="delete">Deletions &amp; Security</option>
-                                    </select>
-                                </label>
-                                <div class="date-range-field">
-                                    <label for="filterDateFrom">From</label>
-                                    <input type="date" id="filterDateFrom">
-                                </div>
-                                <div class="date-range-field">
-                                    <label for="filterDateTo">To</label>
-                                    <input type="date" id="filterDateTo">
-                                </div>
-                                <button class="btn-secondary" id="clearFiltersBtn" title="Clear all filters"><i class="fas fa-rotate-left"></i><span>Clear</span></button>
-                            </div>
-                            <div class="toolbar-actions-panel">
-                                <div class="toolbar-actions">
-                                    <button class="btn-secondary btn-action-pill" id="refreshAuditBtn" title="Refresh audit log trail"><i class="fas fa-rotate-right"></i><span>Refresh</span></button>
-                                    <button class="btn-secondary btn-action-pill" id="exportAuditBtn" type="button" title="Export audit records to CSV"><i class="fas fa-file-export"></i><span>Export CSV</span></button>
-                                </div>
-                            </div>
+                <!-- ── BOX 1: Standalone Control Panel (Top Box) ── -->
+                <div class="audit-control-panel bookings-control-panel">
+                    <!-- Top Row: Segmented Tab Switcher + Primary Actions -->
+                    <div class="panel-top-row">
+                        <div class="records-tabs-track" role="tablist" aria-label="Audit Log Categories">
+                            <button type="button" class="records-tab-btn active" data-tab="all" id="tabAllLogs" aria-selected="true">
+                                <i class="fas fa-layer-group"></i>
+                                <span>All Activity Logs</span>
+                                <span class="tab-badge" id="badgeAllLogs">0</span>
+                            </button>
+                            <button type="button" class="records-tab-btn" data-tab="alerts" id="tabSecurityAlerts" aria-selected="false">
+                                <i class="fas fa-shield-halved"></i>
+                                <span>Security Alerts</span>
+                                <span class="tab-badge" id="badgeSecurityAlerts">0</span>
+                            </button>
+                            <button type="button" class="records-tab-btn" data-tab="auth" id="tabAuthEvents" aria-selected="false">
+                                <i class="fas fa-key"></i>
+                                <span>Authentication</span>
+                                <span class="tab-badge" id="badgeAuthEvents">0</span>
+                            </button>
+                        </div>
+
+                        <div class="panel-action-buttons">
+                            <button class="btn-add type1" id="refreshAuditBtn" type="button" title="Refresh audit log trail">
+                                <span class="btn-txt"><i class="fas fa-rotate-right"></i> Refresh Trail</span>
+                            </button>
+                            <button class="report-export-button report-export-button--excel" id="exportAuditBtn" type="button" title="Export audit records to CSV">
+                                <i class="fas fa-file-excel"></i>
+                                <span>Export CSV</span>
+                            </button>
                         </div>
                     </div>
 
-                    <!-- Inner-scrollable table container -->
+                    <!-- Subtle Horizontal Divider -->
+                    <div class="panel-divider"></div>
+
+                    <!-- Bottom Tier: Search & Filter Controls -->
+                    <div class="panel-bottom-row">
+                        <div class="panel-filters-group">
+                            <span class="filter-bar__label"><i class="fas fa-filter"></i> Filters</span>
+                            <div class="search-field">
+                                <input type="text" id="searchLogs" class="search-field__input" placeholder=" ">
+                                <label for="searchLogs" class="search-field__label">Search action, user, IP, target, or details...</label>
+                                <span class="search-field__icon" aria-hidden="true">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
+                                </span>
+                            </div>
+
+                            <div class="filter-dropdown-wrap">
+                                <label class="status-select-field" for="filterAction">
+                                    <span>Event Action</span>
+                                    <select id="filterAction" aria-label="Filter by action category">
+                                        <option value="">All Action Types</option>
+                                        <option value="login">Logins &amp; Authentication</option>
+                                        <option value="create">Created Records</option>
+                                        <option value="update">Updated Records</option>
+                                        <option value="delete">Deletions &amp; Overrides</option>
+                                    </select>
+                                </label>
+                            </div>
+
+                            <div class="date-range-field">
+                                <label for="filterDateFrom">From</label>
+                                <input type="date" id="filterDateFrom" aria-label="Filter start date">
+                            </div>
+                            <div class="date-range-field">
+                                <label for="filterDateTo">To</label>
+                                <input type="date" id="filterDateTo" aria-label="Filter end date">
+                            </div>
+                        </div>
+
+                        <button class="btn-secondary btn-clear-all" id="clearFiltersBtn" type="button" title="Clear all active filters">
+                            <i class="fas fa-rotate-left"></i>
+                            <span>Clear</span>
+                        </button>
+                    </div>
+                </div>
+
+                <p class="section-label"><i class="fas fa-table-list"></i> Audit Log Trail Records</p>
+
+                <!-- ── BOX 2: Standalone Table Card (Bottom Box) ── -->
+                <div class="chart-card" id="panelAuditTable">
+                    <div class="chart-card__header">
+                        <span class="chart-card__title">Immutable System Audit Trail</span>
+                        <span class="chart-card__badge">Live Queue</span>
+                    </div>
+
+                    <!-- Inner-scrollable zero-scroll table container -->
                     <div class="table-container">
-                        <table class="data-table">
+                        <table class="data-table" id="auditMainTable">
                             <thead>
                                 <tr>
-                                    <th style="width: 165px;">Timestamp</th>
-                                    <th style="width: 175px;">User</th>
-                                    <th style="width: 135px;">Action</th>
-                                    <th style="width: 160px;">Entity Target</th>
-                                    <th style="width: 130px;">IP Address</th>
-                                    <th>Event Details &amp; Payload</th>
+                                    <th class="col-time"><i class="far fa-clock me-1"></i> Timestamp</th>
+                                    <th class="col-user"><i class="fas fa-user me-1"></i> Actor / User</th>
+                                    <th class="col-action"><i class="fas fa-bolt me-1"></i> Action Event</th>
+                                    <th class="col-target"><i class="fas fa-crosshairs me-1"></i> Entity Target</th>
+                                    <th class="col-ip"><i class="fas fa-network-wired me-1"></i> IP Address</th>
+                                    <th class="col-details"><i class="fas fa-align-left me-1"></i> Details &amp; Payload Preview</th>
+                                    <th class="col-actions" style="text-align: right;"><i class="fas fa-sliders me-1"></i> Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="auditTableBody">
-                                <tr><td colspan="6" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading audit trail...</td></tr>
+                                <tr><td colspan="7" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading audit trail...</td></tr>
                             </tbody>
                         </table>
                     </div>
 
-                    <!-- Standardized pinned pagination -->
-                    <div class="pagination" id="auditPagination">
-                        <span class="page-info" id="paginationInfo">Page 1 of 1 • 0 logs</span>
-                        <div class="pagination-right">
+                    <!-- Pinned Pagination Controls Docked Inside Card -->
+                    <div class="pagination-controls" id="auditPagination">
+                        <span class="pagination-info" id="paginationInfo">Page 1 of 1 • 0 logs</span>
+                        <div class="pagination-actions">
                             <div class="pagination-jump" id="paginationJumpForm">
-                                <span>Jump to page</span>
-                                <input type="number" id="pageJumpInput" min="1" step="1" placeholder="№">
-                                <button type="button" class="btn-secondary btn-sm" id="pageJumpBtn"><i class="fas fa-arrow-right"></i> Go</button>
+                                <label for="pageJumpInput">Jump to page</label>
+                                <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Page">
+                                <button class="btn-secondary" id="pageJumpBtn" type="button"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
                             </div>
-                            <div class="pagination-controls">
-                                <button class="btn-secondary btn-sm" id="prevPage" disabled><i class="fas fa-chevron-left"></i> Previous</button>
-                                <button class="btn-secondary btn-sm" id="nextPage" disabled>Next <i class="fas fa-chevron-right"></i></button>
-                            </div>
+                            <span class="pagination-divider" aria-hidden="true"></span>
+                            <button class="btn-secondary" id="prevPage" type="button" disabled><i class="fas fa-chevron-left"></i><span>Previous</span></button>
+                            <button class="btn-secondary" id="nextPage" type="button" disabled><span>Next</span><i class="fas fa-chevron-right"></i></button>
                         </div>
                     </div>
                 </div>
@@ -275,12 +320,12 @@
     <!-- Audit Event Detail & Inspector Modal -->
     <div class="modal-overlay" id="auditDetailModal" style="display:none;" aria-hidden="true">
         <div class="modal-container modal-md" role="dialog" aria-modal="true" aria-labelledby="modalDetailTitle">
+            <button type="button" class="close close-view" id="closeDetailModalBtn" aria-label="Close modal"><i class="fas fa-xmark"></i></button>
             <div class="modal-header">
                 <div class="modal-title-wrap">
                     <span class="modal-title-icon"><i class="fas fa-shield-halved"></i></span>
                     <h3 id="modalDetailTitle">Audit Event Inspection</h3>
                 </div>
-                <button type="button" class="modal-close" id="closeDetailModalBtn" aria-label="Close modal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="audit-detail-grid">
@@ -329,7 +374,9 @@
 
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
-    <script src="../../assets/js/pages/audit.js?v=3"></script>
+    <script src="../../assets/js/shared/button-loading.js"></script>
+    <script src="../../assets/js/shared/pagination.js"></script>
+    <script src="../../assets/js/pages/audit.js?v=6"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
 </body>
