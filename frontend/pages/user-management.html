@@ -153,30 +153,34 @@
             <div class="content-area" id="contentArea">
                 <p class="section-label"><i class="fas fa-users-gear"></i> System User Directory</p>
                 <div class="stats-row user-stats-row">
-                    <div class="stat-card stat-card-filterable is-active-filter active accent-blue" id="cardAllUsers" data-filter="all" role="button" tabindex="0" title="View all users" aria-pressed="true">
+                    <div class="stat-card stat-card-filterable is-active-filter active" id="cardAllUsers" data-filter="all" role="button" tabindex="0" title="View all users" aria-pressed="true">
                         <div class="stat-title">
-                            <span class="stat-title-label"><span class="card-icon"><i class="fas fa-users"></i></span> Total Users</span>
+                            <span class="stat-title-label">Total Users</span>
+                            <span class="card-icon"><i class="fas fa-users"></i></span>
                         </div>
                         <div class="stat-value" id="totalUsers">0</div>
                         <div class="stat-sub" id="totalUsersMeta">Total accounts</div>
                     </div>
-                    <div class="stat-card stat-card-filterable accent-amber" id="cardAdminUsers" data-filter="admin" role="button" tabindex="0" title="Filter Administrator accounts" aria-pressed="false">
+                    <div class="stat-card stat-card-filterable" id="cardAdminUsers" data-filter="admin" role="button" tabindex="0" title="Filter Administrator accounts" aria-pressed="false">
                         <div class="stat-title">
-                            <span class="stat-title-label"><span class="card-icon"><i class="fas fa-user-shield"></i></span> Administrators</span>
+                            <span class="stat-title-label">Administrators</span>
+                            <span class="card-icon"><i class="fas fa-user-shield"></i></span>
                         </div>
                         <div class="stat-value" id="adminCount">0</div>
                         <div class="stat-sub" id="adminCountMeta">Admin accounts</div>
                     </div>
-                    <div class="stat-card stat-card-filterable accent-teal" id="cardStaffUsers" data-filter="staff" role="button" tabindex="0" title="Filter Staff accounts" aria-pressed="false">
+                    <div class="stat-card stat-card-filterable" id="cardStaffUsers" data-filter="staff" role="button" tabindex="0" title="Filter Staff accounts" aria-pressed="false">
                         <div class="stat-title">
-                            <span class="stat-title-label"><span class="card-icon"><i class="fas fa-user-tie"></i></span> Staff</span>
+                            <span class="stat-title-label">Staff</span>
+                            <span class="card-icon"><i class="fas fa-user-tie"></i></span>
                         </div>
                         <div class="stat-value" id="staffCount">0</div>
                         <div class="stat-sub" id="staffCountMeta">Staff accounts</div>
                     </div>
-                    <div class="stat-card stat-card-filterable accent-red" id="cardInactiveUsers" data-filter="inactive" role="button" tabindex="0" title="Filter Deactivated accounts" aria-pressed="false">
+                    <div class="stat-card stat-card-filterable" id="cardInactiveUsers" data-filter="inactive" role="button" tabindex="0" title="Filter Deactivated accounts" aria-pressed="false">
                         <div class="stat-title">
-                            <span class="stat-title-label"><span class="card-icon"><i class="fas fa-user-slash"></i></span> Deactivated</span>
+                            <span class="stat-title-label">Deactivated</span>
+                            <span class="card-icon"><i class="fas fa-user-slash"></i></span>
                         </div>
                         <div class="stat-value" id="inactiveCount">0</div>
                         <div class="stat-sub" id="inactiveCountMeta">Inactive accounts</div>
@@ -227,7 +231,7 @@
                                 <button class="btn-secondary" id="clearFilters"><i class="fas fa-rotate-left"></i><span>Clear</span></button>
                             </div>
                             <div class="toolbar-actions">
-                                <button class="btn-secondary btn-action-pill btn-record-payment" id="openAddUser"><i class="fas fa-user-plus"></i><span>Add User</span></button>
+                                <button class="btn-add type1" id="openAddUser" type="button"><span class="btn-txt"><i class="fas fa-plus"></i> Add User</span></button>
                             </div>
                         </div>
 
@@ -243,24 +247,24 @@
                             </div>
                         </div>
 
-                        <!-- Inner-scrollable table container -->
+                        <!-- Table container replicated from Manage Bookings -->
                         <div class="table-container">
                             <table class="data-table">
                                 <thead>
                                     <tr>
                                         <th class="table-select-col"><input type="checkbox" id="selectAllUsers" aria-label="Select all users"></th>
-                                        <th>Username</th>
-                                        <th>Full Name</th>
-                                        <th>Email</th>
-                                        <th>Role</th>
-                                        <th>Status</th>
-                                        <th>Created</th>
-                                        <th>Last Login</th>
-                                        <th>Actions</th>
+                                        <th class="col-username">Username</th>
+                                        <th class="col-fullname">Full Name</th>
+                                        <th class="col-email">Email</th>
+                                        <th class="col-role">Role</th>
+                                        <th class="col-status">Status</th>
+                                        <th class="col-created">Created</th>
+                                        <th class="col-last-login">Last Login</th>
+                                        <th class="col-actions">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="usersTableBody">
-                                    <tr><td colspan="9">Loading users...</td></tr>
+                                    <tr><td colspan="9" style="text-align:center; padding: 28px; color: #64748b;">Loading users...</td></tr>
                                 </tbody>
                             </table>
                         </div>

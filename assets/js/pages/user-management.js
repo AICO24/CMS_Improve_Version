@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const closeModal = document.querySelector('#userModal .close');
     const cancelUserForm = document.getElementById('cancelUserForm');
 
-    const perPage = 10;
+    const perPage = 8;
     const paginationInfo = document.getElementById('paginationInfo');
     const pageJumpForm = document.getElementById('paginationJumpForm');
     const pageJumpInput = document.getElementById('pageJumpInput');
@@ -306,29 +306,58 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function renderUsers(users) {
         if (!Array.isArray(users) || users.length === 0) {
-            usersTableBody.innerHTML = '<tr><td colspan="9">No users found.</td></tr>';
+            usersTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 32px 16px; color: #64748b; font-size: 0.88rem;">No users found matching the filter criteria.</td></tr>';
             syncBulkControls();
             return;
         }
 
-        usersTableBody.innerHTML = users.map(user => `
-            <tr data-id="${user.user_id}">
-                <td class="table-select-col"><input type="checkbox" class="user-select" data-id="${user.user_id}" ${selectedUserIds.has(Number(user.user_id)) ? 'checked' : ''}></td>
-                <td>${user.username}</td>
-                <td>${user.full_name}</td>
-                <td>${user.email}</td>
-                <td><span class="status-badge ${(user.role_title || user.role || '').toLowerCase() === 'admin' ? 'status-info' : 'status-neutral'}">${user.role_title || user.role || 'Staff'}</span></td>
-                <td><span class="status-badge ${user.is_active ? 'status-success' : 'status-danger'}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
-                <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}</td>
-                <td>${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</td>
-                <td class="action-buttons">
-                    <button class="btn-view" title="Edit"><i class="fas fa-edit"></i></button>
-                    <button class="btn-delete-row" title="Delete"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>
-        `).join('');
+        usersTableBody.innerHTML = users.map(user => {
+            const roleStr = String(user.role_title || user.role || 'Staff');
+            const isAdmin = roleStr.toLowerCase() === 'admin' || roleStr.toLowerCase() === 'administrator';
+            const roleClass = isAdmin ? 'role-admin' : 'role-staff';
+            const roleLabel = isAdmin ? 'Administrator' : 'Staff';
+
+            const statusClass = user.is_active ? 'status-active' : 'status-inactive';
+            const statusLabel = user.is_active ? 'Active' : 'Inactive';
+
+            const usernamePill = `<span class="username-pill">${escapeHtml(user.username || '—')}</span>`;
+            const fullNameCell = `<span class="user-fullname">${escapeHtml(user.full_name || '—')}</span>`;
+            const emailCell = `<span class="user-email">${escapeHtml(user.email || '—')}</span>`;
+
+            const createdDate = user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+            const lastLoginDate = user.last_login ? new Date(user.last_login).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '<span style="color:#94a3b8;">Never</span>';
+
+            return `
+                <tr data-id="${user.user_id}">
+                    <td class="table-select-col"><input type="checkbox" class="user-select" data-id="${user.user_id}" ${selectedUserIds.has(Number(user.user_id)) ? 'checked' : ''} aria-label="Select user ${escapeHtml(user.username)}"></td>
+                    <td class="col-username">${usernamePill}</td>
+                    <td class="col-fullname">${fullNameCell}</td>
+                    <td class="col-email">${emailCell}</td>
+                    <td class="col-role"><span class="status-badge ${roleClass}">${roleLabel}</span></td>
+                    <td class="col-status"><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+                    <td class="col-created">${createdDate}</td>
+                    <td class="col-last-login">${lastLoginDate}</td>
+                    <td class="col-actions">
+                        <div class="action-buttons">
+                            <button class="btn-row-action btn-row-action--edit btn-view" title="Edit User Details" aria-label="Edit User"><i class="fas fa-pen-to-square"></i></button>
+                            <button class="btn-row-action btn-row-action--delete btn-delete-row" title="Delete User Account" aria-label="Delete User"><i class="fas fa-trash-can"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
 
         usersTableBody.querySelectorAll('.user-select').forEach((checkbox) => {
             checkbox.addEventListener('change', () => {
