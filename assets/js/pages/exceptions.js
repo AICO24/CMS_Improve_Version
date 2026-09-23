@@ -58,6 +58,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     const refreshBtn = document.getElementById('refreshExceptionsBtn');
     const tableBody = document.getElementById('exceptionsTableBody');
 
+    // Tab switcher elements
+    const tabAllExceptions = document.getElementById('tabAllExceptions');
+    const tabOpenExceptions = document.getElementById('tabOpenExceptions');
+    const tabCriticalExceptions = document.getElementById('tabCriticalExceptions');
+    const badgeAllExceptions = document.getElementById('badgeAllExceptions');
+    const badgeOpenExceptions = document.getElementById('badgeOpenExceptions');
+    const badgeCriticalExceptions = document.getElementById('badgeCriticalExceptions');
+    const allTabBtns = document.querySelectorAll('.records-tab-btn');
+
     // KPI Counter Nodes
     const openCountEl = document.getElementById('openCount');
     const criticalCountEl = document.getElementById('criticalCount');
@@ -103,6 +112,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         }[char]));
     }
 
+    function formatDateTimeStacked(dateStr) {
+        if (!dateStr) return '<span class="muted">—</span>';
+        try {
+            const d = new Date(dateStr.replace(' ', 'T'));
+            if (isNaN(d.getTime())) {
+                return `<div class="table-datetime-cell"><span class="cell-date">${escapeHtml(dateStr)}</span></div>`;
+            }
+            const dateFormatted = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const timeFormatted = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            return `<div class="table-datetime-cell"><span class="cell-date">${dateFormatted}</span><span class="cell-time"><i class="fas fa-clock"></i> ${timeFormatted}</span></div>`;
+        } catch (e) {
+            return `<div class="table-datetime-cell"><span class="cell-date">${escapeHtml(dateStr)}</span></div>`;
+        }
+    }
+
     function buildSeverityBadge(severity) {
         const classBySeverity = { info: 'status-info', warning: 'status-warning', critical: 'status-danger' };
         return `<span class="status-badge ${classBySeverity[severity] || 'status-warning'}">${escapeHtml(severity || 'warning')}</span>`;
@@ -115,19 +139,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     function buildRow(exception) {
         const action = exception.status === 'open'
             ? `<div class="action-buttons">
-                <button type="button" class="btn-row-action btn-row-action--confirm" data-action="resolve" data-id="${exception.exception_id}"><i class="fas fa-check"></i> Resolve</button>
-                <button type="button" class="btn-row-action" data-action="retry" data-id="${exception.exception_id}"><i class="fas fa-rotate"></i> Retry</button>
+                <button type="button" class="btn-row-action btn-row-action--confirm" data-action="resolve" data-id="${exception.exception_id}" title="Resolve Exception"><i class="fas fa-check"></i><span>Resolve</span></button>
+                <button type="button" class="btn-row-action btn-row-action--retry" data-action="retry" data-id="${exception.exception_id}" title="Retry Automation"><i class="fas fa-rotate"></i><span>Retry</span></button>
                </div>`
-            : `<span class="muted"><i class="fas fa-circle-check" style="color:#10b981; margin-right:4px;"></i>${escapeHtml(exception.resolved_by_name || 'Resolved')}</span>`;
+            : `<span class="resolved-tag"><i class="fas fa-circle-check"></i> ${escapeHtml(exception.resolved_by_name || 'Resolved')}</span>`;
         return `
             <tr data-id="${exception.exception_id}">
-                <td><small class="muted">${escapeHtml(exception.created_at)}</small></td>
-                <td><strong>${escapeHtml(exception.event)}</strong></td>
-                <td><span class="detail-pill">${escapeHtml(exception.entity_type)} #${escapeHtml(exception.entity_id)}</span></td>
-                <td><span title="${escapeHtml(exception.reason)}">${escapeHtml(exception.reason)}</span></td>
-                <td>${buildSeverityBadge(exception.severity)}</td>
-                <td>${buildStatusBadge(exception.status)}</td>
-                <td>${action}</td>
+                <td class="col-raised">${formatDateTimeStacked(exception.created_at)}</td>
+                <td class="col-event"><strong>${escapeHtml(exception.event)}</strong></td>
+                <td class="col-entity"><span class="detail-pill">${escapeHtml(exception.entity_type)} #${escapeHtml(exception.entity_id)}</span></td>
+                <td class="col-reason"><span class="exception-reason-text" title="${escapeHtml(exception.reason)}">${escapeHtml(exception.reason)}</span></td>
+                <td class="col-severity">${buildSeverityBadge(exception.severity)}</td>
+                <td class="col-status">${buildStatusBadge(exception.status)}</td>
+                <td class="col-action">${action}</td>
             </tr>
         `;
     }
@@ -142,6 +166,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (criticalCountEl) criticalCountEl.textContent = critical;
         if (warningCountEl) warningCountEl.textContent = warning;
         if (resolvedCountEl) resolvedCountEl.textContent = resolved;
+
+        if (badgeAllExceptions) badgeAllExceptions.textContent = list.length;
+        if (badgeOpenExceptions) badgeOpenExceptions.textContent = open;
+        if (badgeCriticalExceptions) badgeCriticalExceptions.textContent = critical;
     }
 
     function setActiveFilterCard(filterType) {
@@ -150,6 +178,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             card.classList.toggle('is-active-filter', isMatch);
             card.classList.toggle('active', isMatch);
             card.setAttribute('aria-pressed', isMatch ? 'true' : 'false');
+        });
+    }
+
+    function setActiveTab(tabType) {
+        allTabBtns.forEach(btn => {
+            const isMatch = btn.dataset.tab === tabType;
+            btn.classList.toggle('active', isMatch);
+            btn.setAttribute('aria-selected', isMatch ? 'true' : 'false');
         });
     }
 
@@ -192,7 +228,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function loadAllExceptions() {
-        tableBody.innerHTML = '<tr><td colspan="7">Loading exceptions...</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 28px; color: #64748b;">Loading exceptions...</td></tr>';
         try {
             // Load all items once, then slice/filter locally for instant snappy response
             const exceptions = await api.request('exceptions', { method: 'GET' });
@@ -201,8 +237,42 @@ document.addEventListener('DOMContentLoaded', async function() {
             renderFilteredExceptions();
         } catch (error) {
             console.error('Failed to load exceptions', error);
-            tableBody.innerHTML = '<tr><td colspan="7">Unable to load exceptions right now.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 28px; color: #ef4444;">Unable to load exceptions right now.</td></tr>';
         }
+    }
+
+    // Segmented tabs click interactions
+    if (tabAllExceptions) {
+        tabAllExceptions.addEventListener('click', () => {
+            setActiveTab('all');
+            statusFilter.value = '';
+            filterSeverity.value = '';
+            setActiveFilterCard('');
+            pagination.reset();
+            renderFilteredExceptions();
+        });
+    }
+
+    if (tabOpenExceptions) {
+        tabOpenExceptions.addEventListener('click', () => {
+            setActiveTab('open');
+            statusFilter.value = 'open';
+            filterSeverity.value = '';
+            setActiveFilterCard('open');
+            pagination.reset();
+            renderFilteredExceptions();
+        });
+    }
+
+    if (tabCriticalExceptions) {
+        tabCriticalExceptions.addEventListener('click', () => {
+            setActiveTab('critical');
+            statusFilter.value = 'open';
+            filterSeverity.value = 'critical';
+            setActiveFilterCard('critical');
+            pagination.reset();
+            renderFilteredExceptions();
+        });
     }
 
     // Filterable KPI card click interactions
@@ -214,15 +284,19 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (filterType === 'open') {
                 statusFilter.value = 'open';
                 filterSeverity.value = '';
+                setActiveTab('open');
             } else if (filterType === 'critical') {
                 statusFilter.value = 'open';
                 filterSeverity.value = 'critical';
+                setActiveTab('critical');
             } else if (filterType === 'warning') {
                 statusFilter.value = 'open';
                 filterSeverity.value = 'warning';
+                setActiveTab('');
             } else if (filterType === 'resolved') {
                 statusFilter.value = 'resolved';
                 filterSeverity.value = '';
+                setActiveTab('');
             }
 
             pagination.reset();
@@ -243,14 +317,22 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         if (status === 'resolved') {
             setActiveFilterCard('resolved');
-        } else if (severity === 'critical') {
+            setActiveTab('');
+        } else if (severity === 'critical' && status === 'open') {
             setActiveFilterCard('critical');
-        } else if (severity === 'warning') {
+            setActiveTab('critical');
+        } else if (severity === 'warning' && status === 'open') {
             setActiveFilterCard('warning');
-        } else if (status === 'open') {
+            setActiveTab('');
+        } else if (status === 'open' && !severity) {
             setActiveFilterCard('open');
+            setActiveTab('open');
+        } else if (!status && !severity) {
+            setActiveFilterCard('');
+            setActiveTab('all');
         } else {
             setActiveFilterCard('');
+            setActiveTab('');
         }
     }
 
@@ -289,6 +371,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             statusFilter.value = 'open';
             if (filterSeverity) filterSeverity.value = '';
             setActiveFilterCard('open');
+            setActiveTab('open');
             pagination.reset();
             renderFilteredExceptions();
         });
