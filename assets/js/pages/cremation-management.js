@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    const user = await requireRole(['admin']);
+    const user = await requireRole(['admin', 'staff']);
     if (!user) return;
 
     // System-Wide AI Assistant: page-level header mount

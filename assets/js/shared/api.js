@@ -348,33 +348,25 @@ const ROLE_SIDEBAR_LINKS = {
             ['book-a-service.html', 'fa-handshake', 'Book a Service'],
             ['booking-assistant.html', 'fa-robot', 'Booking Assistant'],
             ['manage-bookings.html', 'fa-calendar-check', 'Manage Bookings'],
-            ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
+            ['manage-reservations.html', 'fa-calendar-check', 'Manage Reservations'],
+            ['manage-cremations.html', 'fa-calendar-check', 'Manage Cremations'],
         ] },
-        // Batch E (Decedent Records audit): staff now has API + page access
-        // to Decedent Records (previously admin-only despite the backend
-        // already allowing staff writes — see DecedentController's
-        // requireRole(['admin', 'staff'])). Only this one Records-group page
-        // is added here; Cremation/Relocation/Expiration Monitoring stay
-        // admin-only and out of this module's scope.
-        // "Phase D": manage-cremations.html (the records-list view over
-        // citizen cremation bookings) is deliberately staff-accessible even
-        // though cremation-management.html (the admin-direct niche-grid
-        // page) above stays out of scope for staff — this is a new page,
-        // not a widening of the niche-grid page's access, mirroring
-        // Manage Reservations' own staff access to Burial Scheduling.
+        { group: 'Cemetery Management', items: [
+            ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
+            ['cremation-management.html', 'fa-fire', 'Columbarium Management'],
+        ] },
         { group: 'Records', items: [
             ['decedent-records.html', 'fa-folder-open', 'Decedent Records'],
-            ['manage-cremations.html', 'fa-calendar-check', 'Manage Cremations'],
         ] },
         { group: 'Finance', items: [
             ['payments.html', 'fa-credit-card', 'Payments'],
         ] },
-        { group: 'AI & Automation', items: [
-            ['exceptions.html', 'fa-triangle-exclamation', 'Exceptions'],
-        ] },
         { group: 'System', items: [
-            ['settings.html', 'fa-gear', 'Settings'],
+            ['exceptions.html', 'fa-triangle-exclamation', 'System Exceptions'],
+        ] },
+        { group: 'Account', items: [
             ['profile.html', 'fa-id-card', 'Profile'],
+            ['settings.html', 'fa-gear', 'Settings'],
         ] },
     ],
     user: [

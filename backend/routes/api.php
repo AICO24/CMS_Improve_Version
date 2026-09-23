@@ -645,7 +645,7 @@ if ($path === 'cremations/suggest-niche' && $requestMethod === 'GET') {
 }
 
 if ($path === 'cremations/assign' && $requestMethod === 'POST') {
-    $user = AuthMiddleware::requireRole(['admin']);
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();
     $result = $cremationController->assignNiche($input, $user['user_id']);
     http_response_code($result['code'] ?? 200);
