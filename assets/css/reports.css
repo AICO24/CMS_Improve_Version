@@ -955,13 +955,11 @@
     margin-top: 18px;
 }
 
-#demographicsTab .demographics-table-card,
-#reservationsTab .reservations-table-card {
+#demographicsTab .demographics-table-card {
     margin-top: 18px;
 }
 
-#demographicsTab .table-wrap,
-#reservationsTab .table-wrap {
+#demographicsTab .table-wrap {
     width: 100%;
     overflow-x: auto;
     border-radius: var(--radius-md);
@@ -969,8 +967,7 @@
     background: rgba(255, 255, 255, 0.72);
 }
 
-#demographicsTab .data-table,
-#reservationsTab .data-table {
+#demographicsTab .data-table {
     width: 100%;
     border-collapse: collapse;
     min-width: 540px;
@@ -978,16 +975,13 @@
 }
 
 #demographicsTab .data-table th,
-#demographicsTab .data-table td,
-#reservationsTab .data-table th,
-#reservationsTab .data-table td {
+#demographicsTab .data-table td {
     padding: 12px 14px;
     border-bottom: 1px solid rgba(44, 94, 71, 0.08);
     font-size: 0.86rem;
 }
 
-#demographicsTab .data-table thead th,
-#reservationsTab .data-table thead th {
+#demographicsTab .data-table thead th {
     background: rgba(15, 118, 110, 0.05);
     color: var(--color-primary-800);
     font-size: 0.75rem;
@@ -995,9 +989,314 @@
     letter-spacing: 0.05em;
 }
 
-#demographicsTab .data-table tbody tr:hover,
-#reservationsTab .data-table tbody tr:hover {
+#demographicsTab .data-table tbody tr:hover {
     background: rgba(15, 118, 110, 0.03);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   RESERVATION RECORDS TABLE — Clean, Muted Executive UI/UX
+   Zero bright/neon colors, refined typography & subtle badges
+   ══════════════════════════════════════════════════════════════════ */
+#reservationsTab .reservations-table-card {
+    margin-top: 18px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    overflow: hidden;
+    padding: 0;
+}
+
+#reservationsTab .reservations-table-card .chart-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+#reservationsTab .reservations-table-card .chart-card__title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: -0.01em;
+}
+
+#reservationsTab .reservations-table-card .chart-card__badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    background: #f8fafc;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+#reservationsTab .table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: none;
+    border-radius: 0;
+    background: #ffffff;
+}
+
+#reservationsTab .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 680px;
+    text-align: left;
+}
+
+#reservationsTab .data-table thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.73rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 12px 18px;
+    border-top: none;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+#reservationsTab .data-table tbody td {
+    padding: 13px 18px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+    font-size: 0.86rem;
+    vertical-align: middle;
+    transition: background-color 0.15s ease;
+}
+
+#reservationsTab .data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+#reservationsTab .data-table tbody tr:hover td {
+    background: #f8fafc;
+}
+
+/* Cell typography & micro-components */
+#reservationsTab .res-col-id {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 3px 8px;
+    border-radius: 5px;
+    letter-spacing: -0.01em;
+}
+
+#reservationsTab .res-col-lot {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+#reservationsTab .res-col-section {
+    color: #64748b;
+    font-size: 0.83rem;
+}
+
+#reservationsTab .res-col-name {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+#reservationsTab .res-col-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #475569;
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+}
+
+#reservationsTab .res-col-date i {
+    color: #94a3b8;
+    font-size: 0.76rem;
+}
+
+#reservationsTab .res-col-type {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 5px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    font-size: 0.76rem;
+    font-weight: 500;
+}
+
+/* Status Pill — Muted, Low-saturation pastel tones, NO bright/neon colors */
+#reservationsTab .res-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 11px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+}
+
+#reservationsTab .res-status-pill__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Confirmed: Muted calm forest/sage green (Not bright neon) */
+#reservationsTab .res-status-pill--confirmed {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+#reservationsTab .res-status-pill--confirmed .res-status-pill__dot {
+    background: #22c55e;
+}
+
+/* Completed: Muted slate steel blue */
+#reservationsTab .res-status-pill--completed {
+    background: #f0f9ff;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+#reservationsTab .res-status-pill--completed .res-status-pill__dot {
+    background: #0284c7;
+}
+
+/* Pending: Muted warm sand amber (Not blinding yellow) */
+#reservationsTab .res-status-pill--pending {
+    background: #fffbeb;
+    color: #92400e;
+    border: 1px solid #fef3c7;
+}
+#reservationsTab .res-status-pill--pending .res-status-pill__dot {
+    background: #f59e0b;
+}
+
+/* Cancelled: Muted soft dusty rose (Not screaming red) */
+#reservationsTab .res-status-pill--cancelled {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+#reservationsTab .res-status-pill--cancelled .res-status-pill__dot {
+    background: #ef4444;
+}
+
+/* Dark Mode Overrides for Reservation Table */
+.dashboard-body[data-theme="dark"] #reservationsTab .reservations-table-card {
+    background: #111a15 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .reservations-table-card .chart-card__header {
+    background: #111a15 !important;
+    border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .reservations-table-card .chart-card__title {
+    color: #f1f5f9 !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .reservations-table-card .chart-card__badge {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: #94a3b8 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .table-wrap {
+    background: #111a15 !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .data-table thead th {
+    background: #16221c !important;
+    color: #94a3b8 !important;
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .data-table tbody td {
+    color: #cbd5e1 !important;
+    border-bottom-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .data-table tbody tr:hover td {
+    background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .res-col-id {
+    color: #94a3b8 !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .res-col-lot {
+    color: #f8fafc !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .res-col-section {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .res-col-name {
+    color: #f1f5f9 !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .res-col-date {
+    color: #cbd5e1 !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .res-col-date i {
+    color: #64748b !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .res-col-type {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .res-status-pill--confirmed {
+    background: rgba(34, 197, 94, 0.10) !important;
+    color: #86efac !important;
+    border-color: rgba(34, 197, 94, 0.22) !important;
+}
+.dashboard-body[data-theme="dark"] #reservationsTab .res-status-pill--confirmed .res-status-pill__dot {
+    background: #4ade80 !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .res-status-pill--completed {
+    background: rgba(14, 165, 233, 0.10) !important;
+    color: #7dd3fc !important;
+    border-color: rgba(14, 165, 233, 0.22) !important;
+}
+.dashboard-body[data-theme="dark"] #reservationsTab .res-status-pill--completed .res-status-pill__dot {
+    background: #38bdf8 !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .res-status-pill--pending {
+    background: rgba(245, 158, 11, 0.10) !important;
+    color: #fde68a !important;
+    border-color: rgba(245, 158, 11, 0.22) !important;
+}
+.dashboard-body[data-theme="dark"] #reservationsTab .res-status-pill--pending .res-status-pill__dot {
+    background: #fbbf24 !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .res-status-pill--cancelled {
+    background: rgba(239, 68, 68, 0.10) !important;
+    color: #fca5a5 !important;
+    border-color: rgba(239, 68, 68, 0.22) !important;
+}
+.dashboard-body[data-theme="dark"] #reservationsTab .res-status-pill--cancelled .res-status-pill__dot {
+    background: #f87171 !important;
 }
 
 .reservations-insights {
@@ -1677,22 +1976,19 @@
 #reservationsTab .pagination-controls {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 12px;
     justify-content: space-between;
     align-items: center;
-    margin-top: auto;
-    padding: 12px 14px 14px;
-    border-top: 1px solid rgba(44, 94, 71, 0.10);
-    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-    background: linear-gradient(180deg, rgba(245, 249, 247, 0.92), rgba(255, 255, 255, 0.8));
-    box-shadow: inset 0 1px 0 rgba(44, 94, 71, 0.06);
+    padding: 14px 20px;
+    border-top: 1px solid #f1f5f9;
+    background: #ffffff;
     width: 100%;
 }
 
 #reservationsTab .pagination-info {
-    color: #556872;
-    font-size: 0.8rem;
-    font-weight: 600;
+    color: #64748b;
+    font-size: 0.80rem;
+    font-weight: 500;
 }
 
 #reservationsTab .pagination-actions {
@@ -1708,23 +2004,57 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    height: 36px;
-    min-width: 96px;
-    padding: 0 12px;
-    border-radius: var(--radius-sm);
-    font-size: 0.8rem;
-    font-weight: var(--fw-bold);
+    height: 34px;
+    min-width: 90px;
+    padding: 0 14px;
+    border-radius: 6px;
+    font-size: 0.80rem;
+    font-weight: 600;
     line-height: 1;
     white-space: nowrap;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    transition: all 0.15s ease;
 }
 
-[data-theme="dark"] #reservationsTab .pagination-controls {
-    background: linear-gradient(180deg, rgba(15, 19, 13, 0.80), rgba(9, 19, 14, 0.70));
-    border-top-color: rgba(255, 255, 255, 0.08);
+#reservationsTab .pagination-actions > .btn-secondary:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
 }
 
-[data-theme="dark"] #reservationsTab .pagination-info {
+#reservationsTab .pagination-actions > .btn-secondary:disabled {
+    opacity: 0.40;
+    cursor: not-allowed;
+    background: #f8fafc;
+    border-color: #e2e8f0;
     color: #94a3b8;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .pagination-controls,
+[data-theme="dark"] #reservationsTab .pagination-controls {
+    background: #111a15 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .pagination-info,
+[data-theme="dark"] #reservationsTab .pagination-info {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .pagination-actions > .btn-secondary,
+[data-theme="dark"] #reservationsTab .pagination-actions > .btn-secondary {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #cbd5e1 !important;
+}
+
+.dashboard-body[data-theme="dark"] #reservationsTab .pagination-actions > .btn-secondary:hover:not(:disabled),
+[data-theme="dark"] #reservationsTab .pagination-actions > .btn-secondary:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.10) !important;
+    border-color: rgba(255, 255, 255, 0.20) !important;
+    color: #ffffff !important;
 }
 
 .data-table {

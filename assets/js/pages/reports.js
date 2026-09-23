@@ -264,14 +264,32 @@ document.addEventListener('DOMContentLoaded', async function() {
             const meta = chart.getDatasetMeta(0);
             if (!meta || !meta.data || !meta.data.length) return;
 
-            const ctx = chart.ctx;
             const dataset = chart.data.datasets[0];
-            const total = dataset.data.reduce((sum, value) => sum + (Number(value) || 0), 0);
-            if (!total) return;
+            if (!dataset || !dataset.data) return;
 
+            // Check whether a slice is currently visible
+            const isSliceVisible = (idx) => {
+                if (typeof chart.getDataVisibility === 'function') {
+                    if (!chart.getDataVisibility(idx)) return false;
+                }
+                const arc = meta.data && meta.data[idx];
+                if (!arc) return false;
+                if (arc.hidden === true) return false;
+                if (typeof arc.circumference === 'number' && arc.circumference <= 0.001) return false;
+                return true;
+            };
+
+            // Calculate total of visible slices only
+            const total = dataset.data.reduce((sum, value, idx) => {
+                if (!isSliceVisible(idx)) return sum;
+                return sum + (Number(value) || 0);
+            }, 0);
+            if (!total || total <= 0) return;
+
+            const ctx = chart.ctx;
             const dark = isDarkMode();
-            const centerX = chart.getDatasetMeta(0).data[0]?.x || chart.chartArea.left + (chart.chartArea.right - chart.chartArea.left) / 2;
-            const centerY = chart.getDatasetMeta(0).data[0]?.y || chart.chartArea.top + (chart.chartArea.bottom - chart.chartArea.top) / 2;
+            const centerX = meta.data[0]?.x || chart.chartArea.left + (chart.chartArea.right - chart.chartArea.left) / 2;
+            const centerY = meta.data[0]?.y || chart.chartArea.top + (chart.chartArea.bottom - chart.chartArea.top) / 2;
             const leftLimit = chart.chartArea.left + 26;
             const rightLimit = chart.chartArea.right - 26;
             const topLimit = chart.chartArea.top + 12;
@@ -282,44 +300,123 @@ document.addEventListener('DOMContentLoaded', async function() {
             ctx.textBaseline = 'middle';
             ctx.font = '600 11px Inter, system-ui, sans-serif';
 
+            // 1. Gather all visible qualifying slices (skip < 4% slivers to prevent cramped overlap)
+            const items = [];
             meta.data.forEach((arc, index) => {
+                if (!isSliceVisible(index)) return;
+
                 const value = Number(dataset.data[index]) || 0;
-                if (!value || total <= 0) return;
+                if (!value || value <= 0) return;
+
+                const ratio = value / total;
+                const roundedPct = Math.round(ratio * 100);
+                if (roundedPct < 4) return;
 
                 const start = arc.startAngle;
                 const end = arc.endAngle;
                 const midAngle = (start + end) / 2;
                 const outerRadius = arc.outerRadius;
                 const innerRadius = arc.innerRadius;
-                const ratio = value / total;
+                const labelRadius = outerRadius + 24;
 
-                const percent = `${Math.round(ratio * 100)}%`;
-                const pctX = centerX + Math.cos(midAngle) * ((outerRadius + innerRadius) / 2);
-                const pctY = centerY + Math.sin(midAngle) * ((outerRadius + innerRadius) / 2);
+                const idealX = centerX + Math.cos(midAngle) * labelRadius;
+                const idealY = centerY + Math.sin(midAngle) * labelRadius;
+                const isRight = Math.cos(midAngle) >= 0;
 
-                ctx.fillStyle = dark ? '#f8fafc' : '#1f2937';
-                ctx.font = '700 12px Inter, system-ui, sans-serif';
-                ctx.fillText(percent, pctX, pctY);
+                items.push({
+                    index,
+                    arc,
+                    midAngle,
+                    outerRadius,
+                    innerRadius,
+                    roundedPct,
+                    isRight,
+                    idealX,
+                    idealY,
+                    y: idealY,
+                    labelText: chart.data.labels[index] || '',
+                    canFitInnerPct: arc.circumference >= 0.35 && (outerRadius - innerRadius) >= 18
+                });
+            });
 
-                const labelRadius = Math.min(outerRadius + 26, Math.max(outerRadius + 12, 76));
-                let labelX = centerX + Math.cos(midAngle) * labelRadius;
-                let labelY = centerY + Math.sin(midAngle) * labelRadius;
-                labelX = Math.min(Math.max(labelX, leftLimit), rightLimit);
-                labelY = Math.min(Math.max(labelY, topLimit), bottomLimit);
-                const labelText = chart.data.labels[index] || '';
-                const labelTextWidth = ctx.measureText(labelText).width;
+            if (!items.length) {
+                ctx.restore();
+                return;
+            }
 
-                ctx.font = '500 11px Inter, system-ui, sans-serif';
-                ctx.fillStyle = dark ? '#cbd5e1' : '#475569';
-                ctx.textAlign = labelX > centerX ? 'left' : 'right';
-                ctx.fillText(labelText, labelX, labelY);
+            // 2. Anti-collision: separate left and right, enforce min vertical gap
+            const minGap = 20;
+            const resolveSide = (sideItems) => {
+                if (sideItems.length <= 1) return;
+                sideItems.sort((a, b) => a.idealY - b.idealY);
+                for (let i = 1; i < sideItems.length; i++) {
+                    if (sideItems[i].y - sideItems[i - 1].y < minGap) {
+                        sideItems[i].y = sideItems[i - 1].y + minGap;
+                    }
+                }
+                const last = sideItems[sideItems.length - 1];
+                if (last.y > bottomLimit) {
+                    last.y = bottomLimit;
+                    for (let i = sideItems.length - 2; i >= 0; i--) {
+                        if (sideItems[i + 1].y - sideItems[i].y < minGap) {
+                            sideItems[i].y = sideItems[i + 1].y - minGap;
+                        }
+                    }
+                }
+                if (sideItems[0].y < topLimit) {
+                    sideItems[0].y = topLimit;
+                    for (let i = 1; i < sideItems.length; i++) {
+                        if (sideItems[i].y - sideItems[i - 1].y < minGap) {
+                            sideItems[i].y = sideItems[i - 1].y + minGap;
+                        }
+                    }
+                }
+            };
 
-                if (labelTextWidth > 0) {
-                    const connectorX = labelX > centerX ? labelX - 6 : labelX + 6;
+            resolveSide(items.filter(it => it.isRight));
+            resolveSide(items.filter(it => !it.isRight));
+
+            // 3. Draw cleanly without overlap
+            items.forEach((it) => {
+                const percent = `${it.roundedPct}%`;
+
+                // Inner slice percentage
+                if (it.canFitInnerPct) {
+                    const midR = (it.outerRadius + it.innerRadius) / 2;
+                    const pctX = centerX + Math.cos(it.midAngle) * midR;
+                    const pctY = centerY + Math.sin(it.midAngle) * midR;
+                    ctx.fillStyle = dark ? '#f8fafc' : '#1f2937';
+                    ctx.font = '700 11.5px Inter, system-ui, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(percent, pctX, pctY);
+                }
+
+                // Outer callout label
+                const labelY = Math.min(Math.max(it.y, topLimit), bottomLimit);
+                const labelX = it.isRight
+                    ? Math.min(Math.max(it.idealX, centerX + 18), rightLimit)
+                    : Math.max(Math.min(it.idealX, centerX - 18), leftLimit);
+
+                const calloutText = it.canFitInnerPct ? it.labelText : `${it.labelText} (${percent})`;
+                const textWidth = ctx.measureText(calloutText).width;
+
+                ctx.font = '600 11px Inter, system-ui, sans-serif';
+                ctx.fillStyle = dark ? '#cbd5e1' : '#334155';
+                ctx.textAlign = it.isRight ? 'left' : 'right';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(calloutText, labelX, labelY);
+
+                // Connector line
+                if (textWidth > 0) {
+                    const connectorX = it.isRight ? labelX - 6 : labelX + 6;
+                    const edgeX = centerX + Math.cos(it.midAngle) * (it.outerRadius + 3);
+                    const edgeY = centerY + Math.sin(it.midAngle) * (it.outerRadius + 3);
+
                     ctx.beginPath();
                     ctx.moveTo(connectorX, labelY);
-                    ctx.lineTo(centerX + Math.cos(midAngle) * (outerRadius + 2), centerY + Math.sin(midAngle) * (outerRadius + 2));
-                    ctx.strokeStyle = dark ? 'rgba(203, 213, 225, 0.45)' : 'rgba(71, 85, 105, 0.45)';
+                    ctx.lineTo(edgeX, edgeY);
+                    ctx.strokeStyle = dark ? 'rgba(203, 213, 225, 0.40)' : 'rgba(71, 85, 105, 0.40)';
                     ctx.lineWidth = 1;
                     ctx.stroke();
                 }
@@ -429,6 +526,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             Number(summary.pending_review || 0),
         ];
         const colors = ['#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6'];
+        const dark = isDarkMode();
+        const tickColor = dark ? '#cbd5e1' : '#1e293b';
 
         expirationStatusChartInstance = new Chart(ctx, {
             type: 'doughnut',
@@ -437,7 +536,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 datasets: [{
                     data: values,
                     backgroundColor: colors,
-                    borderColor: '#ffffff',
+                    borderColor: dark ? '#09130e' : '#ffffff',
                     borderWidth: 2,
                     hoverOffset: 12,
                 }]
@@ -453,16 +552,27 @@ document.addEventListener('DOMContentLoaded', async function() {
                             pointStyle: 'circle',
                             boxWidth: 8,
                             boxHeight: 8,
-                            padding: 10,
-                            font: { size: 10.5 }
+                            padding: 12,
+                            font: { size: 11.5, weight: '700', family: "'Inter', sans-serif" },
+                            color: tickColor
                         }
                     },
                     tooltip: {
                         callbacks: {
-                            label: (context) => `${context.label}: ${context.parsed} lots`
+                            label: (context) => {
+                                const chart = context.chart;
+                                const dataset = context.dataset;
+                                const total = dataset.data.reduce((sum, val, idx) => {
+                                    if (typeof chart.getDataVisibility === 'function' && !chart.getDataVisibility(idx)) return sum;
+                                    return sum + (Number(val) || 0);
+                                }, 0);
+                                const pct = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
+                                return ` ${context.label}: ${context.parsed} lots (${pct}%)`;
+                            }
                         }
                     }
-                }
+                },
+                animation: doughnutPopAnimation(700, 120)
             })
         });
 
@@ -1282,7 +1392,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         backgroundColor: breakdownColors,
                         borderColor: revDark ? '#09130e' : '#ffffff',
                         borderWidth: 2,
-                        hoverOffset: 8
+                        hoverOffset: 12
                     }]
                 },
                 options: compactChartOptions({
@@ -1302,7 +1412,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                                 color: revTickColor
                             }
                         },
-                        donutSliceLabelPlugin: false,
                         tooltip: {
                             backgroundColor: revDark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.98)',
                             titleColor: revDark ? '#f8fafc' : '#0f172a',
@@ -1312,10 +1421,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                             padding: 11,
                             boxPadding: 5,
                             callbacks: {
-                                label: ctx => {
-                                    const totalSum = ctx.dataset.data.reduce((a, b) => a + Number(b || 0), 0);
-                                    const pct = totalSum > 0 ? ((ctx.parsed / totalSum) * 100).toFixed(1) : '0.0';
-                                    return ` ${ctx.label}: ${formatPeso(ctx.parsed)} (${pct}%)`;
+                                label: (context) => {
+                                    const chart = context.chart;
+                                    const dataset = context.dataset;
+                                    const total = dataset.data.reduce((sum, val, idx) => {
+                                        if (typeof chart.getDataVisibility === 'function' && !chart.getDataVisibility(idx)) return sum;
+                                        return sum + (Number(val) || 0);
+                                    }, 0);
+                                    const pct = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
+                                    return ` ${context.label}: ${formatPeso(context.parsed)} (${pct}%)`;
                                 }
                             }
                         }
@@ -1340,8 +1454,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             const verificationCtx = verificationCanvas.getContext('2d');
             if (verificationBreakdownChartInstance) verificationBreakdownChartInstance.destroy();
             const vLabels = verificationBreakdown.map(item => item.verification_status);
-            const vValues = verificationBreakdown.map(item => item.total || 0);
-            const vColors = vLabels.map(l => CHART_COLORS.verification[l] || CHART_COLORS.accent[0]);
+            const vValues = verificationBreakdown.map(item => Number(item.count) || 0);
+            const vAmounts = verificationBreakdown.map(item => Number(item.total) || 0);
+            const vColors = vLabels.map(l => CHART_COLORS.verification[l] || CHART_COLORS.verification[l?.charAt(0).toUpperCase() + l?.slice(1).toLowerCase()] || CHART_COLORS.accent[0]);
             const verDark = isDarkMode();
             const verTickColor = verDark ? '#cbd5e1' : '#1e293b';
             verificationBreakdownChartInstance = new Chart(verificationCtx, {
@@ -1353,7 +1468,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         backgroundColor: vColors,
                         borderColor: verDark ? '#09130e' : '#ffffff',
                         borderWidth: 2,
-                        hoverOffset: 8
+                        hoverOffset: 12
                     }]
                 },
                 options: compactChartOptions({
@@ -1373,7 +1488,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                                 color: verTickColor
                             }
                         },
-                        donutSliceLabelPlugin: false,
                         tooltip: {
                             backgroundColor: verDark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.98)',
                             titleColor: verDark ? '#f8fafc' : '#0f172a',
@@ -1383,10 +1497,17 @@ document.addEventListener('DOMContentLoaded', async function() {
                             padding: 11,
                             boxPadding: 5,
                             callbacks: {
-                                label: ctx => {
-                                    const totalSum = ctx.dataset.data.reduce((a, b) => a + Number(b || 0), 0);
-                                    const pct = totalSum > 0 ? ((ctx.parsed / totalSum) * 100).toFixed(1) : '0.0';
-                                    return ` ${ctx.label}: ${formatPeso(ctx.parsed)} (${pct}%)`;
+                                label: (context) => {
+                                    const chart = context.chart;
+                                    const dataset = context.dataset;
+                                    const total = dataset.data.reduce((sum, val, idx) => {
+                                        if (typeof chart.getDataVisibility === 'function' && !chart.getDataVisibility(idx)) return sum;
+                                        return sum + (Number(val) || 0);
+                                    }, 0);
+                                    const pct = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
+                                    const count = context.parsed;
+                                    const amount = vAmounts[context.dataIndex] || 0;
+                                    return ` ${context.label}: ${count} payment${count === 1 ? '' : 's'} (${formatPeso(amount)}) • ${pct}%`;
                                 }
                             }
                         }
@@ -1558,13 +1679,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function _resStatusBadge(status) {
-        const map = {
-            Confirmed: 'status-success',
-            Completed: 'status-info',
-            Pending:   'status-warning',
-            Cancelled: 'status-danger'
-        };
-        return `<span class="status-badge ${map[status] || 'status-warning'}">${status || 'Unknown'}</span>`;
+        const s = (status || 'Pending').trim();
+        const key = s.toLowerCase();
+        return `<span class="res-status-pill res-status-pill--${key}"><span class="res-status-pill__dot"></span>${s}</span>`;
     }
 
     async function _renderResTable() {
@@ -1601,12 +1718,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                     : (item.provisional_name || item.created_by_name || '—');
                 return `
                     <tr>
-                        <td><strong>#${item.schedule_id}</strong></td>
-                        <td>${item.lot_number || '—'}</td>
-                        <td>${item.section_name || '—'}</td>
-                        <td>${decedentName}</td>
-                        <td>${_formatResDate(item.schedule_date)}</td>
-                        <td>${item.lot_type_name || '—'}</td>
+                        <td><span class="res-col-id">#${item.schedule_id}</span></td>
+                        <td><span class="res-col-lot">${item.lot_number || '—'}</span></td>
+                        <td><span class="res-col-section">${item.section_name || '—'}</span></td>
+                        <td><span class="res-col-name">${decedentName}</span></td>
+                        <td><span class="res-col-date"><i class="far fa-calendar-alt"></i> ${_formatResDate(item.schedule_date)}</span></td>
+                        <td><span class="res-col-type">${item.lot_type_name || 'Standard'}</span></td>
                         <td>${_resStatusBadge(item.status)}</td>
                     </tr>`;
             }).join('');
@@ -1663,7 +1780,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             backgroundColor: statusData.map(d => d.color),
                             borderColor: resDark ? '#09130e' : '#ffffff',
                             borderWidth: 2,
-                            hoverOffset: 8
+                            hoverOffset: 12
                         }]
                     },
                     options: compactChartOptions({
@@ -1683,13 +1800,17 @@ document.addEventListener('DOMContentLoaded', async function() {
                                     color: resTickColor
                                 }
                             },
-                            donutSliceLabelPlugin: false,
                             tooltip: {
                                 callbacks: {
-                                    label: ctx => {
-                                        const total = ctx.dataset.data.reduce((a, b) => a + Number(b || 0), 0);
-                                        const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : '0.0';
-                                        return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+                                    label: (context) => {
+                                        const chart = context.chart;
+                                        const dataset = context.dataset;
+                                        const total = dataset.data.reduce((sum, val, idx) => {
+                                            if (typeof chart.getDataVisibility === 'function' && !chart.getDataVisibility(idx)) return sum;
+                                            return sum + (Number(val) || 0);
+                                        }, 0);
+                                        const pct = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
+                                        return ` ${context.label}: ${context.parsed} reservations (${pct}%)`;
                                     }
                                 }
                             }
@@ -1871,7 +1992,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 } else {
                     recBody.innerHTML = recRows.map(item => {
                         const name = [item.first_name, item.last_name].filter(Boolean).join(' ') || item.full_name || '—';
-                        const type = item.is_cremated == 1 ? '<span class="status-badge status-warning">Cremation</span>' : '<span class="status-badge status-info">Burial</span>';
+                        const isCrem = item.is_cremated === 'yes' || item.is_cremated === 1 || item.is_cremated === '1' || item.is_cremated === true;
+                        const type = isCrem ? '<span class="status-badge status-warning">Cremation</span>' : '<span class="status-badge status-info">Burial</span>';
                         const dod  = item.date_of_death ? new Date(item.date_of_death).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
                         return `<tr>
                             <td><strong>${name}</strong></td>
@@ -1894,20 +2016,53 @@ document.addEventListener('DOMContentLoaded', async function() {
             const dark      = isDarkMode();
             const tickColor = dark ? '#cbd5e1' : '#1e293b';
 
-            const demoCtx = document.getElementById('demographicsChart')?.getContext('2d');
-            if (demoCtx) {
+            const demoCanvas = document.getElementById('demographicsChart');
+            if (demoCanvas) {
+                const demoCtx = demoCanvas.getContext('2d');
                 if (demographicsChartInstance) demographicsChartInstance.destroy();
                 demographicsChartInstance = new Chart(demoCtx, {
                     type: 'doughnut',
                     data: {
                         labels: ['Burials', 'Cremations'],
-                        datasets: [{ data: [burials, cremations], backgroundColor: ['#2c5e47', '#d4a373'], borderColor: dark ? '#09130e' : '#ffffff', borderWidth: 2, hoverOffset: 10 }]
+                        datasets: [{
+                            data: [burials, cremations],
+                            backgroundColor: ['#2c5e47', '#d4a373'],
+                            borderColor: dark ? '#09130e' : '#ffffff',
+                            borderWidth: 2,
+                            hoverOffset: 12
+                        }]
                     },
                     options: compactChartOptions({
                         cutout: '58%',
                         plugins: {
-                            legend: { display: true, position: 'bottom', align: 'center', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 12, font: { size: 11.5, weight: '700', family: "'Inter', sans-serif" }, color: tickColor } },
-                            tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} decedents` } }
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                align: 'center',
+                                labels: {
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    boxWidth: 8,
+                                    boxHeight: 8,
+                                    padding: 12,
+                                    font: { size: 11.5, weight: '700', family: "'Inter', sans-serif" },
+                                    color: tickColor
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => {
+                                        const chart = context.chart;
+                                        const dataset = context.dataset;
+                                        const total = dataset.data.reduce((sum, val, idx) => {
+                                            if (typeof chart.getDataVisibility === 'function' && !chart.getDataVisibility(idx)) return sum;
+                                            return sum + (Number(val) || 0);
+                                        }, 0);
+                                        const pct = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
+                                        return ` ${context.label}: ${context.parsed} decedents (${pct}%)`;
+                                    }
+                                }
+                            }
                         },
                         animation: doughnutPopAnimation(700, 120)
                     })
@@ -2542,6 +2697,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
                 if (ch.options?.plugins?.legend?.labels) {
                     ch.options.plugins.legend.labels.color = tickColor;
+                }
+                if (ch.config?.type === 'doughnut' && ch.data?.datasets?.[0]) {
+                    ch.data.datasets[0].borderColor = dark ? '#09130e' : '#ffffff';
                 }
                 ch.update('none');
             });
