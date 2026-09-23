@@ -342,11 +342,11 @@ document.addEventListener('DOMContentLoaded', async function() {
                     </td>
                     <td class="col-actions">
                         <div class="action-buttons">
-                            <button type="button" class="btn-row-action btn-row-action--view btn-view" data-id="${p.payment_id}" title="View Details" aria-label="View Details">
+                            <button type="button" class="btn-row-action btn-action-icon btn-row-action--view btn-view" data-id="${p.payment_id}" title="View Details" aria-label="View Details">
                                 <i class="fas fa-eye"></i>
                             </button>
                             ${currentUser && currentUser.role === 'admin' && status !== 'Verified' ? `
-                                <button type="button" class="btn-row-action btn-row-action--cancel btn-delete-row" data-id="${p.payment_id}" title="Delete Record" aria-label="Delete Record">
+                                <button type="button" class="btn-row-action btn-action-icon btn-row-action--cancel btn-delete-row" data-id="${p.payment_id}" title="Delete Record" aria-label="Delete Record">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             ` : ''}

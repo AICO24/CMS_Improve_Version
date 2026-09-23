@@ -1997,58 +1997,111 @@
 }
 
 /* ── Manage Bookings Table Row Action Buttons ── */
+.payments-data-table .action-buttons,
+.action-buttons {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 5px !important;
+    white-space: nowrap !important;
+    vertical-align: middle !important;
+}
+
+.btn-action-icon,
 .btn-row-action {
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    font-size: 0.80rem;
-    border-radius: 7px;
-    border: 1px solid #cbd5e1;
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    min-height: 30px !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    border: 1px solid transparent !important;
+    transition: all 0.22s cubic-bezier(0.2, 0, 0.2, 1) !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
     background: #ffffff;
-    color: #475569;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+    flex-shrink: 0 !important;
+    vertical-align: middle !important;
+    box-sizing: border-box !important;
     position: relative;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    text-decoration: none;
 }
 
-.btn-row-action:hover {
-    transform: translateY(-2.5px) scale(1.08);
-    box-shadow: 0 5px 12px rgba(15, 23, 42, 0.12);
+.btn-action-icon i,
+.btn-row-action i {
+    font-size: 12px !important;
+    line-height: 1 !important;
+    display: inline-block;
+    transition: transform 0.22s ease;
+    pointer-events: none;
 }
 
+/* 1. View Button (Blue) */
+.btn-action-icon.btn-view,
+.btn-row-action--view,
+.btn-row-action.btn-view {
+    background: #eff6ff !important;
+    color: #2563eb !important;
+    border-color: #bfdbfe !important;
+}
+
+.btn-action-icon.btn-view:hover,
+.btn-row-action--view:hover,
+.btn-row-action.btn-view:hover {
+    background: #2563eb !important;
+    color: #ffffff !important;
+    border-color: #2563eb !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.32) !important;
+}
+
+.btn-action-icon.btn-view:hover i,
+.btn-row-action--view:hover i,
+.btn-row-action.btn-view:hover i {
+    transform: scale(1.15) !important;
+}
+
+/* 2. Cancel / Delete Button (Red) */
+.btn-action-icon.btn-delete-row,
+.btn-row-action--cancel,
+.btn-row-action.btn-delete-row {
+    background: #fff5f5 !important;
+    color: #dc2626 !important;
+    border-color: #fecaca !important;
+}
+
+.btn-action-icon.btn-delete-row:hover,
+.btn-row-action--cancel:hover,
+.btn-row-action.btn-delete-row:hover {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    border-color: #dc2626 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 14px rgba(220, 38, 38, 0.32) !important;
+}
+
+.btn-action-icon.btn-delete-row:hover i,
+.btn-row-action--cancel:hover i,
+.btn-row-action.btn-delete-row:hover i {
+    transform: rotate(-15deg) scale(1.15) !important;
+}
+
+/* Active & Focus states */
+.btn-action-icon:active,
 .btn-row-action:active {
-    transform: translateY(0) scale(0.96);
+    transform: scale(0.92) !important;
 }
 
-.btn-row-action--view {
-    color: #2563eb;
-    background: #eff6ff;
-    border-color: #bfdbfe;
-}
-
-.btn-row-action--view:hover {
-    background: #2563eb;
-    color: #ffffff;
-    border-color: #2563eb;
-    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.35);
-}
-
-.btn-row-action--cancel {
-    color: #dc2626;
-    background: #fff5f5;
-    border-color: #fecaca;
-}
-
-.btn-row-action--cancel:hover {
-    background: #dc2626;
-    color: #ffffff;
-    border-color: #dc2626;
-    box-shadow: 0 6px 14px rgba(220, 38, 38, 0.35);
+.btn-action-icon:focus-visible,
+.btn-row-action:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
 }
 
 /* ── Rich Empty State (Operations Standard) ── */
@@ -5348,37 +5401,59 @@ body[data-theme="dark"] .payment-badge--rejected,
     border-color: rgba(248, 113, 113, 0.3) !important;
 }
 
+/* Action Buttons Dark Mode (Exact Match with Expiration Monitoring) */
+body[data-theme="dark"] .btn-action-icon,
+[data-theme="dark"] .btn-action-icon,
 body[data-theme="dark"] .btn-row-action,
 [data-theme="dark"] .btn-row-action {
-    background: #0f172a !important;
+    background: #1e293b !important;
     border-color: #334155 !important;
-    color: #cbd5e1 !important;
 }
 
+body[data-theme="dark"] .btn-action-icon.btn-view,
+[data-theme="dark"] .btn-action-icon.btn-view,
 body[data-theme="dark"] .btn-row-action--view,
-[data-theme="dark"] .btn-row-action--view {
-    background: rgba(37, 99, 235, 0.18) !important;
+[data-theme="dark"] .btn-row-action--view,
+body[data-theme="dark"] .btn-row-action.btn-view,
+[data-theme="dark"] .btn-row-action.btn-view {
     color: #60a5fa !important;
-    border-color: rgba(37, 99, 235, 0.35) !important;
+    background: #1e293b !important;
+    border-color: #334155 !important;
 }
 
+body[data-theme="dark"] .btn-action-icon.btn-view:hover,
+[data-theme="dark"] .btn-action-icon.btn-view:hover,
 body[data-theme="dark"] .btn-row-action--view:hover,
-[data-theme="dark"] .btn-row-action--view:hover {
+[data-theme="dark"] .btn-row-action--view:hover,
+body[data-theme="dark"] .btn-row-action.btn-view:hover,
+[data-theme="dark"] .btn-row-action.btn-view:hover {
     background: #2563eb !important;
     color: #ffffff !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5) !important;
 }
 
+body[data-theme="dark"] .btn-action-icon.btn-delete-row,
+[data-theme="dark"] .btn-action-icon.btn-delete-row,
 body[data-theme="dark"] .btn-row-action--cancel,
-[data-theme="dark"] .btn-row-action--cancel {
-    background: rgba(220, 38, 38, 0.18) !important;
+[data-theme="dark"] .btn-row-action--cancel,
+body[data-theme="dark"] .btn-row-action.btn-delete-row,
+[data-theme="dark"] .btn-row-action.btn-delete-row {
     color: #f87171 !important;
-    border-color: rgba(220, 38, 38, 0.35) !important;
+    background: #1e293b !important;
+    border-color: #334155 !important;
 }
 
+body[data-theme="dark"] .btn-action-icon.btn-delete-row:hover,
+[data-theme="dark"] .btn-action-icon.btn-delete-row:hover,
 body[data-theme="dark"] .btn-row-action--cancel:hover,
-[data-theme="dark"] .btn-row-action--cancel:hover {
+[data-theme="dark"] .btn-row-action--cancel:hover,
+body[data-theme="dark"] .btn-row-action.btn-delete-row:hover,
+[data-theme="dark"] .btn-row-action.btn-delete-row:hover {
     background: #dc2626 !important;
     color: #ffffff !important;
+    border-color: #dc2626 !important;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.5) !important;
 }
 
 /* ── Pagination ── */

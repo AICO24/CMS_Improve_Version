@@ -483,20 +483,31 @@ document.addEventListener('DOMContentLoaded', async function() {
             const exceptionReason = hasException ? openRelocationExceptions.get(reqId) : '';
             const truncatedReason = req.reason ? (req.reason.length > 42 ? req.reason.substring(0, 42) + '...' : req.reason) : 'No reason specified';
 
+            const status = req.status || 'Pending';
+            const statusLower = status.toLowerCase();
+
+            let statusBadgeIcon = 'fa-clock';
+            let statusBadgeClass = 'pending';
+            if (statusLower === 'approved') {
+                statusBadgeIcon = 'fa-circle-check';
+                statusBadgeClass = 'confirmed';
+            } else if (statusLower === 'completed') {
+                statusBadgeIcon = 'fa-circle-check';
+                statusBadgeClass = 'completed';
+            } else if (statusLower === 'denied' || statusLower === 'cancelled' || statusLower === 'rejected') {
+                statusBadgeIcon = 'fa-circle-xmark';
+                statusBadgeClass = 'cancelled';
+            }
+
             return `
             <tr data-id="${req.request_id}">
-                <td class="col-req-id">
-                    <span class="reloc-id-chip" title="Relocation Request #${req.request_id}">REQ-${req.request_id}</span>
+                <td class="col-ref col-req-id">
+                    <span class="ref-pill" title="Relocation Request #${req.request_id}">#REQ-${req.request_id}</span>
                 </td>
                 <td class="col-decedent">
-                    <div class="decedent-cell">
-                        <div class="decedent-avatar" aria-hidden="true">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="decedent-info">
-                            <span class="decedent-name" title="${escapeHtml(fullName)}">${escapeHtml(fullName)}</span>
-                            <span class="decedent-meta"><i class="fas fa-hashtag"></i> ID: ${escapeHtml(String(req.deceased_id || req.decedent_id || '—'))}</span>
-                        </div>
+                    <div class="table-decedent-cell decedent-cell" title="${escapeHtml(fullName)}">
+                        <span class="decedent-name">${escapeHtml(fullName)}</span>
+                        <span class="decedent-meta"><i class="fas fa-hashtag"></i> ID: ${escapeHtml(String(req.deceased_id || req.decedent_id || '—'))}</span>
                     </div>
                 </td>
                 <td class="col-route">
@@ -524,9 +535,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 </td>
                 <td class="col-status">
                     <div class="status-cell-wrap">
-                        <span class="status-badge status-${escapeHtml(req.status.toLowerCase())}">${escapeHtml(req.status)}</span>
+                        <span class="status-badge ${statusBadgeClass} status-${statusLower}">
+                            <i class="fas ${statusBadgeIcon}"></i>
+                            <span>${escapeHtml(status)}</span>
+                        </span>
                         ${hasException ? `
-                            <span class="status-badge attention-badge" title="Needs attention: ${escapeHtml(exceptionReason)}">
+                            <span class="status-badge attention-badge aging-badge aging-warning" title="Needs attention: ${escapeHtml(exceptionReason)}">
                                 <i class="fas fa-triangle-exclamation"></i>
                                 <span>Action Req</span>
                             </span>
@@ -534,21 +548,23 @@ document.addEventListener('DOMContentLoaded', async function() {
                     </div>
                 </td>
                 <td class="col-requester">
-                    <div class="requester-cell">
-                        <span class="requester-name" title="${escapeHtml(req.requested_by_name || 'Staff / System')}"><i class="fas fa-user-circle"></i> ${escapeHtml(req.requested_by_name || 'Staff / System')}</span>
+                    <div class="table-requester-cell requester-cell" title="${escapeHtml(req.requested_by_name || 'Staff / System')}">
+                        <span class="requester-name"><i class="fas fa-user-circle"></i> ${escapeHtml(req.requested_by_name || 'Staff / System')}</span>
                         <span class="requester-date"><i class="far fa-clock"></i> ${formatDateTime(req.created_at)}</span>
                     </div>
                 </td>
-                <td class="col-actions action-buttons">
-                    <button class="btn-action-icon btn-view" data-id="${req.request_id}" title="View Details" aria-label="View Details">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="btn-action-icon btn-edit-row" data-id="${req.request_id}" title="Edit Request" aria-label="Edit Request">
-                        <i class="fas fa-pen"></i>
-                    </button>
-                    <button class="btn-action-icon btn-delete-row" data-id="${req.request_id}" title="Delete Request" aria-label="Delete Request">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                <td class="col-actions">
+                    <div class="action-buttons">
+                        <button type="button" class="btn-row-action btn-action-icon btn-row-action--view btn-view" data-id="${req.request_id}" title="View Details" aria-label="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button type="button" class="btn-row-action btn-action-icon btn-row-action--edit btn-edit-row" data-id="${req.request_id}" title="Edit Request" aria-label="Edit Request">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                        <button type="button" class="btn-row-action btn-action-icon btn-row-action--cancel btn-delete-row" data-id="${req.request_id}" title="Delete Request" aria-label="Delete Request">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
             `;
