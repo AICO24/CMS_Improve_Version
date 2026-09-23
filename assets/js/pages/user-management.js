@@ -531,6 +531,112 @@ document.addEventListener('DOMContentLoaded', async function() {
         syncBulkControls();
     });
 
+    // ==========================================
+    // View Tabs Switching (Directory vs Activity)
+    // ==========================================
+    const tabUsersDirectory = document.getElementById('tabUsersDirectory');
+    const tabSecurityActivity = document.getElementById('tabSecurityActivity');
+    const paneUsersDirectory = document.getElementById('paneUsersDirectory');
+    const paneSecurityActivity = document.getElementById('paneSecurityActivity');
+
+    function switchViewTab(targetTab) {
+        if (targetTab === 'activity') {
+            tabSecurityActivity.classList.add('active');
+            tabSecurityActivity.setAttribute('aria-selected', 'true');
+            tabUsersDirectory.classList.remove('active');
+            tabUsersDirectory.setAttribute('aria-selected', 'false');
+
+            paneSecurityActivity.style.display = 'flex';
+            paneSecurityActivity.classList.add('active');
+            paneUsersDirectory.style.display = 'none';
+            paneUsersDirectory.classList.remove('active');
+
+            loadRecentActivity();
+        } else {
+            tabUsersDirectory.classList.add('active');
+            tabUsersDirectory.setAttribute('aria-selected', 'true');
+            tabSecurityActivity.classList.remove('active');
+            tabSecurityActivity.setAttribute('aria-selected', 'false');
+
+            paneUsersDirectory.style.display = 'flex';
+            paneUsersDirectory.classList.add('active');
+            paneSecurityActivity.style.display = 'none';
+            paneSecurityActivity.classList.remove('active');
+        }
+    }
+
+    if (tabUsersDirectory) {
+        tabUsersDirectory.addEventListener('click', () => switchViewTab('directory'));
+    }
+    if (tabSecurityActivity) {
+        tabSecurityActivity.addEventListener('click', () => switchViewTab('activity'));
+    }
+
+    // ==========================================
+    // Interactive Filterable KPI Stat Cards
+    // ==========================================
+    const filterableCards = document.querySelectorAll('.stat-card-filterable');
+
+    function setActiveFilterCard(filterType) {
+        filterableCards.forEach(card => {
+            const isMatch = card.dataset.filter === filterType;
+            card.classList.toggle('is-active-filter', isMatch);
+            card.classList.toggle('active', isMatch);
+            card.setAttribute('aria-pressed', isMatch ? 'true' : 'false');
+        });
+    }
+
+    filterableCards.forEach(card => {
+        card.addEventListener('click', () => {
+            const filterType = card.dataset.filter;
+            setActiveFilterCard(filterType);
+
+            if (filterType === 'all') {
+                filterRole.value = '';
+                filterActive.value = '';
+            } else if (filterType === 'admin') {
+                filterRole.value = 'admin';
+                filterActive.value = '';
+            } else if (filterType === 'staff') {
+                filterRole.value = 'staff';
+                filterActive.value = '';
+            } else if (filterType === 'inactive') {
+                filterRole.value = '';
+                filterActive.value = '0';
+            }
+
+            // Ensure Directory tab is active when clicking a metric
+            switchViewTab('directory');
+            pagination.reset();
+            selectedUserIds.clear();
+            loadUsers();
+        });
+
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                card.click();
+            }
+        });
+    });
+
+    function syncCardFromDropdowns() {
+        const role = filterRole.value;
+        const active = filterActive.value;
+
+        if (active === '0') {
+            setActiveFilterCard('inactive');
+        } else if (role === 'admin') {
+            setActiveFilterCard('admin');
+        } else if (role === 'staff') {
+            setActiveFilterCard('staff');
+        } else if (!role && !active) {
+            setActiveFilterCard('all');
+        } else {
+            setActiveFilterCard('');
+        }
+    }
+
     const refreshFiltered = debounce(() => {
         pagination.reset();
         selectedUserIds.clear();
@@ -551,11 +657,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         loadUsers();
     });
     filterRole.addEventListener('change', () => {
+        syncCardFromDropdowns();
         pagination.reset();
         selectedUserIds.clear();
         loadUsers();
     });
     filterActive.addEventListener('change', () => {
+        syncCardFromDropdowns();
         pagination.reset();
         selectedUserIds.clear();
         loadUsers();
@@ -564,6 +672,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         searchQuery.value = '';
         filterRole.value = '';
         filterActive.value = '';
+        setActiveFilterCard('all');
         pagination.reset();
         selectedUserIds.clear();
         loadUsers();

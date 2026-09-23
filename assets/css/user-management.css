@@ -65,7 +65,9 @@
     isolation: isolate;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
     background:
         radial-gradient(circle at 12% 6%, rgba(44, 94, 71, 0.20), transparent 32%),
         radial-gradient(circle at 88% 14%, rgba(37, 99, 235, 0.14), transparent 28%),
@@ -93,10 +95,11 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
+    flex-shrink: 0;
     background:
         linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(234, 243, 238, 0.9)),
         linear-gradient(90deg, rgba(44, 94, 71, 0.10), rgba(37, 99, 235, 0.06));
-    padding: 16px 24px;
+    padding: 14px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -140,19 +143,13 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    flex: 1 0 auto;
-    padding: 18px 20px 22px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding: 12px 22px 14px;
     display: flex;
     flex-direction: column;
     gap: 8px;
-}
-
-.user-management-footer {
-    position: relative;
-    z-index: 1;
-    margin-top: 20px;
-    padding: 0 24px 22px;
-    background: transparent;
 }
 
 .user-management-footer__bottom {
@@ -331,42 +328,190 @@
     background: linear-gradient(135deg, #2b3658 0%, #465376 100%);
 }
 
-.dashboard-insights {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 18px;
-    margin-top: 14px;
-    margin-bottom: 8px;
+/* Filterable Stat Cards - aligned with payments.html & manage-reservations.html */
+.user-stats-row > .stat-card.stat-card-filterable {
+    cursor: pointer;
+    user-select: none;
+    transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
 }
 
-.dashboard-insights.single-panel .insight-panel {
-    max-width: none;
+.user-stats-row > .stat-card.stat-card-filterable:hover {
+    transform: translateY(-4px);
+    filter: saturate(1.12);
 }
 
-.insight-panel {
-    background: #ffffff;
-    border: 1px solid rgba(15, 23, 42, 0.06);
-    border-bottom: 2px solid rgba(15, 23, 42, 0.08);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.10);
-    padding: 20px;
+.user-stats-row > .stat-card.stat-card-filterable:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 2px;
 }
 
-.insight-header {
+.user-stats-row > .stat-card.stat-card-filterable.is-active-filter,
+.user-stats-row > .stat-card.stat-card-filterable.active {
+    box-shadow: 0 0 0 3px #ffffff, 0 0 0 6px #2b3658, 0 20px 42px rgba(15, 23, 42, 0.22);
+    transform: translateY(-3px);
+}
+
+/* Glassmorphic Unified User Management Card */
+.user-management-card {
+    background: rgba(255, 255, 255, 0.90);
+    border: 1px solid rgba(255, 255, 255, 0.76);
+    border-radius: 18px;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+body[data-theme='dark'] .user-management-card {
+    background: rgba(22, 30, 49, 0.90);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+}
+
+/* View Tabs Segment Bar */
+.user-view-tabs {
     display: flex;
     align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+    background: rgba(248, 250, 252, 0.7);
+    flex-shrink: 0;
+}
+
+body[data-theme='dark'] .user-view-tabs {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.55);
+}
+
+.user-view-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+
+.user-view-tab:hover {
+    color: #1e293b;
+    background: rgba(0, 0, 0, 0.04);
+}
+
+body[data-theme='dark'] .user-view-tab {
+    color: #94a3b8;
+}
+
+body[data-theme='dark'] .user-view-tab:hover {
+    color: #f1f5f9;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.user-view-tab.active {
+    background: #2b3658;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(43, 54, 88, 0.28);
+}
+
+body[data-theme='dark'] .user-view-tab.active {
+    background: #3b82f6;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+
+/* Tab Panes */
+.user-tab-pane {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding: 10px 18px 12px;
+    gap: 8px;
+}
+
+.user-tab-pane:not(.active) {
+    display: none !important;
+}
+
+/* Inner Scrollable Table Container for Zero Page Scroll */
+.user-tab-pane .table-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    max-height: calc(100vh - 355px);
+    border-radius: 12px;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    background: #ffffff;
+}
+
+body[data-theme='dark'] .user-tab-pane .table-container {
+    background: #111827;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.user-tab-pane .table-container thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: #f8fafc;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+
+body[data-theme='dark'] .user-tab-pane .table-container thead th {
+    background: #1e293b;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Security Activity Pane */
+.activity-pane-header {
+    display: flex;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    align-items: flex-start;
+    gap: 14px;
+    padding: 8px 4px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    flex-shrink: 0;
+}
+
+body[data-theme='dark'] .activity-pane-header {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.activity-pane-header h4 {
+    margin: 2px 0 4px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+body[data-theme='dark'] .activity-pane-header h4 {
+    color: #f1f5f9;
+}
+
+.activity-scroll-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    max-height: calc(100vh - 350px);
+    padding: 8px 6px 12px 2px;
 }
 
 .eyebrow {
     display: inline-block;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     color: var(--color-primary-800);
-    font-size: 0.75rem;
+    font-size: 0.74rem;
     letter-spacing: 0.08em;
     font-weight: 800;
     text-transform: uppercase;
