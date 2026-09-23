@@ -993,20 +993,55 @@ document.addEventListener('DOMContentLoaded', async function () {
         await loadExpirationData();
     }
 
+    // Active stat card & tab synchronization
+    function updateActiveStatCards() {
+        document.querySelectorAll('.expmon-stats > .stat-card').forEach((card) => {
+            const tab = card.getAttribute('data-tab');
+            const isActive = currentTab === tab;
+            card.classList.toggle('is-active-filter', isActive);
+            card.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
+    function switchExpirationTab(tab) {
+        currentTab = tab || 'all';
+        document.querySelectorAll('.records-tab-btn').forEach(b => {
+            const isMatch = (b.dataset.tab || 'all') === currentTab;
+            b.classList.toggle('active', isMatch);
+            b.setAttribute('aria-selected', isMatch ? 'true' : 'false');
+        });
+        updateActiveStatCards();
+        pagination.reset();
+        refreshExpirationView();
+    }
+
     // Sub-Tabs segmented switcher
     document.querySelectorAll('.records-tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.records-tab-btn').forEach(b => {
-                b.classList.remove('active');
-                b.setAttribute('aria-selected', 'false');
-            });
-            btn.classList.add('active');
-            btn.setAttribute('aria-selected', 'true');
-            currentTab = btn.dataset.tab || 'all';
-            pagination.reset();
-            refreshExpirationView();
+            switchExpirationTab(btn.dataset.tab || 'all');
         });
     });
+
+    // Quick filter via stat cards
+    document.querySelectorAll('.expmon-stats > .stat-card').forEach(card => {
+        const tab = card.getAttribute('data-tab');
+        if (!tab) return;
+
+        function handleCardAction() {
+            const targetTab = (currentTab === tab && tab !== 'all') ? 'all' : tab;
+            switchExpirationTab(targetTab);
+        }
+
+        card.addEventListener('click', handleCardAction);
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleCardAction();
+            }
+        });
+    });
+
+    updateActiveStatCards();
 
     // Reset filters button
     const resetFiltersBtn = document.getElementById('resetFiltersBtn');
@@ -1019,13 +1054,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (urg) urg.value = 'all';
             const stat = document.getElementById('expirationStatusFilter');
             if (stat) stat.value = 'all';
-            currentTab = 'all';
-            document.querySelectorAll('.records-tab-btn').forEach(b => {
-                b.classList.toggle('active', b.dataset.tab === 'all');
-                b.setAttribute('aria-selected', b.dataset.tab === 'all' ? 'true' : 'false');
-            });
-            pagination.reset();
-            refreshExpirationView();
+            switchExpirationTab('all');
         });
     }
 

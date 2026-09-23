@@ -115,6 +115,26 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     // ── TAB SWITCHING ──────────────────────────────────────────
+    function updateActiveStatCards() {
+        document.querySelectorAll('.bookings-stats .stat-card').forEach((card) => {
+            const action = card.getAttribute('data-action');
+            let isActive = false;
+            if (action === 'all') {
+                isActive = currentTab === 'all' && !currentStatus && !awaitingReviewOnly;
+            } else if (action === 'burial') {
+                isActive = currentTab === 'burial';
+            } else if (action === 'cremation') {
+                isActive = currentTab === 'cremation';
+            } else if (action === 'completed') {
+                isActive = currentStatus === 'Completed';
+            } else if (action === 'review') {
+                isActive = Boolean(awaitingReviewOnly);
+            }
+            card.classList.toggle('is-active-filter', isActive);
+            card.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
     function setActiveTab(tab) {
         currentTab = tab;
         tabBtns.forEach(btn => {
@@ -126,6 +146,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         newUrl.searchParams.set('service', tab);
         window.history.replaceState({}, '', newUrl);
 
+        updateActiveStatCards();
         pagination.reset();
         loadAndRenderBookings();
     }
@@ -1105,6 +1126,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         pagination.reset();
         currentQuery = searchQuery.value || '';
         currentStatus = statusFilter.value || '';
+        updateActiveStatCards();
         await loadAndRenderBookings();
     }, 250);
 
@@ -1116,6 +1138,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             awaitingReviewOnly = toggleAwaitingBtn.checked;
             toggleAwaitingBtn.setAttribute('aria-pressed', String(awaitingReviewOnly));
             statusFilter.disabled = awaitingReviewOnly;
+            updateActiveStatCards();
             pagination.reset();
             await loadAndRenderBookings();
         });
@@ -1132,8 +1155,70 @@ document.addEventListener('DOMContentLoaded', async function() {
             toggleAwaitingBtn.checked = false;
             toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
         }
+        updateActiveStatCards();
         pagination.reset();
         await loadAndRenderBookings();
+    });
+
+    // ── QUICK FILTER VIA STAT CARDS ────────────────────────────
+    document.querySelectorAll('.bookings-stats .stat-card').forEach((card) => {
+        const action = card.getAttribute('data-action');
+        if (!action) return;
+
+        async function handleCardAction() {
+            if (action === 'all') {
+                awaitingReviewOnly = false;
+                if (toggleAwaitingBtn) {
+                    toggleAwaitingBtn.checked = false;
+                    toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+                }
+                statusFilter.disabled = false;
+                statusFilter.value = '';
+                currentStatus = '';
+                setActiveTab('all');
+            } else if (action === 'burial') {
+                setActiveTab(currentTab === 'burial' ? 'all' : 'burial');
+            } else if (action === 'cremation') {
+                setActiveTab(currentTab === 'cremation' ? 'all' : 'cremation');
+            } else if (action === 'completed') {
+                if (currentStatus === 'Completed') {
+                    currentStatus = '';
+                    statusFilter.value = '';
+                } else {
+                    currentStatus = 'Completed';
+                    statusFilter.value = 'Completed';
+                    if (awaitingReviewOnly) {
+                        awaitingReviewOnly = false;
+                        if (toggleAwaitingBtn) {
+                            toggleAwaitingBtn.checked = false;
+                            toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+                        }
+                        statusFilter.disabled = false;
+                    }
+                }
+                updateActiveStatCards();
+                pagination.reset();
+                await loadAndRenderBookings();
+            } else if (action === 'review') {
+                awaitingReviewOnly = !awaitingReviewOnly;
+                if (toggleAwaitingBtn) {
+                    toggleAwaitingBtn.checked = awaitingReviewOnly;
+                    toggleAwaitingBtn.setAttribute('aria-pressed', String(awaitingReviewOnly));
+                }
+                statusFilter.disabled = awaitingReviewOnly;
+                updateActiveStatCards();
+                pagination.reset();
+                await loadAndRenderBookings();
+            }
+        }
+
+        card.addEventListener('click', handleCardAction);
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleCardAction();
+            }
+        });
     });
 
     // ── EXPORT TOOLS (REPORTS INSPIRATION) ──────────────────────

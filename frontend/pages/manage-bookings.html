@@ -80,7 +80,7 @@
             <div class="content-area">
                 <!-- ── Summary Statistics Cards (Unified System Brand Green) ── -->
                 <div class="stats-row bookings-stats">
-                    <div class="stat-card" role="button" tabindex="0" title="Filter by All Bookings">
+                    <div class="stat-card" data-action="all" role="button" tabindex="0" title="Filter by All Bookings" aria-pressed="false">
                         <div class="stat-title">
                             <span>Total Bookings</span>
                             <span class="card-icon"><i class="fas fa-calendar-days"></i></span>
@@ -88,7 +88,7 @@
                         <div class="stat-value" id="statTotalBookings">0</div>
                         <div class="stat-sub">Active &amp; scheduled services</div>
                     </div>
-                    <div class="stat-card" role="button" tabindex="0" title="Filter by Ground Burials">
+                    <div class="stat-card" data-action="burial" role="button" tabindex="0" title="Filter by Ground Burials" aria-pressed="false">
                         <div class="stat-title">
                             <span>Ground Burials</span>
                             <span class="card-icon"><i class="fas fa-monument"></i></span>
@@ -96,7 +96,7 @@
                         <div class="stat-value" id="statBurialCount">0</div>
                         <div class="stat-sub">Traditional plot reservations</div>
                     </div>
-                    <div class="stat-card" role="button" tabindex="0" title="Filter by Cremations">
+                    <div class="stat-card" data-action="cremation" role="button" tabindex="0" title="Filter by Cremations" aria-pressed="false">
                         <div class="stat-title">
                             <span>Cremations</span>
                             <span class="card-icon"><i class="fas fa-fire"></i></span>
@@ -104,7 +104,7 @@
                         <div class="stat-value" id="statCremationCount">0</div>
                         <div class="stat-sub">Columbarium &amp; niche services</div>
                     </div>
-                    <div class="stat-card" role="button" tabindex="0" title="Filter by Completed">
+                    <div class="stat-card" data-action="completed" role="button" tabindex="0" title="Filter by Completed" aria-pressed="false">
                         <div class="stat-title">
                             <span>Completed</span>
                             <span class="card-icon"><i class="fas fa-circle-check"></i></span>
@@ -112,7 +112,7 @@
                         <div class="stat-value" id="statCompletedCount">0</div>
                         <div class="stat-sub">Finished ceremonies</div>
                     </div>
-                    <div class="stat-card" role="button" tabindex="0" title="Filter by Needs Review">
+                    <div class="stat-card" data-action="review" role="button" tabindex="0" title="Filter by Needs Review" aria-pressed="false">
                         <div class="stat-title">
                             <span>Needs Review</span>
                             <span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span>

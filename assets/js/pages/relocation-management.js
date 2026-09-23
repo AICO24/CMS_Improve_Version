@@ -203,6 +203,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
+    function updateActiveStatCards() {
+        document.querySelectorAll('.reloc-stats > .stat-card').forEach((card) => {
+            const tab = card.getAttribute('data-tab');
+            let isActive = false;
+            if (tab === 'attention') {
+                isActive = Boolean(currentAttentionFilter);
+            } else if (tab === 'all') {
+                isActive = currentTab === 'all' && currentStatusFilter === 'all' && !currentAttentionFilter;
+            } else {
+                isActive = currentTab === tab && !currentAttentionFilter;
+            }
+            card.classList.toggle('is-active-filter', isActive);
+            card.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
     function switchTab(tab) {
         currentTab = tab;
         [
@@ -227,6 +243,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             currentStatusFilter = 'all';
         }
 
+        updateActiveStatCards();
         renderActiveFilterChips();
         pagination.reset();
         loadAndRenderRequests();
@@ -263,6 +280,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     if (b) b.classList.toggle('active', b.dataset.tab === 'all');
                 });
             }
+            updateActiveStatCards();
             renderActiveFilterChips();
             pagination.reset();
             loadAndRenderRequests();
@@ -272,11 +290,46 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (attentionFilter) {
         attentionFilter.addEventListener('change', () => {
             currentAttentionFilter = attentionFilter.checked;
+            updateActiveStatCards();
             renderActiveFilterChips();
             pagination.reset();
             loadAndRenderRequests();
         });
     }
+
+    // ── QUICK FILTER VIA STAT CARDS ────────────────────────────
+    document.querySelectorAll('.reloc-stats > .stat-card').forEach((card) => {
+        const tab = card.getAttribute('data-tab');
+        if (!tab) return;
+
+        function handleCardAction() {
+            if (tab === 'attention') {
+                attentionFilter.checked = !currentAttentionFilter;
+                currentAttentionFilter = attentionFilter.checked;
+                updateActiveStatCards();
+                renderActiveFilterChips();
+                pagination.reset();
+                loadAndRenderRequests();
+            } else {
+                if (currentAttentionFilter) {
+                    attentionFilter.checked = false;
+                    currentAttentionFilter = false;
+                }
+                const targetTab = (currentTab === tab && tab !== 'all') ? 'all' : tab;
+                switchTab(targetTab);
+            }
+        }
+
+        card.addEventListener('click', handleCardAction);
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleCardAction();
+            }
+        });
+    });
+
+    updateActiveStatCards();
 
     if (exportCsvBtn) {
         exportCsvBtn.addEventListener('click', () => {

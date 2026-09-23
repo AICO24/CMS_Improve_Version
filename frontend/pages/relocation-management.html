@@ -157,7 +157,7 @@
                 <div class="content-area">
                 <!-- Summary Statistics — at top for executive overview (Unified System Brand Green) -->
                 <div class="stats-row reloc-stats">
-                    <div class="stat-card" role="button" tabindex="0" title="Filter by All Requests">
+                    <div class="stat-card" data-tab="all" role="button" tabindex="0" title="Filter by All Requests" aria-pressed="false">
                         <div class="stat-title">
                             <span>Total Requests</span>
                             <span class="card-icon"><i class="fas fa-truck-moving"></i></span>
@@ -165,7 +165,7 @@
                         <div class="stat-value" id="totalCount">0</div>
                         <div class="stat-sub">All time recorded</div>
                     </div>
-                    <div class="stat-card" role="button" tabindex="0" title="Filter by Pending Review">
+                    <div class="stat-card" data-tab="pending" role="button" tabindex="0" title="Filter by Pending Review" aria-pressed="false">
                         <div class="stat-title">
                             <span>Pending Review</span>
                             <span class="card-icon"><i class="fas fa-clock"></i></span>
@@ -173,7 +173,7 @@
                         <div class="stat-value" id="pendingCount">0</div>
                         <div class="stat-sub">Awaiting approval</div>
                     </div>
-                    <div class="stat-card" role="button" tabindex="0" title="Filter by Approved">
+                    <div class="stat-card" data-tab="approved" role="button" tabindex="0" title="Filter by Approved" aria-pressed="false">
                         <div class="stat-title">
                             <span>Approved</span>
                             <span class="card-icon"><i class="fas fa-calendar-check"></i></span>
@@ -181,7 +181,7 @@
                         <div class="stat-value" id="approvedCount">0</div>
                         <div class="stat-sub">Ready for transfer</div>
                     </div>
-                    <div class="stat-card" role="button" tabindex="0" title="Filter by Completed">
+                    <div class="stat-card" data-tab="completed" role="button" tabindex="0" title="Filter by Completed" aria-pressed="false">
                         <div class="stat-title">
                             <span>Completed</span>
                             <span class="card-icon"><i class="fas fa-circle-check"></i></span>
@@ -189,7 +189,7 @@
                         <div class="stat-value" id="completedCount">0</div>
                         <div class="stat-sub">Transferred remains</div>
                     </div>
-                    <div class="stat-card" role="button" tabindex="0" title="Filter by Needs Attention">
+                    <div class="stat-card" data-tab="attention" role="button" tabindex="0" title="Filter by Needs Attention" aria-pressed="false">
                         <div class="stat-title">
                             <span>Needs Attention</span>
                             <span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span>

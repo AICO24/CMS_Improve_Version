@@ -80,7 +80,7 @@
                 <div class="content-area">
                 <!-- Summary Statistics — 5 Executive Cards (Unified System Brand Green) -->
                 <div class="stats-row expmon-stats">
-                    <div class="stat-card" role="button" tabindex="0" title="Filter by All Monitored Leases">
+                    <div class="stat-card" data-tab="all" role="button" tabindex="0" title="Filter by All Monitored Leases" aria-pressed="false">
                         <div class="stat-title">
                             <span>Total Monitored</span>
                             <span class="card-icon"><i class="fas fa-hourglass-half"></i></span>
@@ -88,7 +88,7 @@
                         <div class="stat-value" id="totalTrackedCount">0</div>
                         <div class="stat-sub">Tracked lease records</div>
                     </div>
-                    <div class="stat-card" role="button" tabindex="0" title="Filter by Expiring Soon">
+                    <div class="stat-card" data-tab="expiring" role="button" tabindex="0" title="Filter by Expiring Soon" aria-pressed="false">
                         <div class="stat-title">
                             <span>Expiring Soon</span>
                             <span class="card-icon"><i class="fas fa-clock"></i></span>
@@ -96,7 +96,7 @@
                         <div class="stat-value" id="expiringSoonCount">0</div>
                         <div class="stat-sub">Next 30 days</div>
                     </div>
-                    <div class="stat-card" role="button" tabindex="0" title="Filter by Expired / Overdue">
+                    <div class="stat-card" data-tab="expired" role="button" tabindex="0" title="Filter by Expired / Overdue" aria-pressed="false">
                         <div class="stat-title">
                             <span>Expired / Overdue</span>
                             <span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span>
@@ -104,7 +104,7 @@
                         <div class="stat-value" id="expiredCount">0</div>
                         <div class="stat-sub">Past due lease</div>
                     </div>
-                    <div class="stat-card" role="button" tabindex="0" title="Filter by Renewals Due">
+                    <div class="stat-card" data-tab="renewed" role="button" tabindex="0" title="Filter by Renewals Due" aria-pressed="false">
                         <div class="stat-title">
                             <span>Renewals Due</span>
                             <span class="card-icon"><i class="fas fa-rotate"></i></span>
@@ -112,7 +112,7 @@
                         <div class="stat-value" id="renewalsDueCount">0</div>
                         <div class="stat-sub">Pending renewal</div>
                     </div>
-                    <div class="stat-card" role="button" tabindex="0" title="Filter by Exhumation Queue">
+                    <div class="stat-card" data-tab="exhumation" role="button" tabindex="0" title="Filter by Exhumation Queue" aria-pressed="false">
                         <div class="stat-title">
                             <span>Exhumation Queue</span>
                             <span class="card-icon"><i class="fas fa-truck-moving"></i></span>
