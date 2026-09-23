@@ -476,30 +476,37 @@
         </div>
     </div>
 
-    <div id="viewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
-        <div class="modal-content payment-detail-modal">
-            <!-- Modern Executive Header matching Lot/Cremation/Decedent -->
-            <div class="modal-header-custom no-print">
-                <div class="modal-title-group">
-                    <span class="modal-subtitle-chip"><i class="fas fa-file-invoice"></i> Finance Department</span>
-                    <h3 id="viewModalTitle" class="modal-heading-main"><i class="fas fa-receipt"></i> Payment Details</h3>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         ANTIGRAVITY ORIGINAL: ZERO-SCROLL SPLIT-DECK ARCHITECTURE
+         Left: Official Financial Voucher & Amount Settlement Engine
+         Right: Settlement Parameters, Linked Service, & Verification Audit
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div id="viewModal" class="modal modal-deck-overlay" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
+        <div class="modal-deck-card modal-deck-card--view resmodal-window">
+            <div class="deck-header no-print">
+                <div class="deck-header-info">
+                    <div class="deck-avatar-halo deck-avatar-halo--gold">
+                        <i class="fas fa-receipt"></i>
+                    </div>
+                    <div class="deck-title-block">
+                        <div class="deck-meta-strip">
+                            <span class="deck-kicker" style="color: #b45309;"><i class="fas fa-file-invoice-dollar"></i> OFFICIAL FINANCIAL VOUCHER</span>
+                            <span id="viewHeaderStatusBadge" class="status-pill status-verified"><span class="dot"></span>Verified</span>
+                        </div>
+                        <h3 id="viewModalTitle" class="deck-title">Payment &amp; Transaction Details</h3>
+                    </div>
                 </div>
-                <div class="modal-header-actions">
-                    <span id="viewHeaderStatusBadge" class="status-pill status-verified"><span class="dot"></span>Verified</span>
-                    <button type="button" class="close-view" id="closeViewModalBtn" aria-label="Close">&times;</button>
-                </div>
+                <button type="button" class="deck-close-btn close-view" id="closeViewModalBtn" aria-label="Close modal"><i class="fas fa-xmark"></i></button>
             </div>
 
-            <!-- Scrollable Body with full contents -->
-            <div class="payment-view-body">
-                <div id="viewDetails"></div>
-            </div>
+            <!-- Zero-Scroll Split-Deck Body Container -->
+            <div id="viewDetails" class="split-deck-body"></div>
 
             <!-- Modal Action Footer (Print, Verify, Reject, Close) -->
-            <div class="payment-view-footer no-print" id="viewModalFooter">
-                <div class="payment-view-footer-left" id="viewModalFooterActions"></div>
-                <div class="payment-view-footer-right">
-                    <button type="button" class="btn-close-view-footer" id="closeViewFooterBtn">
+            <div class="deck-footer no-print" id="viewModalFooter">
+                <div class="modal-actions-left" id="viewModalFooterActions"></div>
+                <div class="modal-actions-right">
+                    <button type="button" class="btn-deck-cancel close-view" id="closeViewFooterBtn">
                         <i class="fas fa-xmark"></i> Close
                     </button>
                 </div>

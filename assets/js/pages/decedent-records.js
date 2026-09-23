@@ -401,7 +401,9 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (aiToggleCaret) aiToggleCaret.classList.toggle('is-open', !isOpen);
         });
     }
-    document.querySelector('.close-view').addEventListener('click', () => viewModal.style.display = 'none');
+    document.querySelectorAll('#viewModal .close-view, #closeViewModalBtn').forEach(btn => {
+        btn.addEventListener('click', () => viewModal.style.display = 'none');
+    });
     document.getElementById('openImportModal').addEventListener('click', () => openImportModal());
     document.querySelector('.close-import').addEventListener('click', () => { importModal.style.display = 'none'; });
     window.addEventListener('click', (e) => {
@@ -1453,6 +1455,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     function renderActivityTimeline(entries) {
         const timelineEl = document.getElementById('viewActivityTimeline');
         if (!timelineEl) return;
+        const countPill = document.getElementById('viewAuditCountPill');
+        if (countPill) countPill.textContent = Array.isArray(entries) ? entries.length : 0;
 
         if (!Array.isArray(entries) || entries.length === 0) {
             timelineEl.innerHTML = '<p class="activity-empty"><i class="fas fa-clock-rotate-left"></i> No activity recorded yet for this record.</p>';
@@ -2035,6 +2039,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     function renderDocumentsList(documents) {
         const listEl = document.getElementById('viewDocumentsList');
         if (!listEl) return;
+        const countPill = document.getElementById('viewDocsCountPill');
+        if (countPill) countPill.textContent = Array.isArray(documents) ? documents.length : 0;
 
         if (documents.length === 0) {
             listEl.innerHTML = '<p class="activity-empty"><i class="fas fa-folder-open"></i> No documents attached to this record yet.</p>';

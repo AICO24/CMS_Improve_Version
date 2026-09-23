@@ -530,65 +530,90 @@
         </div>
     </div>
 
-    <!-- View Modal -->
-    <div id="viewModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
-        <div class="modal-content modal--view">
-            <button type="button" class="close-view" aria-label="Close"><i class="fas fa-xmark"></i></button>
-            <div class="modal-header-compact view-modal-header">
-                <div class="modal-header-icon-wrap view-header-icon">
-                    <i class="fas fa-id-card-clip"></i>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         ANTIGRAVITY ORIGINAL: ZERO-SCROLL SPLIT-DECK ARCHITECTURE
+         Left: Dossier Hero Card & Vital/Burial Parameters
+         Right: Attached Permits & Audit Activity Stream
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div id="viewModal" class="modal modal-deck-overlay" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
+        <div class="modal-deck-card modal-deck-card--view resmodal-window">
+            <div class="deck-header">
+                <div class="deck-header-info">
+                    <div class="deck-avatar-halo deck-avatar-halo--emerald">
+                        <i class="fas fa-id-card-clip"></i>
+                    </div>
+                    <div class="deck-title-block">
+                        <div class="deck-meta-strip">
+                            <span class="deck-kicker" style="color: #047857;"><i class="fas fa-book-bookmark"></i> OFFICIAL INTERMENT DOSSIER</span>
+                        </div>
+                        <h3 id="viewModalTitle" class="deck-title">Decedent Record Details</h3>
+                    </div>
                 </div>
-                <div>
-                    <h3 id="viewModalTitle">Decedent Record Details</h3>
-                    <p class="modal-header-subtitle">Interment, plot allocation, and official documentation</p>
+                <button type="button" class="deck-close-btn close-view" id="closeViewModalBtn" aria-label="Close modal"><i class="fas fa-xmark"></i></button>
+            </div>
+
+            <div class="split-deck-body">
+                <!-- Left Column: Hero Card + Vital & Burial Details Grid -->
+                <div class="deck-pane deck-pane--left">
+                    <div id="viewDetails"></div>
+                </div>
+
+                <!-- Right Column: Attached Permits & Audit Timeline -->
+                <div class="deck-pane deck-pane--right">
+                    <!-- Attached Documents & Permits -->
+                    <details class="view-collapsible-section" id="viewDocsCollapsible" open>
+                        <summary class="view-section-summary">
+                            <span class="view-section-title"><i class="fas fa-folder-open"></i> Attached Documents &amp; Permits</span>
+                            <span class="view-count-pill" id="viewDocsCountPill">0</span>
+                        </summary>
+                        <div class="view-section-content">
+                            <div id="viewDocumentsList" class="documents-list"></div>
+                            <div class="documents-upload-bar">
+                                <select id="documentTypeSelect" aria-label="Document type" class="document-type-select">
+                                    <option value="death_certificate">Death Certificate</option>
+                                    <option value="burial_permit">Burial Permit</option>
+                                    <option value="other">Other Document</option>
+                                </select>
+                                <label for="documentFileInput" class="custom-file-picker" id="documentFileLabel" tabindex="0" role="button">
+                                    <i class="fas fa-paperclip"></i>
+                                    <span id="documentFileText">Select file (.pdf, .jpg, .png)</span>
+                                </label>
+                                <input type="file" id="documentFileInput"
+                                    accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" hidden>
+                                <button type="button" class="btn-secondary upload-doc-btn" id="uploadDocumentBtn">
+                                    <i class="fas fa-arrow-up-from-bracket"></i> Upload
+                                </button>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Activity & Audit Trail -->
+                    <details class="view-collapsible-section" id="viewAuditCollapsible" style="margin-top: 10px;" open>
+                        <summary class="view-section-summary">
+                            <span class="view-section-title"><i class="fas fa-clock-rotate-left"></i> Activity &amp; Audit Trail</span>
+                            <span class="view-count-pill" id="viewAuditCountPill">0</span>
+                        </summary>
+                        <div class="view-section-content">
+                            <div id="viewActivityTimeline" class="activity-timeline"></div>
+                        </div>
+                    </details>
                 </div>
             </div>
 
-            <!-- View Details Container (Hero Card + 2-Column Details Grid) -->
-            <div id="viewDetails"></div>
-
-            <!-- Batch K1 (document upload): death certificate/burial permit attachments -->
-            <div class="documents-section">
-                <div class="section-title-wrap">
-                    <h4 class="view-section-title"><i class="fas fa-folder-open"></i> Attached Documents & Permits</h4>
-                </div>
-                <div id="viewDocumentsList" class="documents-list"></div>
-                <div class="documents-upload-bar">
-                    <select id="documentTypeSelect" aria-label="Document type" class="document-type-select">
-                        <option value="death_certificate">Death Certificate</option>
-                        <option value="burial_permit">Burial Permit</option>
-                        <option value="other">Other Document</option>
-                    </select>
-                    <label for="documentFileInput" class="custom-file-picker" id="documentFileLabel" tabindex="0" role="button">
-                        <i class="fas fa-paperclip"></i>
-                        <span id="documentFileText">Select file (.pdf, .jpg, .png)</span>
-                    </label>
-                    <input type="file" id="documentFileInput"
-                        accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" hidden>
-                    <button type="button" class="btn-secondary upload-doc-btn" id="uploadDocumentBtn">
-                        <i class="fas fa-arrow-up-from-bracket"></i> Upload
+            <!-- Modal Action Footer -->
+            <div class="deck-footer">
+                <div class="modal-actions-left">
+                    <button type="button" class="btn-print-clearance btn-print-cert" id="printCertificateBtn" title="Print official memorial & burial certificate">
+                        <i class="fas fa-print"></i>
+                        <span>Print Memorial Certificate</span>
                     </button>
                 </div>
-            </div>
-
-            <!-- Batch D (activity history): audit logs scoped to this record -->
-            <div class="activity-timeline-section">
-                <div class="section-title-wrap">
-                    <h4 class="view-section-title"><i class="fas fa-clock-rotate-left"></i> Activity & Audit Trail</h4>
+                <div class="modal-actions-right" style="display: flex; gap: 8px; align-items: center;">
+                    <button type="button" class="btn-edit" id="editFromView">
+                        <span class="edit-icon"><i class="fas fa-pen"></i></span>
+                        <span class="edit-text">Edit Record</span>
+                    </button>
                 </div>
-                <div id="viewActivityTimeline" class="activity-timeline"></div>
-            </div>
-
-            <div class="view-modal-footer">
-                <button type="button" class="btn-secondary btn-print-cert" id="printCertificateBtn" title="Print official memorial & burial certificate">
-                    <i class="fas fa-print"></i> Print Memorial Certificate
-                </button>
-                <button class="btn-edit" id="editFromView">
-                    <span class="edit-text">Edit Record</span>
-                    <span class="edit-icon">
-                        <i class="fas fa-pen"></i>
-                    </span>
-                </button>
             </div>
         </div>
     </div>
