@@ -79,10 +79,33 @@ document.addEventListener('DOMContentLoaded', async function() {
             .replace(/'/g, '&#039;');
     }
 
+    // Helper: Format Topic Identifier to Human-Readable Title
+    function formatTopicTitle(slug) {
+        if (!slug) return 'Untitled Topic';
+        const titleMap = {
+            'required_documents': 'Required Documents',
+            'fees_and_pricing': 'Fees & Pricing',
+            'cancellation_policy': 'Cancellation Policy',
+            'booking_lead_time': 'Booking Lead Time & Schedules',
+            'lot_type_differences': 'Lot Types & Options',
+            'payment_process': 'Payment Process & Verification',
+            'after_booking': 'After Booking Guidelines',
+            'payment_instructions': 'Payment Instructions & Channels',
+            'visiting_hours': 'Visiting Hours & Office Hours',
+            'cemetery_location': 'Cemetery Location & Office',
+            'services_overview': 'Services Overview'
+        };
+        const key = String(slug).toLowerCase().trim();
+        if (titleMap[key]) return titleMap[key];
+        return slug
+            .replace(/[_-]+/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
     // ====================================================
     // Tab Switching Logic
     // ====================================================
-    const tabBtns = document.querySelectorAll('.ai-tab-btn');
+    const tabBtns = document.querySelectorAll('.records-tab-btn, .ai-tab-btn');
     const panelKnowledge = document.getElementById('panelKnowledge');
     const panelDiagnostics = document.getElementById('panelDiagnostics');
 
@@ -93,14 +116,139 @@ document.addEventListener('DOMContentLoaded', async function() {
             btn.classList.add('active');
 
             if (target === 'knowledge') {
-                panelKnowledge.classList.add('active');
-                panelDiagnostics.classList.remove('active');
+                if (panelKnowledge) {
+                    panelKnowledge.classList.add('active');
+                    panelKnowledge.style.display = '';
+                }
+                if (panelDiagnostics) {
+                    panelDiagnostics.classList.remove('active');
+                    panelDiagnostics.style.display = 'none';
+                }
+                setActiveStatCard('statTopicsCard');
             } else {
-                panelKnowledge.classList.remove('active');
-                panelDiagnostics.classList.add('active');
+                if (panelKnowledge) {
+                    panelKnowledge.classList.remove('active');
+                    panelKnowledge.style.display = 'none';
+                }
+                if (panelDiagnostics) {
+                    panelDiagnostics.classList.add('active');
+                    panelDiagnostics.style.display = '';
+                }
+                setActiveStatCard('statHealthCard');
             }
         });
     });
+
+    // ====================================================
+    // Interactive KPI Stat Cards
+    // ====================================================
+    const statCards = document.querySelectorAll('.ai-stats .stat-card');
+
+    function setActiveStatCard(cardId) {
+        statCards.forEach(card => {
+            const isMatch = (card.id === cardId);
+            card.classList.toggle('is-active-filter', isMatch);
+            card.classList.toggle('active', isMatch);
+            card.setAttribute('aria-pressed', isMatch ? 'true' : 'false');
+        });
+    }
+
+    function switchAiTab(tabName) {
+        const tabBtn = document.querySelector(`.records-tab-btn[data-tab="${tabName}"], .ai-tab-btn[data-tab="${tabName}"]`);
+        if (tabBtn) tabBtn.click();
+    }
+
+    const statHealthCard = document.getElementById('statHealthCard');
+    const statTopicsCard = document.getElementById('statTopicsCard');
+    const statAttentionCard = document.getElementById('statAttentionCard');
+    const statBriefingCard = document.getElementById('statBriefingCard');
+
+    if (statHealthCard) {
+        statHealthCard.addEventListener('click', () => {
+            setActiveStatCard('statHealthCard');
+            switchAiTab('diagnostics');
+            const target = document.querySelector('.diag-health-card');
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.classList.add('highlight-pulse');
+                setTimeout(() => target.classList.remove('highlight-pulse'), 1500);
+            }
+            const pingBtn = document.getElementById('testHealthBtn');
+            if (pingBtn) pingBtn.click();
+        });
+        statHealthCard.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                statHealthCard.click();
+            }
+        });
+    }
+
+    if (statTopicsCard) {
+        statTopicsCard.addEventListener('click', () => {
+            setActiveStatCard('statTopicsCard');
+            switchAiTab('knowledge');
+            if (knowledgeSearchInput) {
+                knowledgeSearchInput.value = '';
+                applyKnowledgeFilter();
+            }
+            if (panelKnowledge) {
+                panelKnowledge.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+        statTopicsCard.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                statTopicsCard.click();
+            }
+        });
+    }
+
+    if (statAttentionCard) {
+        statAttentionCard.addEventListener('click', () => {
+            setActiveStatCard('statAttentionCard');
+            const isCurrentlyOnDiagnostics = panelDiagnostics && panelDiagnostics.classList.contains('active');
+            if (isCurrentlyOnDiagnostics) {
+                // If already on Diagnostics, navigate directly to Exceptions page
+                window.location.href = 'exceptions.html';
+            } else {
+                switchAiTab('diagnostics');
+                const target = document.getElementById('diagAttentionCard');
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    target.classList.add('highlight-pulse');
+                    setTimeout(() => target.classList.remove('highlight-pulse'), 1500);
+                }
+            }
+        });
+        statAttentionCard.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                statAttentionCard.click();
+            }
+        });
+    }
+
+    if (statBriefingCard) {
+        statBriefingCard.addEventListener('click', () => {
+            setActiveStatCard('statBriefingCard');
+            switchAiTab('diagnostics');
+            const target = document.querySelector('.diag-briefing-card');
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.classList.add('highlight-pulse');
+                setTimeout(() => target.classList.remove('highlight-pulse'), 1500);
+            }
+            const refreshBtn = document.getElementById('refreshDigestBtn');
+            if (refreshBtn) refreshBtn.click();
+        });
+        statBriefingCard.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                statBriefingCard.click();
+            }
+        });
+    }
 
     // ====================================================
     // Tab 1: Knowledge Base Management & Pagination
@@ -150,8 +298,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         } else {
             filteredKnowledge = allKnowledge.filter(item => {
                 const topic = (item.topic || '').toLowerCase();
+                const friendlyTitle = formatTopicTitle(item.topic || '').toLowerCase();
                 const content = (item.content || '').toLowerCase();
-                return topic.includes(query) || content.includes(query);
+                return topic.includes(query) || friendlyTitle.includes(query) || content.includes(query);
             });
         }
         currentPage = 1;
@@ -173,26 +322,30 @@ document.addEventListener('DOMContentLoaded', async function() {
         } else {
             aiKnowledgeBody.innerHTML = pageItems.map(item => {
                 const id = item.knowledge_id;
-                const topic = item.topic || 'untitled';
+                const rawTopic = item.topic || 'untitled';
+                const displayTitle = formatTopicTitle(rawTopic);
                 const content = item.content || '';
                 const length = content.length;
                 return `
                     <tr data-id="${id}">
-                        <td>
-                            <span class="topic-slug-badge" title="${escapeHtml(topic)}">${escapeHtml(topic)}</span>
+                        <td class="col-topic">
+                            <div class="topic-title-cell">
+                                <span class="topic-display-title" title="${escapeHtml(displayTitle)}">${escapeHtml(displayTitle)}</span>
+                                <span class="topic-slug-pill" title="Identifier: #${escapeHtml(rawTopic)}">#${escapeHtml(rawTopic)}</span>
+                            </div>
                         </td>
-                        <td>
+                        <td class="col-content">
                             <div class="content-preview-cell" title="${escapeHtml(content)}">${escapeHtml(content)}</div>
                         </td>
-                        <td style="text-align: center;">
+                        <td class="col-length" style="text-align: center;">
                             <span class="char-badge">${length} chars</span>
                         </td>
-                        <td>
-                            <div class="action-buttons-wrap">
-                                <button type="button" class="btn-icon-action btn-edit-topic" data-id="${id}" title="Edit topic">
+                        <td class="col-actions">
+                            <div class="action-buttons">
+                                <button type="button" class="btn-row-action btn-row-action--edit btn-edit-topic" data-id="${id}" title="Edit Topic Details" aria-label="Edit topic">
                                     <i class="fas fa-pen-to-square"></i>
                                 </button>
-                                <button type="button" class="btn-icon-action btn-delete-topic" data-id="${id}" data-topic="${escapeHtml(topic)}" title="Delete topic">
+                                <button type="button" class="btn-row-action btn-row-action--delete btn-delete-topic" data-id="${id}" data-topic="${escapeHtml(displayTitle)}" title="Delete Knowledge Topic" aria-label="Delete topic">
                                     <i class="fas fa-trash-can"></i>
                                 </button>
                             </div>

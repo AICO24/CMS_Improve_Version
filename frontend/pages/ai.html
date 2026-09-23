@@ -20,10 +20,9 @@
     <link rel="stylesheet" href="../../assets/css/components/tables.css?v=2">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/ai.css?v=3">
-
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/ai.css?v=4">
 </head>
 <body class="dashboard-body">
 <script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
@@ -154,223 +153,250 @@
             <div class="content-area" id="contentArea">
                 <p class="section-label"><i class="fas fa-brain"></i> AI Assistant Knowledge Base &amp; Automation Diagnostics</p>
 
-                <!-- 4 KPI Metric Cards -->
+                <!-- 4 KPI Metric Cards (Interactive) -->
                 <div class="stats-row ai-stats">
-                    <div class="stat-card accent-teal" id="statHealthCard">
+                    <div class="stat-card stat-card-filterable" id="statHealthCard" role="button" tabindex="0" title="Check AI Service Connectivity &amp; Diagnostics" aria-pressed="false" data-stat="health">
                         <div class="stat-title">
-                            <span class="stat-title-label"><span class="card-icon"><i class="fas fa-server"></i></span> Service Status</span>
+                            <span class="stat-title-label">Service Status</span>
+                            <span class="card-icon"><i class="fas fa-server"></i></span>
                         </div>
                         <div class="stat-value" id="healthStatus">Checking...</div>
                         <div class="stat-sub" id="serviceHealthSub">Connecting to AI Service</div>
                     </div>
-                    <div class="stat-card accent-primary" id="statTopicsCard">
+                    <div class="stat-card stat-card-filterable is-active-filter active" id="statTopicsCard" role="button" tabindex="0" title="View &amp; filter Grounding Knowledge Topics" aria-pressed="true" data-stat="topics">
                         <div class="stat-title">
-                            <span class="stat-title-label"><span class="card-icon"><i class="fas fa-book-bookmark"></i></span> Active Topics</span>
+                            <span class="stat-title-label">Active Topics</span>
+                            <span class="card-icon"><i class="fas fa-book-bookmark"></i></span>
                         </div>
                         <div class="stat-value" id="topicsCount">0</div>
                         <div class="stat-sub">Grounding Rules &amp; FAQs</div>
                     </div>
-                    <div class="stat-card accent-amber" id="statAttentionCard">
+                    <div class="stat-card stat-card-filterable" id="statAttentionCard" role="button" tabindex="0" title="Review items requiring human attention &amp; open exceptions" aria-pressed="false" data-stat="attention">
                         <div class="stat-title">
-                            <span class="stat-title-label"><span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span> Needs Attention</span>
+                            <span class="stat-title-label">Needs Attention</span>
+                            <span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span>
                         </div>
                         <div class="stat-value" id="attentionCount">0</div>
                         <div class="stat-sub" id="attentionSub">Checking pending items...</div>
                     </div>
-                    <div class="stat-card accent-blue" id="statBriefingCard">
+                    <div class="stat-card stat-card-filterable" id="statBriefingCard" role="button" tabindex="0" title="View Today's Operational Briefing" aria-pressed="false" data-stat="briefing">
                         <div class="stat-title">
-                            <span class="stat-title-label"><span class="card-icon"><i class="fas fa-robot"></i></span> Today's Briefing</span>
+                            <span class="stat-title-label">Today's Briefing</span>
+                            <span class="card-icon"><i class="fas fa-robot"></i></span>
                         </div>
                         <div class="stat-value" id="briefingStatusVal">Active</div>
                         <div class="stat-sub" id="briefingMeta">Daily automation summary</div>
                     </div>
                 </div>
 
-                <!-- Unified Glassmorphic AI Center Card -->
-                <div class="ai-mgmt-card">
-                    <!-- Tab Switcher Navigation -->
-                    <div class="ai-tabs-nav">
-                        <button type="button" class="ai-tab-btn active" id="tabBtnKnowledge" data-tab="knowledge">
-                            <i class="fas fa-book-bookmark"></i>
-                            <span>Assistant Knowledge Base</span>
-                            <span class="tab-badge" id="knowledgeTabBadge">0</span>
-                        </button>
-                        <button type="button" class="ai-tab-btn" id="tabBtnDiagnostics" data-tab="diagnostics">
-                            <i class="fas fa-chart-line"></i>
-                            <span>Operations Briefing &amp; Diagnostics</span>
-                            <span class="tab-badge badge-pulse" id="healthTabBadge">Online</span>
-                        </button>
-                    </div>
-
-                    <!-- TAB 1: Assistant Knowledge Base -->
-                    <div class="ai-tab-panel active" id="panelKnowledge">
-                        <!-- Clean Single-Line Toolbar -->
-                        <div class="toolbar-row">
-                            <div class="toolbar-main-row">
-                                <div class="toolbar-filters">
-                                    <div class="search-field search-field--with-action">
-                                        <input type="text" id="knowledgeSearchInput" class="search-field__input" placeholder=" ">
-                                        <label for="knowledgeSearchInput" class="search-field__label">Search topic slug or content keyword...</label>
-                                        <span class="search-field__icon" aria-hidden="true">
-                                            <i class="fas fa-search"></i>
-                                        </span>
-                                    </div>
-                                    <button class="btn-secondary" id="clearKnowledgeSearchBtn" title="Clear search"><i class="fas fa-rotate-left"></i><span>Clear</span></button>
-                                </div>
-                                <div class="toolbar-actions-panel">
-                                    <div class="toolbar-actions">
-                                        <button class="btn-primary btn-action-pill" id="addKnowledgeBtn"><i class="fas fa-plus"></i><span>Add Topic</span></button>
-                                        <button class="btn-secondary btn-action-pill" id="refreshKnowledgeBtn" title="Reload knowledge topics"><i class="fas fa-rotate-right"></i><span>Refresh</span></button>
-                                    </div>
-                                </div>
-                            </div>
+                <!-- ── BOX 1: Standalone Control Panel (Top Box) ── -->
+                <div class="ai-control-panel bookings-control-panel">
+                    <!-- Top Row: Tabs & Action Buttons -->
+                    <div class="panel-top-row">
+                        <div class="records-tabs-track" role="tablist" aria-label="AI Views">
+                            <button type="button" class="records-tab-btn active" data-tab="knowledge" id="tabBtnKnowledge" aria-selected="true">
+                                <i class="fas fa-book-bookmark"></i>
+                                <span>Assistant Knowledge Base</span>
+                                <span class="tab-badge" id="knowledgeTabBadge">0</span>
+                            </button>
+                            <button type="button" class="records-tab-btn" data-tab="diagnostics" id="tabBtnDiagnostics" aria-selected="false">
+                                <i class="fas fa-chart-line"></i>
+                                <span>Operations &amp; Diagnostics</span>
+                                <span class="tab-badge badge-pulse" id="healthTabBadge">Online</span>
+                            </button>
                         </div>
 
-                        <!-- Inner-scrollable Table with Sticky Header -->
-                        <div class="table-container">
-                            <table class="data-table" id="aiKnowledgeTable">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 220px;">Topic / Identifier</th>
-                                        <th>Authoritative Knowledge Content</th>
-                                        <th style="width: 100px; text-align: center;">Length</th>
-                                        <th style="width: 120px; text-align: right;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="aiKnowledgeBody">
-                                    <tr><td colspan="4" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading knowledge base...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Standardized Pagination -->
-                        <div class="pagination" id="knowledgePagination">
-                            <span class="page-info" id="knowledgePageInfo">Page 1 of 1 • 0 topics</span>
-                            <div class="pagination-right">
-                                <div class="pagination-jump">
-                                    <span>Jump to page</span>
-                                    <input type="number" id="knowledgeJumpInput" min="1" max="1" placeholder="№">
-                                    <button type="button" class="btn-secondary btn-sm" id="knowledgeJumpBtn"><i class="fas fa-arrow-right"></i> Go</button>
-                                </div>
-                                <div class="pagination-controls">
-                                    <button class="btn-secondary btn-sm" id="knowledgePrevBtn" disabled><i class="fas fa-chevron-left"></i> Previous</button>
-                                    <button class="btn-secondary btn-sm" id="knowledgeNextBtn" disabled>Next <i class="fas fa-chevron-right"></i></button>
-                                </div>
-                            </div>
+                        <div class="panel-action-buttons">
+                            <button class="btn-add type1" id="addKnowledgeBtn" type="button" title="Add knowledge topic">
+                                <span class="btn-txt"><i class="fas fa-plus"></i> Add Topic</span>
+                            </button>
+                            <button class="btn-secondary btn-action-pill" id="refreshKnowledgeBtn" type="button" title="Reload knowledge topics">
+                                <i class="fas fa-rotate-right"></i>
+                                <span>Refresh</span>
+                            </button>
                         </div>
                     </div>
 
-                    <!-- TAB 2: Operations Briefing & Diagnostics -->
-                    <div class="ai-tab-panel" id="panelDiagnostics">
-                        <div class="diagnostics-viewport">
-                            <div class="diagnostics-grid">
-                                <!-- Today's Briefing Card -->
-                                <div class="diag-card diag-briefing-card">
-                                    <div class="diag-card-header">
-                                        <div class="diag-card-title">
-                                            <span class="diag-icon-bubble"><i class="fas fa-robot"></i></span>
-                                            <div>
-                                                <h4>Today's Operational Briefing</h4>
-                                                <small class="muted">Automated summary generated from system activity</small>
-                                            </div>
+                    <!-- Subtle Horizontal Divider -->
+                    <div class="panel-divider"></div>
+
+                    <!-- Bottom Tier: Search & Filter Controls -->
+                    <div class="panel-bottom-row">
+                        <div class="panel-filters-group">
+                            <span class="filter-bar__label"><i class="fas fa-filter"></i> Filters</span>
+                            <div class="search-field">
+                                <input type="text" id="knowledgeSearchInput" class="search-field__input" placeholder=" ">
+                                <label for="knowledgeSearchInput" class="search-field__label">Search topic title, slug, or content keyword...</label>
+                                <span class="search-field__icon" aria-hidden="true">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
+                                </span>
+                            </div>
+                        </div>
+
+                        <button class="btn-secondary btn-clear-all" id="clearKnowledgeSearchBtn" type="button" title="Clear active search">
+                            <i class="fas fa-rotate-left"></i>
+                            <span>Clear</span>
+                        </button>
+                    </div>
+                </div>
+
+                <p class="section-label" id="sectionLabelRegistry"><i class="fas fa-book-bookmark"></i> Knowledge Base Registry</p>
+
+                <!-- ── BOX 2: Standalone Table Card (Knowledge Base Tab) ── -->
+                <div class="chart-card ai-tab-panel active" id="panelKnowledge">
+                    <div class="chart-card__header">
+                        <span class="chart-card__title">All Grounding Knowledge Topics &amp; FAQ Rules</span>
+                        <span class="chart-card__badge">Live Queue</span>
+                    </div>
+
+                    <!-- Inner-scrollable zero-scroll table container -->
+                    <div class="table-container">
+                        <table class="data-table" id="aiKnowledgeTable">
+                            <thead>
+                                <tr>
+                                    <th class="col-topic">Topic / Identifier</th>
+                                    <th class="col-content">Authoritative Knowledge Content</th>
+                                    <th class="col-length">Length</th>
+                                    <th class="col-actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="aiKnowledgeBody">
+                                <tr><td colspan="4" style="text-align:center; padding: 28px; color: #64748b;"><i class="fas fa-spinner fa-spin" style="margin-right: 6px;"></i> Loading knowledge base...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pinned Pagination Controls Docked Inside Card -->
+                    <div class="pagination-controls" id="knowledgePagination">
+                        <span class="pagination-info" id="knowledgePageInfo">Page 1 of 1 • 0 topics</span>
+                        <div class="pagination-actions">
+                            <div class="pagination-jump">
+                                <label for="knowledgeJumpInput">Jump to page</label>
+                                <input type="number" id="knowledgeJumpInput" min="1" step="1" placeholder="Page">
+                                <button class="btn-secondary" id="knowledgeJumpBtn" type="button"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
+                            </div>
+                            <span class="pagination-divider" aria-hidden="true"></span>
+                            <button class="btn-secondary" id="knowledgePrevBtn" type="button" disabled><i class="fas fa-chevron-left"></i><span>Previous</span></button>
+                            <button class="btn-secondary" id="knowledgeNextBtn" type="button" disabled><span>Next</span><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── BOX 2 (Alternate View): Operations Briefing & Diagnostics ── -->
+                <div class="chart-card ai-tab-panel" id="panelDiagnostics" style="display: none;">
+                    <div class="chart-card__header">
+                        <span class="chart-card__title">Operations Briefing &amp; AI Health Diagnostics</span>
+                        <span class="chart-card__badge">System Telemetry</span>
+                    </div>
+
+                    <div class="diagnostics-viewport">
+                        <div class="diagnostics-grid">
+                            <!-- Today's Briefing Card -->
+                            <div class="diag-card diag-briefing-card">
+                                <div class="diag-card-header">
+                                    <div class="diag-card-title">
+                                        <span class="diag-icon-bubble"><i class="fas fa-robot"></i></span>
+                                        <div>
+                                            <h4>Today's Operational Briefing</h4>
+                                            <small class="muted">Automated summary generated from system activity</small>
                                         </div>
-                                        <button type="button" class="btn-refresh-briefing" id="refreshDigestBtn" title="Refresh briefing"><i class="fas fa-rotate"></i></button>
                                     </div>
-                                    <div class="diag-card-body">
-                                        <div class="briefing-content-box">
-                                            <p id="aiDigestText">Loading today's briefing…</p>
+                                    <button type="button" class="btn-secondary btn-action-pill" id="refreshDigestBtn" title="Refresh briefing"><i class="fas fa-rotate"></i><span>Refresh</span></button>
+                                </div>
+                                <div class="diag-card-body">
+                                    <div class="briefing-content-box">
+                                        <p id="aiDigestText">Loading today's briefing…</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Needs Attention & Exceptions Queue -->
+                            <div class="diag-card diag-attention-card" id="diagAttentionCard">
+                                <div class="diag-card-header">
+                                    <div class="diag-card-title">
+                                        <span class="diag-icon-bubble attention-bubble"><i class="fas fa-triangle-exclamation"></i></span>
+                                        <div>
+                                            <h4>Automations Requiring Human Review</h4>
+                                            <small class="muted">Transactions that triggered rule-based exception flags</small>
                                         </div>
                                     </div>
                                 </div>
-
-                                <!-- Needs Attention & Exceptions Queue -->
-                                <div class="diag-card diag-attention-card" id="diagAttentionCard">
-                                    <div class="diag-card-header">
-                                        <div class="diag-card-title">
-                                            <span class="diag-icon-bubble attention-bubble"><i class="fas fa-triangle-exclamation"></i></span>
-                                            <div>
-                                                <h4>Automations Requiring Human Review</h4>
-                                                <small class="muted">Transactions that triggered rule-based exception flags</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="diag-card-body">
-                                        <p class="diag-attention-msg" id="aiAttentionText">Checking for open exceptions…</p>
-                                        <div class="diag-attention-action">
-                                            <a href="exceptions.html" class="btn-secondary btn-sm" id="aiAttentionLink" style="display:none;">
-                                                <i class="fas fa-arrow-up-right-from-square"></i> Review Open Exceptions
-                                            </a>
-                                        </div>
+                                <div class="diag-card-body">
+                                    <p class="diag-attention-msg" id="aiAttentionText">Checking for open exceptions…</p>
+                                    <div class="diag-attention-action" style="margin-top: 10px;">
+                                        <a href="exceptions.html" class="btn-secondary btn-action-pill" id="aiAttentionLink" style="display:none;">
+                                            <i class="fas fa-arrow-up-right-from-square"></i><span>Review Open Exceptions</span>
+                                        </a>
                                     </div>
                                 </div>
+                            </div>
 
-                                <!-- AI Engine Health & Diagnostics -->
-                                <div class="diag-card diag-health-card">
-                                    <div class="diag-card-header">
-                                        <div class="diag-card-title">
-                                            <span class="diag-icon-bubble health-bubble"><i class="fas fa-heart-pulse"></i></span>
-                                            <div>
-                                                <h4>AI Engine Connectivity &amp; Health</h4>
-                                                <small class="muted">Python AI service &amp; Google Gemini model integration status</small>
-                                            </div>
+                            <!-- AI Engine Health & Diagnostics -->
+                            <div class="diag-card diag-health-card">
+                                <div class="diag-card-header">
+                                    <div class="diag-card-title">
+                                        <span class="diag-icon-bubble health-bubble"><i class="fas fa-heart-pulse"></i></span>
+                                        <div>
+                                            <h4>AI Engine Connectivity &amp; Health</h4>
+                                            <small class="muted">Python AI service &amp; Google Gemini model integration status</small>
                                         </div>
-                                        <button type="button" class="btn-secondary btn-sm" id="testHealthBtn"><i class="fas fa-bolt"></i> Ping Service</button>
                                     </div>
-                                    <div class="diag-card-body">
-                                        <div class="health-meta-grid">
-                                            <div class="health-meta-item">
-                                                <span class="health-meta-label">Endpoint Status</span>
-                                                <span class="health-meta-value" id="healthDetailStatus"><span class="badge-status status-ok">Online</span></span>
-                                            </div>
-                                            <div class="health-meta-item">
-                                                <span class="health-meta-label">Backend Controller</span>
-                                                <span class="health-meta-value">FastAPI / AIService.php</span>
-                                            </div>
-                                            <div class="health-meta-item">
-                                                <span class="health-meta-label">LLM Grounding</span>
-                                                <span class="health-meta-value">AiKnowledge Grounded</span>
-                                            </div>
-                                            <div class="health-meta-item">
-                                                <span class="health-meta-label">Last Heartbeat</span>
-                                                <span class="health-meta-value" id="healthLastChecked">—</span>
-                                            </div>
-                                        </div>
-                                        <div class="service-response-banner" id="serviceHealthBanner">AI service is available and responding.</div>
-                                    </div>
+                                    <button type="button" class="btn-secondary btn-action-pill" id="testHealthBtn"><i class="fas fa-bolt"></i><span>Ping Service</span></button>
                                 </div>
-
-                                <!-- Technical Parameters (Legacy Reference) Collapsible Card -->
-                                <div class="diag-card diag-params-card">
-                                    <div class="diag-card-header">
-                                        <div class="diag-card-title">
-                                            <span class="diag-icon-bubble param-bubble"><i class="fas fa-sliders"></i></span>
-                                            <div>
-                                                <h4>AI Parameters (Internal Reference)</h4>
-                                                <small class="muted">Default system fallback weights (configured via code)</small>
-                                            </div>
+                                <div class="diag-card-body">
+                                    <div class="health-meta-grid">
+                                        <div class="health-meta-item">
+                                            <span class="health-meta-label">Endpoint Status</span>
+                                            <span class="health-meta-value" id="healthDetailStatus"><span class="badge-status status-ok">Online</span></span>
                                         </div>
-                                        <button type="button" class="btn-secondary btn-sm" id="toggleParamsBtn"><i class="fas fa-chevron-down"></i> <span id="toggleParamsText">Show Parameters</span></button>
+                                        <div class="health-meta-item">
+                                            <span class="health-meta-label">Backend Controller</span>
+                                            <span class="health-meta-value">FastAPI / AIService.php</span>
+                                        </div>
+                                        <div class="health-meta-item">
+                                            <span class="health-meta-label">LLM Grounding</span>
+                                            <span class="health-meta-value">AiKnowledge Grounded</span>
+                                        </div>
+                                        <div class="health-meta-item">
+                                            <span class="health-meta-label">Last Heartbeat</span>
+                                            <span class="health-meta-value" id="healthLastChecked">—</span>
+                                        </div>
                                     </div>
-                                    <div class="diag-card-body" id="paramsCollapseBody" style="display:none;">
-                                        <div class="ai-params-notice">
-                                            <i class="fas fa-circle-info"></i>
-                                            <span>Reference only — these baseline thresholds serve as internal fallbacks for forecasting and recommendations.</span>
+                                    <div class="service-response-banner" id="serviceHealthBanner" style="margin-top: 12px;">AI service is available and responding.</div>
+                                </div>
+                            </div>
+
+                            <!-- Technical Parameters (Legacy Reference) Collapsible Card -->
+                            <div class="diag-card diag-params-card">
+                                <div class="diag-card-header">
+                                    <div class="diag-card-title">
+                                        <span class="diag-icon-bubble param-bubble"><i class="fas fa-sliders"></i></span>
+                                        <div>
+                                            <h4>AI Parameters (Internal Reference)</h4>
+                                            <small class="muted">Default system fallback weights (configured via code)</small>
                                         </div>
-                                        <div class="params-table-wrapper">
-                                            <table class="data-table params-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Module</th>
-                                                        <th>Parameter Name</th>
-                                                        <th>Current Value</th>
-                                                        <th>Type</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="aiParametersBody">
-                                                    <tr><td colspan="4" class="text-center text-muted py-2">Loading parameters...</td></tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                    </div>
+                                    <button type="button" class="btn-secondary btn-action-pill" id="toggleParamsBtn"><i class="fas fa-chevron-down"></i> <span id="toggleParamsText">Show Parameters</span></button>
+                                </div>
+                                <div class="diag-card-body" id="paramsCollapseBody" style="display:none; margin-top: 10px;">
+                                    <div class="ai-params-notice" style="margin-bottom: 10px; font-size: 0.78rem; color: #64748b; display: flex; gap: 6px; align-items: center;">
+                                        <i class="fas fa-circle-info"></i>
+                                        <span>Reference only — internal baseline fallbacks for forecasting and recommendations.</span>
+                                    </div>
+                                    <div class="params-table-wrapper">
+                                        <table class="data-table params-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Module</th>
+                                                    <th>Parameter Name</th>
+                                                    <th>Current Value</th>
+                                                    <th>Type</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="aiParametersBody">
+                                                <tr><td colspan="4" class="text-center text-muted py-2">Loading parameters...</td></tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </div>
@@ -384,12 +410,12 @@
     <!-- Knowledge Base Topic Modal -->
     <div class="modal-overlay" id="knowledgeModal" style="display:none;" aria-hidden="true">
         <div class="modal-container modal-md" role="dialog" aria-modal="true" aria-labelledby="modalKnowledgeTitle">
+            <button type="button" class="close close-view" id="closeKnowledgeModalBtn" aria-label="Close modal"><i class="fas fa-xmark"></i></button>
             <div class="modal-header">
                 <div class="modal-title-wrap">
                     <span class="modal-title-icon"><i class="fas fa-book-bookmark"></i></span>
                     <h3 id="modalKnowledgeTitle">Add Knowledge Topic</h3>
                 </div>
-                <button type="button" class="modal-close" id="closeKnowledgeModalBtn" aria-label="Close modal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="modal-alert-info">
@@ -424,12 +450,12 @@
     <!-- Delete Topic Confirmation Modal -->
     <div class="modal-overlay" id="deleteConfirmModal" style="display:none;" aria-hidden="true">
         <div class="modal-container modal-sm" role="dialog" aria-modal="true">
+            <button type="button" class="close close-view" id="closeDeleteModalBtn" aria-label="Close modal"><i class="fas fa-xmark"></i></button>
             <div class="modal-header">
                 <div class="modal-title-wrap">
                     <span class="modal-title-icon delete-icon"><i class="fas fa-trash-can"></i></span>
                     <h3>Delete Knowledge Topic</h3>
                 </div>
-                <button type="button" class="modal-close" id="closeDeleteModalBtn" aria-label="Close modal">&times;</button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete <strong id="deleteTopicName">—</strong>?</p>
