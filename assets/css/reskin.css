@@ -205,3 +205,39 @@
     font-weight: 800;
     line-height: 1.2;
 }
+
+/* ---------- Universal Top Bar Notification Icon & Badge (All Pages) ---------- */
+.top-bar .notification-icon,
+.notification-icon {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+}
+
+.top-bar .notification-badge,
+.notification-icon .notification-badge,
+.notification-badge {
+    position: absolute !important;
+    top: -5px !important;
+    right: -6px !important;
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    font-size: 0.65rem !important;
+    font-weight: 700 !important;
+    min-width: 18px !important;
+    height: 18px !important;
+    border-radius: 9999px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 4px !important;
+    line-height: 1 !important;
+    box-shadow: 0 2px 5px rgba(220, 38, 38, 0.45) !important;
+    pointer-events: none !important;
+    z-index: 10 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+

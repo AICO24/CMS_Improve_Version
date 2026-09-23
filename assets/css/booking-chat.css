@@ -19,19 +19,21 @@
     display: none !important;
 }
 
-/* ---------- BASE LAYOUT CHAINS ---------- */
+/* ---------- BASE LAYOUT CHAINS (Admin Dashboard Harmonized) ---------- */
 .dashboard-body {
-    background:
-        radial-gradient(circle at 14% 8%, rgba(44, 94, 71, 0.10), transparent 28%),
-        radial-gradient(circle at 88% 18%, rgba(37, 99, 235, 0.08), transparent 24%),
-        linear-gradient(180deg, #f6faf7 0%, #f4f7fa 42%, #eef3f7 100%);
+    position: relative;
+    min-height: 100vh;
+    background-color: #f7fbf8;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     color: #1e293b;
+    overflow-x: hidden;
 }
 
 .dashboard-container {
     display: flex;
     min-height: 100vh;
+    position: relative;
+    z-index: 1;
 }
 
 .main-content {
@@ -43,47 +45,220 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background:
-        radial-gradient(circle at 12% 6%, rgba(44, 94, 71, 0.18), transparent 32%),
-        radial-gradient(circle at 88% 14%, rgba(37, 99, 235, 0.12), transparent 28%),
-        linear-gradient(180deg, #eef8f1 0%, #f4f7fa 44%, #eaf0f4 100%);
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
     transition: margin-left 220ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .main-content::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    background:
-        radial-gradient(circle at 20% 28%, rgba(122, 167, 122, 0.28), transparent 24%),
-        radial-gradient(circle at 78% 42%, rgba(43, 54, 88, 0.12), transparent 26%),
-        linear-gradient(135deg, rgba(44, 94, 71, 0.12), rgba(37, 99, 235, 0.08) 45%, rgba(244, 247, 250, 0));
-    pointer-events: none;
+    display: none;
 }
 
+/* ── Top Bar (Admin Dashboard Consistent Glassmorphism) ───────────── */
 .top-bar {
     position: relative;
-    z-index: 1;
+    z-index: 10;
     background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(234, 243, 238, 0.74)),
-        linear-gradient(90deg, rgba(44, 94, 71, 0.12), rgba(37, 99, 235, 0.07));
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    padding: 14px 24px;
+        linear-gradient(135deg, rgba(255, 255, 255, 0.90), rgba(234, 243, 238, 0.78)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.10), rgba(37, 99, 235, 0.06));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 12px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.65);
-    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: 1px solid rgba(44, 94, 71, 0.12);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.9),
+        0 4px 20px rgba(15, 23, 42, 0.07),
+        0 8px 32px rgba(44, 94, 71, 0.05);
     flex-shrink: 0;
 }
 
-.top-left h3 {
-    color: #1b3d2f;
+.top-left {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.dashboard-body:not([data-theme="dark"]) .top-bar #pageTitle {
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    letter-spacing: -0.01em !important;
+    line-height: 1.2 !important;
+    margin: 0;
+    border-left: 3px solid #16382b !important;
+    padding-left: 10px !important;
+}
+
+.dashboard-body:not([data-theme="dark"]) .hamburger {
+    border-radius: 8px;
+    transition: background 0.15s ease;
+}
+
+.dashboard-body:not([data-theme="dark"]) .hamburger:hover {
+    background: rgba(44, 94, 71, 0.10);
+}
+
+.dashboard-body:not([data-theme="dark"]) .hamburger .line {
+    stroke: #334155;
+}
+
+.dashboard-body:not([data-theme="dark"]) .hamburger:hover .line {
+    stroke: #16382b;
+}
+
+.dashboard-body:not([data-theme="dark"]) .notification-icon {
+    font-size: 1.05rem;
+    color: #334155;
+    cursor: pointer;
+    position: relative;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    background: rgba(44, 94, 71, 0.07);
+    border: 1px solid rgba(44, 94, 71, 0.12);
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.dashboard-body:not([data-theme="dark"]) .notification-icon:hover {
+    background: rgba(44, 94, 71, 0.14);
+    color: #16382b;
+    border-color: rgba(44, 94, 71, 0.25);
+    transform: translateY(-1px);
+}
+
+.notification-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #ef4444;
+    color: white;
+    border-radius: 999px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.62rem;
     font-weight: 800;
-    letter-spacing: -0.01em;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
+    letter-spacing: 0;
+    line-height: 1;
+}
+
+.dashboard-body:not([data-theme="dark"]) .theme-toggle-btn {
+    font-size: 1rem;
+    color: var(--color-primary-600);
+    background: var(--color-primary-50);
+    border: 1px solid var(--color-primary-200);
+    border-radius: var(--radius-sm);
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.dashboard-body:not([data-theme="dark"]) .theme-toggle-btn:hover {
+    background: var(--color-primary-100);
+    color: var(--color-primary-800);
+    border-color: var(--color-primary-300);
+    transform: rotate(20deg) scale(1.1);
+}
+
+.profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 8px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.dashboard-body:not([data-theme="dark"]) .profile:hover {
+    background: rgba(44, 94, 71, 0.08);
+}
+
+.dashboard-body:not([data-theme="dark"]) .profile-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary-50);
+    color: var(--color-primary-700);
+    border: 1px solid var(--color-primary-200);
+    font-size: 1rem;
+    box-shadow: 0 1px 4px rgba(22, 56, 43, 0.08);
+}
+
+.profile-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-weight: 700;
+    font-size: 0.86rem;
+    line-height: 1.2;
+    color: #1e293b;
+}
+
+.user-role {
+    font-size: 0.70rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+/* Sidebar Nav Consistency with Admin Dashboard */
+.sidebar .nav-item.active {
+    background: #7aa77a !important;
+    color: #06321a !important;
+    font-weight: 700 !important;
+}
+
+.sidebar .nav-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateX(4px);
+    color: #ffffff;
+}
+
+.sidebar .nav-group-header {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: #8fa0c0;
+}
+
+.user-chip {
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.user-chip:hover {
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .content-area {
@@ -92,17 +267,18 @@
     flex: 1;
     min-height: 0;
     display: flex;
-    padding: 20px 24px;
-    overflow: hidden;
+    flex-direction: column;
+    padding: 16px 20px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    gap: 0;
 }
 
 /* ---------- TWO-COLUMN INTELLIGENCE WORKSPACE ---------- */
 .ai-chat-layout {
     display: flex;
-    gap: 20px;
+    gap: 16px;
     width: 100%;
-    max-width: 1440px;
-    margin: 0 auto;
     flex: 1;
     min-height: 0;
 }
@@ -1635,46 +1811,88 @@
 }
 
 /* ---------- DARK MODE ADJUSTMENTS ---------- */
+/* ---------- DARK MODE ADJUSTMENTS (Admin Dashboard Consistent) ---------- */
 body[data-theme="dark"] .dashboard-body,
 body[data-theme="dark"].dashboard-body,
 .dashboard-body[data-theme="dark"] {
-    background:
-        radial-gradient(circle at 14% 8%, rgba(44, 94, 71, 0.18), transparent 28%),
-        radial-gradient(circle at 88% 18%, rgba(37, 99, 235, 0.12), transparent 24%),
-        linear-gradient(180deg, #0b131c 0%, #0d1722 42%, #0a1118 100%) !important;
+    background: #08100c !important;
     color: #e2e8f0;
 }
 
 .dashboard-body[data-theme="dark"] .main-content {
-    background:
-        radial-gradient(circle at 12% 6%, rgba(44, 94, 71, 0.22), transparent 32%),
-        radial-gradient(circle at 88% 14%, rgba(37, 99, 235, 0.16), transparent 28%),
-        linear-gradient(180deg, #0d191d 0%, #0d1722 44%, #0a1118 100%);
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 .dashboard-body[data-theme="dark"] .top-bar {
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(18, 30, 49, 0.90)) !important;
+    background: linear-gradient(135deg, rgba(23, 32, 28, 0.95), rgba(18, 26, 22, 0.92)) !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
 }
 
-.dashboard-body[data-theme="dark"] .top-left h3 {
-    color: #f1f5f9;
+.dashboard-body[data-theme="dark"] .top-bar #pageTitle {
+    color: #f1f5f9 !important;
+    border-left: 3px solid #34d399 !important;
+    padding-left: 10px !important;
+}
+
+.dashboard-body[data-theme="dark"] .theme-toggle-btn,
+.dashboard-body[data-theme="dark"] .notification-icon {
+    background: #1c2520 !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #f1f5f9 !important;
+}
+
+.dashboard-body[data-theme="dark"] .theme-toggle-btn:hover,
+.dashboard-body[data-theme="dark"] .notification-icon:hover {
+    background: #232f29 !important;
+    border-color: rgba(52, 211, 153, 0.4) !important;
+    color: #34d399 !important;
+}
+
+.dashboard-body[data-theme="dark"] .profile-avatar {
+    background: #1c2520 !important;
+    border: 1px solid rgba(52, 211, 153, 0.3) !important;
+    color: #34d399 !important;
+}
+
+.dashboard-body[data-theme="dark"] .profile:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.dashboard-body[data-theme="dark"] .user-name {
+    color: #f1f5f9 !important;
+}
+
+.dashboard-body[data-theme="dark"] .user-role {
+    color: #94a3b8 !important;
 }
 
 [data-theme="dark"] .ai-chat-main,
 [data-theme="dark"] .ai-booking-blueprint,
 [data-theme="dark"] .lot-picker-dialog,
 [data-theme="dark"] .field-edit-dialog {
-    background: #1e293b;
-    border-color: #334155;
+    background: #1e2622 !important;
+    border: 1px solid rgba(52, 211, 153, 0.25) !important;
     color: #f1f5f9;
+}
+
+[data-theme="dark"] .ai-chat-main {
+    border-left: 5px solid #34d399 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
+}
+
+[data-theme="dark"] .ai-booking-blueprint {
+    border-top: 3px solid #34d399 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
 }
 
 [data-theme="dark"] .ai-assistant-header,
 [data-theme="dark"] .blueprint-header,
 [data-theme="dark"] .lot-picker-header {
-    background: #0f172a;
-    border-bottom-color: #334155;
+    background: #17201c !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 [data-theme="dark"] .ai-assistant-name,
@@ -1688,54 +1906,56 @@ body[data-theme="dark"].dashboard-body,
 [data-theme="dark"] .chat-window,
 [data-theme="dark"] .lot-picker-body,
 [data-theme="dark"] .lot-picker-filters {
-    background: #0f172a;
-    border-color: #334155;
+    background: #141a17 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 [data-theme="dark"] .chat-message.assistant {
-    background: #1e293b;
-    border-color: #334155;
-    color: #e2e8f0;
+    background: #232f29 !important;
+    border: 1px solid rgba(52, 211, 153, 0.25) !important;
+    color: #f1f5f9 !important;
 }
 
 [data-theme="dark"] .blueprint-card {
-    background: #0f172a;
-    border-color: #334155;
-    border-left-color: #34d399;
+    background: #1a231e !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-left: 3px solid #34d399 !important;
 }
 
 [data-theme="dark"] .hud-card-header {
-    border-bottom-color: #1e293b;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 [data-theme="dark"] .chat-input-row,
 [data-theme="dark"] .chat-prompt-suggestions,
 [data-theme="dark"] .blueprint-footer {
-    background: #1e293b;
-    border-top-color: #334155;
+    background: #17201c !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 [data-theme="dark"] .chat-input-wrapper input[type="text"],
 [data-theme="dark"] .filter-input-wrap input {
-    background: #0f172a;
-    border-color: #334155;
-    color: #f1f5f9;
+    background: #232f29 !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    color: #f8fafc !important;
 }
 
 [data-theme="dark"] .lot-card-item {
-    background: #1e293b;
-    border-color: #334155;
-    color: #f1f5f9;
+    background: #1c2520 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #f1f5f9 !important;
 }
 
 [data-theme="dark"] .lot-card-item:hover {
-    border-color: #4ade80;
+    border-color: #34d399 !important;
+    box-shadow: 0 4px 14px rgba(52, 211, 153, 0.2) !important;
 }
 
 [data-theme="dark"] .prompt-chip {
-    background: #0f172a;
-    border-color: #334155;
-    color: #cbd5e1;
+    background: #222d27 !important;
+    border: 1px solid rgba(52, 211, 153, 0.25) !important;
+    color: #cbd5e1 !important;
 }
 
 [data-theme="dark"] .prompt-chip:hover {
@@ -2156,116 +2376,1542 @@ body[data-theme="dark"].dashboard-body,
     border-radius: 12px;
 }
 
-/* Dark Mode Overrides for Booking Assistant */
+/* Dark Mode Overrides for Booking Assistant — Admin Dashboard Cemetery Palette */
 [data-theme="dark"] .ai-chat-main {
-    background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
-    border-color: rgba(255, 255, 255, 0.08);
-    border-left-color: #10b981;
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(180deg, #1e2622 0%, #161e1a 100%) !important;
+    border-color: rgba(52, 211, 153, 0.25) !important;
+    border-left: 5px solid #34d399 !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5) !important;
 }
 
 [data-theme="dark"] .ai-assistant-header {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    border-bottom-color: rgba(255, 255, 255, 0.08);
+    background: linear-gradient(135deg, #17201c 0%, #1a2420 100%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 [data-theme="dark"] .ai-assistant-name {
-    color: #f8fafc;
+    color: #f8fafc !important;
 }
 
 [data-theme="dark"] .chat-window {
-    background: #090d16;
+    background: #141a17 !important;
 }
 
 [data-theme="dark"] .chat-message.assistant {
-    background: #1e293b;
-    border-color: rgba(255, 255, 255, 0.08);
-    color: #e2e8f0;
+    background: #232f29 !important;
+    border: 1px solid rgba(52, 211, 153, 0.25) !important;
+    color: #f1f5f9 !important;
 }
 
 [data-theme="dark"] .chat-message.assistant::before {
-    background: #10b981;
+    background: #34d399 !important;
 }
 
 [data-theme="dark"] .chat-message--rich {
-    background: #1e293b;
-    border-color: rgba(255, 255, 255, 0.1);
-    color: #f1f5f9;
+    background: #232f29 !important;
+    border-color: rgba(52, 211, 153, 0.25) !important;
+    color: #f1f5f9 !important;
 }
 
 [data-theme="dark"] .recommendation-card {
-    background: #1e293b;
-    border-color: #334155;
+    background: #1c2520 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 [data-theme="dark"] .recommendation-card:hover {
-    border-color: #10b981;
-    box-shadow: 0 12px 24px -6px rgba(16, 185, 129, 0.2);
+    border-color: #34d399 !important;
+    box-shadow: 0 12px 24px -6px rgba(52, 211, 153, 0.25) !important;
 }
 
 [data-theme="dark"] .recommendation-card .lot-num-title {
-    color: #f8fafc;
+    color: #f8fafc !important;
 }
 
 [data-theme="dark"] .meta-pill {
-    background: #334155;
-    color: #94a3b8;
+    background: #232f29 !important;
+    color: #94a3b8 !important;
 }
 
 [data-theme="dark"] .chat-prompt-suggestions {
-    background: #111827;
-    border-top-color: rgba(255, 255, 255, 0.08);
+    background: #17201c !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 [data-theme="dark"] .prompt-chip {
-    background: #1e293b !important;
-    border-color: #334155 !important;
+    background: #222d27 !important;
+    border-color: rgba(52, 211, 153, 0.25) !important;
     color: #cbd5e1 !important;
 }
 
 [data-theme="dark"] .prompt-chip:hover:not(:disabled) {
-    background: rgba(16, 185, 129, 0.18) !important;
-    border-color: #10b981 !important;
+    background: rgba(52, 211, 153, 0.2) !important;
+    border-color: #34d399 !important;
     color: #34d399 !important;
 }
 
 [data-theme="dark"] .chat-input-row {
-    background: #111827;
-    border-top-color: rgba(255, 255, 255, 0.08);
+    background: #17201c !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 [data-theme="dark"] .chat-input-wrapper input[type="text"] {
-    background: #1e293b;
-    border-color: #334155;
-    color: #f8fafc;
+    background: #232f29 !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    color: #f8fafc !important;
 }
 
 [data-theme="dark"] .ai-booking-blueprint {
-    background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
-    border-color: rgba(255, 255, 255, 0.08);
-    border-top-color: #10b981;
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(180deg, #1e2622 0%, #161e1a 100%) !important;
+    border: 1px solid rgba(52, 211, 153, 0.25) !important;
+    border-top: 4px solid #34d399 !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5) !important;
 }
 
 [data-theme="dark"] .blueprint-header {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    border-bottom-color: rgba(255, 255, 255, 0.08);
+    background: linear-gradient(135deg, #17201c 0%, #1a2420 100%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 [data-theme="dark"] .blueprint-title {
-    color: #f8fafc;
+    color: #f8fafc !important;
 }
 
 [data-theme="dark"] .blueprint-step .step-value {
-    color: #f1f5f9;
+    color: #f1f5f9 !important;
 }
 
 [data-theme="dark"] .blueprint-card {
-    background: #1e293b;
-    border-color: #334155;
+    background: #1a231e !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 [data-theme="dark"] .hud-detail-row strong {
-    color: #f8fafc;
+    color: #f8fafc !important;
 }
+
+/* ==========================================================================
+   DOC UPLOAD CARDS — Semantic Classes (Light + Dark)
+   ========================================================================== */
+.doc-upload-card {
+    background: rgba(248, 250, 252, 0.8);
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
+}
+
+.doc-upload-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.doc-upload-head strong {
+    font-size: 0.92rem;
+    color: #0f172a;
+}
+
+.doc-upload-sub {
+    display: block;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.doc-upload-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.file-name-preview {
+    font-size: 0.8rem;
+    color: #475569;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 250px;
+}
+
+.btn-delete-doc {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.btn-delete-doc:hover {
+    background: #fecaca;
+}
+
+.modal-footer-custom {
+    padding: 14px 20px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-footer-custom span {
+    font-size: 0.82rem;
+    color: #64748b;
+}
+
+/* ==========================================================================
+   BOOKING CONFIRM MODAL — Semantic Classes (Light + Dark)
+   ========================================================================== */
+.booking-confirm-hero {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.booking-confirm-icon-wrap {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: rgba(44, 94, 71, 0.12);
+    color: #2c5e47;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.45rem;
+    margin-bottom: 10px;
+}
+
+.booking-confirm-heading {
+    margin: 0;
+    font-size: 1.08rem;
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.booking-confirm-desc {
+    margin: 6px 0 0;
+    font-size: 0.85rem;
+    color: #64748b;
+    line-height: 1.45;
+}
+
+.booking-confirm-summary-box {
+    background: rgba(248, 250, 252, 0.95);
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+}
+
+.confirm-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+    border-bottom: 1px dashed #cbd5e1;
+}
+
+.confirm-summary-row:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.confirm-summary-label {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.confirm-summary-val {
+    font-size: 0.88rem;
+    color: #0f172a;
+}
+
+.booking-confirm-warning-box {
+    background: rgba(254, 243, 199, 0.6);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 18px;
+    font-size: 0.8rem;
+    color: #92400e;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.booking-confirm-warning-box i {
+    margin-top: 2px;
+    color: #d97706;
+}
+
+/* ==========================================================================
+   DARK MODE — Doc Upload, Confirm Modal, Footer, Close Button, Hamburger
+   ========================================================================== */
+[data-theme="dark"] .doc-upload-card {
+    background: #1a231e !important;
+    border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+[data-theme="dark"] .doc-upload-head strong {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .doc-upload-sub {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .file-name-preview {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .btn-delete-doc {
+    background: rgba(220, 38, 38, 0.15) !important;
+    color: #fca5a5 !important;
+    border-color: rgba(252, 165, 165, 0.35) !important;
+}
+
+[data-theme="dark"] .btn-delete-doc:hover {
+    background: rgba(220, 38, 38, 0.25) !important;
+}
+
+[data-theme="dark"] .modal-footer-custom {
+    border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .modal-footer-custom span {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .booking-confirm-icon-wrap {
+    background: rgba(52, 211, 153, 0.15) !important;
+    color: #34d399 !important;
+}
+
+[data-theme="dark"] .booking-confirm-heading {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .booking-confirm-desc {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .booking-confirm-summary-box {
+    background: #1a231e !important;
+    border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+[data-theme="dark"] .confirm-summary-row {
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .confirm-summary-label {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .confirm-summary-val {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .booking-confirm-warning-box {
+    background: rgba(217, 119, 6, 0.12) !important;
+    border-color: rgba(217, 119, 6, 0.30) !important;
+    color: #fcd34d !important;
+}
+
+[data-theme="dark"] .booking-confirm-warning-box i {
+    color: #fbbf24 !important;
+}
+
+/* Dark mode — close modal button */
+[data-theme="dark"] .btn-close-modal {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .btn-close-modal:hover {
+    color: #f1f5f9 !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Dark mode — field edit dialog */
+[data-theme="dark"] .field-edit-dialog {
+    border-top-color: #34d399 !important;
+}
+
+[data-theme="dark"] .field-edit-header {
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .field-edit-header h4,
+[data-theme="dark"] #fieldEditTitle {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] #fieldEditLabel {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] #fieldEditHint {
+    color: #64748b !important;
+}
+
+/* Dark mode — doc modal body text */
+[data-theme="dark"] .modal-body-custom p {
+    color: #94a3b8 !important;
+}
+
+/* Dark mode — lot picker spinner/empty text */
+[data-theme="dark"] #lotPickerSpinner p,
+[data-theme="dark"] #lotPickerEmpty p {
+    color: #94a3b8 !important;
+}
+
+/* Dark mode — hamburger lines */
+.dashboard-body[data-theme="dark"] .hamburger .line {
+    stroke: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .hamburger:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-body[data-theme="dark"] .hamburger:hover .line {
+    stroke: #34d399 !important;
+}
+
+/* Dark mode — logout button */
+.dashboard-body[data-theme="dark"] .logout-btn,
+.dashboard-body[data-theme="dark"] .Btn {
+    background: #1c2520 !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #f1f5f9 !important;
+}
+
+.dashboard-body[data-theme="dark"] .logout-btn .sign i,
+.dashboard-body[data-theme="dark"] .Btn .sign i {
+    color: #f1f5f9 !important;
+}
+
+.dashboard-body[data-theme="dark"] .logout-btn:hover,
+.dashboard-body[data-theme="dark"] .Btn:hover {
+    background: rgba(220, 38, 38, 0.18) !important;
+    border-color: rgba(220, 38, 38, 0.4) !important;
+}
+
+.dashboard-body[data-theme="dark"] .logout-btn:hover .sign i,
+.dashboard-body[data-theme="dark"] .Btn:hover .sign i {
+    color: #fca5a5 !important;
+}
+
+.dashboard-body[data-theme="dark"] .logout-btn:hover .text,
+.dashboard-body[data-theme="dark"] .Btn:hover .text {
+    color: #fca5a5 !important;
+}
+
+/* Dark mode — typing indicator */
+[data-theme="dark"] .chat-message.chat-typing-indicator {
+    color: #94a3b8 !important;
+}
+
+/* Dark mode — user message */
+[data-theme="dark"] .chat-message.user {
+    background: linear-gradient(135deg, #1e5a3e 0%, #164430 100%) !important;
+    color: #f0fdf4 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Dark mode — assistant status pill */
+[data-theme="dark"] .ai-status-pill {
+    background: rgba(52, 211, 153, 0.15) !important;
+    color: #34d399 !important;
+    border-color: rgba(52, 211, 153, 0.35) !important;
+}
+
+/* Dark mode — assistant desc */
+[data-theme="dark"] .ai-assistant-desc {
+    color: #94a3b8 !important;
+}
+
+/* Dark mode — action buttons in header */
+[data-theme="dark"] .ai-action-btn {
+    background: #232f29 !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .ai-action-btn:hover {
+    background: #2a3a32 !important;
+    border-color: rgba(52, 211, 153, 0.4) !important;
+    color: #34d399 !important;
+}
+
+/* Dark mode — blueprint HUD misc */
+[data-theme="dark"] .blueprint-disclaimer {
+    color: #64748b !important;
+}
+
+[data-theme="dark"] .blueprint-step.pending .step-num {
+    background: #232f29 !important;
+    color: #64748b !important;
+}
+
+[data-theme="dark"] .blueprint-step.completed .step-num {
+    background: rgba(52, 211, 153, 0.2) !important;
+    color: #34d399 !important;
+}
+
+[data-theme="dark"] .blueprint-card.missing-alert {
+    background: rgba(217, 119, 6, 0.10) !important;
+    border-color: rgba(217, 119, 6, 0.30) !important;
+    border-left-color: #f59e0b !important;
+}
+
+[data-theme="dark"] .blueprint-card.missing-alert .hud-card-header {
+    border-bottom-color: rgba(217, 119, 6, 0.20) !important;
+}
+
+[data-theme="dark"] .missing-fields-list li {
+    color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .blueprint-card.match-alert {
+    background: rgba(2, 132, 199, 0.10) !important;
+    border-color: rgba(2, 132, 199, 0.25) !important;
+    border-left-color: #0284c7 !important;
+}
+
+[data-theme="dark"] .blueprint-card.match-alert .hud-card-header {
+    border-bottom-color: rgba(2, 132, 199, 0.20) !important;
+}
+
+/* Dark mode — confirm button */
+[data-theme="dark"] .btn-confirm {
+    background: linear-gradient(135deg, #1e5a3e 0%, #164430 100%) !important;
+    color: #f0fdf4 !important;
+    border: 1px solid rgba(52, 211, 153, 0.3) !important;
+}
+
+[data-theme="dark"] .btn-confirm:hover:not(:disabled) {
+    background: linear-gradient(135deg, #22704c 0%, #1a5239 100%) !important;
+    box-shadow: 0 4px 14px rgba(52, 211, 153, 0.25) !important;
+}
+
+/* Dark mode — scrollbar for chat window */
+[data-theme="dark"] .chat-window::-webkit-scrollbar-track {
+    background: #141a17 !important;
+}
+
+[data-theme="dark"] .chat-window::-webkit-scrollbar-thumb {
+    background: #2c3b33 !important;
+}
+
+[data-theme="dark"] .chat-window::-webkit-scrollbar-thumb:hover {
+    background: #3a5244 !important;
+}
+
+/* Dark mode — selected lot card */
+[data-theme="dark"] .lot-card-item.selected {
+    border-color: #34d399 !important;
+    background: rgba(52, 211, 153, 0.10) !important;
+}
+
+/* Dark mode — section filter dropdown */
+[data-theme="dark"] .lot-picker-filters select {
+    background: #232f29 !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    color: #f1f5f9 !important;
+}
+
+/* ==========================================================================
+   FOOTER — Inside Booking Assistant content-area
+   ========================================================================== */
+.dashboard-footer {
+    position: relative;
+    z-index: 1;
+    margin-top: 16px;
+    padding: 0 0 16px 0;
+    background: transparent;
+    flex-shrink: 0;
+}
+
+.dashboard-footer-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+    gap: 0;
+    background:
+        linear-gradient(135deg,
+            rgba(255, 255, 255, 0.92) 0%,
+            rgba(236, 247, 241, 0.85) 60%,
+            rgba(240, 244, 250, 0.80) 100%),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.08), transparent);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1.5px solid rgba(44, 94, 71, 0.20);
+    border-top: 3px solid #2c5e47;
+    border-radius: 8px;
+    padding: 12px 22px;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.95) inset,
+        0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+.footer-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.footer-col--left {
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.footer-col--center {
+    align-items: center;
+    gap: 4px;
+    border-left: 1.5px solid rgba(44, 94, 71, 0.20);
+    border-right: 1.5px solid rgba(44, 94, 71, 0.20);
+    padding: 0 20px;
+}
+
+.footer-col--right {
+    align-items: flex-end;
+    gap: 6px;
+    padding-left: 20px;
+}
+
+.footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.footer-brand__icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    background: rgba(44, 94, 71, 0.10);
+    border: 1px solid rgba(44, 94, 71, 0.25);
+    color: #2c5e47;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.88rem;
+    flex-shrink: 0;
+    box-shadow: 0 1px 4px rgba(44, 94, 71, 0.10);
+}
+
+.footer-brand__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.footer-brand__name {
+    font-size: 0.80rem;
+    font-weight: 800;
+    color: #16382b;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+}
+
+.footer-brand__version {
+    font-size: 0.70rem;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.005em;
+    line-height: 1.3;
+}
+
+.footer-copy {
+    margin: 0;
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: #94a3b8;
+    letter-spacing: 0.01em;
+    line-height: 1.3;
+}
+
+.footer-pulse-ring {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #2c5e47;
+    box-shadow: 0 0 0 0 rgba(44, 94, 71, 0.4);
+    animation: footerPulse 2.4s ease-in-out infinite;
+    flex-shrink: 0;
+    display: none;
+}
+
+@keyframes footerPulse {
+    0%   { box-shadow: 0 0 0 0   rgba(44, 94, 71, 0.45); }
+    60%  { box-shadow: 0 0 0 6px rgba(44, 94, 71, 0); }
+    100% { box-shadow: 0 0 0 0   rgba(44, 94, 71, 0); }
+}
+
+.footer-timestamp {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    text-align: center;
+}
+
+.footer-timestamp__label {
+    font-size: 0.70rem;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.01em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    line-height: 1.3;
+}
+
+.footer-live-dot {
+    font-size: 0.50rem;
+    color: #16a34a;
+    animation: footerLiveBlink 1.8s ease-in-out infinite;
+}
+
+@keyframes footerLiveBlink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.25; }
+}
+
+.footer-timestamp__value {
+    font-size: 0.80rem;
+    font-weight: 800;
+    color: #16382b;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    font-family: 'Inter', system-ui, sans-serif;
+}
+
+.footer-links-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #94a3b8;
+    line-height: 1.3;
+}
+
+.footer-links {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.footer-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #2c5e47;
+    text-decoration: none;
+    padding: 3px 7px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease, transform 0.14s ease;
+    line-height: 1.3;
+}
+
+.footer-link:hover {
+    background: rgba(44, 94, 71, 0.08);
+    border-color: rgba(44, 94, 71, 0.20);
+    color: #16382b;
+    transform: translateY(-1px);
+}
+
+.footer-link-sep {
+    font-size: 0.55rem;
+    color: #cbd5e1;
+    line-height: 1;
+    user-select: none;
+    opacity: 0.6;
+    padding: 0 1px;
+}
+
+/* Footer responsive breakpoints */
+@media (max-width: 768px) {
+    .dashboard-footer-inner {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 12px;
+        padding: 14px;
+    }
+    .footer-col--left,
+    .footer-col--center,
+    .footer-col--right {
+        align-items: center;
+    }
+    .footer-col--center {
+        border-left: none;
+        border-right: none;
+        border-top: 1px solid rgba(44, 94, 71, 0.15);
+        border-bottom: 1px solid rgba(44, 94, 71, 0.15);
+        padding: 10px 0;
+    }
+    .footer-col--right {
+        padding-left: 0;
+    }
+    .footer-links {
+        justify-content: center;
+    }
+}
+
+[data-theme="dark"] .dashboard-footer-inner,
+.dashboard-body[data-theme="dark"] .dashboard-footer-inner {
+    background:
+        linear-gradient(135deg,
+            rgba(20, 28, 23, 0.96) 0%,
+            rgba(15, 22, 18, 0.94) 60%,
+            rgba(18, 26, 21, 0.96) 100%),
+        linear-gradient(90deg, rgba(52, 211, 153, 0.12), transparent) !important;
+    border: 1.5px solid rgba(52, 211, 153, 0.28) !important;
+    border-top: 3px solid #34d399 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
+}
+
+[data-theme="dark"] .footer-col--center,
+.dashboard-body[data-theme="dark"] .footer-col--center {
+    border-left-color: rgba(255, 255, 255, 0.12) !important;
+    border-right-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-theme="dark"] .footer-brand__icon,
+.dashboard-body[data-theme="dark"] .footer-brand__icon {
+    background: rgba(52, 211, 153, 0.18) !important;
+    border-color: rgba(52, 211, 153, 0.4) !important;
+    color: #34d399 !important;
+}
+
+[data-theme="dark"] .footer-brand__name,
+.dashboard-body[data-theme="dark"] .footer-brand__name {
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .footer-brand__version,
+.dashboard-body[data-theme="dark"] .footer-brand__version {
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .footer-copy,
+.dashboard-body[data-theme="dark"] .footer-copy {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .footer-timestamp__label,
+.dashboard-body[data-theme="dark"] .footer-timestamp__label {
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .footer-timestamp__value,
+.dashboard-body[data-theme="dark"] .footer-timestamp__value {
+    color: #34d399 !important;
+    font-weight: 800 !important;
+}
+
+[data-theme="dark"] .footer-links-label,
+.dashboard-body[data-theme="dark"] .footer-links-label {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .footer-link,
+.dashboard-body[data-theme="dark"] .footer-link {
+    color: #6ee7b7 !important;
+}
+
+[data-theme="dark"] .footer-link:hover,
+.dashboard-body[data-theme="dark"] .footer-link:hover {
+    background: rgba(52, 211, 153, 0.22) !important;
+    border-color: rgba(52, 211, 153, 0.45) !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .footer-link-sep,
+.dashboard-body[data-theme="dark"] .footer-link-sep {
+    color: rgba(255, 255, 255, 0.25) !important;
+}
+
+[data-theme="dark"] .footer-pulse-ring,
+.dashboard-body[data-theme="dark"] .footer-pulse-ring {
+    background: #34d399 !important;
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5) !important;
+}
+
+/* ==========================================================================
+   SEMANTIC CARDS & VOUCHERS BASE STYLES
+   ========================================================================== */
+.lot-card-num {
+    margin: 0;
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.lot-card-sub {
+    font-size: 0.82rem;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+.lot-card-price {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #166534;
+    margin-top: 8px;
+}
+
+/* Reservation Voucher */
+.reservation-voucher {
+    background: #ffffff;
+    border: 2px solid #2c5e47;
+    border-radius: 14px;
+    padding: 18px;
+    margin: 8px 0;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.reservation-voucher.voucher--pending {
+    border-color: #d97706;
+}
+
+.voucher-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1.5px dashed #cbd5e1;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+}
+
+.voucher-status-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #d97706;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.voucher-status-tag.official {
+    color: #2c5e47;
+}
+
+.voucher-ref-title {
+    margin: 2px 0 0 0;
+    font-size: 1.15rem;
+    color: #0f172a;
+    font-weight: 800;
+}
+
+.voucher-badge-pending {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.voucher-badge-official {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.voucher-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    font-size: 0.85rem;
+}
+
+.voucher-alert-box {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+
+.voucher-alert-box.warning {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+}
+
+.voucher-action-footer {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.voucher-footer-note {
+    font-size: 0.78rem;
+    color: #64748b;
+    line-height: 1.4;
+    flex: 1;
+}
+
+/* AI Intel & Checklist Cards */
+.ai-intel-card {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 4px;
+}
+
+.ai-intel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.ai-intel-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #0f172a;
+}
+
+.ai-intel-body {
+    font-size: 0.85rem;
+    color: #334155;
+    line-height: 1.6;
+}
+
+.ai-intel-disclaimer {
+    margin-top: 6px;
+    font-size: 0.75rem;
+    color: #64748b;
+    font-style: italic;
+}
+
+.checklist-body {
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+.checklist-item {
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.checklist-item.done {
+    color: #16a34a;
+    font-weight: 600;
+}
+
+.checklist-item.missing {
+    color: #dc2626;
+}
+
+.checklist-next-step {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #0284c7;
+}
+
+.hud-match-desc {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: #1e293b;
+}
+
+/* ==========================================================================
+   ULTRA-HIGH VISIBILITY DARK MODE FOR BOOKING ASSISTANT
+   Explicitly overrides theme-dark.css with maximum specificity & contrast
+   ========================================================================== */
+.dashboard-body[data-theme="dark"] {
+    background: #090e0b !important;
+    color: #f1f5f9 !important;
+}
+
+/* 1. Main Chat Container & Blueprint Panels */
+.dashboard-body[data-theme="dark"] .ai-chat-main,
+body[data-theme="dark"] .ai-chat-main {
+    background: #141c18 !important;
+    border: 1.5px solid rgba(52, 211, 153, 0.28) !important;
+    border-left: 5px solid #10b981 !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55) !important;
+}
+
+.dashboard-body[data-theme="dark"] .ai-booking-blueprint,
+body[data-theme="dark"] .ai-booking-blueprint {
+    background: #141c18 !important;
+    border: 1.5px solid rgba(52, 211, 153, 0.28) !important;
+    border-top: 4px solid #10b981 !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55) !important;
+}
+
+/* 2. Chat Headers */
+.dashboard-body[data-theme="dark"] .ai-assistant-header,
+.dashboard-body[data-theme="dark"] .blueprint-header {
+    background: linear-gradient(135deg, #16201b 0%, #121915 100%) !important;
+    border-bottom: 1.5px solid rgba(255, 255, 255, 0.10) !important;
+}
+
+.dashboard-body[data-theme="dark"] .ai-assistant-name,
+.dashboard-body[data-theme="dark"] .blueprint-title {
+    color: #ffffff !important;
+    font-weight: 800 !important;
+}
+
+.dashboard-body[data-theme="dark"] .ai-assistant-desc {
+    color: #cbd5e1 !important;
+}
+
+/* 3. Chat Window (Scroll Canvas) */
+.dashboard-body[data-theme="dark"] .chat-window,
+body[data-theme="dark"] .chat-window {
+    background: #0a100d !important;
+}
+
+/* 4. Chat Message Bubbles — Ultra-High Contrast */
+.dashboard-body[data-theme="dark"] .chat-message.assistant,
+body[data-theme="dark"] .chat-message.assistant {
+    background: #1c2821 !important;
+    border: 1px solid rgba(52, 211, 153, 0.35) !important;
+    color: #f8fafc !important;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35) !important;
+}
+
+.dashboard-body[data-theme="dark"] .chat-message.assistant::before {
+    background: #10b981 !important;
+    width: 4px !important;
+}
+
+.dashboard-body[data-theme="dark"] .chat-message.user,
+body[data-theme="dark"] .chat-message.user {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: #ffffff !important;
+    font-weight: 500 !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3) !important;
+}
+
+/* 5. Recommendation Cards */
+.dashboard-body[data-theme="dark"] .recommendation-card,
+body[data-theme="dark"] .recommendation-card {
+    background: #19251e !important;
+    border: 1.5px solid rgba(52, 211, 153, 0.35) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dashboard-body[data-theme="dark"] .recommendation-card:hover,
+body[data-theme="dark"] .recommendation-card:hover {
+    border-color: #34d399 !important;
+    box-shadow: 0 8px 24px rgba(52, 211, 153, 0.25) !important;
+    transform: translateY(-2px);
+}
+
+.dashboard-body[data-theme="dark"] .recommendation-card .lot-num-title {
+    color: #ffffff !important;
+}
+
+.dashboard-body[data-theme="dark"] .recommendation-card .score-badge {
+    background: rgba(16, 185, 129, 0.20) !important;
+    color: #34d399 !important;
+    border: 1px solid rgba(52, 211, 153, 0.45) !important;
+}
+
+.dashboard-body[data-theme="dark"] .meta-pill {
+    background: #202d25 !important;
+    color: #cbd5e1 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.dashboard-body[data-theme="dark"] .meta-pill.section {
+    background: rgba(99, 102, 241, 0.22) !important;
+    color: #c7d2fe !important;
+    border: 1px solid rgba(99, 102, 241, 0.4) !important;
+}
+
+.dashboard-body[data-theme="dark"] .meta-pill.price {
+    background: rgba(16, 185, 129, 0.22) !important;
+    color: #34d399 !important;
+    border: 1px solid rgba(52, 211, 153, 0.4) !important;
+}
+
+.dashboard-body[data-theme="dark"] .recommendation-reasons-box {
+    background: #111814 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-body[data-theme="dark"] .recommendation-reasons-label {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .recommendation-reasons li {
+    color: #e2e8f0 !important;
+}
+
+.dashboard-body[data-theme="dark"] .btn-select-lot,
+.dashboard-body[data-theme="dark"] .select-lot-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+}
+
+.dashboard-body[data-theme="dark"] .btn-select-lot:hover,
+.dashboard-body[data-theme="dark"] .select-lot-btn:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4) !important;
+}
+
+/* 6. Reservation Vouchers in Dark Mode */
+.dashboard-body[data-theme="dark"] .reservation-voucher,
+body[data-theme="dark"] .reservation-voucher {
+    background: #18241d !important;
+    border: 2px solid #10b981 !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dashboard-body[data-theme="dark"] .reservation-voucher.voucher--pending {
+    border-color: #f59e0b !important;
+}
+
+.dashboard-body[data-theme="dark"] .voucher-top-row {
+    border-bottom: 1.5px dashed rgba(255, 255, 255, 0.15) !important;
+}
+
+.dashboard-body[data-theme="dark"] .voucher-status-tag {
+    color: #fbbf24 !important;
+}
+
+.dashboard-body[data-theme="dark"] .voucher-status-tag.official {
+    color: #34d399 !important;
+}
+
+.dashboard-body[data-theme="dark"] .voucher-ref-title {
+    color: #ffffff !important;
+}
+
+.dashboard-body[data-theme="dark"] .voucher-badge-pending {
+    background: rgba(245, 158, 11, 0.20) !important;
+    color: #fbbf24 !important;
+    border: 1px solid rgba(245, 158, 11, 0.4) !important;
+}
+
+.dashboard-body[data-theme="dark"] .voucher-badge-official {
+    background: rgba(16, 185, 129, 0.20) !important;
+    color: #34d399 !important;
+    border: 1px solid rgba(52, 211, 153, 0.4) !important;
+}
+
+.dashboard-body[data-theme="dark"] .voucher-item-label {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .voucher-item-val {
+    color: #f8fafc !important;
+}
+
+.dashboard-body[data-theme="dark"] .voucher-alert-box.warning {
+    background: rgba(245, 158, 11, 0.15) !important;
+    border: 1px solid rgba(245, 158, 11, 0.35) !important;
+    color: #fde68a !important;
+}
+
+.dashboard-body[data-theme="dark"] .voucher-action-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.10) !important;
+}
+
+.dashboard-body[data-theme="dark"] .voucher-footer-note {
+    color: #cbd5e1 !important;
+}
+
+/* 7. AI Intel & Progress Cards */
+.dashboard-body[data-theme="dark"] .ai-intel-card {
+    background: #18241d !important;
+    border: 1px solid rgba(52, 211, 153, 0.3) !important;
+}
+
+.dashboard-body[data-theme="dark"] .ai-intel-title {
+    color: #34d399 !important;
+}
+
+.dashboard-body[data-theme="dark"] .ai-intel-body {
+    color: #e2e8f0 !important;
+}
+
+.dashboard-body[data-theme="dark"] .ai-intel-disclaimer {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .checklist-item.done {
+    color: #4ade80 !important;
+}
+
+.dashboard-body[data-theme="dark"] .checklist-item.missing {
+    color: #f87171 !important;
+}
+
+.dashboard-body[data-theme="dark"] .checklist-next-step {
+    color: #38bdf8 !important;
+}
+
+/* 8. Chat Input & Quick Suggestions */
+.dashboard-body[data-theme="dark"] .chat-prompt-suggestions,
+.dashboard-body[data-theme="dark"] .chat-input-row {
+    background: #131b17 !important;
+    border-top: 1.5px solid rgba(255, 255, 255, 0.10) !important;
+}
+
+.dashboard-body[data-theme="dark"] .prompt-chip {
+    background: #1e2c24 !important;
+    border: 1px solid rgba(52, 211, 153, 0.35) !important;
+    color: #e2e8f0 !important;
+}
+
+.dashboard-body[data-theme="dark"] .prompt-chip:hover {
+    background: #25392e !important;
+    border-color: #34d399 !important;
+    color: #34d399 !important;
+}
+
+.dashboard-body[data-theme="dark"] .chat-input-wrapper input[type="text"] {
+    background: #101713 !important;
+    border: 1.5px solid rgba(52, 211, 153, 0.35) !important;
+    color: #ffffff !important;
+}
+
+.dashboard-body[data-theme="dark"] .chat-input-wrapper input[type="text"]::placeholder {
+    color: #64748b !important;
+}
+
+.dashboard-body[data-theme="dark"] .chat-input-wrapper input[type="text"]:focus {
+    border-color: #34d399 !important;
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.25) !important;
+}
+
+.dashboard-body[data-theme="dark"] .chat-send-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: #ffffff !important;
+}
+
+/* 9. Blueprint Right HUD Details */
+.dashboard-body[data-theme="dark"] .blueprint-step .step-label {
+    color: #cbd5e1 !important;
+}
+
+.dashboard-body[data-theme="dark"] .blueprint-step .step-value {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+.dashboard-body[data-theme="dark"] .blueprint-step.active .step-num {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5) !important;
+}
+
+.dashboard-body[data-theme="dark"] .blueprint-step.completed .step-num {
+    background: #10b981 !important;
+    color: #ffffff !important;
+}
+
+.dashboard-body[data-theme="dark"] .blueprint-card {
+    background: #18241e !important;
+    border: 1px solid rgba(255, 255, 255, 0.10) !important;
+}
+
+.dashboard-body[data-theme="dark"] .hud-detail-row {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .hud-detail-row strong {
+    color: #ffffff !important;
+}
+
+.dashboard-body[data-theme="dark"] .hud-price,
+.dashboard-body[data-theme="dark"] .total-amount {
+    color: #34d399 !important;
+    font-weight: 800 !important;
+}
+
+.dashboard-body[data-theme="dark"] .hud-match-desc {
+    color: #e0f2fe !important;
+}
+
+.dashboard-body[data-theme="dark"] .blueprint-card.missing-alert {
+    background: rgba(245, 158, 11, 0.14) !important;
+    border: 1.5px solid rgba(245, 158, 11, 0.4) !important;
+    border-left: 4px solid #f59e0b !important;
+}
+
+.dashboard-body[data-theme="dark"] .blueprint-card.match-alert {
+    background: rgba(56, 189, 248, 0.14) !important;
+    border: 1.5px solid rgba(56, 189, 248, 0.4) !important;
+    border-left: 4px solid #38bdf8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .blueprint-ai-tips {
+    background: rgba(16, 185, 129, 0.14) !important;
+    border: 1px solid rgba(52, 211, 153, 0.35) !important;
+    border-left: 4px solid #10b981 !important;
+}
+
+.dashboard-body[data-theme="dark"] .tip-header,
+.dashboard-body[data-theme="dark"] .tip-text {
+    color: #a7f3d0 !important;
+}
+
+/* 10. Modals & Dialogs (Lot Picker, Doc Upload, Confirm Modal, Field Edit) */
+.dashboard-body[data-theme="dark"] .lot-picker-dialog,
+.dashboard-body[data-theme="dark"] .field-edit-dialog,
+body[data-theme="dark"] .lot-picker-dialog,
+body[data-theme="dark"] .field-edit-dialog {
+    background: #16221c !important;
+    border: 1.5px solid rgba(52, 211, 153, 0.35) !important;
+    border-top: 4px solid #10b981 !important;
+    color: #f1f5f9 !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7) !important;
+}
+
+.dashboard-body[data-theme="dark"] .lot-picker-header,
+.dashboard-body[data-theme="dark"] .field-edit-header {
+    background: #121915 !important;
+    border-bottom: 1.5px solid rgba(255, 255, 255, 0.10) !important;
+}
+
+.dashboard-body[data-theme="dark"] .lot-picker-title,
+.dashboard-body[data-theme="dark"] .field-edit-header h4,
+.dashboard-body[data-theme="dark"] #fieldEditTitle {
+    color: #ffffff !important;
+}
+
+.dashboard-body[data-theme="dark"] .lot-card-item {
+    background: #1a2620 !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.dashboard-body[data-theme="dark"] .lot-card-num {
+    color: #ffffff !important;
+}
+
+.dashboard-body[data-theme="dark"] .lot-card-sub {
+    color: #cbd5e1 !important;
+}
+
+.dashboard-body[data-theme="dark"] .lot-card-price {
+    color: #34d399 !important;
+}
+
+.dashboard-body[data-theme="dark"] .doc-upload-card {
+    background: #1a2620 !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.dashboard-body[data-theme="dark"] .doc-upload-head strong {
+    color: #ffffff !important;
+}
+
+.dashboard-body[data-theme="dark"] .doc-upload-sub {
+    color: #cbd5e1 !important;
+}
+
+.dashboard-body[data-theme="dark"] .file-name-preview {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .booking-confirm-hero .booking-confirm-heading {
+    color: #ffffff !important;
+}
+
+.dashboard-body[data-theme="dark"] .booking-confirm-hero .booking-confirm-desc {
+    color: #cbd5e1 !important;
+}
+
+.dashboard-body[data-theme="dark"] .booking-confirm-summary-box {
+    background: #111814 !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.dashboard-body[data-theme="dark"] .confirm-summary-row {
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-body[data-theme="dark"] .confirm-summary-label {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .confirm-summary-val {
+    color: #ffffff !important;
+}
+
+.dashboard-body[data-theme="dark"] .booking-confirm-warning-box {
+    background: rgba(245, 158, 11, 0.15) !important;
+    border: 1px solid rgba(245, 158, 11, 0.35) !important;
+    color: #fde68a !important;
+}
+
+.dashboard-body[data-theme="dark"] .btn-secondary {
+    background: #202d25 !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    color: #f1f5f9 !important;
+}
+
+.dashboard-body[data-theme="dark"] .btn-secondary:hover {
+    background: #2a3c32 !important;
+    border-color: rgba(52, 211, 153, 0.4) !important;
+    color: #34d399 !important;
+}
+
+.dashboard-body[data-theme="dark"] .btn-primary {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+}
+
+.dashboard-body[data-theme="dark"] .btn-primary:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+}
+
+.dashboard-body[data-theme="dark"] .modal-footer-custom {
+    border-top: 1.5px solid rgba(255, 255, 255, 0.10) !important;
+}
+
+.dashboard-body[data-theme="dark"] .modal-footer-custom span {
+    color: #cbd5e1 !important;
+}
+
+.dashboard-body[data-theme="dark"] #fieldEditInput {
+    background: #101713 !important;
+    border: 1.5px solid rgba(52, 211, 153, 0.35) !important;
+    color: #ffffff !important;
+}
+
+.dashboard-body[data-theme="dark"] #fieldEditLabel {
+    color: #cbd5e1 !important;
+}
+
+.dashboard-body[data-theme="dark"] #fieldEditHint {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .modal-status-text,
+.dashboard-body[data-theme="dark"] .modal-desc-text {
+    color: #cbd5e1 !important;
+}
+
 

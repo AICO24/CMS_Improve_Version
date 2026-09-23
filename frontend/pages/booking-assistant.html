@@ -20,17 +20,28 @@
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/toast.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/booking-chat.css?v=3">
+    <link rel="stylesheet" href="../../assets/css/ambient-swirl.css?v=1">
+    <link rel="stylesheet" href="../../assets/css/booking-chat.css?v=6">
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
 </head>
 <body class="dashboard-body">
 <script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <!-- Ambient Swirl Background Effect (Ultra-Visible Swirling Dots Particle Vortex) -->
+    <div class="ambient-swirl-canvas" aria-hidden="true">
+        <canvas id="ambientSwirlDotsCanvas"></canvas>
+        <div class="swirl-orb swirl-orb-1"></div>
+        <div class="swirl-orb swirl-orb-2"></div>
+        <div class="swirl-orb swirl-orb-3"></div>
+        <div class="swirl-orb swirl-orb-4"></div>
+        <div class="swirl-vignette"></div>
+    </div>
+
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
-                <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
+                <button type="button" id="railToggleBtn" title="Collapse to icons" aria-label="Collapse sidebar navigation"><i class="fas fa-angles-left"></i></button>
             </div>
             <div class="sidebar-nav">
                 <a href="dashboard_user.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
@@ -74,9 +85,9 @@
                 </div>
             </div>
             <div class="sidebar-footer">
-                <div class="user-chip">
+                <div class="user-chip" id="sidebarUserChip" role="button" tabindex="0" title="View Profile" aria-label="View user profile">
                     <i class="fas fa-user-circle"></i>
-                    <div><span id="sidebarUserName">User</span><small id="sidebarUserRole">Client</small></div>
+                    <div><span id="sidebarUserName">Client</span><small id="sidebarUserRole">Citizen User</small></div>
                 </div>
             </div>
         </aside>
@@ -84,8 +95,8 @@
         <main class="main-content">
             <div class="top-bar">
                 <div class="top-left">
-                    <label class="hamburger">
-                        <input type="checkbox" id="toggleSidebar">
+                    <label class="hamburger" title="Toggle sidebar menu">
+                        <input type="checkbox" id="toggleSidebar" aria-label="Toggle sidebar menu">
                         <svg viewBox="0 0 32 32">
                             <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
                             <path class="line" d="M7 16H27"></path>
@@ -94,19 +105,19 @@
                     <h3 id="pageTitle">AI Booking Assistant</h3>
                 </div>
                 <div class="user-info">
-                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode"><i class="fas fa-moon"></i></button>
-                    <div class="notification-icon" id="notificationIcon">
+                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false" aria-label="Toggle dark/light theme"><i class="fas fa-moon"></i></button>
+                    <div class="notification-icon" id="notificationIcon" role="button" tabindex="0" title="View notifications" aria-label="View system notifications">
                         <i class="fas fa-bell"></i>
                         <span class="notification-badge" id="notificationBadge">0</span>
                     </div>
-                    <div class="profile">
+                    <div class="profile" id="userProfile" role="button" tabindex="0" title="View user profile" aria-label="View user profile">
                         <div class="profile-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
                         <div class="profile-text">
-                            <div class="user-name" id="userName">User</div>
-                            <div class="user-role" id="userRole">Client</div>
+                            <div class="user-name" id="userName">Client</div>
+                            <div class="user-role" id="userRole">Citizen User</div>
                         </div>
                     </div>
-                    <button class="Btn logout-btn" id="logoutBtn">
+                    <button class="Btn logout-btn" id="logoutBtn" type="button" title="Sign out of system" aria-label="Logout">
                         <div class="sign"><i class="fas fa-sign-out-alt"></i></div>
                         <div class="text">Logout</div>
                     </button>
@@ -312,7 +323,7 @@
                                     <span class="hud-label text-info"><i class="fas fa-info-circle"></i> Cemetery Record Found</span>
                                 </div>
                                 <div class="hud-card-body">
-                                    <p id="hudMatchText" style="margin:0;font-size:0.8rem;line-height:1.4;color:#1e293b;"></p>
+                                    <p id="hudMatchText" class="hud-match-desc"></p>
                                 </div>
                             </div>
                         </div>
@@ -325,6 +336,56 @@
                         </div>
                     </aside>
                 </div>
+
+                <!-- Dashboard Footer (Unified 3-Column System Base Footer) -->
+                <footer class="dashboard-footer">
+                    <div class="dashboard-footer-inner">
+                        <!-- Left: Brand & Copyright -->
+                        <div class="footer-col footer-col--left">
+                            <div class="footer-brand">
+                                <span class="footer-brand__icon"><i class="fas fa-tree"></i></span>
+                                <div class="footer-brand__text">
+                                    <span class="footer-brand__name">Cemetery Management System</span>
+                                    <span class="footer-brand__version">AI Booking Assistant &nbsp;·&nbsp; Smart Reservation</span>
+                                </div>
+                            </div>
+                            <p class="footer-copy">&copy; <span id="footerYear">2026</span> All rights reserved.</p>
+                        </div>
+
+                        <!-- Center: Live Data Pulse -->
+                        <div class="footer-col footer-col--center">
+                            <div class="footer-pulse-ring"></div>
+                            <div class="footer-timestamp">
+                                <span class="footer-timestamp__label">
+                                    <i class="fas fa-circle-dot footer-live-dot"></i> Assistant service active as of
+                                </span>
+                                <strong class="footer-timestamp__value" id="footerLiveTime">—</strong>
+                            </div>
+                        </div>
+
+                        <!-- Right: Quick Links -->
+                        <div class="footer-col footer-col--right">
+                            <span class="footer-links-label">Quick Links</span>
+                            <nav class="footer-links" aria-label="Footer quick links">
+                                <a href="dashboard_user.html" class="footer-link">
+                                    <i class="fas fa-gauge-high"></i> Dashboard
+                                </a>
+                                <span class="footer-link-sep">·</span>
+                                <a href="my-bookings.html" class="footer-link">
+                                    <i class="fas fa-calendar-check"></i> Bookings
+                                </a>
+                                <span class="footer-link-sep">·</span>
+                                <a href="my-records.html" class="footer-link">
+                                    <i class="fas fa-folder-open"></i> Records
+                                </a>
+                                <span class="footer-link-sep">·</span>
+                                <a href="payment-history.html" class="footer-link">
+                                    <i class="fas fa-receipt"></i> Payments
+                                </a>
+                            </nav>
+                        </div>
+                    </div>
+                </footer>
             </div>
         </main>
     </div>
@@ -351,14 +412,14 @@
             <div class="lot-picker-body">
                 <div id="lotPickerSpinner" style="text-align: center; padding: 40px; display: none;">
                     <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
-                    <p style="margin-top: 10px; font-size: 0.85rem; color: #64748b;">Loading available cemetery lots...</p>
+                    <p class="modal-status-text" style="margin-top: 10px; font-size: 0.85rem;">Loading available cemetery lots...</p>
                 </div>
                 <div class="recommendations-grid" id="lotGridContainer">
                     <!-- Populated dynamically -->
                 </div>
                 <div id="lotPickerEmpty" style="text-align: center; padding: 40px; display: none;">
                     <i class="fas fa-folder-open fa-2x text-muted"></i>
-                    <p style="margin-top: 10px; font-size: 0.88rem; color: #64748b;">No available lots found matching your criteria.</p>
+                    <p class="modal-status-text" style="margin-top: 10px; font-size: 0.88rem;">No available lots found matching your criteria.</p>
                 </div>
             </div>
         </div>
@@ -368,12 +429,12 @@
     <div class="field-edit-modal-overlay" id="fieldEditModal" style="display: none;">
         <div class="field-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="fieldEditTitle">
             <div class="field-edit-header">
-                <h4 id="fieldEditTitle" style="margin: 0; font-size: 1rem; color: #0f172a;">Update Information</h4>
+                <h4 id="fieldEditTitle" style="margin: 0; font-size: 1rem;">Update Information</h4>
                 <button type="button" class="btn-close-modal" id="btnCloseFieldEdit" aria-label="Close field editor"><i class="fas fa-times"></i></button>
             </div>
             <form id="fieldEditForm" style="margin-top: 14px;">
                 <div class="form-group">
-                    <label id="fieldEditLabel" for="fieldEditInput" style="display: block; font-size: 0.82rem; font-weight: 600; color: #475569; margin-bottom: 6px;">Field Value</label>
+                    <label id="fieldEditLabel" for="fieldEditInput" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px;">Field Value</label>
                     <input type="text" id="fieldEditInput" class="form-control" style="width: 100%; border-radius: 8px;" required />
                     <small id="fieldEditHint" class="text-muted" style="display: block; margin-top: 4px; font-size: 0.75rem;"></small>
                 </div>
@@ -396,66 +457,66 @@
                 <button type="button" class="btn-close-modal" id="btnCloseDocModal" aria-label="Close document upload"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body-custom" style="padding: 20px;">
-                <p style="font-size: 0.85rem; color: #64748b; margin-top: 0; margin-bottom: 16px;">
+                <p class="modal-desc-text" style="font-size: 0.85rem; margin-top: 0; margin-bottom: 16px;">
                     Please upload the required documents for the deceased person. Accepted formats: <strong>PDF, JPG, PNG</strong> (up to 10MB each).
                 </p>
 
                 <!-- Document 1: Death Certificate -->
-                <div class="doc-upload-card" id="cardUploadDeathCert" style="background: rgba(248, 250, 252, 0.8); border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 14px; margin-bottom: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="doc-upload-card" id="cardUploadDeathCert">
+                    <div class="doc-upload-head">
                         <div>
-                            <strong style="font-size: 0.92rem; color: #0f172a;"><i class="fas fa-file-medical text-primary"></i> Death Certificate</strong>
-                            <span style="display: block; font-size: 0.75rem; color: #64748b;">PSA or Local Civil Registrar Certified True Copy</span>
+                            <strong><i class="fas fa-file-medical text-primary"></i> Death Certificate</strong>
+                            <span class="doc-upload-sub">PSA or Local Civil Registrar Certified True Copy</span>
                         </div>
-                        <span class="score-badge" id="modalBadgeDeathCert" style="font-size: 0.75rem; padding: 3px 8px;"><i class="fas fa-clock"></i> Pending</span>
+                        <span class="score-badge" id="modalBadgeDeathCert"><i class="fas fa-clock"></i> Pending</span>
                     </div>
-                    <div class="doc-upload-actions" style="margin-top: 10px; display: flex; gap: 8px; align-items: center;">
+                    <div class="doc-upload-actions">
                         <input type="file" id="inputFileDeathCert" accept=".pdf,.jpg,.jpeg,.png" style="display: none;" />
                         <button type="button" class="btn-secondary btn-sm" id="btnChooseDeathCert"><i class="fas fa-folder-open"></i> Choose File</button>
-                        <span class="file-name-preview" id="fileNameDeathCert" style="font-size: 0.8rem; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">No file selected</span>
+                        <span class="file-name-preview" id="fileNameDeathCert">No file selected</span>
                         <button type="button" class="btn-primary btn-sm" id="btnUploadDeathCert" style="margin-left: auto; display: none;"><i class="fas fa-upload"></i> Upload</button>
-                        <button type="button" class="btn-sm" id="btnDeleteDeathCert" style="display: none; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px;" title="Remove document"><i class="fas fa-trash"></i></button>
+                        <button type="button" class="btn-sm btn-delete-doc" id="btnDeleteDeathCert" style="display: none;" title="Remove document"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
 
                 <!-- Document 2: Burial / Cremation Permit -->
-                <div class="doc-upload-card" id="cardUploadPermit" style="background: rgba(248, 250, 252, 0.8); border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 14px; margin-bottom: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="doc-upload-card" id="cardUploadPermit">
+                    <div class="doc-upload-head">
                         <div>
-                            <strong style="font-size: 0.92rem; color: #0f172a;"><i class="fas fa-file-contract text-primary"></i> <span id="modalTitlePermit">Burial Permit</span></strong>
-                            <span style="display: block; font-size: 0.75rem; color: #64748b;">City Health Office or Local Government Unit Permit</span>
+                            <strong><i class="fas fa-file-contract text-primary"></i> <span id="modalTitlePermit">Burial Permit</span></strong>
+                            <span class="doc-upload-sub">City Health Office or Local Government Unit Permit</span>
                         </div>
-                        <span class="score-badge" id="modalBadgePermit" style="font-size: 0.75rem; padding: 3px 8px;"><i class="fas fa-clock"></i> Pending</span>
+                        <span class="score-badge" id="modalBadgePermit"><i class="fas fa-clock"></i> Pending</span>
                     </div>
-                    <div class="doc-upload-actions" style="margin-top: 10px; display: flex; gap: 8px; align-items: center;">
+                    <div class="doc-upload-actions">
                         <input type="file" id="inputFilePermit" accept=".pdf,.jpg,.jpeg,.png" style="display: none;" />
                         <button type="button" class="btn-secondary btn-sm" id="btnChoosePermit"><i class="fas fa-folder-open"></i> Choose File</button>
-                        <span class="file-name-preview" id="fileNamePermit" style="font-size: 0.8rem; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">No file selected</span>
+                        <span class="file-name-preview" id="fileNamePermit">No file selected</span>
                         <button type="button" class="btn-primary btn-sm" id="btnUploadPermit" style="margin-left: auto; display: none;"><i class="fas fa-upload"></i> Upload</button>
-                        <button type="button" class="btn-sm" id="btnDeletePermit" style="display: none; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px;" title="Remove document"><i class="fas fa-trash"></i></button>
+                        <button type="button" class="btn-sm btn-delete-doc" id="btnDeletePermit" style="display: none;" title="Remove document"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
 
                 <!-- Document 3: Valid Government ID -->
-                <div class="doc-upload-card" id="cardUploadId" style="background: rgba(248, 250, 252, 0.8); border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 14px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="doc-upload-card" id="cardUploadId">
+                    <div class="doc-upload-head">
                         <div>
-                            <strong style="font-size: 0.92rem; color: #0f172a;"><i class="fas fa-id-card text-primary"></i> Valid Government ID</strong>
-                            <span style="display: block; font-size: 0.75rem; color: #64748b;">Government-issued ID of Informant / Claimant (e.g. UMID, Driver's License, Passport, PhilSys)</span>
+                            <strong><i class="fas fa-id-card text-primary"></i> Valid Government ID</strong>
+                            <span class="doc-upload-sub">Government-issued ID of Informant / Claimant (e.g. UMID, Driver's License, Passport, PhilSys)</span>
                         </div>
-                        <span class="score-badge" id="modalBadgeId" style="font-size: 0.75rem; padding: 3px 8px;"><i class="fas fa-clock"></i> Pending</span>
+                        <span class="score-badge" id="modalBadgeId"><i class="fas fa-clock"></i> Pending</span>
                     </div>
-                    <div class="doc-upload-actions" style="margin-top: 10px; display: flex; gap: 8px; align-items: center;">
+                    <div class="doc-upload-actions">
                         <input type="file" id="inputFileId" accept=".pdf,.jpg,.jpeg,.png" style="display: none;" />
                         <button type="button" class="btn-secondary btn-sm" id="btnChooseId"><i class="fas fa-folder-open"></i> Choose File</button>
-                        <span class="file-name-preview" id="fileNameId" style="font-size: 0.8rem; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">No file selected</span>
+                        <span class="file-name-preview" id="fileNameId">No file selected</span>
                         <button type="button" class="btn-primary btn-sm" id="btnUploadId" style="margin-left: auto; display: none;"><i class="fas fa-upload"></i> Upload</button>
-                        <button type="button" class="btn-sm" id="btnDeleteId" style="display: none; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px;" title="Remove document"><i class="fas fa-trash"></i></button>
+                        <button type="button" class="btn-sm btn-delete-doc" id="btnDeleteId" style="display: none;" title="Remove document"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer-custom" style="padding: 14px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                <span id="modalDocSummaryText" style="font-size: 0.82rem; color: #64748b;">0 of 3 documents submitted</span>
+            <div class="modal-footer-custom">
+                <span id="modalDocSummaryText">0 of 3 documents submitted</span>
                 <button type="button" class="btn-primary" id="btnDoneDocModal" style="padding: 8px 18px;">Done</button>
             </div>
         </div>
@@ -472,42 +533,42 @@
                 <button type="button" class="btn-close-modal" id="btnCloseBookingConfirm" aria-label="Close confirmation dialog"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body-custom" style="padding: 22px;">
-                <div style="text-align: center; margin-bottom: 16px;">
-                    <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(15, 118, 110, 0.12); color: #0f766e; display: inline-flex; align-items: center; justify-content: center; font-size: 1.45rem; margin-bottom: 10px;">
+                <div class="booking-confirm-hero">
+                    <div class="booking-confirm-icon-wrap">
                         <i class="fas fa-file-circle-check"></i>
                     </div>
-                    <h4 style="margin: 0; font-size: 1.08rem; color: #0f172a; font-weight: 700;">Finalize & Submit Reservation</h4>
-                    <p style="margin: 6px 0 0; font-size: 0.85rem; color: #64748b; line-height: 1.45;">
+                    <h4 class="booking-confirm-heading">Finalize & Submit Reservation</h4>
+                    <p class="booking-confirm-desc">
                         Please verify the reservation details below before submitting to cemetery administration.
                     </p>
                 </div>
 
                 <!-- Structured Reservation Summary Box -->
-                <div style="background: rgba(248, 250, 252, 0.95); border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px;">
-                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Service Type</span>
-                        <strong id="confirmModalService" style="font-size: 0.88rem; color: #0f172a;">Burial Service</strong>
+                <div class="booking-confirm-summary-box">
+                    <div class="confirm-summary-row">
+                        <span class="confirm-summary-label">Service Type</span>
+                        <strong id="confirmModalService" class="confirm-summary-val">Burial Service</strong>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px;">
-                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Decedent Name</span>
-                        <strong id="confirmModalDecedent" style="font-size: 0.88rem; color: #0f172a;">--</strong>
+                    <div class="confirm-summary-row">
+                        <span class="confirm-summary-label">Decedent Name</span>
+                        <strong id="confirmModalDecedent" class="confirm-summary-val">--</strong>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px;">
-                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Scheduled Date</span>
-                        <strong id="confirmModalDate" style="font-size: 0.88rem; color: #0f172a;">--</strong>
+                    <div class="confirm-summary-row">
+                        <span class="confirm-summary-label">Scheduled Date</span>
+                        <strong id="confirmModalDate" class="confirm-summary-val">--</strong>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px;">
-                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;" id="confirmModalAllocationLabel">Burial Lot</span>
-                        <strong id="confirmModalLot" style="font-size: 0.88rem; color: #0f172a;">--</strong>
+                    <div class="confirm-summary-row">
+                        <span class="confirm-summary-label" id="confirmModalAllocationLabel">Burial Lot</span>
+                        <strong id="confirmModalLot" class="confirm-summary-val">--</strong>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Documentary Requirements</span>
+                    <div class="confirm-summary-row">
+                        <span class="confirm-summary-label">Documentary Requirements</span>
                         <span id="confirmModalDocsBadge" class="doc-req-status pending" style="font-size: 0.75rem;">Pending</span>
                     </div>
                 </div>
 
-                <div style="background: rgba(254, 243, 199, 0.6); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 8px; padding: 10px 12px; margin-bottom: 18px; font-size: 0.8rem; color: #92400e; display: flex; gap: 8px; align-items: flex-start;">
-                    <i class="fas fa-info-circle" style="margin-top: 2px; color: #d97706;"></i>
+                <div class="booking-confirm-warning-box">
+                    <i class="fas fa-info-circle"></i>
                     <span>Once confirmed, your booking will be officially locked and submitted to the cemetery staff.</span>
                 </div>
 
@@ -527,6 +588,7 @@
     <script src="../../assets/js/shared/button-loading.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
+    <script src="../../assets/js/components/ambient-swirl-dots.js"></script>
     <script src="../../assets/js/pages/booking-assistant.js"></script>
 </body>
 </html>

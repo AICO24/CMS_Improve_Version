@@ -70,6 +70,9 @@
         }
 
         await initializeSession();
+
+        // Footer live clock
+        setupFooterClock();
     }
 
     /**
@@ -281,6 +284,48 @@
         if (logoutBtn && typeof api !== 'undefined' && typeof api.logout === 'function') {
             logoutBtn.addEventListener('click', () => api.logout());
         }
+
+        // Profile Click (Top-bar & Sidebar User Chip)
+        const openProfile = () => {
+            const basePath = typeof getFrontendBasePath === 'function' ? getFrontendBasePath() : '../..';
+            window.location.href = `${basePath}/pages/profile.html`;
+        };
+        const userProfileEl = document.getElementById('userProfile');
+        if (userProfileEl) {
+            userProfileEl.addEventListener('click', openProfile);
+            userProfileEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openProfile();
+                }
+            });
+        }
+        const sidebarChipEl = document.getElementById('sidebarUserChip');
+        if (sidebarChipEl) {
+            sidebarChipEl.addEventListener('click', openProfile);
+            sidebarChipEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openProfile();
+                }
+            });
+        }
+
+        // Notification Bell Click & Keyboard Accessibility
+        const notificationBtn = document.getElementById('notificationIcon');
+        if (notificationBtn) {
+            const openNotifications = () => {
+                const basePath = typeof getFrontendBasePath === 'function' ? getFrontendBasePath() : '../..';
+                window.location.href = `${basePath}/pages/notifications.html`;
+            };
+            notificationBtn.addEventListener('click', openNotifications);
+            notificationBtn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openNotifications();
+                }
+            });
+        }
     }
 
     /**
@@ -309,10 +354,25 @@
                 const nameEls = [document.getElementById('userName'), document.getElementById('sidebarUserName')];
                 const roleEls = [document.getElementById('userRole'), document.getElementById('sidebarUserRole')];
                 const displayName = user.full_name || user.username || 'Client';
-                const displayRole = user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'Client';
+                const displayRole = user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'Citizen User';
 
                 nameEls.forEach(el => { if (el) el.textContent = displayName; });
                 roleEls.forEach(el => { if (el) el.textContent = displayRole; });
+            }
+
+            // Unread notifications count in top-bar badge
+            try {
+                if (typeof api !== 'undefined' && api.request) {
+                    const unreadRes = await api.request('notifications/unread-count', { method: 'GET' }).catch(() => ({ count: 0 }));
+                    const unreadCount = Number(unreadRes && unreadRes.count ? unreadRes.count : 0);
+                    const badge = document.getElementById('notificationBadge');
+                    if (badge) {
+                        badge.textContent = String(unreadCount);
+                        badge.style.display = 'inline-flex';
+                    }
+                }
+            } catch (notifErr) {
+                console.warn('Could not fetch unread notifications count:', notifErr);
             }
         } catch (e) {
             console.warn('Could not fetch user profile:', e);
@@ -945,15 +1005,15 @@
         if (avail.available_lot_count !== undefined) detailsHtml += `<div><strong>Available Lots:</strong> ${avail.available_lot_count}</div>`;
 
         cardDiv.innerHTML = `
-            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 12px; margin-top: 4px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="font-weight: 600; font-size: 0.95rem;"><i class="fas fa-calendar-check"></i> Availability Intelligence</span>
+            <div class="ai-intel-card">
+                <div class="ai-intel-header">
+                    <span class="ai-intel-title"><i class="fas fa-calendar-check"></i> Availability Intelligence</span>
                     <span class="badge badge-${badgeClass}"><i class="fas fa-${badgeIcon}"></i> ${badgeText}</span>
                 </div>
-                <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.5;">
+                <div class="ai-intel-body">
                     ${detailsHtml}
                 </div>
-                <div style="margin-top: 6px; font-size: 0.75rem; color: #94a3b8; font-style: italic;">
+                <div class="ai-intel-disclaimer">
                     Advisory query only — no reservation created.
                 </div>
             </div>
@@ -975,23 +1035,23 @@
         };
         let compList = (checklist.completed || []).map(f => {
             const lbl = fieldLabels[f] || f.replace(/_/g, ' ');
-            return `<div style="color: #4ade80; margin-bottom: 3px;"><i class="fas fa-check-circle"></i> ${lbl}</div>`;
+            return `<div class="checklist-item done"><i class="fas fa-check-circle"></i> ${lbl}</div>`;
         }).join('');
         let missList = (checklist.missing || []).map(f => {
             const lbl = fieldLabels[f] || f.replace(/_/g, ' ');
-            return `<div style="color: #f87171; margin-bottom: 3px;"><i class="far fa-circle"></i> ${lbl}</div>`;
+            return `<div class="checklist-item missing"><i class="far fa-circle"></i> ${lbl}</div>`;
         }).join('');
 
         cardDiv.innerHTML = `
-            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 12px; margin-top: 4px;">
-                <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 8px;">
-                    <i class="fas fa-tasks"></i> Booking Progress Checklist
+            <div class="ai-intel-card">
+                <div class="ai-intel-header">
+                    <span class="ai-intel-title"><i class="fas fa-tasks"></i> Booking Progress Checklist</span>
                 </div>
-                <div style="font-size: 0.85rem; line-height: 1.5;">
+                <div class="checklist-body">
                     ${compList}
                     ${missList}
                 </div>
-                ${checklist.next_recommended_step ? `<div style="margin-top: 8px; font-size: 0.85rem; color: #38bdf8;"><strong>Next Step:</strong> ${checklist.next_recommended_step.replace(/_/g, ' ')}</div>` : ''}
+                ${checklist.next_recommended_step ? `<div class="checklist-next-step"><strong>Next Step:</strong> ${checklist.next_recommended_step.replace(/_/g, ' ')}</div>` : ''}
             </div>
         `;
         chatThread.appendChild(cardDiv);
@@ -1205,13 +1265,13 @@
             card.innerHTML = `
                 <div>
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-                        <h4 style="margin:0;font-size:1rem;color:#0f172a;font-weight:700;">Lot ${escapeHtml(lot.lot_number)}</h4>
-                        <span class="meta-pill" style="background:#e0f2fe;color:#0369a1;font-size:0.72rem;">${escapeHtml(lot.lot_type_name || 'Standard')}</span>
+                        <h4 class="lot-card-num">Lot ${escapeHtml(lot.lot_number)}</h4>
+                        <span class="meta-pill section">${escapeHtml(lot.lot_type_name || 'Standard')}</span>
                     </div>
-                    <div style="font-size:0.82rem;color:#64748b;margin-top:4px;">
+                    <div class="lot-card-sub">
                         ${escapeHtml(lot.section_name || '')} • ${escapeHtml(lot.block_name || '')}
                     </div>
-                    <div style="font-size:1.05rem;font-weight:800;color:#166534;margin-top:8px;">
+                    <div class="lot-card-price">
                         ₱${Number(lot.price || 0).toLocaleString()}
                     </div>
                 </div>
@@ -1458,43 +1518,43 @@
 
         const errDetail = checkoutError ? escapeHtml(checkoutError) : 'Online checkout could not be initialized at this time.';
         const voucherHtml = `
-            <div class="reservation-voucher" style="background:#ffffff;border:2px solid #d97706;border-radius:14px;padding:18px;margin:8px 0;">
-                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px dashed #cbd5e1;padding-bottom:12px;margin-bottom:12px;">
+            <div class="reservation-voucher voucher--pending">
+                <div class="voucher-top-row">
                     <div>
-                        <span style="font-size:0.75rem;font-weight:700;color:#d97706;text-transform:uppercase;">Reservation Created — Payment Pending</span>
-                        <h3 style="margin:2px 0 0 0;font-size:1.15rem;color:#0f172a;">${scheduleRef}</h3>
+                        <span class="voucher-status-tag">Reservation Created — Payment Pending</span>
+                        <h3 class="voucher-ref-title">${scheduleRef}</h3>
                     </div>
-                    <span class="score-badge" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;padding:4px 10px;font-size:0.8rem;">
+                    <span class="score-badge voucher-badge-pending">
                         <i class="fas fa-clock"></i> Awaiting Payment
                     </span>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:0.85rem;">
+                <div class="voucher-details-grid">
                     <div>
-                        <span style="color:#64748b;font-size:0.75rem;display:block;">Service Type</span>
-                        <strong style="color:#0f172a;">${isCremation ? 'Cremation Service' : 'Burial Service'}</strong>
+                        <span class="voucher-item-label">Service Type</span>
+                        <strong class="voucher-item-val">${isCremation ? 'Cremation Service' : 'Burial Service'}</strong>
                     </div>
                     <div>
-                        <span style="color:#64748b;font-size:0.75rem;display:block;">Scheduled Date</span>
-                        <strong style="color:#0f172a;">${formatDate(dateVal)}</strong>
+                        <span class="voucher-item-label">Scheduled Date</span>
+                        <strong class="voucher-item-val">${formatDate(dateVal)}</strong>
                     </div>
                     <div>
-                        <span style="color:#64748b;font-size:0.75rem;display:block;">Decedent Name</span>
-                        <strong style="color:#0f172a;">${escapeHtml(state.extractedData.decedent_name || 'N/A')}</strong>
+                        <span class="voucher-item-label">Decedent Name</span>
+                        <strong class="voucher-item-val">${escapeHtml(state.extractedData.decedent_name || 'N/A')}</strong>
                     </div>
                     <div>
-                        <span style="color:#64748b;font-size:0.75rem;display:block;">${isCremation ? 'Columbarium' : 'Burial Lot'}</span>
-                        <strong style="color:#0f172a;">${isCremation ? (escapeHtml(state.extractedData.preferred_columbarium || 'Assigned on arrival')) : (state.selectedLotDetails ? `Lot ${escapeHtml(state.selectedLotDetails.lot_number)} (${escapeHtml(state.selectedLotDetails.section_name)})` : `Lot #${state.extractedData.lot_id}`)}</strong>
+                        <span class="voucher-item-label">${isCremation ? 'Columbarium' : 'Burial Lot'}</span>
+                        <strong class="voucher-item-val">${isCremation ? (escapeHtml(state.extractedData.preferred_columbarium || 'Assigned on arrival')) : (state.selectedLotDetails ? `Lot ${escapeHtml(state.selectedLotDetails.lot_number)} (${escapeHtml(state.selectedLotDetails.section_name)})` : `Lot #${state.extractedData.lot_id}`)}</strong>
                     </div>
                 </div>
-                <div style="margin-top:12px;background:#fffbeb;padding:10px 14px;border-radius:8px;border:1px solid #fde68a;font-size:0.85rem;color:#92400e;">
-                    <i class="fas fa-circle-exclamation" style="margin-right:4px;"></i> <strong>Payment Notice:</strong> Your reservation is saved as <strong>Pending</strong>, but online checkout could not be initialized (${errDetail}). You can complete payment or retry checkout at any time in My Bookings.
+                <div class="voucher-alert-box warning">
+                    <i class="fas fa-circle-exclamation"></i> <strong>Payment Notice:</strong> Your reservation is saved as <strong>Pending</strong>, but online checkout could not be initialized (${errDetail}). You can complete payment or retry checkout at any time in My Bookings.
                 </div>
-                <div style="margin-top:14px;padding-top:12px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                    <span style="font-size:0.78rem;color:#64748b;line-height:1.4;">
+                <div class="voucher-action-footer">
+                    <span class="voucher-footer-note">
                         <i class="fas fa-info-circle text-warning"></i> Your schedule slot is recorded. Please complete payment to finalize reservation.
                     </span>
                     <div style="display:flex;gap:8px;">
-                        <a href="my-bookings.html?${isCremation ? 'cremation_id' : 'schedule_id'}=${state.committedRecordId || ''}" style="padding:6px 14px;font-size:0.8rem;background:#2c5e47;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-calendar-check"></i> Go to My Bookings &rarr;</a>
+                        <a href="my-bookings.html?${isCremation ? 'cremation_id' : 'schedule_id'}=${state.committedRecordId || ''}" class="btn-primary" style="padding:7px 14px;font-size:0.82rem;text-decoration:none;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-calendar-check"></i> Go to My Bookings &rarr;</a>
                     </div>
                 </div>
             </div>
@@ -1518,41 +1578,41 @@
         const isCommitted = state.status === 'COMMITTED';
 
         const voucherHtml = `
-            <div class="reservation-voucher" style="background:#ffffff;border:2px solid #2c5e47;border-radius:14px;padding:18px;margin:8px 0;">
-                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px dashed #cbd5e1;padding-bottom:12px;margin-bottom:12px;">
+            <div class="reservation-voucher voucher--official">
+                <div class="voucher-top-row">
                     <div>
-                        <span style="font-size:0.75rem;font-weight:700;color:#2c5e47;text-transform:uppercase;">Official Booking Voucher</span>
-                        <h3 style="margin:2px 0 0 0;font-size:1.15rem;color:#0f172a;">${scheduleRef}</h3>
+                        <span class="voucher-status-tag official">Official Booking Voucher</span>
+                        <h3 class="voucher-ref-title">${scheduleRef}</h3>
                     </div>
-                    <span class="score-badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:4px 10px;font-size:0.8rem;">
+                    <span class="score-badge voucher-badge-official">
                         <i class="fas fa-${isCommitted ? 'check-double' : 'clock'}"></i> ${isCommitted ? 'Pending Admin Review' : 'Awaiting Review'}
                     </span>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:0.85rem;">
+                <div class="voucher-details-grid">
                     <div>
-                        <span style="color:#64748b;font-size:0.75rem;display:block;">Service Type</span>
-                        <strong style="color:#0f172a;">${isCremation ? 'Cremation Service' : 'Burial Service'}</strong>
+                        <span class="voucher-item-label">Service Type</span>
+                        <strong class="voucher-item-val">${isCremation ? 'Cremation Service' : 'Burial Service'}</strong>
                     </div>
                     <div>
-                        <span style="color:#64748b;font-size:0.75rem;display:block;">Scheduled Date</span>
-                        <strong style="color:#0f172a;">${formatDate(dateVal)}</strong>
+                        <span class="voucher-item-label">Scheduled Date</span>
+                        <strong class="voucher-item-val">${formatDate(dateVal)}</strong>
                     </div>
                     <div>
-                        <span style="color:#64748b;font-size:0.75rem;display:block;">Decedent Name</span>
-                        <strong style="color:#0f172a;">${escapeHtml(state.extractedData.decedent_name || 'N/A')}</strong>
+                        <span class="voucher-item-label">Decedent Name</span>
+                        <strong class="voucher-item-val">${escapeHtml(state.extractedData.decedent_name || 'N/A')}</strong>
                     </div>
                     <div>
-                        <span style="color:#64748b;font-size:0.75rem;display:block;">${isCremation ? 'Columbarium' : 'Burial Lot'}</span>
-                        <strong style="color:#0f172a;">${isCremation ? (escapeHtml(state.extractedData.preferred_columbarium || 'Assigned on arrival')) : (state.selectedLotDetails ? `Lot ${escapeHtml(state.selectedLotDetails.lot_number)} (${escapeHtml(state.selectedLotDetails.section_name)})` : `Lot #${state.extractedData.lot_id}`)}</strong>
+                        <span class="voucher-item-label">${isCremation ? 'Columbarium' : 'Burial Lot'}</span>
+                        <strong class="voucher-item-val">${isCremation ? (escapeHtml(state.extractedData.preferred_columbarium || 'Assigned on arrival')) : (state.selectedLotDetails ? `Lot ${escapeHtml(state.selectedLotDetails.lot_number)} (${escapeHtml(state.selectedLotDetails.section_name)})` : `Lot #${state.extractedData.lot_id}`)}</strong>
                     </div>
                 </div>
-                <div style="margin-top:14px;padding-top:12px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                    <span style="font-size:0.78rem;color:#64748b;line-height:1.4;">
+                <div class="voucher-action-footer">
+                    <span class="voucher-footer-note">
                         <i class="fas fa-shield-alt text-success"></i> Your booking details are recorded in our official scheduling system. Administrative staff will verify documents and review your schedule.
                     </span>
                     <div style="display:flex;gap:8px;">
-                        <button type="button" onclick="window.print()" style="padding:6px 12px;font-size:0.8rem;background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;cursor:pointer;color:#334155;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-print"></i> Print</button>
-                        <a href="my-bookings.html" style="padding:6px 14px;font-size:0.8rem;background:#2c5e47;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-calendar-check"></i> My Bookings &rarr;</a>
+                        <button type="button" onclick="window.print()" class="btn-secondary" style="padding:7px 12px;font-size:0.82rem;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-print"></i> Print</button>
+                        <a href="my-bookings.html" class="btn-primary" style="padding:7px 14px;font-size:0.82rem;text-decoration:none;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-calendar-check"></i> My Bookings &rarr;</a>
                     </div>
                 </div>
             </div>
@@ -1993,6 +2053,23 @@
         } catch (err) {
             if (typeof showToast === 'function') showToast(err.message || 'Delete failed', 'error');
         }
+    }
+
+    /**
+     * Footer live-clock: updates the timestamp in the system footer every second
+     */
+    function setupFooterClock() {
+        const timeEl = document.getElementById('footerLiveTime');
+        const yearEl = document.getElementById('footerYear');
+        if (yearEl) yearEl.textContent = new Date().getFullYear();
+        if (!timeEl) return;
+        function tick() {
+            const now = new Date();
+            const opts = { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            timeEl.textContent = now.toLocaleString('en-US', opts);
+        }
+        tick();
+        setInterval(tick, 1000);
     }
 
     // Auto-init on DOMContentLoaded

@@ -151,4 +151,75 @@ document.addEventListener('DOMContentLoaded', async function() {
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
     }
+
+    function setupFooterClock() {
+        const timeEl = document.getElementById('footerLiveTime');
+        const yearEl = document.getElementById('footerYear');
+        if (yearEl) yearEl.textContent = new Date().getFullYear();
+        if (!timeEl) return;
+        function tick() {
+            const now = new Date();
+            const opts = { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            timeEl.textContent = now.toLocaleString('en-US', opts);
+        }
+        tick();
+        setInterval(tick, 1000);
+    }
+
+    async function updateNotificationBadge() {
+        try {
+            if (!window.api || typeof window.api.request !== 'function') return;
+            const result = await api.request('notifications/unread-count', { method: 'GET' });
+            const badge = document.getElementById('notificationBadge');
+            if (badge) {
+                const count = Number(result.count || 0);
+                badge.textContent = String(count);
+                badge.style.display = 'flex';
+            }
+        } catch (e) {
+            console.error('Failed to update notification badge:', e);
+        }
+    }
+
+    function setupTopBarActions() {
+        const notificationBtn = document.getElementById('notificationIcon');
+        if (notificationBtn) {
+            const openNotifications = () => {
+                const basePath = typeof getFrontendBasePath === 'function' ? getFrontendBasePath() : '../..';
+                window.location.href = `${basePath}/pages/notifications.html`;
+            };
+            notificationBtn.addEventListener('click', openNotifications);
+            notificationBtn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openNotifications();
+                }
+            });
+        }
+
+        const openProfile = () => {
+            const basePath = typeof getFrontendBasePath === 'function' ? getFrontendBasePath() : '../..';
+            window.location.href = `${basePath}/pages/profile.html`;
+        };
+        const userProfileEl = document.getElementById('userProfile');
+        if (userProfileEl) {
+            userProfileEl.addEventListener('click', openProfile);
+            userProfileEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openProfile();
+                }
+            });
+        }
+        document.getElementById('sidebarUserChip')?.addEventListener('click', openProfile);
+
+        document.getElementById('logoutBtn')?.addEventListener('click', () => {
+            if (window.api && typeof window.api.logout === 'function') api.logout();
+        });
+    }
+
+    setupTopBarActions();
+    setupFooterClock();
+    updateNotificationBadge();
+    setInterval(updateNotificationBadge, 30000);
 });

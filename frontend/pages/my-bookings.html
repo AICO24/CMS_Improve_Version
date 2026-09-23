@@ -20,12 +20,26 @@
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/toast.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/my-bookings.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/ambient-swirl.css?v=1">
+    <link rel="stylesheet" href="../../assets/css/dashboard_user.css?v=4">
+    <link rel="stylesheet" href="../../assets/css/my-bookings.css?v=3">
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
 </head>
 <body class="dashboard-body">
 <script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <!-- Ambient Swirl Background Effect (Ultra-Visible Swirling Dots Particle Vortex) -->
+    <div class="ambient-swirl-canvas" aria-hidden="true">
+        <div class="ambient-swirl-orbit orbit-1"></div>
+        <div class="ambient-swirl-orbit orbit-2"></div>
+        <div class="ambient-swirl-orbit orbit-3"></div>
+        <div class="ambient-swirl-orbit orbit-4"></div>
+        <div class="ambient-swirl-orbit orbit-5"></div>
+        <div class="ambient-swirl-orbit orbit-6"></div>
+        <div class="ambient-swirl-orbit orbit-7"></div>
+        <div class="ambient-swirl-orbit orbit-8"></div>
+        <div class="ambient-swirl-core"></div>
+    </div>
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="sidebar-header">
@@ -84,8 +98,8 @@
         <main class="main-content">
             <div class="top-bar">
                 <div class="top-left">
-                    <label class="hamburger">
-                        <input type="checkbox" id="toggleSidebar">
+                    <label class="hamburger" title="Toggle sidebar menu">
+                        <input type="checkbox" id="toggleSidebar" aria-label="Toggle sidebar menu">
                         <svg viewBox="0 0 32 32">
                             <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
                             <path class="line" d="M7 16H27"></path>
@@ -94,19 +108,19 @@
                     <h3 id="pageTitle">My Bookings</h3>
                 </div>
                 <div class="user-info">
-                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
-                    <div class="notification-icon" id="notificationIcon">
+                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false" aria-label="Toggle dark/light theme"><i class="fas fa-moon"></i></button>
+                    <div class="notification-icon" id="notificationIcon" role="button" tabindex="0" title="View notifications" aria-label="View system notifications">
                         <i class="fas fa-bell"></i>
                         <span class="notification-badge" id="notificationBadge">0</span>
                     </div>
-                    <div class="profile">
+                    <div class="profile" id="userProfile" role="button" tabindex="0" title="View user profile" aria-label="View user profile">
                         <div class="profile-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
                         <div class="profile-text">
                             <div class="user-name" id="userName">Client</div>
-                            <div class="user-role" id="userRole">Client</div>
+                            <div class="user-role" id="userRole">Citizen User</div>
                         </div>
                     </div>
-                    <button class="Btn logout-btn" id="logoutBtn" title="Sign out">
+                    <button class="Btn logout-btn" id="logoutBtn" type="button" title="Sign out of system" aria-label="Logout">
                         <div class="sign"><i class="fas fa-sign-out-alt"></i></div>
                         <div class="text">Logout</div>
                     </button>
@@ -129,29 +143,31 @@
                 <!-- Checkout Return Status Notification -->
                 <div id="checkoutStatusAlert" class="checkout-status-alert" style="display:none;"></div>
 
-                <!-- Summary Stats Section -->
-                <p class="section-label"><i class="fas fa-chart-pie"></i> Bookings Overview</p>
-
-                <div id="bookingStatsRow" class="stats-row my-bookings-stats">
-                    <div class="stat-card accent-green">
+                <!-- Status Cards (System Forest Color Palette & Interactive Design) -->
+                <div class="stats-row dashboard-user-stats" id="bookingStatsRow">
+                    <div class="stat-card accent-green active-filter" id="cardStatTotal" role="button" tabindex="0" title="View all bookings and drafts" data-filter="" aria-label="Show all bookings">
                         <div class="stat-title"><span class="card-icon"><i class="fas fa-folder-open"></i></span> Total Bookings</div>
-                        <div id="statTotal" class="stat-value">-</div>
+                        <div class="stat-value" id="statTotal">-</div>
                         <div class="stat-sub">All requests &amp; drafts</div>
+                        <div class="stat-card-action"><i class="fas fa-calendar-check"></i> <span>Manage Bookings</span></div>
                     </div>
-                    <div class="stat-card accent-teal">
+                    <div class="stat-card accent-teal" id="cardStatBurials" role="button" tabindex="0" title="View burial schedules" data-filter="burial" aria-label="Filter burial schedules">
                         <div class="stat-title"><span class="card-icon"><i class="fas fa-monument"></i></span> Burial Services</div>
-                        <div id="statBurials" class="stat-value">-</div>
+                        <div class="stat-value" id="statBurials">-</div>
                         <div class="stat-sub">Burial schedules</div>
+                        <div class="stat-card-action"><i class="fas fa-calendar-day"></i> <span>Schedule Details</span></div>
                     </div>
-                    <div class="stat-card accent-purple">
+                    <div class="stat-card accent-amber" id="cardStatCremations" role="button" tabindex="0" title="View cremation requests" data-filter="cremation" aria-label="Filter cremation requests">
                         <div class="stat-title"><span class="card-icon"><i class="fas fa-fire"></i></span> Cremation Services</div>
-                        <div id="statCremations" class="stat-value">-</div>
+                        <div class="stat-value" id="statCremations">-</div>
                         <div class="stat-sub">Columbarium requests</div>
+                        <div class="stat-card-action"><i class="fas fa-clock"></i> <span>Schedule Details</span></div>
                     </div>
-                    <div class="stat-card accent-amber">
+                    <div class="stat-card accent-navy" id="cardStatDrafts" role="button" tabindex="0" title="View active drafts" data-filter="draft" aria-label="Filter active drafts">
                         <div class="stat-title"><span class="card-icon"><i class="fas fa-pen-to-square"></i></span> Active Drafts</div>
-                        <div id="statDrafts" class="stat-value">-</div>
+                        <div class="stat-value" id="statDrafts">-</div>
                         <div class="stat-sub">In-progress bookings</div>
+                        <div class="stat-card-action"><i class="fas fa-hourglass-half"></i> <span>View Drafts</span></div>
                     </div>
                 </div>
 
@@ -227,13 +243,61 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <footer class="dashboard-footer">
-                <div class="dashboard-footer__bottom">
-                    <span class="dashboard-footer__text">&copy; 2026 Cemetery Management System. All rights reserved.</span>
-                </div>
-            </footer>
+                <!-- Dashboard Footer (Unified 3-Column System Base Footer) -->
+                <footer class="dashboard-footer" role="contentinfo">
+                    <div class="dashboard-footer-inner">
+                        <!-- Left: Brand & Copyright -->
+                        <div class="footer-col footer-col--left">
+                            <div class="footer-brand">
+                                <span class="footer-brand__icon"><i class="fas fa-tree"></i></span>
+                                <div class="footer-brand__text">
+                                    <span class="footer-brand__name">Cemetery Management System</span>
+                                    <span class="footer-brand__version">Citizen Portal &nbsp;·&nbsp; My Bookings</span>
+                                </div>
+                            </div>
+                            <p class="footer-copy">&copy; <span id="footerYear">2026</span> All rights reserved.</p>
+                        </div>
+
+                        <!-- Center: Live Data Pulse -->
+                        <div class="footer-col footer-col--center">
+                            <div class="footer-pulse-ring"></div>
+                            <div class="footer-timestamp">
+                                <span class="footer-timestamp__label">
+                                    <i class="fas fa-circle-dot footer-live-dot"></i> Citizen portal active as of
+                                </span>
+                                <strong class="footer-timestamp__value" id="footerLiveTime">—</strong>
+                            </div>
+                        </div>
+
+                        <!-- Right: Quick Links -->
+                        <div class="footer-col footer-col--right">
+                            <span class="footer-links-label">Quick Links</span>
+                            <nav class="footer-links" aria-label="Footer quick links">
+                                <a href="dashboard_user.html" class="footer-link">
+                                    <i class="fas fa-gauge-high"></i> Dashboard
+                                </a>
+                                <span class="footer-link-sep">·</span>
+                                <a href="booking-assistant.html" class="footer-link">
+                                    <i class="fas fa-robot"></i> Assistant
+                                </a>
+                                <span class="footer-link-sep">·</span>
+                                <a href="my-bookings.html" class="footer-link">
+                                    <i class="fas fa-calendar-check"></i> Bookings
+                                </a>
+                                <span class="footer-link-sep">·</span>
+                                <a href="my-records.html" class="footer-link">
+                                    <i class="fas fa-folder-open"></i> Records
+                                </a>
+                                <span class="footer-link-sep">·</span>
+                                <a href="payment-history.html" class="footer-link">
+                                    <i class="fas fa-receipt"></i> Payments
+                                </a>
+                            </nav>
+                        </div>
+                    </div>
+                </footer>
+            </div>
         </main>
     </div>
 
@@ -243,6 +307,7 @@
     <script src="../../assets/js/shared/confirm-modal.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
+    <script src="../../assets/js/components/ambient-swirl-dots.js"></script>
     <script src="../../assets/js/pages/my-bookings.js"></script>
 </body>
 </html>

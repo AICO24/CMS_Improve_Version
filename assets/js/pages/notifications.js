@@ -18,8 +18,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             const result = await api.request('notifications/unread-count', { method: 'GET' });
             const badge = document.getElementById('notificationBadge');
             if (badge) {
-                badge.innerText = result.count || 0;
-                badge.style.display = result.count > 0 ? 'flex' : 'none';
+                const count = Number(result.count || 0);
+                badge.textContent = String(count);
+                badge.style.display = 'flex';
             }
         } catch (e) {
             console.error('Failed to load notification count:', e);

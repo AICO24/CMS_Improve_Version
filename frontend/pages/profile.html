@@ -20,6 +20,8 @@
     <link rel="stylesheet" href="../../assets/css/components/tables.css?v=2">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/ambient-swirl.css?v=1">
+    <link rel="stylesheet" href="../../assets/css/dashboard_user.css?v=4">
     <link rel="stylesheet" href="../../assets/css/profile.css">
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
@@ -85,8 +87,8 @@
         <main class="main-content">
             <div class="top-bar">
                 <div class="top-left">
-                    <label class="hamburger">
-                        <input type="checkbox" id="toggleSidebar">
+                    <label class="hamburger" title="Toggle sidebar menu">
+                        <input type="checkbox" id="toggleSidebar" aria-label="Toggle sidebar menu">
                         <svg viewBox="0 0 32 32">
                             <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
                             <path class="line" d="M7 16H27"></path>
@@ -95,19 +97,19 @@
                     <h3 id="pageTitle">Profile</h3>
                 </div>
                 <div class="user-info">
-                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
-                    <div class="notification-icon" id="notificationIcon">
+                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false" aria-label="Toggle dark/light theme"><i class="fas fa-moon"></i></button>
+                    <div class="notification-icon" id="notificationIcon" role="button" tabindex="0" title="View notifications" aria-label="View system notifications">
                         <i class="fas fa-bell"></i>
                         <span class="notification-badge" id="notificationBadge">0</span>
                     </div>
-                    <div class="profile">
+                    <div class="profile" id="userProfile" role="button" tabindex="0" title="View user profile" aria-label="View user profile">
                         <div class="profile-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
                         <div class="profile-text">
                             <div class="user-name" id="userName">Client</div>
-                            <div class="user-role" id="userRole">Client</div>
+                            <div class="user-role" id="userRole">Citizen User</div>
                         </div>
                     </div>
-                    <button class="Btn logout-btn" id="logoutBtn">
+                    <button class="Btn logout-btn" id="logoutBtn" type="button" title="Sign out of system" aria-label="Logout">
                         <div class="sign"><i class="fas fa-sign-out-alt"></i></div>
                         <div class="text">Logout</div>
                     </button>
@@ -119,18 +121,71 @@
                 <!-- Section Label -->
                 <p class="section-label"><i class="fas fa-id-card"></i> User Identity</p>
 
-                <!-- Profile Hero Banner Card -->
-                <div class="profile-hero-card">
-                    <div class="profile-hero-content">
-                        <div class="profile-hero-avatar">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="profile-hero-text">
-                            <div class="profile-hero-badge-row">
-                                <span class="profile-status-pill"><i class="fas fa-circle-check"></i> Active Account</span>
+                <!-- Facebook-Style Profile Hero Card (Identical to User Dashboard) -->
+                <div class="fb-profile-hero card">
+                    <div class="fb-cover-banner">
+                        <div class="fb-cover-overlay"></div>
+                        <div class="fb-cover-pattern"></div>
+                        <div class="fb-cover-controls">
+                            <div class="fb-weather-pill" id="fbWeatherPill" title="Local Weather & Temperature">
+                                <i class="fas fa-cloud-sun weather-icon" id="fbWeatherIcon"></i>
+                                <span class="weather-temp" id="fbWeatherTemp">29°C</span>
+                                <span class="weather-condition" id="fbWeatherDesc">Partly Cloudy</span>
                             </div>
-                            <h4 class="profile-hero-name">Personal Profile</h4>
-                            <p>Registered Member &bull; Cemetery Management System</p>
+                            <div class="fb-cover-badge">
+                                <i class="fas fa-shield-halved"></i>
+                                <span>Citizen Portal</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fb-profile-body">
+                        <div class="fb-avatar-container">
+                            <div class="fb-avatar-wrap">
+                                <div class="fb-avatar" id="welcomeUserAvatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <span class="fb-avatar__online-dot" title="Active Citizen User"></span>
+                            </div>
+                        </div>
+                        <div class="fb-profile-main">
+                            <div class="fb-profile-info">
+                                <div class="fb-greeting-tag" id="welcomeSalutation">Personal Profile</div>
+                                <div class="fb-name-row">
+                                    <h2 class="fb-profile-name" id="welcomeUserName">Citizen User</h2>
+                                    <span class="fb-verified-badge" title="Verified Citizen Account"><i class="fas fa-circle-check"></i></span>
+                                </div>
+                                <div class="fb-meta-bar">
+                                    <span class="fb-meta-item">
+                                        <i class="fas fa-at"></i>
+                                        <span id="welcomeUserUsername">user</span>
+                                    </span>
+                                    <span class="fb-meta-sep">•</span>
+                                    <span class="fb-meta-item">
+                                        <i class="fas fa-calendar-day"></i>
+                                        <span id="welcomeCurrentDate">Today</span>
+                                    </span>
+                                    <span class="fb-meta-sep">•</span>
+                                    <span class="fb-meta-item">
+                                        <i class="fas fa-clock"></i>
+                                        <span id="welcomeCurrentTime">--:--</span>
+                                    </span>
+                                    <span class="fb-meta-sep">•</span>
+                                    <span class="fb-meta-item fb-meta-item--live">
+                                        <span class="fb-pulse-dot"></span>
+                                        <span>Active Session</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="fb-profile-actions">
+                                <a href="settings.html" class="fb-btn fb-btn--primary">
+                                    <i class="fas fa-sliders"></i>
+                                    <span>Settings</span>
+                                </a>
+                                <a href="notifications.html" class="fb-btn fb-btn--secondary">
+                                    <i class="fas fa-bell"></i>
+                                    <span>Notifications</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -179,10 +234,53 @@
                     </div>
                 </div>
 
+                <!-- Dashboard Footer (Unified 3-Column System Base Footer) -->
                 <footer class="dashboard-footer">
-                    <div class="footer-inner">
-                        <span>CodeRebels Cemetery Management System &copy; 2026</span>
-                        <span>Portal &bull; Profile</span>
+                    <div class="dashboard-footer-inner">
+                        <!-- Left: Brand & Copyright -->
+                        <div class="footer-col footer-col--left">
+                            <div class="footer-brand">
+                                <span class="footer-brand__icon"><i class="fas fa-tree"></i></span>
+                                <div class="footer-brand__text">
+                                    <span class="footer-brand__name">Cemetery Management System</span>
+                                    <span class="footer-brand__version">Citizen Portal &nbsp;·&nbsp; Profile</span>
+                                </div>
+                            </div>
+                            <p class="footer-copy">&copy; <span id="footerYear">2026</span> All rights reserved.</p>
+                        </div>
+
+                        <!-- Center: Live Data Pulse -->
+                        <div class="footer-col footer-col--center">
+                            <div class="footer-pulse-ring"></div>
+                            <div class="footer-timestamp">
+                                <span class="footer-timestamp__label">
+                                    <i class="fas fa-circle-dot footer-live-dot"></i> Citizen portal active as of
+                                </span>
+                                <strong class="footer-timestamp__value" id="footerLiveTime">—</strong>
+                            </div>
+                        </div>
+
+                        <!-- Right: Quick Links -->
+                        <div class="footer-col footer-col--right">
+                            <span class="footer-links-label">Quick Links</span>
+                            <nav class="footer-links" aria-label="Footer quick links">
+                                <a href="dashboard_user.html" class="footer-link">
+                                    <i class="fas fa-gauge-high"></i> Dashboard
+                                </a>
+                                <span class="footer-link-sep">·</span>
+                                <a href="booking-assistant.html" class="footer-link">
+                                    <i class="fas fa-robot"></i> Assistant
+                                </a>
+                                <span class="footer-link-sep">·</span>
+                                <a href="my-bookings.html" class="footer-link">
+                                    <i class="fas fa-calendar-check"></i> Bookings
+                                </a>
+                                <span class="footer-link-sep">·</span>
+                                <a href="payment-history.html" class="footer-link">
+                                    <i class="fas fa-receipt"></i> Payments
+                                </a>
+                            </nav>
+                        </div>
                     </div>
                 </footer>
             </div>

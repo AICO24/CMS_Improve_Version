@@ -64,13 +64,45 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
+    const notificationBtn = document.getElementById('notificationIcon');
+    if (notificationBtn) {
+        const openNotifications = () => {
+            const basePath = typeof getFrontendBasePath === 'function' ? getFrontendBasePath() : '../..';
+            window.location.href = `${basePath}/pages/notifications.html`;
+        };
+        notificationBtn.addEventListener('click', openNotifications);
+        notificationBtn.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openNotifications();
+            }
+        });
+    }
+
+    const openProfile = () => {
+        const basePath = typeof getFrontendBasePath === 'function' ? getFrontendBasePath() : '../..';
+        window.location.href = `${basePath}/pages/profile.html`;
+    };
+    const userProfileEl = document.getElementById('userProfile');
+    if (userProfileEl) {
+        userProfileEl.addEventListener('click', openProfile);
+        userProfileEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openProfile();
+            }
+        });
+    }
+    document.getElementById('sidebarUserChip')?.addEventListener('click', openProfile);
+
     async function updateNotificationBadge() {
         try {
             const result = await api.request('notifications/unread-count', { method: 'GET' });
             const badge = document.getElementById('notificationBadge');
             if (badge) {
-                badge.innerText = result.count || 0;
-                badge.style.display = result.count > 0 ? 'flex' : 'none';
+                const count = Number(result.count || 0);
+                badge.textContent = String(count);
+                badge.style.display = 'flex';
             }
         } catch (e) {
             console.error('Failed to load notification count:', e);
@@ -325,8 +357,57 @@ document.addEventListener('DOMContentLoaded', async function() {
         await refreshAll();
     });
 
+    // Interactive Stat Cards
+    const statCards = document.querySelectorAll('#paymentStatsRow .stat-card');
+    statCards.forEach(card => {
+        function activate() {
+            statCards.forEach(c => c.classList.remove('active-filter'));
+            card.classList.add('active-filter');
+            const filterType = card.getAttribute('data-filter');
+            if (filterType === 'month') {
+                const now = new Date();
+                const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+                if (dateFromFilterInput) dateFromFilterInput.value = firstDay;
+                if (dateToFilterInput) dateToFilterInput.value = lastDay;
+            } else {
+                if (dateFromFilterInput) dateFromFilterInput.value = '';
+                if (dateToFilterInput) dateToFilterInput.value = '';
+                if (statusFilterSelect) statusFilterSelect.value = '';
+                if (transactionTypeFilterSelect) transactionTypeFilterSelect.value = '';
+            }
+            pagination.reset();
+            refreshAll();
+        }
+
+        card.addEventListener('click', activate);
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                activate();
+            }
+        });
+    });
+
+    function setupFooterClock() {
+        const timeEl = document.getElementById('footerLiveTime');
+        const yearEl = document.getElementById('footerYear');
+        if (yearEl) yearEl.textContent = new Date().getFullYear();
+        if (!timeEl) return;
+        function tick() {
+            const now = new Date();
+            const opts = { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            timeEl.textContent = now.toLocaleString('en-US', opts);
+        }
+        tick();
+        setInterval(tick, 1000);
+    }
+
+    setupFooterClock();
+
     await refreshAll();
 
     updateNotificationBadge();
     setInterval(updateNotificationBadge, 30000);
 });
+

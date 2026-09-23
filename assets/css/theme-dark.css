@@ -418,10 +418,125 @@
 */
 .dashboard-body[data-theme="dark"] .pagination-jump input,
 .dashboard-body[data-theme="dark"] .status-select-field,
-.dashboard-body[data-theme="dark"] .date-filter-field {
-    background: var(--color-surface);
-    border-color: var(--color-border);
-    color: var(--color-text);
+.dashboard-body[data-theme="dark"] .date-filter-field,
+.dashboard-body[data-theme="dark"] .date-chip {
+    background: rgba(15, 23, 42, 0.88) !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.16) !important;
+    color: #f8fafc !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+}
+
+.dashboard-body[data-theme="dark"] .date-filter-field:hover,
+.dashboard-body[data-theme="dark"] .date-chip:hover {
+    border-color: #34d399 !important;
+    box-shadow: 0 2px 10px rgba(52, 211, 153, 0.25) !important;
+}
+
+.dashboard-body[data-theme="dark"] .date-filter-field:focus-within,
+.dashboard-body[data-theme="dark"] .date-chip:focus-within {
+    border-color: #34d399 !important;
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.25) !important;
+}
+
+.dashboard-body[data-theme="dark"] .status-select-field span,
+.dashboard-body[data-theme="dark"] .date-filter-field span,
+.dashboard-body[data-theme="dark"] .date-chip-label {
+    color: #6ee7b7 !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em !important;
+}
+
+.dashboard-body[data-theme="dark"] .date-filter-field input[type="date"],
+.dashboard-body[data-theme="dark"] .date-chip input[type="date"],
+.dashboard-body[data-theme="dark"] input[type="date"],
+.dashboard-body[data-theme="dark"] input[type="month"],
+.dashboard-body[data-theme="dark"] input[type="datetime-local"] {
+    color: #f8fafc !important;
+    color-scheme: dark !important;
+    background: transparent !important;
+    font-weight: 600 !important;
+}
+
+.dashboard-body[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+.dashboard-body[data-theme="dark"] input[type="month"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.9) brightness(1.3) !important;
+    cursor: pointer;
+    opacity: 0.95;
+    transition: filter 0.15s ease, opacity 0.15s ease;
+}
+
+.dashboard-body[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator:hover,
+.dashboard-body[data-theme="dark"] input[type="month"]::-webkit-calendar-picker-indicator:hover {
+    filter: invert(1) brightness(1.6) !important;
+    opacity: 1;
+}
+
+/* Secondary & Reset buttons in dark mode (Fixes black/invisible buttons) */
+.dashboard-body[data-theme="dark"] .btn-secondary,
+.dashboard-body[data-theme="dark"] .btn--secondary,
+.dashboard-body[data-theme="dark"] .btn-ghost,
+.dashboard-body[data-theme="dark"] button.btn-secondary,
+.dashboard-body[data-theme="dark"] .btn-reset-filters {
+    background: rgba(30, 41, 59, 0.90) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    color: #f1f5f9 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+    transition: all 0.18s ease;
+}
+
+.dashboard-body[data-theme="dark"] .btn-secondary:hover,
+.dashboard-body[data-theme="dark"] .btn--secondary:hover,
+.dashboard-body[data-theme="dark"] .btn-ghost:hover,
+.dashboard-body[data-theme="dark"] button.btn-secondary:hover,
+.dashboard-body[data-theme="dark"] .btn-reset-filters:hover {
+    background: rgba(52, 211, 153, 0.22) !important;
+    border-color: #34d399 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(52, 211, 153, 0.28) !important;
+    transform: translateY(-1px);
+}
+
+.dashboard-body[data-theme="dark"] .btn-secondary i,
+.dashboard-body[data-theme="dark"] .btn-reset-filters i {
+    color: #34d399 !important;
+}
+
+.dashboard-body[data-theme="dark"] .btn-secondary:hover i,
+.dashboard-body[data-theme="dark"] .btn-reset-filters:hover i {
+    color: #ffffff !important;
+}
+
+/* Filter apply button */
+.dashboard-body[data-theme="dark"] .btn-filter {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+    border: 1px solid #34d399 !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 10px rgba(5, 150, 105, 0.45) !important;
+}
+
+.dashboard-body[data-theme="dark"] .btn-filter:hover {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    border-color: #6ee7b7 !important;
+    box-shadow: 0 4px 16px rgba(5, 150, 105, 0.65) !important;
+    transform: translateY(-1px);
+}
+
+/* Month Filter Cards (e.g. This Month on Payment History & Payments) */
+.dashboard-body[data-theme="dark"] .stat-card#cardMonthPaid,
+.dashboard-body[data-theme="dark"] .stat-card#cardMonthRevenue,
+.dashboard-body[data-theme="dark"] .stat-card[data-filter="month"] {
+    border-color: rgba(45, 212, 191, 0.35) !important;
+}
+
+.dashboard-body[data-theme="dark"] .stat-card#cardMonthPaid.active-filter,
+.dashboard-body[data-theme="dark"] .stat-card#cardMonthPaid.active,
+.dashboard-body[data-theme="dark"] .stat-card#cardMonthRevenue.active,
+.dashboard-body[data-theme="dark"] .stat-card#cardMonthRevenue.is-active-filter,
+.dashboard-body[data-theme="dark"] .stat-card[data-filter="month"].active,
+.dashboard-body[data-theme="dark"] .stat-card[data-filter="month"].is-active-filter {
+    border-color: #2dd4bf !important;
+    box-shadow: 0 0 20px rgba(45, 212, 191, 0.35), 0 8px 24px rgba(0, 0, 0, 0.45) !important;
 }
 
 /* .toolbar-row: the search/filter toolbar wrapper itself (distinct from
@@ -435,11 +550,6 @@
 .dashboard-body[data-theme="dark"] .filter-toolbar {
     background: var(--color-surface-soft);
     border-color: var(--color-border);
-}
-
-.dashboard-body[data-theme="dark"] .status-select-field span,
-.dashboard-body[data-theme="dark"] .date-filter-field span {
-    color: var(--color-text-muted);
 }
 
 .dashboard-body[data-theme="dark"] .btn-view {
@@ -586,11 +696,276 @@
    now (Phase 6) — these overrides were patching hardcoded colors that
    no longer exist, so they're redundant rather than wrong; removed. */
 
-/* ---------- notifications.css ---------- */
-/* .notification-item's own background is now var(--color-surface)
-   directly (Phase 5c) — this override was patching a hardcoded #fff
-   that no longer exists, so it's redundant rather than wrong; removed
-   rather than left as a no-op duplicate. */
+/* ---------- notifications.css & Dashboard Notifications Feed ---------- */
+.dashboard-body[data-theme="dark"] .notifications-main-card {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-left: 6px solid #34d399 !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45) !important;
+}
+
+.dashboard-body[data-theme="dark"] .notifications-card-title-group h4 {
+    color: #f8fafc !important;
+}
+
+.dashboard-body[data-theme="dark"] .notifications-card-title-group p {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .notifications-card-badge {
+    background: rgba(52, 211, 153, 0.15) !important;
+    color: #34d399 !important;
+    border-color: rgba(52, 211, 153, 0.3) !important;
+}
+
+.dashboard-body[data-theme="dark"] .notification-item {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.10) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+    color: #e2e8f0 !important;
+}
+
+.dashboard-body[data-theme="dark"] .notification-item:hover {
+    border-color: rgba(52, 211, 153, 0.4) !important;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45) !important;
+    background: rgba(30, 41, 59, 0.95) !important;
+}
+
+.dashboard-body[data-theme="dark"] .notification-item.unread {
+    border-left: 5px solid #34d399 !important;
+    background: linear-gradient(90deg, rgba(52, 211, 153, 0.10) 0%, rgba(30, 41, 59, 0.92) 24%) !important;
+}
+
+.dashboard-body[data-theme="dark"] .notification-title {
+    color: #f8fafc !important;
+    font-weight: 700 !important;
+}
+
+.dashboard-body[data-theme="dark"] .notification-meta {
+    color: #cbd5e1 !important;
+}
+
+.dashboard-body[data-theme="dark"] .notification-meta:last-child {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .hero-card {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(20, 36, 28, 0.90) 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dashboard-body[data-theme="dark"] .hero-text h4 {
+    color: #f8fafc !important;
+}
+
+.dashboard-body[data-theme="dark"] .hero-text p {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .hero-icon-shell {
+    background: rgba(44, 94, 71, 0.35) !important;
+    color: #34d399 !important;
+    border: 1px solid rgba(52, 211, 153, 0.4) !important;
+}
+
+.dashboard-body[data-theme="dark"] .hero-btn {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid #34d399 !important;
+}
+
+.dashboard-body[data-theme="dark"] .hero-btn:hover {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    box-shadow: 0 4px 14px rgba(5, 150, 105, 0.5) !important;
+}
+
+/* User Dashboard Recent Notifications List */
+.dashboard-body[data-theme="dark"] #notificationsList .recent-item,
+.dashboard-body[data-theme="dark"] #upcomingScheduleList .recent-item {
+    background: rgba(30, 41, 59, 0.70) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #e2e8f0 !important;
+}
+
+/* ==========================================================================
+   ACCOUNT MODULE (Profile & Settings) DARK THEME
+   ========================================================================== */
+.dashboard-body[data-theme="dark"] .profile-hero-card {
+    background:
+        radial-gradient(circle at 88% 24%, rgba(13, 148, 136, 0.25), transparent 48%),
+        linear-gradient(135deg, #0d231b 0%, #1e4534 60%, #163229 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.10) !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35) !important;
+    color: #ffffff !important;
+}
+
+.dashboard-body[data-theme="dark"] .profile-hero-avatar {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(52, 211, 153, 0.45) !important;
+    color: #6ee7b7 !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35) !important;
+}
+
+.dashboard-body[data-theme="dark"] .profile-hero-name {
+    color: #ffffff !important;
+}
+
+.dashboard-body[data-theme="dark"] .profile-hero-text p {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.dashboard-body[data-theme="dark"] .profile-status-pill {
+    background: rgba(16, 185, 129, 0.22) !important;
+    border-color: rgba(52, 211, 153, 0.45) !important;
+    color: #6ee7b7 !important;
+}
+
+.dashboard-body[data-theme="dark"] .profile-main-card,
+.dashboard-body[data-theme="dark"] .settings-main-card {
+    background:
+        linear-gradient(180deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.12), rgba(37, 99, 235, 0.08)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-left: 6px solid #10b981 !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35) !important;
+}
+
+.dashboard-body[data-theme="dark"] .profile-card-title-group h4,
+.dashboard-body[data-theme="dark"] .settings-card-title-group h4 {
+    color: #f8fafc !important;
+}
+
+.dashboard-body[data-theme="dark"] .profile-card-title-group p,
+.dashboard-body[data-theme="dark"] .settings-card-title-group p {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .profile-card-badge,
+.dashboard-body[data-theme="dark"] .settings-card-badge {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.dashboard-body[data-theme="dark"] .detail-row {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    transition: all 0.2s ease !important;
+}
+
+.dashboard-body[data-theme="dark"] .detail-row:hover {
+    border-color: rgba(52, 211, 153, 0.35) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25) !important;
+}
+
+.dashboard-body[data-theme="dark"] .detail-label {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .detail-label i {
+    color: #34d399 !important;
+}
+
+.dashboard-body[data-theme="dark"] .detail-row strong {
+    color: #f8fafc !important;
+}
+
+.dashboard-body[data-theme="dark"] .profile-security-card,
+.dashboard-body[data-theme="dark"] .settings-security-card {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2) !important;
+}
+
+.dashboard-body[data-theme="dark"] .security-card-icon {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #34d399 !important;
+}
+
+.dashboard-body[data-theme="dark"] .security-card-text h5 {
+    color: #f8fafc !important;
+}
+
+.dashboard-body[data-theme="dark"] .security-card-text p {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .theme-choice-card {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.10) !important;
+}
+
+.dashboard-body[data-theme="dark"] .theme-choice-card:hover {
+    border-color: #10b981 !important;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dashboard-body[data-theme="dark"] .theme-choice-card.active {
+    border-color: #10b981 !important;
+    background: linear-gradient(180deg, #1e293b 0%, #0d2818 100%) !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.28), 0 10px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+.dashboard-body[data-theme="dark"] .theme-choice-title {
+    color: #f8fafc !important;
+}
+
+.dashboard-body[data-theme="dark"] .theme-choice-title i {
+    color: #34d399 !important;
+}
+
+.dashboard-body[data-theme="dark"] .theme-choice-info p {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .theme-choice-status {
+    color: #34d399 !important;
+}
+
+.dashboard-body[data-theme="dark"] .preference-item {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-body[data-theme="dark"] .preference-item:hover {
+    border-color: rgba(52, 211, 153, 0.35) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+}
+
+.dashboard-body[data-theme="dark"] .preference-title {
+    color: #f8fafc !important;
+}
+
+.dashboard-body[data-theme="dark"] .preference-title i {
+    color: #34d399 !important;
+}
+
+.dashboard-body[data-theme="dark"] .preference-info p {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .toggle-slider {
+    background-color: #334155 !important;
+}
+
+
+.dashboard-body[data-theme="dark"] #notificationsList .recent-item:hover,
+.dashboard-body[data-theme="dark"] #upcomingScheduleList .recent-item:hover {
+    background: rgba(52, 211, 153, 0.12) !important;
+    border-color: rgba(52, 211, 153, 0.3) !important;
+}
+
+.dashboard-body[data-theme="dark"] #notificationsList .recent-item-title,
+.dashboard-body[data-theme="dark"] #upcomingScheduleList .recent-item-title {
+    color: #f8fafc !important;
+    font-weight: 700 !important;
+}
+
+.dashboard-body[data-theme="dark"] #notificationsList .recent-item-meta,
+.dashboard-body[data-theme="dark"] #upcomingScheduleList .recent-item-meta {
+    color: #94a3b8 !important;
+}
 
 /* ---------- ai.css (its filter/select chrome uses its own color set,
    distinct from every other module's #d9e1e8/#243736 pairing) ---------- */

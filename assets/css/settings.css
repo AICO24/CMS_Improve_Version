@@ -607,22 +607,6 @@
 }
 
 /* ── Dashboard Footer ──────────────────────────────────────────────── */
-.dashboard-footer {
-    margin-top: 28px;
-    padding-top: 18px;
-    border-top: 1px solid rgba(44, 94, 71, 0.14);
-}
-
-.footer-inner {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.8rem;
-    color: #64748b;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
 /* ── Dark Theme Overrides ──────────────────────────────────────────── */
 body[data-theme="dark"] .dashboard-body,
 body[data-theme="dark"].dashboard-body {
@@ -754,14 +738,6 @@ body[data-theme="dark"] .security-card-text h5 {
 }
 
 body[data-theme="dark"] .security-card-text p {
-    color: #94a3b8;
-}
-
-body[data-theme="dark"] .dashboard-footer {
-    border-top-color: rgba(255, 255, 255, 0.08);
-}
-
-body[data-theme="dark"] .footer-inner {
     color: #94a3b8;
 }
 

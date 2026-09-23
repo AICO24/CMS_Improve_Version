@@ -1,0 +1,210 @@
+/* ==========================================================================
+   AMBIENT SWIRL BACKGROUND ANIMATION (UI/UX Motion Layer)
+   Harmonious Cemetery Palette: Forest Pine (#2c5e47), Meadow Sage (#7aa77a),
+   Deep Evergreen (#123326), and Morning Mist Emerald (#34d399)
+   High-performance, Hardware-Accelerated, Non-distracting, Accessible
+   ========================================================================== */
+
+.ambient-swirl-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+    isolation: isolate;
+    background:
+        radial-gradient(ellipse 95% 75% at 12% 10%, rgba(44, 94, 71, 0.14) 0%, transparent 60%),
+        radial-gradient(ellipse 80% 65% at 88% 85%, rgba(82, 158, 114, 0.12) 0%, transparent 60%),
+        linear-gradient(180deg, #f7fbf8 0%, #f2f7f4 45%, #ecf3ef 100%);
+    transition: background 0.4s ease;
+}
+
+#ambientSwirlDotsCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 6;
+    display: block;
+}
+
+.ambient-swirl-canvas .swirl-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(65px);
+    -webkit-filter: blur(65px);
+    will-change: transform, opacity;
+    pointer-events: none;
+    mix-blend-mode: multiply;
+}
+
+/* Primary Forest Pine Swirl Orb - Slow Clockwise Elliptical Rotation */
+.ambient-swirl-canvas .swirl-orb-1 {
+    top: -18vh;
+    left: -12vw;
+    width: 78vw;
+    height: 78vh;
+    background: radial-gradient(circle at 40% 40%, rgba(44, 94, 71, 0.26) 0%, rgba(22, 60, 45, 0.14) 45%, transparent 72%);
+    animation: swirlRotateSlow 34s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+    transform-origin: 45% 48%;
+}
+
+/* Secondary Meadow Sage Swirl Orb - Counter-clockwise Undulation */
+.ambient-swirl-canvas .swirl-orb-2 {
+    bottom: -18vh;
+    right: -12vw;
+    width: 72vw;
+    height: 72vh;
+    background: radial-gradient(circle at 60% 50%, rgba(122, 167, 122, 0.24) 0%, rgba(82, 158, 114, 0.12) 50%, transparent 72%);
+    animation: swirlCounterRotate 40s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+    transform-origin: 52% 46%;
+}
+
+/* Center Fluid Swirl Eddy - Morphing Liquid Breathing */
+.ambient-swirl-canvas .swirl-orb-3 {
+    top: 22vh;
+    left: 22vw;
+    width: 56vw;
+    height: 56vh;
+    background: radial-gradient(circle at 50% 50%, rgba(52, 211, 153, 0.16) 0%, rgba(20, 184, 166, 0.08) 45%, transparent 70%);
+    animation: swirlDriftMorph 28s ease-in-out infinite alternate;
+    transform-origin: 50% 50%;
+}
+
+/* Deep Accent Whisper - Subtle Cool Pine Drift */
+.ambient-swirl-canvas .swirl-orb-4 {
+    top: 6vh;
+    right: 6vw;
+    width: 50vw;
+    height: 50vh;
+    background: radial-gradient(circle at 50% 50%, rgba(18, 51, 38, 0.16) 0%, rgba(44, 94, 71, 0.06) 55%, transparent 72%);
+    animation: swirlDriftSecondary 36s ease-in-out infinite alternate;
+    transform-origin: 48% 52%;
+}
+
+/* Soft Vignette Overlay to maintain reading contrast in the center */
+.ambient-swirl-canvas .swirl-vignette {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 45%, transparent 48%, rgba(246, 250, 247, 0.30) 100%);
+    pointer-events: none;
+}
+
+/* ── Swirl Motion Keyframes ─────────────────────────────────────────── */
+@keyframes swirlRotateSlow {
+    0% {
+        transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+        border-radius: 44% 56% 62% 38% / 48% 42% 58% 52%;
+    }
+    33% {
+        transform: translate3d(4vw, 3vh, 0) rotate(120deg) scale(1.08);
+        border-radius: 58% 42% 48% 52% / 54% 60% 40% 46%;
+    }
+    66% {
+        transform: translate3d(-3vw, 2vh, 0) rotate(240deg) scale(0.96);
+        border-radius: 48% 52% 38% 62% / 42% 48% 52% 58%;
+    }
+    100% {
+        transform: translate3d(0, 0, 0) rotate(360deg) scale(1);
+        border-radius: 44% 56% 62% 38% / 48% 42% 58% 52%;
+    }
+}
+
+@keyframes swirlCounterRotate {
+    0% {
+        transform: translate3d(0, 0, 0) rotate(360deg) scale(1);
+        border-radius: 52% 48% 40% 60% / 46% 56% 44% 54%;
+    }
+    33% {
+        transform: translate3d(-3vw, -2vh, 0) rotate(240deg) scale(1.06);
+        border-radius: 42% 58% 54% 46% / 58% 44% 56% 42%;
+    }
+    66% {
+        transform: translate3d(3vw, -4vh, 0) rotate(120deg) scale(0.94);
+        border-radius: 56% 44% 60% 40% / 48% 52% 48% 52%;
+    }
+    100% {
+        transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+        border-radius: 52% 48% 40% 60% / 46% 56% 44% 54%;
+    }
+}
+
+@keyframes swirlDriftMorph {
+    0% {
+        transform: translate3d(0, 0, 0) rotate(0deg) scale(0.96);
+        opacity: 0.72;
+    }
+    50% {
+        transform: translate3d(5vw, -5vh, 0) rotate(180deg) scale(1.14);
+        opacity: 0.95;
+    }
+    100% {
+        transform: translate3d(-4vw, 4vh, 0) rotate(360deg) scale(1.02);
+        opacity: 0.76;
+    }
+}
+
+@keyframes swirlDriftSecondary {
+    0% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+        transform: translate3d(-4vw, 3vh, 0) scale(1.10);
+    }
+    100% {
+        transform: translate3d(3vw, -3vh, 0) scale(0.94);
+    }
+}
+
+/* ── Dark Mode Swirl Adaptation ─────────────────────────────────────── */
+.dashboard-body[data-theme="dark"] .ambient-swirl-canvas,
+body[data-theme="dark"] .ambient-swirl-canvas,
+body[data-theme="dark"] ~ .ambient-swirl-canvas {
+    background:
+        radial-gradient(ellipse 95% 75% at 12% 10%, rgba(22, 60, 45, 0.40) 0%, transparent 60%),
+        radial-gradient(ellipse 80% 65% at 88% 85%, rgba(16, 185, 129, 0.18) 0%, transparent 60%),
+        linear-gradient(180deg, #08100c 0%, #0c1813 45%, #09120e 100%);
+}
+
+.dashboard-body[data-theme="dark"] .ambient-swirl-canvas .swirl-orb,
+body[data-theme="dark"] .ambient-swirl-canvas .swirl-orb {
+    mix-blend-mode: screen;
+    filter: blur(75px);
+    -webkit-filter: blur(75px);
+}
+
+.dashboard-body[data-theme="dark"] .ambient-swirl-canvas .swirl-orb-1,
+body[data-theme="dark"] .ambient-swirl-canvas .swirl-orb-1 {
+    background: radial-gradient(circle at 40% 40%, rgba(30, 92, 66, 0.36) 0%, rgba(16, 60, 42, 0.20) 45%, transparent 70%);
+}
+
+.dashboard-body[data-theme="dark"] .ambient-swirl-canvas .swirl-orb-2,
+body[data-theme="dark"] .ambient-swirl-canvas .swirl-orb-2 {
+    background: radial-gradient(circle at 60% 50%, rgba(16, 185, 129, 0.24) 0%, rgba(5, 150, 105, 0.14) 50%, transparent 72%);
+}
+
+.dashboard-body[data-theme="dark"] .ambient-swirl-canvas .swirl-orb-3,
+body[data-theme="dark"] .ambient-swirl-canvas .swirl-orb-3 {
+    background: radial-gradient(circle at 50% 50%, rgba(52, 211, 153, 0.20) 0%, rgba(15, 118, 110, 0.12) 45%, transparent 68%);
+}
+
+.dashboard-body[data-theme="dark"] .ambient-swirl-canvas .swirl-orb-4,
+body[data-theme="dark"] .ambient-swirl-canvas .swirl-orb-4 {
+    background: radial-gradient(circle at 50% 50%, rgba(20, 55, 75, 0.26) 0%, rgba(13, 148, 136, 0.14) 55%, transparent 70%);
+}
+
+.dashboard-body[data-theme="dark"] .ambient-swirl-canvas .swirl-vignette,
+body[data-theme="dark"] .ambient-swirl-canvas .swirl-vignette {
+    background: radial-gradient(circle at 50% 45%, transparent 45%, rgba(6, 12, 9, 0.70) 100%);
+}
+
+/* ── Reduced Motion Accessibility ───────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .ambient-swirl-canvas .swirl-orb {
+        animation: none !important;
+        transform: none !important;
+    }
+}
