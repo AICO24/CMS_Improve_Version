@@ -742,21 +742,41 @@
     color: #163024;
 }
 
-/* ── Section Label ────────────────────────────────────────── */
+/* ── Section Label (Mirrors Dashboard Admin) ────────────────────────── */
 .section-label {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.86rem;
-    font-weight: 700;
+    margin: 6px 0 2px;
+    font-size: 0.78rem;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #2c5e47;
-    margin: 4px 0 0;
+    letter-spacing: 0.06em;
+    color: #0f2e22;
+    line-height: 1;
+}
+
+.section-label::after {
+    content: "";
+    flex: 1;
+    height: 1.5px;
+    background: linear-gradient(90deg, rgba(18, 51, 38, 0.4), rgba(18, 51, 38, 0.05));
 }
 
 .section-label i {
-    color: #10b981;
+    font-size: 0.8rem;
+    color: var(--color-primary-600, #10b981);
+    width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.dashboard-body[data-theme="dark"] .section-label {
+    color: #86efac !important;
+}
+
+.dashboard-body[data-theme="dark"] .section-label::after {
+    background: linear-gradient(90deg, rgba(134, 239, 172, 0.45), rgba(134, 239, 172, 0.08)) !important;
 }
 
 /* ── Chart Card & Table Architecture ──────────────────────── */
