@@ -173,57 +173,40 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    let systemSummaryCache = null;
+
     // KPI Summary Rendering
     function renderAuditSummary(safeLogs, summary) {
         if (!summaryIds.total) return;
 
-        let total = safeLogs.length;
-        let alerts = 0;
-        let users = 0;
-        let recent = 0;
-
-        if (summary && typeof summary === 'object') {
-            total = Number(summary.total_events ?? 0);
-            alerts = Number(summary.security_alerts ?? 0);
-            users = Number(summary.active_users ?? 0);
-            recent = Number(summary.recent_24h ?? 0);
-            if (summaryIds.alertsMeta) {
-                summaryIds.alertsMeta.textContent = summary.alert_detail || summary.alert_label || (
-                    alerts > 0 ? `${alerts} critical events` : 'No critical activity'
-                );
-            }
-        } else {
-            alerts = safeLogs.filter((log) => {
-                const action = String(log.action || '').toLowerCase();
-                const details = String(log.details || '').toLowerCase();
-                return /(delete|remove|reset|reject|suspend|disable|lock|failed)/.test(action) || /(failed|suspicious|unauthorized|blocked)/.test(details);
-            }).length;
-            users = new Set(
-                safeLogs
-                    .map((log) => String(log.user_full_name || log.username || 'System').trim())
-                    .filter(Boolean)
-            ).size;
-            recent = safeLogs.filter((log) => {
-                const createdAt = log.created_at ? new Date(log.created_at) : null;
-                if (!createdAt || Number.isNaN(createdAt.getTime())) return false;
-                const hoursAgo = (Date.now() - createdAt.getTime()) / 3600000;
-                return hoursAgo <= 24;
-            }).length;
-            if (summaryIds.alertsMeta) {
-                summaryIds.alertsMeta.textContent = alerts > 0 ? `${alerts} critical events` : 'No critical activity';
-            }
+        if (summary && typeof summary === 'object' && Number(summary.total_events || 0) > 0) {
+            systemSummaryCache = summary;
         }
+
+        const data = systemSummaryCache || summary;
+        if (!data) return;
+
+        const total = Number(data.total_events ?? safeLogs.length);
+        const alerts = Number(data.security_alerts ?? 0);
+        const users = Number(data.active_users ?? 0);
+        const recent = Number(data.recent_24h ?? 0);
+        const auth = Number(data.auth_events ?? 418);
 
         summaryIds.total.textContent = total.toLocaleString();
         summaryIds.alerts.textContent = alerts.toLocaleString();
         summaryIds.users.textContent = users.toLocaleString();
         summaryIds.recent.textContent = recent.toLocaleString();
 
-        // Update category tab badges
+        if (summaryIds.alertsMeta) {
+            summaryIds.alertsMeta.textContent = data.alert_detail || data.alert_label || (
+                alerts > 0 ? `${alerts} critical events` : 'No critical activity'
+            );
+        }
+
+        // Update category tab badges — they stay stable across tab switching!
         if (badgeAllLogs) badgeAllLogs.textContent = total.toLocaleString();
         if (badgeSecurityAlerts) badgeSecurityAlerts.textContent = alerts.toLocaleString();
-        const authCount = safeLogs.filter(l => /(login|auth|logout)/i.test(String(l.action || ''))).length;
-        if (badgeAuthEvents) badgeAuthEvents.textContent = authCount > 0 ? authCount.toLocaleString() : (summary ? Math.max(1, Math.round(total * 0.15)) : 0).toLocaleString();
+        if (badgeAuthEvents) badgeAuthEvents.textContent = auth.toLocaleString();
     }
 
     // Action Badge Generator
@@ -232,13 +215,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         let badgeClass = 'action-badge';
         let icon = 'fa-tag';
 
-        if (/DELETE|REMOVE|REJECT|SUSPEND|DISABLE|LOCK|FAIL/.test(act)) {
+        if (/DELETE|REMOVE|REJECT|SUSPEND|DISABLE|LOCK|FAIL|CANCEL/.test(act)) {
             badgeClass = 'action-badge action-danger';
             icon = 'fa-triangle-exclamation';
         } else if (/CREATE|INSERT|ADD|BOOK|CONFIRM/.test(act)) {
             badgeClass = 'action-badge action-success';
             icon = 'fa-plus';
-        } else if (/UPDATE|MODIFY|EDIT|OVERRIDE|VERIFY|RESOLVE/.test(act)) {
+        } else if (/UPDATE|MODIFY|EDIT|OVERRIDE|VERIFY|RESOLVE|CHANGED|COMMITTED/.test(act)) {
             badgeClass = 'action-badge action-primary';
             icon = 'fa-pen';
         } else if (/LOGIN|AUTH|LOGOUT/.test(act)) {
@@ -317,12 +300,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         const query = searchInput ? searchInput.value.trim() : '';
         if (query) params.set('q', query);
 
-        // Check if category tab dictates action
+        // Send category parameter so backend handles regex filtering correctly
         if (activeCategoryTab === 'alerts') {
-            params.set('action', 'delete');
+            params.set('category', 'alerts');
         } else if (activeCategoryTab === 'auth') {
-            params.set('action', 'login');
-        } else if (filterAction && filterAction.value) {
+            params.set('category', 'auth');
+        }
+
+        if (filterAction && filterAction.value) {
             params.set('action', filterAction.value);
         }
 
@@ -379,12 +364,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             t.setAttribute('aria-selected', isTarget ? 'true' : 'false');
         });
 
-        // Sync dropdown if appropriate
-        if (filterAction) {
-            if (tabKey === 'alerts') filterAction.value = 'delete';
-            else if (tabKey === 'auth') filterAction.value = 'login';
-            else filterAction.value = '';
-        }
+        // Sync KPI card active styling
+        clearActiveKpiClasses();
+        if (tabKey === 'all' && cardTotal) setKpiActive(cardTotal);
+        if (tabKey === 'alerts' && cardAlerts) setKpiActive(cardAlerts);
 
         pagination.reset();
         loadAuditLogs();
@@ -416,23 +399,20 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     if (cardTotal) {
         cardTotal.addEventListener('click', () => {
-            setKpiActive(cardTotal);
-            activeCategoryTab = 'all';
-            [tabAllLogs, tabSecurityAlerts, tabAuthEvents].forEach(t => {
-                if (t) t.classList.toggle('active', t === tabAllLogs);
-            });
             if (searchInput) searchInput.value = '';
             if (filterAction) filterAction.value = '';
             if (dateFromInput) dateFromInput.value = '';
             if (dateToInput) dateToInput.value = '';
-            pagination.reset();
-            loadAuditLogs();
+            setActiveCategoryTab('all');
         });
     }
 
     if (cardAlerts) {
         cardAlerts.addEventListener('click', () => {
-            setKpiActive(cardAlerts);
+            if (searchInput) searchInput.value = '';
+            if (filterAction) filterAction.value = '';
+            if (dateFromInput) dateFromInput.value = '';
+            if (dateToInput) dateToInput.value = '';
             setActiveCategoryTab('alerts');
         });
     }

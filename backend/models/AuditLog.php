@@ -51,9 +51,29 @@ class AuditLog {
             $params[] = $query;
             $params[] = $query;
         }
+        if (!empty($filters['category'])) {
+            $cat = strtolower(trim($filters['category']));
+            if ($cat === 'alerts' || $cat === 'security') {
+                $sql .= " AND (LOWER(a.action) REGEXP 'delete|remove|reset|reject|suspend|disable|lock|failed' OR LOWER(COALESCE(a.details, '')) REGEXP 'failed|suspicious|unauthorized|blocked')";
+            } elseif ($cat === 'auth' || $cat === 'login' || $cat === 'authentication') {
+                $sql .= " AND LOWER(a.action) REGEXP 'login|auth|logout'";
+            }
+        }
         if (!empty($filters['action'])) {
-            $sql .= " AND LOWER(a.action) = ?";
-            $params[] = strtolower($filters['action']);
+            $act = strtolower(trim($filters['action']));
+            if ($act === 'login' || $act === 'auth') {
+                $sql .= " AND LOWER(a.action) REGEXP 'login|auth|logout'";
+            } elseif ($act === 'create') {
+                $sql .= " AND (LOWER(a.action) LIKE '%create%' OR LOWER(a.action) LIKE '%.created' OR LOWER(a.action) LIKE '%add%' OR LOWER(a.action) LIKE '%book%')";
+            } elseif ($act === 'update') {
+                $sql .= " AND (LOWER(a.action) LIKE '%update%' OR LOWER(a.action) LIKE '%.state_changed%' OR LOWER(a.action) LIKE '%verify%' OR LOWER(a.action) LIKE '%.committed%')";
+            } elseif ($act === 'delete') {
+                $sql .= " AND (LOWER(a.action) REGEXP 'delete|remove|reset|reject|suspend|disable|lock|failed|cancelled' OR LOWER(COALESCE(a.details, '')) REGEXP 'failed|suspicious|unauthorized|blocked')";
+            } else {
+                $sql .= " AND (LOWER(a.action) = ? OR LOWER(a.action) LIKE ?)";
+                $params[] = $act;
+                $params[] = '%' . $act . '%';
+            }
         }
         if (!empty($filters['entity_type'])) {
             $sql .= " AND LOWER(a.entity_type) = ?";
@@ -121,6 +141,7 @@ class AuditLog {
             SUM(CASE WHEN a.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) THEN 1 ELSE 0 END) AS recent_24h,
             SUM(CASE WHEN LOWER(a.action) REGEXP 'login' AND LOWER(COALESCE(a.details, '')) REGEXP 'failed|invalid|unauthorized|denied' THEN 1 ELSE 0 END) AS failed_logins,
             SUM(CASE WHEN LOWER(a.action) REGEXP 'login|access' AND LOWER(COALESCE(a.details, '')) REGEXP 'denied|blocked|suspicious|unauthorized' THEN 1 ELSE 0 END) AS denied_access,
+            SUM(CASE WHEN LOWER(a.action) REGEXP 'login|auth|logout' THEN 1 ELSE 0 END) AS auth_events,
             SUM(CASE WHEN LOWER(a.action) REGEXP 'reset|lock|suspend|disable' OR LOWER(COALESCE(a.details, '')) REGEXP 'reset|lock|suspend|disable' THEN 1 ELSE 0 END) AS reset_actions,
             SUM(CASE WHEN LOWER(a.action) REGEXP 'delete|remove|reject' OR LOWER(COALESCE(a.details, '')) REGEXP 'delete|remove|reject' THEN 1 ELSE 0 END) AS delete_actions
             FROM audit_logs a
@@ -138,6 +159,7 @@ class AuditLog {
         $deniedAccess = (int)($row['denied_access'] ?? 0);
         $resetActions = (int)($row['reset_actions'] ?? 0);
         $deleteActions = (int)($row['delete_actions'] ?? 0);
+        $authEvents = (int)($row['auth_events'] ?? 0);
 
         $breakdown = [];
         if ($failedLogins > 0) $breakdown[] = $failedLogins === 1 ? '1 failed login' : "$failedLogins failed logins";
@@ -154,6 +176,7 @@ class AuditLog {
             'security_alerts' => $securityAlerts,
             'active_users' => (int)($row['active_users'] ?? 0),
             'recent_24h' => (int)($row['recent_24h'] ?? 0),
+            'auth_events' => $authEvents,
             'alert_label' => $alertLabel,
             'alert_detail' => $breakdown ? implode(' • ', $breakdown) : 'No critical activity',
             'alert_breakdown' => [

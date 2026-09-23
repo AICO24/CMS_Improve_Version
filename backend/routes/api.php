@@ -1229,12 +1229,9 @@ if ($path === 'audit-logs' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin']);
     $filters = [];
     if (isset($_GET['q'])) $filters['q'] = $_GET['q'];
+    if (isset($_GET['category'])) $filters['category'] = $_GET['category'];
     if (isset($_GET['action'])) $filters['action'] = $_GET['action'];
     if (isset($_GET['entity_type'])) $filters['entity_type'] = $_GET['entity_type'];
-    // Batch D (Decedent Records audit): lets a caller scope to one specific
-    // record's own history (e.g. Decedent #12) instead of every row of that
-    // entity_type — AuditLog::applyFilters() already supported this filter
-    // for AuditIntelligenceService, it just wasn't reachable over HTTP yet.
     if (isset($_GET['entity_id'])) $filters['entity_id'] = $_GET['entity_id'];
     if (isset($_GET['user_id'])) $filters['user_id'] = $_GET['user_id'];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
@@ -1243,8 +1240,11 @@ if ($path === 'audit-logs' && $requestMethod === 'GET') {
     $offset = $_GET['offset'] ?? 0;
 
     if (!empty($_GET['summary']) && $_GET['summary'] === 'true') {
+        $summaryFilters = [];
+        if (isset($_GET['date_from'])) $summaryFilters['date_from'] = $_GET['date_from'];
+        if (isset($_GET['date_to'])) $summaryFilters['date_to'] = $_GET['date_to'];
         echo json_encode([
-            'summary' => $auditLogModel->getSummaryStats($filters),
+            'summary' => $auditLogModel->getSummaryStats($summaryFilters),
             'logs' => $auditLogModel->findAll($filters, $limit, $offset),
         ]);
         exit;
@@ -1254,13 +1254,11 @@ if ($path === 'audit-logs' && $requestMethod === 'GET') {
     exit;
 }
 
-// Batch F: a sibling endpoint rather than changing audit-logs' own response
-// shape (still a bare array) — the Audit Logs page previously had no way to
-// know the real total, only a limit+1 "peek ahead" trick.
 if ($path === 'audit-logs/count' && $requestMethod === 'GET') {
     AuthMiddleware::requireRole(['admin']);
     $filters = [];
     if (isset($_GET['q'])) $filters['q'] = $_GET['q'];
+    if (isset($_GET['category'])) $filters['category'] = $_GET['category'];
     if (isset($_GET['action'])) $filters['action'] = $_GET['action'];
     if (isset($_GET['entity_type'])) $filters['entity_type'] = $_GET['entity_type'];
     if (isset($_GET['user_id'])) $filters['user_id'] = $_GET['user_id'];
