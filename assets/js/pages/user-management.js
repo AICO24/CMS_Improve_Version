@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const modalTitle = document.getElementById('modalTitle');
     const modalSubtitle = document.getElementById('modalSubtitle');
     const userForm = document.getElementById('userForm');
-    const closeModal = document.querySelector('#userModal .close');
+    const closeModal = document.querySelector('#userModal .close, #userModal .close-view, #closeUserModal');
     const cancelUserForm = document.getElementById('cancelUserForm');
 
     const perPage = 8;
@@ -348,10 +348,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         usersTableBody.innerHTML = users.map(user => {
-            const roleStr = String(user.role_title || user.role || 'Staff');
-            const isAdmin = roleStr.toLowerCase() === 'admin' || roleStr.toLowerCase() === 'administrator';
-            const roleClass = isAdmin ? 'role-admin' : 'role-staff';
-            const roleLabel = isAdmin ? 'Administrator' : 'Staff';
+            const roleStr = String(user.role_title || user.role || 'Staff').toLowerCase();
+            let roleClass = 'role-staff';
+            let roleLabel = 'Staff';
+            if (roleStr.includes('admin')) {
+                roleClass = 'role-admin';
+                roleLabel = 'Administrator';
+            } else if (roleStr.includes('user') || roleStr.includes('citizen') || roleStr.includes('client')) {
+                roleClass = 'role-user';
+                roleLabel = 'User';
+            }
 
             const statusClass = user.is_active ? 'status-active' : 'status-inactive';
             const statusLabel = user.is_active ? 'Active' : 'Inactive';
@@ -478,7 +484,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             userFields.email.value = user.email;
             userFields.contactNumber.value = user.contact_number || '';
             userFields.address.value = user.address || '';
-            userFields.role.value = user.role_title ? user.role_title.toLowerCase() : (user.role || 'staff');
+            const currentRole = (user.role_title || user.role || 'staff').toLowerCase();
+            userFields.role.value = currentRole.includes('admin') ? 'admin' : (currentRole.includes('user') ? 'user' : 'staff');
             userFields.password.value = '';
             userFields.isActive.value = user.is_active ? '1' : '0';
             showModal();
@@ -497,13 +504,15 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     userForm.addEventListener('submit', async function(e) {
         e.preventDefault();
+        const roleVal = userFields.role.value;
+        const roleId = roleVal === 'admin' ? 1 : (roleVal === 'user' ? 3 : 2);
         const payload = {
             username: userFields.username.value.trim(),
             full_name: userFields.fullName.value.trim(),
             email: userFields.email.value.trim(),
             contact_number: userFields.contactNumber.value.trim(),
             address: userFields.address.value.trim(),
-            role_id: userFields.role.value === 'admin' ? 1 : 2,
+            role_id: roleId,
             is_active: parseInt(userFields.isActive.value, 10),
         };
 
