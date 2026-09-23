@@ -1775,11 +1775,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     });
 
-    // Stat Card Clicks (Interactive Quick Filtering)
+    // Stat Card Clicks
     document.querySelectorAll('.stat-card-filterable').forEach(card => {
-        function handleCremationCardClick() {
+        card.addEventListener('click', () => {
             const filterVal = card.dataset.statusFilter ?? '';
-            currentStatusFilter = (currentStatusFilter === filterVal && filterVal !== '') ? '' : filterVal;
+            currentStatusFilter = filterVal;
 
             // Reflect on tab buttons
             document.querySelectorAll('.records-tab-btn').forEach(b => {
@@ -1789,21 +1789,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
 
             document.querySelectorAll('.stat-card-filterable').forEach(c => {
-                const cVal = c.dataset.statusFilter ?? '';
-                const isActive = (cVal === currentStatusFilter && currentStatusFilter !== '') || (cVal === '' && currentStatusFilter === '');
-                c.classList.toggle('is-active-filter', isActive);
-                c.setAttribute('aria-pressed', String(isActive));
+                c.classList.toggle('is-active-filter', c.dataset.statusFilter === currentStatusFilter && currentStatusFilter !== '');
             });
 
             applyFilters();
-        }
-
-        card.addEventListener('click', handleCremationCardClick);
-        card.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleCremationCardClick();
-            }
         });
     });
 

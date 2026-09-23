@@ -16,19 +16,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // AI Assistant mount
-    if (typeof initAiAssistant === 'function' && document.querySelector('#aiAssistantMount')) {
-        initAiAssistant({
-            mountSelector: '#aiAssistantMount',
-            context: { scope: 'module', module: 'Schedule' },
-            greeting: "Hello! I'm your AI assistant for Cemetery Bookings & Operations. How can I help you manage burials or cremations today?",
-            suggestions: [
-                { icon: 'fa-list-check', label: 'Pending bookings', question: 'How many bookings are currently pending across burials and cremations?' },
-                { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions or capacity issues I need to review?' },
-                { icon: 'fa-hourglass-half', label: 'At-risk bookings', question: 'Which pending bookings are at risk of being auto-cancelled?' },
-                { icon: 'fa-circle-question', label: 'How does auto-confirm work?', question: 'How does payment-triggered auto-confirmation work for both burials and cremations?' },
-            ],
-        });
-    }
+    initAiAssistant({
+        mountSelector: '#aiAssistantMount',
+        context: { scope: 'module', module: 'Schedule' },
+        greeting: "Hello! I'm your AI assistant for Cemetery Bookings & Operations. How can I help you manage burials or cremations today?",
+        suggestions: [
+            { icon: 'fa-list-check', label: 'Pending bookings', question: 'How many bookings are currently pending across burials and cremations?' },
+            { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions or capacity issues I need to review?' },
+            { icon: 'fa-hourglass-half', label: 'At-risk bookings', question: 'Which pending bookings are at risk of being auto-cancelled?' },
+            { icon: 'fa-circle-question', label: 'How does auto-confirm work?', question: 'How does payment-triggered auto-confirmation work for both burials and cremations?' },
+        ],
+    });
 
     // Shared UI helpers
     const { escapeHtml, buildStatusBadge, debounce, renderFilterChips } = window.reservationUI;
@@ -94,17 +92,12 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     if (currentQuery) searchQuery.value = currentQuery;
     if (currentStatus) statusFilter.value = currentStatus;
-    function syncAwaitingReviewUI(val) {
-        awaitingReviewOnly = Boolean(val);
-        if (toggleAwaitingBtn) {
-            if ('checked' in toggleAwaitingBtn) toggleAwaitingBtn.checked = awaitingReviewOnly;
-            toggleAwaitingBtn.setAttribute('aria-pressed', String(awaitingReviewOnly));
-        }
-        statusFilter.disabled = awaitingReviewOnly;
-    }
-
     if (awaitingReviewOnly) {
-        syncAwaitingReviewUI(true);
+        if (toggleAwaitingBtn) {
+            toggleAwaitingBtn.checked = true;
+            toggleAwaitingBtn.setAttribute('aria-pressed', 'true');
+        }
+        statusFilter.disabled = true;
     }
 
     const perPage = 10;
@@ -122,27 +115,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     // ── TAB SWITCHING ──────────────────────────────────────────
-    function updateActiveStatCards() {
-        document.querySelectorAll('.bookings-stats .stat-card').forEach((card) => {
-            const action = card.getAttribute('data-action') || '';
-            const href = card.getAttribute('data-href') || '';
-            let isActive = false;
-            if (action === 'all' || href === 'manage-bookings.html') {
-                isActive = currentTab === 'all' && !currentStatus && !awaitingReviewOnly;
-            } else if (action === 'burial' || href.includes('service=burial')) {
-                isActive = currentTab === 'burial' && !currentStatus && !awaitingReviewOnly;
-            } else if (action === 'cremation' || href.includes('service=cremation')) {
-                isActive = currentTab === 'cremation' && !currentStatus && !awaitingReviewOnly;
-            } else if (action === 'completed' || href.includes('status=Completed')) {
-                isActive = currentStatus === 'Completed';
-            } else if (action === 'review' || href.includes('awaiting_confirmation') || href.includes('exceptions.html')) {
-                isActive = Boolean(awaitingReviewOnly);
-            }
-            card.classList.toggle('is-active-filter', isActive);
-            card.setAttribute('aria-pressed', String(isActive));
-        });
-    }
-
     function setActiveTab(tab) {
         currentTab = tab;
         tabBtns.forEach(btn => {
@@ -151,14 +123,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Update URL query state without full page reload
         const newUrl = new URL(window.location);
-        if (tab === 'all') {
-            newUrl.searchParams.delete('service');
-        } else {
-            newUrl.searchParams.set('service', tab);
-        }
+        newUrl.searchParams.set('service', tab);
         window.history.replaceState({}, '', newUrl);
 
-        updateActiveStatCards();
         pagination.reset();
         loadAndRenderBookings();
     }
@@ -284,7 +251,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             section_name: s.section_name || 'N/A',
             date_time: `${s.schedule_date || 'N/A'} ${s.schedule_time || ''}`.trim(),
             date_raw: s.schedule_date || '',
-            time_raw: s.schedule_time || '',
             created_by_name: s.created_by_name || 'N/A',
             created_by_id: s.created_by,
             status: s.status,
@@ -314,7 +280,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             niche_number: c.niche_number || 'TBD',
             date_time: c.cremation_date || 'N/A',
             date_raw: c.cremation_date || '',
-            time_raw: c.cremation_time || '',
             created_by_name: c.created_by_name || 'N/A',
             created_by_id: c.created_by,
             status: c.status,
@@ -333,43 +298,43 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (currentTab === 'burial') {
             bookingsHead.innerHTML = `
                 <tr>
-                    <th class="col-ref">Ref #</th>
-                    <th class="col-decedent">Decedent</th>
-                    <th class="col-lot">Lot</th>
-                    <th class="col-section">Section</th>
-                    <th class="col-schedule">Burial Date</th>
-                    <th class="col-requester">Requested By</th>
-                    <th class="col-status">Status</th>
-                    <th class="col-payment">Payment</th>
-                    <th class="col-actions">Actions</th>
+                    <th>Booking Ref</th>
+                    <th>Decedent</th>
+                    <th>Lot</th>
+                    <th>Section</th>
+                    <th>Burial Date &amp; Time</th>
+                    <th>Requested By</th>
+                    <th>Status</th>
+                    <th>Payment</th>
+                    <th>Actions</th>
                 </tr>
             `;
         } else if (currentTab === 'cremation') {
             bookingsHead.innerHTML = `
                 <tr>
-                    <th class="col-ref">Ref #</th>
-                    <th class="col-decedent">Decedent</th>
-                    <th class="col-columbarium">Columbarium</th>
-                    <th class="col-niche">Niche</th>
-                    <th class="col-schedule">Cremation Date</th>
-                    <th class="col-requester">Requested By</th>
-                    <th class="col-status">Status</th>
-                    <th class="col-payment">Payment</th>
-                    <th class="col-actions">Actions</th>
+                    <th>Request Ref</th>
+                    <th>Decedent</th>
+                    <th>Columbarium</th>
+                    <th>Niche</th>
+                    <th>Cremation Date</th>
+                    <th>Requested By</th>
+                    <th>Status</th>
+                    <th>Payment</th>
+                    <th>Actions</th>
                 </tr>
             `;
         } else {
             bookingsHead.innerHTML = `
                 <tr>
-                    <th class="col-ref">Ref #</th>
-                    <th class="col-service">Service</th>
-                    <th class="col-decedent">Decedent</th>
-                    <th class="col-location">Location</th>
-                    <th class="col-schedule">Schedule</th>
-                    <th class="col-requester">Requested By</th>
-                    <th class="col-status">Status</th>
-                    <th class="col-payment">Payment</th>
-                    <th class="col-actions">Actions</th>
+                    <th>Ref #</th>
+                    <th>Service</th>
+                    <th>Decedent</th>
+                    <th>Location / Slot</th>
+                    <th>Schedule Date &amp; Time</th>
+                    <th>Requested By</th>
+                    <th>Status</th>
+                    <th>Payment</th>
+                    <th>Actions</th>
                 </tr>
             `;
         }
@@ -391,83 +356,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             return `<span class="service-pill service-pill--burial"><i class="fas fa-monument"></i> Burial</span>`;
         }
         return `<span class="service-pill service-pill--cremation"><i class="fas fa-fire"></i> Cremation</span>`;
-    }
-
-    function formatScheduleCell(dateVal, timeVal) {
-        if (!dateVal || dateVal === 'N/A') {
-            return '<span class="text-muted" style="color:#94a3b8;">—</span>';
-        }
-        let formattedDate = dateVal;
-        let formattedTime = '';
-
-        let datePart = dateVal;
-        let timePart = timeVal || '';
-        if (typeof dateVal === 'string' && dateVal.includes(' ') && !timePart) {
-            const split = dateVal.split(' ');
-            datePart = split[0];
-            timePart = split.slice(1).join(' ');
-        }
-
-        try {
-            const parts = String(datePart).split('-');
-            if (parts.length === 3) {
-                const year = Number(parts[0]);
-                const month = Number(parts[1]) - 1;
-                const day = Number(parts[2]);
-                const d = new Date(year, month, day);
-                if (!isNaN(d.getTime())) {
-                    formattedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                }
-            }
-        } catch (_) {
-            formattedDate = datePart;
-        }
-
-        if (timePart) {
-            try {
-                const timeComponents = timePart.split(':');
-                if (timeComponents.length >= 2) {
-                    let hour = parseInt(timeComponents[0], 10);
-                    const minute = timeComponents[1];
-                    const ampm = hour >= 12 ? 'PM' : 'AM';
-                    hour = hour % 12 || 12;
-                    formattedTime = `${hour}:${minute} ${ampm}`;
-                } else {
-                    formattedTime = timePart;
-                }
-            } catch (_) {
-                formattedTime = timePart;
-            }
-        }
-
-        return `
-            <div class="table-datetime-cell">
-                <span class="cell-date">${escapeHtml(formattedDate)}</span>
-                ${formattedTime ? `<span class="cell-time"><i class="far fa-clock"></i> ${escapeHtml(formattedTime)}</span>` : ''}
-            </div>
-        `;
-    }
-
-    function formatLocationCell(item) {
-        if (item.service_type === 'burial') {
-            const lot = item.lot_number && item.lot_number !== 'N/A' ? `Lot ${item.lot_number}` : 'No lot';
-            const section = item.section_name && item.section_name !== 'N/A' ? item.section_name : '';
-            return `
-                <div class="table-location-cell">
-                    <span class="loc-main">${escapeHtml(lot)}</span>
-                    ${section ? `<span class="loc-sub">${escapeHtml(section)}</span>` : ''}
-                </div>
-            `;
-        } else {
-            const niche = item.niche_number && item.niche_number !== 'TBD' ? `Niche ${item.niche_number}` : 'Niche TBD';
-            const columbarium = item.columbarium && item.columbarium !== 'N/A' ? item.columbarium : 'Columbarium';
-            return `
-                <div class="table-location-cell">
-                    <span class="loc-main">${escapeHtml(niche)}</span>
-                    <span class="loc-sub">${escapeHtml(columbarium)}</span>
-                </div>
-            `;
-        }
     }
 
     function buildActionButtons(item) {
@@ -498,31 +386,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function buildTableRow(item) {
-        const refPill = `<span class="ref-pill" title="${escapeHtml(item.ref_label)}">#${escapeHtml(String(item.id))}</span>`;
-        const decedentCell = `
-            <div class="table-decedent-cell" title="${escapeHtml(item.decedent_name)}">
-                <span class="decedent-name">${escapeHtml(item.decedent_name)}</span>
-            </div>
-        `;
-        const requesterCell = `
-            <div class="table-requester-cell" title="${escapeHtml(item.created_by_name)}">
-                <span class="requester-name">${escapeHtml(item.created_by_name)}</span>
-            </div>
-        `;
-        const scheduleCell = formatScheduleCell(item.date_raw || item.date_time, item.time_raw);
-
         if (currentTab === 'burial') {
             return `
                 <tr data-id="${item.id}" data-service="${item.service_type}">
-                    <td class="col-ref">${refPill}</td>
-                    <td class="col-decedent">${decedentCell}</td>
-                    <td class="col-lot"><span class="lot-pill">${escapeHtml(item.lot_number || 'N/A')}</span></td>
-                    <td class="col-section"><span class="section-text" title="${escapeHtml(item.section_name || '')}">${escapeHtml(item.section_name || 'N/A')}</span></td>
-                    <td class="col-schedule">${scheduleCell}</td>
-                    <td class="col-requester">${requesterCell}</td>
-                    <td class="col-status">${buildStatusBadge(item.status)}</td>
-                    <td class="col-payment">${buildPaymentBadge(item)}</td>
-                    <td class="col-actions"><div class="action-buttons">${buildActionButtons(item)}</div></td>
+                    <td><strong>${item.ref_label}</strong></td>
+                    <td>${escapeHtml(item.decedent_name)}</td>
+                    <td>${escapeHtml(item.lot_number)}</td>
+                    <td>${escapeHtml(item.section_name)}</td>
+                    <td>${escapeHtml(item.date_time)}</td>
+                    <td>${escapeHtml(item.created_by_name)}</td>
+                    <td>${buildStatusBadge(item.status)}</td>
+                    <td>${buildPaymentBadge(item)}</td>
+                    <td class="action-buttons">${buildActionButtons(item)}</td>
                 </tr>
             `;
         }
@@ -530,30 +405,30 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (currentTab === 'cremation') {
             return `
                 <tr data-id="${item.id}" data-service="${item.service_type}">
-                    <td class="col-ref">${refPill}</td>
-                    <td class="col-decedent">${decedentCell}</td>
-                    <td class="col-columbarium"><span class="columbarium-text" title="${escapeHtml(item.columbarium || '')}">${escapeHtml(item.columbarium || 'N/A')}</span></td>
-                    <td class="col-niche"><span class="niche-pill">${escapeHtml(item.niche_number || 'TBD')}</span></td>
-                    <td class="col-schedule">${scheduleCell}</td>
-                    <td class="col-requester">${requesterCell}</td>
-                    <td class="col-status">${buildStatusBadge(item.status)}</td>
-                    <td class="col-payment">${buildPaymentBadge(item)}</td>
-                    <td class="col-actions"><div class="action-buttons">${buildActionButtons(item)}</div></td>
+                    <td><strong>${item.ref_label}</strong></td>
+                    <td>${escapeHtml(item.decedent_name)}</td>
+                    <td>${escapeHtml(item.columbarium)}</td>
+                    <td>${escapeHtml(item.niche_number)}</td>
+                    <td>${escapeHtml(item.date_time)}</td>
+                    <td>${escapeHtml(item.created_by_name)}</td>
+                    <td>${buildStatusBadge(item.status)}</td>
+                    <td>${buildPaymentBadge(item)}</td>
+                    <td class="action-buttons">${buildActionButtons(item)}</td>
                 </tr>
             `;
         }
 
         return `
             <tr data-id="${item.id}" data-service="${item.service_type}">
-                <td class="col-ref">${refPill}</td>
-                <td class="col-service">${buildServiceBadge(item.service_type)}</td>
-                <td class="col-decedent">${decedentCell}</td>
-                <td class="col-location">${formatLocationCell(item)}</td>
-                <td class="col-schedule">${scheduleCell}</td>
-                <td class="col-requester">${requesterCell}</td>
-                <td class="col-status">${buildStatusBadge(item.status)}</td>
-                <td class="col-payment">${buildPaymentBadge(item)}</td>
-                <td class="col-actions"><div class="action-buttons">${buildActionButtons(item)}</div></td>
+                <td><strong>${item.ref_label}</strong></td>
+                <td>${buildServiceBadge(item.service_type)}</td>
+                <td>${escapeHtml(item.decedent_name)}</td>
+                <td>${item.location_label}</td>
+                <td>${escapeHtml(item.date_time)}</td>
+                <td>${escapeHtml(item.created_by_name)}</td>
+                <td>${buildStatusBadge(item.status)}</td>
+                <td>${buildPaymentBadge(item)}</td>
+                <td class="action-buttons">${buildActionButtons(item)}</td>
             </tr>
         `;
     }
@@ -684,7 +559,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         ]);
     }
 
-    // ── DETAIL VIEW MODAL (Simplified & Compact Executive Design) ──
+    // ── DETAIL VIEW MODAL (Decedent Records Hero & Grid Pattern) ──
     let currentViewBookingId = null;
     let currentViewServiceType = null;
 
@@ -694,94 +569,176 @@ document.addEventListener('DOMContentLoaded', async function() {
         const decedentDisplay = data.decedent_name || fullName || (data.provisional_name ? `${data.provisional_name} (unregistered)` : 'Unspecified Decedent');
         const isProvisional = !fullName && !!data.provisional_name;
 
+        const scheduleDisplay = isBurial
+            ? `${data.schedule_date || data.date_raw || 'Date TBD'}${data.schedule_time ? ` at ${data.schedule_time}` : ''}`
+            : (data.cremation_date || data.date_raw ? `${data.cremation_date || data.date_raw}` : 'Date TBD');
+
+        const statusTrackerHtml = window.reservationUI && typeof window.reservationUI.buildStatusTracker === 'function'
+            ? window.reservationUI.buildStatusTracker(data.status, data.payment_status, {
+                confirmedLabel: isBurial ? 'Confirmed' : 'Scheduled'
+            })
+            : '';
+
+        // Location string calculation
+        let locationDisplay = data.location_label;
+        if (!locationDisplay) {
+            locationDisplay = isBurial
+                ? (data.lot_number ? `Lot ${escapeHtml(data.lot_number)}, Section ${escapeHtml(data.section_name || 'Standard')}` : 'No lot assigned yet')
+                : `${escapeHtml(data.columbarium || 'Columbarium')} &bull; Niche ${escapeHtml(data.niche_number || 'Auto-allocated upon completion')}`;
+        }
+
         // Payment calculation
         const paymentStatusStr = data.payment_status || 'Unpaid';
         const paymentAmountVal = parseFloat(data.payment_amount || 0);
         const paymentAmountFormatted = isNaN(paymentAmountVal) || paymentAmountVal === 0 ? '0.00' : paymentAmountVal.toLocaleString('en-US', { minimumFractionDigits: 2 });
         const paymentMethodStr = data.payment_method || (data.raw && data.raw.payment_method) || 'Standard';
-        const paymentReceiptStr = data.payment_receipt_number || data.payment_receipt || (data.raw && data.raw.payment_receipt_number) || '—';
-        const paymentDateStr = data.payment_date || (data.raw && data.raw.payment_date) || '—';
+        const paymentReceiptStr = data.payment_receipt_number || data.payment_receipt || (data.raw && data.raw.payment_receipt_number) || 'N/A';
+        const paymentDateStr = data.payment_date || (data.raw && data.raw.payment_date) || 'N/A';
 
-        // Applicant calculation
-        const applicantName = data.created_by_name || (data.raw && data.raw.created_by_name) || 'Citizen User';
-        const contactPhone = data.contact_number || (data.raw && (data.raw.contact_number || data.raw.phone || data.raw.created_by_phone)) || '';
-        const relationship = data.relationship || (data.raw && data.raw.relationship) || 'Family / Next of Kin';
+        // Staff display
+        const handledByStr = user.full_name || user.username || 'Staff Console';
 
         detailModalBody.innerHTML = `
-            <!-- Simplified Executive Summary Banner -->
-            <div class="view-summary-panel">
-                <div class="view-summary-top">
-                    <div class="view-summary-title">
-                        <span class="ref-pill" title="${escapeHtml(data.ref_label || '')}">#${id}</span>
-                        ${buildServiceBadge(serviceType)}
-                        <h3 class="view-decedent-heading">${escapeHtml(decedentDisplay)}</h3>
-                        ${isProvisional ? '<span class="status-badge pending"><i class="fas fa-user-clock"></i> Provisional</span>' : ''}
+            <!-- View Hero Profile Card -->
+            <div class="view-hero-card">
+                <div class="view-hero-avatar ${isBurial ? 'avatar--burial' : 'avatar--cremation'}">
+                    <i class="fas ${isBurial ? 'fa-monument' : 'fa-fire'}"></i>
+                </div>
+                <div class="view-hero-info">
+                    <div class="view-hero-title-row">
+                        <h2 class="view-decedent-name">${escapeHtml(decedentDisplay)}</h2>
+                        <div class="view-status-wrap">
+                            ${buildServiceBadge(serviceType)}
+                            ${buildStatusBadge(data.status)}
+                            ${isProvisional ? '<span class="view-schedule-pill" style="background:#fef3c7; color:#92400e;"><i class="fas fa-user-clock"></i> Provisional Request</span>' : ''}
+                        </div>
                     </div>
-                    <div class="view-summary-badges">
-                        ${buildStatusBadge(data.status)}
-                        ${buildPaymentBadge({ payment_status: paymentStatusStr })}
+                    <div class="view-hero-schedule">
+                        <i class="fas fa-calendar-day"></i>
+                        <span>${escapeHtml(scheduleDisplay)}</span>
+                        <span class="view-schedule-pill">${isBurial ? 'Ground Interment' : 'Cremation Ceremony'}</span>
                     </div>
                 </div>
             </div>
 
-            <!-- 3-Column Compact Specifications Grid (No Scrolling, Table-Compatible) -->
-            <div class="view-compact-grid">
-                <!-- Column 1: Service Allocation -->
-                <div class="compact-info-group">
-                    <span class="compact-group-title"><i class="fas fa-calendar-check"></i> Service Allocation</span>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Schedule</span>
-                        <div class="compact-val">${formatScheduleCell(data.schedule_date || data.date_raw || data.date_time, data.schedule_time || data.time_raw)}</div>
+            <!-- 4-Stage Stepper Tracker -->
+            ${statusTrackerHtml ? `
+            <div class="booking-stepper-wrap">
+                ${statusTrackerHtml}
+            </div>` : ''}
+
+            <!-- 2-Column Info Cards Grid -->
+            <div class="view-details-grid">
+                <!-- Card 1: Ceremony & Slot Allocation -->
+                <div class="view-info-card">
+                    <div class="view-card-header">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Ceremony &amp; Allocation Details</span>
                     </div>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">${isBurial ? 'Plot / Section' : 'Columbarium / Niche'}</span>
-                        <div class="compact-val">${formatLocationCell({ service_type: serviceType, lot_number: data.lot_number, section_name: data.section_name, niche_number: data.niche_number, columbarium: data.columbarium })}</div>
-                    </div>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Interment Mode</span>
-                        <div class="compact-val">${isBurial ? 'Ground Interment' : 'Columbarium Inurnment'}</div>
+                    <div class="view-card-body">
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-hashtag"></i> Booking Ref</span>
+                            <strong class="prop-value">#${id} (${isBurial ? 'Burial' : 'Cremation'})</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-clock"></i> Schedule Date &amp; Time</span>
+                            <strong class="prop-value">${escapeHtml(scheduleDisplay)}</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas ${isBurial ? 'fa-map-pin' : 'fa-box-archive'}"></i> ${isBurial ? 'Assigned Lot & Section' : 'Columbarium & Niche'}</span>
+                            <strong class="prop-value">${locationDisplay}</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-circle-nodes"></i> Operational Lifecycle</span>
+                            <strong class="prop-value">${data.status === 'Completed' ? '<span style="color:#059669; font-weight:700;"><i class="fas fa-circle-check"></i> Completed &amp; Synchronized</span>' : (data.status === 'Cancelled' ? '<span style="color:#dc2626;"><i class="fas fa-ban"></i> Cancelled &amp; Released</span>' : '<span style="color:#d97706;"><i class="fas fa-hourglass-half"></i> Active / In Progress</span>')}</strong>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Column 2: Applicant & Contact -->
-                <div class="compact-info-group">
-                    <span class="compact-group-title"><i class="fas fa-user-group"></i> Applicant &amp; Contact</span>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Requested By</span>
-                        <div class="compact-val" title="${escapeHtml(applicantName)}"><strong>${escapeHtml(applicantName)}</strong></div>
+                <!-- Card 2: Family & Client Information -->
+                <div class="view-info-card">
+                    <div class="view-card-header">
+                        <i class="fas fa-user-group"></i>
+                        <span>Applicant &amp; Family Record</span>
                     </div>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Contact Phone</span>
-                        <div class="compact-val">${contactPhone ? `<a href="tel:${escapeHtml(contactPhone)}" class="phone-link"><i class="fas fa-phone"></i> ${escapeHtml(contactPhone)}</a>` : '—'}</div>
-                    </div>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Relationship</span>
-                        <div class="compact-val">${escapeHtml(relationship)}</div>
+                    <div class="view-card-body">
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-user"></i> Requested By</span>
+                            <strong class="prop-value">${escapeHtml(data.created_by_name || (data.raw && data.raw.created_by_name) || 'Citizen User')}</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-phone"></i> Contact Phone</span>
+                            <strong class="prop-value">${(data.contact_number || (data.raw && (data.raw.contact_number || data.raw.phone || data.raw.created_by_phone))) ? `<a href="tel:${escapeHtml(data.contact_number || (data.raw && (data.raw.contact_number || data.raw.phone || data.raw.created_by_phone)))}" class="prop-phone-link"><i class="fas fa-phone-volume"></i> ${escapeHtml(data.contact_number || (data.raw && (data.raw.contact_number || data.raw.phone || data.raw.created_by_phone)))}</a>` : 'On file'}</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-envelope"></i> Email Address</span>
+                            <strong class="prop-value">${(data.created_by_email || (data.raw && (data.raw.created_by_email || data.raw.email))) ? `<a href="mailto:${escapeHtml(data.created_by_email || (data.raw && (data.raw.created_by_email || data.raw.email)))}" style="color:#2c5e47; text-decoration:none;">${escapeHtml(data.created_by_email || (data.raw && (data.raw.created_by_email || data.raw.email)))}</a>` : 'Verified user'}</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-heart"></i> Kin Relationship</span>
+                            <strong class="prop-value">${escapeHtml(data.relationship || (data.raw && data.raw.relationship) || 'Next of kin / Representative')}</strong>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Column 3: Accounting & Settlement -->
-                <div class="compact-info-group">
-                    <span class="compact-group-title"><i class="fas fa-receipt"></i> Accounting &amp; Settlement</span>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Settlement Fee</span>
-                        <div class="compact-val"><strong style="color:#0f2e22; font-size:0.92rem;">&#8369;${paymentAmountFormatted}</strong></div>
+                <!-- Card 3: Payment & Accounting Record -->
+                <div class="view-info-card">
+                    <div class="view-card-header">
+                        <i class="fas fa-credit-card"></i>
+                        <span>Payment &amp; Accounting Record</span>
                     </div>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Payment Method</span>
-                        <div class="compact-val">${escapeHtml(paymentMethodStr)}</div>
+                    <div class="view-card-body">
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-shield-check"></i> Payment Status</span>
+                            <strong class="prop-value">${buildPaymentBadge({ payment_status: paymentStatusStr })}</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-peso-sign"></i> Amount</span>
+                            <strong class="prop-value">&#8369;${paymentAmountFormatted}</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-receipt"></i> Official Receipt</span>
+                            <strong class="prop-value">${escapeHtml(paymentReceiptStr)}</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-money-bill-transfer"></i> Payment Method</span>
+                            <strong class="prop-value">${escapeHtml(paymentMethodStr)}</strong>
+                        </div>
                     </div>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Receipt / Date</span>
-                        <div class="compact-val"><code>${escapeHtml(paymentReceiptStr)}</code> &bull; <small style="color:#64748b;">${escapeHtml(paymentDateStr)}</small></div>
+                </div>
+
+                <!-- Card 4: Audit & System Metadata -->
+                <div class="view-info-card">
+                    <div class="view-card-header">
+                        <i class="fas fa-shield-halved"></i>
+                        <span>System &amp; Verification Trail</span>
+                    </div>
+                    <div class="view-card-body">
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-calendar-plus"></i> Creation Date</span>
+                            <strong class="prop-value">${escapeHtml(data.created_at || (data.raw && data.raw.created_at) || 'System record')}</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-file-invoice"></i> Settlement Date</span>
+                            <strong class="prop-value">${escapeHtml(paymentDateStr)}</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-user-shield"></i> Handled By</span>
+                            <strong class="prop-value">${escapeHtml(handledByStr)}</strong>
+                        </div>
+                        <div class="view-prop-row">
+                            <span class="prop-label"><i class="fas fa-bell"></i> Automation Trail</span>
+                            <strong class="prop-value"><span style="color:#0f766e;"><i class="fas fa-check-double"></i> Verified Sync</span></strong>
+                        </div>
                     </div>
                 </div>
             </div>
 
             ${data.notes ? `
-            <div class="view-note-pill">
-                <i class="fas fa-circle-info"></i>
-                <span><strong>Special Note:</strong> ${escapeHtml(data.notes)}</span>
+            <!-- Special Instructions / Notes Box -->
+            <div class="booking-notes-box">
+                <div class="booking-notes-label"><i class="fas fa-note-sticky"></i> Special Instructions &amp; Requests</div>
+                <p class="booking-notes-text">${escapeHtml(data.notes)}</p>
             </div>
             ` : ''}
         `;
@@ -914,9 +871,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     async function viewBookingDetails(serviceType, id) {
         currentViewBookingId = id;
         currentViewServiceType = serviceType;
-
-        const drawer = document.getElementById('bookingActivityDrawer');
-        if (drawer) drawer.open = false;
 
         // 1. Instant Render from Cache if available (Zero Delay)
         const cached = cachedCurrentPageData.find(item => String(item.id) === String(id) && item.service_type === serviceType);
@@ -1151,7 +1105,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         pagination.reset();
         currentQuery = searchQuery.value || '';
         currentStatus = statusFilter.value || '';
-        updateActiveStatCards();
         await loadAndRenderBookings();
     }, 250);
 
@@ -1159,127 +1112,28 @@ document.addEventListener('DOMContentLoaded', async function() {
     statusFilter.addEventListener('change', debouncedFilter);
 
     if (toggleAwaitingBtn) {
-        const handleAwaitingToggle = async () => {
-            const nextState = toggleAwaitingBtn.tagName === 'BUTTON' ? !awaitingReviewOnly : toggleAwaitingBtn.checked;
-            syncAwaitingReviewUI(nextState);
-            if (awaitingReviewOnly) {
-                currentStatus = '';
-                statusFilter.value = '';
-            }
-            updateActiveStatCards();
+        toggleAwaitingBtn.addEventListener('change', async () => {
+            awaitingReviewOnly = toggleAwaitingBtn.checked;
+            toggleAwaitingBtn.setAttribute('aria-pressed', String(awaitingReviewOnly));
+            statusFilter.disabled = awaitingReviewOnly;
             pagination.reset();
             await loadAndRenderBookings();
-        };
-
-        toggleAwaitingBtn.addEventListener('click', () => {
-            if (toggleAwaitingBtn.tagName === 'BUTTON') handleAwaitingToggle();
-        });
-        toggleAwaitingBtn.addEventListener('change', () => {
-            if (toggleAwaitingBtn.tagName !== 'BUTTON') handleAwaitingToggle();
         });
     }
 
     clearFilters.addEventListener('click', async () => {
         searchQuery.value = '';
         statusFilter.value = '';
+        statusFilter.disabled = false;
         currentQuery = '';
         currentStatus = '';
-        syncAwaitingReviewUI(false);
-        updateActiveStatCards();
+        awaitingReviewOnly = false;
+        if (toggleAwaitingBtn) {
+            toggleAwaitingBtn.checked = false;
+            toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+        }
         pagination.reset();
         await loadAndRenderBookings();
-    });
-
-    // ── STAT CARD INTERACTION & FILTERING (MIRRORS ADMIN DASHBOARD & QUICK FILTER) ────
-    document.querySelectorAll('.bookings-stats .stat-card').forEach((card) => {
-        const action = card.getAttribute('data-action') || '';
-        if (card.dataset.navBound) return;
-        card.dataset.navBound = 'true';
-
-        async function handleCardAction(e) {
-            if (e) e.preventDefault();
-
-            if (action === 'all') {
-                currentTab = 'all';
-                currentStatus = '';
-                statusFilter.value = '';
-                searchQuery.value = '';
-                currentQuery = '';
-                syncAwaitingReviewUI(false);
-                tabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === 'all'));
-                const newUrl = new URL(window.location.href.split('?')[0]);
-                window.history.pushState({}, '', newUrl);
-                updateActiveStatCards();
-                pagination.reset();
-                await loadAndRenderBookings();
-            } else if (action === 'burial') {
-                const nextTab = (currentTab === 'burial' && !currentStatus && !awaitingReviewOnly) ? 'all' : 'burial';
-                currentTab = nextTab;
-                currentStatus = '';
-                statusFilter.value = '';
-                syncAwaitingReviewUI(false);
-                tabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === nextTab));
-                const newUrl = new URL(window.location.href.split('?')[0]);
-                if (nextTab !== 'all') newUrl.searchParams.set('service', nextTab);
-                window.history.pushState({}, '', newUrl);
-                updateActiveStatCards();
-                pagination.reset();
-                await loadAndRenderBookings();
-            } else if (action === 'cremation') {
-                const nextTab = (currentTab === 'cremation' && !currentStatus && !awaitingReviewOnly) ? 'all' : 'cremation';
-                currentTab = nextTab;
-                currentStatus = '';
-                statusFilter.value = '';
-                syncAwaitingReviewUI(false);
-                tabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === nextTab));
-                const newUrl = new URL(window.location.href.split('?')[0]);
-                if (nextTab !== 'all') newUrl.searchParams.set('service', nextTab);
-                window.history.pushState({}, '', newUrl);
-                updateActiveStatCards();
-                pagination.reset();
-                await loadAndRenderBookings();
-            } else if (action === 'completed') {
-                if (currentStatus === 'Completed') {
-                    currentStatus = '';
-                    statusFilter.value = '';
-                } else {
-                    currentStatus = 'Completed';
-                    statusFilter.value = 'Completed';
-                    if (awaitingReviewOnly) {
-                        syncAwaitingReviewUI(false);
-                    }
-                }
-                const newUrl = new URL(window.location.href.split('?')[0]);
-                if (currentTab !== 'all') newUrl.searchParams.set('service', currentTab);
-                if (currentStatus) newUrl.searchParams.set('status', currentStatus);
-                window.history.pushState({}, '', newUrl);
-                updateActiveStatCards();
-                pagination.reset();
-                await loadAndRenderBookings();
-            } else if (action === 'review') {
-                const nextState = !awaitingReviewOnly;
-                syncAwaitingReviewUI(nextState);
-                if (awaitingReviewOnly) {
-                    currentStatus = '';
-                    statusFilter.value = '';
-                }
-                const newUrl = new URL(window.location.href.split('?')[0]);
-                if (currentTab !== 'all') newUrl.searchParams.set('service', currentTab);
-                if (awaitingReviewOnly) newUrl.searchParams.set('awaiting_confirmation', '1');
-                window.history.pushState({}, '', newUrl);
-                updateActiveStatCards();
-                pagination.reset();
-                await loadAndRenderBookings();
-            }
-        }
-
-        card.addEventListener('click', handleCardAction);
-        card.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleCardAction(e);
-            }
-        });
     });
 
     // ── EXPORT TOOLS (REPORTS INSPIRATION) ──────────────────────

@@ -82,27 +82,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     let currentQuery = '';
     let currentStatusFilter = 'all';
     let currentAttentionFilter = false;
-
-    // Parse URL params for deep-linking (e.g. from admin dashboard or stat cards)
-    const urlParams = new URLSearchParams(window.location.search);
-    const initialStatus = urlParams.get('status');
-    const initialAttention = urlParams.get('attention');
-    const initialQuery = urlParams.get('q');
-    if (initialQuery) {
-        currentQuery = initialQuery;
-        if (searchInput) searchInput.value = initialQuery;
-    }
-    if (initialAttention === '1' || initialAttention === 'true') {
-        currentAttentionFilter = true;
-        if (attentionFilter) attentionFilter.checked = true;
-    } else if (initialStatus) {
-        const lower = initialStatus.toLowerCase();
-        if (['pending', 'approved', 'completed'].includes(lower)) {
-            currentTab = lower;
-            currentStatusFilter = initialStatus;
-            if (statusFilter) statusFilter.value = initialStatus;
-        }
-    }
     let cachedRequests = [];
     let cachedDecedents = [];
     let cachedLots = [];
@@ -224,25 +203,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    function updateActiveStatCards() {
-        document.querySelectorAll('.reloc-stats > .stat-card').forEach((card) => {
-            const href = card.getAttribute('data-href') || '';
-            let isActive = false;
-            if (href.includes('entity_type=Relocation')) {
-                isActive = Boolean(currentAttentionFilter);
-            } else if (href === 'relocation-management.html') {
-                isActive = currentTab === 'all' && currentStatusFilter === 'all' && !currentAttentionFilter;
-            } else if (href.includes('status=')) {
-                const match = href.match(/status=([^&]+)/);
-                if (match) {
-                    isActive = currentStatusFilter.toLowerCase() === match[1].toLowerCase() && !currentAttentionFilter;
-                }
-            }
-            card.classList.toggle('is-active-filter', isActive);
-            card.setAttribute('aria-pressed', String(isActive));
-        });
-    }
-
     function switchTab(tab) {
         currentTab = tab;
         [
@@ -267,7 +227,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             currentStatusFilter = 'all';
         }
 
-        updateActiveStatCards();
         renderActiveFilterChips();
         pagination.reset();
         loadAndRenderRequests();
@@ -304,7 +263,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                     if (b) b.classList.toggle('active', b.dataset.tab === 'all');
                 });
             }
-            updateActiveStatCards();
             renderActiveFilterChips();
             pagination.reset();
             loadAndRenderRequests();
@@ -314,35 +272,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (attentionFilter) {
         attentionFilter.addEventListener('change', () => {
             currentAttentionFilter = attentionFilter.checked;
-            updateActiveStatCards();
             renderActiveFilterChips();
             pagination.reset();
             loadAndRenderRequests();
         });
     }
-
-    // ── INTERACTIVE DIRECT MODULE NAVIGATION (MIRRORS ADMIN DASHBOARD) ────
-    document.querySelectorAll('.reloc-stats > .stat-card').forEach((card) => {
-        const targetHref = card.getAttribute('data-href');
-        if (!targetHref || card.dataset.navBound) return;
-        card.dataset.navBound = 'true';
-
-        function triggerCardAction() {
-            card.classList.add('is-active-filter');
-            card.setAttribute('aria-pressed', 'true');
-            window.location.href = targetHref;
-        }
-
-        card.addEventListener('click', triggerCardAction);
-        card.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                triggerCardAction();
-            }
-        });
-    });
-
-    updateActiveStatCards();
 
     if (exportCsvBtn) {
         exportCsvBtn.addEventListener('click', () => {
@@ -485,44 +419,43 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             return `
             <tr data-id="${req.request_id}">
-                <td class="col-req-id">
+                <td>
                     <span class="reloc-id-chip" title="Relocation Request #${req.request_id}">REQ-${req.request_id}</span>
                 </td>
-                <td class="col-decedent">
+                <td>
                     <div class="decedent-cell">
                         <div class="decedent-avatar" aria-hidden="true">
                             <i class="fas fa-user"></i>
                         </div>
                         <div class="decedent-info">
-                            <span class="decedent-name" title="${escapeHtml(fullName)}">${escapeHtml(fullName)}</span>
+                            <span class="decedent-name">${escapeHtml(fullName)}</span>
                             <span class="decedent-meta"><i class="fas fa-hashtag"></i> ID: ${escapeHtml(String(req.deceased_id || req.decedent_id || '—'))}</span>
                         </div>
                     </div>
                 </td>
-                <td class="col-route">
-                    <div class="transfer-route-cell" title="Origin: Lot ${escapeHtml(req.from_lot_number || 'N/A')} (${escapeHtml(req.from_section || '—')}) ➔ Destination: Lot ${escapeHtml(req.to_lot_number || 'N/A')} (${escapeHtml(req.to_section || '—')})">
-                        <div class="route-chips-row">
-                            <span class="route-chip from">
-                                <i class="fas fa-map-pin"></i>
-                                <span>${escapeHtml(req.from_lot_number || 'N/A')}</span>
-                            </span>
-                            <i class="fas fa-arrow-right route-arrow-icon" aria-hidden="true"></i>
-                            <span class="route-chip to">
-                                <i class="fas fa-location-dot"></i>
-                                <span>${escapeHtml(req.to_lot_number || 'N/A')}</span>
-                            </span>
-                        </div>
-                        <div class="route-sub-section">
-                            ${escapeHtml(req.from_section && req.to_section && req.from_section === req.to_section ? req.from_section : `${req.from_section || '—'} → ${req.to_section || '—'}`)}
-                        </div>
+                <td>
+                    <div class="transfer-route-badge">
+                        <span class="route-point from" title="Origin Lot ${escapeHtml(req.from_lot_number || 'N/A')} (${escapeHtml(req.from_section || '—')})">
+                            <i class="fas fa-map-pin"></i>
+                            <span class="route-lot">${escapeHtml(req.from_lot_number || 'N/A')}</span>
+                            <span class="route-section">${escapeHtml(req.from_section || 'Sec —')}</span>
+                        </span>
+                        <span class="route-arrow" aria-hidden="true">
+                            <i class="fas fa-arrow-right"></i>
+                        </span>
+                        <span class="route-point to" title="Destination Lot ${escapeHtml(req.to_lot_number || 'N/A')} (${escapeHtml(req.to_section || '—')})">
+                            <i class="fas fa-location-dot"></i>
+                            <span class="route-lot">${escapeHtml(req.to_lot_number || 'N/A')}</span>
+                            <span class="route-section">${escapeHtml(req.to_section || 'Sec —')}</span>
+                        </span>
                     </div>
                 </td>
-                <td class="col-reason">
+                <td>
                     <div class="reason-cell" title="${escapeHtml(req.reason || '')}">
                         <span class="reason-text">${escapeHtml(truncatedReason)}</span>
                     </div>
                 </td>
-                <td class="col-status">
+                <td>
                     <div class="status-cell-wrap">
                         <span class="status-badge status-${escapeHtml(req.status.toLowerCase())}">${escapeHtml(req.status)}</span>
                         ${hasException ? `
@@ -533,13 +466,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                         ` : ''}
                     </div>
                 </td>
-                <td class="col-requester">
+                <td>
                     <div class="requester-cell">
-                        <span class="requester-name" title="${escapeHtml(req.requested_by_name || 'Staff / System')}"><i class="fas fa-user-circle"></i> ${escapeHtml(req.requested_by_name || 'Staff / System')}</span>
+                        <span class="requester-name"><i class="fas fa-user-circle"></i> ${escapeHtml(req.requested_by_name || 'Staff / System')}</span>
                         <span class="requester-date"><i class="far fa-clock"></i> ${formatDateTime(req.created_at)}</span>
                     </div>
                 </td>
-                <td class="col-actions action-buttons">
+                <td class="action-buttons">
                     <button class="btn-action-icon btn-view" data-id="${req.request_id}" title="View Details" aria-label="View Details">
                         <i class="fas fa-eye"></i>
                     </button>
@@ -848,35 +781,70 @@ document.addEventListener('DOMContentLoaded', async function() {
                     </div>
                 </div>` : ''}
 
-                <!-- Compact Executive Data Grid (Zero-Scroll Structure) -->
-                <div class="view-data-grid">
-                    <div class="view-data-item">
-                        <span class="view-data-label"><i class="fas fa-map-pin"></i> Origin Plot</span>
-                        <strong class="view-data-value">Lot ${escapeHtml(req.from_lot_number)} <small class="sec-hint">(${escapeHtml(req.from_section)})</small></strong>
+                <!-- 2-Column Info Grid -->
+                <div class="view-details-grid">
+                    <!-- Card 1: Transfer Route & Logistics -->
+                    <div class="view-info-card">
+                        <div class="view-card-header">
+                            <i class="fas fa-route"></i>
+                            <span>Transfer Logistics & Route</span>
+                        </div>
+                        <div class="view-card-body">
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-arrow-up-from-bracket"></i> Origin Lot</span>
+                                <strong class="prop-value"><span class="view-lot-tag">Lot ${escapeHtml(req.from_lot_number)}</span></strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-layer-group"></i> Origin Section</span>
+                                <strong class="prop-value"><span class="view-section-tag">${escapeHtml(req.from_section)}</span></strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-location-crosshairs"></i> Destination Lot</span>
+                                <strong class="prop-value"><span class="view-lot-tag">Lot ${escapeHtml(req.to_lot_number)}</span></strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-layer-group"></i> Destination Section</span>
+                                <strong class="prop-value"><span class="view-section-tag">${escapeHtml(req.to_section)}</span></strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-comment-dots"></i> Transfer Reason</span>
+                                <strong class="prop-value">${escapeHtml(req.reason || 'Not Specified')}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-calendar-day"></i> Target Date</span>
+                                <strong class="prop-value">${escapeHtml(req.scheduled_date || 'Standard Exhumation Flow')}</strong>
+                            </div>
+                        </div>
                     </div>
-                    <div class="view-data-item">
-                        <span class="view-data-label"><i class="fas fa-location-dot"></i> Destination Plot</span>
-                        <strong class="view-data-value">Lot ${escapeHtml(req.to_lot_number)} <small class="sec-hint">(${escapeHtml(req.to_section)})</small></strong>
-                    </div>
-                    <div class="view-data-item">
-                        <span class="view-data-label"><i class="fas fa-calendar-day"></i> Target Date</span>
-                        <strong class="view-data-value">${escapeHtml(req.scheduled_date || 'Standard Flow')}</strong>
-                    </div>
-                    <div class="view-data-item">
-                        <span class="view-data-label"><i class="fas fa-user-pen"></i> Requested By</span>
-                        <strong class="view-data-value">${escapeHtml(req.requested_by_name || 'System / Staff')}</strong>
-                    </div>
-                    <div class="view-data-item">
-                        <span class="view-data-label"><i class="fas fa-user-check"></i> Authorized By</span>
-                        <strong class="view-data-value">${escapeHtml(req.approved_by_name || (req.status === 'Approved' || req.status === 'Completed' ? 'System Administrator' : 'Pending Review'))}</strong>
-                    </div>
-                    <div class="view-data-item">
-                        <span class="view-data-label"><i class="fas fa-clock"></i> Date Submitted</span>
-                        <strong class="view-data-value">${escapeHtml(req.created_at || '—')}</strong>
-                    </div>
-                    <div class="view-data-item full-width">
-                        <span class="view-data-label"><i class="fas fa-comment-dots"></i> Transfer Reason</span>
-                        <span class="view-data-value reason-val">${escapeHtml(req.reason || 'None specified')}</span>
+
+                    <!-- Card 2: Administrative & Authorization -->
+                    <div class="view-info-card">
+                        <div class="view-card-header">
+                            <i class="fas fa-shield-halved"></i>
+                            <span>Administrative & Authorization</span>
+                        </div>
+                        <div class="view-card-body">
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-user-pen"></i> Requested By</span>
+                                <strong class="prop-value">${escapeHtml(req.requested_by_name || 'System / Staff')}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-clock"></i> Date Submitted</span>
+                                <strong class="prop-value">${escapeHtml(req.created_at || '—')}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-user-check"></i> Authorized By</span>
+                                <strong class="prop-value">${escapeHtml(req.approved_by_name || (req.status === 'Approved' || req.status === 'Completed' ? 'System Administrator' : 'Pending Review'))}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-calendar-check"></i> Action Timestamp</span>
+                                <strong class="prop-value">${escapeHtml(req.completed_at || req.approved_at || req.updated_at || '—')}</strong>
+                            </div>
+                            <div class="view-prop-row">
+                                <span class="prop-label"><i class="fas fa-flag"></i> Request Status</span>
+                                <strong class="prop-value"><span class="status-badge status-${statusKey}">${escapeHtml(req.status)}</span></strong>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -975,12 +943,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             };
 
-            // Reset collapsible default states: documents open, audit history collapsed
-            const docsCollapsible = document.getElementById('viewDocsCollapsible');
-            const auditCollapsible = document.getElementById('viewAuditCollapsible');
-            if (docsCollapsible) docsCollapsible.open = true;
-            if (auditCollapsible) auditCollapsible.open = false;
-
             // Load attached documents and audit timeline
             await loadRelocationDocuments(id);
             await loadRelocationActivityTimeline(id);
@@ -993,26 +955,20 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     async function loadRelocationDocuments(requestId) {
         const listEl = document.getElementById('viewDocumentsList');
-        const countPill = document.getElementById('viewDocsCountPill');
         if (!listEl) return;
         listEl.innerHTML = '<p class="activity-loading"><i class="fas fa-spinner fa-spin"></i> Loading documents...</p>';
         try {
             const documents = await apiRequest(`relocations/${requestId}/documents`);
-            const docsList = Array.isArray(documents) ? documents : [];
-            if (countPill) countPill.textContent = docsList.length;
-            renderRelocationDocumentsList(docsList, requestId);
+            renderRelocationDocumentsList(Array.isArray(documents) ? documents : [], requestId);
         } catch (error) {
             console.error('Failed to load documents', error);
-            if (countPill) countPill.textContent = '0';
             listEl.innerHTML = '<p class="activity-empty">Could not load documents.</p>';
         }
     }
 
     function renderRelocationDocumentsList(documents, requestId) {
         const listEl = document.getElementById('viewDocumentsList');
-        const countPill = document.getElementById('viewDocsCountPill');
         if (!listEl) return;
-        if (countPill) countPill.textContent = documents.length;
 
         if (documents.length === 0) {
             listEl.innerHTML = '<p class="activity-empty"><i class="fas fa-folder-open"></i> No documents attached to this relocation request yet.</p>';
@@ -1076,26 +1032,20 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     async function loadRelocationActivityTimeline(requestId) {
         const timelineEl = document.getElementById('viewActivityTimeline');
-        const countPill = document.getElementById('viewAuditCountPill');
         if (!timelineEl) return;
         timelineEl.innerHTML = '<p class="activity-loading"><i class="fas fa-spinner fa-spin"></i> Loading activity history...</p>';
         try {
             const entries = await apiRequest(`audit-logs?entity_type=Relocation&entity_id=${requestId}`);
-            const entryList = Array.isArray(entries) ? entries : [];
-            if (countPill) countPill.textContent = `${entryList.length} ${entryList.length === 1 ? 'event' : 'events'}`;
-            renderRelocationActivityTimeline(entryList);
+            renderRelocationActivityTimeline(Array.isArray(entries) ? entries : []);
         } catch (error) {
             console.error('Failed to load activity timeline', error);
-            if (countPill) countPill.textContent = '0';
             timelineEl.innerHTML = '<p class="activity-empty">Could not load activity history.</p>';
         }
     }
 
     function renderRelocationActivityTimeline(entries) {
         const timelineEl = document.getElementById('viewActivityTimeline');
-        const countPill = document.getElementById('viewAuditCountPill');
         if (!timelineEl) return;
-        if (countPill) countPill.textContent = `${entries.length} ${entries.length === 1 ? 'event' : 'events'}`;
 
         if (!Array.isArray(entries) || entries.length === 0) {
             timelineEl.innerHTML = '<p class="activity-empty"><i class="fas fa-clock-rotate-left"></i> No audit activity recorded yet for this relocation.</p>';

@@ -222,12 +222,11 @@
     transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-/* Stat value — clamp for fluid sizing with Fraunces serif display */
+/* Stat value — clamp for fluid sizing */
 .mgmtres-stats > .stat-card .stat-value {
     max-width: 100%;
     overflow-wrap: anywhere;
     color: #ffffff;
-    font-family: var(--font-display, 'Fraunces', serif);
     font-size: clamp(1.45rem, 1.8vw, 1.85rem);
     font-weight: 900;
     line-height: 1.15;

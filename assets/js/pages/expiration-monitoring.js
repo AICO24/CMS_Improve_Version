@@ -30,10 +30,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         logoutBtn.addEventListener('click', () => api.logout());
     }
 
-    // Parse URL params for initial state / deep-links
-    const urlParams = new URLSearchParams(window.location.search);
-    const initialFilter = urlParams.get('filter') || urlParams.get('tab');
-    let currentTab = (initialFilter && ['all', 'expiring', 'expired', 'renewed', 'exhumation'].includes(initialFilter)) ? initialFilter : 'all';
+    let currentTab = 'all';
     const perPage = 10;
     let cachedRecords = [];
 
@@ -996,71 +993,20 @@ document.addEventListener('DOMContentLoaded', async function () {
         await loadExpirationData();
     }
 
-    // Active stat card & tab synchronization
-    function updateActiveStatCards() {
-        document.querySelectorAll('.expmon-stats > .stat-card').forEach((card) => {
-            const href = card.getAttribute('data-href') || '';
-            let isActive = false;
-            if (href === 'expiration-monitoring.html') {
-                isActive = currentTab === 'all';
-            } else if (href.includes('filter=')) {
-                const match = href.match(/filter=([^&]+)/);
-                if (match) {
-                    isActive = currentTab === match[1];
-                }
-            }
-            card.classList.toggle('is-active-filter', isActive);
-            card.setAttribute('aria-pressed', String(isActive));
-        });
-    }
-
-    function switchExpirationTab(tab) {
-        currentTab = tab || 'all';
-        document.querySelectorAll('.records-tab-btn').forEach(b => {
-            const isMatch = (b.dataset.tab || 'all') === currentTab;
-            b.classList.toggle('active', isMatch);
-            b.setAttribute('aria-selected', isMatch ? 'true' : 'false');
-        });
-        updateActiveStatCards();
-        pagination.reset();
-        refreshExpirationView();
-    }
-
     // Sub-Tabs segmented switcher
     document.querySelectorAll('.records-tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            switchExpirationTab(btn.dataset.tab || 'all');
+            document.querySelectorAll('.records-tab-btn').forEach(b => {
+                b.classList.remove('active');
+                b.setAttribute('aria-selected', 'false');
+            });
+            btn.classList.add('active');
+            btn.setAttribute('aria-selected', 'true');
+            currentTab = btn.dataset.tab || 'all';
+            pagination.reset();
+            refreshExpirationView();
         });
     });
-
-    // ── INTERACTIVE DIRECT MODULE NAVIGATION (MIRRORS ADMIN DASHBOARD) ────
-    document.querySelectorAll('.expmon-stats > .stat-card').forEach((card) => {
-        const targetHref = card.getAttribute('data-href');
-        if (!targetHref || card.dataset.navBound) return;
-        card.dataset.navBound = 'true';
-
-        function triggerCardAction() {
-            card.classList.add('is-active-filter');
-            card.setAttribute('aria-pressed', 'true');
-            window.location.href = targetHref;
-        }
-
-        card.addEventListener('click', triggerCardAction);
-        card.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                triggerCardAction();
-            }
-        });
-    });
-
-    // Initial state reflection
-    document.querySelectorAll('.records-tab-btn').forEach(b => {
-        const isMatch = (b.dataset.tab || 'all') === currentTab;
-        b.classList.toggle('active', isMatch);
-        b.setAttribute('aria-selected', isMatch ? 'true' : 'false');
-    });
-    updateActiveStatCards();
 
     // Reset filters button
     const resetFiltersBtn = document.getElementById('resetFiltersBtn');
@@ -1073,7 +1019,13 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (urg) urg.value = 'all';
             const stat = document.getElementById('expirationStatusFilter');
             if (stat) stat.value = 'all';
-            switchExpirationTab('all');
+            currentTab = 'all';
+            document.querySelectorAll('.records-tab-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.tab === 'all');
+                b.setAttribute('aria-selected', b.dataset.tab === 'all' ? 'true' : 'false');
+            });
+            pagination.reset();
+            refreshExpirationView();
         });
     }
 

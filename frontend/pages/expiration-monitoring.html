@@ -78,52 +78,35 @@
                 </div>
             </div>
                 <div class="content-area">
-                <p class="section-label"><i class="fas fa-chart-pie"></i> Lease &amp; Expiration Overview</p>
-                <!-- Summary Statistics — 5 Executive Cards (Unified System Brand Green) -->
+                <!-- Summary Statistics — 5 Executive 3D Embossed Cards -->
                 <div class="stats-row expmon-stats">
-                    <div class="stat-card" data-href="expiration-monitoring.html" onclick="window.location.href='expiration-monitoring.html'" role="button" tabindex="0" title="View all monitored leases" aria-pressed="false">
-                        <div class="stat-title">
-                            <span>Total Monitored</span>
-                            <span class="card-icon"><i class="fas fa-hourglass-half"></i></span>
-                        </div>
+                    <div class="stat-card accent-teal">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-hourglass-half"></i></span> Total Monitored</div>
                         <div class="stat-value" id="totalTrackedCount">0</div>
                         <div class="stat-sub">Tracked lease records</div>
                     </div>
-                    <div class="stat-card" data-href="expiration-monitoring.html?filter=expiring" onclick="window.location.href='expiration-monitoring.html?filter=expiring'" role="button" tabindex="0" title="Filter by Expiring Soon (30d)" aria-pressed="false">
-                        <div class="stat-title">
-                            <span>Expiring Soon</span>
-                            <span class="card-icon"><i class="fas fa-clock"></i></span>
-                        </div>
+                    <div class="stat-card accent-amber">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-clock"></i></span> Expiring Soon</div>
                         <div class="stat-value" id="expiringSoonCount">0</div>
                         <div class="stat-sub">Next 30 days</div>
                     </div>
-                    <div class="stat-card" data-href="expiration-monitoring.html?filter=expired" onclick="window.location.href='expiration-monitoring.html?filter=expired'" role="button" tabindex="0" title="Filter by Expired lots" aria-pressed="false">
-                        <div class="stat-title">
-                            <span>Expired / Overdue</span>
-                            <span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span>
-                        </div>
+                    <div class="stat-card accent-red">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span> Expired / Overdue</div>
                         <div class="stat-value" id="expiredCount">0</div>
                         <div class="stat-sub">Past due lease</div>
                     </div>
-                    <div class="stat-card" data-href="expiration-monitoring.html?filter=renewed" onclick="window.location.href='expiration-monitoring.html?filter=renewed'" role="button" tabindex="0" title="Filter by Renewals Due" aria-pressed="false">
-                        <div class="stat-title">
-                            <span>Renewals Due</span>
-                            <span class="card-icon"><i class="fas fa-rotate"></i></span>
-                        </div>
+                    <div class="stat-card accent-blue">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-rotate"></i></span> Renewals Due</div>
                         <div class="stat-value" id="renewalsDueCount">0</div>
                         <div class="stat-sub">Pending renewal</div>
                     </div>
-                    <div class="stat-card" data-href="relocation-management.html" onclick="window.location.href='relocation-management.html'" role="button" tabindex="0" title="Open Exhumation & Relocation Management module" aria-pressed="false">
-                        <div class="stat-title">
-                            <span>Exhumation Queue</span>
-                            <span class="card-icon"><i class="fas fa-truck-moving"></i></span>
-                        </div>
+                    <div class="stat-card accent-navy">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-truck-moving"></i></span> Exhumation Queue</div>
                         <div class="stat-value" id="exhumationCount">0</div>
                         <div class="stat-sub">Scheduled / required</div>
                     </div>
                 </div>
 
-                <p class="section-label"><i class="fas fa-list-check"></i> Lease Monitoring &amp; Renewal Directory</p>
                 <!-- ── Unified Master Control Panel (Single Consolidated Box) ── -->
                 <div class="expiration-control-panel">
                     <!-- Top Tier: Sub-Tabs Segmented Switcher + Action Buttons -->
