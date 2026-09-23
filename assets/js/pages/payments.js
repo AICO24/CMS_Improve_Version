@@ -166,73 +166,207 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function renderTable(payments) {
         if (!payments || payments.length === 0) {
+            const isFiltered = Boolean(
+                (referenceFilterInput && referenceFilterInput.value.trim()) ||
+                (transactionTypeFilterSelect && transactionTypeFilterSelect.value) ||
+                (statusFilterSelect && statusFilterSelect.value) ||
+                (dateFromFilterInput && dateFromFilterInput.value) ||
+                (dateToFilterInput && dateToFilterInput.value)
+            );
             tbody.innerHTML = `
                 <tr>
                     <td colspan="8">
-                        <div class="payments-empty-state">
-                            <i class="fas fa-receipt"></i>
-                            <strong>No payments found</strong>
-                            <span>Adjust the filters or record a new payment.</span>
+                        <div class="payments-empty-state reloc-empty-state">
+                            <div class="empty-icon-wrap">
+                                <i class="fas fa-receipt"></i>
+                            </div>
+                            <strong>${isFiltered ? 'No matching payment records found' : 'No payment records found'}</strong>
+                            <span>${isFiltered ? 'Try clearing or modifying your filter criteria.' : 'Recorded financial transactions will appear here.'}</span>
+                            ${isFiltered ? `
+                                <button type="button" class="btn-secondary btn-clear-filters" id="emptyClearFiltersBtn">
+                                    <i class="fas fa-filter-circle-xmark"></i> Clear Filters
+                                </button>
+                            ` : ''}
                         </div>
                     </td>
                 </tr>
             `;
+            const clearBtn = document.getElementById('emptyClearFiltersBtn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', async () => {
+                    if (referenceFilterInput) referenceFilterInput.value = '';
+                    if (transactionTypeFilterSelect) transactionTypeFilterSelect.value = '';
+                    if (statusFilterSelect) statusFilterSelect.value = '';
+                    if (dateFromFilterInput) dateFromFilterInput.value = '';
+                    if (dateToFilterInput) dateToFilterInput.value = '';
+                    syncSubTabsActiveState();
+                    renderActiveFilterChips();
+                    pagination.reset();
+                    await refreshAll();
+                });
+            }
             return;
         }
 
         tbody.innerHTML = payments.map(p => {
-            const date = p.payment_date || p.created_at || '—';
-            // Triage aid only, not an approval — see Payment::findAll()'s
-            // comment. Only meaningful while still Pending; a self-reported
-            // amount match plus an uploaded file is not proof, just a signal
-            // for staff to look at this one first. PDO/MySQL can return this
-            // as the string "0" (truthy in JS), so compare numerically.
-            const isHighConfidence = Number(p.is_high_confidence) === 1 && (p.verification_status || 'Pending') === 'Pending';
+            const rawDateStr = p.payment_date || p.created_at || '';
+            let formattedDate = '—';
+            let formattedTime = '';
+            if (rawDateStr) {
+                try {
+                    const d = new Date(rawDateStr.replace(' ', 'T'));
+                    if (!isNaN(d.getTime())) {
+                        formattedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        formattedTime = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                    } else {
+                        formattedDate = rawDateStr;
+                    }
+                } catch (_) {
+                    formattedDate = rawDateStr;
+                }
+            }
+
+            const receiptNum = p.receipt_number || `REC-${p.payment_id}`;
+
+            // Transaction Type icon and context
+            const tType = (p.transaction_type || '').toLowerCase();
+            let typeIcon = 'fa-file-invoice-dollar';
+            if (tType.includes('burial')) typeIcon = 'fa-monument';
+            else if (tType.includes('cremation')) typeIcon = 'fa-fire';
+            else if (tType.includes('maintenance') || tType.includes('renewal')) typeIcon = 'fa-rotate';
+            else if (tType.includes('lot')) typeIcon = 'fa-vector-square';
+            else if (tType.includes('relocation') || tType.includes('exhumation')) typeIcon = 'fa-truck-moving';
+
+            const refSubtext = p.reference_id 
+                ? `${escapeHtml(p.reference_kind ? p.reference_kind.charAt(0).toUpperCase() + p.reference_kind.slice(1) : 'Ref')} #${escapeHtml(String(p.reference_id))}` 
+                : 'Direct Payment';
+
+            // Payment Method icon and class
+            const method = (p.payment_method || '').toLowerCase();
+            let methodIcon = 'fa-wallet';
+            let methodClass = 'method-default';
+            if (method.includes('cash')) {
+                methodIcon = 'fa-money-bill-wave';
+                methodClass = 'method-cash';
+            } else if (method.includes('gcash')) {
+                methodIcon = 'fa-mobile-screen-button';
+                methodClass = 'method-gcash';
+            } else if (method.includes('paymongo')) {
+                methodIcon = 'fa-credit-card';
+                methodClass = 'method-paymongo';
+            } else if (method.includes('bank') || method.includes('check')) {
+                methodIcon = 'fa-building-columns';
+                methodClass = 'method-bank';
+            }
+
+            // Triage aid badges
+            const isPending = (p.verification_status || 'Pending') === 'Pending';
+            const isHighConfidence = Number(p.is_high_confidence) === 1 && isPending;
             const highConfidenceBadge = isHighConfidence
-                ? ' <span class="status-badge status-info" title="Amount matches the lot price and a receipt was uploaded — not verified, just worth checking first">Likely valid</span>'
+                ? ' <span class="status-badge status-info" title="Amount matches the lot price and a receipt was uploaded — not verified, just worth checking first"><i class="fas fa-circle-check"></i> Likely valid</span>'
                 : '';
 
-            const isPending = (p.verification_status || 'Pending') === 'Pending';
             let isAgingOverdue = false;
-            if (isPending) {
-                const rawDateStr = p.created_at || p.payment_date;
-                if (rawDateStr) {
-                    const timestamp = new Date(rawDateStr.replace(' ', 'T')).getTime();
-                    if (timestamp && (Date.now() - timestamp) > 48 * 60 * 60 * 1000) {
-                        isAgingOverdue = true;
-                    }
+            if (isPending && rawDateStr) {
+                const timestamp = new Date(rawDateStr.replace(' ', 'T')).getTime();
+                if (timestamp && (Date.now() - timestamp) > 48 * 60 * 60 * 1000) {
+                    isAgingOverdue = true;
                 }
             }
             const agingBadge = isAgingOverdue
                 ? ' <span class="aging-badge aging-warning" title="Pending review for over 48 hours — requires staff attention"><i class="fas fa-hourglass-half"></i> &gt;48h</span>'
                 : '';
 
+            const status = p.verification_status || 'Pending';
+            const statusLower = status.toLowerCase();
+
+            let paymentBadgeHtml = '';
+            if (statusLower === 'verified') {
+                paymentBadgeHtml = `<span class="payment-badge payment-badge--verified"><i class="fas fa-circle-check"></i> Verified</span>`;
+            } else if (statusLower === 'pending') {
+                paymentBadgeHtml = `<span class="payment-badge payment-badge--pending"><i class="fas fa-clock"></i> Pending</span>`;
+            } else {
+                paymentBadgeHtml = `<span class="payment-badge payment-badge--unpaid"><i class="fas fa-circle-xmark"></i> ${escapeHtml(status)}</span>`;
+            }
+
             return `
-                <tr data-id="${p.payment_id}" data-status="${p.verification_status || 'Pending'}">
-                    <td><span class="receipt-chip">${p.receipt_number || '—'}</span></td>
-                    <td><span class="transaction-type">${p.transaction_type || '—'}</span></td>
-                    <td class="amount-cell">${formatCurrency(p.amount)}</td>
-                    <td class="date-cell">${date}</td>
-                    <td><span class="method-chip">${p.payment_method || '—'}</span></td>
-                    <td><span class="status-badge ${statusBadgeClass(p.verification_status || 'Pending')}">${p.verification_status || 'Pending'}</span>${agingBadge}${highConfidenceBadge}</td>
-                    <td class="received-by-cell">${p.received_by_name || 'N/A'}</td>
-                    <td class="action-buttons">
-                        <button class="btn-view" title="View"><i class="fas fa-eye"></i></button>
-                        ${currentUser.role === 'admin' && (p.verification_status || 'Pending') !== 'Verified' ? '<button class="btn-delete-row" title="Delete"><i class="fas fa-trash"></i></button>' : ''}
+                <tr data-id="${p.payment_id}" data-status="${escapeHtml(status)}">
+                    <td class="col-ref col-receipt">
+                        <span class="ref-pill" title="Receipt #${escapeHtml(receiptNum)}">
+                            #${escapeHtml(receiptNum)}
+                        </span>
+                    </td>
+                    <td class="col-type">
+                        <div class="transaction-cell">
+                            <span class="transaction-name" title="${escapeHtml(p.transaction_type || 'Payment')}">
+                                <i class="fas ${typeIcon}"></i> ${escapeHtml(p.transaction_type || 'Payment')}
+                            </span>
+                            <span class="transaction-meta" title="${refSubtext}">
+                                <i class="fas fa-link"></i> ${refSubtext}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="col-amount">
+                        <div class="amount-cell">
+                            <span class="amount-val">${formatCurrency(p.amount)}</span>
+                        </div>
+                    </td>
+                    <td class="col-date">
+                        <div class="table-datetime-cell">
+                            <span class="cell-date">${escapeHtml(formattedDate)}</span>
+                            ${formattedTime ? `<span class="cell-time"><i class="far fa-clock"></i> ${escapeHtml(formattedTime)}</span>` : ''}
+                        </div>
+                    </td>
+                    <td class="col-method">
+                        <span class="payment-method-chip ${methodClass}">
+                            <i class="fas ${methodIcon}"></i>
+                            <span>${escapeHtml(p.payment_method || '—')}</span>
+                        </span>
+                    </td>
+                    <td class="col-status col-payment">
+                        <div class="status-cell-wrap">
+                            ${paymentBadgeHtml}
+                            ${agingBadge}
+                            ${highConfidenceBadge}
+                        </div>
+                    </td>
+                    <td class="col-receiver col-requester">
+                        <div class="requester-cell table-requester-cell">
+                            <span class="requester-name" title="${escapeHtml(p.received_by_name || 'Staff / System')}">
+                                <i class="fas fa-user-circle"></i> ${escapeHtml(p.received_by_name || 'Staff / System')}
+                            </span>
+                            <span class="requester-date">
+                                ${p.verified_by_name ? `<i class="fas fa-shield-halved" title="Verified by ${escapeHtml(p.verified_by_name)}"></i> Verified` : `<i class="fas fa-user-tag"></i> Recorded`}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="col-actions">
+                        <div class="action-buttons">
+                            <button type="button" class="btn-row-action btn-row-action--view btn-view" data-id="${p.payment_id}" title="View Details" aria-label="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${currentUser && currentUser.role === 'admin' && status !== 'Verified' ? `
+                                <button type="button" class="btn-row-action btn-row-action--cancel btn-delete-row" data-id="${p.payment_id}" title="Delete Record" aria-label="Delete Record">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            ` : ''}
+                        </div>
                     </td>
                 </tr>
             `;
         }).join('');
 
         tbody.querySelectorAll('.btn-view').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const id = btn.closest('tr').dataset.id;
                 showViewModal(id);
             });
         });
 
         tbody.querySelectorAll('.btn-delete-row').forEach(btn => {
-            btn.addEventListener('click', async () => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
                 const id = btn.closest('tr').dataset.id;
                 if (!confirm('Delete this payment record?')) {
                     return;
