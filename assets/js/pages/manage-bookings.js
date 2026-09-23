@@ -284,6 +284,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             section_name: s.section_name || 'N/A',
             date_time: `${s.schedule_date || 'N/A'} ${s.schedule_time || ''}`.trim(),
             date_raw: s.schedule_date || '',
+            time_raw: s.schedule_time || '',
             created_by_name: s.created_by_name || 'N/A',
             created_by_id: s.created_by,
             status: s.status,
@@ -313,6 +314,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             niche_number: c.niche_number || 'TBD',
             date_time: c.cremation_date || 'N/A',
             date_raw: c.cremation_date || '',
+            time_raw: c.cremation_time || '',
             created_by_name: c.created_by_name || 'N/A',
             created_by_id: c.created_by,
             status: c.status,
@@ -331,43 +333,43 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (currentTab === 'burial') {
             bookingsHead.innerHTML = `
                 <tr>
-                    <th>Booking Ref</th>
-                    <th>Decedent</th>
-                    <th>Lot</th>
-                    <th>Section</th>
-                    <th>Burial Date &amp; Time</th>
-                    <th>Requested By</th>
-                    <th>Status</th>
-                    <th>Payment</th>
-                    <th>Actions</th>
+                    <th class="col-ref">Ref #</th>
+                    <th class="col-decedent">Decedent</th>
+                    <th class="col-lot">Lot</th>
+                    <th class="col-section">Section</th>
+                    <th class="col-schedule">Burial Date</th>
+                    <th class="col-requester">Requested By</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-payment">Payment</th>
+                    <th class="col-actions">Actions</th>
                 </tr>
             `;
         } else if (currentTab === 'cremation') {
             bookingsHead.innerHTML = `
                 <tr>
-                    <th>Request Ref</th>
-                    <th>Decedent</th>
-                    <th>Columbarium</th>
-                    <th>Niche</th>
-                    <th>Cremation Date</th>
-                    <th>Requested By</th>
-                    <th>Status</th>
-                    <th>Payment</th>
-                    <th>Actions</th>
+                    <th class="col-ref">Ref #</th>
+                    <th class="col-decedent">Decedent</th>
+                    <th class="col-columbarium">Columbarium</th>
+                    <th class="col-niche">Niche</th>
+                    <th class="col-schedule">Cremation Date</th>
+                    <th class="col-requester">Requested By</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-payment">Payment</th>
+                    <th class="col-actions">Actions</th>
                 </tr>
             `;
         } else {
             bookingsHead.innerHTML = `
                 <tr>
-                    <th>Ref #</th>
-                    <th>Service</th>
-                    <th>Decedent</th>
-                    <th>Location / Slot</th>
-                    <th>Schedule Date &amp; Time</th>
-                    <th>Requested By</th>
-                    <th>Status</th>
-                    <th>Payment</th>
-                    <th>Actions</th>
+                    <th class="col-ref">Ref #</th>
+                    <th class="col-service">Service</th>
+                    <th class="col-decedent">Decedent</th>
+                    <th class="col-location">Location</th>
+                    <th class="col-schedule">Schedule</th>
+                    <th class="col-requester">Requested By</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-payment">Payment</th>
+                    <th class="col-actions">Actions</th>
                 </tr>
             `;
         }
@@ -389,6 +391,83 @@ document.addEventListener('DOMContentLoaded', async function() {
             return `<span class="service-pill service-pill--burial"><i class="fas fa-monument"></i> Burial</span>`;
         }
         return `<span class="service-pill service-pill--cremation"><i class="fas fa-fire"></i> Cremation</span>`;
+    }
+
+    function formatScheduleCell(dateVal, timeVal) {
+        if (!dateVal || dateVal === 'N/A') {
+            return '<span class="text-muted" style="color:#94a3b8;">—</span>';
+        }
+        let formattedDate = dateVal;
+        let formattedTime = '';
+
+        let datePart = dateVal;
+        let timePart = timeVal || '';
+        if (typeof dateVal === 'string' && dateVal.includes(' ') && !timePart) {
+            const split = dateVal.split(' ');
+            datePart = split[0];
+            timePart = split.slice(1).join(' ');
+        }
+
+        try {
+            const parts = String(datePart).split('-');
+            if (parts.length === 3) {
+                const year = Number(parts[0]);
+                const month = Number(parts[1]) - 1;
+                const day = Number(parts[2]);
+                const d = new Date(year, month, day);
+                if (!isNaN(d.getTime())) {
+                    formattedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                }
+            }
+        } catch (_) {
+            formattedDate = datePart;
+        }
+
+        if (timePart) {
+            try {
+                const timeComponents = timePart.split(':');
+                if (timeComponents.length >= 2) {
+                    let hour = parseInt(timeComponents[0], 10);
+                    const minute = timeComponents[1];
+                    const ampm = hour >= 12 ? 'PM' : 'AM';
+                    hour = hour % 12 || 12;
+                    formattedTime = `${hour}:${minute} ${ampm}`;
+                } else {
+                    formattedTime = timePart;
+                }
+            } catch (_) {
+                formattedTime = timePart;
+            }
+        }
+
+        return `
+            <div class="table-datetime-cell">
+                <span class="cell-date">${escapeHtml(formattedDate)}</span>
+                ${formattedTime ? `<span class="cell-time"><i class="far fa-clock"></i> ${escapeHtml(formattedTime)}</span>` : ''}
+            </div>
+        `;
+    }
+
+    function formatLocationCell(item) {
+        if (item.service_type === 'burial') {
+            const lot = item.lot_number && item.lot_number !== 'N/A' ? `Lot ${item.lot_number}` : 'No lot';
+            const section = item.section_name && item.section_name !== 'N/A' ? item.section_name : '';
+            return `
+                <div class="table-location-cell">
+                    <span class="loc-main">${escapeHtml(lot)}</span>
+                    ${section ? `<span class="loc-sub">${escapeHtml(section)}</span>` : ''}
+                </div>
+            `;
+        } else {
+            const niche = item.niche_number && item.niche_number !== 'TBD' ? `Niche ${item.niche_number}` : 'Niche TBD';
+            const columbarium = item.columbarium && item.columbarium !== 'N/A' ? item.columbarium : 'Columbarium';
+            return `
+                <div class="table-location-cell">
+                    <span class="loc-main">${escapeHtml(niche)}</span>
+                    <span class="loc-sub">${escapeHtml(columbarium)}</span>
+                </div>
+            `;
+        }
     }
 
     function buildActionButtons(item) {
@@ -419,18 +498,31 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function buildTableRow(item) {
+        const refPill = `<span class="ref-pill" title="${escapeHtml(item.ref_label)}">#${escapeHtml(String(item.id))}</span>`;
+        const decedentCell = `
+            <div class="table-decedent-cell" title="${escapeHtml(item.decedent_name)}">
+                <span class="decedent-name">${escapeHtml(item.decedent_name)}</span>
+            </div>
+        `;
+        const requesterCell = `
+            <div class="table-requester-cell" title="${escapeHtml(item.created_by_name)}">
+                <span class="requester-name">${escapeHtml(item.created_by_name)}</span>
+            </div>
+        `;
+        const scheduleCell = formatScheduleCell(item.date_raw || item.date_time, item.time_raw);
+
         if (currentTab === 'burial') {
             return `
                 <tr data-id="${item.id}" data-service="${item.service_type}">
-                    <td><strong>${item.ref_label}</strong></td>
-                    <td>${escapeHtml(item.decedent_name)}</td>
-                    <td>${escapeHtml(item.lot_number)}</td>
-                    <td>${escapeHtml(item.section_name)}</td>
-                    <td>${escapeHtml(item.date_time)}</td>
-                    <td>${escapeHtml(item.created_by_name)}</td>
-                    <td>${buildStatusBadge(item.status)}</td>
-                    <td>${buildPaymentBadge(item)}</td>
-                    <td class="action-buttons">${buildActionButtons(item)}</td>
+                    <td class="col-ref">${refPill}</td>
+                    <td class="col-decedent">${decedentCell}</td>
+                    <td class="col-lot"><span class="lot-pill">${escapeHtml(item.lot_number || 'N/A')}</span></td>
+                    <td class="col-section"><span class="section-text" title="${escapeHtml(item.section_name || '')}">${escapeHtml(item.section_name || 'N/A')}</span></td>
+                    <td class="col-schedule">${scheduleCell}</td>
+                    <td class="col-requester">${requesterCell}</td>
+                    <td class="col-status">${buildStatusBadge(item.status)}</td>
+                    <td class="col-payment">${buildPaymentBadge(item)}</td>
+                    <td class="col-actions"><div class="action-buttons">${buildActionButtons(item)}</div></td>
                 </tr>
             `;
         }
@@ -438,30 +530,30 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (currentTab === 'cremation') {
             return `
                 <tr data-id="${item.id}" data-service="${item.service_type}">
-                    <td><strong>${item.ref_label}</strong></td>
-                    <td>${escapeHtml(item.decedent_name)}</td>
-                    <td>${escapeHtml(item.columbarium)}</td>
-                    <td>${escapeHtml(item.niche_number)}</td>
-                    <td>${escapeHtml(item.date_time)}</td>
-                    <td>${escapeHtml(item.created_by_name)}</td>
-                    <td>${buildStatusBadge(item.status)}</td>
-                    <td>${buildPaymentBadge(item)}</td>
-                    <td class="action-buttons">${buildActionButtons(item)}</td>
+                    <td class="col-ref">${refPill}</td>
+                    <td class="col-decedent">${decedentCell}</td>
+                    <td class="col-columbarium"><span class="columbarium-text" title="${escapeHtml(item.columbarium || '')}">${escapeHtml(item.columbarium || 'N/A')}</span></td>
+                    <td class="col-niche"><span class="niche-pill">${escapeHtml(item.niche_number || 'TBD')}</span></td>
+                    <td class="col-schedule">${scheduleCell}</td>
+                    <td class="col-requester">${requesterCell}</td>
+                    <td class="col-status">${buildStatusBadge(item.status)}</td>
+                    <td class="col-payment">${buildPaymentBadge(item)}</td>
+                    <td class="col-actions"><div class="action-buttons">${buildActionButtons(item)}</div></td>
                 </tr>
             `;
         }
 
         return `
             <tr data-id="${item.id}" data-service="${item.service_type}">
-                <td><strong>${item.ref_label}</strong></td>
-                <td>${buildServiceBadge(item.service_type)}</td>
-                <td>${escapeHtml(item.decedent_name)}</td>
-                <td>${item.location_label}</td>
-                <td>${escapeHtml(item.date_time)}</td>
-                <td>${escapeHtml(item.created_by_name)}</td>
-                <td>${buildStatusBadge(item.status)}</td>
-                <td>${buildPaymentBadge(item)}</td>
-                <td class="action-buttons">${buildActionButtons(item)}</td>
+                <td class="col-ref">${refPill}</td>
+                <td class="col-service">${buildServiceBadge(item.service_type)}</td>
+                <td class="col-decedent">${decedentCell}</td>
+                <td class="col-location">${formatLocationCell(item)}</td>
+                <td class="col-schedule">${scheduleCell}</td>
+                <td class="col-requester">${requesterCell}</td>
+                <td class="col-status">${buildStatusBadge(item.status)}</td>
+                <td class="col-payment">${buildPaymentBadge(item)}</td>
+                <td class="col-actions"><div class="action-buttons">${buildActionButtons(item)}</div></td>
             </tr>
         `;
     }
