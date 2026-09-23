@@ -192,39 +192,37 @@
     display: inline-block;
 }
 
-/* .logout-btn/.Btn (+ .sign/.text sliding animation) now come from assets/css/dashboard.css (Batch 10; previously duplicated here in Batch 8) */
-
 .user-stats-row {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
+    gap: 12px;
     align-items: stretch;
     margin-bottom: 2px;
 }
 
 .user-stats-row > .stat-card {
     position: relative;
-    min-height: 128px;
+    min-height: 74px;
     height: 100%;
-    padding: 16px 18px 14px;
+    padding: 10px 14px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.24);
-    border-left: 8px solid rgba(255, 255, 255, 0.78);
+    border-left: 5px solid rgba(255, 255, 255, 0.78);
     background: linear-gradient(135deg, rgba(44, 94, 71, 0.97), rgba(59, 112, 85, 0.92));
-    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.10), inset 0 1px 0 rgba(255,255,255,0.18);
-    border-radius: 22px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255,255,255,0.18);
+    border-radius: 12px;
     transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
 }
 
 .user-stats-row > .stat-card::before {
     content: "";
     position: absolute;
-    inset: auto -30px -28px auto;
-    width: 120px;
-    height: 120px;
+    inset: auto -20px -20px auto;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     background: radial-gradient(circle, rgba(255,255,255,0.22), transparent 68%);
     pointer-events: none;
@@ -240,8 +238,8 @@
 }
 
 .user-stats-row > .stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14);
     filter: saturate(1.08);
 }
 
@@ -255,47 +253,47 @@
 .user-stats-row > .stat-card .stat-title {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
     color: rgba(255, 255, 255, 0.92);
-    font-size: 0.76rem;
-    line-height: 1.25;
+    font-size: 0.70rem;
+    line-height: 1.1;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 
 .user-stats-row > .stat-card .stat-title .card-icon {
-    width: 30px;
-    height: 30px;
-    border-radius: 10px;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
     margin-left: auto;
     order: 2;
-    background: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.16);
     color: #fff;
-    font-size: 12px;
+    font-size: 11px;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.22);
 }
 
 .user-stats-row > .stat-card .stat-value {
     color: #fff;
-    font-size: clamp(1.4rem, 1.6vw, 1.8rem);
+    font-size: 1.45rem;
     font-weight: 800;
     line-height: 1.1;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.03em;
     text-shadow: 0 1px 1px rgba(15, 23, 42, 0.2);
 }
 
 .user-stats-row > .stat-card .stat-sub {
-    margin-top: 8px;
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 0.74rem;
-    line-height: 1.4;
-    min-height: 18px;
+    margin-top: 2px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.68rem;
+    line-height: 1.2;
+    min-height: auto;
 }
 
 .user-stats-row > .stat-card.accent-blue {
@@ -447,9 +445,10 @@ body[data-theme='dark'] .user-view-tab.active {
 /* Inner Scrollable Table Container for Zero Page Scroll */
 .user-tab-pane .table-container {
     flex: 1 1 auto;
-    min-height: 0;
+    min-height: 280px;
+    max-height: calc(100vh - 270px);
     overflow-y: auto;
-    max-height: calc(100vh - 355px);
+    overflow-x: auto;
     border-radius: 12px;
     border: 1px solid rgba(226, 232, 240, 0.9);
     background: #ffffff;
@@ -460,17 +459,43 @@ body[data-theme='dark'] .user-tab-pane .table-container {
     border-color: rgba(255, 255, 255, 0.08);
 }
 
+.user-tab-pane .table-container table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
 .user-tab-pane .table-container thead th {
     position: sticky;
     top: 0;
     z-index: 5;
     background: #f8fafc;
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+    padding: 10px 14px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #475569;
+    white-space: nowrap;
 }
 
 body[data-theme='dark'] .user-tab-pane .table-container thead th {
     background: #1e293b;
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+}
+
+.user-tab-pane .table-container tbody td {
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: #1e293b;
+    border-top: 1px solid rgba(226, 232, 240, 0.6);
+    vertical-align: middle;
+}
+
+body[data-theme='dark'] .user-tab-pane .table-container tbody td {
+    color: #f1f5f9;
+    border-top-color: rgba(255, 255, 255, 0.06);
 }
 
 /* Security Activity Pane */
@@ -719,132 +744,49 @@ body[data-theme='dark'] .activity-pane-header h4 {
     color: #10243d;
 }
 
+/* Clean Single-Row Toolbar — aligned with manage-reservations.css */
 .toolbar-row {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: -2px;
-    margin-bottom: 0;
-    padding: 16px 18px 14px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(233, 246, 238, 0.84));
-    border: 1px solid rgba(255,255,255,0.72);
-    border-left: 6px solid rgba(44, 94, 71, 0.9);
-    border-radius: 22px;
-    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255,255,255,0.8);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    overflow: hidden;
-}
-
-.toolbar-row::before {
-    content: "";
-    position: absolute;
-    inset: 0 auto auto 0;
-    width: 180px;
-    height: 180px;
-    background: radial-gradient(circle, rgba(44, 94, 71, 0.12), transparent 65%);
-    pointer-events: none;
-}
-
-.toolbar-action-row,
-.toolbar-main-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
-    width: 100%;
-}
-
-.toolbar-action-row {
-    padding-bottom: 14px;
-    border-bottom: 1px solid rgba(44, 94, 71, 0.10);
-}
-
-.toolbar-main-row {
-    align-items: flex-end;
+    gap: 10px;
+    margin: 0 0 6px 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
     flex-wrap: wrap;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-}
-
-.toolbar-section-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--color-primary-700);
-    font-size: var(--fs-body-sm);
-    font-weight: var(--fw-bold);
-    white-space: nowrap;
-}
-
-.toolbar-section-label i {
-    width: 28px;
-    height: 28px;
-    border-radius: var(--radius-sm);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-primary-50);
-    color: var(--color-primary-600);
-}
-
-.section-label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 2px 0 0;
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--color-primary-700);
-}
-
-.section-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: rgba(44, 94, 71, 0.14);
-}
-
-.section-label i {
-    font-size: 0.82rem;
+    flex-shrink: 0;
 }
 
 .toolbar-filters {
     display: flex;
+    align-items: center;
+    gap: 8px;
     flex-wrap: wrap;
-    gap: 10px;
-    align-items: flex-end;
-    flex: 1 1 420px;
-    justify-content: flex-start;
-    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .toolbar-filters .search-field {
-    flex: 1 1 220px;
-    min-width: 220px;
-}
-.search-field--with-action {
-    flex: 1 1 300px;
+    flex: 1 1 200px;
+    max-width: 320px;
+    height: 38px;
 }
 
 .search-button {
-    height: 46px;
-    min-width: 110px;
-    padding-inline: 16px;
-    font-weight: 700;
+    height: 38px;
+    padding: 0 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
 }
+
 .status-select-field {
-    height: 46px;
-    min-width: 150px;
-    padding: 4px 12px 5px;
+    height: 38px;
+    min-width: 125px;
+    padding: 2px 10px;
     border: 1px solid rgba(44, 94, 71, 0.18);
-    border-radius: var(--radius-md);
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+    border-radius: var(--radius-md, 8px);
+    background: rgba(255, 255, 255, 0.95);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -853,106 +795,85 @@ body[data-theme='dark'] .activity-pane-header h4 {
 
 .status-select-field span {
     color: var(--color-primary-700);
-    font-size: 0.68rem;
-    font-weight: var(--fw-bold);
+    font-size: 0.62rem;
+    font-weight: var(--fw-bold, 700);
     line-height: 1;
     text-transform: uppercase;
 }
 
 .status-select-field select {
     width: 100%;
-    height: 23px;
+    height: 20px;
     border: none;
     background: transparent;
     color: var(--color-neutral-800);
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     outline: none;
-}
-
-.toolbar-actions-panel {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
-}
-
-.toolbar-actions-label {
-    display: inline-flex;
-    align-items: center;
-    color: var(--color-primary-700);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    padding: 0;
 }
 
 .toolbar-actions {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
 }
 
+/* Bulk Toolbar — compact notification strip */
 .bulk-toolbar {
-    position: relative;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
     gap: 10px;
-    margin: 0 0 8px;
-    padding: 14px 16px 14px 18px;
-    border: 1px solid rgba(44, 94, 71, 0.14);
-    border-left: 6px solid var(--color-primary-500);
-    border-bottom: 2px solid rgba(44, 94, 71, 0.10);
-    border-radius: 18px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.82), rgba(234,244,237,0.74));
-    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255,255,255,0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    overflow: hidden;
+    margin: 0 0 6px;
+    padding: 6px 14px;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 8px;
+    background: rgba(236, 253, 245, 0.9);
+    flex-shrink: 0;
 }
 
-.bulk-toolbar::before {
-    content: "";
-    position: absolute;
-    inset: auto -30px -40px auto;
-    width: 140px;
-    height: 140px;
-    background: radial-gradient(circle, rgba(37, 99, 235, 0.10), transparent 70%);
-    pointer-events: none;
+body[data-theme='dark'] .bulk-toolbar {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.4);
 }
 
 .bulk-toolbar__meta {
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .bulk-toolbar__label {
-    color: var(--color-primary-700);
-    font-size: 0.74rem;
-    font-weight: var(--fw-bold);
-    letter-spacing: 0.08em;
+    color: #065f46;
+    font-size: 0.72rem;
+    font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+body[data-theme='dark'] .bulk-toolbar__label {
+    color: #6ee7b7;
 }
 
 .bulk-toolbar__count {
-    color: #475569;
-    font-size: 0.9rem;
+    color: #047857;
+    font-size: 0.82rem;
     font-weight: 600;
+}
+
+body[data-theme='dark'] .bulk-toolbar__count {
+    color: #a7f3d0;
 }
 
 .bulk-toolbar__actions {
     display: flex;
     align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    gap: 6px;
 }
 
 .table-select-col {
-    width: 42px;
+    width: 40px;
     text-align: center;
 }
 

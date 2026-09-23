@@ -452,3 +452,180 @@
     border-radius: 8px;
 }
 
+/* ====================================================
+   Exceptions Modern Layout & Anti-Scroll Viewport Styles
+   ==================================================== */
+.exceptions-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 2px;
+}
+
+.exceptions-stats .stat-card {
+    position: relative;
+    min-height: 120px;
+    padding: 16px 18px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-left: 8px solid rgba(255, 255, 255, 0.78);
+    border-radius: 22px;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.10), inset 0 1px 0 rgba(255,255,255,0.18);
+    background: linear-gradient(135deg, rgba(44, 94, 71, 0.97), rgba(59, 112, 85, 0.92));
+    transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.exceptions-stats .stat-card.stat-card-filterable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.exceptions-stats .stat-card.stat-card-filterable:hover {
+    transform: translateY(-4px);
+    filter: saturate(1.12);
+}
+
+.exceptions-stats .stat-card.stat-card-filterable:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.exceptions-stats .stat-card.stat-card-filterable.is-active-filter,
+.exceptions-stats .stat-card.stat-card-filterable.active {
+    box-shadow: 0 0 0 3px #ffffff, 0 0 0 6px #2b3658, 0 20px 42px rgba(15, 23, 42, 0.22);
+    transform: translateY(-3px);
+}
+
+.exceptions-stats .stat-card::before {
+    content: "";
+    position: absolute;
+    inset: auto -30px -28px auto;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.22), transparent 68%);
+    pointer-events: none;
+}
+
+.exceptions-stats .stat-card.accent-amber {
+    border-left-color: #d97706;
+    background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+}
+
+.exceptions-stats .stat-card.accent-red {
+    border-left-color: #991b1b;
+    background: linear-gradient(135deg, #dc2626 0%, #e85757 100%);
+}
+
+.exceptions-stats .stat-card.accent-navy {
+    border-left-color: #2b3658;
+    background: linear-gradient(135deg, #2b3658 0%, #465376 100%);
+}
+
+.exceptions-stats .stat-card.accent-teal {
+    border-left-color: #0f766e;
+    background: linear-gradient(135deg, #0d9488 0%, #2fb5aa 100%);
+}
+
+.exceptions-stats .stat-card .stat-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.exceptions-stats .stat-card .card-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    font-size: 13px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.24);
+}
+
+.exceptions-stats .stat-card .stat-value {
+    color: #fff;
+    font-size: clamp(1.4rem, 1.6vw, 1.8rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    text-shadow: 0 1px 2px rgba(15, 23, 42, 0.2);
+}
+
+.exceptions-stats .stat-card .stat-sub {
+    margin-top: 8px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.74rem;
+}
+
+/* Glassmorphic Unified Exceptions Card */
+.exceptions-card {
+    background: rgba(255, 255, 255, 0.90);
+    border: 1px solid rgba(255, 255, 255, 0.76);
+    border-radius: 18px;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding: 10px 18px 14px;
+    gap: 10px;
+}
+
+body[data-theme='dark'] .exceptions-card {
+    background: rgba(22, 30, 49, 0.90);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+}
+
+/* Inner Scrollable Table Container for Zero Page Scroll */
+.exceptions-card .table-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    max-height: calc(100vh - 355px);
+    border-radius: 12px;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    background: #ffffff;
+}
+
+body[data-theme='dark'] .exceptions-card .table-container {
+    background: #111827;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.exceptions-card .table-container thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: #f8fafc;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+
+body[data-theme='dark'] .exceptions-card .table-container thead th {
+    background: #1e293b;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Modal Enhancements */
+.resolve-modal-content {
+    max-width: 540px;
+    padding: 24px;
+}
+
+

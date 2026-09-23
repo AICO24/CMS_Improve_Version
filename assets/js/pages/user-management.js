@@ -288,6 +288,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function syncBulkControls() {
         const count = selectedUserIds.size;
+        const bulkToolbar = document.getElementById('bulkToolbar');
+        if (bulkToolbar) {
+            bulkToolbar.style.display = count > 0 ? 'flex' : 'none';
+        }
         bulkSelectedCount.textContent = count ? `${count} user${count > 1 ? 's' : ''} selected` : 'No users selected';
         bulkActivateBtn.disabled = count === 0;
         bulkDeactivateBtn.disabled = count === 0;

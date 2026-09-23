@@ -37,12 +37,50 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
+    // Notification badge sync
+    async function updateNotificationBadge() {
+        try {
+            const result = await api.request('notifications/unread-count', { method: 'GET' });
+            const badge = document.getElementById('notificationBadge');
+            if (badge) {
+                badge.innerText = result.count || 0;
+                badge.style.display = result.count > 0 ? 'flex' : 'none';
+            }
+        } catch (e) { /* silent — non-critical UI */ }
+    }
+    updateNotificationBadge();
+    setInterval(updateNotificationBadge, 30000);
+
+    const searchQuery = document.getElementById('searchQuery');
     const statusFilter = document.getElementById('statusFilter');
+    const filterSeverity = document.getElementById('filterSeverity');
+    const clearFiltersBtn = document.getElementById('clearFilters');
     const refreshBtn = document.getElementById('refreshExceptionsBtn');
     const tableBody = document.getElementById('exceptionsTableBody');
 
+    // KPI Counter Nodes
+    const openCountEl = document.getElementById('openCount');
+    const criticalCountEl = document.getElementById('criticalCount');
+    const warningCountEl = document.getElementById('warningCount');
+    const resolvedCountEl = document.getElementById('resolvedCount');
+    const filterableCards = document.querySelectorAll('.stat-card-filterable');
+
+    // Pagination elements
+    const perPage = 10;
+    const pagination = createPagination({
+        prevBtn: document.getElementById('prevPage'),
+        nextBtn: document.getElementById('nextPage'),
+        infoEl: document.getElementById('paginationInfo'),
+        jumpForm: document.getElementById('paginationJumpForm'),
+        jumpInput: document.getElementById('pageJumpInput'),
+        jumpBtn: document.getElementById('pageJumpBtn'),
+        itemLabel: 'exception',
+        onChange: () => renderFilteredExceptions(),
+    });
+
     const resolveModal = document.getElementById('resolveModal');
     const resolveModalClose = document.getElementById('resolveModalClose');
+    const cancelResolveBtn = document.getElementById('cancelResolveBtn');
     const resolveModalReason = document.getElementById('resolveModalReason');
     const useAsNotesBtn = document.getElementById('useAsNotesBtn');
     const resolutionNotes = document.getElementById('resolutionNotes');
@@ -51,6 +89,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const confirmAnywayLabel = document.getElementById('confirmAnywayLabel');
     const resolveModalSubmit = document.getElementById('resolveModalSubmit');
 
+    let allExceptions = [];
     let activeException = null;
     let lastAiDiagnosis = null;
 
@@ -74,28 +113,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function buildRow(exception) {
-        // .btn-row-action--confirm reuses the same green "positive/completing
-        // action" semantic manage-reservations.js already uses it for — see
-        // assets/css/components/buttons.css (promoted here from
-        // manage-reservations.css during the Full Automation Round 2 button
-        // audit; this page was referencing the class without ever linking
-        // its defining stylesheet, so it rendered unstyled).
-        // Retry (G.7): shown for every open row, not just ones known to
-        // support it — the backend has the authoritative, exact list of
-        // retryable (event, entity_type) combinations (see
-        // SystemExceptionController::retry()) and returns a clear error for
-        // anything else, so duplicating that list here would just be a
-        // second copy that can drift out of sync.
         const action = exception.status === 'open'
-            ? `<button type="button" class="btn-row-action btn-row-action--confirm" data-action="resolve" data-id="${exception.exception_id}">Resolve</button>
-               <button type="button" class="btn-row-action" data-action="retry" data-id="${exception.exception_id}">Retry</button>`
-            : `<span class="muted">${escapeHtml(exception.resolved_by_name || 'Resolved')}</span>`;
+            ? `<div class="action-buttons">
+                <button type="button" class="btn-row-action btn-row-action--confirm" data-action="resolve" data-id="${exception.exception_id}"><i class="fas fa-check"></i> Resolve</button>
+                <button type="button" class="btn-row-action" data-action="retry" data-id="${exception.exception_id}"><i class="fas fa-rotate"></i> Retry</button>
+               </div>`
+            : `<span class="muted"><i class="fas fa-circle-check" style="color:#10b981; margin-right:4px;"></i>${escapeHtml(exception.resolved_by_name || 'Resolved')}</span>`;
         return `
             <tr data-id="${exception.exception_id}">
-                <td>${escapeHtml(exception.created_at)}</td>
-                <td>${escapeHtml(exception.event)}</td>
-                <td>${escapeHtml(exception.entity_type)} #${escapeHtml(exception.entity_id)}</td>
-                <td>${escapeHtml(exception.reason)}</td>
+                <td><small class="muted">${escapeHtml(exception.created_at)}</small></td>
+                <td><strong>${escapeHtml(exception.event)}</strong></td>
+                <td><span class="detail-pill">${escapeHtml(exception.entity_type)} #${escapeHtml(exception.entity_id)}</span></td>
+                <td><span title="${escapeHtml(exception.reason)}">${escapeHtml(exception.reason)}</span></td>
                 <td>${buildSeverityBadge(exception.severity)}</td>
                 <td>${buildStatusBadge(exception.status)}</td>
                 <td>${action}</td>
@@ -103,54 +132,189 @@ document.addEventListener('DOMContentLoaded', async function() {
         `;
     }
 
-    let currentExceptions = [];
+    function updateKpiCounters(list) {
+        const open = list.filter(e => e.status === 'open').length;
+        const critical = list.filter(e => e.status === 'open' && e.severity === 'critical').length;
+        const warning = list.filter(e => e.status === 'open' && e.severity !== 'critical').length;
+        const resolved = list.filter(e => e.status === 'resolved').length;
 
-    async function loadAndRenderExceptions() {
+        if (openCountEl) openCountEl.textContent = open;
+        if (criticalCountEl) criticalCountEl.textContent = critical;
+        if (warningCountEl) warningCountEl.textContent = warning;
+        if (resolvedCountEl) resolvedCountEl.textContent = resolved;
+    }
+
+    function setActiveFilterCard(filterType) {
+        filterableCards.forEach(card => {
+            const isMatch = card.dataset.filter === filterType;
+            card.classList.toggle('is-active-filter', isMatch);
+            card.classList.toggle('active', isMatch);
+            card.setAttribute('aria-pressed', isMatch ? 'true' : 'false');
+        });
+    }
+
+    function getFilteredList() {
+        const query = searchQuery ? searchQuery.value.trim().toLowerCase() : '';
+        const status = statusFilter ? statusFilter.value : '';
+        const severity = filterSeverity ? filterSeverity.value : '';
+
+        return allExceptions.filter(item => {
+            if (status && item.status !== status) return false;
+            if (severity && item.severity !== severity) return false;
+            if (query) {
+                const combined = `${item.reason || ''} ${item.event || ''} ${item.entity_type || ''} ${item.entity_id || ''}`.toLowerCase();
+                if (!combined.includes(query)) return false;
+            }
+            return true;
+        });
+    }
+
+    function renderFilteredExceptions() {
+        const filtered = getFilteredList();
+        const total = filtered.length;
+        const totalPages = Math.max(1, Math.ceil(total / perPage));
+        if (pagination.page > totalPages) pagination.page = totalPages;
+
+        const start = (pagination.page - 1) * perPage;
+        const paged = filtered.slice(start, start + perPage);
+
+        if (paged.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 32px;"><i class="fas fa-circle-check" style="color: #10b981; font-size: 1.4rem; margin-bottom: 6px; display:block;"></i> <strong>Nothing needs attention</strong> — normal transactions are confirming automatically.</td></tr>';
+        } else {
+            tableBody.innerHTML = paged.map(buildRow).join('');
+        }
+
+        pagination.render({
+            page: pagination.page,
+            total_pages: totalPages,
+            total: total,
+        });
+    }
+
+    async function loadAllExceptions() {
         tableBody.innerHTML = '<tr><td colspan="7">Loading exceptions...</td></tr>';
         try {
-            const params = new URLSearchParams();
-            if (statusFilter.value) params.set('status', statusFilter.value);
-            const exceptions = await api.request(`exceptions?${params.toString()}`, { method: 'GET' });
-            currentExceptions = Array.isArray(exceptions) ? exceptions : [];
-            tableBody.innerHTML = currentExceptions.length > 0
-                ? currentExceptions.map(buildRow).join('')
-                : '<tr><td colspan="7" style="text-align:center; padding: 32px;"><i class="fas fa-circle-check"></i> <strong>Nothing needs attention</strong> — normal transactions are confirming automatically.</td></tr>';
+            // Load all items once, then slice/filter locally for instant snappy response
+            const exceptions = await api.request('exceptions', { method: 'GET' });
+            allExceptions = Array.isArray(exceptions) ? exceptions : [];
+            updateKpiCounters(allExceptions);
+            renderFilteredExceptions();
         } catch (error) {
             console.error('Failed to load exceptions', error);
             tableBody.innerHTML = '<tr><td colspan="7">Unable to load exceptions right now.</td></tr>';
         }
     }
 
+    // Filterable KPI card click interactions
+    filterableCards.forEach(card => {
+        card.addEventListener('click', () => {
+            const filterType = card.dataset.filter;
+            setActiveFilterCard(filterType);
+
+            if (filterType === 'open') {
+                statusFilter.value = 'open';
+                filterSeverity.value = '';
+            } else if (filterType === 'critical') {
+                statusFilter.value = 'open';
+                filterSeverity.value = 'critical';
+            } else if (filterType === 'warning') {
+                statusFilter.value = 'open';
+                filterSeverity.value = 'warning';
+            } else if (filterType === 'resolved') {
+                statusFilter.value = 'resolved';
+                filterSeverity.value = '';
+            }
+
+            pagination.reset();
+            renderFilteredExceptions();
+        });
+
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                card.click();
+            }
+        });
+    });
+
+    function syncCardFromDropdowns() {
+        const status = statusFilter.value;
+        const severity = filterSeverity.value;
+
+        if (status === 'resolved') {
+            setActiveFilterCard('resolved');
+        } else if (severity === 'critical') {
+            setActiveFilterCard('critical');
+        } else if (severity === 'warning') {
+            setActiveFilterCard('warning');
+        } else if (status === 'open') {
+            setActiveFilterCard('open');
+        } else {
+            setActiveFilterCard('');
+        }
+    }
+
+    function debounce(fn, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => fn.apply(this, args), wait);
+        };
+    }
+
+    if (searchQuery) {
+        searchQuery.addEventListener('input', debounce(() => {
+            pagination.reset();
+            renderFilteredExceptions();
+        }, 250));
+    }
+
+    statusFilter.addEventListener('change', () => {
+        syncCardFromDropdowns();
+        pagination.reset();
+        renderFilteredExceptions();
+    });
+
+    if (filterSeverity) {
+        filterSeverity.addEventListener('change', () => {
+            syncCardFromDropdowns();
+            pagination.reset();
+            renderFilteredExceptions();
+        });
+    }
+
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', () => {
+            if (searchQuery) searchQuery.value = '';
+            statusFilter.value = 'open';
+            if (filterSeverity) filterSeverity.value = '';
+            setActiveFilterCard('open');
+            pagination.reset();
+            renderFilteredExceptions();
+        });
+    }
+
+    refreshBtn.addEventListener('click', async () => {
+        await loadAllExceptions();
+    });
+
     function openResolveModal(exception) {
         activeException = exception;
         resolveModalReason.textContent = `${exception.event} — ${exception.entity_type} #${exception.entity_id}: ${exception.reason}`;
         resolutionNotes.value = '';
         lastAiDiagnosis = null;
-        useAsNotesBtn.style.display = 'none';
+        if (useAsNotesBtn) useAsNotesBtn.style.display = 'none';
 
-        // System-Wide AI Assistant (Phase 4): mounts with this exception's
-        // entity context pre-wired — an exception's own entity_type/
-        // entity_id already point at a supported AuditIntelligenceService
-        // entity (Schedule/Lot/Cremation/etc.), which gives a richer answer
-        // than the old explain-exception endpoint's bare event/reason
-        // fields. No longer auto-asks on modal open (quota-reduction batch
-        // — opening the resolve modal must never cost an LLM call by
-        // itself). onAnswer still wires up "Use as resolution notes" once
-        // the admin explicitly asks.
         initAiAssistant({
             mountSelector: '#aiAssistantMountRecord',
             context: { scope: 'entity', entity_type: exception.entity_type, entity_id: exception.entity_id },
             label: 'Ask AI',
             onAnswer: (message) => {
                 lastAiDiagnosis = message;
-                useAsNotesBtn.style.display = 'inline-block';
+                if (useAsNotesBtn) useAsNotesBtn.style.display = 'inline-block';
             },
         });
-        // The "confirm anyway" override only makes sense for an entity type
-        // that has its own resolvable pending decision — a booking (Schedule)
-        // waiting on confirmation, or (Round 2) a relocation request whose
-        // auto-approval hit a lot-availability exception. Resolving a Payment
-        // or Lot-tagged exception has no such decision to force through here.
+
         confirmAnywayRow.style.display = (exception.entity_type === 'Schedule' || exception.entity_type === 'Relocation') ? '' : 'none';
         confirmAnywayCheckbox.checked = false;
         confirmAnywayLabel.textContent = exception.entity_type === 'Relocation'
@@ -165,20 +329,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     resolveModalClose.addEventListener('click', closeResolveModal);
+    if (cancelResolveBtn) cancelResolveBtn.addEventListener('click', closeResolveModal);
     resolveModal.addEventListener('click', (event) => {
         if (event.target === resolveModal) closeResolveModal();
     });
 
-    // "Note down the cause" (System-Wide AI Assistant, Phase 4): the
-    // assistant only ever proposes the note text — the admin still reviews/
-    // edits it in the textarea and clicks Resolve themselves, same as
-    // typing it by hand. Never written directly to resolution_notes without
-    // that review step.
-    useAsNotesBtn.addEventListener('click', () => {
-        if (!lastAiDiagnosis) return;
-        resolutionNotes.value = lastAiDiagnosis;
-        resolutionNotes.focus();
-    });
+    if (useAsNotesBtn) {
+        useAsNotesBtn.addEventListener('click', () => {
+            if (!lastAiDiagnosis) return;
+            resolutionNotes.value = lastAiDiagnosis;
+            resolutionNotes.focus();
+        });
+    }
 
     resolveModalSubmit.addEventListener('click', async () => {
         if (!activeException) return;
@@ -190,9 +352,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         await withButtonLoading(resolveModalSubmit, async () => {
             try {
                 if (confirmAnywayCheckbox.checked && activeException.entity_type === 'Schedule') {
-                    // override_exception_id lets the backend record this PUT as
-                    // an explicit admin override of a flagged exception, not an
-                    // ordinary confirmation — see ScheduleController::update().
                     const confirmResult = await api.request(`schedules/${activeException.entity_id}`, {
                         method: 'PUT',
                         body: { status: 'Confirmed', override_exception_id: activeException.exception_id },
@@ -203,10 +362,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                 }
                 if (confirmAnywayCheckbox.checked && activeException.entity_type === 'Relocation') {
-                    // Same manual-override path RelocationController::approve()
-                    // has always exposed — re-checks the destination lot itself,
-                    // so this still fails cleanly if it's genuinely unavailable
-                    // rather than forcing a bad state.
                     const approveResult = await api.request(`relocations/${activeException.entity_id}/approve`, {
                         method: 'PUT',
                     });
@@ -221,7 +376,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 });
                 if (result.success) {
                     closeResolveModal();
-                    await loadAndRenderExceptions();
+                    await loadAllExceptions();
                 } else {
                     alert(result.error || 'Unable to resolve this exception.');
                 }
@@ -236,7 +391,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             try {
                 const result = await api.request(`exceptions/${id}/retry`, { method: 'PUT' });
                 if (result.success) {
-                    await loadAndRenderExceptions();
+                    await loadAllExceptions();
                 } else {
                     alert(result.error || 'Retry failed.');
                 }
@@ -250,7 +405,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const resolveButton = event.target.closest('button[data-action="resolve"]');
         if (resolveButton) {
             const id = Number(resolveButton.getAttribute('data-id'));
-            const exception = currentExceptions.find((item) => item.exception_id === id);
+            const exception = allExceptions.find((item) => item.exception_id === id);
             if (exception) openResolveModal(exception);
             return;
         }
@@ -260,25 +415,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 
-    statusFilter.addEventListener('change', loadAndRenderExceptions);
-    refreshBtn.addEventListener('click', loadAndRenderExceptions);
+    await loadAllExceptions();
 
-    await loadAndRenderExceptions();
-
-    // Batch H (reservation module audit): Manage Reservations' "Review
-    // Exception" link previously just navigated here with no context,
-    // dumping the admin into the full open-exceptions list to find the one
-    // they came for. It now links with ?entity_type=&entity_id=, so this
-    // page can jump straight to the resolve modal for that specific
-    // exception instead. Silently does nothing if not found (e.g. it was
-    // already resolved by someone else in the meantime, or a stale
-    // bookmark) — the admin still lands on a normal, working exceptions
-    // list either way, just without the auto-open.
     const deepLinkParams = new URLSearchParams(window.location.search);
     const deepLinkEntityType = deepLinkParams.get('entity_type');
     const deepLinkEntityId = deepLinkParams.get('entity_id');
     if (deepLinkEntityType && deepLinkEntityId) {
-        const target = currentExceptions.find((item) =>
+        const target = allExceptions.find((item) =>
             item.entity_type === deepLinkEntityType && String(item.entity_id) === String(deepLinkEntityId));
         if (target) openResolveModal(target);
     }

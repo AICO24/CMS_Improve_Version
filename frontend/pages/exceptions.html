@@ -127,71 +127,163 @@
                     </button>
                 </div>
             </div>
-                <div class="content-area">
-                <p class="muted" style="margin: 0 0 16px;">
-                    Things the system couldn't safely handle on its own — a normal payment/booking never lands here.
-                    Resolve each one below; most normal transactions confirm automatically and never need your attention.
-                </p>
+            <div class="content-area" id="contentArea">
+                <p class="section-label"><i class="fas fa-triangle-exclamation"></i> System Exception &amp; Needs Attention Queue</p>
 
-                <div class="toolbar-row">
-                    <div class="toolbar-filters">
-                        <label class="status-select-field" for="statusFilter">
-                            <span>Status</span>
-                            <select id="statusFilter" aria-label="Filter by status">
-                                <option value="open" selected>Open</option>
-                                <option value="resolved">Resolved</option>
-                                <option value="">All</option>
-                            </select>
-                        </label>
-                        <button class="btn-secondary" id="refreshExceptionsBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+                <!-- KPI Metric Cards (Filterable) -->
+                <div class="stats-row exceptions-stats">
+                    <div class="stat-card stat-card-filterable is-active-filter active accent-amber" id="cardOpen" data-filter="open" role="button" tabindex="0" title="Filter open exceptions" aria-pressed="true">
+                        <div class="stat-title">
+                            <span class="stat-title-label"><span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span> Open Items</span>
+                        </div>
+                        <div class="stat-value" id="openCount">0</div>
+                        <div class="stat-sub" id="openCountMeta">Awaiting manual review</div>
+                    </div>
+                    <div class="stat-card stat-card-filterable accent-red" id="cardCritical" data-filter="critical" role="button" tabindex="0" title="Filter critical severity" aria-pressed="false">
+                        <div class="stat-title">
+                            <span class="stat-title-label"><span class="card-icon"><i class="fas fa-circle-radiation"></i></span> Critical</span>
+                        </div>
+                        <div class="stat-value" id="criticalCount">0</div>
+                        <div class="stat-sub" id="criticalCountMeta">High priority blocks</div>
+                    </div>
+                    <div class="stat-card stat-card-filterable accent-navy" id="cardWarning" data-filter="warning" role="button" tabindex="0" title="Filter warning & info" aria-pressed="false">
+                        <div class="stat-title">
+                            <span class="stat-title-label"><span class="card-icon"><i class="fas fa-shield-halved"></i></span> Warnings</span>
+                        </div>
+                        <div class="stat-value" id="warningCount">0</div>
+                        <div class="stat-sub" id="warningCountMeta">Non-critical notices</div>
+                    </div>
+                    <div class="stat-card stat-card-filterable accent-teal" id="cardResolved" data-filter="resolved" role="button" tabindex="0" title="Filter resolved exceptions" aria-pressed="false">
+                        <div class="stat-title">
+                            <span class="stat-title-label"><span class="card-icon"><i class="fas fa-circle-check"></i></span> Resolved</span>
+                        </div>
+                        <div class="stat-value" id="resolvedCount">0</div>
+                        <div class="stat-sub" id="resolvedCountMeta">Historical overrides</div>
                     </div>
                 </div>
 
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Raised</th>
-                                <th>Event</th>
-                                <th>Entity</th>
-                                <th>Reason</th>
-                                <th>Severity</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="exceptionsTableBody">
-                            <tr><td colspan="7">Loading exceptions...</td></tr>
-                        </tbody>
-                    </table>
+                <!-- Unified Glassmorphic Card Container -->
+                <div class="exceptions-card">
+                    <div class="toolbar-row">
+                        <div class="toolbar-action-row">
+                            <div class="toolbar-section-label">
+                                <i class="fas fa-filter"></i>
+                                <span>Filters</span>
+                            </div>
+                        </div>
+                        <div class="toolbar-main-row">
+                            <div class="toolbar-filters">
+                                <div class="search-field search-field--with-action">
+                                    <input type="text" id="searchQuery" class="search-field__input" placeholder=" ">
+                                    <label for="searchQuery" class="search-field__label">Search reason, event, entity</label>
+                                    <span class="search-field__icon" aria-hidden="true">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
+                                    </span>
+                                </div>
+                                <label class="status-select-field" for="statusFilter">
+                                    <span>Status</span>
+                                    <select id="statusFilter" aria-label="Filter by status">
+                                        <option value="open" selected>Open</option>
+                                        <option value="resolved">Resolved</option>
+                                        <option value="">All</option>
+                                    </select>
+                                </label>
+                                <label class="status-select-field" for="filterSeverity">
+                                    <span>Severity</span>
+                                    <select id="filterSeverity" aria-label="Filter by severity">
+                                        <option value="">All severities</option>
+                                        <option value="critical">Critical</option>
+                                        <option value="warning">Warning</option>
+                                        <option value="info">Info</option>
+                                    </select>
+                                </label>
+                                <button class="btn-secondary" id="clearFilters"><i class="fas fa-rotate-left"></i><span>Clear</span></button>
+                            </div>
+                            <div class="toolbar-actions-panel">
+                                <div class="toolbar-actions">
+                                    <button class="btn-secondary btn-action-pill" id="refreshExceptionsBtn"><i class="fas fa-rotate-right"></i><span>Refresh</span></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Inner-scrollable table container -->
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Raised</th>
+                                    <th>Event</th>
+                                    <th>Entity</th>
+                                    <th>Reason</th>
+                                    <th>Severity</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="exceptionsTableBody">
+                                <tr><td colspan="7">Loading exceptions...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pinned Pagination Controls -->
+                    <div class="pagination-controls" id="paginationControls">
+                        <span class="pagination-info" id="paginationInfo"></span>
+                        <div class="pagination-actions">
+                            <form class="pagination-jump" id="paginationJumpForm">
+                                <label for="pageJumpInput">Jump to page</label>
+                                <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Enter page number">
+                                <button class="btn-secondary" id="pageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
+                            </form>
+                            <span class="pagination-divider" aria-hidden="true"></span>
+                            <button class="btn-secondary" id="prevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
+                            <button class="btn-secondary" id="nextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Resolve modal — same .modal/.modal-content/.close convention as decedent-records.html -->
+    <!-- Resolve modal — standard modern layout -->
     <div id="resolveModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="resolveModalTitle">
-        <div class="modal-content">
+        <div class="modal-content resolve-modal-content">
+            <div class="modal-heading">
+                <div class="modal-heading-icon"><i class="fas fa-check-double"></i></div>
+                <div>
+                    <h3 id="resolveModalTitle">Resolve Exception</h3>
+                    <p id="resolveModalReason" class="muted small"></p>
+                </div>
+            </div>
             <button type="button" class="close" id="resolveModalClose" aria-label="Close">&times;</button>
-            <h3 id="resolveModalTitle">Resolve Exception</h3>
-            <p id="resolveModalReason" class="muted"></p>
             <div class="form-group full-width" style="margin-top: 14px;">
-                <label>Resolution notes (required)</label>
-                <textarea id="resolutionNotes" rows="3" placeholder="What did you do — rebook a different lot, confirm anyway, etc.?"></textarea>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <label for="resolutionNotes">Resolution notes (required)</label>
+                    <button type="button" class="btn-secondary btn-action-pill" id="useAsNotesBtn" style="display:none; font-size: 0.75rem;"><i class="fas fa-paste"></i> Use AI Diagnosis</button>
+                </div>
+                <textarea id="resolutionNotes" rows="3" placeholder="What corrective action was taken (e.g., reassigned slot, verified manual deposit, override confirmation)"></textarea>
             </div>
             <div class="form-group full-width" id="confirmAnywayRow" style="display:none;">
-                <label><input type="checkbox" id="confirmAnywayCheckbox"> <span id="confirmAnywayLabel">Also confirm this booking now (admin override)</span></label>
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="confirmAnywayCheckbox">
+                    <span id="confirmAnywayLabel" style="font-weight: 600; color: #b45309;">Also confirm this booking now (admin override)</span>
+                </label>
             </div>
-            <button type="button" class="btn-save bookmarkBtn" id="resolveModalSubmit">
-                <span class="IconContainer"><i class="fas fa-check icon"></i></span>
-                <span class="text">Resolve</span>
-            </button>
+            <div class="modal-actions" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn-secondary" id="cancelResolveBtn"><i class="fas fa-xmark"></i><span>Cancel</span></button>
+                <button type="button" class="btn-save bookmarkBtn" id="resolveModalSubmit">
+                    <span class="IconContainer"><i class="fas fa-check icon"></i></span>
+                    <span class="text">Resolve</span>
+                </button>
+            </div>
         </div>
     </div>
 
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/shared/button-loading.js"></script>
+    <script src="../../assets/js/shared/pagination.js"></script>
     <script src="../../assets/js/pages/exceptions.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
