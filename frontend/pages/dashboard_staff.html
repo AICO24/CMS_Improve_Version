@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Staff Dashboard | Cemetery Management</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../../assets/css/tokens.css?v=2">
     <link rel="stylesheet" href="../../assets/css/typography.css">
@@ -25,8 +25,9 @@
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
 </head>
+
 <body class="dashboard-body">
-<script>(function(){try{var t=localStorage.getItem('cms-theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.body.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <script>(function () { try { var t = localStorage.getItem('cms-theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); document.body.setAttribute('data-theme', t); } catch (e) { } })();</script>
     <div class="dashboard-container">
         <!-- SIDEBAR (static, no fetch) -->
         <aside class="sidebar">
@@ -34,18 +35,19 @@
                 <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
                 <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
             </div>
-                                                <div class="sidebar-nav">
-                    <a href="dashboard_staff.html" class="nav-item active"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
+            <div class="sidebar-nav">
+                <a href="dashboard_staff.html" class="nav-item active"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
                 <div class="nav-group">
                     <button type="button" class="nav-group-header">
                         <span>Operations</span>
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="book-a-service.html" class="nav-item"><i class="fas fa-handshake icon"></i> <span>Book a Service</span></a>
-                    <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
-                    <a href="manage-reservations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Reservations</span></a>
-                    <a href="manage-cremations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Cremations</span></a>
+                        <a href="book-a-service.html" class="nav-item"><i class="fas fa-handshake icon"></i> <span>Book a Service</span></a>
+                        <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
+                        <a href="manage-bookings.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Bookings</span></a>
+                        <a href="manage-reservations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Reservations</span></a>
+                        <a href="manage-cremations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Cremations</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -54,8 +56,8 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="lot-management.html" class="nav-item"><i class="fas fa-map-location-dot icon"></i> <span>Lot Management</span></a>
-                    <a href="decedent-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>Decedent Records</span></a>
+                        <a href="lot-management.html" class="nav-item"><i class="fas fa-map-location-dot icon"></i> <span>Lot Management</span></a>
+                        <a href="decedent-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>Decedent Records</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -64,7 +66,7 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
+                        <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -73,7 +75,7 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="exceptions.html" class="nav-item"><i class="fas fa-triangle-exclamation icon"></i> <span>System Exceptions</span></a>
+                        <a href="exceptions.html" class="nav-item"><i class="fas fa-triangle-exclamation icon"></i> <span>System Exceptions</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -82,15 +84,18 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
-                    <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
+                        <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
+                        <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
                     </div>
                 </div>
             </div>
             <div class="sidebar-footer">
                 <div class="user-chip">
                     <i class="fas fa-user"></i>
-                    <div><span id="sidebarUserName">Staff User</span><small id="sidebarUserRole">Staff</small></div>
+                    <div>
+                        <span id="sidebarUserName">Staff User</span>
+                        <small id="sidebarUserRole">Staff</small>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -126,43 +131,716 @@
                     </button>
                 </div>
             </div>
-                <div class="content-area" id="contentArea">
-                <div class="stats-row">
-                    <div class="stat-card"><div class="stat-title">Total Occupancy</div><div class="stat-value" id="statTotal">-</div><div class="stat-sub">Lots occupied</div></div>
-                    <div class="stat-card"><div class="stat-title">Available Lots</div><div class="stat-value" id="statAvailable">-</div><div class="stat-sub">Ready for assignment</div></div>
-                    <div class="stat-card"><div class="stat-title">Monthly Revenue</div><div class="stat-value" id="statRevenue">-</div><div class="stat-sub">This month</div></div>
-                    <div class="stat-card"><div class="stat-title">Available Capacity</div><div class="stat-value" id="statForecast">-</div><div class="stat-sub">Share of lots currently available</div></div>
-                </div>
-                <div class="attention-row" id="attentionRow" style="display:none;">
-                    <div class="card attention-card">
-                        <h4><i class="fas fa-triangle-exclamation"></i> Needs Attention</h4>
-                        <p class="muted" id="attentionSummary"></p>
-                        <a href="exceptions.html" class="btn-primary">Review Exceptions →</a>
+
+            <div class="content-area" id="contentArea">
+                <!-- Facebook-Style Profile Hero Card -->
+                <div class="fb-profile-hero card">
+                    <div class="fb-cover-banner">
+                        <div class="fb-cover-overlay"></div>
+                        <div class="fb-cover-pattern"></div>
+                        <div class="fb-cover-controls">
+                            <div class="fb-weather-pill" id="fbWeatherPill" title="Local Weather & Temperature">
+                                <i class="fas fa-cloud-sun weather-icon" id="fbWeatherIcon"></i>
+                                <span class="weather-temp" id="fbWeatherTemp">29°C</span>
+                                <span class="weather-condition" id="fbWeatherDesc">Partly Cloudy</span>
+                            </div>
+                            <div class="fb-cover-badge">
+                                <i class="fas fa-user-gear"></i>
+                                <span>Staff Operations Center</span>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="mid-row">
-                    <div class="card availability"><h4>Real-time Availability Map</h4><div class="availability-map" id="availabilityMap"></div></div>
-                    <div class="card operational-queues">
-                        <h4><i class="fas fa-calendar-check"></i> Cemetery Bookings &amp; Operations</h4>
-                        <p class="muted" id="bookingSummaryText"><strong id="bookingPendingCount">0</strong> pending &middot; <strong id="bookingScheduledCount">0</strong> scheduled/confirmed</p>
-                        <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap;">
-                            <a href="manage-bookings.html" class="btn-primary">Manage Bookings &rarr;</a>
-                            <a href="booking-assistant.html" class="btn-secondary">Booking Assistant &rarr;</a>
+                    <div class="fb-profile-body">
+                        <div class="fb-avatar-container">
+                            <div class="fb-avatar-wrap">
+                                <div class="fb-avatar" id="welcomeUserAvatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <span class="fb-avatar__online-dot" title="Active Staff"></span>
+                            </div>
+                        </div>
+                        <div class="fb-profile-main">
+                            <div class="fb-profile-info">
+                                <div class="fb-greeting-tag" id="welcomeSalutation">Good day, Welcome back!</div>
+                                <div class="fb-name-row">
+                                    <h2 class="fb-profile-name" id="welcomeUserName">Staff Member</h2>
+                                    <span class="fb-verified-badge" title="Verified Staff"><i class="fas fa-circle-check"></i></span>
+                                </div>
+                                <div class="fb-meta-bar">
+                                    <span class="fb-meta-item">
+                                        <i class="fas fa-at"></i>
+                                        <span id="welcomeUserUsername">staff</span>
+                                    </span>
+                                    <span class="fb-meta-sep">•</span>
+                                    <span class="fb-meta-item">
+                                        <i class="fas fa-calendar-day"></i>
+                                        <span id="welcomeCurrentDate">Today</span>
+                                    </span>
+                                    <span class="fb-meta-sep">•</span>
+                                    <span class="fb-meta-item">
+                                        <i class="fas fa-clock"></i>
+                                        <span id="welcomeCurrentTime">--:--</span>
+                                    </span>
+                                    <span class="fb-meta-sep">•</span>
+                                    <span class="fb-meta-item fb-meta-item--live">
+                                        <span class="fb-pulse-dot"></span>
+                                        <span>Live Operations</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="fb-profile-actions">
+                                <a href="profile.html" class="fb-btn fb-btn--primary">
+                                    <i class="fas fa-user-pen"></i>
+                                    <span>Edit Profile</span>
+                                </a>
+                                <a href="settings.html" class="fb-btn fb-btn--secondary">
+                                    <i class="fas fa-sliders"></i>
+                                    <span>Settings</span>
+                                </a>
+                                <a href="exceptions.html" class="fb-btn fb-btn--icon" title="View System Exceptions">
+                                    <i class="fas fa-triangle-exclamation"></i>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="bottom-row">
-                    <div class="card chart-card"><canvas id="occChart" height="160"></canvas></div>
-                    <div class="card transactions"><h4>Recent Transactions</h4><ul id="recentList" class="recent-list"></ul></div>
+
+                <!-- Top Operational KPI Stats Row -->
+                <p class="section-label"><i class="fas fa-chart-pie"></i> Operational Overview</p>
+                <div class="stats-row">
+                    <div class="stat-card" role="button" tabindex="0" title="View available lots in Lot Management" data-href="lot-management.html?status=Available" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Available Lots</span>
+                            <span class="card-icon"><i class="fas fa-layer-group"></i></span>
+                        </div>
+                        <div class="stat-value" id="statAvailableLots">-</div>
+                        <div class="stat-sub">Ready for assignment</div>
+                    </div>
+                    <div class="stat-card" role="button" tabindex="0" title="View occupied lots in Lot Management" data-href="lot-management.html?status=Occupied" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Occupied Lots</span>
+                            <span class="card-icon"><i class="fas fa-map-pin"></i></span>
+                        </div>
+                        <div class="stat-value" id="statOccupiedLots">-</div>
+                        <div class="stat-sub">Currently utilized</div>
+                    </div>
+                    <div class="stat-card" role="button" tabindex="0" title="Manage pending and scheduled bookings" data-href="manage-bookings.html" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Active Bookings</span>
+                            <span class="card-icon"><i class="fas fa-calendar-check"></i></span>
+                        </div>
+                        <div class="stat-value" id="statPendingBookings">-</div>
+                        <div class="stat-sub">Burial & service queue</div>
+                    </div>
+                    <div class="stat-card" role="button" tabindex="0" title="View recorded payments in Payments" data-href="payments.html" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Monthly Collections</span>
+                            <span class="card-icon"><i class="fas fa-receipt"></i></span>
+                        </div>
+                        <div class="stat-value" id="statMonthlyRevenue">-</div>
+                        <div class="stat-sub">Counter payments this month</div>
+                    </div>
                 </div>
+
+                <!-- Operations & Service Queues Row -->
+                <p class="section-label"><i class="fas fa-arrows-spin"></i> Operations & Service Queues</p>
+                <div class="operations-row">
+                    <!-- Card 1: Cremation Requests -->
+                    <div class="card ops-card" data-href="manage-cremations.html">
+                        <div class="ops-card-header">
+                            <div class="ops-card-heading">
+                                <span class="ops-icon"><i class="fas fa-fire"></i></span>
+                                <div>
+                                    <h4>Cremation Requests</h4>
+                                    <small>Queue analysis</small>
+                                </div>
+                            </div>
+                            <span class="ops-live-badge">Live</span>
+                        </div>
+
+                        <div class="ops-metrics">
+                            <div class="ops-metric ops-metric--pending" data-filter-href="manage-cremations.html?status=Pending" role="button" tabindex="0" title="Filter to Pending cremation requests">
+                                <span class="ops-metric-label">Pending</span>
+                                <strong id="cremationPendingCount" class="ops-metric-value">0</strong>
+                            </div>
+                            <div class="ops-metric ops-metric--ok" data-filter-href="manage-cremations.html?status=Scheduled" role="button" tabindex="0" title="Filter to Scheduled cremation requests">
+                                <span class="ops-metric-label">Scheduled</span>
+                                <strong id="cremationTodayScheduledCount" class="ops-metric-value">0</strong>
+                            </div>
+                        </div>
+
+                        <div class="ops-progress-wrap">
+                            <div class="ops-status-sub">
+                                <span id="cremationQueueInsight">Queue Analysis Active</span>
+                            </div>
+                            <div class="ops-progress-bar">
+                                <div class="ops-seg ops-seg--warn" id="cremationPendingBar" style="width:50%;"></div>
+                                <div class="ops-seg ops-seg--ok" id="cremationScheduledBar" style="width:50%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="ops-footer">
+                            <a href="manage-cremations.html" class="ops-action-btn">
+                                <span>Manage Queue</span><i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Real-time Availability -->
+                    <div class="card ops-card" data-href="lot-management.html">
+                        <div class="ops-card-header">
+                            <div class="ops-card-heading">
+                                <span class="ops-icon"><i class="fas fa-map-location-dot"></i></span>
+                                <div>
+                                    <h4>Real-time Availability</h4>
+                                    <small>Section occupancy</small>
+                                </div>
+                            </div>
+                            <span class="ops-live-badge">Live</span>
+                        </div>
+
+                        <div class="ops-metrics">
+                            <div class="ops-metric ops-metric--ok" data-filter-href="lot-management.html?status=Available" role="button" tabindex="0" title="View available cemetery lots">
+                                <span class="ops-metric-label">Available</span>
+                                <strong id="availMapAvailable" class="ops-metric-value">—</strong>
+                            </div>
+                            <div class="ops-metric ops-metric--neutral" data-filter-href="lot-management.html" role="button" tabindex="0" title="View all cemetery lots">
+                                <span class="ops-metric-label">Total Lots</span>
+                                <strong id="availMapTotal" class="ops-metric-value">—</strong>
+                            </div>
+                        </div>
+
+                        <div class="ops-progress-wrap">
+                            <div class="ops-status-sub">
+                                <span id="availMapPct">—</span>
+                                <span style="opacity:0.6;">fill rate</span>
+                            </div>
+                            <div class="ops-progress-bar">
+                                <div class="ops-seg ops-seg--ok" id="availOccupancyFill" style="width:0%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="ops-footer">
+                            <a href="lot-management.html" class="ops-action-btn">
+                                <span>Open Lot Map</span><i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Burial Scheduling Queues -->
+                    <div class="card ops-card" data-href="manage-reservations.html">
+                        <div class="ops-card-header">
+                            <div class="ops-card-heading">
+                                <span class="ops-icon"><i class="fas fa-calendar-check"></i></span>
+                                <div>
+                                    <h4>Burial Scheduling</h4>
+                                    <small>Burial queues</small>
+                                </div>
+                            </div>
+                            <span class="ops-live-badge">Live</span>
+                        </div>
+
+                        <div class="ops-metrics">
+                            <div class="ops-metric ops-metric--pending" data-filter-href="manage-reservations.html?status=Pending" role="button" tabindex="0" title="Filter to Pending burial reservations">
+                                <span class="ops-metric-label">Pending</span>
+                                <strong id="burialPendingCount" class="ops-metric-value">0</strong>
+                            </div>
+                            <div class="ops-metric ops-metric--ok" data-filter-href="manage-reservations.html?status=Confirmed" role="button" tabindex="0" title="Filter to Confirmed burial reservations">
+                                <span class="ops-metric-label">Confirmed</span>
+                                <strong id="burialConfirmedCount" class="ops-metric-value">0</strong>
+                            </div>
+                        </div>
+
+                        <div class="ops-progress-wrap">
+                            <div class="ops-status-sub">
+                                <span id="burialQueueInsight">Active Schedules</span>
+                            </div>
+                            <div class="ops-progress-bar">
+                                <div class="ops-seg ops-seg--warn" id="burialPendingBar" style="width:50%;"></div>
+                                <div class="ops-seg ops-seg--ok" id="burialConfirmedBar" style="width:50%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="ops-footer">
+                            <a href="manage-reservations.html" class="ops-action-btn">
+                                <span>Manage Reservations</span><i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Card 4: Cemetery Bookings Queue -->
+                    <div class="card ops-card" data-href="manage-bookings.html">
+                        <div class="ops-card-header">
+                            <div class="ops-card-heading">
+                                <span class="ops-icon"><i class="fas fa-clipboard-list"></i></span>
+                                <div>
+                                    <h4>Citizen Bookings</h4>
+                                    <small>Service appointments</small>
+                                </div>
+                            </div>
+                            <span class="ops-live-badge">Live</span>
+                        </div>
+
+                        <div class="ops-metrics">
+                            <div class="ops-metric ops-metric--pending" data-filter-href="manage-bookings.html?status=pending" role="button" tabindex="0" title="Filter to Pending service bookings">
+                                <span class="ops-metric-label">Pending</span>
+                                <strong id="bookingPendingCount" class="ops-metric-value">0</strong>
+                            </div>
+                            <div class="ops-metric ops-metric--ok" data-filter-href="manage-bookings.html?status=confirmed" role="button" tabindex="0" title="Filter to Confirmed service bookings">
+                                <span class="ops-metric-label">Scheduled</span>
+                                <strong id="bookingScheduledCount" class="ops-metric-value">0</strong>
+                            </div>
+                        </div>
+
+                        <div class="ops-progress-wrap">
+                            <div class="ops-status-sub">
+                                <span id="bookingQueueInsight">Booking flow active</span>
+                            </div>
+                            <div class="ops-progress-bar">
+                                <div class="ops-seg ops-seg--warn" id="bookingPendingBar" style="width:50%;"></div>
+                                <div class="ops-seg ops-seg--ok" id="bookingScheduledBar" style="width:50%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="ops-footer">
+                            <a href="manage-bookings.html" class="ops-action-btn">
+                                <span>Manage Bookings</span><i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compliance & Service Watch Row -->
+                <p class="section-label"><i class="fas fa-clipboard-check"></i> Compliance & Service Watch</p>
+                <div class="compliance-row">
+                    <!-- Card 1: Document Compliance -->
+                    <div class="card ops-card" data-href="decedent-records.html">
+                        <div class="ops-card-header">
+                            <div class="ops-card-heading">
+                                <span class="ops-icon"><i class="fas fa-file-circle-check"></i></span>
+                                <div>
+                                    <h4>Document Compliance</h4>
+                                    <small>Permits & certificates</small>
+                                </div>
+                            </div>
+                            <span class="ops-live-badge">Live</span>
+                        </div>
+
+                        <div class="ops-metrics">
+                            <div class="ops-metric ops-metric--pending" data-filter-href="decedent-records.html" role="button" tabindex="0" title="Review document submissions">
+                                <span class="ops-metric-label">Pending Docs</span>
+                                <strong id="docPendingCount" class="ops-metric-value">0</strong>
+                            </div>
+                            <div class="ops-metric ops-metric--ok" data-filter-href="decedent-records.html" role="button" tabindex="0" title="View verified decedent records">
+                                <span class="ops-metric-label">Verified Total</span>
+                                <strong id="docVerifiedCount" class="ops-metric-value">0</strong>
+                            </div>
+                        </div>
+
+                        <div class="ops-progress-wrap">
+                            <div class="ops-status-sub">
+                                <span id="docStatusInsight">Citizen document reviews</span>
+                            </div>
+                            <div class="ops-progress-bar">
+                                <div class="ops-seg ops-seg--warn" id="docPendingBar" style="width:0%;"></div>
+                                <div class="ops-seg ops-seg--ok" id="docVerifiedBar" style="width:100%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="ops-footer">
+                            <a href="decedent-records.html" class="ops-action-btn">
+                                <span>Review Records</span><i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Cash Reconciliation -->
+                    <div class="card ops-card" data-href="payments.html">
+                        <div class="ops-card-header">
+                            <div class="ops-card-heading">
+                                <span class="ops-icon"><i class="fas fa-hand-holding-dollar"></i></span>
+                                <div>
+                                    <h4>Cash Reconciliation</h4>
+                                    <small>Offline & counter pay</small>
+                                </div>
+                            </div>
+                            <span class="ops-live-badge">Live</span>
+                        </div>
+
+                        <div class="ops-metrics">
+                            <div class="ops-metric ops-metric--pending" data-filter-href="payments.html?payment_status=pending" role="button" tabindex="0" title="View pending cash payments in Payments">
+                                <span class="ops-metric-label">Pending Count</span>
+                                <strong id="pendingCashCount" class="ops-metric-value">0</strong>
+                            </div>
+                            <div class="ops-metric ops-metric--ok" data-filter-href="payments.html" role="button" tabindex="0" title="View all verified payments in Payments">
+                                <span class="ops-metric-label">Verified Total</span>
+                                <strong id="verifiedCashSum" class="ops-metric-value">₱0</strong>
+                            </div>
+                        </div>
+
+                        <div class="ops-progress-wrap">
+                            <div class="ops-status-sub">
+                                <span id="cashStatusInsight">Offline counter payments</span>
+                            </div>
+                            <div class="ops-progress-bar">
+                                <div class="ops-seg ops-seg--warn" id="cashPendingBar" style="width:0%;"></div>
+                                <div class="ops-seg ops-seg--ok" id="cashVerifiedBar" style="width:100%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="ops-footer">
+                            <a href="payments.html" class="ops-action-btn">
+                                <span>Reconcile Cash</span><i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Lease Expirations Watch -->
+                    <div class="card ops-card" data-href="lot-management.html">
+                        <div class="ops-card-header">
+                            <div class="ops-card-heading">
+                                <span class="ops-icon"><i class="fas fa-hourglass-half"></i></span>
+                                <div>
+                                    <h4>Lease Expirations</h4>
+                                    <small>5-Year term monitoring</small>
+                                </div>
+                            </div>
+                            <span class="ops-live-badge">Live</span>
+                        </div>
+
+                        <div class="ops-metrics">
+                            <div class="ops-metric ops-metric--pending" data-filter-href="lot-management.html" role="button" tabindex="0" title="View leases expiring soon">
+                                <span class="ops-metric-label">Expiring Soon</span>
+                                <strong id="expiringSoonCount" class="ops-metric-value">0</strong>
+                            </div>
+                            <div class="ops-metric ops-metric--ok" data-filter-href="lot-management.html" role="button" tabindex="0" title="View all tracked leases">
+                                <span class="ops-metric-label">Active / Total</span>
+                                <strong id="expiringTotalCount" class="ops-metric-value">0</strong>
+                            </div>
+                        </div>
+
+                        <div class="ops-progress-wrap">
+                            <div class="ops-status-sub">
+                                <span id="expiringStatusInsight">Monitoring lease terms</span>
+                            </div>
+                            <div class="ops-progress-bar">
+                                <div class="ops-seg ops-seg--warn" id="expiringSoonBar" style="width:0%;"></div>
+                                <div class="ops-seg ops-seg--ok" id="expiringOkBar" style="width:100%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="ops-footer">
+                            <a href="lot-management.html" class="ops-action-btn">
+                                <span>Check Lots</span><i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Card 4: System Exceptions -->
+                    <div class="card ops-card" data-href="exceptions.html">
+                        <div class="ops-card-header">
+                            <div class="ops-card-heading">
+                                <span class="ops-icon"><i class="fas fa-triangle-exclamation"></i></span>
+                                <div>
+                                    <h4>System Exceptions</h4>
+                                    <small>Intervention queue</small>
+                                </div>
+                            </div>
+                            <span class="ops-live-badge">Live</span>
+                        </div>
+
+                        <div class="ops-metrics">
+                            <div class="ops-metric ops-metric--pending" data-filter-href="exceptions.html?status=open" role="button" tabindex="0" title="View open system exceptions">
+                                <span class="ops-metric-label">Open Issues</span>
+                                <strong id="exceptionOpenCount" class="ops-metric-value">0</strong>
+                            </div>
+                            <div class="ops-metric ops-metric--ok" data-filter-href="exceptions.html" role="button" tabindex="0" title="View all system exceptions">
+                                <span class="ops-metric-label">Status</span>
+                                <strong id="exceptionStatusVal" class="ops-metric-value">Active</strong>
+                            </div>
+                        </div>
+
+                        <div class="ops-progress-wrap">
+                            <div class="ops-status-sub">
+                                <span id="exceptionStatusInsight">Automated exception monitoring</span>
+                            </div>
+                            <div class="ops-progress-bar">
+                                <div class="ops-seg ops-seg--ok" style="width:100%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="ops-footer">
+                            <a href="exceptions.html" class="ops-action-btn">
+                                <span>Resolve Issues</span><i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Needs Attention Notification Banner -->
+                <div class="attention-row" id="attentionRow" style="display:none;">
+                    <div class="card attention-card">
+                        <div class="attention-card__left">
+                            <div class="attention-card__icon">
+                                <i class="fas fa-triangle-exclamation"></i>
+                            </div>
+                            <div class="attention-card__content">
+                                <div class="attention-card__header">
+                                    <h4 class="attention-card__title">Needs Attention</h4>
+                                    <span class="attention-card__badge" id="attentionCountBadge">0 Issues</span>
+                                </div>
+                                <p class="attention-card__summary" id="attentionSummary">Loading items needing review...</p>
+                            </div>
+                        </div>
+                        <div class="attention-card__right">
+                            <a href="exceptions.html" class="attention-card__action-btn">
+                                <span>Review Exceptions</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics & Financials Row -->
+                <p class="section-label"><i class="fas fa-chart-line"></i> Financials & Collections</p>
+                <div class="bottom-row">
+                    <div class="card chart-card chart-card--focus">
+                        <div class="chart-card__header">
+                            <div class="chart-card__heading">
+                                <span class="chart-icon"><i class="fas fa-chart-column"></i></span>
+                                <div class="chart-card__title-wrap">
+                                    <h4 class="chart-card__title">Revenue by Month</h4>
+                                    <small id="chartRevenueSub" class="chart-card__sub">Current calendar year financial performance</small>
+                                </div>
+                            </div>
+                            <div class="chart-card__meta">
+                                <div class="chart-custom-legend">
+                                    <span class="legend-color-box"></span>
+                                    <span class="legend-text" id="chartLegendText">Monthly Revenue</span>
+                                </div>
+                                <span class="chart-card__badge">Bar</span>
+                            </div>
+                        </div>
+                        <div class="chart-frame chart-frame--md">
+                            <canvas id="occChart"></canvas>
+                        </div>
+                        <div class="chart-bottom-legends">
+                            <div class="chart-legend-chip">
+                                <span class="legend-dot legend-dot--teal"></span>
+                                <span class="legend-chip-label">YTD Revenue:</span>
+                                <strong class="legend-chip-val" id="finYtdTotal">₱0</strong>
+                            </div>
+                            <div class="chart-legend-chip">
+                                <span class="legend-dot legend-dot--green"></span>
+                                <span class="legend-chip-label">This Month:</span>
+                                <strong class="legend-chip-val legend-chip-val--accent" id="finMonthTotal">₱0</strong>
+                            </div>
+                            <div class="chart-legend-chip">
+                                <span class="legend-dot legend-dot--slate"></span>
+                                <span class="legend-chip-label">Avg / Tx:</span>
+                                <strong class="legend-chip-val" id="finAvgTotal">₱0</strong>
+                            </div>
+                            <div class="chart-legend-chip">
+                                <span class="legend-dot legend-dot--dark"></span>
+                                <span class="legend-chip-label">Total Transactions:</span>
+                                <strong class="legend-chip-val" id="finTxTotal">0</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card transactions">
+                        <div class="chart-card__header">
+                            <div class="chart-card__heading">
+                                <span class="chart-icon"><i class="fas fa-receipt"></i></span>
+                                <div class="chart-card__title-wrap">
+                                    <h4 class="chart-card__title">Recent Transactions</h4>
+                                    <small class="chart-card__sub">Latest counter payments</small>
+                                </div>
+                            </div>
+                            <a href="payments.html" class="chart-card__badge" style="text-decoration:none;" title="View all payments">View All <i class="fas fa-arrow-right" style="font-size:0.65rem;margin-left:4px;"></i></a>
+                        </div>
+                        <ul id="recentList" class="recent-list"></ul>
+                    </div>
+                </div>
+
+                <!-- Cemetery Capacity Forecasting & Land Utilization -->
+                <p class="section-label"><i class="fas fa-chart-pie"></i> Capacity Forecasting & Space Utilization</p>
+                <div class="capacity-forecast-section">
+                    <div class="card capacity-forecast-card chart-card">
+                        <div class="chart-card__header">
+                            <div class="chart-card__heading">
+                                <span class="chart-icon"><i class="fas fa-chart-pie"></i></span>
+                                <div class="chart-card__title-wrap">
+                                    <h4 class="chart-card__title">Cemetery Capacity Forecasting</h4>
+                                    <small class="chart-card__sub">Overall space utilization, lot inventory, and remaining capacity forecast</small>
+                                </div>
+                            </div>
+                            <div class="chart-card__meta">
+                                <div class="chart-custom-legend">
+                                    <span class="legend-color-box"></span>
+                                    <span class="legend-text">Capacity Distribution</span>
+                                </div>
+                                <a href="lot-management.html" class="chart-card__badge" style="text-decoration:none;" title="View lot management map">
+                                    Lot Map <i class="fas fa-arrow-right" style="font-size:0.65rem;margin-left:4px;"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="capacity-forecast-body">
+                            <!-- Left: Doughnut Chart -->
+                            <div class="capacity-chart-col">
+                                <div class="capacity-chart-wrapper">
+                                    <canvas id="capacityForecastChart"></canvas>
+                                    <div class="capacity-chart-center-info" id="capacityCenterInfo">
+                                        <span class="capacity-center-val" id="capacityCenterPct">0%</span>
+                                        <span class="capacity-center-lbl">Available</span>
+                                    </div>
+                                </div>
+                                <!-- Chart Legends List -->
+                                <div class="capacity-legend-list" id="capacityChartLegends">
+                                    <div class="capacity-legend-row">
+                                        <div class="capacity-legend-left">
+                                            <span class="legend-dot legend-dot--green"></span>
+                                            <span class="capacity-legend-name">Available Space</span>
+                                        </div>
+                                        <strong class="capacity-legend-value" id="legValAvail">0 (0%)</strong>
+                                    </div>
+                                    <div class="capacity-legend-row">
+                                        <div class="capacity-legend-left">
+                                            <span class="legend-dot legend-dot--dark"></span>
+                                            <span class="capacity-legend-name">Occupied Lots</span>
+                                        </div>
+                                        <strong class="capacity-legend-value" id="legValOcc">0 (0%)</strong>
+                                    </div>
+                                    <div class="capacity-legend-row">
+                                        <div class="capacity-legend-left">
+                                            <span class="legend-dot legend-dot--slate"></span>
+                                            <span class="capacity-legend-name">Reserved Lots</span>
+                                        </div>
+                                        <strong class="capacity-legend-value" id="legValRes">0 (0%)</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: Metrics Breakdown & Dynamic Insight -->
+                            <div class="capacity-insight-col">
+                                <div class="capacity-metrics-grid">
+                                    <div class="capacity-stat-tile">
+                                        <span class="capacity-stat-tile__label">Available Space</span>
+                                        <div class="capacity-stat-tile__val-row">
+                                            <strong class="capacity-stat-tile__value capacity-stat-tile__value--accent" id="capStatAvailable">0</strong>
+                                            <span class="capacity-stat-tile__pct" id="capStatAvailPct">(0%)</span>
+                                        </div>
+                                        <span class="capacity-stat-tile__sub">Open for new assignments</span>
+                                    </div>
+
+                                    <div class="capacity-stat-tile">
+                                        <span class="capacity-stat-tile__label">Occupied Lots</span>
+                                        <div class="capacity-stat-tile__val-row">
+                                            <strong class="capacity-stat-tile__value" id="capStatOccupied">0</strong>
+                                            <span class="capacity-stat-tile__pct" id="capStatOccupiedPct">(0%)</span>
+                                        </div>
+                                        <span class="capacity-stat-tile__sub">Currently utilized</span>
+                                    </div>
+
+                                    <div class="capacity-stat-tile">
+                                        <span class="capacity-stat-tile__label">Reserved Lots</span>
+                                        <div class="capacity-stat-tile__val-row">
+                                            <strong class="capacity-stat-tile__value" id="capStatReserved">0</strong>
+                                            <span class="capacity-stat-tile__pct" id="capStatReservedPct">(0%)</span>
+                                        </div>
+                                        <span class="capacity-stat-tile__sub">Hold & pending confirmation</span>
+                                    </div>
+
+                                    <div class="capacity-stat-tile">
+                                        <span class="capacity-stat-tile__label">Total Cemetery Lots</span>
+                                        <div class="capacity-stat-tile__val-row">
+                                            <strong class="capacity-stat-tile__value" id="capStatTotal">0</strong>
+                                            <span class="capacity-stat-tile__pct">lots</span>
+                                        </div>
+                                        <span class="capacity-stat-tile__sub">Overall mapped capacity</span>
+                                    </div>
+                                </div>
+
+                                <!-- Dynamic Insight Callout -->
+                                <div class="capacity-insight-box" id="capacityInsightBox">
+                                    <div class="capacity-insight-box__icon">
+                                        <i class="fas fa-chart-line"></i>
+                                    </div>
+                                    <div class="capacity-insight-box__body">
+                                        <h5 class="capacity-insight-box__title">Capacity Forecast Insight</h5>
+                                        <p class="capacity-insight-box__text" id="capacityInsightText">
+                                            Loading current cemetery occupancy and remaining space forecast...
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Staff Dashboard Footer -->
+                <footer class="staff-dashboard-footer admin-dashboard-footer">
+                    <div class="footer-divider"></div>
+                    <div class="staff-dashboard-footer__inner admin-dashboard-footer__inner">
+                        <!-- Left: System Branding -->
+                        <div class="footer-col footer-col--left">
+                            <div class="footer-brand">
+                                <span class="footer-brand__icon"><i class="fas fa-tree"></i></span>
+                                <div class="footer-brand__text">
+                                    <span class="footer-brand__name">Cemetery Management System</span>
+                                    <span class="footer-brand__version">Staff Portal &nbsp;·&nbsp; v1.0</span>
+                                </div>
+                            </div>
+                            <p class="footer-copy">© <span id="footerYear">2026</span> All rights reserved.</p>
+                        </div>
+
+                        <!-- Center: Live Data Pulse -->
+                        <div class="footer-col footer-col--center">
+                            <div class="footer-pulse-ring"></div>
+                            <div class="footer-timestamp">
+                                <span class="footer-timestamp__label">
+                                    <i class="fas fa-circle-dot footer-live-dot"></i> Dashboard data as of
+                                </span>
+                                <strong class="footer-timestamp__value" id="footerLiveTime">—</strong>
+                            </div>
+                        </div>
+
+                        <!-- Right: Quick Links -->
+                        <div class="footer-col footer-col--right">
+                            <span class="footer-links-label">Quick Links</span>
+                            <nav class="footer-links" aria-label="Footer quick links">
+                                <a href="manage-bookings.html" class="footer-link">
+                                    <i class="fas fa-calendar-check"></i> Bookings
+                                </a>
+                                <span class="footer-link-sep">·</span>
+                                <a href="decedent-records.html" class="footer-link">
+                                    <i class="fas fa-folder-open"></i> Records
+                                </a>
+                                <span class="footer-link-sep">·</span>
+                                <a href="exceptions.html" class="footer-link">
+                                    <i class="fas fa-triangle-exclamation"></i> Exceptions
+                                </a>
+                            </nav>
+                        </div>
+                    </div>
+                </footer>
             </div>
         </main>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        if (typeof Chart !== 'undefined') {
+            Chart.defaults.elements.bar.borderRadius = 6;
+            Chart.defaults.elements.bar.borderSkipped = 'bottom';
+        }
+    </script>
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/pages/dashboard_staff.js"></script>
+
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
 </body>
+
 </html>
