@@ -111,6 +111,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     b.classList.toggle('active', b.dataset.tab === 'all');
                     b.setAttribute('aria-selected', b.dataset.tab === 'all' ? 'true' : 'false');
                 });
+                updateActiveStatCards();
             } }
         ].filter((chip) => chip.value);
 
@@ -241,6 +242,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                     headerTitle.innerText = 'All Leases & Expiration Records';
                 }
             }
+
+            updateActiveStatCards();
 
             if (!tableBody) return;
 
@@ -1016,18 +1019,51 @@ document.addEventListener('DOMContentLoaded', async function () {
         await loadExpirationData();
     }
 
+    function updateActiveStatCards() {
+        document.querySelectorAll('.expmon-stats > .stat-card').forEach((card) => {
+            const tab = card.getAttribute('data-tab') || '';
+            const isActive = (tab === currentTab);
+            card.classList.toggle('is-active-filter', isActive);
+            card.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
+    function switchExpirationTab(tab) {
+        currentTab = tab || 'all';
+        document.querySelectorAll('.records-tab-btn').forEach(b => {
+            const isActive = (b.dataset.tab === currentTab);
+            b.classList.toggle('active', isActive);
+            b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+        updateActiveStatCards();
+        renderActiveFilterChips();
+        pagination.reset();
+        refreshExpirationView();
+    }
+
     // Sub-Tabs segmented switcher
     document.querySelectorAll('.records-tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.records-tab-btn').forEach(b => {
-                b.classList.remove('active');
-                b.setAttribute('aria-selected', 'false');
-            });
-            btn.classList.add('active');
-            btn.setAttribute('aria-selected', 'true');
-            currentTab = btn.dataset.tab || 'all';
-            pagination.reset();
-            refreshExpirationView();
+            switchExpirationTab(btn.dataset.tab || 'all');
+        });
+    });
+
+    // Stat Cards Interactive Filtering (Mirrors Manage Bookings)
+    document.querySelectorAll('.expmon-stats > .stat-card').forEach((card) => {
+        if (card.dataset.navBound) return;
+        card.dataset.navBound = 'true';
+
+        function triggerCardAction() {
+            const targetTab = card.getAttribute('data-tab') || 'all';
+            switchExpirationTab(targetTab);
+        }
+
+        card.addEventListener('click', triggerCardAction);
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                triggerCardAction();
+            }
         });
     });
 
@@ -1042,13 +1078,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (urg) urg.value = 'all';
             const stat = document.getElementById('expirationStatusFilter');
             if (stat) stat.value = 'all';
-            currentTab = 'all';
-            document.querySelectorAll('.records-tab-btn').forEach(b => {
-                b.classList.toggle('active', b.dataset.tab === 'all');
-                b.setAttribute('aria-selected', b.dataset.tab === 'all' ? 'true' : 'false');
-            });
-            pagination.reset();
-            refreshExpirationView();
+            switchExpirationTab('all');
         });
     }
 
@@ -1173,6 +1203,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     wireModalsSystem();
     await populateSectionsDropdown();
+    updateActiveStatCards();
     await refreshExpirationView();
     await updateNotificationBadge();
     setInterval(updateNotificationBadge, 30000);
