@@ -188,18 +188,70 @@ class AIService {
                  ORDER BY month ASC"
             )->fetchAll(PDO::FETCH_ASSOC);
 
+            $cremationRows = $db->query(
+                "SELECT DATE_FORMAT(COALESCE(cremation_date, created_at), '%Y-%m') AS month, COUNT(*) AS cremations
+                 FROM cremation_records
+                 WHERE status != 'Cancelled'
+                   AND COALESCE(cremation_date, created_at) >= DATE_SUB(CURDATE(), INTERVAL 24 MONTH)
+                 GROUP BY DATE_FORMAT(COALESCE(cremation_date, created_at), '%Y-%m')
+                 ORDER BY month ASC"
+            )->fetchAll(PDO::FETCH_ASSOC);
+
+            $relocationRows = $db->query(
+                "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS relocations
+                 FROM relocation_requests
+                 WHERE status IN ('Approved', 'Completed')
+                   AND created_at >= DATE_SUB(CURDATE(), INTERVAL 24 MONTH)
+                 GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+                 ORDER BY month ASC"
+            )->fetchAll(PDO::FETCH_ASSOC);
+
             $historicalMap = [];
             foreach ($historicalRows as $row) {
                 $historicalMap[$row['month']] = (int) $row['burials'];
             }
 
+            $cremationMap = [];
+            foreach ($cremationRows as $row) {
+                $cremationMap[$row['month']] = (int) $row['cremations'];
+            }
+
+            $relocationMap = [];
+            foreach ($relocationRows as $row) {
+                $relocationMap[$row['month']] = (int) $row['relocations'];
+            }
+
             $currentMonth = new DateTimeImmutable('first day of this month');
+            $allActiveMonths = array_filter(
+                array_merge(array_keys($historicalMap), array_keys($cremationMap), array_keys($relocationMap))
+            );
+            $startOffset = -8; // Default: start from 2026-01
+            if (!empty($allActiveMonths)) {
+                $earliest = min($allActiveMonths);
+                try {
+                    $earliestDate = new DateTimeImmutable($earliest . '-01');
+                    $diff = $earliestDate->diff($currentMonth);
+                    $monthsBack = ($diff->y * 12) + $diff->m;
+                    $startOffset = -min(23, max(5, $monthsBack));
+                } catch (\Exception $e) {
+                    $startOffset = -8;
+                }
+            }
+
             $historical = [];
-            for ($offset = -23; $offset <= 0; $offset++) {
+            for ($offset = $startOffset; $offset <= 0; $offset++) {
                 $date = $this->addMonths($currentMonth, $offset);
                 $label = $date->format('Y-m');
-                $value = $historicalMap[$label] ?? 0;
-                $historical[] = ['month' => $label, 'burials' => (int) $value];
+                $bCount = (int) ($historicalMap[$label] ?? 0);
+                $cCount = (int) ($cremationMap[$label] ?? 0);
+                $rCount = (int) ($relocationMap[$label] ?? 0);
+                $historical[] = [
+                    'month' => $label,
+                    'burials' => $bCount,
+                    'cremations' => $cCount,
+                    'relocations' => $rCount,
+                    'total_activities' => ($bCount + $cCount + $rCount),
+                ];
             }
 
             $values = array_map(static fn($entry) => (int) $entry['burials'], $historical);
@@ -291,10 +343,81 @@ class AIService {
                 }
             }
 
+            $totalPredictedBurials = !empty($forecast) ? (int) end($forecast)['cumulative'] : 0;
+            $avgMonthlyDemand = $months > 0 ? round($totalPredictedBurials / $months, 1) : 0.0;
+            $availableLots = (int) ($capacity['available'] ?? 0);
+            $runwayMonths = $avgMonthlyDemand > 0 ? round($availableLots / $avgMonthlyDemand, 1) : 999.0;
+            $totalReclaimableInHorizon = array_sum(array_column($forecast, 'reclaimable'));
+
+            $alertMonth = $capacityAlert ? $capacityAlert['month'] : null;
+            $alertStatus = $capacityAlert ? $capacityAlert['status'] : 'optimal';
+
+            if ($availableLots <= 0) {
+                $expansionAdvice = "Zero open lots remain in active sections. Immediate new section zoning, land acquisition, or columbarium expansion is required to accommodate the projected +{$totalPredictedBurials} burials over the next {$months} months.";
+                $headlineAdvice = "Critical: Active lot inventory is depleted. Emergency capacity expansion or immediate plot reclamation is required.";
+            } elseif ($runwayMonths <= 6.0) {
+                $targetStr = $alertMonth ? "by {$alertMonth}" : "within {$runwayMonths} months";
+                $expansionAdvice = "Current inventory of {$availableLots} open lots will reach warning thresholds {$targetStr} at the projected intake pace of ~{$avgMonthlyDemand} burials/month. Phase 2 land development or section re-allocation should begin within the next 60 days.";
+                $headlineAdvice = "Notice: Space warning threshold expected {$targetStr} at ~{$avgMonthlyDemand} burials/month. Advance expansion planning recommended.";
+            } else {
+                $expansionAdvice = "Current reserve of {$availableLots} open plots provides a comfortable operational buffer of ~{$runwayMonths} months under projected demand. Continue routine inventory audits.";
+                $headlineAdvice = "Optimal: Capacity runway is stable (~{$runwayMonths} months remaining). Regular monitoring and standard maintenance schedule advised.";
+            }
+
+            $weeklyPace = max(1, (int) round($avgMonthlyDemand / 4.3));
+            $staffingAdvice = "Anticipating ~{$avgMonthlyDemand} burials/month requires coordinating approximately {$weeklyPace} interment service(s) weekly. Schedule grave-digging crews, equipment readiness (backhoe/tools), and ceremonial setups in advance to prevent operational bottlenecks.";
+
+            if ($totalReclaimableInHorizon > 0) {
+                $reclamationAdvice = "A total of {$totalReclaimableInHorizon} plots reach expiration within the next {$months} months. Issuing timely 5-year lease renewal notices can replenish available inventory through legitimate plot re-cycling if unrenewed.";
+            } else {
+                $reclamationAdvice = "No cemetery lot leases are expiring within this {$months}-month period. Space replenishment must rely on opening new sections or niche conversions.";
+            }
+
+            $budgetAdvice = "Projecting +{$totalPredictedBurials} burials provides baseline forecasting for interment fee collections and administrative revenues. Procure concrete vaults, grave markers, and gravel in advance to mitigate inflation.";
+
+            $operationalGuidance = [
+                'burn_rate_monthly' => $avgMonthlyDemand,
+                'runway_months' => $runwayMonths,
+                'alert_month' => $alertMonth,
+                'alert_status' => $alertStatus,
+                'headline' => $headlineAdvice,
+                'pillars' => [
+                    'expansion' => [
+                        'title' => '1. Land & Capacity Expansion',
+                        'goal' => 'Prevent abrupt plot shortages',
+                        'recommendation' => $expansionAdvice,
+                    ],
+                    'staffing' => [
+                        'title' => '2. Staffing & Operations Allocation',
+                        'goal' => 'Ensure workforce and equipment readiness',
+                        'recommendation' => $staffingAdvice,
+                    ],
+                    'reclamation' => [
+                        'title' => '3. Lease Expiration & Plot Reclamation',
+                        'goal' => 'Replenish inventory via 5-year leases',
+                        'recommendation' => $reclamationAdvice,
+                    ],
+                    'budgeting' => [
+                        'title' => '4. Budget & Materials Procurement',
+                        'goal' => 'Forecast revenue and advance supply orders',
+                        'recommendation' => $budgetAdvice,
+                    ],
+                ],
+            ];
+
+            $activitySummary = [
+                'total_burials' => array_sum(array_column($historical, 'burials')),
+                'total_cremations' => array_sum(array_column($historical, 'cremations')),
+                'total_relocations' => array_sum(array_column($historical, 'relocations')),
+                'total_operations' => array_sum(array_column($historical, 'total_activities')),
+            ];
+
             return [
                 'success' => true,
                 'source' => 'local_fallback',
                 'historical' => $historical,
+                'activity_summary' => $activitySummary,
+                'operational_guidance' => $operationalGuidance,
                 'forecast' => $forecast,
                 'trend' => $trend,
                 'capacity' => $capacity,

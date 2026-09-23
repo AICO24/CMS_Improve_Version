@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
     <link rel="stylesheet" href="../../assets/css/forecast.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard_admin.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
@@ -122,8 +123,8 @@
         <main class="main-content">
             <div class="top-bar">
                 <div class="top-left">
-                    <label class="hamburger">
-                        <input type="checkbox" id="toggleSidebar">
+                    <label class="hamburger" title="Toggle sidebar menu">
+                        <input type="checkbox" id="toggleSidebar" aria-label="Toggle sidebar menu">
                         <svg viewBox="0 0 32 32">
                             <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
                             <path class="line" d="M7 16H27"></path>
@@ -132,19 +133,19 @@
                     <h3 id="pageTitle">Capacity Forecasting</h3>
                 </div>
                 <div class="user-info">
-                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
-                    <div class="notification-icon" id="notificationIcon">
+                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false" aria-label="Toggle dark/light theme"><i class="fas fa-moon"></i></button>
+                    <div class="notification-icon" id="notificationIcon" role="button" tabindex="0" title="View notifications" aria-label="View system notifications">
                         <i class="fas fa-bell"></i>
-                        <span class="notification-badge" id="notificationBadge">0</span>
+                        <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
                     </div>
-                    <div class="profile">
+                    <div class="profile" id="userProfile" role="button" tabindex="0" title="View user profile" aria-label="View user profile">
                         <div class="profile-avatar" id="userAvatar"><i class="fas fa-user-tie"></i></div>
                         <div class="profile-text">
                             <div class="user-name" id="userName">Admin User</div>
                             <div class="user-role" id="userRole">Administrator</div>
                         </div>
                     </div>
-                    <button class="Btn logout-btn" id="logoutBtn">
+                    <button class="Btn logout-btn" id="logoutBtn" type="button" title="Sign out of system" aria-label="Logout">
                         <div class="sign"><i class="fas fa-sign-out-alt"></i></div>
                         <div class="text">Logout</div>
                     </button>
@@ -152,30 +153,149 @@
             </div>
             <div class="content-area">
                 <div id="serviceBanner" class="service-banner"></div>
-                <div id="capacityBanner" class="service-banner"></div>
                 <div class="stats-row forecast-stats">
-                    <div class="stat-card accent-green">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-house-user"></i></span> Current Occupancy</div>
-                        <div class="stat-value" id="currentOccupancy">0</div>
-                        <div class="stat-sub">Occupied lots today</div>
+                    <div class="stat-card accent-green" id="statCardUtilization" role="button" tabindex="0" title="Click to inspect Capacity & Space Utilization" data-metric="capacity">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-house-user"></i></span> Current Utilization</div>
+                        <div class="stat-value" id="currentOccupancy">0 / 0</div>
+                        <div class="stat-sub" id="currentOccupancySub">Loading current lot status...</div>
+                        <div class="stat-card-action"><i class="fas fa-chart-pie"></i> <span>Inspect Space Breakdown</span></div>
                     </div>
-                    <div class="stat-card accent-amber">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-chart-line"></i></span> Projected Burials</div>
+                    <div class="stat-card accent-amber" id="statCardDemand" role="button" tabindex="0" title="Click to inspect Projected Demand forecast" data-metric="demand">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-chart-line"></i></span> Projected Demand</div>
                         <div class="stat-value" id="predictedOccupancy">0</div>
-                        <div class="stat-sub">Expected in selected period</div>
+                        <div class="stat-sub" id="predictedOccupancySub">Expected burials in period</div>
+                        <div class="stat-card-action"><i class="fas fa-table-list"></i> <span>Inspect Forecast Table</span></div>
                     </div>
-                    <div class="stat-card accent-teal">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-expand"></i></span> Projected Available</div>
+                    <div class="stat-card accent-teal" id="statCardSpace" role="button" tabindex="0" title="Click to inspect Net Available Space depletion" data-metric="space">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-expand"></i></span> Net Available Space</div>
                         <div class="stat-value" id="availableFuture">0</div>
-                        <div class="stat-sub">Open lots after projection</div>
+                        <div class="stat-sub" id="availableFutureSub">Projected open plots remaining</div>
+                        <div class="stat-card-action"><i class="fas fa-clock-rotate-left"></i> <span>Inspect Depletion Timeline</span></div>
                     </div>
-                    <div class="stat-card accent-navy">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-arrow-trend-up"></i></span> Demand Trend</div>
+                    <div class="stat-card accent-navy" id="statCardRunway" role="button" tabindex="0" title="Click to inspect Runway & Decision Guide" data-metric="runway">
+                        <div class="stat-title"><span class="card-icon"><i class="fas fa-hourglass-half"></i></span> Est. Capacity Runway</div>
                         <div class="stat-value" id="trendStatus">—</div>
-                        <div class="stat-sub">Usage trajectory</div>
+                        <div class="stat-sub" id="trendStatusSub">Time until capacity threshold</div>
+                        <div class="stat-card-action"><i class="fas fa-compass"></i> <span>Inspect Decision Guide</span></div>
                     </div>
                 </div>
 
+                <!-- Capacity Forecasting & Cemetery Space Utilization Analysis (Matching Admin Dashboard) -->
+                <p class="section-label"><i class="fas fa-chart-pie"></i> Space Utilization &amp; Lot Distribution</p>
+                <div class="capacity-forecast-section" id="capacityForecastSection">
+                    <div class="card capacity-forecast-card chart-card" id="capacityForecastCard">
+                        <div class="chart-card__header">
+                            <div class="chart-card__heading">
+                                <span class="chart-icon"><i class="fas fa-chart-pie"></i></span>
+                                <div class="chart-card__title-wrap">
+                                    <h4 class="chart-card__title">Cemetery Capacity Forecasting & Space Utilization</h4>
+                                    <small class="chart-card__sub">Overall space utilization, lot inventory, and remaining capacity forecast</small>
+                                </div>
+                            </div>
+                            <div class="chart-card__meta">
+                                <div class="chart-custom-legend">
+                                    <span class="legend-color-box"></span>
+                                    <span class="legend-text">Capacity Distribution</span>
+                                </div>
+                                <span class="chart-card__badge">Live System Metrics</span>
+                            </div>
+                        </div>
+
+                        <div class="capacity-forecast-body">
+                            <!-- Left: Pie / Doughnut Chart in standard chart-frame -->
+                            <div class="capacity-chart-col">
+                                <div class="capacity-chart-wrapper">
+                                    <canvas id="capacityForecastChart"></canvas>
+                                    <div class="capacity-chart-center-info" id="capacityCenterInfo">
+                                        <span class="capacity-center-val" id="capacityCenterPct">0%</span>
+                                        <span class="capacity-center-lbl">Available</span>
+                                    </div>
+                                </div>
+                                <!-- Organized Chart Legends List -->
+                                <div class="capacity-legend-list" id="capacityChartLegends">
+                                    <div class="capacity-legend-row">
+                                        <div class="capacity-legend-left">
+                                            <span class="legend-dot legend-dot--green"></span>
+                                            <span class="capacity-legend-name">Available Space</span>
+                                        </div>
+                                        <strong class="capacity-legend-value" id="legValAvail">0 (0%)</strong>
+                                    </div>
+                                    <div class="capacity-legend-row">
+                                        <div class="capacity-legend-left">
+                                            <span class="legend-dot legend-dot--dark"></span>
+                                            <span class="capacity-legend-name">Occupied Lots</span>
+                                        </div>
+                                        <strong class="capacity-legend-value" id="legValOcc">0 (0%)</strong>
+                                    </div>
+                                    <div class="capacity-legend-row">
+                                        <div class="capacity-legend-left">
+                                            <span class="legend-dot legend-dot--slate"></span>
+                                            <span class="capacity-legend-name">Reserved Lots</span>
+                                        </div>
+                                        <strong class="capacity-legend-value" id="legValRes">0 (0%)</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: Metrics Breakdown & Insight Callout with consistent brand hierarchy -->
+                            <div class="capacity-insight-col">
+                                <div class="capacity-metrics-grid">
+                                    <div class="capacity-stat-tile">
+                                        <span class="capacity-stat-tile__label">Available Space</span>
+                                        <div class="capacity-stat-tile__val-row">
+                                            <strong class="capacity-stat-tile__value capacity-stat-tile__value--accent" id="capStatAvailable">0</strong>
+                                            <span class="capacity-stat-tile__pct" id="capStatAvailPct">(0%)</span>
+                                        </div>
+                                        <span class="capacity-stat-tile__sub">Open for new assignments</span>
+                                    </div>
+
+                                    <div class="capacity-stat-tile">
+                                        <span class="capacity-stat-tile__label">Occupied Lots</span>
+                                        <div class="capacity-stat-tile__val-row">
+                                            <strong class="capacity-stat-tile__value" id="capStatOccupied">0</strong>
+                                            <span class="capacity-stat-tile__pct" id="capStatOccupiedPct">(0%)</span>
+                                        </div>
+                                        <span class="capacity-stat-tile__sub">Currently utilized</span>
+                                    </div>
+
+                                    <div class="capacity-stat-tile">
+                                        <span class="capacity-stat-tile__label">Reserved Lots</span>
+                                        <div class="capacity-stat-tile__val-row">
+                                            <strong class="capacity-stat-tile__value" id="capStatReserved">0</strong>
+                                            <span class="capacity-stat-tile__pct" id="capStatReservedPct">(0%)</span>
+                                        </div>
+                                        <span class="capacity-stat-tile__sub">Hold & pending confirmation</span>
+                                    </div>
+
+                                    <div class="capacity-stat-tile">
+                                        <span class="capacity-stat-tile__label">Total Cemetery Lots</span>
+                                        <div class="capacity-stat-tile__val-row">
+                                            <strong class="capacity-stat-tile__value" id="capStatTotal">0</strong>
+                                            <span class="capacity-stat-tile__pct">lots</span>
+                                        </div>
+                                        <span class="capacity-stat-tile__sub">Overall mapped capacity</span>
+                                    </div>
+                                </div>
+
+                                <!-- Dynamic Insight Callout -->
+                                <div class="capacity-insight-box" id="capacityInsightBox">
+                                    <div class="capacity-insight-box__icon">
+                                        <i class="fas fa-chart-line"></i>
+                                    </div>
+                                    <div class="capacity-insight-box__body">
+                                        <h5 class="capacity-insight-box__title">Capacity Forecast Insight & Recommendations</h5>
+                                        <p class="capacity-insight-box__text" id="capacityInsightText">
+                                            Loading current cemetery occupancy and remaining space forecast...
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Historical Operations & Projected Burials Demand Timeline Section -->
+                <p class="section-label"><i class="fas fa-chart-line"></i> Operations Velocity &amp; Demand Timeline</p>
                 <div class="forecast-toolbar">
                     <div class="toolbar-card period-card">
                         <div class="toolbar-card__label">
@@ -192,6 +312,19 @@
                         </label>
                     </div>
 
+                    <div class="toolbar-card filter-pills-card">
+                        <div class="toolbar-card__label">
+                            <i class="fas fa-filter"></i>
+                            <span>View Series</span>
+                        </div>
+                        <div class="activity-toggle-group" id="activityFilterGroup">
+                            <button type="button" class="activity-pill active" data-filter="all">All Operations</button>
+                            <button type="button" class="activity-pill" data-filter="burials"><span class="pill-dot dot--emerald"></span> Burials</button>
+                            <button type="button" class="activity-pill" data-filter="cremations"><span class="pill-dot dot--amber"></span> Cremations</button>
+                            <button type="button" class="activity-pill" data-filter="relocations"><span class="pill-dot dot--indigo"></span> Relocations</button>
+                        </div>
+                    </div>
+
                     <div class="toolbar-card status-card">
                         <div class="toolbar-meta">
                             <span class="toolbar-meta__label">Data source</span>
@@ -204,31 +337,189 @@
                     </div>
                 </div>
 
-                <p class="section-label"><i class="fas fa-chart-line"></i> Capacity Analysis</p>
                 <div class="chart-card chart-card--focus">
                     <div class="chart-card__header">
-                        <span class="chart-card__title">Historical &amp; Forecasted Burials</span>
-                        <span class="chart-card__badge">Trend</span>
+                        <div class="chart-card__heading">
+                            <span class="chart-icon chart-icon--teal"><i class="fas fa-chart-line"></i></span>
+                            <div class="chart-card__title-wrap">
+                                <h4 class="chart-card__title">Historical Operations &amp; Forecasted Demand</h4>
+                                <small class="chart-card__sub">Track past cemetery burials, cremations, and relocations alongside projected burial demand</small>
+                            </div>
+                        </div>
+                        <span class="chart-card__badge" id="chartViewBadge">All Operations</span>
                     </div>
                     <div class="chart-frame chart-frame--lg">
                         <canvas id="forecastChart"></canvas>
                     </div>
                 </div>
 
-                <div class="chart-card table-container">
+                <!-- Operational Purpose & Decision Guide for Forecasted Burials -->
+                <p class="section-label"><i class="fas fa-compass"></i> Strategic Capacity &amp; Resource Allocation Guide</p>
+                <div class="card chart-card forecast-usage-card" id="forecastUsageCard">
                     <div class="chart-card__header">
-                        <span class="chart-card__title">Forecast Details</span>
-                        <span class="chart-card__badge">Projection</span>
+                        <div class="chart-card__heading">
+                            <span class="chart-icon chart-icon--teal"><i class="fas fa-compass"></i></span>
+                            <div class="chart-card__title-wrap">
+                                <h4 class="chart-card__title">Operational Decision Framework: Forecasted Demand</h4>
+                                <small class="chart-card__sub">Actionable decision pillars guided by projected demand and capacity runway metrics</small>
+                            </div>
+                        </div>
+                        <div class="chart-card__meta">
+                            <span class="forecast-metric-chip" id="chipBurnRate"><i class="fas fa-fire-flame-curved"></i> Pace: <strong>—</strong></span>
+                            <span class="forecast-metric-chip" id="chipRunway"><i class="fas fa-hourglass-half"></i> Runway: <strong>—</strong></span>
+                        </div>
                     </div>
-                    <div id="forecastDetails" class="table-container"></div>
+
+                    <div class="forecast-usage-grid">
+                        <div class="forecast-usage-col" data-pillar="expansion">
+                            <div class="usage-pillar-badge badge--emerald" id="pillarExpansionTitle">
+                                <i class="fas fa-map-location-dot"></i> 1. Land &amp; Capacity Expansion
+                            </div>
+                            <strong class="usage-pillar-goal" id="pillarExpansionGoal">Goal: Prevent abrupt plot shortages</strong>
+                            <p class="usage-pillar-desc" id="pillarExpansionDesc">
+                                Analyzing remaining capacity runway against projected intake to calculate expansion lead times.
+                            </p>
+                        </div>
+
+                        <div class="forecast-usage-col" data-pillar="staffing">
+                            <div class="usage-pillar-badge badge--amber" id="pillarStaffingTitle">
+                                <i class="fas fa-users-gear"></i> 2. Staffing &amp; Equipment Allocation
+                            </div>
+                            <strong class="usage-pillar-goal" id="pillarStaffingGoal">Goal: Ensure workforce and gear readiness</strong>
+                            <p class="usage-pillar-desc" id="pillarStaffingDesc">
+                                Forecasting weekly interment volume to prepare grave-digging crews, ceremonial tools, and logistics.
+                            </p>
+                        </div>
+
+                        <div class="forecast-usage-col" data-pillar="reclamation">
+                            <div class="usage-pillar-badge badge--teal" id="pillarReclamationTitle">
+                                <i class="fas fa-rotate"></i> 3. Lease Expiration &amp; Plot Reclamation
+                            </div>
+                            <strong class="usage-pillar-goal" id="pillarReclamationGoal">Goal: Replenish inventory via 5-year leases</strong>
+                            <p class="usage-pillar-desc" id="pillarReclamationDesc">
+                                Matching incoming burial demand against expiring lot leases to schedule renewal notices and plot re-cycling.
+                            </p>
+                        </div>
+
+                        <div class="forecast-usage-col" data-pillar="budgeting">
+                            <div class="usage-pillar-badge badge--indigo" id="pillarBudgetingTitle">
+                                <i class="fas fa-sack-dollar"></i> 4. Budget &amp; Materials Procurement
+                            </div>
+                            <strong class="usage-pillar-goal" id="pillarBudgetingGoal">Goal: Forecast revenue and advance supply orders</strong>
+                            <p class="usage-pillar-desc" id="pillarBudgetingDesc">
+                                Projecting interment revenue and executing bulk procurement of concrete vaults, markers, and gravel.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Live Takeaway Banner -->
+                    <div class="forecast-live-takeaway status-safe" id="forecastLiveTakeaway">
+                        <div class="takeaway-icon-wrap">
+                            <i class="fas fa-bolt-lightning takeaway-icon"></i>
+                        </div>
+                        <div class="takeaway-content">
+                            <strong class="takeaway-title" id="forecastTakeawayTitle">Live Operational Guidance:</strong>
+                            <span class="takeaway-text" id="forecastTakeawayText">Calculating data-driven operational recommendation...</span>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Operations & Forecast Details Table Card -->
+                <p class="section-label"><i class="fas fa-table-list"></i> Detailed Interment Records &amp; Projections</p>
+                <div class="card chart-card details-table-card" id="detailsTableContainer">
+                    <div class="chart-card__header">
+                        <div class="chart-card__heading">
+                            <span class="chart-icon chart-icon--teal"><i class="fas fa-table-list"></i></span>
+                            <div class="chart-card__title-wrap">
+                                <h4 class="chart-card__title" id="detailsTableTitle">Forecast Demand &amp; Capacity Projections</h4>
+                                <small class="chart-card__sub" id="detailsTableSub">Monthly projected interment demand, cumulative velocity, and plot availability</small>
+                            </div>
+                        </div>
+                        <div class="chart-card__meta">
+                            <div class="table-subtabs" id="timelineTableTabs" role="tablist">
+                                <button type="button" class="subtab-btn active" data-tab="forecast">Forecast Projections</button>
+                                <button type="button" class="subtab-btn" data-tab="historical">Past Operations</button>
+                                <button type="button" class="subtab-btn" data-tab="combined">Combined</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="forecastDetails" class="details-table-wrapper"></div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- SYSTEM FOOTER (Rich 3-Column CMS Brand Footer) -->
+                <!-- ============================================================ -->
+                <footer class="admin-dashboard-footer">
+                    <div class="footer-divider"></div>
+                    <div class="admin-dashboard-footer__inner">
+
+                        <!-- Left: System Branding -->
+                        <div class="footer-col footer-col--left">
+                            <div class="footer-brand">
+                                <span class="footer-brand__icon"><i class="fas fa-tree"></i></span>
+                                <div class="footer-brand__text">
+                                    <span class="footer-brand__name">Cemetery Management System</span>
+                                    <span class="footer-brand__version">Capacity Forecasting &nbsp;·&nbsp; v1.0</span>
+                                </div>
+                            </div>
+                            <p class="footer-copy">© <span id="footerYear">2026</span> All rights reserved.</p>
+                        </div>
+
+                        <!-- Center: Live Data Pulse -->
+                        <div class="footer-col footer-col--center">
+                            <div class="footer-pulse-ring"></div>
+                            <div class="footer-timestamp">
+                                <span class="footer-timestamp__label">
+                                    <i class="fas fa-circle-dot footer-live-dot"></i> Forecast model updated as of
+                                </span>
+                                <strong class="footer-timestamp__value" id="footerLiveTime">—</strong>
+                            </div>
+                        </div>
+
+                        <!-- Right: Quick Links -->
+                        <div class="footer-col footer-col--right">
+                            <span class="footer-links-label">Quick Links</span>
+                            <nav class="footer-links" aria-label="Footer quick links">
+                                <a href="dashboard_admin.html" class="footer-link">
+                                    <i class="fas fa-gauge-high"></i> Dashboard
+                                </a>
+                                <span class="footer-link-sep">·</span>
+                                <a href="reports.html" class="footer-link">
+                                    <i class="fas fa-chart-bar"></i> Reports
+                                </a>
+                                <span class="footer-link-sep">·</span>
+                                <a href="cemetery-mapping.html" class="footer-link">
+                                    <i class="fas fa-map-location-dot"></i> Lot Mapping
+                                </a>
+                            </nav>
+                        </div>
+
+                    </div>
+                </footer>
             </div>
 
-            <footer class="forecast-footer">
-                <div class="forecast-footer__bottom">
-                    <span class="forecast-footer__text">© 2026 Cemetery Management System. All rights reserved.</span>
+            <!-- Interactive Metric Detail Modal -->
+            <div class="modal-overlay" id="metricDetailModal" style="display: none;" aria-hidden="true" role="dialog" aria-modal="true">
+                <div class="modal-box metric-modal-box">
+                    <div class="modal-header">
+                        <div class="modal-title-wrap">
+                            <span class="modal-icon" id="metricModalIcon"><i class="fas fa-chart-pie"></i></span>
+                            <div>
+                                <h4 class="modal-title" id="metricModalTitle">Metric Breakdown</h4>
+                                <small class="modal-subtitle" id="metricModalSubtitle">Operational analysis &amp; details</small>
+                            </div>
+                        </div>
+                        <button type="button" class="modal-close-btn" id="closeMetricModalBtn" aria-label="Close modal">&times;</button>
+                    </div>
+                    <div class="modal-body" id="metricModalBody">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" id="modalDismissBtn">Close</button>
+                        <button type="button" class="btn-primary" id="modalJumpSectionBtn"><i class="fas fa-arrow-down"></i> View Section</button>
+                    </div>
                 </div>
-            </footer>
+            </div>
         </main>
     </div>
 

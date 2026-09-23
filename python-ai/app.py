@@ -1872,32 +1872,75 @@ def forecast_burials():
                 """
             )
             raw_rows = cursor.fetchall()
+
+            cursor.execute(
+                """
+                SELECT DATE_FORMAT(COALESCE(cremation_date, created_at), '%Y-%m') AS month, COUNT(*) AS cremations
+                FROM cremation_records
+                WHERE status != 'Cancelled'
+                  AND COALESCE(cremation_date, created_at) >= DATE_SUB(CURDATE(), INTERVAL 24 MONTH)
+                GROUP BY DATE_FORMAT(COALESCE(cremation_date, created_at), '%Y-%m')
+                ORDER BY month ASC
+                """
+            )
+            raw_cremations = cursor.fetchall()
+
+            cursor.execute(
+                """
+                SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS relocations
+                FROM relocation_requests
+                WHERE status IN ('Approved', 'Completed')
+                  AND created_at >= DATE_SUB(CURDATE(), INTERVAL 24 MONTH)
+                GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+                ORDER BY month ASC
+                """
+            )
+            raw_relocations = cursor.fetchall()
             cursor.close()
             conn.close()
         except Exception:
             raw_rows = []
+            raw_cremations = []
+            raw_relocations = []
 
         current_month = datetime.now().replace(day=1)
-        if raw_rows:
-            monthly_series = []
-            for offset in range(-23, 1):
-                month_date = _add_months(current_month, offset)
-                label = month_date.strftime('%Y-%m')
-                monthly_series.append((label, 0))
-            monthly_map = {row['month']: int(row['burials']) for row in raw_rows if row.get('month')}
-            monthly_series = [(label, monthly_map.get(label, 0)) for label, _ in monthly_series]
-        else:
-            monthly_series = []
+        monthly_series = []
+        monthly_map = {row['month']: int(row['burials']) for row in raw_rows if row.get('month')}
+        monthly_cremations_map = {row['month']: int(row['cremations']) for row in raw_cremations if row.get('month')}
+        monthly_relocations_map = {row['month']: int(row['relocations']) for row in raw_relocations if row.get('month')}
 
-        if len(monthly_series) >= 5:
-            series = pd.Series([value for _, value in monthly_series], dtype=float)
-            history = [
-                {'month': label, 'burials': int(value)}
-                for label, value in monthly_series
-            ]
+        all_active_months = [k for k in (list(monthly_map.keys()) + list(monthly_cremations_map.keys()) + list(monthly_relocations_map.keys())) if k]
+        start_offset = -8
+        if all_active_months:
+            try:
+                earliest_dt = datetime.strptime(min(all_active_months) + '-01', '%Y-%m-%d')
+                diff_months = (current_month.year - earliest_dt.year) * 12 + (current_month.month - earliest_dt.month)
+                start_offset = -min(23, max(5, diff_months))
+            except Exception:
+                start_offset = -8
+
+        for offset in range(start_offset, 1):
+            month_date = _add_months(current_month, offset)
+            label = month_date.strftime('%Y-%m')
+            b_val = monthly_map.get(label, 0)
+            c_val = monthly_cremations_map.get(label, 0)
+            r_val = monthly_relocations_map.get(label, 0)
+            monthly_series.append({
+                'month': label,
+                'burials': b_val,
+                'cremations': c_val,
+                'relocations': r_val,
+                'total_activities': b_val + c_val + r_val
+            })
+
+        history = monthly_series
+        burial_values = [item['burials'] for item in history]
+
+        if len(burial_values) >= 5:
+            series = pd.Series(burial_values, dtype=float)
             forecast_values = _fit_arima_forecast(series, months)
             if forecast_values is None:
-                forecast_values = _moving_average_forecast([item['burials'] for item in history], months)
+                forecast_values = _moving_average_forecast(burial_values, months)
             forecast_payload = []
             cumulative = 0
             for index, value in enumerate(forecast_values):
@@ -1908,11 +1951,7 @@ def forecast_burials():
                     'cumulative': cumulative,
                 })
         else:
-            history = [
-                {'month': label, 'burials': int(value)}
-                for label, value in monthly_series
-            ]
-            forecast_values = _moving_average_forecast([item['burials'] for item in history], months)
+            forecast_values = _moving_average_forecast(burial_values, months)
             forecast_payload = []
             cumulative = 0
             for index, value in enumerate(forecast_values):
@@ -1971,9 +2010,70 @@ def forecast_burials():
             entry['occupancy_rate'] = round(occupancy_rate, 4)
             entry['capacity_status'] = capacity_status
 
+        total_predicted = forecast_payload[-1]['cumulative'] if forecast_payload else 0
+        avg_monthly = round(total_predicted / months, 1) if months > 0 else 0.0
+        avail_lots = capacity.get('available', 0)
+        runway_mos = round(avail_lots / avg_monthly, 1) if avg_monthly > 0 else 999.0
+        total_reclaimable = sum(entry.get('reclaimable', 0) for entry in forecast_payload)
+
+        alert_m = capacity_alert['month'] if capacity_alert else None
+        alert_s = capacity_alert['status'] if capacity_alert else 'optimal'
+
+        if avail_lots <= 0:
+            exp_advice = f"Zero open lots remain in active sections. Immediate new section zoning, land acquisition, or columbarium expansion is required to accommodate the projected +{total_predicted} burials over the next {months} months."
+            headline = "Critical: Active lot inventory is depleted. Emergency capacity expansion or immediate plot reclamation is required."
+        elif runway_mos <= 6.0:
+            t_str = f"by {alert_m}" if alert_m else f"within {runway_mos} months"
+            exp_advice = f"Current inventory of {avail_lots} open lots will reach warning thresholds {t_str} at the projected intake pace of ~{avg_monthly} burials/month. Phase 2 land development or section re-allocation should begin within the next 60 days."
+            headline = f"Notice: Space warning threshold expected {t_str} at ~{avg_monthly} burials/month. Advance expansion planning recommended."
+        else:
+            exp_advice = f"Current reserve of {avail_lots} open plots provides a comfortable operational buffer of ~{runway_mos} months under projected demand. Continue routine inventory audits."
+            headline = f"Optimal: Capacity runway is stable (~{runway_mos} months remaining). Regular monitoring and standard maintenance schedule advised."
+
+        weekly_pace = max(1, int(round(avg_monthly / 4.3)))
+        staffing_advice = f"Anticipating ~{avg_monthly} burials/month requires coordinating approximately {weekly_pace} interment service(s) weekly. Schedule grave-digging crews, equipment readiness (backhoe/tools), and ceremonial setups in advance to prevent operational bottlenecks."
+
+        if total_reclaimable > 0:
+            reclaim_advice = f"A total of {total_reclaimable} plots reach expiration within the next {months} months. Issuing timely 5-year lease renewal notices can replenish available inventory through legitimate plot re-cycling if unrenewed."
+        else:
+            reclaim_advice = f"No cemetery lot leases are expiring within this {months}-month period. Space replenishment must rely on opening new sections or niche conversions."
+
+        budget_advice = f"Projecting +{total_predicted} burials provides baseline forecasting for interment fee collections and administrative revenues. Procure concrete vaults, grave markers, and gravel in advance to mitigate inflation."
+
+        operational_guidance = {
+            'burn_rate_monthly': avg_monthly,
+            'runway_months': runway_mos,
+            'alert_month': alert_m,
+            'alert_status': alert_s,
+            'headline': headline,
+            'pillars': {
+                'expansion': {
+                    'title': '1. Land & Capacity Expansion',
+                    'goal': 'Prevent abrupt plot shortages',
+                    'recommendation': exp_advice,
+                },
+                'staffing': {
+                    'title': '2. Staffing & Operations Allocation',
+                    'goal': 'Ensure workforce and equipment readiness',
+                    'recommendation': staffing_advice,
+                },
+                'reclamation': {
+                    'title': '3. Lease Expiration & Plot Reclamation',
+                    'goal': 'Replenish inventory via 5-year leases',
+                    'recommendation': reclaim_advice,
+                },
+                'budgeting': {
+                    'title': '4. Budget & Materials Procurement',
+                    'goal': 'Forecast revenue and advance supply orders',
+                    'recommendation': budget_advice,
+                },
+            },
+        }
+
         return jsonify({
             'historical': history,
             'forecast': forecast_payload,
+            'operational_guidance': operational_guidance,
             'trend': trend,
             'model': 'arima' if len(monthly_series) >= 5 else 'moving_average',
             'capacity': capacity,
