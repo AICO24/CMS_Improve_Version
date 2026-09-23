@@ -186,11 +186,12 @@
                                 <option value="exhumation">Exhumation</option>
                                 <option value="renewed">Renewed</option>
                             </select>
-                            <button type="button" id="resetFiltersBtn" class="btn-outline-danger" title="Clear all search queries and active filters">
-                                <i class="fas fa-arrow-rotate-left"></i>
-                                <span>Reset</span>
-                            </button>
                         </div>
+
+                        <button class="btn-secondary btn-clear-all" id="resetFiltersBtn" type="button" title="Clear all active filters" style="display: none;">
+                            <i class="fas fa-rotate-left"></i>
+                            <span>Clear Filters</span>
+                        </button>
                     </div>
 
                     <!-- Active Filter Chips bar -->
@@ -199,31 +200,26 @@
 
                 <div id="expirationStatusMessage" class="status-message"></div>
 
+                <p class="section-label"><i class="fas fa-hourglass-half"></i> Lease Registry &amp; Expiration Queue</p>
                 <!-- ── High-Density Polymorphic Data Table in Chart Card ── -->
                 <div class="chart-card expiration-table-card">
-                    <div class="chart-header">
-                        <div class="chart-header-left">
-                            <h4 class="chart-title">
-                                <i class="fas fa-hourglass-half"></i>
-                                <span>Lease Expiration &amp; Renewal Registry</span>
-                            </h4>
-                            <span class="badge badge-emerald" id="expirationBadgeCount">0 lots</span>
-                        </div>
-                        <div class="chart-actions">
-                            <span class="table-subtitle" id="tableFilterSummary">Showing all tracked leases</span>
+                    <div class="chart-card__header">
+                        <div class="chart-card__header-left">
+                            <span class="chart-card__title" id="tableHeaderTitle">All Leases &amp; Expiration Records</span>
+                            <span class="chart-card__badge" id="expirationBadgeCount">0 Lots</span>
                         </div>
                     </div>
 
-                    <div class="table-scroll">
+                    <div class="table-container">
                         <table class="data-table expiration-data-table" id="expirationTable">
                             <thead>
                                 <tr>
-                                    <th>Lot / Plot</th>
-                                    <th>Deceased &amp; Next of Kin</th>
-                                    <th>Lease Timeline</th>
-                                    <th>Status</th>
-                                    <th>Notice Delivery</th>
-                                    <th class="text-right">Actions</th>
+                                    <th class="col-lot">Lot / Plot</th>
+                                    <th class="col-decedent">Deceased &amp; Next of Kin</th>
+                                    <th class="col-timeline">Lease Timeline</th>
+                                    <th class="col-status" style="text-align: center;">Status</th>
+                                    <th class="col-notice" style="text-align: center;">Notice Delivery</th>
+                                    <th class="col-actions" style="text-align: center;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="expirationTableBody">

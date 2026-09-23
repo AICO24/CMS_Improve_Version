@@ -122,6 +122,12 @@ document.addEventListener('DOMContentLoaded', async function () {
             </span>
         `).join('');
 
+        const resetBtn = document.getElementById('resetFiltersBtn');
+        if (resetBtn) {
+            const hasFilters = Boolean(searchValue || sectionValue || urgencyValue || statusValue || currentTab !== 'all');
+            resetBtn.style.display = hasFilters ? 'inline-flex' : 'none';
+        }
+
         activeFilterChips.querySelectorAll('.filter-chip').forEach((chipEl) => {
             const chip = chips.find((item) => item.key === chipEl.dataset.filterKey);
             const button = chipEl.querySelector('button');
@@ -212,18 +218,28 @@ document.addEventListener('DOMContentLoaded', async function () {
             const meta = recordsResult.meta || { page: 1, total_pages: 1, total: recordsList.length };
             cachedRecords = recordsList;
 
-            // Table header badge & summary
+            // Table header badge & title
             const badgeCount = document.getElementById('expirationBadgeCount');
-            if (badgeCount) badgeCount.innerText = `${meta.total ?? recordsList.length} lots`;
+            if (badgeCount) {
+                const total = meta.total ?? recordsList.length;
+                badgeCount.innerText = `${total} ${total === 1 ? 'Lot' : 'Lots'}`;
+            }
 
-            const filterSummary = document.getElementById('tableFilterSummary');
-            if (filterSummary) {
-                const parts = [];
-                if (currentTab !== 'all') parts.push(`Tab: ${currentTab}`);
-                if (status !== 'all') parts.push(`Status: ${status}`);
-                if (section !== 'all') parts.push(`Section: ${section}`);
-                if (urgency !== 'all') parts.push(`Timeline: ${urgency}`);
-                filterSummary.innerText = parts.length ? `Filtered by ${parts.join(', ')}` : 'Showing all tracked leases';
+            const headerTitle = document.getElementById('tableHeaderTitle');
+            if (headerTitle) {
+                if (currentTab === 'expiring') {
+                    headerTitle.innerText = 'Expiring Soon (Next 30 Days)';
+                } else if (currentTab === 'expired') {
+                    headerTitle.innerText = 'Expired & Overdue Leases';
+                } else if (currentTab === 'renewed') {
+                    headerTitle.innerText = 'Renewed Leases Registry';
+                } else if (currentTab === 'exhumation') {
+                    headerTitle.innerText = 'Exhumation Queue';
+                } else if (query) {
+                    headerTitle.innerText = `Search results for "${query}"`;
+                } else {
+                    headerTitle.innerText = 'All Leases & Expiration Records';
+                }
             }
 
             if (!tableBody) return;
@@ -255,14 +271,14 @@ document.addEventListener('DOMContentLoaded', async function () {
                         countdownBadgeHtml = `<span class="timeline-badge timeline-active"><i class="fas fa-check-circle"></i> Active (${daysRemaining}d left)</span>`;
                     }
 
-                    const statusBadgeClass = record.status === 'Expired' 
-                        ? 'status-danger' 
-                        : record.status === 'Exhumation' 
-                        ? 'status-danger' 
-                        : record.status === 'Renewed' 
-                        ? 'status-success' 
-                        : record.status === 'Expiring' 
-                        ? 'status-warning' 
+                    const statusClass = record.status === 'Exhumation'
+                        ? 'status-exhumation'
+                        : record.status === 'Expired'
+                        ? 'status-expired'
+                        : record.status === 'Renewed'
+                        ? 'status-renewed'
+                        : record.status === 'Expiring'
+                        ? 'status-expiring'
                         : 'status-active';
 
                     const noticeBadgeHtml = record.notified_at 
@@ -271,24 +287,29 @@ document.addEventListener('DOMContentLoaded', async function () {
 
                     return `
                     <tr data-id="${record.expiration_id}" data-lot-id="${record.lot_id || ''}">
-                        <td>
+                        <td class="col-lot">
                             <div class="lot-cell">
-                                <span class="lot-number-chip">${escapeHtml(record.lot_number || 'LOT-' + record.lot_id)}</span>
+                                <span class="reloc-id-chip">${escapeHtml(record.lot_number || 'LOT-' + record.lot_id)}</span>
                                 <span class="lot-location-meta">${escapeHtml(record.section_name || 'N/A')} • ${escapeHtml(record.block_name || 'Block')}</span>
                             </div>
                         </td>
-                        <td>
+                        <td class="col-decedent">
                             <div class="decedent-cell">
-                                <span class="decedent-name">
-                                    <i class="fas fa-cross"></i> ${escapeHtml((record.decedent_name && record.decedent_name.trim()) ? record.decedent_name.trim() : 'Unassigned Occupant')}
-                                </span>
-                                <span class="contact-meta">
-                                    <i class="fas fa-user-tag"></i> ${escapeHtml((record.contact_name && record.contact_name.trim()) ? record.contact_name.trim() : 'No Contact Person')}
-                                    ${(record.contact_number && record.contact_number.trim()) ? '• ' + escapeHtml(record.contact_number.trim()) : ''}
-                                </span>
+                                <div class="decedent-avatar" aria-hidden="true">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="decedent-info">
+                                    <span class="decedent-name" title="${escapeHtml(record.decedent_name || 'Unassigned Occupant')}">
+                                        ${escapeHtml((record.decedent_name && record.decedent_name.trim()) ? record.decedent_name.trim() : 'Unassigned Occupant')}
+                                    </span>
+                                    <span class="decedent-meta" title="${escapeHtml(record.contact_name || '')}">
+                                        <i class="fas fa-user-tag"></i> ${escapeHtml((record.contact_name && record.contact_name.trim()) ? record.contact_name.trim() : 'No Contact Person')}
+                                        ${(record.contact_number && record.contact_number.trim()) ? ' • ' + escapeHtml(record.contact_number.trim()) : ''}
+                                    </span>
+                                </div>
                             </div>
                         </td>
-                        <td>
+                        <td class="col-timeline">
                             <div class="timeline-cell">
                                 <span class="timeline-dates">
                                     ${formatDate(record.start_date)} <i class="fas fa-arrow-right"></i> ${formatDate(record.end_date)}
@@ -296,30 +317,32 @@ document.addEventListener('DOMContentLoaded', async function () {
                                 ${countdownBadgeHtml}
                             </div>
                         </td>
-                        <td>
-                            <span class="status-badge ${statusBadgeClass}">
+                        <td class="col-status" style="text-align: center;">
+                            <span class="status-badge ${statusClass}">
                                 ${record.status === 'Exhumation' ? '<i class="fas fa-truck-moving"></i> ' : ''}${escapeHtml(record.status || 'Active')}
                             </span>
                         </td>
-                        <td>
+                        <td class="col-notice" style="text-align: center;">
                             ${noticeBadgeHtml}
                         </td>
-                        <td class="action-buttons">
-                            <button class="btn-action-icon btn-view" data-id="${record.expiration_id}" title="View Lease Details" aria-label="View Lease Details">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn-action-icon btn-renew" data-id="${record.expiration_id}" title="Renew Lease" aria-label="Renew Lease">
-                                <i class="fas fa-rotate"></i>
-                            </button>
-                            <button class="btn-action-icon btn-notify" data-id="${record.expiration_id}" data-lot="${escapeHtml(record.lot_number || '')}" title="Send Reminder Notice" aria-label="Send Reminder Notice">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                            <button class="btn-action-icon btn-relocate" data-id="${record.expiration_id}" title="Initiate Relocation / Exhumation" aria-label="Initiate Relocation / Exhumation">
-                                <i class="fas fa-truck-moving"></i>
-                            </button>
-                            <button class="btn-action-icon btn-delete-row" data-id="${record.expiration_id}" title="Delete Record" aria-label="Delete Record">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                        <td class="col-actions" style="text-align: center; vertical-align: middle;">
+                            <div class="action-buttons">
+                                <button class="btn-action-icon btn-view" data-id="${record.expiration_id}" title="View Lease Details" aria-label="View Lease Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn-action-icon btn-renew" data-id="${record.expiration_id}" title="Renew Lease" aria-label="Renew Lease">
+                                    <i class="fas fa-rotate"></i>
+                                </button>
+                                <button class="btn-action-icon btn-notify" data-id="${record.expiration_id}" data-lot="${escapeHtml(record.lot_number || '')}" title="Send Reminder Notice" aria-label="Send Reminder Notice">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                                <button class="btn-action-icon btn-relocate" data-id="${record.expiration_id}" title="Initiate Relocation / Exhumation" aria-label="Initiate Relocation / Exhumation">
+                                    <i class="fas fa-truck-moving"></i>
+                                </button>
+                                <button class="btn-action-icon btn-delete-row" data-id="${record.expiration_id}" title="Delete Record" aria-label="Delete Record">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     `;
@@ -1110,13 +1133,25 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 
-    // Live search input
-    document.getElementById('expirationSearch').addEventListener('keyup', function (event) {
-        if (event.key === 'Enter') {
-            pagination.reset();
-            refreshExpirationView();
-        }
-    });
+    // Live search input with debounce
+    let searchDebounceTimer = null;
+    const searchInputEl = document.getElementById('expirationSearch');
+    if (searchInputEl) {
+        searchInputEl.addEventListener('input', function () {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                pagination.reset();
+                refreshExpirationView();
+            }, 300);
+        });
+        searchInputEl.addEventListener('keyup', function (event) {
+            if (event.key === 'Enter') {
+                clearTimeout(searchDebounceTimer);
+                pagination.reset();
+                refreshExpirationView();
+            }
+        });
+    }
 
     const secFilter = document.getElementById('expirationSectionFilter');
     if (secFilter) secFilter.addEventListener('change', () => {

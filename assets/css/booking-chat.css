@@ -2063,9 +2063,38 @@ body[data-theme="dark"].dashboard-body,
     border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
+[data-theme="dark"] .doc-upload-card strong,
+[data-theme="dark"] .doc-upload-card #modalTitlePermit {
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .doc-upload-card span {
+    color: #94a3b8 !important;
+}
+
 [data-theme="dark"] .doc-upload-dialog {
     background: #0f172a;
     color: #f8fafc;
+}
+
+[data-theme="dark"] .field-edit-header h4,
+[data-theme="dark"] #fieldEditTitle {
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] #fieldEditLabel {
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] #fieldEditInput {
+    background: #0f172a !important;
+    border: 1.5px solid #334155 !important;
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] #fieldEditInput:focus {
+    border-color: #34d399 !important;
+    outline: none !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
