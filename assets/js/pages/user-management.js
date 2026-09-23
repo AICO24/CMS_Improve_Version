@@ -147,6 +147,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (totalUsersMeta) {
             totalUsersMeta.textContent = 'Total accounts';
         }
+        const badgeAllUsers = document.getElementById('badgeAllUsers');
+        if (badgeAllUsers) {
+            badgeAllUsers.textContent = total;
+        }
 
         try {
             const countFor = (overrides) => {
@@ -316,6 +320,26 @@ document.addEventListener('DOMContentLoaded', async function() {
             .replace(/'/g, '&#39;');
     }
 
+    function formatLoginCell(dateVal) {
+        if (!dateVal || dateVal === 'Never') {
+            return '<span class="text-muted" style="color:#94a3b8; font-size:0.80rem;">Never</span>';
+        }
+        try {
+            const d = new Date(dateVal);
+            if (isNaN(d.getTime())) return `<span class="cell-date">${escapeHtml(dateVal)}</span>`;
+            const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            return `
+                <div class="table-datetime-cell">
+                    <span class="cell-date">${dateStr}</span>
+                    <span class="cell-time"><i class="far fa-clock"></i> ${timeStr}</span>
+                </div>
+            `;
+        } catch (_) {
+            return `<span class="cell-date">${escapeHtml(dateVal)}</span>`;
+        }
+    }
+
     function renderUsers(users) {
         if (!Array.isArray(users) || users.length === 0) {
             usersTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 32px 16px; color: #64748b; font-size: 0.88rem;">No users found matching the filter criteria.</td></tr>';
@@ -333,11 +357,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             const statusLabel = user.is_active ? 'Active' : 'Inactive';
 
             const usernamePill = `<span class="username-pill">${escapeHtml(user.username || '—')}</span>`;
-            const fullNameCell = `<span class="user-fullname">${escapeHtml(user.full_name || '—')}</span>`;
-            const emailCell = `<span class="user-email">${escapeHtml(user.email || '—')}</span>`;
+            const fullNameCell = `<span class="user-fullname" title="${escapeHtml(user.full_name || '')}">${escapeHtml(user.full_name || '—')}</span>`;
+            const emailCell = `<span class="user-email" title="${escapeHtml(user.email || '')}">${escapeHtml(user.email || '—')}</span>`;
 
             const createdDate = user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-            const lastLoginDate = user.last_login ? new Date(user.last_login).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '<span style="color:#94a3b8;">Never</span>';
+            const lastLoginDate = formatLoginCell(user.last_login);
 
             return `
                 <tr data-id="${user.user_id}">
@@ -572,6 +596,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     const paneUsersDirectory = document.getElementById('paneUsersDirectory');
     const paneSecurityActivity = document.getElementById('paneSecurityActivity');
 
+    const sectionLabelRegistry = document.getElementById('sectionLabelRegistry');
+
     function switchViewTab(targetTab) {
         if (targetTab === 'activity') {
             tabSecurityActivity.classList.add('active');
@@ -584,6 +610,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             paneUsersDirectory.style.display = 'none';
             paneUsersDirectory.classList.remove('active');
 
+            if (sectionLabelRegistry) {
+                sectionLabelRegistry.innerHTML = '<i class="fas fa-shield-halved"></i> Security &amp; Activity Log';
+            }
+
             loadRecentActivity();
         } else {
             tabUsersDirectory.classList.add('active');
@@ -595,6 +625,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             paneUsersDirectory.classList.add('active');
             paneSecurityActivity.style.display = 'none';
             paneSecurityActivity.classList.remove('active');
+
+            if (sectionLabelRegistry) {
+                sectionLabelRegistry.innerHTML = '<i class="fas fa-calendar-check"></i> User Registry';
+            }
         }
     }
 
