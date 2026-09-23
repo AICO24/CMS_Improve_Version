@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audit Logs | Cemetery Management System</title>
+    <title>Security &amp; Audit Trail | Cemetery Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -20,9 +20,8 @@
     <link rel="stylesheet" href="../../assets/css/components/tables.css?v=2">
     <link rel="stylesheet" href="../../assets/css/components/modals.css">
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
-    <link rel="stylesheet" href="../../assets/css/user-management.css">
-    <link rel="stylesheet" href="../../assets/css/audit.css">
     <link rel="stylesheet" href="../../assets/css/components/search-input.css">
+    <link rel="stylesheet" href="../../assets/css/audit.css?v=4">
 
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
@@ -35,20 +34,20 @@
                 <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
                 <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
             </div>
-                                                <div class="sidebar-nav">
-                    <a href="dashboard_admin.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
+            <div class="sidebar-nav">
+                <a href="dashboard_admin.html" class="nav-item"><i class="fas fa-gauge-high icon"></i> <span>Dashboard</span></a>
                 <div class="nav-group">
                     <button type="button" class="nav-group-header">
                         <span>Operations</span>
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="book-a-service.html" class="nav-item"><i class="fas fa-handshake icon"></i> <span>Book a Service</span></a>
-                    <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
-                    <a href="manage-reservations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Reservations</span></a>
-                    <a href="manage-cremations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Cremations</span></a>
-                    <a href="relocation-management.html" class="nav-item"><i class="fas fa-truck-moving icon"></i> <span>Relocation Management</span></a>
-                    <a href="expiration-monitoring.html" class="nav-item"><i class="fas fa-hourglass-half icon"></i> <span>Expiration Monitoring</span></a>
+                        <a href="book-a-service.html" class="nav-item"><i class="fas fa-handshake icon"></i> <span>Book a Service</span></a>
+                        <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>Booking Assistant</span></a>
+                        <a href="manage-reservations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Reservations</span></a>
+                        <a href="manage-cremations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i> <span>Manage Cremations</span></a>
+                        <a href="relocation-management.html" class="nav-item"><i class="fas fa-truck-moving icon"></i> <span>Relocation Management</span></a>
+                        <a href="expiration-monitoring.html" class="nav-item"><i class="fas fa-hourglass-half icon"></i> <span>Expiration Monitoring</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -57,8 +56,8 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="lot-management.html" class="nav-item"><i class="fas fa-map-location-dot icon"></i> <span>Lot Management</span></a>
-                    <a href="cremation-management.html" class="nav-item"><i class="fas fa-fire icon"></i> <span>Columbarium Management</span></a>
+                        <a href="lot-management.html" class="nav-item"><i class="fas fa-map-location-dot icon"></i> <span>Lot Management</span></a>
+                        <a href="cremation-management.html" class="nav-item"><i class="fas fa-fire icon"></i> <span>Columbarium Management</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -67,7 +66,7 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="decedent-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>Decedent Records</span></a>
+                        <a href="decedent-records.html" class="nav-item"><i class="fas fa-folder-open icon"></i> <span>Decedent Records</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -76,17 +75,17 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
+                        <a href="payments.html" class="nav-item"><i class="fas fa-credit-card icon"></i> <span>Payments</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
                     <button type="button" class="nav-group-header">
-                        <span>Intelligence & Analytics</span>
+                        <span>Intelligence &amp; Analytics</span>
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="reports.html" class="nav-item"><i class="fas fa-chart-column icon"></i> <span>Reports</span></a>
-                    <a href="forecast.html" class="nav-item"><i class="fas fa-chart-line icon"></i> <span>Capacity Forecast</span></a>
+                        <a href="reports.html" class="nav-item"><i class="fas fa-chart-column icon"></i> <span>Reports</span></a>
+                        <a href="forecast.html" class="nav-item"><i class="fas fa-chart-line icon"></i> <span>Capacity Forecast</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -95,10 +94,10 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="user-management.html" class="nav-item"><i class="fas fa-users icon"></i> <span>User Management</span></a>
-                    <a href="exceptions.html" class="nav-item"><i class="fas fa-triangle-exclamation icon"></i> <span>System Exceptions</span></a>
-                    <a href="ai.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>AI Configuration</span></a>
-                    <a href="audit.html" class="nav-item active"><i class="fas fa-clipboard-list icon"></i> <span>Audit Logs</span></a>
+                        <a href="user-management.html" class="nav-item"><i class="fas fa-users icon"></i> <span>User Management</span></a>
+                        <a href="exceptions.html" class="nav-item"><i class="fas fa-triangle-exclamation icon"></i> <span>System Exceptions</span></a>
+                        <a href="ai.html" class="nav-item"><i class="fas fa-robot icon"></i> <span>AI Configuration</span></a>
+                        <a href="audit.html" class="nav-item active"><i class="fas fa-clipboard-list icon"></i> <span>Audit Logs</span></a>
                     </div>
                 </div>
                 <div class="nav-group">
@@ -107,8 +106,8 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                    <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
-                    <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
+                        <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
+                        <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
                     </div>
                 </div>
             </div>
@@ -130,7 +129,7 @@
                             <path class="line" d="M7 16H27"></path>
                         </svg>
                     </label>
-                    <h3 id="pageTitle">Security & Audit Trail</h3>
+                    <h3 id="pageTitle">Security &amp; Audit Trail</h3>
                 </div>
                 <div class="user-info">
                     <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
@@ -151,112 +150,186 @@
                     </button>
                 </div>
             </div>
-            <div class="content-area">
-                <div class="audit-summary-row">
-                    <div class="audit-summary-card accent-blue">
-                        <div class="summary-topline">
-                            <span>Total events</span>
-                            <i class="fas fa-chart-bar"></i>
+
+            <!-- Content Area strictly budgeted for zero outer scroll -->
+            <div class="content-area" id="contentArea">
+                <p class="section-label"><i class="fas fa-shield-halved"></i> Security &amp; Immutable System Audit Trail</p>
+
+                <!-- 4 Interactive Filterable KPI Cards -->
+                <div class="audit-summary-row audit-stats">
+                    <div class="stat-card audit-summary-card accent-blue stat-card-filterable active" id="cardTotal" role="button" tabindex="0" title="Click to view all audit events">
+                        <div class="stat-title summary-topline">
+                            <span class="stat-title-label"><span>Total Events</span></span>
+                            <span class="card-icon"><i class="fas fa-chart-bar"></i></span>
                         </div>
-                        <div class="summary-value" id="auditSummaryTotal">0</div>
-                        <div class="summary-meta">Recorded in current view</div>
+                        <div class="stat-value summary-value" id="auditSummaryTotal">0</div>
+                        <div class="stat-sub summary-meta">All logged system records</div>
                     </div>
-                    <div class="audit-summary-card accent-red">
-                        <div class="summary-topline">
-                            <span>Security alerts</span>
-                            <i class="fas fa-shield-halved"></i>
+                    <div class="stat-card audit-summary-card accent-red stat-card-filterable" id="cardAlerts" role="button" tabindex="0" title="Click to filter critical security alerts">
+                        <div class="stat-title summary-topline">
+                            <span class="stat-title-label"><span>Security Alerts</span></span>
+                            <span class="card-icon"><i class="fas fa-shield-halved"></i></span>
                         </div>
-                        <div class="summary-value" id="auditSummaryAlerts">0</div>
-                        <div class="summary-meta" id="auditSummaryAlertsMeta">Critical or flagged activity</div>
+                        <div class="stat-value summary-value" id="auditSummaryAlerts">0</div>
+                        <div class="stat-sub summary-meta" id="auditSummaryAlertsMeta">Critical or flagged activity</div>
                     </div>
-                    <div class="audit-summary-card accent-teal">
-                        <div class="summary-topline">
-                            <span>Users active</span>
-                            <i class="fas fa-users"></i>
+                    <div class="stat-card audit-summary-card accent-teal stat-card-filterable" id="cardUsers" role="button" tabindex="0" title="Unique actors active in last 24h">
+                        <div class="stat-title summary-topline">
+                            <span class="stat-title-label"><span>Active Users</span></span>
+                            <span class="card-icon"><i class="fas fa-users"></i></span>
                         </div>
-                        <div class="summary-value" id="auditSummaryUsers">0</div>
-                        <div class="summary-meta">Unique users in last 24h</div>
+                        <div class="stat-value summary-value" id="auditSummaryUsers">0</div>
+                        <div class="stat-sub summary-meta">Active in past 24 hours</div>
                     </div>
-                    <div class="audit-summary-card accent-navy">
-                        <div class="summary-topline">
-                            <span>Last 24h</span>
-                            <i class="fas fa-clock"></i>
+                    <div class="stat-card audit-summary-card accent-navy stat-card-filterable" id="cardRecent" role="button" tabindex="0" title="Click to filter last 24h activity">
+                        <div class="stat-title summary-topline">
+                            <span class="stat-title-label"><span>Last 24 Hours</span></span>
+                            <span class="card-icon"><i class="fas fa-clock"></i></span>
                         </div>
-                        <div class="summary-value" id="auditSummaryRecent">0</div>
-                        <div class="summary-meta">Recent activity volume</div>
+                        <div class="stat-value summary-value" id="auditSummaryRecent">0</div>
+                        <div class="stat-sub summary-meta">Recent activity volume</div>
                     </div>
                 </div>
 
-                <div class="toolbar-row">
-                    <div class="toolbar-filters">
-                        <div class="search-field">
-                            <input type="text" id="searchLogs" class="search-field__input" placeholder=" ">
-                            <label for="searchLogs" class="search-field__label">Filter by action or username</label>
-                            <span class="search-field__icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
-                            </span>
+                <!-- Unified Glassmorphic Audit Card -->
+                <div class="audit-card">
+                    <!-- Clean Single-Line Toolbar -->
+                    <div class="toolbar-row">
+                        <div class="toolbar-main-row">
+                            <div class="toolbar-filters">
+                                <div class="search-field search-field--with-action">
+                                    <input type="text" id="searchLogs" class="search-field__input" placeholder=" ">
+                                    <label for="searchLogs" class="search-field__label">Search action, user, IP, or details...</label>
+                                    <span class="search-field__icon" aria-hidden="true">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.979 16.8991C11.0591 17.4633 10.6657 17.9926 10.0959 17.9994C8.52021 18.0183 6.96549 17.5712 5.63246 16.7026C4.00976 15.6452 2.82575 14.035 2.30018 12.1709C1.77461 10.3068 1.94315 8.31525 2.77453 6.56596C3.60592 4.81667 5.04368 3.42838 6.82101 2.65875C8.59833 1.88911 10.5945 1.79039 12.4391 2.3809C14.2837 2.97141 15.8514 4.21105 16.8514 5.86977C17.8513 7.52849 18.2155 9.49365 17.8764 11.4005C17.5979 12.967 16.8603 14.4068 15.7684 15.543C15.3736 15.9539 14.7184 15.8787 14.3617 15.4343C14.0051 14.9899 14.0846 14.3455 14.4606 13.9173C15.1719 13.1073 15.6538 12.1134 15.8448 11.0393C16.0964 9.62426 15.8261 8.166 15.0841 6.93513C14.3421 5.70426 13.1788 4.78438 11.81 4.34618C10.4412 3.90799 8.95988 3.98125 7.641 4.55236C6.32213 5.12348 5.25522 6.15367 4.63828 7.45174C4.02135 8.74982 3.89628 10.2276 4.28629 11.6109C4.67629 12.9942 5.55489 14.1891 6.75903 14.9737C7.67308 15.5693 8.72759 15.8979 9.80504 15.9333C10.3746 15.952 10.8989 16.3349 10.979 16.8991Z"></path><rect transform="rotate(-49.6812 12.2469 14.8859)" rx="1" height="10.1881" width="2" y="14.8859" x="12.2469"></rect></svg>
+                                    </span>
+                                </div>
+                                <label class="status-select-field" for="filterAction">
+                                    <span>Action</span>
+                                    <select id="filterAction" aria-label="Filter by action category">
+                                        <option value="">All Actions</option>
+                                        <option value="login">Logins &amp; Auth</option>
+                                        <option value="create">Creations</option>
+                                        <option value="update">Updates &amp; Edits</option>
+                                        <option value="delete">Deletions &amp; Security</option>
+                                    </select>
+                                </label>
+                                <div class="date-range-field">
+                                    <label for="filterDateFrom">From</label>
+                                    <input type="date" id="filterDateFrom">
+                                </div>
+                                <div class="date-range-field">
+                                    <label for="filterDateTo">To</label>
+                                    <input type="date" id="filterDateTo">
+                                </div>
+                                <button class="btn-secondary" id="clearFiltersBtn" title="Clear all filters"><i class="fas fa-rotate-left"></i><span>Clear</span></button>
+                            </div>
+                            <div class="toolbar-actions-panel">
+                                <div class="toolbar-actions">
+                                    <button class="btn-secondary btn-action-pill" id="refreshAuditBtn" title="Refresh audit log trail"><i class="fas fa-rotate-right"></i><span>Refresh</span></button>
+                                    <button class="btn-secondary btn-action-pill" id="exportAuditBtn" type="button" title="Export audit records to CSV"><i class="fas fa-file-export"></i><span>Export CSV</span></button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="date-range-field">
-                            <label for="filterDateFrom">From</label>
-                            <input type="date" id="filterDateFrom">
-                        </div>
-                        <div class="date-range-field">
-                            <label for="filterDateTo">To</label>
-                            <input type="date" id="filterDateTo">
-                        </div>
-                        <button class="btn-secondary" id="refreshAuditBtn"><i class="fas fa-sync-alt"></i><span>Refresh Logs</span></button>
-                        <button class="btn-secondary" id="exportAuditBtn" type="button"><i class="fas fa-file-export"></i><span>Export CSV</span></button>
                     </div>
-                </div>
 
-                <p class="section-label"><i class="fas fa-history"></i> Audit Trail</p>
+                    <!-- Inner-scrollable table container -->
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 165px;">Timestamp</th>
+                                    <th style="width: 175px;">User</th>
+                                    <th style="width: 135px;">Action</th>
+                                    <th style="width: 160px;">Entity Target</th>
+                                    <th style="width: 130px;">IP Address</th>
+                                    <th>Event Details &amp; Payload</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditTableBody">
+                                <tr><td colspan="6" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading audit trail...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>User</th>
-                                <th>Action</th>
-                                <th>Entity</th>
-                                <th>IP Address</th>
-                                <th>Details</th>
-                            </tr>
-                        </thead>
-                        <tbody id="auditTableBody">
-                            <tr><td colspan="6">Loading audit trail...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="pagination-controls" id="paginationControls">
-                    <span class="pagination-info" id="paginationInfo"></span>
-                    <div class="pagination-actions">
-                        <form class="pagination-jump" id="paginationJumpForm">
-                            <label for="pageJumpInput">Jump to page</label>
-                            <input type="number" id="pageJumpInput" min="1" step="1" placeholder="Enter page number">
-                            <button class="btn-secondary" id="pageJumpBtn" type="submit"><i class="fas fa-arrow-right-to-bracket"></i><span>Go</span></button>
-                        </form>
-                        <span class="pagination-divider" aria-hidden="true"></span>
-                        <button class="btn-secondary" id="prevPage"><i class="fas fa-chevron-left"></i><span>Previous</span></button>
-                        <button class="btn-secondary" id="nextPage"><span>Next</span><i class="fas fa-chevron-right"></i></button>
+                    <!-- Standardized pinned pagination -->
+                    <div class="pagination" id="auditPagination">
+                        <span class="page-info" id="paginationInfo">Page 1 of 1 • 0 logs</span>
+                        <div class="pagination-right">
+                            <div class="pagination-jump" id="paginationJumpForm">
+                                <span>Jump to page</span>
+                                <input type="number" id="pageJumpInput" min="1" step="1" placeholder="№">
+                                <button type="button" class="btn-secondary btn-sm" id="pageJumpBtn"><i class="fas fa-arrow-right"></i> Go</button>
+                            </div>
+                            <div class="pagination-controls">
+                                <button class="btn-secondary btn-sm" id="prevPage" disabled><i class="fas fa-chevron-left"></i> Previous</button>
+                                <button class="btn-secondary btn-sm" id="nextPage" disabled>Next <i class="fas fa-chevron-right"></i></button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <footer class="audit-footer">
-                <div class="audit-footer__bottom">
-                    <span class="audit-footer__text">© 2026 Cemetery Management System. All rights reserved.</span>
-                </div>
-            </footer>
         </main>
     </div>
 
+    <!-- Audit Event Detail & Inspector Modal -->
+    <div class="modal-overlay" id="auditDetailModal" style="display:none;" aria-hidden="true">
+        <div class="modal-container modal-md" role="dialog" aria-modal="true" aria-labelledby="modalDetailTitle">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <span class="modal-title-icon"><i class="fas fa-shield-halved"></i></span>
+                    <h3 id="modalDetailTitle">Audit Event Inspection</h3>
+                </div>
+                <button type="button" class="modal-close" id="closeDetailModalBtn" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="audit-detail-grid">
+                    <div class="detail-grid-item">
+                        <span class="detail-label">Timestamp</span>
+                        <span class="detail-val" id="modalTimestamp">—</span>
+                    </div>
+                    <div class="detail-grid-item">
+                        <span class="detail-label">User / Actor</span>
+                        <span class="detail-val" id="modalUser">—</span>
+                    </div>
+                    <div class="detail-grid-item">
+                        <span class="detail-label">Action</span>
+                        <span class="detail-val" id="modalAction">—</span>
+                    </div>
+                    <div class="detail-grid-item">
+                        <span class="detail-label">Entity</span>
+                        <span class="detail-val" id="modalEntity">—</span>
+                    </div>
+                    <div class="detail-grid-item">
+                        <span class="detail-label">IP Address</span>
+                        <span class="detail-val" id="modalIp">—</span>
+                    </div>
+                    <div class="detail-grid-item">
+                        <span class="detail-label">Log ID</span>
+                        <span class="detail-val" id="modalLogId">—</span>
+                    </div>
+                </div>
+
+                <div class="payload-box-wrapper" style="margin-top: 14px;">
+                    <div class="payload-box-header">
+                        <span><i class="fas fa-code"></i> Event Payload &amp; State Changes</span>
+                        <button type="button" class="btn-secondary btn-sm" id="copyPayloadBtn" title="Copy raw payload"><i class="fas fa-copy"></i> Copy</button>
+                    </div>
+                    <pre class="payload-code-block" id="modalPayloadBlock"><code>No details recorded.</code></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="dismissDetailModalBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
     <script src="../../assets/js/shared/navigation-config.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
-    <script src="../../assets/js/shared/button-loading.js"></script>
-    <script src="../../assets/js/shared/pagination.js"></script>
-    <script src="../../assets/js/pages/audit.js"></script>
+    <script src="../../assets/js/pages/audit.js?v=3"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
 </body>
