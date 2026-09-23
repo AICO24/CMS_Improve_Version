@@ -78,36 +78,53 @@
             </div>
 
             <div class="content-area">
-                <!-- ── Summary Statistics Cards (Decedent Records Accent Style) ── -->
+                <p class="section-label"><i class="fas fa-chart-pie"></i> Operations Overview</p>
+                <!-- ── Summary Statistics Cards (Unified System Brand Green) ── -->
                 <div class="stats-row bookings-stats">
-                    <div class="stat-card accent-teal">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-calendar-days"></i></span> Total Bookings</div>
+                    <div class="stat-card" data-action="all" data-href="manage-bookings.html" role="button" tabindex="0" title="View all bookings in Manage Bookings" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Total Bookings</span>
+                            <span class="card-icon"><i class="fas fa-calendar-days"></i></span>
+                        </div>
                         <div class="stat-value" id="statTotalBookings">0</div>
                         <div class="stat-sub">Active &amp; scheduled services</div>
                     </div>
-                    <div class="stat-card accent-navy">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-monument"></i></span> Ground Burials</div>
+                    <div class="stat-card" data-action="burial" data-href="manage-bookings.html?service=burial" role="button" tabindex="0" title="Filter by Ground Burials" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Ground Burials</span>
+                            <span class="card-icon"><i class="fas fa-monument"></i></span>
+                        </div>
                         <div class="stat-value" id="statBurialCount">0</div>
                         <div class="stat-sub">Traditional plot reservations</div>
                     </div>
-                    <div class="stat-card accent-amber">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-fire"></i></span> Cremations</div>
+                    <div class="stat-card" data-action="cremation" data-href="manage-bookings.html?service=cremation" role="button" tabindex="0" title="Filter by Cremations" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Cremations</span>
+                            <span class="card-icon"><i class="fas fa-fire"></i></span>
+                        </div>
                         <div class="stat-value" id="statCremationCount">0</div>
                         <div class="stat-sub">Columbarium &amp; niche services</div>
                     </div>
-                    <div class="stat-card accent-blue">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-circle-check"></i></span> Completed</div>
+                    <div class="stat-card" data-action="completed" data-href="manage-bookings.html?status=Completed" role="button" tabindex="0" title="Filter by Completed bookings" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Completed</span>
+                            <span class="card-icon"><i class="fas fa-circle-check"></i></span>
+                        </div>
                         <div class="stat-value" id="statCompletedCount">0</div>
                         <div class="stat-sub">Finished ceremonies</div>
                     </div>
-                    <div class="stat-card accent-red">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span> Needs Review</div>
+                    <div class="stat-card" data-action="review" data-href="manage-bookings.html?awaiting_confirmation=1" role="button" tabindex="0" title="Filter by Needs Review" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Needs Review</span>
+                            <span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span>
+                        </div>
                         <div class="stat-value" id="statReviewCount">0</div>
                         <div class="stat-sub">Exceptions requiring attention</div>
                     </div>
                 </div>
 
-                <!-- ── Unified Master Control Panel (Single Consolidated Box) ── -->
+                <p class="section-label"><i class="fas fa-list-check"></i> Bookings Directory &amp; Manifest</p>
+                <!-- ── Control Panel (Standalone Box) ── -->
                 <div class="bookings-control-panel">
                     <!-- Top Tier: Sub-Tabs Segmented Switcher + Primary Actions & Exports -->
                     <div class="panel-top-row">
@@ -136,10 +153,6 @@
                                     Book a Service
                                 </span>
                             </a>
-                            <a href="exceptions.html" class="btn-secondary panel-btn" title="Jump to System Exceptions Console">
-                                <i class="fas fa-triangle-exclamation"></i>
-                                <span>Exceptions Hub</span>
-                            </a>
                             <button type="button" class="report-export-button report-export-button--pdf" id="exportPdfBtn" title="Print daily manifest / schedule PDF">
                                 <i class="fas fa-file-pdf"></i>
                                 <span>Print Manifest</span>
@@ -154,7 +167,7 @@
                     <!-- Subtle Horizontal Divider -->
                     <div class="panel-divider"></div>
 
-                    <!-- Bottom Tier: Search & Filter Controls -->
+                    <!-- Bottom Tier: Search & Filter Controls (All Level, Flexible Row) -->
                     <div class="panel-bottom-row">
                         <div class="panel-filters-group">
                             <span class="filter-bar__label"><i class="fas fa-filter"></i> Filters</span>
@@ -175,30 +188,32 @@
                                 <option value="Completed">Completed</option>
                                 <option value="Cancelled">Cancelled</option>
                             </select>
-                            <label class="attention-filter-toggle" for="toggleAwaitingConfirmation">
-                                <input type="checkbox" id="toggleAwaitingConfirmation">
-                                <span>Needs review only</span>
-                                <span class="attention-count-tag" id="awaitingConfirmationCount">0</span>
-                            </label>
+                            <button class="btn-secondary btn-action-pill" id="toggleAwaitingConfirmation" type="button" aria-pressed="false">
+                                <i class="fas fa-clipboard-check"></i> Needs Review <span class="count-badge" id="awaitingConfirmationCount">0</span>
+                            </button>
+                            <a class="btn-secondary btn-action-pill" href="exceptions.html" title="Jump to System Exceptions Console">
+                                <i class="fas fa-triangle-exclamation"></i> Exceptions Hub
+                            </a>
                         </div>
 
                         <button class="btn-secondary btn-clear-all" id="clearFilters" type="button" title="Clear all active filters">
                             <i class="fas fa-rotate-left"></i>
-                            <span>Clear Filters</span>
+                            <span>Clear</span>
                         </button>
                     </div>
 
-                    <!-- Active Filter Chips inside Box Footer -->
+                    <!-- Active Filter Chips inside Control Panel -->
                     <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
                 </div>
 
-                <!-- ── Polymorphic Data Table Card ── -->
+                <!-- ── Separate Data Table Card (Elevated Design) ── -->
                 <p class="section-label"><i class="fas fa-calendar-check"></i> Booking Registry</p>
                 <div class="chart-card">
                     <div class="chart-card__header">
                         <span class="chart-card__title">All bookings &amp; schedules</span>
                         <span class="chart-card__badge">Live Queue</span>
                     </div>
+
                     <div class="table-container">
                         <table class="data-table" id="bookingsTable">
                             <thead id="bookingsHead">
@@ -210,7 +225,7 @@
                         </table>
                     </div>
 
-                    <!-- ── Pagination Controls Docked Inside Card ── -->
+                    <!-- ── Pagination Controls Docked Inside Table Card ── -->
                     <div class="pagination-controls" id="paginationControls">
                         <span class="pagination-info" id="paginationInfo"></span>
                         <div class="pagination-actions">
@@ -235,7 +250,7 @@
         </main>
     </div>
 
-    <!-- ── Booking Detail View Modal (Decedent Records Hero & Grid Pattern) ── -->
+    <!-- ── Booking Detail View Modal (Simplified & Compact Executive Design) ── -->
     <div class="modal" id="bookingDetailModal" role="dialog" aria-modal="true" aria-labelledby="detailModalTitle">
         <div class="modal-content modal--view">
             <button type="button" class="close-view" id="closeDetailModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
@@ -249,16 +264,17 @@
                 </div>
             </div>
 
-            <!-- View Details Container (Hero Card + 4-Stage Stepper + 2-Column Details Grid + Notes) -->
+            <!-- View Details Container (Simplified Executive Specs Card) -->
             <div id="bookingDetailBody"></div>
 
-            <!-- Activity & Audit Trail (scoped to this booking schedule / cremation) -->
-            <div class="activity-timeline-section">
-                <div class="section-title-wrap">
-                    <h4 class="view-section-title"><i class="fas fa-clock-rotate-left"></i> Activity &amp; Audit Trail</h4>
-                </div>
+            <!-- Collapsible Activity & Audit Trail Drawer (Optional Expand) -->
+            <details class="activity-timeline-drawer" id="bookingActivityDrawer">
+                <summary class="activity-drawer-summary">
+                    <span><i class="fas fa-clock-rotate-left"></i> Activity &amp; Audit Trail</span>
+                    <i class="fas fa-chevron-down drawer-icon"></i>
+                </summary>
                 <div id="bookingActivityTimeline" class="activity-timeline"></div>
-            </div>
+            </details>
 
             <div class="view-modal-footer" id="bookingDetailFooter">
                 <button type="button" class="btn-secondary" id="closeDetailModalBtn">Close</button>

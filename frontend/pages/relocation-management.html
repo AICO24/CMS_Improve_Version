@@ -155,35 +155,52 @@
                 </div>
             </div>
                 <div class="content-area">
-                <!-- Summary Statistics — at top for executive overview -->
+                <p class="section-label"><i class="fas fa-chart-pie"></i> Relocation Overview</p>
+                <!-- Summary Statistics — at top for executive overview (Unified System Brand Green) -->
                 <div class="stats-row reloc-stats">
-                    <div class="stat-card accent-teal">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-truck-moving"></i></span> Total Requests</div>
+                    <div class="stat-card" data-href="relocation-management.html" onclick="window.location.href='relocation-management.html'" role="button" tabindex="0" title="View all relocation requests" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Total Requests</span>
+                            <span class="card-icon"><i class="fas fa-truck-moving"></i></span>
+                        </div>
                         <div class="stat-value" id="totalCount">0</div>
                         <div class="stat-sub">All time recorded</div>
                     </div>
-                    <div class="stat-card accent-amber">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-clock"></i></span> Pending Review</div>
+                    <div class="stat-card" data-href="relocation-management.html?status=Pending" onclick="window.location.href='relocation-management.html?status=Pending'" role="button" tabindex="0" title="Filter by Pending approval" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Pending Review</span>
+                            <span class="card-icon"><i class="fas fa-clock"></i></span>
+                        </div>
                         <div class="stat-value" id="pendingCount">0</div>
                         <div class="stat-sub">Awaiting approval</div>
                     </div>
-                    <div class="stat-card accent-navy">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-calendar-check"></i></span> Approved</div>
+                    <div class="stat-card" data-href="relocation-management.html?status=Approved" onclick="window.location.href='relocation-management.html?status=Approved'" role="button" tabindex="0" title="Filter by Approved / Ready" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Approved</span>
+                            <span class="card-icon"><i class="fas fa-calendar-check"></i></span>
+                        </div>
                         <div class="stat-value" id="approvedCount">0</div>
                         <div class="stat-sub">Ready for transfer</div>
                     </div>
-                    <div class="stat-card accent-blue">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-circle-check"></i></span> Completed</div>
+                    <div class="stat-card" data-href="relocation-management.html?status=Completed" onclick="window.location.href='relocation-management.html?status=Completed'" role="button" tabindex="0" title="Filter by Completed transfers" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Completed</span>
+                            <span class="card-icon"><i class="fas fa-circle-check"></i></span>
+                        </div>
                         <div class="stat-value" id="completedCount">0</div>
                         <div class="stat-sub">Transferred remains</div>
                     </div>
-                    <div class="stat-card accent-red">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span> Needs Attention</div>
+                    <div class="stat-card" data-href="exceptions.html?entity_type=Relocation" onclick="window.location.href='exceptions.html?entity_type=Relocation'" role="button" tabindex="0" title="Open System Exceptions for Relocations" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Needs Attention</span>
+                            <span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span>
+                        </div>
                         <div class="stat-value" id="attentionCount">0</div>
                         <div class="stat-sub">Flagged / Exceptions</div>
                     </div>
                 </div>
 
+                <p class="section-label"><i class="fas fa-list-check"></i> Relocation &amp; Transfer Records</p>
                 <!-- ── Unified Master Control Panel (Single Consolidated Box like Manage Bookings) ── -->
                 <div class="relocations-control-panel">
                     <!-- Top Tier: Sub-Tabs Segmented Switcher + Primary Actions & Exports -->
@@ -274,13 +291,13 @@
                         <table class="data-table" id="relocationsTable">
                             <thead>
                                 <tr>
-                                    <th>Request ID</th>
-                                    <th>Decedent</th>
-                                    <th>Transfer Route</th>
-                                    <th>Reason</th>
-                                    <th>Status</th>
-                                    <th>Requested By</th>
-                                    <th>Actions</th>
+                                    <th class="col-req-id">Request ID</th>
+                                    <th class="col-decedent">Decedent</th>
+                                    <th class="col-route">Transfer Route</th>
+                                    <th class="col-reason">Reason</th>
+                                    <th class="col-status">Status</th>
+                                    <th class="col-requester">Requested By</th>
+                                    <th class="col-actions">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="requestsTableBody">
@@ -564,39 +581,45 @@
                 <!-- Right Column: Attached Permits & Audit Timeline -->
                 <div class="deck-pane deck-pane--right">
                     <!-- Attached Documents & Permits -->
-                    <div class="documents-section">
-                        <div class="section-title-wrap">
-                            <h4 class="view-section-title"><i class="fas fa-folder-open"></i> Attached Documents &amp; Permits</h4>
+                    <details class="view-collapsible-section" id="viewDocsCollapsible" open>
+                        <summary class="view-section-summary">
+                            <span class="view-section-title"><i class="fas fa-folder-open"></i> Attached Permits &amp; Docs</span>
+                            <span class="view-count-pill" id="viewDocsCountPill">0</span>
+                        </summary>
+                        <div class="view-section-content">
+                            <div id="viewDocumentsList" class="documents-list"></div>
+                            <div class="documents-upload-bar">
+                                <select id="documentTypeSelect" aria-label="Document type" class="document-type-select">
+                                    <option value="relocation_permit">Relocation Permit</option>
+                                    <option value="exhumation_permit">Exhumation Permit</option>
+                                    <option value="transfer_clearance">Transfer Clearance</option>
+                                    <option value="family_consent">Family Consent</option>
+                                    <option value="death_certificate">Death Certificate</option>
+                                    <option value="other">Other Document</option>
+                                </select>
+                                <label for="documentFileInput" class="custom-file-picker" id="documentFileLabel" tabindex="0" role="button">
+                                    <i class="fas fa-paperclip"></i>
+                                    <span id="documentFileText">Select file</span>
+                                </label>
+                                <input type="file" id="documentFileInput"
+                                    accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" hidden>
+                                <button type="button" class="btn-secondary upload-doc-btn" id="uploadDocumentBtn">
+                                    <i class="fas fa-arrow-up-from-bracket"></i> Upload
+                                </button>
+                            </div>
                         </div>
-                        <div id="viewDocumentsList" class="documents-list"></div>
-                        <div class="documents-upload-bar">
-                            <select id="documentTypeSelect" aria-label="Document type" class="document-type-select">
-                                <option value="relocation_permit">Relocation Permit</option>
-                                <option value="exhumation_permit">Exhumation Permit</option>
-                                <option value="transfer_clearance">Transfer Clearance</option>
-                                <option value="family_consent">Family Consent</option>
-                                <option value="death_certificate">Death Certificate</option>
-                                <option value="other">Other Document</option>
-                            </select>
-                            <label for="documentFileInput" class="custom-file-picker" id="documentFileLabel" tabindex="0" role="button">
-                                <i class="fas fa-paperclip"></i>
-                                <span id="documentFileText">Select file (.pdf, .jpg, .png)</span>
-                            </label>
-                            <input type="file" id="documentFileInput"
-                                accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" hidden>
-                            <button type="button" class="btn-secondary upload-doc-btn" id="uploadDocumentBtn">
-                                <i class="fas fa-arrow-up-from-bracket"></i> Upload
-                            </button>
-                        </div>
-                    </div>
+                    </details>
 
                     <!-- Activity & Audit Trail -->
-                    <div class="activity-timeline-section" style="margin-top: 14px;">
-                        <div class="section-title-wrap">
-                            <h4 class="view-section-title"><i class="fas fa-clock-rotate-left"></i> Activity &amp; Audit Trail</h4>
+                    <details class="view-collapsible-section" id="viewAuditCollapsible" style="margin-top: 10px;">
+                        <summary class="view-section-summary">
+                            <span class="view-section-title"><i class="fas fa-clock-rotate-left"></i> Activity &amp; Audit Trail</span>
+                            <span class="view-count-pill" id="viewAuditCountPill">0</span>
+                        </summary>
+                        <div class="view-section-content">
+                            <div id="viewActivityTimeline" class="activity-timeline"></div>
                         </div>
-                        <div id="viewActivityTimeline" class="activity-timeline"></div>
-                    </div>
+                    </details>
                 </div>
             </div>
 
