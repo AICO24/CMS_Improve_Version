@@ -1776,6 +1776,7 @@ if ($path === 'decedents' && $requestMethod === 'GET') {
     if (isset($_GET['is_cremated'])) $filters['is_cremated'] = $_GET['is_cremated'];
     if (isset($_GET['incomplete'])) $filters['incomplete'] = $_GET['incomplete'];
     if (isset($_GET['document_status'])) $filters['document_status'] = $_GET['document_status'];
+    if (isset($_GET['sort_by'])) $filters['sort_by'] = $_GET['sort_by'];
     $pagination = [];
     if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
     if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];

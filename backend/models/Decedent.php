@@ -114,7 +114,13 @@ class Decedent {
         $params = [];
         $this->applyFilters($sql, $params, $filters);
 
-        $sql .= " ORDER BY dr.dod DESC, dr.last_name, dr.first_name";
+        if (!empty($filters['sort_by']) && $filters['sort_by'] === 'age_desc') {
+            $sql .= " ORDER BY (CASE WHEN dr.dob IS NOT NULL AND dr.dod IS NOT NULL THEN TIMESTAMPDIFF(YEAR, dr.dob, dr.dod) ELSE -1 END) DESC, dr.dod DESC, dr.last_name, dr.first_name";
+        } elseif (!empty($filters['sort_by']) && $filters['sort_by'] === 'age_asc') {
+            $sql .= " ORDER BY (CASE WHEN dr.dob IS NOT NULL AND dr.dod IS NOT NULL THEN TIMESTAMPDIFF(YEAR, dr.dob, dr.dod) ELSE 999 END) ASC, dr.dod DESC, dr.last_name, dr.first_name";
+        } else {
+            $sql .= " ORDER BY dr.dod DESC, dr.last_name, dr.first_name";
+        }
 
         $page = null;
         $perPage = null;

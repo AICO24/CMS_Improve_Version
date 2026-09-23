@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     let currentSectionFilter = '';
     let currentAttentionFilter = false;
     let currentDocumentStatusFilter = '';
+    let currentAgeSort = false; // false, 'age_desc', or 'age_asc'
     let pendingRequests = [];
     // Set only when "Approve" was clicked on a pending request — saveRecord()
     // checks this after a successful CREATE (never on edit) and links the new
@@ -303,6 +304,16 @@ document.addEventListener('DOMContentLoaded', async function () {
             { key: 'section', label: 'Section', value: currentSectionFilter, clear: () => { if (sectionFilter) sectionFilter.value = ''; currentSectionFilter = ''; } },
             { key: 'type', label: 'Type', value: currentTypeFilter !== 'all' ? (TYPE_FILTER_LABELS[currentTypeFilter] || currentTypeFilter) : '', clear: () => { typeFilter.value = 'all'; currentTypeFilter = 'all'; } },
             { key: 'attention', label: 'Attention', value: currentAttentionFilter ? 'Needs attention only' : '', clear: () => { attentionFilter.checked = false; currentAttentionFilter = false; } },
+            {
+                key: 'age',
+                label: 'Sort by Age',
+                value: currentAgeSort === 'age_desc' ? 'Oldest first' : (currentAgeSort === 'age_asc' ? 'Youngest first' : ''),
+                clear: () => {
+                    currentAgeSort = false;
+                    const ageCard = document.getElementById('cardAvgAge');
+                    if (ageCard) ageCard.title = 'Click to sort decedents by age (Oldest / Youngest)';
+                }
+            },
         ].filter((chip) => chip.value);
 
         if (!activeFilterChips) return;
@@ -465,7 +476,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             const filter = card.dataset.statusFilter;
             let isActive = false;
             if (filter === 'all') {
-                isActive = (currentTypeFilter === 'all' && !currentAttentionFilter && !currentSectionFilter && !currentQuery && !currentDocumentStatusFilter);
+                isActive = (currentTypeFilter === 'all' && !currentAttentionFilter && !currentSectionFilter && !currentQuery && !currentDocumentStatusFilter && !currentAgeSort);
             } else if (filter === 'no') {
                 isActive = (currentTypeFilter === 'no');
             } else if (filter === 'yes') {
@@ -474,6 +485,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                 isActive = (currentDocumentStatusFilter === 'pending_requirements');
             } else if (filter === 'attention') {
                 isActive = Boolean(currentAttentionFilter);
+            } else if (filter === 'age') {
+                isActive = Boolean(currentAgeSort);
             }
             card.classList.toggle('is-active-filter', isActive);
             card.setAttribute('aria-pressed', isActive ? 'true' : 'false');
@@ -489,11 +502,14 @@ document.addEventListener('DOMContentLoaded', async function () {
                 currentDocumentStatusFilter = '';
                 currentSectionFilter = '';
                 currentQuery = '';
+                currentAgeSort = false;
                 typeFilter.value = 'all';
                 attentionFilter.checked = false;
                 if (sectionFilter) sectionFilter.value = '';
                 searchInput.value = '';
                 if (searchClearBtn) searchClearBtn.style.display = 'none';
+                const ageCard = document.getElementById('cardAvgAge');
+                if (ageCard) ageCard.title = 'Click to sort decedents by age (Oldest / Youngest)';
             } else if (filter === 'no') {
                 currentTypeFilter = (currentTypeFilter === 'no') ? 'all' : 'no';
                 typeFilter.value = currentTypeFilter;
@@ -505,6 +521,20 @@ document.addEventListener('DOMContentLoaded', async function () {
             } else if (filter === 'attention') {
                 currentAttentionFilter = !currentAttentionFilter;
                 attentionFilter.checked = currentAttentionFilter;
+            } else if (filter === 'age') {
+                if (!currentAgeSort) {
+                    currentAgeSort = 'age_desc';
+                    card.title = 'Sorted by age (Oldest first) — Click for Youngest first';
+                    if (typeof showToast === 'function') showToast('Sorted by age: Oldest first', { type: 'info' });
+                } else if (currentAgeSort === 'age_desc') {
+                    currentAgeSort = 'age_asc';
+                    card.title = 'Sorted by age (Youngest first) — Click to restore default';
+                    if (typeof showToast === 'function') showToast('Sorted by age: Youngest first', { type: 'info' });
+                } else {
+                    currentAgeSort = false;
+                    card.title = 'Click to sort decedents by age (Oldest / Youngest)';
+                    if (typeof showToast === 'function') showToast('Default sorting restored', { type: 'info' });
+                }
             }
             updateActiveStatCards();
             pagination.reset();
@@ -530,6 +560,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                     if (currentTypeFilter !== 'all') exportParams.set('is_cremated', currentTypeFilter);
                     if (currentSectionFilter) exportParams.set('section', currentSectionFilter);
                     if (currentAttentionFilter) exportParams.set('incomplete', '1');
+                    if (currentDocumentStatusFilter) exportParams.set('document_status', currentDocumentStatusFilter);
+                    if (currentAgeSort) exportParams.set('sort_by', currentAgeSort);
                     exportParams.set('per_page', '5000');
 
                     const res = await api.request(`decedents?${exportParams.toString()}`, { method: 'GET' });
@@ -1052,6 +1084,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (currentSectionFilter) params.set('section', currentSectionFilter);
         if (currentAttentionFilter) params.set('incomplete', '1');
         if (currentDocumentStatusFilter) params.set('document_status', currentDocumentStatusFilter);
+        if (currentAgeSort) params.set('sort_by', currentAgeSort);
         params.set('page', pagination.page);
         params.set('per_page', perPage);
         try {
