@@ -1798,136 +1798,151 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function loadDemographics() {
+        // Step 1: Always fetch and render the age-group table + stat cards first
+        let ageGroups = [
+            { label: '0-17', value: 0 }, { label: '18-35', value: 0 },
+            { label: '36-55', value: 0 }, { label: '56-75', value: 0 }, { label: '75+', value: 0 }
+        ];
+        let total = 0, burials = 0, cremations = 0;
+
         try {
             const data = await api.request('decedents/stats', { method: 'GET' });
-            const total = Number(data.total || 0);
-            const burials = Number(data.burials || 0);
-            const cremations = Number(data.cremations || 0);
-            const ageGroups = Array.isArray(data.age_groups) && data.age_groups.length ? data.age_groups : [
-                { label: '0-17', value: 0 },
-                { label: '18-35', value: 0 },
-                { label: '36-55', value: 0 },
-                { label: '56-75', value: 0 },
-                { label: '75+', value: 0 }
-            ];
+            total      = Number(data.total      || 0);
+            burials    = Number(data.burials    || 0);
+            cremations = Number(data.cremations || 0);
 
-            document.getElementById('demoTotal').innerText = total;
-            document.getElementById('demoBurials').innerText = burials;
-            document.getElementById('demoCremations').innerText = cremations;
-            document.getElementById('demoAvgAge').innerText = data.avg_age || 0;
+            if (Array.isArray(data.age_groups) && data.age_groups.length) ageGroups = data.age_groups;
 
-            const demoCtx = document.getElementById('demographicsChart').getContext('2d');
-            if (demographicsChartInstance) demographicsChartInstance.destroy();
-            demographicsChartInstance = new Chart(demoCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Burials', 'Cremations'],
-                    datasets: [{
-                        data: [burials, cremations],
-                        backgroundColor: ['#2c5e47', '#d4a373'],
-                        borderColor: '#ffffff',
-                        borderWidth: 2,
-                        hoverOffset: 10,
-                    }]
-                },
-                options: compactChartOptions({
-                    cutout: '58%',
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'bottom',
-                            align: 'center',
-                            labels: {
-                                usePointStyle: true,
-                                pointStyle: 'circle',
-                                boxWidth: 8,
-                                boxHeight: 8,
-                                padding: 10,
-                                font: { size: 10.5 }
-                            }
-                        },
-                        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed} decedents` } }
-                    },
-                    animation: doughnutPopAnimation(700, 120)
-                })
-            });
+            const setV = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v ?? 0; };
+            setV('demoTotal',      total);
+            setV('demoBurials',    burials);
+            setV('demoCremations', cremations);
+            setV('demoAvgAge',     data.avg_age || 0);
 
-            const ageCanvas = document.getElementById('ageDistributionChart');
-            ageCanvas.style.display = 'block';
-            ageCanvas.style.width = '100%';
-            ageCanvas.style.height = '280px';
-            ageCanvas.height = 280;
-            const ageCtx = ageCanvas.getContext('2d');
-            if (ageDistributionChartInstance) ageDistributionChartInstance.destroy();
-            ageDistributionChartInstance = new Chart(ageCtx, {
-                type: 'bar',
-                data: {
-                    labels: ageGroups.map(group => group.label),
-                    datasets: [{
-                        label: 'Decedents',
-                        data: ageGroups.map(group => Number(group.value || 0)),
-                        backgroundColor: ['#2c5e47', '#2563eb', '#d4a373', '#7aa77a', '#b5838d'],
-                        borderRadius: 8,
-                        maxBarThickness: 44
-                    }]
-                },
-                options: compactChartOptions({
-                    layout: { padding: { left: 8, right: 8, top: 4, bottom: 0 } },
-                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} decedents` } } },
-                    animation: staggeredBarAnimation(800),
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { precision: 0, maxTicksLimit: 6, font: { size: 10.5 } }
-                        },
-                        x: {
-                            ticks: { font: { size: 10.5 }, maxRotation: 0 },
-                            grid: { display: false }
-                        }
-                    }
-                })
-            });
-
+            // Age group table
             const tableBody = document.getElementById('demographicsTableBody');
             if (tableBody) {
-                const totalAgeGroupCount = ageGroups.reduce((sum, group) => sum + Number(group.value || 0), 0);
+                const totalAgeCount = ageGroups.reduce((s, g) => s + Number(g.value || 0), 0);
                 tableBody.innerHTML = ageGroups.map(group => {
-                    const value = Number(group.value || 0);
-                    const share = totalAgeGroupCount > 0 ? Math.round((value / totalAgeGroupCount) * 100) : 0;
-                    let profile = 'Low count';
-                    if (value >= 25) profile = 'High concentration';
-                    else if (value >= 10) profile = 'Moderate';
-                    else if (value > 0) profile = 'Low';
-
-                    return `
-                        <tr>
-                            <td>${group.label}</td>
-                            <td>${value}</td>
-                            <td>${share}%</td>
-                            <td>${profile}</td>
-                        </tr>
-                    `;
+                    const v     = Number(group.value || 0);
+                    const share = totalAgeCount > 0 ? Math.round((v / totalAgeCount) * 100) : 0;
+                    const prof  = v >= 25 ? 'High concentration' : v >= 10 ? 'Moderate' : v > 0 ? 'Low' : 'No data';
+                    return `<tr>
+                        <td>${group.label}</td>
+                        <td><strong>${v}</strong></td>
+                        <td>${share}%</td>
+                        <td><span class="status-badge ${v >= 25 ? 'status-danger' : v >= 10 ? 'status-warning' : 'status-info'}">${prof}</span></td>
+                    </tr>`;
                 }).join('');
             }
 
-            const dominantGroup = ageGroups.reduce((best, group) => Number(group.value || 0) > Number(best.value || 0) ? group : best, { label: 'N/A', value: 0 });
-            const burialMix = total > 0 ? Math.round((burials / total) * 100) : 0;
+            // Insights bar
+            const burialMix    = total > 0 ? Math.round((burials    / total) * 100) : 0;
             const cremationMix = total > 0 ? Math.round((cremations / total) * 100) : 0;
-            const profileLabel = burialMix > cremationMix ? 'Burial-heavy profile' : cremationMix > burialMix ? 'Cremation-heavy profile' : 'Balanced profile';
-            const insights = document.getElementById('demographicsInsights');
-            insights.innerHTML = [
-                { label: 'Largest age range', value: dominantGroup.label === 'N/A' ? 'No data' : `${dominantGroup.label} yrs`, className: '' },
-                { label: 'Service mix', value: profileLabel, className: burialMix >= cremationMix ? 'risk-low' : 'risk-moderate' },
-                { label: 'Burial share', value: `${burialMix}%`, className: 'risk-low' },
-                { label: 'Cremation share', value: `${cremationMix}%`, className: 'risk-moderate' }
-            ].map(item => `
-                <div class="insight-item ${item.className || ''}">
-                    <span>${item.label}</span>
-                    <strong>${item.value}</strong>
-                </div>
-            `).join('');
-        } catch (error) {
-            console.error('Failed to load demographics:', error);
+            const dominant     = ageGroups.reduce((b, g) => Number(g.value || 0) > Number(b.value || 0) ? g : b, { label: 'N/A', value: 0 });
+            const profileLabel = burialMix > cremationMix ? 'Burial-heavy' : cremationMix > burialMix ? 'Cremation-heavy' : 'Balanced';
+            const insights     = document.getElementById('demographicsInsights');
+            if (insights) {
+                insights.innerHTML = [
+                    { label: 'Total decedents',    value: total,                                                      className: '' },
+                    { label: 'Dominant age group', value: dominant.label !== 'N/A' ? `${dominant.label} yrs` : '—',  className: '' },
+                    { label: 'Service mix',        value: profileLabel,                                               className: 'risk-low' },
+                    { label: 'Burial share',       value: `${burialMix}%`,                                           className: 'risk-low' },
+                    { label: 'Cremation share',    value: `${cremationMix}%`,                                        className: cremationMix > burialMix ? 'risk-moderate' : '' },
+                    { label: 'Needs attention',    value: `${data.needs_attention || 0} records`,                    className: (data.needs_attention || 0) > 0 ? 'risk-high' : '' }
+                ].map(item => `
+                    <div class="insight-item ${item.className || ''}">
+                        <span>${item.label}</span>
+                        <strong>${item.value}</strong>
+                    </div>`).join('');
+            }
+        } catch (err) {
+            console.error('Demographics stats error:', err);
+        }
+
+        // Step 2: Load recent decedents records table
+        try {
+            const recRes  = await api.request('decedents?per_page=15&page=1', { method: 'GET' });
+            const recRows = Array.isArray(recRes?.data) ? recRes.data : (Array.isArray(recRes) ? recRes : []);
+            const recBody = document.getElementById('recentDecedentsTableBody');
+            if (recBody) {
+                if (recRows.length === 0) {
+                    recBody.innerHTML = '<tr><td colspan="5" class="text-center">No decedent records found.</td></tr>';
+                } else {
+                    recBody.innerHTML = recRows.map(item => {
+                        const name = [item.first_name, item.last_name].filter(Boolean).join(' ') || item.full_name || '—';
+                        const type = item.is_cremated == 1 ? '<span class="status-badge status-warning">Cremation</span>' : '<span class="status-badge status-info">Burial</span>';
+                        const dod  = item.date_of_death ? new Date(item.date_of_death).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
+                        return `<tr>
+                            <td><strong>${name}</strong></td>
+                            <td>${item.age ?? '—'}</td>
+                            <td>${type}</td>
+                            <td>${item.section_name || '—'}</td>
+                            <td>${dod}</td>
+                        </tr>`;
+                    }).join('');
+                }
+            }
+        } catch (err) {
+            console.error('Recent decedents error:', err);
+            const recBody = document.getElementById('recentDecedentsTableBody');
+            if (recBody) recBody.innerHTML = '<tr><td colspan="5" class="text-center">Could not load records.</td></tr>';
+        }
+
+        // Step 3: Render charts (guarded — chart failure won't block data display)
+        try {
+            const dark      = isDarkMode();
+            const tickColor = dark ? '#cbd5e1' : '#1e293b';
+
+            const demoCtx = document.getElementById('demographicsChart')?.getContext('2d');
+            if (demoCtx) {
+                if (demographicsChartInstance) demographicsChartInstance.destroy();
+                demographicsChartInstance = new Chart(demoCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Burials', 'Cremations'],
+                        datasets: [{ data: [burials, cremations], backgroundColor: ['#2c5e47', '#d4a373'], borderColor: dark ? '#09130e' : '#ffffff', borderWidth: 2, hoverOffset: 10 }]
+                    },
+                    options: compactChartOptions({
+                        cutout: '58%',
+                        plugins: {
+                            legend: { display: true, position: 'bottom', align: 'center', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 12, font: { size: 11.5, weight: '700', family: "'Inter', sans-serif" }, color: tickColor } },
+                            tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} decedents` } }
+                        },
+                        animation: doughnutPopAnimation(700, 120)
+                    })
+                });
+            }
+
+            const ageCanvas = document.getElementById('ageDistributionChart');
+            if (ageCanvas) {
+                ageCanvas.style.display = 'block'; ageCanvas.style.width = '100%'; ageCanvas.style.height = '280px'; ageCanvas.height = 280;
+                const ageCtx = ageCanvas.getContext('2d');
+                if (ageDistributionChartInstance) ageDistributionChartInstance.destroy();
+                const axisB = dark ? 'rgba(255,255,255,0.24)' : 'rgba(44,94,71,0.35)';
+                const gridC = dark ? 'rgba(255,255,255,0.14)' : 'rgba(44,94,71,0.18)';
+                ageDistributionChartInstance = new Chart(ageCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ageGroups.map(g => g.label),
+                        datasets: [{ label: 'Decedents', data: ageGroups.map(g => Number(g.value || 0)), backgroundColor: ['#2c5e47', '#2563eb', '#d4a373', '#7aa77a', '#b5838d'], borderRadius: 8, maxBarThickness: 44 }]
+                    },
+                    options: compactChartOptions({
+                        layout: { padding: { left: 8, right: 8, top: 4, bottom: 0 } },
+                        plugins: {
+                            legend: { display: true, position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 10, font: { size: 11, weight: '700', family: "'Inter', sans-serif" }, color: tickColor } },
+                            tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} decedents` } }
+                        },
+                        animation: staggeredBarAnimation(800),
+                        scales: {
+                            y: { beginAtZero: true, ticks: { precision: 0, maxTicksLimit: 6, font: { size: 10.5 }, color: tickColor }, grid: { color: gridC, borderDash: [4, 4] }, border: { color: axisB } },
+                            x: { ticks: { font: { size: 10.5 }, maxRotation: 0, color: tickColor }, grid: { display: false }, border: { color: axisB } }
+                        }
+                    })
+                });
+            }
+        } catch (chartErr) {
+            console.error('Demographics chart error:', chartErr);
         }
     }
 
@@ -1982,110 +1997,125 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function loadExpiration() {
+        const fromValue = document.getElementById('expirationDateFrom')?.value;
+        const toValue   = document.getElementById('expirationDateTo')?.value;
+        const pageSize  = 15;
+
+        const params = new URLSearchParams();
+        params.set('page',     '1');
+        params.set('per_page', String(pageSize));
+        if (fromValue) params.set('date_from', fromValue);
+        if (toValue)   params.set('date_to',   toValue);
+
         try {
-            const params = new URLSearchParams();
-            params.set('page', '1');
-            params.set('per_page', '8');
-            const fromValue = document.getElementById('expirationDateFrom')?.value;
-            const toValue = document.getElementById('expirationDateTo')?.value;
-            if (fromValue) params.set('date_from', fromValue);
-            if (toValue) params.set('date_to', toValue);
-
             const data = await api.request(`reports/expiration?${params.toString()}`, { method: 'GET' });
-            const summary = data.summary || {};
-            document.getElementById('expExpiring').innerText = summary.expiring_soon ?? 0;
-            document.getElementById('expExpired').innerText = summary.expired ?? 0;
-            document.getElementById('expRenewalDue').innerText = summary.renewal_due ?? 0;
-            document.getElementById('expPendingReview').innerText = summary.pending_review ?? 0;
+            const summary      = data.summary || {};
+            const expiringRows = Array.isArray(data.expiring_soon?.data) ? data.expiring_soon.data : (Array.isArray(data.expiring_soon) ? data.expiring_soon : []);
+            const expiredRows  = Array.isArray(data.expired?.data)       ? data.expired.data       : (Array.isArray(data.expired)       ? data.expired       : []);
+            const expiringMeta = data.expiring_soon?.meta ?? { page: 1, total_pages: 1, total: expiringRows.length };
+            const expiredMeta  = data.expired?.meta       ?? { page: 1, total_pages: 1, total: expiredRows.length  };
 
-            const expiringRows = Array.isArray(data.expiring_soon && data.expiring_soon.data) ? data.expiring_soon.data : (Array.isArray(data.expiring_soon) ? data.expiring_soon : []);
-            const expiredRows = Array.isArray(data.expired && data.expired.data) ? data.expired.data : (Array.isArray(data.expired) ? data.expired : []);
-            const expiringMeta = data.expiring_soon && data.expiring_soon.meta ? data.expiring_soon.meta : { page: 1, total_pages: 1, total: expiringRows.length };
-            const expiredMeta = data.expired && data.expired.meta ? data.expired.meta : { page: 1, total_pages: 1, total: expiredRows.length };
-            const pageSize = 8;
+            // ── Stat cards ──
+            const setV = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v ?? 0; };
+            setV('expExpiring',     summary.expiring_soon  ?? 0);
+            setV('expExpired',      summary.expired        ?? 0);
+            setV('expRenewalDue',   summary.renewal_due    ?? 0);
+            setV('expPendingReview',summary.pending_review ?? 0);
 
-            buildExpirationStatusChart(document.getElementById('expirationStatusChart'), summary);
-            buildExpirationTrendChart(document.getElementById('expirationTrendChart'), expiringRows);
+            // ── Helper: format expiration date + days-until ──
+            function fmtExpRow(item, statusClass, label) {
+                const end = item.end_date ? new Date(`${item.end_date}T00:00:00`) : null;
+                const displayDate = end ? end.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
+                const today = new Date(); today.setHours(0,0,0,0);
+                const diff  = end ? Math.round((end - today) / 86400000) : null;
+                const daysLabel = diff === null ? '—' : diff < 0 ? `${Math.abs(diff)}d overdue` : diff === 0 ? 'Today' : `in ${diff}d`;
+                return `<tr>
+                    <td><strong>${item.lot_number || '—'}</strong></td>
+                    <td>${item.section_name || '—'}</td>
+                    <td>${item.block_name   || '—'}</td>
+                    <td>${displayDate}</td>
+                    <td><span class="status-badge ${diff !== null && diff < 0 ? 'status-danger' : statusClass}">${label} · ${daysLabel}</span></td>
+                </tr>`;
+            }
 
-            function renderExpirationTable({ rows, containerId, statusClass, label, emptyText, pagination, meta, infoId }) {
-                const safeRows = Array.isArray(rows) ? rows : [];
+            // ── Render tables first (always visible) ──
+            function renderExpirationTable({ rows, containerId, statusClass, label, emptyText, pagination, meta }) {
+                const safeRows   = Array.isArray(rows) ? rows : [];
                 const totalCount = Number(meta.total ?? safeRows.length ?? 0);
-                const perPage = Number(meta.per_page || pageSize || safeRows.length || 1);
-                const totalPages = Math.max(1, Number(meta.total_pages || Math.ceil(totalCount / perPage) || 1));
-                const page = Math.min(Math.max(Number(meta.page || pagination.page || 1), 1), totalPages);
-                const pageRows = safeRows;
-                const table = document.getElementById(containerId);
-
-                table.innerHTML = pageRows.length === 0
+                const perPage2   = Number(meta.per_page || pageSize || safeRows.length || 1);
+                const totalPages = Math.max(1, Number(meta.total_pages || Math.ceil(totalCount / perPage2) || 1));
+                const page       = Math.min(Math.max(Number(meta.page || pagination.page || 1), 1), totalPages);
+                const table      = document.getElementById(containerId);
+                if (!table) return;
+                table.innerHTML  = safeRows.length === 0
                     ? `<tr><td colspan="5">${emptyText}</td></tr>`
-                    : pageRows.map(item => `
-                        <tr>
-                            <td>${item.lot_number}</td>
-                            <td>${item.section_name}</td>
-                            <td>${item.block_name}</td>
-                            <td>${item.end_date}</td>
-                            <td><span class="status-badge ${statusClass}">${label}</span></td>
-                        </tr>
-                    `).join('');
-
-                pagination.render({
-                    page,
-                    total_pages: totalPages,
-                    total: totalCount,
-                    shown: pageRows.length,
-                });
+                    : safeRows.map(item => fmtExpRow(item, statusClass, label)).join('');
+                pagination.render({ page, total_pages: totalPages, total: totalCount, shown: safeRows.length });
             }
 
             const expiringPagination = createPagination({
-                prevBtn: document.getElementById('expiringPrevPage'),
-                nextBtn: document.getElementById('expiringNextPage'),
-                infoEl: document.getElementById('expiringPaginationInfo'),
+                prevBtn:  document.getElementById('expiringPrevPage'),
+                nextBtn:  document.getElementById('expiringNextPage'),
+                infoEl:   document.getElementById('expiringPaginationInfo'),
                 jumpForm: document.getElementById('expiringPaginationJumpForm'),
-                jumpInput: document.getElementById('expiringPageJumpInput'),
-                jumpBtn: document.getElementById('expiringPageJumpBtn'),
+                jumpInput:document.getElementById('expiringPageJumpInput'),
+                jumpBtn:  document.getElementById('expiringPageJumpBtn'),
                 itemLabel: 'lot',
                 onChange: async () => {
-                    const pageParams = new URLSearchParams();
-                    pageParams.set('page', String(expiringPagination.page));
-                    pageParams.set('per_page', String(pageSize));
-                    const currentFrom = document.getElementById('expirationDateFrom')?.value;
-                    const currentTo = document.getElementById('expirationDateTo')?.value;
-                    if (currentFrom) pageParams.set('date_from', currentFrom);
-                    if (currentTo) pageParams.set('date_to', currentTo);
-                    const response = await api.request(`reports/expiration?${pageParams.toString()}`, { method: 'GET' });
-                    const nextRows = Array.isArray(response.expiring_soon && response.expiring_soon.data) ? response.expiring_soon.data : [];
-                    const nextMeta = response.expiring_soon && response.expiring_soon.meta ? response.expiring_soon.meta : { page: 1, total_pages: 1, total: nextRows.length };
-                    renderExpirationTable({ rows: nextRows, containerId: 'expiringTableBody', statusClass: 'status-warning', label: 'Expiring', emptyText: 'No lots expiring soon.', pagination: expiringPagination, meta: nextMeta, infoId: 'expiringPaginationInfo' });
+                    const pp = new URLSearchParams();
+                    pp.set('page', String(expiringPagination.page));
+                    pp.set('per_page', String(pageSize));
+                    const cf = document.getElementById('expirationDateFrom')?.value;
+                    const ct = document.getElementById('expirationDateTo')?.value;
+                    if (cf) pp.set('date_from', cf);
+                    if (ct) pp.set('date_to',   ct);
+                    const res  = await api.request(`reports/expiration?${pp.toString()}`, { method: 'GET' });
+                    const rows2 = Array.isArray(res.expiring_soon?.data) ? res.expiring_soon.data : [];
+                    const meta2 = res.expiring_soon?.meta ?? { page: 1, total_pages: 1, total: rows2.length };
+                    renderExpirationTable({ rows: rows2, containerId: 'expiringTableBody', statusClass: 'status-warning', label: 'Expiring', emptyText: 'No lots expiring soon.', pagination: expiringPagination, meta: meta2 });
                 }
             });
 
             const expiredPagination = createPagination({
-                prevBtn: document.getElementById('expiredPrevPage'),
-                nextBtn: document.getElementById('expiredNextPage'),
-                infoEl: document.getElementById('expiredPaginationInfo'),
+                prevBtn:  document.getElementById('expiredPrevPage'),
+                nextBtn:  document.getElementById('expiredNextPage'),
+                infoEl:   document.getElementById('expiredPaginationInfo'),
                 jumpForm: document.getElementById('expiredPaginationJumpForm'),
-                jumpInput: document.getElementById('expiredPageJumpInput'),
-                jumpBtn: document.getElementById('expiredPageJumpBtn'),
+                jumpInput:document.getElementById('expiredPageJumpInput'),
+                jumpBtn:  document.getElementById('expiredPageJumpBtn'),
                 itemLabel: 'lot',
                 onChange: async () => {
-                    const pageParams = new URLSearchParams();
-                    pageParams.set('page', String(expiredPagination.page));
-                    pageParams.set('per_page', String(pageSize));
-                    const currentFrom = document.getElementById('expirationDateFrom')?.value;
-                    const currentTo = document.getElementById('expirationDateTo')?.value;
-                    if (currentFrom) pageParams.set('date_from', currentFrom);
-                    if (currentTo) pageParams.set('date_to', currentTo);
-                    const response = await api.request(`reports/expiration?${pageParams.toString()}`, { method: 'GET' });
-                    const nextRows = Array.isArray(response.expired && response.expired.data) ? response.expired.data : [];
-                    const nextMeta = response.expired && response.expired.meta ? response.expired.meta : { page: 1, total_pages: 1, total: nextRows.length };
-                    renderExpirationTable({ rows: nextRows, containerId: 'expiredTableBody', statusClass: 'status-danger', label: 'Expired', emptyText: 'No expired lots.', pagination: expiredPagination, meta: nextMeta, infoId: 'expiredPaginationInfo' });
+                    const pp = new URLSearchParams();
+                    pp.set('page', String(expiredPagination.page));
+                    pp.set('per_page', String(pageSize));
+                    const cf = document.getElementById('expirationDateFrom')?.value;
+                    const ct = document.getElementById('expirationDateTo')?.value;
+                    if (cf) pp.set('date_from', cf);
+                    if (ct) pp.set('date_to',   ct);
+                    const res  = await api.request(`reports/expiration?${pp.toString()}`, { method: 'GET' });
+                    const rows2 = Array.isArray(res.expired?.data) ? res.expired.data : [];
+                    const meta2 = res.expired?.meta ?? { page: 1, total_pages: 1, total: rows2.length };
+                    renderExpirationTable({ rows: rows2, containerId: 'expiredTableBody', statusClass: 'status-danger', label: 'Expired', emptyText: 'No expired lots.', pagination: expiredPagination, meta: meta2 });
                 }
             });
 
-            renderExpirationTable({ rows: expiringRows, containerId: 'expiringTableBody', statusClass: 'status-warning', label: 'Expiring', emptyText: 'No lots expiring soon.', pagination: expiringPagination, meta: expiringMeta, infoId: 'expiringPaginationInfo' });
-            renderExpirationTable({ rows: expiredRows, containerId: 'expiredTableBody', statusClass: 'status-danger', label: 'Expired', emptyText: 'No expired lots.', pagination: expiredPagination, meta: expiredMeta, infoId: 'expiredPaginationInfo' });
+            renderExpirationTable({ rows: expiringRows, containerId: 'expiringTableBody', statusClass: 'status-warning', label: 'Expiring', emptyText: 'No lots expiring soon.', pagination: expiringPagination, meta: expiringMeta });
+            renderExpirationTable({ rows: expiredRows,  containerId: 'expiredTableBody',  statusClass: 'status-danger',  label: 'Expired',  emptyText: 'No expired lots.',       pagination: expiredPagination,  meta: expiredMeta  });
+
+            // ── Charts (guarded — failure won't break tables) ──
+            try {
+                buildExpirationStatusChart(document.getElementById('expirationStatusChart'), summary);
+                buildExpirationTrendChart(document.getElementById('expirationTrendChart'), expiringRows);
+            } catch (chartErr) {
+                console.error('Expiration chart error:', chartErr);
+            }
+
         } catch (error) {
             console.error('Failed to load expiration:', error);
+            const expiringBody = document.getElementById('expiringTableBody');
+            const expiredBody  = document.getElementById('expiredTableBody');
+            if (expiringBody) expiringBody.innerHTML = '<tr><td colspan="5">Failed to load data.</td></tr>';
+            if (expiredBody)  expiredBody.innerHTML  = '<tr><td colspan="5">Failed to load data.</td></tr>';
         }
     }
 
