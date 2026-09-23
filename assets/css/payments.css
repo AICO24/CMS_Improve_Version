@@ -3573,8 +3573,10 @@ body[data-theme="dark"] .aging-badge.aging-warning {
 }
 
 .deck-close-btn {
-    width: 34px;
-    height: 34px;
+    position: static !important;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
     border-radius: 50%;
     border: 1px solid #e2e8f0;
     background: #ffffff;
@@ -3584,7 +3586,11 @@ body[data-theme="dark"] .aging-badge.aging-warning {
     justify-content: center;
     cursor: pointer;
     font-size: 0.95rem;
+    padding: 0;
+    margin: 0;
+    line-height: 1;
     transition: all 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .deck-close-btn:hover {
@@ -3685,10 +3691,26 @@ body[data-theme="dark"] .aging-badge.aging-warning {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 16px;
     padding: 14px 28px;
     background: #ffffff;
     border-top: 1px solid #e2e8f0;
     flex-shrink: 0;
+}
+
+.modal-actions-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.modal-actions-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .btn-print-clearance {
@@ -3727,12 +3749,15 @@ body[data-theme="dark"] .aging-badge.aging-warning {
     align-items: center;
     gap: 8px;
     transition: all 0.2s ease;
+    user-select: none;
+    white-space: nowrap;
 }
 
 .btn-deck-cancel:hover {
     background: #f1f5f9;
     color: #0f172a;
     border-color: #94a3b8;
+    transform: translateY(-1px);
 }
 
 .btn-approve,
@@ -3753,29 +3778,44 @@ body[data-theme="dark"] .aging-badge.aging-warning {
     gap: 6px;
     transition: all 250ms ease;
     user-select: none;
+    white-space: nowrap;
 }
 
 .btn-approve {
+    border-color: #059669;
     color: #059669;
 }
 
-.btn-approve:hover {
+.btn-approve:hover:not(:disabled) {
     background-color: #059669;
     color: #ffffff;
     box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
     transform: translateY(-1px);
 }
 
+.btn-approve:disabled,
+.btn-approve--disabled {
+    border-color: #059669 !important;
+    background-color: rgba(5, 150, 105, 0.08) !important;
+    color: #059669 !important;
+    opacity: 0.85;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
 .btn-deny {
+    border-color: #dc2626;
     color: #dc2626;
 }
 
-.btn-deny:hover {
+.btn-deny:hover:not(:disabled) {
     background-color: #dc2626;
     color: #ffffff;
     box-shadow: 0 6px 16px rgba(220, 38, 38, 0.35);
     transform: translateY(-1px);
 }
+
 
 /* Document Entry inside Proof Card */
 .document-entry {

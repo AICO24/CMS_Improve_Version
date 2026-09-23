@@ -632,18 +632,17 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             const footerActions = document.getElementById('viewModalFooterActions');
             if (footerActions) {
-                footerActions.innerHTML = `
-                    <button type="button" class="btn-print-clearance" id="printReceiptBtn">
-                        <i class="fas fa-print"></i>
-                        <span>Print Official Voucher</span>
-                    </button>
-                    ${currentUser && currentUser.role === 'admin' && payment.verification_status === 'Pending' ? `
-                        <div class="admin-verification-actions" style="display: flex; gap: 8px; align-items: center;">
-                            ${!isPayMongo ? '<button id="verifyPaymentBtn" class="btn-approve"><i class="fas fa-check"></i> Verify Payment</button>' : '<button class="btn-approve" disabled title="PayMongo payments cannot be manually verified (automated via webhook)"><i class="fas fa-lock"></i> Gateway Managed</button>'}
-                            <button id="rejectPaymentBtn" class="btn-deny"><i class="fas fa-times"></i> Reject</button>
-                        </div>
-                    ` : ''}
-                `;
+                const isPending = payment.verification_status === 'Pending';
+                const isAdmin = currentUser && currentUser.role === 'admin';
+                let verificationHtml = '';
+                if (isAdmin && isPending) {
+                    verificationHtml = !isPayMongo
+                        ? `<button type="button" id="verifyPaymentBtn" class="btn-approve"><i class="fas fa-check"></i> Verify Payment</button>`
+                        : `<button type="button" class="btn-approve btn-approve--disabled" disabled title="PayMongo payments cannot be manually verified (automated via webhook)"><i class="fas fa-lock"></i> Gateway Managed</button>`;
+                    verificationHtml += `<button type="button" id="rejectPaymentBtn" class="btn-deny"><i class="fas fa-xmark"></i> Reject</button>`;
+                }
+
+                footerActions.innerHTML = verificationHtml;
             }
 
             document.getElementById('printReceiptBtn')?.addEventListener('click', () => {
@@ -1146,7 +1145,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('openAddPayment')?.addEventListener('click', openAddModal);
     document.getElementById('closePaymentModalBtn')?.addEventListener('click', closePaymentModal);
     document.querySelector('#paymentModal .close')?.addEventListener('click', closePaymentModal);
-    document.querySelectorAll('#viewModal .close-view, #closeViewFooterBtn, #closeViewModalBtn').forEach(btn => {
+    document.querySelectorAll('#closeViewModalBtn, #viewModal .deck-close-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.getElementById('viewModal').style.display = 'none';
         });

@@ -401,7 +401,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (aiToggleCaret) aiToggleCaret.classList.toggle('is-open', !isOpen);
         });
     }
-    document.querySelectorAll('#viewModal .close-view, #closeViewModalBtn').forEach(btn => {
+    document.querySelectorAll('#closeViewModalBtn, #viewModal .deck-close-btn').forEach(btn => {
         btn.addEventListener('click', () => viewModal.style.display = 'none');
     });
     document.getElementById('openImportModal').addEventListener('click', () => openImportModal());

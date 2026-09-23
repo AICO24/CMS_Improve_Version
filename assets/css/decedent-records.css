@@ -1671,8 +1671,10 @@
 }
 
 .deck-close-btn {
-    width: 34px;
-    height: 34px;
+    position: static !important;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
     border-radius: 50%;
     border: 1px solid #e2e8f0;
     background: #ffffff;
@@ -1682,7 +1684,11 @@
     justify-content: center;
     cursor: pointer;
     font-size: 0.95rem;
+    padding: 0;
+    margin: 0;
+    line-height: 1;
     transition: all 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .deck-close-btn:hover {
