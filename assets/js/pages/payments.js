@@ -311,16 +311,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
         const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
 
-        document.querySelectorAll('.stat-card-filterable').forEach(card => card.classList.remove('active'));
+        const allCards = document.querySelectorAll('.stat-card-filterable');
+        allCards.forEach(card => {
+            card.classList.remove('active', 'is-active-filter');
+            card.setAttribute('aria-pressed', 'false');
+        });
 
+        let activeCard = null;
         if (status === 'Pending') {
-            document.getElementById('cardPendingPayments')?.classList.add('active');
+            activeCard = document.getElementById('cardPendingPayments');
         } else if (status === 'Verified') {
-            document.getElementById('cardVerifiedPayments')?.classList.add('active');
+            activeCard = document.getElementById('cardVerifiedPayments');
         } else if (dateFrom === monthStart && dateTo === monthEnd && !status) {
-            document.getElementById('cardMonthRevenue')?.classList.add('active');
+            activeCard = document.getElementById('cardMonthRevenue');
         } else if (!status && !dateFrom && !dateTo && !referenceFilterInput.value && !transactionTypeFilterSelect.value) {
-            document.getElementById('cardTotalRevenue')?.classList.add('active');
+            activeCard = document.getElementById('cardTotalRevenue');
+        }
+
+        if (activeCard) {
+            activeCard.classList.add('active', 'is-active-filter');
+            activeCard.setAttribute('aria-pressed', 'true');
         }
     }
 
@@ -1197,9 +1207,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     document.querySelectorAll('.stat-card-filterable').forEach(card => {
-        card.addEventListener('click', async () => {
+        async function triggerFilter() {
             const filterType = card.dataset.filter;
-            if (filterType === 'all') {
+            const isAlreadyActive = card.classList.contains('active') || card.classList.contains('is-active-filter');
+
+            if (filterType === 'all' || (isAlreadyActive && filterType !== 'all')) {
                 referenceFilterInput.value = '';
                 transactionTypeFilterSelect.value = '';
                 statusFilterSelect.value = '';
@@ -1218,6 +1230,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             syncStatCardActiveState();
             pagination.reset();
             await refreshAll();
+        }
+
+        card.addEventListener('click', triggerFilter);
+        card.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                await triggerFilter();
+            }
         });
     });
 

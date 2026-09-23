@@ -149,34 +149,53 @@
             </div>
             <div class="content-area">
                 <!-- Summary Statistics — at top for executive overview -->
+                <p class="section-label"><i class="fas fa-chart-pie"></i> Records Overview</p>
                 <div class="stats-row decrec-stats">
-                    <div class="stat-card accent-teal stat-card-filterable is-active-filter" data-status-filter="all" title="Click to view all records">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-folder-open"></i></span> Total Records</div>
+                    <div class="stat-card stat-card-filterable is-active-filter" data-status-filter="all" role="button" tabindex="0" title="Click to view all records" aria-pressed="true">
+                        <div class="stat-title">
+                            <span>Total Records</span>
+                            <span class="card-icon"><i class="fas fa-folder-open"></i></span>
+                        </div>
                         <div class="stat-value" id="totalCount">0</div>
                         <div class="stat-sub">Decedents on file</div>
                     </div>
-                    <div class="stat-card accent-navy stat-card-filterable" data-status-filter="no" title="Click to filter burials only">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-monument"></i></span> Burials</div>
+                    <div class="stat-card stat-card-filterable" data-status-filter="no" role="button" tabindex="0" title="Click to filter burials only" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Burials</span>
+                            <span class="card-icon"><i class="fas fa-monument"></i></span>
+                        </div>
                         <div class="stat-value" id="burialCount">0</div>
                         <div class="stat-sub">Interred</div>
                     </div>
-                    <div class="stat-card accent-amber stat-card-filterable" data-status-filter="yes" title="Click to filter cremations only">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-fire"></i></span> Cremations</div>
+                    <div class="stat-card stat-card-filterable" data-status-filter="yes" role="button" tabindex="0" title="Click to filter cremations only" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Cremations</span>
+                            <span class="card-icon"><i class="fas fa-fire"></i></span>
+                        </div>
                         <div class="stat-value" id="cremationCount">0</div>
                         <div class="stat-sub">Ashes stored</div>
                     </div>
-                    <div class="stat-card accent-blue">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-cake-candles"></i></span> Avg. Age</div>
+                    <div class="stat-card" role="button" tabindex="0" title="Average age of decedents on file">
+                        <div class="stat-title">
+                            <span>Avg. Age</span>
+                            <span class="card-icon"><i class="fas fa-cake-candles"></i></span>
+                        </div>
                         <div class="stat-value" id="avgAge">0</div>
                         <div class="stat-sub">Years old</div>
                     </div>
-                    <div class="stat-card accent-orange stat-card-filterable" data-status-filter="pending_requirements" title="Click to filter records with pending requirements / to follow">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-clock"></i></span> To Follow</div>
+                    <div class="stat-card stat-card-filterable" data-status-filter="pending_requirements" role="button" tabindex="0" title="Click to filter records with pending requirements / to follow" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>To Follow</span>
+                            <span class="card-icon"><i class="fas fa-clock"></i></span>
+                        </div>
                         <div class="stat-value" id="pendingReqCount">0</div>
                         <div class="stat-sub">Pending requirements</div>
                     </div>
-                    <div class="stat-card accent-red stat-card-filterable" data-status-filter="attention" title="Click to filter records needing attention">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span> Needs Attention</div>
+                    <div class="stat-card stat-card-filterable" data-status-filter="attention" role="button" tabindex="0" title="Click to filter records needing attention" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Needs Attention</span>
+                            <span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span>
+                        </div>
                         <div class="stat-value" id="attentionCount">0</div>
                         <div class="stat-sub">Incomplete records</div>
                     </div>

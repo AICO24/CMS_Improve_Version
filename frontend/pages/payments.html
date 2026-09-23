@@ -152,8 +152,9 @@
             </div>
                 <div class="content-area">
                 <div id="checkoutStatusAlert" class="alert-banner" style="display:none; margin-bottom:1rem;" role="alert"></div>
+                <p class="section-label"><i class="fas fa-chart-pie"></i> Financial Overview</p>
                 <div class="stats-row payment-stats">
-                    <div class="stat-card stat-card-filterable active" id="cardTotalRevenue" data-filter="all" role="button" tabindex="0" title="View all payments">
+                    <div class="stat-card stat-card-filterable is-active-filter active" id="cardTotalRevenue" data-filter="all" role="button" tabindex="0" title="View all payments" aria-pressed="true">
                         <div class="stat-title">
                             <span class="stat-title-label">Total Revenue</span>
                             <span class="card-icon"><i class="fas fa-coins"></i></span>
@@ -161,7 +162,7 @@
                         <div class="stat-value" id="totalRevenue">₱0</div>
                         <div class="stat-sub">All time collected</div>
                     </div>
-                    <div class="stat-card stat-card-filterable" id="cardMonthRevenue" data-filter="month" role="button" tabindex="0" title="Filter to this month's payments">
+                    <div class="stat-card stat-card-filterable" id="cardMonthRevenue" data-filter="month" role="button" tabindex="0" title="Filter to this month's payments" aria-pressed="false">
                         <div class="stat-title">
                             <span class="stat-title-label">This Month</span>
                             <span class="card-icon"><i class="fas fa-calendar-days"></i></span>
@@ -169,7 +170,7 @@
                         <div class="stat-value" id="monthRevenue">₱0</div>
                         <div class="stat-sub">Current month revenue</div>
                     </div>
-                    <div class="stat-card stat-card-filterable" id="cardPendingPayments" data-filter="pending" role="button" tabindex="0" title="Filter to Pending verification">
+                    <div class="stat-card stat-card-filterable" id="cardPendingPayments" data-filter="pending" role="button" tabindex="0" title="Filter to Pending verification" aria-pressed="false">
                         <div class="stat-title">
                             <span class="stat-title-label">Pending Review</span>
                             <span class="card-icon"><i class="fas fa-clock"></i></span>
@@ -177,7 +178,7 @@
                         <div class="stat-value" id="transactionCount">0</div>
                         <div class="stat-sub">Awaiting verification</div>
                     </div>
-                    <div class="stat-card stat-card-filterable" id="cardVerifiedPayments" data-filter="verified" role="button" tabindex="0" title="Filter to Verified payments">
+                    <div class="stat-card stat-card-filterable" id="cardVerifiedPayments" data-filter="verified" role="button" tabindex="0" title="Filter to Verified payments" aria-pressed="false">
                         <div class="stat-title">
                             <span class="stat-title-label">Verified Total</span>
                             <span class="card-icon"><i class="fas fa-circle-check"></i></span>

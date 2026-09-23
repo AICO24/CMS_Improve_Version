@@ -474,11 +474,12 @@ document.addEventListener('DOMContentLoaded', async function () {
                 isActive = Boolean(currentAttentionFilter);
             }
             card.classList.toggle('is-active-filter', isActive);
+            card.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
     }
 
     document.querySelectorAll('.stat-card-filterable').forEach(card => {
-        card.addEventListener('click', () => {
+        function triggerFilter() {
             const filter = card.dataset.statusFilter;
             if (filter === 'all') {
                 currentTypeFilter = 'all';
@@ -506,6 +507,14 @@ document.addEventListener('DOMContentLoaded', async function () {
             updateActiveStatCards();
             pagination.reset();
             loadRecords();
+        }
+
+        card.addEventListener('click', triggerFilter);
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                triggerFilter();
+            }
         });
     });
 
