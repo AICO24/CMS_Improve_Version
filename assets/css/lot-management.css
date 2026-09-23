@@ -235,6 +235,7 @@
 
 /* ========================================================
    EXECUTIVE 3D EMBOSSED STAT CARDS (LOT MANAGEMENT)
+   Unified System Brand Green Palette (Matches Columbarium)
    ======================================================== */
 .lotmgmt-stats {
     display: grid;
@@ -244,28 +245,31 @@
     align-items: stretch;
 }
 
-.lotmgmt-stats>.stat-card {
+.lotmgmt-stats > .stat-card {
     position: relative;
-    min-height: 124px;
+    min-height: 120px;
     height: 100%;
     padding: 16px 18px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     overflow: hidden;
-    border: 1px solid rgba(22, 50, 41, 0.20);
-    border-left: 8px solid #163229;
-    background: linear-gradient(135deg, #2c5e47 0%, #3b7055 100%);
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
     border-radius: var(--radius-lg, 14px);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
     contain: layout;
     animation: statFloat 7s ease-in-out infinite alternate;
     transition: transform 220ms cubic-bezier(0.2, 0, 0.2, 1),
-        box-shadow 220ms cubic-bezier(0.2, 0, 0.2, 1);
+        box-shadow 220ms cubic-bezier(0.2, 0, 0.2, 1),
+        outline-color 150ms ease;
     cursor: pointer;
 }
 
-.lotmgmt-stats>.stat-card::before {
+.lotmgmt-stats > .stat-card:focus-visible {
+    outline: 2px solid #34d399;
+    outline-offset: 2px;
+}
+
+.lotmgmt-stats > .stat-card::before {
     content: "";
     position: absolute;
     width: 120px;
@@ -273,51 +277,134 @@
     right: -40px;
     top: -30px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 70%);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 70%);
     pointer-events: none;
 }
 
-.lotmgmt-stats>.stat-card::after {
+.lotmgmt-stats > .stat-card::after {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 55%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 52%);
     pointer-events: none;
+    border-radius: inherit;
 }
 
-.lotmgmt-stats>.stat-card:hover {
+.lotmgmt-stats > .stat-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.14);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
 }
 
-.lotmgmt-stats>.stat-card.accent-teal {
-    border-left-color: #0f766e;
-    background: linear-gradient(135deg, #0d9488 0%, #2fb5aa 100%);
+/* Active filter state: highlighted with emerald ring (Identical to Columbarium) */
+.lotmgmt-stats > .stat-card.is-active-filter {
+    outline: 2px solid #34d399 !important;
+    outline-offset: 1px;
+    box-shadow: 0 0 18px rgba(52, 211, 153, 0.42), 0 14px 30px rgba(15, 23, 42, 0.24) !important;
+    transform: translateY(-3px);
 }
 
-.lotmgmt-stats>.stat-card.accent-emerald {
-    border-left-color: #047857;
-    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+.lotmgmt-stats > .stat-card:hover .card-icon,
+.lotmgmt-stats > .stat-card:focus-visible .card-icon,
+.lotmgmt-stats > .stat-card.is-active-filter .card-icon {
+    background: #34d399;
+    color: #06170f;
+    border-color: #34d399;
 }
 
-.lotmgmt-stats>.stat-card.accent-amber {
-    border-left-color: #92400e;
-    background: linear-gradient(135deg, #b45309 0%, #d08a28 100%);
+.lotmgmt-stats > .stat-card .stat-title,
+.lotmgmt-stats > .stat-card .stat-value,
+.lotmgmt-stats > .stat-card .stat-sub {
+    position: relative;
+    z-index: 1;
 }
 
-.lotmgmt-stats>.stat-card.accent-navy {
-    border-left-color: #2b3658;
-    background: linear-gradient(135deg, #2b3658 0%, #465376 100%);
+/* Stat title — label left, icon right */
+.lotmgmt-stats > .stat-card .stat-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    color: #ffffff;
+    font-size: 0.82rem;
+    line-height: 1.25;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+    margin-bottom: 0;
 }
 
-.lotmgmt-stats>.stat-card.accent-red {
-    border-left-color: #991b1b;
-    background: linear-gradient(135deg, #dc2626 0%, #e85757 100%);
+/* Icon pill — mirrors columbarium & admin dashboard .card-icon */
+.lotmgmt-stats > .stat-card .card-icon,
+.lotmgmt-stats > .stat-card .stat-title .card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    margin-left: auto;
+    order: 2;
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: #ffffff;
+    font-size: 13px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.lotmgmt-stats>.stat-card.is-active-filter {
-    box-shadow: 0 0 0 3px #ffffff, 0 0 0 5px var(--color-primary-500, #10b981), 0 16px 32px rgba(15, 23, 42, 0.20);
-    transform: translateY(-3px) scale(1.02);
+/* Stat value — serif display typography */
+.lotmgmt-stats > .stat-card .stat-value {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    color: #ffffff;
+    font-family: var(--font-display, 'Fraunces', serif);
+    font-size: clamp(1.45rem, 1.8vw, 1.85rem);
+    font-weight: 900;
+    line-height: 1.15;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    margin-top: 6px;
+    letter-spacing: -0.02em;
+}
+
+/* Stat sub */
+.lotmgmt-stats > .stat-card .stat-sub {
+    margin-top: 5px;
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.25;
+    min-height: 18px;
+    opacity: 0.95;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+/* Unified System Brand Green Palette (Mirrors Columbarium & Manage Bookings) */
+.lotmgmt-stats > .stat-card:nth-child(1) {
+    border-left: 3px solid #06170f;
+    background: linear-gradient(135deg, #133327 0%, #214c38 100%);
+}
+
+.lotmgmt-stats > .stat-card:nth-child(2) {
+    border-left: 3px solid #081d13;
+    background: linear-gradient(135deg, #173d2d 0%, #265640 100%);
+}
+
+.lotmgmt-stats > .stat-card:nth-child(3) {
+    border-left: 3px solid #06170f;
+    background: linear-gradient(135deg, #133327 0%, #234f3b 100%);
+}
+
+.lotmgmt-stats > .stat-card:nth-child(4) {
+    border-left: 3px solid #081d13;
+    background: linear-gradient(135deg, #163a2b 0%, #25543d 100%);
+}
+
+.lotmgmt-stats > .stat-card:nth-child(5) {
+    border-left: 3px solid #06170f;
+    background: linear-gradient(135deg, #143528 0%, #224e39 100%);
 }
 
 @keyframes statFloat {
@@ -332,53 +419,6 @@
     100% {
         transform: translateY(0px);
     }
-}
-
-.lotmgmt-stats>.stat-card .stat-title,
-.lotmgmt-stats>.stat-card .stat-value,
-.lotmgmt-stats>.stat-card .stat-sub {
-    position: relative;
-    z-index: 1;
-}
-
-.lotmgmt-stats>.stat-card .stat-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.80rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.92);
-    margin-bottom: 6px;
-}
-
-.lotmgmt-stats>.stat-card .card-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: var(--radius-sm, 6px);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.20);
-    color: #ffffff;
-    font-size: 13px;
-    flex: 0 0 auto;
-}
-
-.lotmgmt-stats>.stat-card .stat-value {
-    font-size: 1.85rem;
-    font-weight: 800;
-    line-height: 1.15;
-    color: #ffffff;
-    text-shadow: 0 2px 4px rgba(15, 23, 42, 0.20);
-    margin: 4px 0 2px;
-}
-
-.lotmgmt-stats>.stat-card .stat-sub {
-    font-size: 0.76rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.85);
 }
 
 /* ========================================================

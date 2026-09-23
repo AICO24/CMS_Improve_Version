@@ -88,37 +88,48 @@
             <div class="content-area">
                 <!-- ── Executive Summary Statistics — 5 Embossed Cards ── -->
                 <div class="stats-row lotmgmt-stats">
-                    <div class="stat-card accent-teal stat-card-filterable" data-status-filter="" role="button"
+                    <div class="stat-card stat-card-filterable is-active-filter" data-status-filter="" role="button"
                         tabindex="0" aria-label="Show all lots">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-monument"></i></span> Total
-                            Lots</div>
+                        <div class="stat-title">
+                            Total Lots
+                            <span class="card-icon"><i class="fas fa-monument"></i></span>
+                        </div>
                         <div class="stat-value" id="totalCount">0</div>
                         <div class="stat-sub">All plots &amp; niches</div>
                     </div>
-                    <div class="stat-card accent-emerald stat-card-filterable" data-status-filter="Available"
+                    <div class="stat-card stat-card-filterable" data-status-filter="Available"
                         role="button" tabindex="0" aria-label="Filter lots by Available status">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-check-circle"></i></span>
-                            Available</div>
+                        <div class="stat-title">
+                            Available
+                            <span class="card-icon"><i class="fas fa-check-circle"></i></span>
+                        </div>
                         <div class="stat-value" id="availableCount">0</div>
                         <div class="stat-sub">Ready for burial / assignment</div>
                     </div>
-                    <div class="stat-card accent-amber stat-card-filterable" data-status-filter="Reserved" role="button"
+                    <div class="stat-card stat-card-filterable" data-status-filter="Reserved" role="button"
                         tabindex="0" aria-label="Filter lots by Reserved status">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-clock"></i></span> Reserved
+                        <div class="stat-title">
+                            Reserved
+                            <span class="card-icon"><i class="fas fa-clock"></i></span>
                         </div>
                         <div class="stat-value" id="reservedCount">0</div>
                         <div class="stat-sub">Pending confirmation / burial</div>
                     </div>
-                    <div class="stat-card accent-navy stat-card-filterable" data-status-filter="Occupied" role="button"
+                    <div class="stat-card stat-card-filterable" data-status-filter="Occupied" role="button"
                         tabindex="0" aria-label="Filter lots by Occupied status">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-bed"></i></span> Occupied</div>
+                        <div class="stat-title">
+                            Occupied
+                            <span class="card-icon"><i class="fas fa-bed"></i></span>
+                        </div>
                         <div class="stat-value" id="occupiedCount">0</div>
                         <div class="stat-sub">Interred decedents</div>
                     </div>
-                    <div class="stat-card accent-red stat-card-filterable" data-status-filter="Expired" role="button"
+                    <div class="stat-card stat-card-filterable" data-status-filter="Expired" role="button"
                         tabindex="0" aria-label="Filter lots by Expired status">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-hourglass-half"></i></span>
-                            Expired</div>
+                        <div class="stat-title">
+                            Expired
+                            <span class="card-icon"><i class="fas fa-hourglass-half"></i></span>
+                        </div>
                         <div class="stat-value" id="expiredCount">0</div>
                         <div class="stat-sub">Lapsed burial leases</div>
                     </div>
