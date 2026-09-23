@@ -30,7 +30,10 @@ document.addEventListener('DOMContentLoaded', async function () {
         logoutBtn.addEventListener('click', () => api.logout());
     }
 
-    let currentTab = 'all';
+    // Parse URL params for initial state / deep-links
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialFilter = urlParams.get('filter') || urlParams.get('tab');
+    let currentTab = (initialFilter && ['all', 'expiring', 'expired', 'renewed', 'exhumation'].includes(initialFilter)) ? initialFilter : 'all';
     const perPage = 10;
     let cachedRecords = [];
 
@@ -996,8 +999,16 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Active stat card & tab synchronization
     function updateActiveStatCards() {
         document.querySelectorAll('.expmon-stats > .stat-card').forEach((card) => {
-            const tab = card.getAttribute('data-tab');
-            const isActive = currentTab === tab;
+            const href = card.getAttribute('data-href') || '';
+            let isActive = false;
+            if (href === 'expiration-monitoring.html') {
+                isActive = currentTab === 'all';
+            } else if (href.includes('filter=')) {
+                const match = href.match(/filter=([^&]+)/);
+                if (match) {
+                    isActive = currentTab === match[1];
+                }
+            }
             card.classList.toggle('is-active-filter', isActive);
             card.setAttribute('aria-pressed', String(isActive));
         });
@@ -1022,25 +1033,33 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     });
 
-    // Quick filter via stat cards
-    document.querySelectorAll('.expmon-stats > .stat-card').forEach(card => {
-        const tab = card.getAttribute('data-tab');
-        if (!tab) return;
+    // ── INTERACTIVE DIRECT MODULE NAVIGATION (MIRRORS ADMIN DASHBOARD) ────
+    document.querySelectorAll('.expmon-stats > .stat-card').forEach((card) => {
+        const targetHref = card.getAttribute('data-href');
+        if (!targetHref || card.dataset.navBound) return;
+        card.dataset.navBound = 'true';
 
-        function handleCardAction() {
-            const targetTab = (currentTab === tab && tab !== 'all') ? 'all' : tab;
-            switchExpirationTab(targetTab);
+        function triggerCardAction() {
+            card.classList.add('is-active-filter');
+            card.setAttribute('aria-pressed', 'true');
+            window.location.href = targetHref;
         }
 
-        card.addEventListener('click', handleCardAction);
+        card.addEventListener('click', triggerCardAction);
         card.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                handleCardAction();
+                triggerCardAction();
             }
         });
     });
 
+    // Initial state reflection
+    document.querySelectorAll('.records-tab-btn').forEach(b => {
+        const isMatch = (b.dataset.tab || 'all') === currentTab;
+        b.classList.toggle('active', isMatch);
+        b.setAttribute('aria-selected', isMatch ? 'true' : 'false');
+    });
     updateActiveStatCards();
 
     // Reset filters button

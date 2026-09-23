@@ -172,7 +172,7 @@ class BookingController {
 
         [$scheduleExceptions, $cremationExceptions] = $this->getOpenExceptionIds();
 
-        $serviceType = strtolower(trim((string) ($filters['service_type'] ?? 'all')));
+        $serviceType = strtolower(trim((string) ($filters['service_type'] ?? ($filters['service'] ?? 'all'))));
         $page = !empty($pagination['page']) ? max(1, (int) $pagination['page']) : 1;
         $perPage = !empty($pagination['per_page']) ? max(1, min(100, (int) $pagination['per_page'])) : 10;
 

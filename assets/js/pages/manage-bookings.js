@@ -16,17 +16,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // AI Assistant mount
-    initAiAssistant({
-        mountSelector: '#aiAssistantMount',
-        context: { scope: 'module', module: 'Schedule' },
-        greeting: "Hello! I'm your AI assistant for Cemetery Bookings & Operations. How can I help you manage burials or cremations today?",
-        suggestions: [
-            { icon: 'fa-list-check', label: 'Pending bookings', question: 'How many bookings are currently pending across burials and cremations?' },
-            { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions or capacity issues I need to review?' },
-            { icon: 'fa-hourglass-half', label: 'At-risk bookings', question: 'Which pending bookings are at risk of being auto-cancelled?' },
-            { icon: 'fa-circle-question', label: 'How does auto-confirm work?', question: 'How does payment-triggered auto-confirmation work for both burials and cremations?' },
-        ],
-    });
+    if (typeof initAiAssistant === 'function' && document.querySelector('#aiAssistantMount')) {
+        initAiAssistant({
+            mountSelector: '#aiAssistantMount',
+            context: { scope: 'module', module: 'Schedule' },
+            greeting: "Hello! I'm your AI assistant for Cemetery Bookings & Operations. How can I help you manage burials or cremations today?",
+            suggestions: [
+                { icon: 'fa-list-check', label: 'Pending bookings', question: 'How many bookings are currently pending across burials and cremations?' },
+                { icon: 'fa-triangle-exclamation', label: 'Any exceptions?', question: 'Are there any open exceptions or capacity issues I need to review?' },
+                { icon: 'fa-hourglass-half', label: 'At-risk bookings', question: 'Which pending bookings are at risk of being auto-cancelled?' },
+                { icon: 'fa-circle-question', label: 'How does auto-confirm work?', question: 'How does payment-triggered auto-confirmation work for both burials and cremations?' },
+            ],
+        });
+    }
 
     // Shared UI helpers
     const { escapeHtml, buildStatusBadge, debounce, renderFilterChips } = window.reservationUI;
@@ -117,17 +119,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     // ── TAB SWITCHING ──────────────────────────────────────────
     function updateActiveStatCards() {
         document.querySelectorAll('.bookings-stats .stat-card').forEach((card) => {
-            const action = card.getAttribute('data-action');
+            const action = card.getAttribute('data-action') || '';
+            const href = card.getAttribute('data-href') || '';
             let isActive = false;
-            if (action === 'all') {
+            if (action === 'all' || href === 'manage-bookings.html') {
                 isActive = currentTab === 'all' && !currentStatus && !awaitingReviewOnly;
-            } else if (action === 'burial') {
-                isActive = currentTab === 'burial';
-            } else if (action === 'cremation') {
-                isActive = currentTab === 'cremation';
-            } else if (action === 'completed') {
+            } else if (action === 'burial' || href.includes('service=burial')) {
+                isActive = currentTab === 'burial' && !currentStatus && !awaitingReviewOnly;
+            } else if (action === 'cremation' || href.includes('service=cremation')) {
+                isActive = currentTab === 'cremation' && !currentStatus && !awaitingReviewOnly;
+            } else if (action === 'completed' || href.includes('status=Completed')) {
                 isActive = currentStatus === 'Completed';
-            } else if (action === 'review') {
+            } else if (action === 'review' || href.includes('awaiting_confirmation') || href.includes('exceptions.html')) {
                 isActive = Boolean(awaitingReviewOnly);
             }
             card.classList.toggle('is-active-filter', isActive);
@@ -143,7 +146,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Update URL query state without full page reload
         const newUrl = new URL(window.location);
-        newUrl.searchParams.set('service', tab);
+        if (tab === 'all') {
+            newUrl.searchParams.delete('service');
+        } else {
+            newUrl.searchParams.set('service', tab);
+        }
         window.history.replaceState({}, '', newUrl);
 
         updateActiveStatCards();
@@ -1160,26 +1167,69 @@ document.addEventListener('DOMContentLoaded', async function() {
         await loadAndRenderBookings();
     });
 
-    // ── QUICK FILTER VIA STAT CARDS ────────────────────────────
+    // ── STAT CARD INTERACTION & FILTERING (MIRRORS ADMIN DASHBOARD & QUICK FILTER) ────
     document.querySelectorAll('.bookings-stats .stat-card').forEach((card) => {
-        const action = card.getAttribute('data-action');
-        if (!action) return;
+        const action = card.getAttribute('data-action') || '';
+        if (card.dataset.navBound) return;
+        card.dataset.navBound = 'true';
 
-        async function handleCardAction() {
+        async function handleCardAction(e) {
+            if (e) e.preventDefault();
+
             if (action === 'all') {
+                currentTab = 'all';
+                currentStatus = '';
+                statusFilter.value = '';
+                statusFilter.disabled = false;
+                searchQuery.value = '';
+                currentQuery = '';
                 awaitingReviewOnly = false;
                 if (toggleAwaitingBtn) {
                     toggleAwaitingBtn.checked = false;
                     toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
                 }
-                statusFilter.disabled = false;
-                statusFilter.value = '';
-                currentStatus = '';
-                setActiveTab('all');
+                tabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === 'all'));
+                const newUrl = new URL(window.location.href.split('?')[0]);
+                window.history.pushState({}, '', newUrl);
+                updateActiveStatCards();
+                pagination.reset();
+                await loadAndRenderBookings();
             } else if (action === 'burial') {
-                setActiveTab(currentTab === 'burial' ? 'all' : 'burial');
+                const nextTab = (currentTab === 'burial' && !currentStatus && !awaitingReviewOnly) ? 'all' : 'burial';
+                currentTab = nextTab;
+                currentStatus = '';
+                statusFilter.value = '';
+                statusFilter.disabled = false;
+                awaitingReviewOnly = false;
+                if (toggleAwaitingBtn) {
+                    toggleAwaitingBtn.checked = false;
+                    toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+                }
+                tabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === nextTab));
+                const newUrl = new URL(window.location.href.split('?')[0]);
+                if (nextTab !== 'all') newUrl.searchParams.set('service', nextTab);
+                window.history.pushState({}, '', newUrl);
+                updateActiveStatCards();
+                pagination.reset();
+                await loadAndRenderBookings();
             } else if (action === 'cremation') {
-                setActiveTab(currentTab === 'cremation' ? 'all' : 'cremation');
+                const nextTab = (currentTab === 'cremation' && !currentStatus && !awaitingReviewOnly) ? 'all' : 'cremation';
+                currentTab = nextTab;
+                currentStatus = '';
+                statusFilter.value = '';
+                statusFilter.disabled = false;
+                awaitingReviewOnly = false;
+                if (toggleAwaitingBtn) {
+                    toggleAwaitingBtn.checked = false;
+                    toggleAwaitingBtn.setAttribute('aria-pressed', 'false');
+                }
+                tabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === nextTab));
+                const newUrl = new URL(window.location.href.split('?')[0]);
+                if (nextTab !== 'all') newUrl.searchParams.set('service', nextTab);
+                window.history.pushState({}, '', newUrl);
+                updateActiveStatCards();
+                pagination.reset();
+                await loadAndRenderBookings();
             } else if (action === 'completed') {
                 if (currentStatus === 'Completed') {
                     currentStatus = '';
@@ -1196,6 +1246,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                         statusFilter.disabled = false;
                     }
                 }
+                const newUrl = new URL(window.location.href.split('?')[0]);
+                if (currentTab !== 'all') newUrl.searchParams.set('service', currentTab);
+                if (currentStatus) newUrl.searchParams.set('status', currentStatus);
+                window.history.pushState({}, '', newUrl);
                 updateActiveStatCards();
                 pagination.reset();
                 await loadAndRenderBookings();
@@ -1206,6 +1260,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                     toggleAwaitingBtn.setAttribute('aria-pressed', String(awaitingReviewOnly));
                 }
                 statusFilter.disabled = awaitingReviewOnly;
+                if (awaitingReviewOnly) {
+                    currentStatus = '';
+                    statusFilter.value = '';
+                }
+                const newUrl = new URL(window.location.href.split('?')[0]);
+                if (currentTab !== 'all') newUrl.searchParams.set('service', currentTab);
+                if (awaitingReviewOnly) newUrl.searchParams.set('awaiting_confirmation', '1');
+                window.history.pushState({}, '', newUrl);
                 updateActiveStatCards();
                 pagination.reset();
                 await loadAndRenderBookings();
@@ -1216,7 +1278,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         card.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                handleCardAction();
+                handleCardAction(e);
             }
         });
     });

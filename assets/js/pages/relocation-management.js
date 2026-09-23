@@ -82,6 +82,27 @@ document.addEventListener('DOMContentLoaded', async function() {
     let currentQuery = '';
     let currentStatusFilter = 'all';
     let currentAttentionFilter = false;
+
+    // Parse URL params for deep-linking (e.g. from admin dashboard or stat cards)
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialStatus = urlParams.get('status');
+    const initialAttention = urlParams.get('attention');
+    const initialQuery = urlParams.get('q');
+    if (initialQuery) {
+        currentQuery = initialQuery;
+        if (searchInput) searchInput.value = initialQuery;
+    }
+    if (initialAttention === '1' || initialAttention === 'true') {
+        currentAttentionFilter = true;
+        if (attentionFilter) attentionFilter.checked = true;
+    } else if (initialStatus) {
+        const lower = initialStatus.toLowerCase();
+        if (['pending', 'approved', 'completed'].includes(lower)) {
+            currentTab = lower;
+            currentStatusFilter = initialStatus;
+            if (statusFilter) statusFilter.value = initialStatus;
+        }
+    }
     let cachedRequests = [];
     let cachedDecedents = [];
     let cachedLots = [];
@@ -205,14 +226,17 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function updateActiveStatCards() {
         document.querySelectorAll('.reloc-stats > .stat-card').forEach((card) => {
-            const tab = card.getAttribute('data-tab');
+            const href = card.getAttribute('data-href') || '';
             let isActive = false;
-            if (tab === 'attention') {
+            if (href.includes('entity_type=Relocation')) {
                 isActive = Boolean(currentAttentionFilter);
-            } else if (tab === 'all') {
+            } else if (href === 'relocation-management.html') {
                 isActive = currentTab === 'all' && currentStatusFilter === 'all' && !currentAttentionFilter;
-            } else {
-                isActive = currentTab === tab && !currentAttentionFilter;
+            } else if (href.includes('status=')) {
+                const match = href.match(/status=([^&]+)/);
+                if (match) {
+                    isActive = currentStatusFilter.toLowerCase() === match[1].toLowerCase() && !currentAttentionFilter;
+                }
             }
             card.classList.toggle('is-active-filter', isActive);
             card.setAttribute('aria-pressed', String(isActive));
@@ -297,34 +321,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    // ── QUICK FILTER VIA STAT CARDS ────────────────────────────
+    // ── INTERACTIVE DIRECT MODULE NAVIGATION (MIRRORS ADMIN DASHBOARD) ────
     document.querySelectorAll('.reloc-stats > .stat-card').forEach((card) => {
-        const tab = card.getAttribute('data-tab');
-        if (!tab) return;
+        const targetHref = card.getAttribute('data-href');
+        if (!targetHref || card.dataset.navBound) return;
+        card.dataset.navBound = 'true';
 
-        function handleCardAction() {
-            if (tab === 'attention') {
-                attentionFilter.checked = !currentAttentionFilter;
-                currentAttentionFilter = attentionFilter.checked;
-                updateActiveStatCards();
-                renderActiveFilterChips();
-                pagination.reset();
-                loadAndRenderRequests();
-            } else {
-                if (currentAttentionFilter) {
-                    attentionFilter.checked = false;
-                    currentAttentionFilter = false;
-                }
-                const targetTab = (currentTab === tab && tab !== 'all') ? 'all' : tab;
-                switchTab(targetTab);
-            }
+        function triggerCardAction() {
+            card.classList.add('is-active-filter');
+            card.setAttribute('aria-pressed', 'true');
+            window.location.href = targetHref;
         }
 
-        card.addEventListener('click', handleCardAction);
+        card.addEventListener('click', triggerCardAction);
         card.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                handleCardAction();
+                triggerCardAction();
             }
         });
     });
