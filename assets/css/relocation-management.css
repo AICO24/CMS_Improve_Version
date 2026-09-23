@@ -797,7 +797,7 @@
     border: 1px solid rgba(44, 94, 71, 0.16);
 }
 
-/* Inner table-container inside chart-card */
+/* Inner table-container inside chart-card (Zero Horizontal Scroll Architecture) */
 .chart-card .table-container {
     background: transparent;
     border-radius: 0;
@@ -805,35 +805,100 @@
     border: none;
     padding: 0;
     overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(44, 94, 71, 0.25) transparent;
+}
+
+.chart-card .table-container::-webkit-scrollbar {
+    height: 6px;
+}
+
+.chart-card .table-container::-webkit-scrollbar-track {
+    background: rgba(44, 94, 71, 0.04);
+    border-radius: 999px;
+}
+
+.chart-card .table-container::-webkit-scrollbar-thumb {
+    background: rgba(44, 94, 71, 0.25);
+    border-radius: 999px;
+}
+
+.chart-card .table-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(44, 94, 71, 0.45);
 }
 
 .chart-card .data-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 820px;
+    min-width: 0;
+    table-layout: auto;
 }
 
 .chart-card .data-table thead th {
     background: rgba(44, 94, 71, 0.06);
     color: var(--color-primary-800, #163229);
-    font-size: 0.76rem;
+    font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     border-bottom: 2px solid rgba(44, 94, 71, 0.14);
-    padding: 12px 14px;
+    padding: 10px 8px;
     white-space: nowrap;
 }
 
 .chart-card .data-table tbody td {
-    padding: 12px 14px;
-    font-size: 0.85rem;
+    padding: 9px 8px;
+    font-size: 0.83rem;
     border-bottom: 1px solid rgba(44, 94, 71, 0.06);
     vertical-align: middle;
 }
 
 .chart-card .data-table tbody tr:hover {
     background: rgba(44, 94, 71, 0.04);
+}
+
+/* ── Column Sizing & Proportions (Zero Horizontal Scrollbar Guarantee) ── */
+.chart-card .col-req-id {
+    width: 75px;
+    white-space: nowrap;
+}
+
+.chart-card .col-decedent {
+    min-width: 115px;
+    max-width: 160px;
+    overflow: hidden;
+}
+
+.chart-card .col-route {
+    min-width: 145px;
+    max-width: 195px;
+    overflow: hidden;
+}
+
+.chart-card .col-reason {
+    min-width: 95px;
+    max-width: 145px;
+    overflow: hidden;
+}
+
+.chart-card .col-status {
+    width: 95px;
+    min-width: 95px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.chart-card .col-requester {
+    min-width: 85px;
+    max-width: 125px;
+    overflow: hidden;
+}
+
+.chart-card .col-actions {
+    width: 105px;
+    min-width: 105px;
+    text-align: right;
+    white-space: nowrap;
 }
 
 /* Docked pagination controls inside .chart-card */
@@ -863,12 +928,12 @@
     align-items: center;
     font-family: var(--font-mono, 'JetBrains Mono', 'Courier New', monospace);
     font-weight: 700;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     color: #0f766e;
     background: rgba(15, 118, 110, 0.08);
     border: 1px solid rgba(15, 118, 110, 0.22);
-    padding: 3px 8px;
-    border-radius: 6px;
+    padding: 2px 7px;
+    border-radius: 5px;
     letter-spacing: 0.02em;
     white-space: nowrap;
 }
@@ -877,20 +942,22 @@
 .decedent-cell {
     display: flex;
     align-items: center;
-    gap: 10px;
-    min-width: 160px;
+    gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .decedent-avatar {
-    width: 34px;
-    height: 34px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     background: linear-gradient(135deg, rgba(44, 94, 71, 0.12), rgba(15, 118, 110, 0.18));
     color: #163229;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
+    font-size: 11px;
     flex-shrink: 0;
     border: 1px solid rgba(44, 94, 71, 0.16);
 }
@@ -899,100 +966,107 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .decedent-name {
-    font-size: 0.88rem;
+    font-size: 0.83rem;
     font-weight: 700;
     color: var(--color-text, #1e293b);
     line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .decedent-meta {
-    font-size: 0.74rem;
+    font-size: 0.70rem;
     color: var(--color-text-muted, #64748b);
     display: inline-flex;
     align-items: center;
     gap: 3px;
-}
-
-/* ── Visual Transfer Route Badge ── */
-.transfer-route-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 10px;
-    background: rgba(241, 245, 249, 0.85);
-    border: 1px solid rgba(203, 213, 225, 0.8);
-    border-radius: 8px;
     white-space: nowrap;
-    transition: all 0.2s ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.transfer-route-badge:hover {
-    background: #ffffff;
-    border-color: #cbd5e1;
-    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.06);
+/* ── Visual Transfer Route Cell (Stacked Route & Section Architecture) ── */
+.transfer-route-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
 }
 
-.route-point {
+.route-chips-row {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 0.80rem;
-    padding: 3px 7px;
-    border-radius: 5px;
+    gap: 6px;
+    white-space: nowrap;
 }
 
-.route-point.from {
-    background: rgba(226, 232, 240, 0.6);
-    color: #475569;
-}
-
-.route-point.to {
-    background: rgba(16, 185, 129, 0.12);
-    color: #047857;
+.route-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.76rem;
     font-weight: 700;
-    border: 1px solid rgba(16, 185, 129, 0.20);
+    padding: 2px 7px;
+    border-radius: 5px;
+    white-space: nowrap;
 }
 
-.route-point i {
+.route-chip.from {
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+}
+
+.route-chip.from i {
+    color: #64748b;
+    font-size: 10px;
+}
+
+.route-arrow-icon {
+    color: #059669;
     font-size: 11px;
 }
 
-.route-lot {
-    font-weight: 700;
+.route-chip.to {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
-.route-section {
-    font-size: 0.72rem;
-    opacity: 0.85;
+.route-chip.to i {
+    color: #059669;
+    font-size: 10px;
 }
 
-.route-arrow {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #0f766e;
-    font-size: 12px;
-    animation: arrowNudge 2.5s infinite ease-in-out;
-}
-
-@keyframes arrowNudge {
-    0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(2px); }
+.route-sub-section {
+    font-size: 0.70rem;
+    color: var(--color-text-muted, #64748b);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    display: block;
+    line-height: 1.25;
 }
 
 /* ── Reason Cell ── */
 .reason-cell {
-    max-width: 170px;
+    max-width: 135px;
 }
 
 .reason-text {
-    display: inline-block;
+    display: block;
     color: var(--color-text-muted, #475569);
-    font-size: 0.82rem;
-    line-height: 1.35;
+    font-size: 0.78rem;
+    line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1004,16 +1078,16 @@
     display: inline-flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+    gap: 3px;
 }
 
 .status-badge {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 3px 10px;
+    gap: 4px;
+    padding: 2px 7px;
     border-radius: 999px;
-    font-size: 0.76rem;
+    font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.02em;
     white-space: nowrap;
@@ -1043,8 +1117,8 @@
     background: rgba(220, 38, 38, 0.10);
     color: #dc2626;
     border: 1px solid rgba(220, 38, 38, 0.25);
-    font-size: 0.70rem;
-    padding: 2px 7px;
+    font-size: 0.68rem;
+    padding: 2px 5px;
     border-radius: 4px;
     font-weight: 700;
     animation: pulseAttention 2s infinite ease-in-out;
@@ -1060,46 +1134,51 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    min-width: 130px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .requester-name {
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     font-weight: 600;
     color: var(--color-text, #1e293b);
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .requester-name i {
     color: var(--color-primary-600, #0f766e);
-    font-size: 12px;
+    font-size: 11px;
 }
 
 .requester-date {
-    font-size: 0.74rem;
+    font-size: 0.70rem;
     color: var(--color-text-muted, #64748b);
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
+    white-space: nowrap;
 }
 
 .requester-date i {
-    font-size: 10px;
+    font-size: 9px;
 }
 
-/* ── Row Action Buttons (Icon-only: View, Edit, Delete) ── */
+/* ── Row Action Buttons (Icon-only: View, Edit, Delete - 30x30 Compact Animated) ── */
 .action-buttons {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
+    justify-content: flex-end;
+    gap: 4px;
 }
 
 .btn-action-icon {
-    width: 36px;
-    height: 36px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
@@ -1107,14 +1186,14 @@
     cursor: pointer;
     border: 1px solid transparent;
     transition: all 0.22s cubic-bezier(0.2, 0, 0.2, 1);
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
     background: #ffffff;
     padding: 0;
     position: relative;
 }
 
 .btn-action-icon i {
-    font-size: 14px;
+    font-size: 12px;
     transition: transform 0.22s ease;
 }
 
@@ -1129,12 +1208,12 @@
     background: #2563eb;
     color: #ffffff;
     border-color: #2563eb;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.32);
+    transform: translateY(-2px) scale(1.08);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
 }
 
 .btn-action-icon.btn-view:hover i {
-    transform: scale(1.18);
+    transform: scale(1.15);
 }
 
 /* 2. Edit Button (Amber) */
@@ -1148,8 +1227,8 @@
     background: #f59e0b;
     color: #ffffff;
     border-color: #f59e0b;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(245, 158, 11, 0.32);
+    transform: translateY(-2px) scale(1.08);
+    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.35);
 }
 
 .btn-action-icon.btn-edit-row:hover i {
@@ -1167,8 +1246,8 @@
     background: #dc2626;
     color: #ffffff;
     border-color: #dc2626;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(220, 38, 38, 0.32);
+    transform: translateY(-2px) scale(1.08);
+    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.35);
 }
 
 .btn-action-icon.btn-delete-row:hover i {
@@ -1904,29 +1983,29 @@
     flex-shrink: 0;
 }
 
-/* ── Hero Profile Card ── */
+/* ── Hero Profile Card (Compact Executive Layout) ── */
 .view-hero-card {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
     background: linear-gradient(135deg, rgba(44, 94, 71, 0.08) 0%, rgba(37, 99, 235, 0.04) 100%);
     border: 1px solid rgba(44, 94, 71, 0.18);
-    border-radius: var(--radius-md, 12px);
-    padding: 16px 20px;
-    margin-bottom: 16px;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
 }
 
 .view-hero-avatar {
-    width: 54px;
-    height: 54px;
-    border-radius: 14px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
     background: #2c5e47;
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
-    box-shadow: 0 4px 12px rgba(44, 94, 71, 0.25);
+    font-size: 1.05rem;
+    box-shadow: 0 2px 8px rgba(44, 94, 71, 0.22);
     flex-shrink: 0;
 }
 
@@ -1940,12 +2019,12 @@
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
 }
 
 .view-decedent-name {
     margin: 0;
-    font-size: 1.30rem;
+    font-size: 1.05rem;
     font-weight: 800;
     color: var(--color-text, #1e293b);
     letter-spacing: -0.01em;
@@ -1955,16 +2034,16 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
 }
 
 .view-hero-route {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.84rem;
+    gap: 6px;
+    font-size: 0.78rem;
     color: var(--color-text-muted, #64748b);
-    margin-top: 6px;
+    margin-top: 4px;
     flex-wrap: wrap;
 }
 
@@ -1972,136 +2051,158 @@
 .route-pill-dest {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     background: #ffffff;
     border: 1px solid rgba(44, 94, 71, 0.22);
-    padding: 3px 9px;
-    border-radius: 6px;
+    padding: 2px 7px;
+    border-radius: 5px;
     font-weight: 700;
     color: var(--color-text, #1e293b);
-    font-size: 0.78rem;
+    font-size: 0.74rem;
 }
 
 .route-pill-arrow {
     color: #2c5e47;
-    font-size: 0.85rem;
+    font-size: 0.78rem;
 }
 
 .view-lifespan-pill {
     background: rgba(44, 94, 71, 0.12);
     color: #2c5e47;
     font-weight: 700;
-    font-size: 0.74rem;
-    padding: 3px 9px;
+    font-size: 0.70rem;
+    padding: 2px 7px;
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
 }
 
-/* ── 2-Column Info Grid ── */
-.view-details-grid {
+/* ── Compact Executive Data Grid (Zero-Scroll Structure) ── */
+.view-data-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-    margin-bottom: 16px;
+    gap: 8px 10px;
+    margin-bottom: 10px;
 }
 
 @media (max-width: 640px) {
-    .view-details-grid {
+    .view-data-grid {
         grid-template-columns: 1fr;
     }
 }
 
-.view-info-card {
+.view-data-item {
     background: var(--color-surface, #ffffff);
-    border: 1px solid var(--color-border, #e2e8f0);
-    border-radius: var(--radius-md, 12px);
-    overflow: hidden;
+    border: 1px solid rgba(44, 94, 71, 0.14);
+    border-radius: 8px;
+    padding: 8px 12px;
     display: flex;
     flex-direction: column;
+    gap: 3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-.view-card-header {
-    background: rgba(44, 94, 71, 0.05);
-    border-bottom: 1px solid var(--color-border, #e2e8f0);
-    padding: 9px 14px;
+.view-data-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.view-data-label {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.82rem;
+    gap: 6px;
+    font-size: 0.70rem;
     font-weight: 700;
-    color: #1e4533;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted, #64748b);
 }
 
-.view-card-header i {
+.view-data-label i {
     color: #2c5e47;
-    font-size: 0.9rem;
+    font-size: 0.75rem;
 }
 
-.view-card-body {
-    padding: 12px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    flex: 1;
+.view-data-value {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--color-text, #1e293b);
 }
 
-.view-prop-row {
+.view-data-value .sec-hint {
+    font-weight: 500;
+    color: #64748b;
+    font-size: 0.74rem;
+}
+
+.view-data-value.reason-val {
+    font-weight: 500;
+    font-size: 0.80rem;
+    color: #475569;
+    line-height: 1.35;
+}
+
+/* ── Collapsible Sections for Right Deck Pane ── */
+.view-collapsible-section {
+    background: #ffffff;
+    border: 1px solid rgba(44, 94, 71, 0.14);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.view-collapsible-section[open] {
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.view-section-summary {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px dashed rgba(0, 0, 0, 0.07);
+    padding: 9px 12px;
+    background: rgba(44, 94, 71, 0.04);
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    transition: background 0.15s ease;
+}
+
+.view-section-summary::-webkit-details-marker {
+    display: none;
+}
+
+.view-section-summary:hover {
+    background: rgba(44, 94, 71, 0.08);
+}
+
+.view-section-summary .view-section-title {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-primary-800, #163229);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.view-section-summary .view-section-title i {
+    color: #2c5e47;
     font-size: 0.82rem;
 }
 
-.view-prop-row:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.prop-label {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    color: var(--color-text-muted, #64748b);
-    font-size: 0.78rem;
-    font-weight: 500;
-}
-
-.prop-label i {
-    color: #64748b;
-    font-size: 0.80rem;
-    width: 14px;
-    text-align: center;
-}
-
-.prop-value {
-    color: var(--color-text, #1e293b);
-    font-weight: 600;
-    text-align: right;
-    word-break: break-word;
-}
-
-.view-section-tag {
-    background: rgba(44, 94, 71, 0.10);
+.view-count-pill {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(44, 94, 71, 0.12);
     color: #2c5e47;
-    padding: 2px 8px;
-    border-radius: 6px;
-    font-size: 0.76rem;
-    font-weight: 700;
 }
 
-.view-lot-tag {
-    background: var(--color-surface-soft, #f1f5f9);
-    border: 1px solid var(--color-border, #e2e8f0);
-    color: var(--color-text, #1e293b);
-    padding: 2px 8px;
-    border-radius: 6px;
-    font-size: 0.80rem;
-    font-weight: 700;
+.view-section-content {
+    padding: 10px 12px;
 }
 
 /* Exception Warning Banner */
@@ -2109,25 +2210,25 @@
     background: rgba(245, 158, 11, 0.10);
     border: 1px solid rgba(245, 158, 11, 0.35);
     border-radius: var(--radius-md, 8px);
-    padding: 10px 14px;
+    padding: 8px 12px;
     display: flex;
     align-items: flex-start;
-    gap: 10px;
-    margin-bottom: 14px;
+    gap: 8px;
+    margin-bottom: 10px;
 }
 
 .view-exception-alert i {
     color: #d97706;
-    font-size: 1.1rem;
-    margin-top: 2px;
+    font-size: 1rem;
+    margin-top: 1px;
     flex-shrink: 0;
 }
 
 .view-exception-alert-text {
     flex: 1;
-    font-size: 0.80rem;
+    font-size: 0.78rem;
     color: #92400e;
-    line-height: 1.4;
+    line-height: 1.35;
 }
 
 .view-exception-alert-text a {
@@ -2138,8 +2239,8 @@
 
 /* ── Attached Documents & Permits ── */
 .documents-section {
-    margin-top: 14px;
-    padding-top: 14px;
+    margin-top: 10px;
+    padding-top: 10px;
     border-top: 1px solid var(--color-border, #e2e8f0);
 }
 
@@ -2574,46 +2675,55 @@
     color: #34d399;
 }
 
-.dashboard-body[data-theme="dark"] .view-info-card {
+.dashboard-body[data-theme="dark"] .view-data-item {
     background: #1e293b;
     border-color: rgba(255, 255, 255, 0.08);
 }
 
-.dashboard-body[data-theme="dark"] .view-card-header {
-    background: rgba(52, 211, 153, 0.08);
-    border-bottom-color: rgba(255, 255, 255, 0.08);
-    color: #34d399;
-}
-
-.dashboard-body[data-theme="dark"] .view-card-header i {
-    color: #34d399;
-}
-
-.dashboard-body[data-theme="dark"] .view-prop-row {
-    border-bottom-color: rgba(255, 255, 255, 0.06);
-}
-
-.dashboard-body[data-theme="dark"] .prop-label {
+.dashboard-body[data-theme="dark"] .view-data-label {
     color: #94a3b8;
 }
 
-.dashboard-body[data-theme="dark"] .prop-label i {
-    color: #64748b;
-}
-
-.dashboard-body[data-theme="dark"] .prop-value {
-    color: #f1f5f9;
-}
-
-.dashboard-body[data-theme="dark"] .view-section-tag {
-    background: rgba(52, 211, 153, 0.15);
+.dashboard-body[data-theme="dark"] .view-data-label i {
     color: #34d399;
 }
 
-.dashboard-body[data-theme="dark"] .view-lot-tag {
-    background: #0f172a;
-    border-color: rgba(255, 255, 255, 0.12);
+.dashboard-body[data-theme="dark"] .view-data-value {
     color: #f8fafc;
+}
+
+.dashboard-body[data-theme="dark"] .view-data-value .sec-hint {
+    color: #94a3b8;
+}
+
+.dashboard-body[data-theme="dark"] .view-data-value.reason-val {
+    color: #cbd5e1;
+}
+
+.dashboard-body[data-theme="dark"] .view-collapsible-section {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-body[data-theme="dark"] .view-section-summary {
+    background: rgba(52, 211, 153, 0.06);
+}
+
+.dashboard-body[data-theme="dark"] .view-section-summary:hover {
+    background: rgba(52, 211, 153, 0.10);
+}
+
+.dashboard-body[data-theme="dark"] .view-section-summary .view-section-title {
+    color: #34d399;
+}
+
+.dashboard-body[data-theme="dark"] .view-section-summary .view-section-title i {
+    color: #34d399;
+}
+
+.dashboard-body[data-theme="dark"] .view-count-pill {
+    background: rgba(52, 211, 153, 0.15);
+    color: #34d399;
 }
 
 .dashboard-body[data-theme="dark"] .view-section-title {
@@ -2772,6 +2882,35 @@
     color: #ffffff;
 }
 
+/* Transfer Route Dark Mode */
+.dashboard-body[data-theme="dark"] .route-chip.from {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+}
+
+.dashboard-body[data-theme="dark"] .route-chip.from i {
+    color: #94a3b8;
+}
+
+.dashboard-body[data-theme="dark"] .route-chip.to {
+    background: rgba(16, 185, 129, 0.18);
+    border-color: rgba(52, 211, 153, 0.35);
+    color: #34d399;
+}
+
+.dashboard-body[data-theme="dark"] .route-chip.to i {
+    color: #34d399;
+}
+
+.dashboard-body[data-theme="dark"] .route-arrow-icon {
+    color: #34d399;
+}
+
+.dashboard-body[data-theme="dark"] .route-sub-section {
+    color: #94a3b8;
+}
+
 /* =========================================================================
    ANTIGRAVITY ZERO-SCROLL SPLIT-DECK ARCHITECTURE: LOGISTICS COBALT
    Dual Spatial Transit Hologram & Executive Relocation Protocol
@@ -2892,6 +3031,21 @@
 #requestModal .deck-pane--left,
 #viewModal .deck-pane--left {
     border-right: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+#viewModal .modal-deck-card {
+    max-width: 960px;
+    width: 92%;
+    max-height: 86vh;
+    border-radius: 16px;
+}
+
+#viewModal .split-deck-body {
+    grid-template-columns: 1.15fr 0.85fr;
+}
+
+#viewModal .deck-pane {
+    padding: 16px 18px;
 }
 
 /* ── Dual Spatial Transit Deck Hologram ── */

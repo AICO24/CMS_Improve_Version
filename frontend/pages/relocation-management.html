@@ -291,13 +291,13 @@
                         <table class="data-table" id="relocationsTable">
                             <thead>
                                 <tr>
-                                    <th>Request ID</th>
-                                    <th>Decedent</th>
-                                    <th>Transfer Route</th>
-                                    <th>Reason</th>
-                                    <th>Status</th>
-                                    <th>Requested By</th>
-                                    <th>Actions</th>
+                                    <th class="col-req-id">Request ID</th>
+                                    <th class="col-decedent">Decedent</th>
+                                    <th class="col-route">Transfer Route</th>
+                                    <th class="col-reason">Reason</th>
+                                    <th class="col-status">Status</th>
+                                    <th class="col-requester">Requested By</th>
+                                    <th class="col-actions">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="requestsTableBody">
@@ -581,39 +581,45 @@
                 <!-- Right Column: Attached Permits & Audit Timeline -->
                 <div class="deck-pane deck-pane--right">
                     <!-- Attached Documents & Permits -->
-                    <div class="documents-section">
-                        <div class="section-title-wrap">
-                            <h4 class="view-section-title"><i class="fas fa-folder-open"></i> Attached Documents &amp; Permits</h4>
+                    <details class="view-collapsible-section" id="viewDocsCollapsible" open>
+                        <summary class="view-section-summary">
+                            <span class="view-section-title"><i class="fas fa-folder-open"></i> Attached Permits &amp; Docs</span>
+                            <span class="view-count-pill" id="viewDocsCountPill">0</span>
+                        </summary>
+                        <div class="view-section-content">
+                            <div id="viewDocumentsList" class="documents-list"></div>
+                            <div class="documents-upload-bar">
+                                <select id="documentTypeSelect" aria-label="Document type" class="document-type-select">
+                                    <option value="relocation_permit">Relocation Permit</option>
+                                    <option value="exhumation_permit">Exhumation Permit</option>
+                                    <option value="transfer_clearance">Transfer Clearance</option>
+                                    <option value="family_consent">Family Consent</option>
+                                    <option value="death_certificate">Death Certificate</option>
+                                    <option value="other">Other Document</option>
+                                </select>
+                                <label for="documentFileInput" class="custom-file-picker" id="documentFileLabel" tabindex="0" role="button">
+                                    <i class="fas fa-paperclip"></i>
+                                    <span id="documentFileText">Select file</span>
+                                </label>
+                                <input type="file" id="documentFileInput"
+                                    accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" hidden>
+                                <button type="button" class="btn-secondary upload-doc-btn" id="uploadDocumentBtn">
+                                    <i class="fas fa-arrow-up-from-bracket"></i> Upload
+                                </button>
+                            </div>
                         </div>
-                        <div id="viewDocumentsList" class="documents-list"></div>
-                        <div class="documents-upload-bar">
-                            <select id="documentTypeSelect" aria-label="Document type" class="document-type-select">
-                                <option value="relocation_permit">Relocation Permit</option>
-                                <option value="exhumation_permit">Exhumation Permit</option>
-                                <option value="transfer_clearance">Transfer Clearance</option>
-                                <option value="family_consent">Family Consent</option>
-                                <option value="death_certificate">Death Certificate</option>
-                                <option value="other">Other Document</option>
-                            </select>
-                            <label for="documentFileInput" class="custom-file-picker" id="documentFileLabel" tabindex="0" role="button">
-                                <i class="fas fa-paperclip"></i>
-                                <span id="documentFileText">Select file (.pdf, .jpg, .png)</span>
-                            </label>
-                            <input type="file" id="documentFileInput"
-                                accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" hidden>
-                            <button type="button" class="btn-secondary upload-doc-btn" id="uploadDocumentBtn">
-                                <i class="fas fa-arrow-up-from-bracket"></i> Upload
-                            </button>
-                        </div>
-                    </div>
+                    </details>
 
                     <!-- Activity & Audit Trail -->
-                    <div class="activity-timeline-section" style="margin-top: 14px;">
-                        <div class="section-title-wrap">
-                            <h4 class="view-section-title"><i class="fas fa-clock-rotate-left"></i> Activity &amp; Audit Trail</h4>
+                    <details class="view-collapsible-section" id="viewAuditCollapsible" style="margin-top: 10px;">
+                        <summary class="view-section-summary">
+                            <span class="view-section-title"><i class="fas fa-clock-rotate-left"></i> Activity &amp; Audit Trail</span>
+                            <span class="view-count-pill" id="viewAuditCountPill">0</span>
+                        </summary>
+                        <div class="view-section-content">
+                            <div id="viewActivityTimeline" class="activity-timeline"></div>
                         </div>
-                        <div id="viewActivityTimeline" class="activity-timeline"></div>
-                    </div>
+                    </details>
                 </div>
             </div>
 
