@@ -396,23 +396,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         const isAdmin = user.role === 'admin';
         const isOwnPending = item.status === 'Pending' && String(item.created_by_id) === String(user.user_id);
 
-        buttons.push(`<button class="btn-row-action btn-row-action--view" data-action="view" data-service="${item.service_type}" data-id="${item.id}" title="View Details" aria-label="View Details"><i class="fas fa-eye"></i> View</button>`);
+        buttons.push(`<button class="btn-row-action btn-row-action--view" data-action="view" data-service="${item.service_type}" data-id="${item.id}" title="View Details" aria-label="View Details"><i class="fas fa-eye"></i></button>`);
 
         if (item.has_exception) {
             const entityType = item.service_type === 'burial' ? 'Schedule' : 'Cremation';
-            buttons.push(`<a class="btn-row-action btn-row-action--exception" href="exceptions.html?entity_type=${entityType}&entity_id=${item.id}" title="Review Exception" aria-label="Review Exception"><i class="fas fa-triangle-exclamation"></i> Review</a>`);
+            buttons.push(`<a class="btn-row-action btn-row-action--exception" href="exceptions.html?entity_type=${entityType}&entity_id=${item.id}" title="Review Exception" aria-label="Review Exception"><i class="fas fa-triangle-exclamation"></i></a>`);
         }
 
         if (item.status === 'Confirmed' || item.status === 'Scheduled') {
-            buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete" data-service="${item.service_type}" data-id="${item.id}" title="Mark Ceremony Completed" aria-label="Complete"><i class="fas fa-check"></i> Complete</button>`);
+            buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete" data-service="${item.service_type}" data-id="${item.id}" title="Mark Ceremony Completed" aria-label="Complete"><i class="fas fa-check"></i></button>`);
         }
 
         if (item.status === 'Pending' && !item.has_exception) {
-            buttons.push(`<button class="btn-row-action btn-row-action--cash" data-action="complete-cash" data-service="${item.service_type}" data-id="${item.id}" title="Record Cash / Offline Payment & Complete" aria-label="Record Cash Payment"><i class="fas fa-money-bill-wave"></i> Complete (Cash)</button>`);
+            buttons.push(`<button class="btn-row-action btn-row-action--cash" data-action="complete-cash" data-service="${item.service_type}" data-id="${item.id}" title="Record Cash / Offline Payment & Complete" aria-label="Record Cash Payment"><i class="fas fa-money-bill-wave"></i></button>`);
         }
 
         if ((item.status === 'Pending' || item.status === 'Confirmed' || item.status === 'Scheduled') && (isAdmin || isOwnPending)) {
-            buttons.push(`<button class="btn-row-action btn-row-action--cancel" data-action="cancel" data-service="${item.service_type}" data-id="${item.id}" title="Cancel Booking" aria-label="Cancel"><i class="fas fa-xmark"></i> Cancel</button>`);
+            buttons.push(`<button class="btn-row-action btn-row-action--cancel" data-action="cancel" data-service="${item.service_type}" data-id="${item.id}" title="Cancel Booking" aria-label="Cancel"><i class="fas fa-xmark"></i></button>`);
         }
 
         return buttons.length ? buttons.join('') : '<span class="muted" style="font-size:0.8rem; color:#94a3b8;">No actions</span>';

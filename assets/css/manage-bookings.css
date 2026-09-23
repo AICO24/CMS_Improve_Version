@@ -1117,152 +1117,109 @@
     border: 1px solid #cbd5e1;
 }
 
-/* Table Row Actions (Modern High-Grade Labeled Pills) */
-.data-table th:last-child {
-    min-width: 270px;
-    white-space: nowrap;
-    text-align: left;
-}
-
-.data-table td.action-buttons,
+/* Table Row Actions (Modern Icon Buttons with Tooltips & Animation Effect) */
+.data-table th:last-child,
 .data-table td:last-child {
-    min-width: 270px;
+    min-width: 140px;
+    width: 140px;
+    text-align: right;
     white-space: nowrap;
-    vertical-align: middle;
 }
 
 .action-buttons {
+    white-space: nowrap;
     display: inline-flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 6px;
-    flex-wrap: nowrap;
-    white-space: nowrap;
 }
 
-.action-buttons .btn-row-action {
+.btn-row-action {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    font-size: 0.88rem;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    text-decoration: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
-    height: 29px;
-    padding: 0 10px;
-    border-radius: 6px;
-    font-size: 0.74rem;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-    box-sizing: border-box;
-    border: 1px solid #d1d5db;
-    background: #ffffff;
-    color: #374151;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    transition: all 0.15s ease;
-    white-space: nowrap;
-    line-height: 1;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
 
-.action-buttons .btn-row-action i {
-    font-size: 0.72rem;
-    color: #6b7280;
-    transition: color 0.15s ease;
+.btn-row-action:hover {
+    transform: translateY(-3px) scale(1.08);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
 }
 
-.action-buttons .btn-row-action:hover {
-    background: #f3f4f6;
-    border-color: #9ca3af;
-    color: #111827;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+.btn-row-action:active {
+    transform: translateY(0) scale(0.96);
 }
 
-.action-buttons .btn-row-action:hover i {
-    color: #111827;
+.btn-row-action--view {
+    color: #2563eb;
+    background: #eff6ff;
+    border-color: #bfdbfe;
 }
-
-/* Primary Complete action: Executive Forest Green */
-.action-buttons .btn-row-action--complete {
-    background: #16382b;
-    border: 1px solid #16382b;
+.btn-row-action--view:hover {
+    background: #2563eb;
     color: #ffffff;
-    box-shadow: 0 1px 3px rgba(22, 56, 43, 0.18);
+    border-color: #2563eb;
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.35);
 }
 
-.action-buttons .btn-row-action--complete i {
-    color: #a7f3d0;
-}
-
-.action-buttons .btn-row-action--complete:hover {
-    background: #23523f;
-    border-color: #23523f;
-    color: #ffffff;
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(22, 56, 43, 0.28);
-}
-
-.action-buttons .btn-row-action--complete:hover i {
-    color: #ffffff;
-}
-
-/* Cash Complete action: Mint / Cash Tint */
-.action-buttons .btn-row-action--cash {
-    background: #ecfdf5;
-    border: 1px solid #a7f3d0;
-    color: #065f46;
-    box-shadow: 0 1px 2px rgba(5, 150, 105, 0.08);
-}
-
-.action-buttons .btn-row-action--cash i {
+.btn-row-action--complete {
     color: #059669;
+    background: #ecfdf5;
+    border-color: #a7f3d0;
 }
-
-.action-buttons .btn-row-action--cash:hover {
+.btn-row-action--complete:hover {
     background: #059669;
+    color: #ffffff;
     border-color: #059669;
-    color: #ffffff;
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(5, 150, 105, 0.25);
+    box-shadow: 0 6px 14px rgba(5, 150, 105, 0.35);
 }
 
-.action-buttons .btn-row-action--cash:hover i {
-    color: #ffffff;
-}
-
-/* Exception review action: Warm Executive Amber */
-.action-buttons .btn-row-action--exception {
-    background: #fffbeb;
-    border: 1px solid #fde68a;
-    color: #b45309;
-    box-shadow: 0 1px 2px rgba(245, 158, 11, 0.08);
-}
-
-.action-buttons .btn-row-action--exception i {
+.btn-row-action--cash {
     color: #d97706;
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+.btn-row-action--cash:hover {
+    background: #d97706;
+    color: #ffffff;
+    border-color: #d97706;
+    box-shadow: 0 6px 14px rgba(217, 119, 6, 0.35);
 }
 
-.action-buttons .btn-row-action--exception:hover {
-    background: #fef3c7;
-    border-color: #f59e0b;
-    color: #92400e;
-    transform: translateY(-1px);
+.btn-row-action--exception {
+    color: #ea580c;
+    background: #fff7ed;
+    border-color: #fed7aa;
+}
+.btn-row-action--exception:hover {
+    background: #ea580c;
+    color: #ffffff;
+    border-color: #ea580c;
+    box-shadow: 0 6px 14px rgba(234, 88, 12, 0.35);
 }
 
-/* Cancel action: Clean Alert Tint */
-.action-buttons .btn-row-action--cancel {
-    background: #ffffff;
-    border: 1px solid #fca5a5;
+.btn-row-action--cancel {
     color: #dc2626;
-    box-shadow: 0 1px 2px rgba(220, 38, 38, 0.06);
+    background: #fef2f2;
+    border-color: #fecaca;
 }
-
-.action-buttons .btn-row-action--cancel i {
-    color: #ef4444;
-}
-
-.action-buttons .btn-row-action--cancel:hover {
-    background: #fee2e2;
-    border-color: #ef4444;
-    color: #b91c1c;
-    transform: translateY(-1px);
+.btn-row-action--cancel:hover {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+    box-shadow: 0 6px 14px rgba(220, 38, 38, 0.35);
 }
 
 /* Empty State */
