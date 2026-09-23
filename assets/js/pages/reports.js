@@ -2,7 +2,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     const user = await requireRole(['admin']);
     if (!user) return;
 
-    document.getElementById('logoutBtn').addEventListener('click', () => api.logout());
+    document.getElementById('logoutBtn')?.addEventListener('click', () => api.logout());
+    document.getElementById('notificationIcon')?.addEventListener('click', () => window.location.href = 'notifications.html');
+
+    if (user) {
+        const fullName = user.full_name || user.username || 'Admin User';
+        const roleLabel = user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'Administrator';
+        const nameEl = document.getElementById('userName');
+        const roleEl = document.getElementById('userRole');
+        const sidebarNameEl = document.getElementById('sidebarUserName');
+        const sidebarRoleEl = document.getElementById('sidebarUserRole');
+        if (nameEl) nameEl.textContent = fullName;
+        if (roleEl) roleEl.textContent = roleLabel;
+        if (sidebarNameEl) sidebarNameEl.textContent = fullName;
+        if (sidebarRoleEl) sidebarRoleEl.textContent = roleLabel;
+    }
 
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.querySelector('.sidebar');
@@ -44,6 +58,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     });
 
+    // Interactive Quick Navigation & Accessible Stat Cards (mirrors admin dashboard functionality)
+    document.querySelectorAll('.report-stats > .stat-card').forEach((card) => {
+        const targetHref = card.getAttribute('data-href');
+        if (!targetHref || card.dataset.navBound) return;
+        card.dataset.navBound = 'true';
+
+        function triggerCardAction() {
+            card.classList.add('is-active-filter');
+            card.setAttribute('aria-pressed', 'true');
+            window.location.href = targetHref;
+        }
+
+        card.addEventListener('click', triggerCardAction);
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                triggerCardAction();
+            }
+        });
+    });
+
     if (tabsTrack) {
         const scrollAmount = 220;
         prevTabScrollBtn?.addEventListener('click', () => {
@@ -68,11 +103,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     let verificationBreakdownChartInstance = null;
     let revenueByMethodChartInstance = null;
     let reservationsChartInstance = null;
+    let reservationStatusChartInstance = null;
     // Occupancy chart instances (kept so exports can reliably render images)
     let occupancyChartInstance = null;
     let occupancyByBlockChartInstance = null;
     let occupancyByTypeChartInstance = null;
-    let occupancyTrendChartInstance = null;
 
     function formatPeso(value) {
         return `₱${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -123,20 +158,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         const container = document.getElementById(id);
         if (!container) return;
         const mapDot = (cls) => {
-            if (!cls) return 'neutral';
+            if (!cls || cls.includes('brand')) return 'brand';
             if (cls.includes('risk-low')) return 'low';
             if (cls.includes('risk-moderate')) return 'moderate';
             if (cls.includes('risk-high') || cls.includes('risk-critical')) return 'high';
-            return 'neutral';
+            return 'brand';
         };
         container.innerHTML = items.map(item => {
             const dot = mapDot(item.className || '');
+            const subHtml = item.sub ? `<span class="insight-sub">${item.sub}</span>` : '';
             return `
             <div class="insight-item ${item.className || ''}">
-                <span><i class="analysis-dot ${dot}"></i>${item.label}</span>
-                <strong>${item.value}</strong>
+                <span class="insight-label"><i class="analysis-dot ${dot}"></i>${item.label}</span>
+                <strong class="insight-value">${item.value}</strong>
+                ${subHtml}
             </div>
-        `
+        `;
         }).join('');
     }
 
@@ -176,7 +213,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         return items.map((_, index) => index === items.length - 1 ? base + remainder : base);
     }
 
+    function isDarkMode() {
+        return document.body.getAttribute('data-theme') === 'dark';
+    }
+
     function compactChartOptions(extra = {}) {
+        const dark = isDarkMode();
+        const tickColor = dark ? '#e2e8f0' : '#1e293b';
+        const gridColor = dark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(44, 94, 71, 0.16)';
+        const axisBorderColor = dark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(44, 94, 71, 0.28)';
+
         return {
             ...extra,
             responsive: true,
@@ -185,10 +231,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             plugins: {
                 legend: {
                     display: false,
-                    labels: { boxWidth: 10, boxHeight: 10, font: { size: 11 } }
+                    labels: { boxWidth: 10, boxHeight: 10, font: { size: 11, weight: '700' }, color: tickColor }
                 },
                 tooltip: {
-                    titleFont: { size: 12 },
+                    titleFont: { size: 12, weight: '700' },
                     bodyFont: { size: 12 },
                     ...(extra.plugins?.tooltip || {})
                 },
@@ -196,13 +242,15 @@ document.addEventListener('DOMContentLoaded', async function() {
             },
             scales: {
                 x: {
-                    ticks: { maxRotation: 0, autoSkip: true, font: { size: 11 } },
+                    border: { display: true, color: axisBorderColor, width: 1.5 },
+                    ticks: { maxRotation: 0, autoSkip: true, font: { size: 11.5, weight: '700' }, color: tickColor },
                     grid: { display: false }
                 },
                 y: {
                     beginAtZero: true,
-                    ticks: { precision: 0, font: { size: 11 } },
-                    grid: { color: 'rgba(44, 94, 71, 0.10)' }
+                    border: { display: true, color: axisBorderColor, width: 1.5 },
+                    ticks: { precision: 0, font: { size: 11.5, weight: '700' }, color: tickColor },
+                    grid: { color: gridColor, borderDash: [4, 4], lineWidth: 1.2 }
                 },
                 ...(extra.scales || {})
             }
@@ -212,6 +260,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const donutSliceLabelPlugin = {
         id: 'donutSliceLabelPlugin',
         afterDatasetsDraw(chart, args, pluginOptions) {
+            if (pluginOptions === false || chart.options?.plugins?.donutSliceLabelPlugin === false) return;
             const meta = chart.getDatasetMeta(0);
             if (!meta || !meta.data || !meta.data.length) return;
 
@@ -220,6 +269,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const total = dataset.data.reduce((sum, value) => sum + (Number(value) || 0), 0);
             if (!total) return;
 
+            const dark = isDarkMode();
             const centerX = chart.getDatasetMeta(0).data[0]?.x || chart.chartArea.left + (chart.chartArea.right - chart.chartArea.left) / 2;
             const centerY = chart.getDatasetMeta(0).data[0]?.y || chart.chartArea.top + (chart.chartArea.bottom - chart.chartArea.top) / 2;
             const leftLimit = chart.chartArea.left + 26;
@@ -247,7 +297,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const pctX = centerX + Math.cos(midAngle) * ((outerRadius + innerRadius) / 2);
                 const pctY = centerY + Math.sin(midAngle) * ((outerRadius + innerRadius) / 2);
 
-                ctx.fillStyle = '#1f2937';
+                ctx.fillStyle = dark ? '#f8fafc' : '#1f2937';
                 ctx.font = '700 12px Inter, system-ui, sans-serif';
                 ctx.fillText(percent, pctX, pctY);
 
@@ -260,7 +310,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const labelTextWidth = ctx.measureText(labelText).width;
 
                 ctx.font = '500 11px Inter, system-ui, sans-serif';
-                ctx.fillStyle = '#475569';
+                ctx.fillStyle = dark ? '#cbd5e1' : '#475569';
                 ctx.textAlign = labelX > centerX ? 'left' : 'right';
                 ctx.fillText(labelText, labelX, labelY);
 
@@ -269,7 +319,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     ctx.beginPath();
                     ctx.moveTo(connectorX, labelY);
                     ctx.lineTo(centerX + Math.cos(midAngle) * (outerRadius + 2), centerY + Math.sin(midAngle) * (outerRadius + 2));
-                    ctx.strokeStyle = 'rgba(71, 85, 105, 0.45)';
+                    ctx.strokeStyle = dark ? 'rgba(203, 213, 225, 0.45)' : 'rgba(71, 85, 105, 0.45)';
                     ctx.lineWidth = 1;
                     ctx.stroke();
                 }
@@ -284,10 +334,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     function buildRevenueLineChart(canvas, labels, values, { chartRef, label, gradientColor = '#0f766e' } = {}) {
         const ctx = canvas.getContext('2d');
         if (chartRef) chartRef.destroy();
+        const dark = isDarkMode();
+        const tickColor = dark ? '#cbd5e1' : '#1e293b';
+        const axisBorderColor = dark ? 'rgba(255, 255, 255, 0.24)' : 'rgba(44, 94, 71, 0.35)';
+        const gridColor = dark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(44, 94, 71, 0.18)';
+
         const grad = ctx.createLinearGradient(0, 0, 0, canvas.height || 320);
-        grad.addColorStop(0, 'rgba(15, 118, 110, 0.16)');
-        grad.addColorStop(0.6, 'rgba(15, 118, 110, 0.08)');
-        grad.addColorStop(1, 'rgba(15, 118, 110, 0.02)');
+        grad.addColorStop(0, dark ? 'rgba(45, 212, 191, 0.25)' : 'rgba(15, 118, 110, 0.20)');
+        grad.addColorStop(0.6, dark ? 'rgba(45, 212, 191, 0.08)' : 'rgba(15, 118, 110, 0.07)');
+        grad.addColorStop(1, 'rgba(15, 118, 110, 0.01)');
+
+        const strokeColor = dark ? '#2dd4bf' : gradientColor;
 
         const instance = new Chart(ctx, {
             type: 'line',
@@ -296,22 +353,45 @@ document.addEventListener('DOMContentLoaded', async function() {
                 datasets: [{
                     label,
                     data: values,
-                    borderColor: gradientColor,
+                    borderColor: strokeColor,
                     backgroundColor: grad,
-                    borderWidth: 3,
-                    pointRadius: 4,
-                    pointHoverRadius: 5,
-                    pointBackgroundColor: gradientColor,
+                    borderWidth: 3.5,
+                    pointRadius: 4.5,
+                    pointHoverRadius: 6.5,
+                    pointBackgroundColor: strokeColor,
                     pointBorderColor: '#ffffff',
-                    pointBorderWidth: 1.5,
+                    pointBorderWidth: 2,
                     tension: 0.38,
                     fill: true
                 }]
             },
             options: compactChartOptions({
+                layout: { padding: { top: 8, right: 14, bottom: 6, left: 10 } },
                 plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { label: ctx => formatPeso(ctx.parsed.y) } }
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            boxWidth: 8,
+                            boxHeight: 8,
+                            padding: 12,
+                            font: { size: 11.5, weight: '700', family: "'Inter', sans-serif" },
+                            color: tickColor
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: dark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.98)',
+                        titleColor: dark ? '#f8fafc' : '#0f172a',
+                        bodyColor: dark ? '#cbd5e1' : '#334155',
+                        borderColor: dark ? 'rgba(255, 255, 255, 0.20)' : 'rgba(44, 94, 71, 0.30)',
+                        borderWidth: 1.5,
+                        padding: 11,
+                        boxPadding: 5,
+                        callbacks: { label: ctx => ` ${label}: ${formatPeso(ctx.parsed.y)}` }
+                    }
                 },
                 animation: {
                     duration: 900,
@@ -319,12 +399,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                 },
                 scales: {
                     x: {
-                        ticks: { maxRotation: 0, autoSkip: false, font: { size: 11 } },
+                        border: { display: true, color: axisBorderColor, width: 1.5 },
+                        ticks: { maxRotation: 0, autoSkip: false, font: { size: 11.5, weight: '700' }, color: tickColor },
                         grid: { display: false }
                     },
                     y: {
                         beginAtZero: true,
-                        ticks: { callback: formatPesoCompact, maxTicksLimit: 6 }
+                        border: { display: true, color: axisBorderColor, width: 1.5 },
+                        ticks: { callback: formatPesoCompact, maxTicksLimit: 6, font: { size: 11.5, weight: '700' }, color: tickColor },
+                        grid: { display: true, color: gridColor, borderDash: [4, 4], lineWidth: 1.2 }
                     }
                 }
             })
@@ -485,7 +568,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         };
     }
 
-    function updateOccupancyAnalysis(data, trend) {
+    function updateOccupancyAnalysis(data) {
         const sections = data.by_section || [];
         const blocks = data.by_block || [];
         const lotTypes = data.by_lot_type || [];
@@ -510,44 +593,36 @@ document.addEventListener('DOMContentLoaded', async function() {
         const tightestReservedBlock = topBy(blocks, item => item.reserved);
 
         renderInsightList('sectionInsights', [
-            { label: 'Most available section', value: mostAvailableSection ? `${mostAvailableSection.section_name} (${numberValue(mostAvailableSection.available)} lots)` : 'No data' },
-            { label: 'Reserved lots', value: `${reserved} lots`, className: 'risk-moderate' },
-            { label: 'Current risk level', value: occupancyRisk(currentRate).label, className: occupancyRisk(currentRate).className },
+            { label: 'Most Available Section', value: mostAvailableSection ? `${mostAvailableSection.section_name}` : 'No data', sub: mostAvailableSection ? `${numberValue(mostAvailableSection.available)} lots available` : '', className: 'brand' },
+            { label: 'Reserved Lots', value: `${numberValue(reserved)} lots`, sub: total > 0 ? `${percentValue(reserved, total)}% of total plots` : '', className: 'brand' },
+            { label: 'Current Risk Level', value: occupancyRisk(currentRate).label, sub: `${currentRate}% overall occupancy`, className: 'brand' },
         ]);
 
         renderInsightList('lotTypeInsights', [
-            { label: 'Most used lot type', value: highestLotType ? `${highestLotType.type_name} (${numberValue(highestLotType.occupied)} used)` : 'No data' },
-            { label: 'Most reserved lot type', value: mostReservedType ? `${mostReservedType.type_name} (${numberValue(mostReservedType.reserved)} reserved)` : 'No data' },
-            { label: 'Best remaining inventory', value: mostAvailableType ? `${mostAvailableType.type_name} (${numberValue(mostAvailableType.available)} open)` : 'No data' },
+            { label: 'Most Used Lot Type', value: highestLotType ? `${highestLotType.type_name}` : 'No data', sub: highestLotType ? `${numberValue(highestLotType.occupied)} plots occupied` : '', className: 'brand' },
+            { label: 'Most Reserved Lot Type', value: mostReservedType ? `${mostReservedType.type_name}` : 'No data', sub: mostReservedType ? `${numberValue(mostReservedType.reserved)} plots reserved` : '', className: 'brand' },
+            { label: 'Best Remaining Inventory', value: mostAvailableType ? `${mostAvailableType.type_name}` : 'No data', sub: mostAvailableType ? `${numberValue(mostAvailableType.available)} plots open` : '', className: 'brand' },
         ]);
 
         renderInsightList('blockInsights', [
-            { label: 'Tightest block', value: tightestBlock ? `${tightestBlock.block_name}, ${tightestBlock.section_name} (${percentValue(tightestBlock.occupied, tightestBlock.total)}%)` : 'No data' },
-            { label: 'Most reserved block', value: tightestReservedBlock ? `${tightestReservedBlock.block_name}, ${tightestReservedBlock.section_name} (${numberValue(tightestReservedBlock.reserved)} reserved)` : 'No data' },
-            { label: 'Best relief block', value: openBlock ? `${openBlock.block_name}, ${openBlock.section_name} (${numberValue(openBlock.available)} open)` : 'No data' },
-        ]);
-
-        const sortedTrend = [...(trend || [])].sort((a, b) => new Date(a.snapshot_date) - new Date(b.snapshot_date));
-        const first = sortedTrend[0];
-        const latest = sortedTrend[sortedTrend.length - 1];
-        const averageGrowth = first && latest && sortedTrend.length > 1
-            ? (numberValue(latest.occupied) - numberValue(first.occupied)) / Math.max(1, sortedTrend.length - 1)
-            : 0;
-        const periodsToFull = averageGrowth > 0 ? Math.ceil(available / averageGrowth) : null;
-        const projected12 = Math.min(total, Math.round(occupied + (averageGrowth * 12)));
-
-        renderForecast([
             {
-                label: 'Next 12 snapshots',
-                value: total ? `${projected12}/${total}` : 'No data',
-                note: `${percentValue(projected12, total)}% occupied`
+                label: 'Tightest Block',
+                value: tightestBlock ? `${tightestBlock.block_name} · ${tightestBlock.section_name}` : 'No data',
+                sub: tightestBlock ? `${percentValue(tightestBlock.occupied, tightestBlock.total)}% utilized · ${numberValue(tightestBlock.occupied)}/${numberValue(tightestBlock.total)} plots` : '',
+                className: 'brand'
             },
             {
-                label: 'Capacity horizon',
-                value: periodsToFull ? `${periodsToFull} snapshots` : 'Stable',
-                note: averageGrowth > 0 ? `Avg. +${averageGrowth.toFixed(1)} occupied per snapshot` : 'No positive growth trend yet',
-                className: periodsToFull && periodsToFull <= 12 ? 'risk-high' : ''
-            }
+                label: 'Most Reserved Block',
+                value: tightestReservedBlock ? `${tightestReservedBlock.block_name} · ${tightestReservedBlock.section_name}` : 'No data',
+                sub: tightestReservedBlock ? `${numberValue(tightestReservedBlock.reserved)} reserved · ${percentValue(tightestReservedBlock.reserved, tightestReservedBlock.total)}% on hold` : '',
+                className: 'brand'
+            },
+            {
+                label: 'Best Relief Block',
+                value: openBlock ? `${openBlock.block_name} · ${openBlock.section_name}` : 'No data',
+                sub: openBlock ? `${numberValue(openBlock.available)} open plots · ${percentValue(openBlock.available, openBlock.total)}% free` : '',
+                className: 'brand'
+            },
         ]);
     }
 
@@ -592,77 +667,316 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('occRate').innerText = displayReserved || 0;
 
             const occCanvas = document.getElementById('occupancyChart');
-            // Enforce fixed canvas height to prevent layout expansion
             occCanvas.style.display = 'block';
             occCanvas.style.width = '100%';
-            occCanvas.style.height = '205px';
-            occCanvas.height = 205;
+            occCanvas.style.height = '380px';
+            occCanvas.height = 380;
+            if (occCanvas.parentElement) {
+                occCanvas.parentElement.style.minHeight = '396px';
+                occCanvas.parentElement.style.height = 'auto';
+            }
             const ctx = occCanvas.getContext('2d');
             const labels = (data.by_section || []).map(item => item.section_name);
             if (occupancyChartInstance) occupancyChartInstance.destroy();
-            // create vertical gradients for bar datasets to match revenue styling
-            const availGrad = ctx.createLinearGradient(0, 0, 0, occCanvas.height || 205);
-            availGrad.addColorStop(0, 'rgba(15,118,110,0.95)');
-            availGrad.addColorStop(1, 'rgba(15,118,110,0.65)');
-            const occGrad = ctx.createLinearGradient(0, 0, 0, occCanvas.height || 205);
-            occGrad.addColorStop(0, 'rgba(185,28,28,0.95)');
-            occGrad.addColorStop(1, 'rgba(185,28,28,0.65)');
-            const resGrad = ctx.createLinearGradient(0, 0, 0, occCanvas.height || 205);
-            resGrad.addColorStop(0, 'rgba(180,83,9,0.95)');
-            resGrad.addColorStop(1, 'rgba(180,83,9,0.65)');
 
+            // Populate Legend Button counts for By Section
+            const sectionList = data.by_section || [];
+            const secTotalAvail = sectionList.reduce((acc, s) => acc + (Number(s.available) || 0), 0);
+            const secTotalOcc = sectionList.reduce((acc, s) => acc + (Number(s.occupied) || 0), 0);
+            const secTotalRes = sectionReservedSeries.reduce((acc, v) => acc + (Number(v) || 0), 0);
+
+            const secAvailCountEl = document.getElementById('sectionLegendAvailCount');
+            const secOccCountEl = document.getElementById('sectionLegendOccCount');
+            const secResCountEl = document.getElementById('sectionLegendResCount');
+            if (secAvailCountEl) secAvailCountEl.textContent = numberValue(secTotalAvail);
+            if (secOccCountEl) secOccCountEl.textContent = numberValue(secTotalOcc);
+            if (secResCountEl) secResCountEl.textContent = numberValue(secTotalRes);
+
+            const secLegendContainer = document.getElementById('sectionChartLegendBtns');
+            if (secLegendContainer && !secLegendContainer.dataset.initialized) {
+                secLegendContainer.dataset.initialized = 'true';
+                secLegendContainer.querySelectorAll('.legend-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        if (!occupancyChartInstance) return;
+                        const dsIdx = parseInt(btn.getAttribute('data-dataset-index'), 10);
+                        const isVisible = occupancyChartInstance.isDatasetVisible(dsIdx);
+                        occupancyChartInstance.setDatasetVisibility(dsIdx, !isVisible);
+                        occupancyChartInstance.update();
+                        if (isVisible) {
+                            btn.classList.add('muted');
+                            btn.classList.remove('active');
+                        } else {
+                            btn.classList.remove('muted');
+                            btn.classList.add('active');
+                        }
+                    });
+                });
+            }
+
+            const secDark = isDarkMode();
+            const secAxisBorderColor = secDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(44, 94, 71, 0.32)';
+            const secGridColor = secDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(44, 94, 71, 0.18)';
             occupancyChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels,
                     datasets: [
-                        { label: 'Available', data: (data.by_section || []).map(item => item.available || 0), backgroundColor: availGrad, borderRadius: 8, maxBarThickness: 40 },
-                        { label: 'Occupied', data: (data.by_section || []).map(item => item.occupied || 0), backgroundColor: occGrad, borderRadius: 8, maxBarThickness: 40 },
-                        { label: 'Reserved Space', data: sectionReservedSeries, backgroundColor: resGrad, borderRadius: 8, maxBarThickness: 40 },
+                        {
+                            label: 'Available',
+                            data: (data.by_section || []).map(item => item.available || 0),
+                            backgroundColor: 'rgba(16, 185, 129, 0.95)',
+                            borderColor: '#047857',
+                            borderWidth: 2,
+                            borderRadius: 6,
+                            maxBarThickness: 54,
+                            barPercentage: 0.68,
+                            categoryPercentage: 0.78,
+                            hoverBorderWidth: 2.5,
+                            hoverBorderColor: '#ffffff'
+                        },
+                        {
+                            label: 'Occupied',
+                            data: (data.by_section || []).map(item => item.occupied || 0),
+                            backgroundColor: 'rgba(239, 68, 68, 0.95)',
+                            borderColor: '#b91c1c',
+                            borderWidth: 2,
+                            borderRadius: 6,
+                            maxBarThickness: 54,
+                            barPercentage: 0.68,
+                            categoryPercentage: 0.78,
+                            hoverBorderWidth: 2.5,
+                            hoverBorderColor: '#ffffff'
+                        },
+                        {
+                            label: 'Reserved Space',
+                            data: sectionReservedSeries,
+                            backgroundColor: 'rgba(245, 158, 11, 0.95)',
+                            borderColor: '#b45309',
+                            borderWidth: 2,
+                            borderRadius: 6,
+                            maxBarThickness: 54,
+                            barPercentage: 0.68,
+                            categoryPercentage: 0.78,
+                            hoverBorderWidth: 2.5,
+                            hoverBorderColor: '#ffffff'
+                        },
                     ]
                 },
                 options: compactChartOptions({
-                    plugins: { legend: { display: true, position: 'bottom' }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}` } } },
-                    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } },
-                    animations: staggeredBarAnimation(900)
+                    layout: {
+                        padding: { top: 14, right: 16, bottom: 8, left: 12 }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: secDark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.98)',
+                            titleColor: secDark ? '#f8fafc' : '#0f172a',
+                            bodyColor: secDark ? '#cbd5e1' : '#334155',
+                            borderColor: secDark ? 'rgba(255, 255, 255, 0.20)' : 'rgba(44, 94, 71, 0.30)',
+                            borderWidth: 1.5,
+                            padding: 11,
+                            boxPadding: 5,
+                            callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} lots` }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true,
+                            border: { display: true, color: secAxisBorderColor, width: 1.5 },
+                            ticks: {
+                                font: { size: 12.5, weight: '800', family: "'Inter', sans-serif" },
+                                color: secDark ? '#ffffff' : '#06170f',
+                                padding: 8,
+                                maxRotation: 0,
+                                autoSkip: false,
+                                callback: function(value) {
+                                    const lbl = this.getLabelForValue(value);
+                                    if (typeof lbl === 'string' && lbl.length > 28) {
+                                        return lbl.slice(0, 26) + '…';
+                                    }
+                                    return lbl;
+                                }
+                            },
+                            grid: { display: false }
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            border: { display: true, color: secAxisBorderColor, width: 1.5 },
+                            ticks: {
+                                precision: 0,
+                                maxTicksLimit: 6,
+                                font: { size: 12, weight: '750' },
+                                color: secDark ? '#cbd5e1' : '#1e293b',
+                                padding: 8
+                            },
+                            grid: {
+                                display: true,
+                                color: secGridColor,
+                                borderDash: [4, 4],
+                                lineWidth: 1.2
+                            }
+                        }
+                    },
+                    animations: staggeredBarAnimation(850)
                 })
             });
 
             const blockCanvas = document.getElementById('occupancyByBlockChart');
+            const blocksList = data.by_block || [];
+            // Dynamically scale canvas and frame height according to block count so bars are spacious
+            const blockRowHeight = 44;
+            const dynamicBlockHeight = Math.max(340, Math.min(760, blocksList.length * blockRowHeight + 70));
             blockCanvas.style.display = 'block';
             blockCanvas.style.width = '100%';
-            blockCanvas.style.height = '240px';
-            blockCanvas.height = 240;
+            blockCanvas.style.height = `${dynamicBlockHeight}px`;
+            blockCanvas.height = dynamicBlockHeight;
+            if (blockCanvas.parentElement) {
+                blockCanvas.parentElement.style.minHeight = `${dynamicBlockHeight + 16}px`;
+                blockCanvas.parentElement.style.height = 'auto';
+            }
             const blockCtx = blockCanvas.getContext('2d');
             if (occupancyByBlockChartInstance) occupancyByBlockChartInstance.destroy();
-            // horizontal gradients for better visual on horizontal bars
-            const blockAvailGrad = blockCtx.createLinearGradient(0, 0, blockCanvas.width || 600, 0);
-            blockAvailGrad.addColorStop(0, 'rgba(15,118,110,0.95)');
-            blockAvailGrad.addColorStop(1, 'rgba(15,118,110,0.65)');
-            const blockOccGrad = blockCtx.createLinearGradient(0, 0, blockCanvas.width || 600, 0);
-            blockOccGrad.addColorStop(0, 'rgba(185,28,28,0.95)');
-            blockOccGrad.addColorStop(1, 'rgba(185,28,28,0.65)');
-            const blockResGrad = blockCtx.createLinearGradient(0, 0, blockCanvas.width || 600, 0);
-            blockResGrad.addColorStop(0, 'rgba(180,83,9,0.95)');
-            blockResGrad.addColorStop(1, 'rgba(180,83,9,0.65)');
 
+            // Populate Legend Button counts
+            const totalAvail = blocksList.reduce((acc, b) => acc + (Number(b.available) || 0), 0);
+            const totalOcc = blocksList.reduce((acc, b) => acc + (Number(b.occupied) || 0), 0);
+            const totalRes = blockReservedSeries.reduce((acc, v) => acc + (Number(v) || 0), 0);
+
+            const availCountEl = document.getElementById('blockLegendAvailCount');
+            const occCountEl = document.getElementById('blockLegendOccCount');
+            const resCountEl = document.getElementById('blockLegendResCount');
+            if (availCountEl) availCountEl.textContent = numberValue(totalAvail);
+            if (occCountEl) occCountEl.textContent = numberValue(totalOcc);
+            if (resCountEl) resCountEl.textContent = numberValue(totalRes);
+
+            // Wire up interactive Legend Button filters
+            const legendContainer = document.getElementById('blockChartLegendBtns');
+            if (legendContainer && !legendContainer.dataset.initialized) {
+                legendContainer.dataset.initialized = 'true';
+                legendContainer.querySelectorAll('.legend-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        if (!occupancyByBlockChartInstance) return;
+                        const dsIdx = parseInt(btn.getAttribute('data-dataset-index'), 10);
+                        const isVisible = occupancyByBlockChartInstance.isDatasetVisible(dsIdx);
+                        occupancyByBlockChartInstance.setDatasetVisibility(dsIdx, !isVisible);
+                        occupancyByBlockChartInstance.update();
+                        if (isVisible) {
+                            btn.classList.add('muted');
+                            btn.classList.remove('active');
+                        } else {
+                            btn.classList.remove('muted');
+                            btn.classList.add('active');
+                        }
+                    });
+                });
+            }
+
+
+
+            const dark = isDarkMode();
+            const blockAxisBorderColor = dark ? 'rgba(255, 255, 255, 0.24)' : 'rgba(44, 94, 71, 0.35)';
+            const blockGridColor = dark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(44, 94, 71, 0.18)';
             occupancyByBlockChartInstance = new Chart(blockCtx, {
                 type: 'bar',
                 data: {
-                    labels: (data.by_block || []).map(item => `${item.block_name} (${item.section_name})`),
+                    labels: blocksList.map(item => `${item.block_name} · ${item.section_name}`),
                     datasets: [
-                        { label: 'Available', data: (data.by_block || []).map(item => item.available || 0), backgroundColor: blockAvailGrad, borderRadius: 8, maxBarThickness: 48 },
-                        { label: 'Occupied', data: (data.by_block || []).map(item => item.occupied || 0), backgroundColor: blockOccGrad, borderRadius: 8, maxBarThickness: 48 },
-                        { label: 'Reserved Space', data: blockReservedSeries, backgroundColor: blockResGrad, borderRadius: 8, maxBarThickness: 48 },
+                        {
+                            label: 'Available',
+                            data: blocksList.map(item => item.available || 0),
+                            backgroundColor: 'rgba(16, 185, 129, 0.95)',
+                            borderColor: '#047857',
+                            borderWidth: 2,
+                            borderRadius: 6,
+                            maxBarThickness: 28,
+                            barPercentage: 0.82,
+                            categoryPercentage: 0.88,
+                            hoverBorderWidth: 2.5,
+                            hoverBorderColor: '#ffffff'
+                        },
+                        {
+                            label: 'Occupied',
+                            data: blocksList.map(item => item.occupied || 0),
+                            backgroundColor: 'rgba(239, 68, 68, 0.95)',
+                            borderColor: '#b91c1c',
+                            borderWidth: 2,
+                            borderRadius: 6,
+                            maxBarThickness: 28,
+                            barPercentage: 0.82,
+                            categoryPercentage: 0.88,
+                            hoverBorderWidth: 2.5,
+                            hoverBorderColor: '#ffffff'
+                        },
+                        {
+                            label: 'Reserved Space',
+                            data: blockReservedSeries,
+                            backgroundColor: 'rgba(245, 158, 11, 0.95)',
+                            borderColor: '#b45309',
+                            borderWidth: 2,
+                            borderRadius: 6,
+                            maxBarThickness: 28,
+                            barPercentage: 0.82,
+                            categoryPercentage: 0.88,
+                            hoverBorderWidth: 2.5,
+                            hoverBorderColor: '#ffffff'
+                        },
                     ]
                 },
                 options: compactChartOptions({
                     indexAxis: 'y',
-                    plugins: {
-                        legend: { display: true, position: 'bottom' },
-                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x}` } }
+                    layout: {
+                        padding: { top: 12, right: 20, bottom: 8, left: 12 }
                     },
-                    scales: { x: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }, y: { stacked: true } },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: dark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.98)',
+                            titleColor: dark ? '#f8fafc' : '#0f172a',
+                            bodyColor: dark ? '#cbd5e1' : '#334155',
+                            borderColor: dark ? 'rgba(255, 255, 255, 0.20)' : 'rgba(44, 94, 71, 0.30)',
+                            borderWidth: 1.5,
+                            padding: 11,
+                            boxPadding: 5,
+                            callbacks: {
+                                label: ctx => `  ${ctx.dataset.label}: ${ctx.parsed.x} plots`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true,
+                            beginAtZero: true,
+                            border: { display: true, color: blockAxisBorderColor, width: 1.5 },
+                            ticks: {
+                                precision: 0,
+                                font: { size: 12, weight: '750' },
+                                color: dark ? '#cbd5e1' : '#1e293b',
+                                padding: 8
+                            },
+                            grid: {
+                                display: true,
+                                color: blockGridColor,
+                                borderDash: [4, 4],
+                                lineWidth: 1.2
+                            }
+                        },
+                        y: {
+                            stacked: true,
+                            border: { display: true, color: blockAxisBorderColor, width: 1.5 },
+                            ticks: {
+                                font: { size: 12.5, weight: '800', family: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" },
+                                color: dark ? '#ffffff' : '#06170f',
+                                padding: 14,
+                                autoSkip: false,
+                                callback: function(val) {
+                                    const label = this.getLabelForValue(val) || '';
+                                    return label.length > 32 ? label.substring(0, 30) + '…' : label;
+                                }
+                            },
+                            grid: { display: false }
+                        }
+                    },
                     animations: staggeredBarAnimation(850, 'x')
                 })
             });
@@ -670,133 +984,158 @@ document.addEventListener('DOMContentLoaded', async function() {
             const typeCanvas = document.getElementById('occupancyByTypeChart');
             typeCanvas.style.display = 'block';
             typeCanvas.style.width = '100%';
-            typeCanvas.style.height = '205px';
-            typeCanvas.height = 205;
+            typeCanvas.style.height = '380px';
+            typeCanvas.height = 380;
+            if (typeCanvas.parentElement) {
+                typeCanvas.parentElement.style.minHeight = '396px';
+                typeCanvas.parentElement.style.height = 'auto';
+            }
             const typeCtx = typeCanvas.getContext('2d');
             if (occupancyByTypeChartInstance) occupancyByTypeChartInstance.destroy();
-            const typeAvailGrad = typeCtx.createLinearGradient(0, 0, 0, typeCanvas.height || 205);
-            typeAvailGrad.addColorStop(0, 'rgba(15,118,110,0.95)');
-            typeAvailGrad.addColorStop(1, 'rgba(15,118,110,0.65)');
-            const typeOccGrad = typeCtx.createLinearGradient(0, 0, 0, typeCanvas.height || 205);
-            typeOccGrad.addColorStop(0, 'rgba(185,28,28,0.95)');
-            typeOccGrad.addColorStop(1, 'rgba(185,28,28,0.65)');
-            const typeResGrad = typeCtx.createLinearGradient(0, 0, 0, typeCanvas.height || 205);
-            typeResGrad.addColorStop(0, 'rgba(180,83,9,0.95)');
-            typeResGrad.addColorStop(1, 'rgba(180,83,9,0.65)');
 
+            // Populate Legend Button counts for By Lot Type
+            const typeList = data.by_lot_type || [];
+            const typeTotalAvail = typeList.reduce((acc, t) => acc + (Number(t.available) || 0), 0);
+            const typeTotalOcc = typeList.reduce((acc, t) => acc + (Number(t.occupied) || 0), 0);
+            const typeTotalRes = lotTypeReservedSeries.reduce((acc, v) => acc + (Number(v) || 0), 0);
+
+            const typeAvailCountEl = document.getElementById('typeLegendAvailCount');
+            const typeOccCountEl = document.getElementById('typeLegendOccCount');
+            const typeResCountEl = document.getElementById('typeLegendResCount');
+            if (typeAvailCountEl) typeAvailCountEl.textContent = numberValue(typeTotalAvail);
+            if (typeOccCountEl) typeOccCountEl.textContent = numberValue(typeTotalOcc);
+            if (typeResCountEl) typeResCountEl.textContent = numberValue(typeTotalRes);
+
+            const typeLegendContainer = document.getElementById('typeChartLegendBtns');
+            if (typeLegendContainer && !typeLegendContainer.dataset.initialized) {
+                typeLegendContainer.dataset.initialized = 'true';
+                typeLegendContainer.querySelectorAll('.legend-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        if (!occupancyByTypeChartInstance) return;
+                        const dsIdx = parseInt(btn.getAttribute('data-dataset-index'), 10);
+                        const isVisible = occupancyByTypeChartInstance.isDatasetVisible(dsIdx);
+                        occupancyByTypeChartInstance.setDatasetVisibility(dsIdx, !isVisible);
+                        occupancyByTypeChartInstance.update();
+                        if (isVisible) {
+                            btn.classList.add('muted');
+                            btn.classList.remove('active');
+                        } else {
+                            btn.classList.remove('muted');
+                            btn.classList.add('active');
+                        }
+                    });
+                });
+            }
+
+            const typeDark = isDarkMode();
+            const typeAxisBorderColor = typeDark ? 'rgba(255, 255, 255, 0.24)' : 'rgba(44, 94, 71, 0.35)';
+            const typeGridColor = typeDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(44, 94, 71, 0.18)';
             occupancyByTypeChartInstance = new Chart(typeCtx, {
                 type: 'bar',
                 data: {
                     labels: (data.by_lot_type || []).map(item => item.type_name),
                     datasets: [
-                        { label: 'Available', data: (data.by_lot_type || []).map(item => item.available || 0), backgroundColor: typeAvailGrad, borderRadius: 8, maxBarThickness: 40 },
-                        { label: 'Occupied', data: (data.by_lot_type || []).map(item => item.occupied || 0), backgroundColor: typeOccGrad, borderRadius: 8, maxBarThickness: 40 },
-                        { label: 'Reserved Space', data: lotTypeReservedSeries, backgroundColor: typeResGrad, borderRadius: 8, maxBarThickness: 40 },
+                        {
+                            label: 'Available',
+                            data: (data.by_lot_type || []).map(item => item.available || 0),
+                            backgroundColor: 'rgba(16, 185, 129, 0.95)',
+                            borderColor: '#047857',
+                            borderWidth: 2,
+                            borderRadius: 6,
+                            maxBarThickness: 54,
+                            barPercentage: 0.68,
+                            categoryPercentage: 0.78,
+                            hoverBorderWidth: 2.5,
+                            hoverBorderColor: '#ffffff'
+                        },
+                        {
+                            label: 'Occupied',
+                            data: (data.by_lot_type || []).map(item => item.occupied || 0),
+                            backgroundColor: 'rgba(239, 68, 68, 0.95)',
+                            borderColor: '#b91c1c',
+                            borderWidth: 2,
+                            borderRadius: 6,
+                            maxBarThickness: 54,
+                            barPercentage: 0.68,
+                            categoryPercentage: 0.78,
+                            hoverBorderWidth: 2.5,
+                            hoverBorderColor: '#ffffff'
+                        },
+                        {
+                            label: 'Reserved Space',
+                            data: lotTypeReservedSeries,
+                            backgroundColor: 'rgba(245, 158, 11, 0.95)',
+                            borderColor: '#b45309',
+                            borderWidth: 2,
+                            borderRadius: 6,
+                            maxBarThickness: 54,
+                            barPercentage: 0.68,
+                            categoryPercentage: 0.78,
+                            hoverBorderWidth: 2.5,
+                            hoverBorderColor: '#ffffff'
+                        },
                     ]
                 },
-                options: compactChartOptions({ plugins: { legend: { display: true, position: 'bottom' }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}` } } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } }, animations: staggeredBarAnimation(900) })
-            });
-
-            const trend = await api.request('reports/occupancy-trend?months=12', { method: 'GET' });
-            const trendItems = Array.isArray(trend) ? trend : [];
-            const trendNote = document.getElementById('occupancyTrendNote');
-            if (trendNote) {
-                trendNote.textContent = trendItems.length < 2
-                    ? 'History is captured automatically each time this page is viewed — check back over the coming weeks to see a trend build up.'
-                    : '';
-            }
-            const trendCanvas = document.getElementById('occupancyTrendChart');
-            trendCanvas.style.display = 'block';
-            trendCanvas.style.width = '100%';
-            trendCanvas.style.height = '320px';
-            trendCanvas.height = 320;
-            const trendCtx = trendCanvas.getContext('2d');
-            if (occupancyTrendChartInstance) occupancyTrendChartInstance.destroy();
-
-            const monthDataMap = new Map();
-            trendItems.forEach(item => {
-                const rawMonth = String(item.month_start || item.snapshot_date || '').trim();
-                if (!rawMonth) return;
-                const monthKey = rawMonth.length >= 7 ? rawMonth.slice(0, 7) : rawMonth;
-                monthDataMap.set(monthKey, Number(item.occupied || 0));
-            });
-
-            const monthSeries = [];
-            const currentMonthDate = new Date();
-            currentMonthDate.setDate(1);
-            currentMonthDate.setHours(0, 0, 0, 0);
-            for (let offset = 11; offset >= 0; offset -= 1) {
-                const monthDate = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() - offset, 1);
-                const year = monthDate.getFullYear();
-                const month = String(monthDate.getMonth() + 1).padStart(2, '0');
-                const monthKey = `${year}-${month}`;
-                monthSeries.push({
-                    label: monthDate.toLocaleDateString('en-US', { month: 'short' }),
-                    value: monthDataMap.get(monthKey) ?? 0,
-                    key: monthKey
-                });
-            }
-
-            const normalizedTrend = monthSeries.map(item => ({
-                ...item,
-                label: item.label,
-                value: Number(item.value || 0)
-            }));
-            const trendValues = normalizedTrend.map(item => item.value);
-            const trendGrad = trendCtx.createLinearGradient(0, 0, 0, trendCanvas.height || 320);
-            trendGrad.addColorStop(0, 'rgba(15, 118, 110, 0.16)');
-            trendGrad.addColorStop(0.6, 'rgba(15, 118, 110, 0.08)');
-            trendGrad.addColorStop(1, 'rgba(15, 118, 110, 0.02)');
-            occupancyTrendChartInstance = new Chart(trendCtx, {
-                type: 'line',
-                data: {
-                    labels: normalizedTrend.map(item => item.label),
-                    datasets: [{
-                        label: 'Occupied Lots',
-                        data: trendValues,
-                        borderColor: '#0f766e',
-                        backgroundColor: trendGrad,
-                        borderWidth: 3,
-                        pointRadius: 4,
-                        pointHoverRadius: 5,
-                        pointBackgroundColor: '#0f766e',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 1.5,
-                        tension: 0.38,
-                        fill: true
-                    }]
-                },
                 options: compactChartOptions({
-                    layout: { padding: { top: 8, right: 12, bottom: 4, left: 8 } },
+                    layout: {
+                        padding: { top: 14, right: 16, bottom: 8, left: 12 }
+                    },
                     plugins: {
                         legend: { display: false },
-                        tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} occupied lots` } }
-                    },
-                    animation: {
-                        duration: 900,
-                        easing: 'easeOutCubic'
+                        tooltip: {
+                            backgroundColor: typeDark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.98)',
+                            titleColor: typeDark ? '#f8fafc' : '#0f172a',
+                            bodyColor: typeDark ? '#cbd5e1' : '#334155',
+                            borderColor: typeDark ? 'rgba(255, 255, 255, 0.20)' : 'rgba(44, 94, 71, 0.30)',
+                            borderWidth: 1.5,
+                            padding: 11,
+                            boxPadding: 5,
+                            callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} lots` }
+                        }
                     },
                     scales: {
                         x: {
-                            title: { display: true, text: 'Month', color: '#2c5e47', font: { size: 12, weight: '600' }, padding: { top: 6 } },
+                            stacked: true,
+                            border: { display: true, color: typeAxisBorderColor, width: 1.5 },
                             ticks: {
+                                font: { size: 12.5, weight: '800', family: "'Inter', sans-serif" },
+                                color: typeDark ? '#ffffff' : '#06170f',
+                                padding: 8,
                                 maxRotation: 0,
-                                minRotation: 0,
-                                autoSkip: true,
-                                maxTicksLimit: 12,
-                                font: { size: 10.5 }
+                                autoSkip: false,
+                                callback: function(value) {
+                                    const lbl = this.getLabelForValue(value);
+                                    if (typeof lbl === 'string' && lbl.length > 28) {
+                                        return lbl.slice(0, 26) + '…';
+                                    }
+                                    return lbl;
+                                }
                             },
                             grid: { display: false }
                         },
                         y: {
+                            stacked: true,
                             beginAtZero: true,
-                            title: { display: true, text: 'Occupied Lots', color: '#2c5e47', font: { size: 12, weight: '600' }, padding: { bottom: 6 } },
-                            ticks: { precision: 0, maxTicksLimit: 6, callback: value => `${value} lots` }
+                            border: { display: true, color: typeAxisBorderColor, width: 1.5 },
+                            ticks: {
+                                precision: 0,
+                                maxTicksLimit: 6,
+                                font: { size: 12, weight: '750' },
+                                color: typeDark ? '#cbd5e1' : '#1e293b',
+                                padding: 8
+                            },
+                            grid: {
+                                display: true,
+                                color: typeGridColor,
+                                borderDash: [4, 4],
+                                lineWidth: 1.2
+                            }
                         }
-                    }
+                    },
+                    animations: staggeredBarAnimation(850)
                 })
             });
-            updateOccupancyAnalysis(data, trendItems);
+            updateOccupancyAnalysis(data);
 
             // Section Capacity & Space Utilization Matrix Table
             const sectionTbody = document.getElementById('sectionCapacityTableBody');
@@ -923,26 +1262,63 @@ document.addEventListener('DOMContentLoaded', async function() {
             const breakdown = data.breakdown || [];
             const labels = breakdown.map(item => item.transaction_type || 'Unknown');
             const values = breakdown.map(item => item.total || 0);
-            // map labels to color palette for stable coloring across loads
             const palette = CHART_COLORS.accent;
             const breakdownColors = labels.map((l, idx) => palette[idx % palette.length]);
             const breakdownCanvas = document.getElementById('revenueBreakdownChart');
             breakdownCanvas.style.display = 'block';
             breakdownCanvas.style.width = '100%';
-            breakdownCanvas.style.height = '220px';
-            breakdownCanvas.height = 220;
+            breakdownCanvas.style.height = '280px';
+            breakdownCanvas.height = 280;
             const breakdownCtx = breakdownCanvas.getContext('2d');
             if (revenueBreakdownChartInstance) revenueBreakdownChartInstance.destroy();
+            const revDark = isDarkMode();
+            const revTickColor = revDark ? '#cbd5e1' : '#1e293b';
             revenueBreakdownChartInstance = new Chart(breakdownCtx, {
                 type: 'doughnut',
-                data: { labels, datasets: [{ data: values, backgroundColor: breakdownColors, borderColor: '#ffffff', borderWidth: 2, hoverOffset: 8 }] },
+                data: {
+                    labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: breakdownColors,
+                        borderColor: revDark ? '#09130e' : '#ffffff',
+                        borderWidth: 2,
+                        hoverOffset: 8
+                    }]
+                },
                 options: compactChartOptions({
                     cutout: '58%',
                     plugins: {
                         legend: {
-                            display: false
+                            display: true,
+                            position: 'bottom',
+                            align: 'center',
+                            labels: {
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                boxWidth: 8,
+                                boxHeight: 8,
+                                padding: 12,
+                                font: { size: 11.5, weight: '700', family: "'Inter', sans-serif" },
+                                color: revTickColor
+                            }
                         },
-                        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatPeso(ctx.parsed)}` } }
+                        donutSliceLabelPlugin: false,
+                        tooltip: {
+                            backgroundColor: revDark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.98)',
+                            titleColor: revDark ? '#f8fafc' : '#0f172a',
+                            bodyColor: revDark ? '#cbd5e1' : '#334155',
+                            borderColor: revDark ? 'rgba(255, 255, 255, 0.20)' : 'rgba(44, 94, 71, 0.30)',
+                            borderWidth: 1.5,
+                            padding: 11,
+                            boxPadding: 5,
+                            callbacks: {
+                                label: ctx => {
+                                    const totalSum = ctx.dataset.data.reduce((a, b) => a + Number(b || 0), 0);
+                                    const pct = totalSum > 0 ? ((ctx.parsed / totalSum) * 100).toFixed(1) : '0.0';
+                                    return ` ${ctx.label}: ${formatPeso(ctx.parsed)} (${pct}%)`;
+                                }
+                            }
+                        }
                     },
                     animation: doughnutPopAnimation(700, 120)
                 })
@@ -959,26 +1335,61 @@ document.addEventListener('DOMContentLoaded', async function() {
             const verificationCanvas = document.getElementById('verificationBreakdownChart');
             verificationCanvas.style.display = 'block';
             verificationCanvas.style.width = '100%';
-            verificationCanvas.style.height = '220px';
-            verificationCanvas.height = 220;
+            verificationCanvas.style.height = '280px';
+            verificationCanvas.height = 280;
             const verificationCtx = verificationCanvas.getContext('2d');
             if (verificationBreakdownChartInstance) verificationBreakdownChartInstance.destroy();
             const vLabels = verificationBreakdown.map(item => item.verification_status);
             const vValues = verificationBreakdown.map(item => item.total || 0);
             const vColors = vLabels.map(l => CHART_COLORS.verification[l] || CHART_COLORS.accent[0]);
+            const verDark = isDarkMode();
+            const verTickColor = verDark ? '#cbd5e1' : '#1e293b';
             verificationBreakdownChartInstance = new Chart(verificationCtx, {
                 type: 'doughnut',
                 data: {
                     labels: vLabels,
-                    datasets: [{ data: vValues, backgroundColor: vColors, borderColor: '#ffffff', borderWidth: 2, hoverOffset: 8 }]
+                    datasets: [{
+                        data: vValues,
+                        backgroundColor: vColors,
+                        borderColor: verDark ? '#09130e' : '#ffffff',
+                        borderWidth: 2,
+                        hoverOffset: 8
+                    }]
                 },
                 options: compactChartOptions({
                     cutout: '58%',
                     plugins: {
                         legend: {
-                            display: false
+                            display: true,
+                            position: 'bottom',
+                            align: 'center',
+                            labels: {
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                boxWidth: 8,
+                                boxHeight: 8,
+                                padding: 12,
+                                font: { size: 11.5, weight: '700', family: "'Inter', sans-serif" },
+                                color: verTickColor
+                            }
                         },
-                        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatPeso(ctx.parsed)}` } }
+                        donutSliceLabelPlugin: false,
+                        tooltip: {
+                            backgroundColor: verDark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.98)',
+                            titleColor: verDark ? '#f8fafc' : '#0f172a',
+                            bodyColor: verDark ? '#cbd5e1' : '#334155',
+                            borderColor: verDark ? 'rgba(255, 255, 255, 0.20)' : 'rgba(44, 94, 71, 0.30)',
+                            borderWidth: 1.5,
+                            padding: 11,
+                            boxPadding: 5,
+                            callbacks: {
+                                label: ctx => {
+                                    const totalSum = ctx.dataset.data.reduce((a, b) => a + Number(b || 0), 0);
+                                    const pct = totalSum > 0 ? ((ctx.parsed / totalSum) * 100).toFixed(1) : '0.0';
+                                    return ` ${ctx.label}: ${formatPeso(ctx.parsed)} (${pct}%)`;
+                                }
+                            }
+                        }
                     },
                     animation: doughnutPopAnimation(700, 120)
                 })
@@ -995,19 +1406,97 @@ document.addEventListener('DOMContentLoaded', async function() {
             const methodLabels = methodBreakdown.map(item => item.payment_method);
             const methodValues = methodBreakdown.map(item => item.total || 0);
             const methodColors = methodLabels.map(m => CHART_COLORS.methodDefaults[m] || CHART_COLORS.accent[methodLabels.indexOf(m) % CHART_COLORS.accent.length]);
+            const methDark = isDarkMode();
+            const methTickColor = methDark ? '#cbd5e1' : '#1e293b';
+            const methAxisBorderColor = methDark ? 'rgba(255, 255, 255, 0.24)' : 'rgba(44, 94, 71, 0.35)';
+            const methGridColor = methDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(44, 94, 71, 0.18)';
             revenueByMethodChartInstance = new Chart(methodCtx, {
                 type: 'bar',
                 data: {
                     labels: methodLabels,
                     datasets: [{
-                        label: 'Revenue',
+                        label: 'Payment Method',
                         data: methodValues,
                         backgroundColor: methodColors,
+                        borderColor: methDark ? 'rgba(255, 255, 255, 0.20)' : 'rgba(15, 23, 42, 0.15)',
+                        borderWidth: 1.5,
+                        hoverBorderWidth: 2.5,
+                        hoverBorderColor: '#ffffff',
                         borderRadius: 8,
                         maxBarThickness: 64
                     }]
                 },
-                options: compactChartOptions({ animations: staggeredBarAnimation(), plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => formatPeso(ctx.parsed.y) } } }, scales: { y: { beginAtZero: true, ticks: { callback: formatPesoCompact, maxTicksLimit: 6 } } } })
+                options: compactChartOptions({
+                    animations: staggeredBarAnimation(),
+                    layout: { padding: { top: 12, right: 16, bottom: 8, left: 12 } },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                boxWidth: 8,
+                                boxHeight: 8,
+                                padding: 12,
+                                font: { size: 11.5, weight: '700', family: "'Inter', sans-serif" },
+                                color: methTickColor,
+                                generateLabels: function(chart) {
+                                    const d = chart.data;
+                                    if (d.labels.length && d.datasets.length) {
+                                        const ds = d.datasets[0];
+                                        return d.labels.map((lbl, i) => ({
+                                            text: lbl,
+                                            fillStyle: Array.isArray(ds.backgroundColor) ? ds.backgroundColor[i] : ds.backgroundColor,
+                                            strokeStyle: '#ffffff',
+                                            lineWidth: 1.5,
+                                            pointStyle: 'circle',
+                                            hidden: chart.getDataVisibility ? !chart.getDataVisibility(i) : false,
+                                            index: i
+                                        }));
+                                    }
+                                    return [];
+                                }
+                            },
+                            onClick: function(e, legendItem, legend) {
+                                const index = legendItem.index;
+                                const ci = legend.chart;
+                                if (ci.getDataVisibility(index)) {
+                                    ci.hide(0, index);
+                                    legendItem.hidden = true;
+                                } else {
+                                    ci.show(0, index);
+                                    legendItem.hidden = false;
+                                }
+                                ci.update();
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: methDark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.98)',
+                            titleColor: methDark ? '#f8fafc' : '#0f172a',
+                            bodyColor: methDark ? '#cbd5e1' : '#334155',
+                            borderColor: methDark ? 'rgba(255, 255, 255, 0.20)' : 'rgba(44, 94, 71, 0.30)',
+                            borderWidth: 1.5,
+                            padding: 11,
+                            boxPadding: 5,
+                            callbacks: { label: ctx => ` ${ctx.label}: ${formatPeso(ctx.parsed.y)}` }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            border: { display: true, color: methAxisBorderColor, width: 1.5 },
+                            ticks: { font: { size: 12, weight: '800' }, color: methDark ? '#ffffff' : '#06170f' },
+                            grid: { display: false }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            border: { display: true, color: methAxisBorderColor, width: 1.5 },
+                            ticks: { callback: formatPesoCompact, maxTicksLimit: 6, font: { size: 11.5, weight: '700' }, color: methTickColor },
+                            grid: { display: true, color: methGridColor, borderDash: [4, 4], lineWidth: 1.2 }
+                        }
+                    }
+                })
             });
             // Recent transactions table for quick review
             // Simple recent transactions table without pagination on the reports tab
@@ -1055,15 +1544,91 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    async function loadReservations() {
+    // ── Reservations helpers ──────────────────────────────────────────
+    let _resPage = 1;
+    const _resPerPage = 20;
+    let _resFilters = {};
+    let _resTotal = 0;
+
+    function _formatResDate(raw) {
+        if (!raw) return '—';
+        const d = new Date(raw);
+        if (isNaN(d)) return raw;
+        return d.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function _resStatusBadge(status) {
+        const map = {
+            Confirmed: 'status-success',
+            Completed: 'status-info',
+            Pending:   'status-warning',
+            Cancelled: 'status-danger'
+        };
+        return `<span class="status-badge ${map[status] || 'status-warning'}">${status || 'Unknown'}</span>`;
+    }
+
+    async function _renderResTable() {
+        const tbody = document.getElementById('reservationActionTableBody');
+        const info  = document.getElementById('reservationPaginationInfo');
+        const prevBtn = document.getElementById('reservationPrevPage');
+        const nextBtn = document.getElementById('reservationNextPage');
+        const titleEl = document.getElementById('reservationTableTitle');
+        const badgeEl = document.getElementById('reservationTableBadge');
+        if (!tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">Loading…</td></tr>';
+
+        const params = [`page=${_resPage}`, `per_page=${_resPerPage}`, `sort_desc=1`];
+        if (_resFilters.status) params.push(`status=${encodeURIComponent(_resFilters.status)}`);
+        if (_resFilters.year)   params.push(`year=${_resFilters.year}`);
+
+        const result = await api.request(`schedules?${params.join('&')}`, { method: 'GET' });
+        const rows   = Array.isArray(result?.data) ? result.data : (Array.isArray(result) ? result : []);
+        _resTotal    = result?.meta?.total ?? rows.length;
+        const pages  = result?.meta?.pages ?? Math.ceil(_resTotal / _resPerPage);
+
+        const statusLabel = _resFilters.status || 'All';
+        const yearLabel   = _resFilters.year   || 'All years';
+        if (titleEl) titleEl.textContent = `${statusLabel} Reservations`;
+        if (badgeEl) badgeEl.textContent  = `${_resTotal} total · ${yearLabel}`;
+
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">No reservations found.</td></tr>';
+        } else {
+            tbody.innerHTML = rows.map(item => {
+                const decedentName = item.first_name
+                    ? `${item.first_name} ${item.last_name || ''}`.trim()
+                    : (item.provisional_name || item.created_by_name || '—');
+                return `
+                    <tr>
+                        <td><strong>#${item.schedule_id}</strong></td>
+                        <td>${item.lot_number || '—'}</td>
+                        <td>${item.section_name || '—'}</td>
+                        <td>${decedentName}</td>
+                        <td>${_formatResDate(item.schedule_date)}</td>
+                        <td>${item.lot_type_name || '—'}</td>
+                        <td>${_resStatusBadge(item.status)}</td>
+                    </tr>`;
+            }).join('');
+        }
+
+        if (info) info.textContent = `Page ${_resPage} of ${pages || 1} · ${_resTotal} record${_resTotal !== 1 ? 's' : ''}`;
+        if (prevBtn) prevBtn.disabled = _resPage <= 1;
+        if (nextBtn) nextBtn.disabled = _resPage >= pages;
+    }
+
+    async function loadReservations(year) {
+        // Step 1: Always render the table first — independent of chart creation
+        _resPage = 1;
+        await _renderResTable();
+
+        // Step 2: Load stats and render charts (guarded separately so a chart failure
+        //         doesn't prevent the table from displaying data)
         try {
-            const data = await api.request(`schedules/stats?year=${new Date().getFullYear()}`, { method: 'GET' });
-            const pendingResult = await api.request('schedules?status=Pending&per_page=8', { method: 'GET' });
-            const pendingRows = Array.isArray(pendingResult?.data) ? pendingResult.data : (Array.isArray(pendingResult) ? pendingResult : []);
-            const setVal = (id, val) => {
-                const el = document.getElementById(id);
-                if (el) el.innerText = val ?? 0;
-            };
+            const statsYear = year || _resFilters.year || new Date().getFullYear();
+            const data = await api.request(`schedules/stats?year=${statsYear}`, { method: 'GET' });
+
+            const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val ?? 0; };
             setVal('resTotal', data.total);
             setVal('resConfirmed', data.confirmed);
             setVal('resPending', data.pending);
@@ -1072,151 +1637,163 @@ document.addEventListener('DOMContentLoaded', async function() {
             const statusChartCanvas = document.getElementById('reservationStatusChart');
             const reservationsCanvas = document.getElementById('reservationsChart');
             const reservationInsights = document.getElementById('reservationInsights');
-            if (!statusChartCanvas || !reservationsCanvas || !reservationInsights) {
-                return;
-            }
-            statusChartCanvas.style.display = 'block';
-            statusChartCanvas.style.width = '100%';
-            statusChartCanvas.style.height = '280px';
-            statusChartCanvas.height = 280;
-            const statusChartCtx = statusChartCanvas.getContext('2d');
-            const statusData = [
-                { label: 'Pending', value: Number(data.pending || 0), color: '#f59e0b' },
-                { label: 'Confirmed', value: Number(data.confirmed || 0), color: '#0f766e' },
-                { label: 'Completed', value: Number(data.completed || 0), color: '#2563eb' },
-                { label: 'Cancelled', value: Number(data.cancelled || 0), color: '#ef4444' }
-            ];
-            new Chart(statusChartCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: statusData.map(item => item.label),
-                    datasets: [{
-                        data: statusData.map(item => item.value),
-                        backgroundColor: statusData.map(item => item.color),
-                        borderColor: '#ffffff',
-                        borderWidth: 2,
-                        hoverOffset: 8
-                    }]
-                },
-                options: compactChartOptions({
-                    cutout: '58%',
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'bottom',
-                            align: 'center',
-                            labels: {
-                                usePointStyle: true,
-                                pointStyle: 'circle',
-                                boxWidth: 8,
-                                boxHeight: 8,
-                                padding: 10,
-                                font: { size: 10.5 }
+
+            const resDark      = isDarkMode();
+            const resTickColor = resDark ? '#cbd5e1' : '#1e293b';
+
+            if (statusChartCanvas) {
+                statusChartCanvas.style.display = 'block';
+                statusChartCanvas.style.width = '100%';
+                statusChartCanvas.style.height = '280px';
+                statusChartCanvas.height = 280;
+                const statusChartCtx = statusChartCanvas.getContext('2d');
+                if (reservationStatusChartInstance) reservationStatusChartInstance.destroy();
+                const statusData = [
+                    { label: 'Pending',   value: Number(data.pending   || 0), color: '#f59e0b' },
+                    { label: 'Confirmed', value: Number(data.confirmed || 0), color: '#0f766e' },
+                    { label: 'Completed', value: Number(data.completed || 0), color: '#2563eb' },
+                    { label: 'Cancelled', value: Number(data.cancelled || 0), color: '#ef4444' }
+                ];
+                reservationStatusChartInstance = new Chart(statusChartCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: statusData.map(d => d.label),
+                        datasets: [{
+                            data: statusData.map(d => d.value),
+                            backgroundColor: statusData.map(d => d.color),
+                            borderColor: resDark ? '#09130e' : '#ffffff',
+                            borderWidth: 2,
+                            hoverOffset: 8
+                        }]
+                    },
+                    options: compactChartOptions({
+                        cutout: '58%',
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                align: 'center',
+                                labels: {
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    boxWidth: 8,
+                                    boxHeight: 8,
+                                    padding: 12,
+                                    font: { size: 11.5, weight: '700', family: "'Inter', sans-serif" },
+                                    color: resTickColor
+                                }
+                            },
+                            donutSliceLabelPlugin: false,
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => {
+                                        const total = ctx.dataset.data.reduce((a, b) => a + Number(b || 0), 0);
+                                        const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : '0.0';
+                                        return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+                                    }
+                                }
                             }
                         },
-                        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed} reservations` } }
-                    },
-                    animation: doughnutPopAnimation(700, 120)
-                })
-            });
-
-            const byMonth = data.by_month || [];
-            const counts = new Array(12).fill(0);
-            byMonth.forEach(item => {
-                const idx = Number(item.month) - 1;
-                if (idx >= 0 && idx < 12) counts[idx] = Number(item.count) || 0;
-            });
-
-            reservationsCanvas.style.display = 'block';
-            reservationsCanvas.style.width = '100%';
-            reservationsCanvas.style.height = '280px';
-            reservationsCanvas.height = 280;
-            const reservationsCtx = reservationsCanvas.getContext('2d');
-            if (reservationsChartInstance) reservationsChartInstance.destroy();
-            const resGrad = reservationsCtx.createLinearGradient(0, 0, 0, reservationsCanvas.height || 280);
-            resGrad.addColorStop(0, 'rgba(15, 118, 110, 0.16)');
-            resGrad.addColorStop(0.6, 'rgba(15, 118, 110, 0.08)');
-            resGrad.addColorStop(1, 'rgba(15, 118, 110, 0.02)');
-
-            reservationsChartInstance = new Chart(reservationsCtx, {
-                type: 'line',
-                data: {
-                    labels: MONTH_NAMES,
-                    datasets: [{
-                        label: 'Reservations',
-                        data: counts,
-                        borderColor: '#0f766e',
-                        backgroundColor: resGrad,
-                        borderWidth: 3,
-                        pointRadius: 4,
-                        pointHoverRadius: 5,
-                        pointBackgroundColor: '#0f766e',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 1.5,
-                        tension: 0.38,
-                        fill: true
-                    }]
-                },
-                options: compactChartOptions({
-                    layout: { padding: { top: 8, right: 12, bottom: 4, left: 8 } },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} reservations` } }
-                    },
-                    animation: { duration: 900, easing: 'easeOutCubic' },
-                    scales: {
-                        x: {
-                            title: { display: true, text: 'Month', color: '#2c5e47', font: { size: 12, weight: '600' }, padding: { top: 6 } },
-                            ticks: { maxRotation: 0, autoSkip: false, font: { size: 11 } },
-                            grid: { display: false }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            title: { display: true, text: 'Reservations', color: '#2c5e47', font: { size: 12, weight: '600' }, padding: { bottom: 6 } },
-                            ticks: { precision: 0, maxTicksLimit: 6 }
-                        }
-                    }
-                })
-            });
-
-            const pendingTableBody = document.getElementById('reservationActionTableBody');
-            if (pendingTableBody) {
-                const rows = [...pendingRows].sort((a, b) => new Date(a.schedule_date) - new Date(b.schedule_date));
-                pendingTableBody.innerHTML = rows.length
-                    ? rows.slice(0, 8).map(item => {
-                        const date = new Date(item.schedule_date);
-                        const today = new Date();
-                        const daysPending = Math.max(0, Math.ceil((today - date) / 86400000));
-                        const badgeClass = item.status === 'Confirmed' ? 'status-success' : item.status === 'Completed' ? 'status-info' : 'status-warning';
-                        return `
-                            <tr>
-                                <td>#${item.schedule_id}</td>
-                                <td>${item.lot_number || '—'}</td>
-                                <td>${(item.first_name || item.created_by_name || 'Unknown') + ' ' + (item.last_name || '')}</td>
-                                <td>${item.schedule_date || '—'}</td>
-                                <td>${daysPending}d</td>
-                                <td><span class="status-badge ${badgeClass}">${item.status || 'Pending'}</span></td>
-                            </tr>
-                        `;
-                    }).join('')
-                    : '<tr><td colspan="6">No pending reservations found.</td></tr>';
+                        animation: doughnutPopAnimation(700, 120)
+                    })
+                });
             }
 
-            const confirmationRate = Number(data.confirmation_rate || 0);
-            const cancellationRate = Number(data.cancellation_rate || 0);
-            reservationInsights.innerHTML = [
-                { label: 'Confirmation rate', value: `${confirmationRate}%`, className: 'risk-low' },
-                { label: 'Cancellation rate', value: `${cancellationRate}%`, className: 'risk-moderate' },
-                { label: 'Pending follow-up', value: `${data.pending || 0} items`, className: 'risk-moderate' },
-                { label: 'Month peak', value: counts.indexOf(Math.max(...counts)) >= 0 ? MONTH_NAMES[counts.indexOf(Math.max(...counts))] : '—', className: '' }
-            ].map(item => `
-                <div class="insight-item ${item.className || ''}">
-                    <span>${item.label}</span>
-                    <strong>${item.value}</strong>
-                </div>
-            `).join('');
+            if (reservationsCanvas) {
+                const byMonth = data.by_month || [];
+                const counts  = new Array(12).fill(0);
+                byMonth.forEach(item => {
+                    const idx = Number(item.month) - 1;
+                    if (idx >= 0 && idx < 12) counts[idx] = Number(item.count) || 0;
+                });
+                reservationsCanvas.style.display = 'block';
+                reservationsCanvas.style.width   = '100%';
+                reservationsCanvas.style.height  = '280px';
+                reservationsCanvas.height        = 280;
+                const reservationsCtx = reservationsCanvas.getContext('2d');
+                if (reservationsChartInstance) reservationsChartInstance.destroy();
+                const resGrad = reservationsCtx.createLinearGradient(0, 0, 0, 280);
+                resGrad.addColorStop(0, resDark ? 'rgba(45, 212, 191, 0.22)' : 'rgba(15, 118, 110, 0.18)');
+                resGrad.addColorStop(0.6, resDark ? 'rgba(45, 212, 191, 0.08)' : 'rgba(15, 118, 110, 0.07)');
+                resGrad.addColorStop(1, 'rgba(15, 118, 110, 0.01)');
+                const resStroke     = resDark ? '#2dd4bf' : '#0f766e';
+                const resAxisBorder = resDark ? 'rgba(255,255,255,0.24)' : 'rgba(44,94,71,0.35)';
+                const resGrid       = resDark ? 'rgba(255,255,255,0.14)' : 'rgba(44,94,71,0.18)';
+                reservationsChartInstance = new Chart(reservationsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: MONTH_NAMES,
+                        datasets: [{
+                            label: `Reservations ${statsYear}`,
+                            data: counts,
+                            borderColor: resStroke,
+                            backgroundColor: resGrad,
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: resStroke,
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 1.5,
+                            tension: 0.38,
+                            fill: true
+                        }]
+                    },
+                    options: compactChartOptions({
+                        layout: { padding: { top: 8, right: 12, bottom: 4, left: 8 } },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                align: 'end',
+                                labels: {
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    boxWidth: 8,
+                                    boxHeight: 8,
+                                    padding: 12,
+                                    font: { size: 11.5, weight: '700', family: "'Inter', sans-serif" },
+                                    color: resTickColor
+                                }
+                            },
+                            tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} reservation${ctx.parsed.y !== 1 ? 's' : ''}` } }
+                        },
+                        animation: { duration: 900, easing: 'easeOutCubic' },
+                        scales: {
+                            x: {
+                                ticks: { maxRotation: 0, autoSkip: false, font: { size: 11 }, color: resTickColor },
+                                grid: { display: false },
+                                border: { color: resAxisBorder }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: { precision: 0, maxTicksLimit: 6, color: resTickColor },
+                                grid: { color: resGrid, lineWidth: 1, borderDash: [4, 4] },
+                                border: { color: resAxisBorder }
+                            }
+                        }
+                    })
+                });
+
+                if (reservationInsights) {
+                    const confirmationRate = Number(data.confirmation_rate || 0);
+                    const cancellationRate = Number(data.cancellation_rate || 0);
+                    const peakIdx = counts.indexOf(Math.max(...counts));
+                    reservationInsights.innerHTML = [
+                        { label: 'Confirmation rate',   value: `${confirmationRate}%`,          className: 'risk-low' },
+                        { label: 'Cancellation rate',   value: `${cancellationRate}%`,          className: cancellationRate > 20 ? 'risk-high' : 'risk-moderate' },
+                        { label: 'Pending follow-up',   value: `${data.pending || 0} items`,   className: data.pending > 0 ? 'risk-moderate' : '' },
+                        { label: 'Completed',           value: `${data.completed || 0} done`,  className: 'risk-low' },
+                        { label: 'Peak month',          value: peakIdx >= 0 ? MONTH_NAMES[peakIdx] : '—', className: '' }
+                    ].map(item => `
+                        <div class="insight-item ${item.className || ''}">
+                            <span>${item.label}</span>
+                            <strong>${item.value}</strong>
+                        </div>
+                    `).join('');
+                }
+            }
         } catch (error) {
-            console.error('Failed to load reservations:', error);
+            console.error('Failed to load reservation stats/charts:', error);
         }
     }
 
@@ -1546,7 +2123,47 @@ document.addEventListener('DOMContentLoaded', async function() {
         loadRevenue();
     });
 
-    // Feature 12: PDF & Excel Export
+    // Populate reservation year dropdown
+    (function populateReservationYears() {
+        const sel = document.getElementById('reservationYearFilter');
+        if (!sel) return;
+        const currentYear = new Date().getFullYear();
+        sel.innerHTML = '<option value="">All years</option>';
+        for (let y = currentYear; y >= currentYear - 10; y--) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            if (y === currentYear) opt.selected = true;
+            sel.appendChild(opt);
+        }
+    })();
+
+    document.getElementById('applyReservationFilter')?.addEventListener('click', async () => {
+        const year   = document.getElementById('reservationYearFilter')?.value || '';
+        const status = document.getElementById('reservationStatusFilter')?.value || '';
+        _resFilters  = { year, status };
+        await loadReservations(year ? Number(year) : null);
+    });
+
+    document.getElementById('clearReservationFilter')?.addEventListener('click', async () => {
+        const yearSel   = document.getElementById('reservationYearFilter');
+        const statusSel = document.getElementById('reservationStatusFilter');
+        if (yearSel)   yearSel.value   = new Date().getFullYear();
+        if (statusSel) statusSel.value = '';
+        _resFilters = {};
+        await loadReservations();
+    });
+
+    document.getElementById('reservationPrevPage')?.addEventListener('click', async () => {
+        if (_resPage > 1) { _resPage--; await _renderResTable(); }
+    });
+
+    document.getElementById('reservationNextPage')?.addEventListener('click', async () => {
+        _resPage++;
+        await _renderResTable();
+    });
+
+
     function triggerFileDownload(url, filename) {
         const a = document.createElement('a');
         a.href = url;
@@ -1625,7 +2242,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (id === 'occupancyChart' && occupancyChartInstance) dataUrl = occupancyChartInstance.toBase64Image();
                 else if (id === 'occupancyByBlockChart' && occupancyByBlockChartInstance) dataUrl = occupancyByBlockChartInstance.toBase64Image();
                 else if (id === 'occupancyByTypeChart' && occupancyByTypeChartInstance) dataUrl = occupancyByTypeChartInstance.toBase64Image();
-                else if (id === 'occupancyTrendChart' && occupancyTrendChartInstance) dataUrl = occupancyTrendChartInstance.toBase64Image();
                 else if (id === 'reservationsChart' && reservationsChartInstance) dataUrl = reservationsChartInstance.toBase64Image();
                 else {
                     const source = document.getElementById(id);
@@ -1858,4 +2474,98 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadExpiration();
     updateNotificationBadge();
     setInterval(updateNotificationBadge, 30000);
+
+    document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
+        setTimeout(() => {
+            const dark = isDarkMode();
+            const tickColor = dark ? '#cbd5e1' : '#1e293b';
+            const categoryTickColor = dark ? '#ffffff' : '#06170f';
+            const gridColor = dark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(44, 94, 71, 0.18)';
+            const axisBorderColor = dark ? 'rgba(255, 255, 255, 0.24)' : 'rgba(44, 94, 71, 0.35)';
+
+            const allCharts = [
+                occupancyChartInstance,
+                occupancyByBlockChartInstance,
+                occupancyByTypeChartInstance,
+                revenueMonthChart,
+                revenueYearChart,
+                revenueBreakdownChartInstance,
+                verificationBreakdownChartInstance,
+                revenueByMethodChartInstance,
+                reservationsChartInstance,
+                reservationStatusChartInstance,
+                demographicsChartInstance,
+                ageDistributionChartInstance,
+                expirationStatusChartInstance,
+                expirationTrendChartInstance
+            ];
+            allCharts.forEach(ch => {
+                if (!ch) return;
+                if (ch.options?.scales?.x) {
+                    if (ch.options.scales.x.ticks) ch.options.scales.x.ticks.color = tickColor;
+                    if (ch.options.scales.x.border) ch.options.scales.x.border.color = axisBorderColor;
+                }
+                if (ch.options?.scales?.y) {
+                    if (ch.options.scales.y.ticks) ch.options.scales.y.ticks.color = tickColor;
+                    if (ch.options.scales.y.grid) ch.options.scales.y.grid.color = gridColor;
+                    if (ch.options.scales.y.border) ch.options.scales.y.border.color = axisBorderColor;
+                }
+                if (ch.options?.plugins?.legend?.labels) {
+                    ch.options.plugins.legend.labels.color = tickColor;
+                }
+                ch.update('none');
+            });
+            if (occupancyChartInstance) {
+                if (occupancyChartInstance.options?.scales?.x?.ticks) {
+                    occupancyChartInstance.options.scales.x.ticks.color = categoryTickColor;
+                }
+                if (occupancyChartInstance.options?.scales?.y?.ticks) {
+                    occupancyChartInstance.options.scales.y.ticks.color = tickColor;
+                }
+                occupancyChartInstance.update('none');
+            }
+            if (occupancyByTypeChartInstance) {
+                if (occupancyByTypeChartInstance.options?.scales?.x?.ticks) {
+                    occupancyByTypeChartInstance.options.scales.x.ticks.color = categoryTickColor;
+                }
+                if (occupancyByTypeChartInstance.options?.scales?.y?.ticks) {
+                    occupancyByTypeChartInstance.options.scales.y.ticks.color = tickColor;
+                }
+                occupancyByTypeChartInstance.update('none');
+            }
+            if (occupancyByBlockChartInstance) {
+                if (occupancyByBlockChartInstance.options?.scales?.y?.ticks) {
+                    occupancyByBlockChartInstance.options.scales.y.ticks.color = categoryTickColor;
+                }
+                if (occupancyByBlockChartInstance.options?.scales?.x?.ticks) {
+                    occupancyByBlockChartInstance.options.scales.x.ticks.color = tickColor;
+                }
+                if (occupancyByBlockChartInstance.options?.scales?.x?.grid) {
+                    occupancyByBlockChartInstance.options.scales.x.grid.color = gridColor;
+                }
+                occupancyByBlockChartInstance.update('none');
+            }
+        }, 60);
+    });
 });
+
+(function initFooter() {
+    const yearEl = document.getElementById('footerYear');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+    const timeEl = document.getElementById('footerLiveTime');
+    const pulseEl = document.querySelector('.footer-pulse-ring');
+
+    function stampFooterTime() {
+        const now = new Date();
+        const formatted = now.toLocaleString('en-PH', {
+            weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true
+        });
+        if (timeEl) timeEl.textContent = formatted;
+        if (pulseEl) pulseEl.style.display = 'block';
+    }
+
+    stampFooterTime();
+    window.stampFooterTime = stampFooterTime;
+})();

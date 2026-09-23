@@ -89,6 +89,9 @@ class Schedule {
             $sql .= " AND YEAR(s.schedule_date) = ? AND MONTH(s.schedule_date) = ?";
             $params[] = $filters['year'];
             $params[] = $filters['month'];
+        } elseif (!empty($filters['year'])) {
+            $sql .= " AND YEAR(s.schedule_date) = ?";
+            $params[] = $filters['year'];
         }
         if (!empty($filters['awaiting_confirmation'])) {
             $sql .= " AND s.status = 'Pending' AND EXISTS (
@@ -97,7 +100,11 @@ class Schedule {
             )";
         }
 
-        $sql .= " ORDER BY s.schedule_date ASC, s.schedule_time ASC";
+        if (!empty($filters['sort_desc'])) {
+            $sql .= " ORDER BY s.schedule_date DESC, s.schedule_time DESC";
+        } else {
+            $sql .= " ORDER BY s.schedule_date ASC, s.schedule_time ASC";
+        }
 
         $page = null;
         $perPage = null;
@@ -168,6 +175,9 @@ class Schedule {
             $sql .= " AND YEAR(s.schedule_date) = ? AND MONTH(s.schedule_date) = ?";
             $params[] = $filters['year'];
             $params[] = $filters['month'];
+        } elseif (!empty($filters['year'])) {
+            $sql .= " AND YEAR(s.schedule_date) = ?";
+            $params[] = $filters['year'];
         }
         if (!empty($filters['awaiting_confirmation'])) {
             $sql .= " AND s.status = 'Pending' AND EXISTS (

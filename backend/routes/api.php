@@ -554,6 +554,7 @@ if ($path === 'schedules' && $requestMethod === 'GET') {
     if (isset($_GET['page'])) $filters['page'] = $_GET['page'];
     if (isset($_GET['per_page'])) $filters['per_page'] = $_GET['per_page'];
     if (isset($_GET['awaiting_confirmation'])) $filters['awaiting_confirmation'] = true;
+    if (!empty($_GET['sort_desc'])) $filters['sort_desc'] = true;
     echo json_encode($scheduleController->index($filters, $user));
     exit;
 }
