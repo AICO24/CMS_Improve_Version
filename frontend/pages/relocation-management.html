@@ -155,30 +155,45 @@
                 </div>
             </div>
                 <div class="content-area">
-                <!-- Summary Statistics — at top for executive overview -->
+                <!-- Summary Statistics — at top for executive overview (Unified System Brand Green) -->
                 <div class="stats-row reloc-stats">
-                    <div class="stat-card accent-teal">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-truck-moving"></i></span> Total Requests</div>
+                    <div class="stat-card" role="button" tabindex="0" title="Filter by All Requests">
+                        <div class="stat-title">
+                            <span>Total Requests</span>
+                            <span class="card-icon"><i class="fas fa-truck-moving"></i></span>
+                        </div>
                         <div class="stat-value" id="totalCount">0</div>
                         <div class="stat-sub">All time recorded</div>
                     </div>
-                    <div class="stat-card accent-amber">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-clock"></i></span> Pending Review</div>
+                    <div class="stat-card" role="button" tabindex="0" title="Filter by Pending Review">
+                        <div class="stat-title">
+                            <span>Pending Review</span>
+                            <span class="card-icon"><i class="fas fa-clock"></i></span>
+                        </div>
                         <div class="stat-value" id="pendingCount">0</div>
                         <div class="stat-sub">Awaiting approval</div>
                     </div>
-                    <div class="stat-card accent-navy">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-calendar-check"></i></span> Approved</div>
+                    <div class="stat-card" role="button" tabindex="0" title="Filter by Approved">
+                        <div class="stat-title">
+                            <span>Approved</span>
+                            <span class="card-icon"><i class="fas fa-calendar-check"></i></span>
+                        </div>
                         <div class="stat-value" id="approvedCount">0</div>
                         <div class="stat-sub">Ready for transfer</div>
                     </div>
-                    <div class="stat-card accent-blue">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-circle-check"></i></span> Completed</div>
+                    <div class="stat-card" role="button" tabindex="0" title="Filter by Completed">
+                        <div class="stat-title">
+                            <span>Completed</span>
+                            <span class="card-icon"><i class="fas fa-circle-check"></i></span>
+                        </div>
                         <div class="stat-value" id="completedCount">0</div>
                         <div class="stat-sub">Transferred remains</div>
                     </div>
-                    <div class="stat-card accent-red">
-                        <div class="stat-title"><span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span> Needs Attention</div>
+                    <div class="stat-card" role="button" tabindex="0" title="Filter by Needs Attention">
+                        <div class="stat-title">
+                            <span>Needs Attention</span>
+                            <span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span>
+                        </div>
                         <div class="stat-value" id="attentionCount">0</div>
                         <div class="stat-sub">Flagged / Exceptions</div>
                     </div>
