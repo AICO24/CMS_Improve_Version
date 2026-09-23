@@ -2360,48 +2360,93 @@
     color: #a7f3d0 !important;
 }
 
-.dashboard-body[data-theme="dark"] .toolbar-filters .search-field {
+.dashboard-body[data-theme="dark"] .toolbar-filters .search-field,
+.dashboard-body[data-theme="dark"] .panel-filters-group .search-field,
+body[data-theme="dark"] .toolbar-filters .search-field,
+body[data-theme="dark"] .panel-filters-group .search-field,
+[data-theme="dark"] .toolbar-filters .search-field,
+[data-theme="dark"] .panel-filters-group .search-field {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
 }
 
-.dashboard-body[data-theme="dark"] .toolbar-filters .search-field .search-field__input {
-    background: #111a15 !important;
-    border: 1.5px solid rgba(255, 255, 255, 0.28) !important;
-    color: #ffffff !important;
+.dashboard-body[data-theme="dark"] .toolbar-filters .search-field .search-field__input,
+.dashboard-body[data-theme="dark"] .panel-filters-group .search-field .search-field__input,
+body[data-theme="dark"] .toolbar-filters .search-field .search-field__input,
+body[data-theme="dark"] .panel-filters-group .search-field .search-field__input,
+[data-theme="dark"] .toolbar-filters .search-field .search-field__input,
+[data-theme="dark"] .panel-filters-group .search-field .search-field__input {
+    background: #1e293b !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.2) !important;
+    color: #f1f5f9 !important;
     font-weight: 600 !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 }
 
-.dashboard-body[data-theme="dark"] .toolbar-filters .search-field .search-field__input:hover {
+.dashboard-body[data-theme="dark"] .toolbar-filters .search-field .search-field__input:hover,
+.dashboard-body[data-theme="dark"] .panel-filters-group .search-field .search-field__input:hover,
+body[data-theme="dark"] .toolbar-filters .search-field .search-field__input:hover,
+body[data-theme="dark"] .panel-filters-group .search-field .search-field__input:hover,
+[data-theme="dark"] .toolbar-filters .search-field .search-field__input:hover,
+[data-theme="dark"] .panel-filters-group .search-field .search-field__input:hover {
     border-color: #34d399 !important;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
 }
 
-.dashboard-body[data-theme="dark"] .toolbar-filters .search-field .search-field__input:focus {
+.dashboard-body[data-theme="dark"] .toolbar-filters .search-field .search-field__input:focus,
+.dashboard-body[data-theme="dark"] .panel-filters-group .search-field .search-field__input:focus,
+body[data-theme="dark"] .toolbar-filters .search-field .search-field__input:focus,
+body[data-theme="dark"] .panel-filters-group .search-field .search-field__input:focus,
+[data-theme="dark"] .toolbar-filters .search-field .search-field__input:focus,
+[data-theme="dark"] .panel-filters-group .search-field .search-field__input:focus {
     border-color: #34d399 !important;
     box-shadow: 0 0 0 3.5px rgba(52, 211, 153, 0.3) !important;
 }
 
-.dashboard-body[data-theme="dark"] .toolbar-filters .search-field .search-field__label {
-    color: #cbd5e1 !important;
+.dashboard-body[data-theme="dark"] .toolbar-filters .search-field .search-field__label,
+.dashboard-body[data-theme="dark"] .panel-filters-group .search-field .search-field__label,
+body[data-theme="dark"] .toolbar-filters .search-field .search-field__label,
+body[data-theme="dark"] .panel-filters-group .search-field .search-field__label,
+[data-theme="dark"] .toolbar-filters .search-field .search-field__label,
+[data-theme="dark"] .panel-filters-group .search-field .search-field__label {
+    color: #94a3b8 !important;
     font-weight: 600 !important;
-    background: transparent !important;
+    background: #1e293b !important;
 }
 
 .dashboard-body[data-theme="dark"] .toolbar-filters .search-field .search-field__input:focus ~ .search-field__label,
-.dashboard-body[data-theme="dark"] .toolbar-filters .search-field .search-field__input:not(:placeholder-shown) ~ .search-field__label {
-    background: #111a15 !important;
-    color: #6ee7b7 !important;
-    font-weight: 800 !important;
+.dashboard-body[data-theme="dark"] .toolbar-filters .search-field .search-field__input:not(:placeholder-shown) ~ .search-field__label,
+.dashboard-body[data-theme="dark"] .panel-filters-group .search-field .search-field__input:focus ~ .search-field__label,
+.dashboard-body[data-theme="dark"] .panel-filters-group .search-field .search-field__input:not(:placeholder-shown) ~ .search-field__label,
+body[data-theme="dark"] .toolbar-filters .search-field .search-field__input:focus ~ .search-field__label,
+body[data-theme="dark"] .toolbar-filters .search-field .search-field__input:not(:placeholder-shown) ~ .search-field__label,
+body[data-theme="dark"] .panel-filters-group .search-field .search-field__input:focus ~ .search-field__label,
+body[data-theme="dark"] .panel-filters-group .search-field .search-field__input:not(:placeholder-shown) ~ .search-field__label,
+[data-theme="dark"] .toolbar-filters .search-field .search-field__input:focus ~ .search-field__label,
+[data-theme="dark"] .toolbar-filters .search-field .search-field__input:not(:placeholder-shown) ~ .search-field__label,
+[data-theme="dark"] .panel-filters-group .search-field .search-field__input:focus ~ .search-field__label,
+[data-theme="dark"] .panel-filters-group .search-field .search-field__input:not(:placeholder-shown) ~ .search-field__label {
+    background: #1e293b !important;
+    color: #34d399 !important;
+    font-weight: 700 !important;
 }
 
-.dashboard-body[data-theme="dark"] .toolbar-filters .search-field .search-field__icon {
-    color: #cbd5e1 !important;
+.dashboard-body[data-theme="dark"] .toolbar-filters .search-field .search-field__icon,
+.dashboard-body[data-theme="dark"] .panel-filters-group .search-field .search-field__icon,
+body[data-theme="dark"] .toolbar-filters .search-field .search-field__icon,
+body[data-theme="dark"] .panel-filters-group .search-field .search-field__icon,
+[data-theme="dark"] .toolbar-filters .search-field .search-field__icon,
+[data-theme="dark"] .panel-filters-group .search-field .search-field__icon {
+    color: #94a3b8 !important;
 }
 
-.dashboard-body[data-theme="dark"] .toolbar-filters .search-field .search-field__input:focus ~ .search-field__icon {
+.dashboard-body[data-theme="dark"] .toolbar-filters .search-field .search-field__input:focus ~ .search-field__icon,
+.dashboard-body[data-theme="dark"] .panel-filters-group .search-field .search-field__input:focus ~ .search-field__icon,
+body[data-theme="dark"] .toolbar-filters .search-field .search-field__input:focus ~ .search-field__icon,
+body[data-theme="dark"] .panel-filters-group .search-field .search-field__input:focus ~ .search-field__icon,
+[data-theme="dark"] .toolbar-filters .search-field .search-field__input:focus ~ .search-field__icon,
+[data-theme="dark"] .panel-filters-group .search-field .search-field__input:focus ~ .search-field__icon {
     color: #34d399 !important;
 }
 
