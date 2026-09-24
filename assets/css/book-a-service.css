@@ -530,6 +530,45 @@
     }
 }
 
+@media (max-width: 480px) {
+    .content-area {
+        padding: 10px 8px !important;
+    }
+
+    .service-hero-deck {
+        padding: 14px 12px;
+    }
+
+    .service-hero-title {
+        font-size: 1.25rem;
+    }
+
+    .service-hero-subtitle {
+        font-size: 0.82rem;
+    }
+
+    .service-ticker-chip {
+        padding: 8px 10px;
+    }
+
+    .service-command-card {
+        padding: 16px 12px;
+    }
+
+    .service-cta-btn {
+        width: 100%;
+        justify-content: center;
+        height: 42px;
+    }
+
+    .quick-link-pill {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+    }
+}
+
+
 /* =========================================================================
    OBSIDIAN DARK MODE ENGINE ([data-theme="dark"])
    ========================================================================= */

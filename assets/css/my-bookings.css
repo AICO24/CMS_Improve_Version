@@ -735,6 +735,9 @@
     .btn-new-booking {
         width: 100%;
     }
+    .bookings-data-table {
+        min-width: 680px !important;
+    }
 }
 
 /* ── Dark Mode Harmony ──────────────────────────────────────────────── */
@@ -1031,18 +1034,28 @@ body[data-theme="dark"] .dashboard-footer-inner {
 }
 
 
-@media (max-width: 375px) {
+@media (max-width: 480px) {
     .content-area {
-        padding: 12px;
+        padding: 10px 8px;
     }
     .my-bookings-stats > .stat-card {
-        padding: 14px 16px;
+        padding: 14px 12px;
     }
     .my-bookings-stats > .stat-card .stat-value {
-        font-size: 1.8rem;
+        font-size: clamp(1.4rem, 6vw, 1.8rem);
     }
     .bookings-data-table thead th,
     .bookings-data-table tbody td {
-        padding: 10px 12px;
+        padding: 10px 10px;
+    }
+    .btn-new-booking {
+        justify-content: center;
+        height: 42px;
+    }
+    .pagination-controls {
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
     }
 }
+

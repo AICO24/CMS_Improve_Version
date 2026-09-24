@@ -1997,7 +1997,9 @@ body[data-theme="dark"].dashboard-body,
 @media (max-width: 768px) {
     html, body {
         height: 100%;
-        overflow: hidden;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .dashboard-container {
@@ -2199,6 +2201,62 @@ body[data-theme="dark"].dashboard-body,
         z-index: 20;
     }
 }
+
+@media (max-width: 480px) {
+    .chat-window {
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .chat-message {
+        max-width: 94%;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+
+    .chat-input-row {
+        padding: 6px 8px;
+        gap: 6px;
+    }
+
+    .chat-input-wrapper input[type="text"] {
+        height: 40px;
+        font-size: 0.86rem;
+        padding: 0 10px 0 34px;
+        border-radius: 10px;
+    }
+
+    .chat-input-icon {
+        left: 10px;
+        font-size: 0.85rem;
+    }
+
+    .chat-btn-send {
+        height: 40px;
+        width: 40px;
+        min-width: 40px;
+        border-radius: 10px;
+    }
+
+    .chat-prompt-suggestions {
+        padding: 4px 6px;
+        gap: 4px;
+    }
+
+    .prompt-chip {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+    }
+
+    .blueprint-card {
+        padding: 10px 10px;
+    }
+
+    .hud-label {
+        font-size: 0.70rem;
+    }
+}
+
 
 /* ---------- DOCUMENTARY REQUIREMENTS HUD & MODAL ---------- */
 .doc-requirement-item {
