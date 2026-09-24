@@ -4,8 +4,11 @@
 .vscode
 scratch
 tests
-python-ai
+python-ai/venv
+python-ai/.venv
+python-ai/__pycache__
 *.zip
 *.log
 .env
+
 
