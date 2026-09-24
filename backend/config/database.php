@@ -26,6 +26,16 @@ class Database {
             PDO::ATTR_EMULATE_PREPARES => false,
         ];
 
+        $ssl = EnvironmentService::get('DB_SSL', 'false');
+        if (filter_var($ssl, FILTER_VALIDATE_BOOLEAN)) {
+            $caPath = EnvironmentService::get('DB_SSL_CA', '/etc/ssl/certs/ca-certificates.crt');
+            if (!empty($caPath) && file_exists($caPath)) {
+                $options[PDO::MYSQL_ATTR_SSL_CA] = $caPath;
+            }
+            $verifyCert = EnvironmentService::get('DB_SSL_VERIFY', 'false');
+            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = filter_var($verifyCert, FILTER_VALIDATE_BOOLEAN);
+        }
+
         try {
             $this->conn = new PDO($dsn, $this->username, $this->password, $options);
         } catch (PDOException $e) {

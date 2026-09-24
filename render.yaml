@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: cms-app
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "4000"
+      - key: DB_NAME
+        value: cemetery_db
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRY
+        value: "28800"
+      - key: JWT_REMEMBER_EXPIRY
+        value: "2592000"
+      - key: SEED_DEFAULT_USERS
+        value: "false"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "*"

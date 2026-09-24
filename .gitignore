@@ -21,3 +21,5 @@ backend/uploads/decedent-documents/*.pdf
 # OS files
 .DS_Store
 Thumbs.db
+*.zip
+

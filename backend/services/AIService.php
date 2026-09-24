@@ -1,14 +1,17 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
 
+require_once __DIR__ . '/EnvironmentService.php';
+
 class AIService {
     private $baseUrl;
     private $timeout;
     private $cacheDir;
 
-    public function __construct($baseUrl = 'http://127.0.0.1:5000') {
-        $this->baseUrl = rtrim($baseUrl, '/');
-        $this->timeout = 30;
+    public function __construct($baseUrl = null) {
+        $defaultUrl = EnvironmentService::get('AI_SERVICE_URL', 'http://127.0.0.1:5000');
+        $this->baseUrl = rtrim($baseUrl ?? $defaultUrl, '/');
+        $this->timeout = (int) EnvironmentService::get('AI_SERVICE_TIMEOUT', 30);
         $this->cacheDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cms_cache';
         if (!is_dir($this->cacheDir)) {
             @mkdir($this->cacheDir, 0777, true);

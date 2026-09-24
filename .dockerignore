@@ -1,6 +1,11 @@
 .git
+.gemini
+.claude
+.vscode
 scratch
 tests
 python-ai
 *.zip
 *.log
+.env
+
