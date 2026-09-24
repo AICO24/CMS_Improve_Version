@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             scales: {
                 x: {
                     border: { display: true, color: axisBorderColor, width: 1.5 },
-                    ticks: { maxRotation: 0, autoSkip: true, font: { size: 11.5, weight: '700' }, color: tickColor },
+                    ticks: { maxRotation: 45, minRotation: 0, autoSkip: true, autoSkipPadding: 6, font: { size: 11.5, weight: '700' }, color: tickColor },
                     grid: { display: false }
                 },
                 y: {
@@ -428,7 +428,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     Chart.register(donutSliceLabelPlugin);
 
-    function buildRevenueLineChart(canvas, labels, values, { chartRef, label, gradientColor = '#0f766e' } = {}) {
+    function buildRevenueLineChart(canvas, labels, values, { chartRef, label, gradientColor = '#0f766e', tooltipYear = '' } = {}) {
         const ctx = canvas.getContext('2d');
         if (chartRef) chartRef.destroy();
         const dark = isDarkMode();
@@ -487,7 +487,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                         borderWidth: 1.5,
                         padding: 11,
                         boxPadding: 5,
-                        callbacks: { label: ctx => ` ${label}: ${formatPeso(ctx.parsed.y)}` }
+                        callbacks: {
+                            title: (tooltipItems) => {
+                                const item = tooltipItems[0];
+                                if (!item) return '';
+                                return tooltipYear ? `${item.label} ${tooltipYear}` : item.label;
+                            },
+                            label: ctx => ` ${label}: ${formatPeso(ctx.parsed.y)}`
+                        }
                     }
                 },
                 animation: {
@@ -497,7 +504,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                 scales: {
                     x: {
                         border: { display: true, color: axisBorderColor, width: 1.5 },
-                        ticks: { maxRotation: 0, autoSkip: false, font: { size: 11.5, weight: '700' }, color: tickColor },
+                        ticks: {
+                            autoSkip: true,
+                            maxRotation: 45,
+                            minRotation: 0,
+                            autoSkipPadding: 8,
+                            maxTicksLimit: 12,
+                            font: { size: 11, weight: '700' },
+                            color: tickColor
+                        },
                         grid: { display: false }
                     },
                     y: {
@@ -894,11 +909,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                             stacked: true,
                             border: { display: true, color: secAxisBorderColor, width: 1.5 },
                             ticks: {
-                                font: { size: 12.5, weight: '800', family: "'Inter', sans-serif" },
+                                font: { size: 12, weight: '750', family: "'Inter', sans-serif" },
                                 color: secDark ? '#ffffff' : '#06170f',
                                 padding: 8,
-                                maxRotation: 0,
-                                autoSkip: false,
+                                maxRotation: 45,
+                                minRotation: 0,
+                                autoSkip: true,
+                                autoSkipPadding: 8,
                                 callback: function(value) {
                                     const lbl = this.getLabelForValue(value);
                                     if (typeof lbl === 'string' && lbl.length > 28) {
@@ -1208,11 +1225,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                             stacked: true,
                             border: { display: true, color: typeAxisBorderColor, width: 1.5 },
                             ticks: {
-                                font: { size: 12.5, weight: '800', family: "'Inter', sans-serif" },
+                                font: { size: 12, weight: '750', family: "'Inter', sans-serif" },
                                 color: typeDark ? '#ffffff' : '#06170f',
                                 padding: 8,
-                                maxRotation: 0,
-                                autoSkip: false,
+                                maxRotation: 45,
+                                minRotation: 0,
+                                autoSkip: true,
+                                autoSkipPadding: 8,
                                 callback: function(value) {
                                     const lbl = this.getLabelForValue(value);
                                     if (typeof lbl === 'string' && lbl.length > 28) {
@@ -1343,31 +1362,48 @@ document.addEventListener('DOMContentLoaded', async function() {
             const revenueCanvas = document.getElementById('revenueChart');
             revenueCanvas.style.display = 'block';
             revenueCanvas.style.width = '100%';
-            revenueCanvas.style.height = '320px';
-            revenueCanvas.height = 320;
-            revenueMonthChart = buildRevenueLineChart(revenueCanvas, monthData.map(item => `${MONTH_NAMES[item.month - 1]} ${monthYear}`), monthData.map(item => item.total || 0), {
+            revenueCanvas.style.height = '300px';
+            revenueCanvas.height = 300;
+
+            // Short month names (Jan, Feb, Mar...) so x-axis is responsive and clean without label collisions
+            const monthLabels = (monthData || []).map(item => MONTH_NAMES[item.month - 1]);
+            const monthValues = (monthData || []).map(item => item.total || 0);
+
+            revenueMonthChart = buildRevenueLineChart(revenueCanvas, monthLabels, monthValues, {
                 chartRef: revenueMonthChart,
-                label: 'Monthly Revenue'
+                label: 'Monthly Revenue',
+                tooltipYear: String(monthYear)
             });
+            const monthBadge = document.getElementById('revenueMonthBadge');
+            if (monthBadge) monthBadge.textContent = `${monthYear} · Line`;
 
             const yearData = await api.request(`payments/revenue-by-year${params.length ? '?' + params.join('&') : ''}`, { method: 'GET' });
             const yearMap = new Map((yearData || []).map(item => [Number(item.year), Number(item.total) || 0]));
-            const yearLabels = hasDateRange
+
+            const currentYear = new Date().getFullYear();
+            const validDataYears = (yearData || []).map(item => Number(item.year)).filter(Boolean);
+            const earliestYear = validDataYears.length ? Math.min(...validDataYears) : currentYear;
+            const startYear = Math.min(earliestYear, currentYear - 4);
+            const endYear = Math.max(currentYear, ...(validDataYears.length ? validDataYears : [currentYear]));
+            const totalYearsCount = Math.min(10, Math.max(5, endYear - startYear + 1));
+            const actualStartYear = endYear - totalYearsCount + 1;
+
+            const yearLabels = hasDateRange && yearData?.length
                 ? (yearData || []).map(item => String(item.year))
-                : Array.from({ length: 13 }, (_, index) => String(new Date().getFullYear() + index));
-            const yearValues = hasDateRange
-                ? (yearData || []).map(item => Number(item.total) || 0)
-                : yearLabels.map(year => yearMap.get(Number(year)) || 0);
+                : Array.from({ length: totalYearsCount }, (_, index) => String(actualStartYear + index));
+            const yearValues = yearLabels.map(year => yearMap.get(Number(year)) || 0);
 
             const yearCanvas = document.getElementById('revenueYearChart');
             yearCanvas.style.display = 'block';
             yearCanvas.style.width = '100%';
-            yearCanvas.style.height = '320px';
-            yearCanvas.height = 320;
+            yearCanvas.style.height = '300px';
+            yearCanvas.height = 300;
             revenueYearChart = buildRevenueLineChart(yearCanvas, yearLabels, yearValues, {
                 chartRef: revenueYearChart,
                 label: 'Yearly Revenue'
             });
+            const yearBadge = document.getElementById('revenueYearBadge');
+            if (yearBadge) yearBadge.textContent = `${yearLabels.length}-Year Trend · Line`;
 
             const breakdown = data.breakdown || [];
             const labels = breakdown.map(item => item.transaction_type || 'Unknown');
@@ -1607,7 +1643,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                     scales: {
                         x: {
                             border: { display: true, color: methAxisBorderColor, width: 1.5 },
-                            ticks: { font: { size: 12, weight: '800' }, color: methDark ? '#ffffff' : '#06170f' },
+                            ticks: {
+                                font: { size: 11.5, weight: '700' },
+                                color: methDark ? '#ffffff' : '#06170f',
+                                autoSkip: true,
+                                maxRotation: 45,
+                                minRotation: 0,
+                                autoSkipPadding: 8
+                            },
                             grid: { display: false }
                         },
                         y: {
