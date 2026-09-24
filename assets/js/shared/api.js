@@ -9,7 +9,8 @@ function getFrontendBasePath() {
         return `${window.location.origin}${currentPath.split('/frontend')[0]}/frontend`;
     }
 
-    return `${window.location.origin}/CMS/frontend`;
+    const prefix = currentPath.includes('/CMS') ? '/CMS' : '';
+    return `${window.location.origin}${prefix}/frontend`;
 }
 
 function getAppOrigin() {

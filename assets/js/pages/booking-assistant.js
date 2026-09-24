@@ -1996,7 +1996,8 @@
             formData.append('document_type', docType);
 
             const token = api.getToken ? api.getToken() : localStorage.getItem('token');
-            const resRaw = await fetch(`/CMS/backend/routes/api.php?path=booking-agent/drafts/${state.draftId}/documents`, {
+            const appBase = window.getAppOrigin ? window.getAppOrigin() : (window.location.pathname.includes('/CMS') ? `${window.location.origin}/CMS` : window.location.origin);
+            const resRaw = await fetch(`${appBase}/backend/routes/api.php?path=booking-agent/drafts/${state.draftId}/documents`, {
                 method: 'POST',
                 headers: token ? { 'Authorization': `Bearer ${token}` } : {},
                 body: formData
