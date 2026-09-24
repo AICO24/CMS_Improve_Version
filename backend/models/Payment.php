@@ -275,6 +275,23 @@ class Payment {
     }
 
     /**
+     * Finds a Verified payment record by transaction type and reference.
+     */
+    public function findVerifiedByReference($transactionType, $referenceId, $referenceKind = null) {
+        $sql = "SELECT * FROM payments WHERE transaction_type = ? AND reference_id = ? AND verification_status = 'Verified'";
+        $params = [$transactionType, $referenceId];
+        if ($referenceKind !== null) {
+            $sql .= " AND reference_kind = ?";
+            $params[] = $referenceKind;
+        }
+        $sql .= " ORDER BY payment_id DESC LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    /**
      * Batch 3: Finds a payment by its PayMongo Checkout Session ID.
      */
     public function findByCheckoutSessionId($checkoutSessionId) {

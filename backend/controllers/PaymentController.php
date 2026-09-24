@@ -178,7 +178,7 @@ class PaymentController {
     // it's trusted outright instead of re-guessed. Left null by legacy
     // callers and the payments modal's manual reference-entry fallback, which
     // still need the original guess — see migration_20260902_add_payment_reference_kind.sql.
-    private function validatePaymentReference($transactionType, $referenceId, $userId, $userRole, $referenceKind = null) {
+    private function validatePaymentReference($transactionType, $referenceId, $userId, $userRole, $referenceKind = null, $isNewPayment = false) {
         $transactionType = $this->normalizeTransactionType($transactionType);
         if ($transactionType === null) {
             return ['error' => 'Invalid transaction type', 'code' => 400];
@@ -202,6 +202,9 @@ class PaymentController {
                     if (!$lot) {
                         return ['error' => 'Lot reference not found', 'code' => 404];
                     }
+                    if ($isNewPayment && ($lot['status'] ?? '') !== 'Available') {
+                        return ['error' => 'Only available lots can be purchased directly', 'code' => 409];
+                    }
                     return [
                         'reference_id' => $referenceId,
                         'reference_kind' => 'lot',
@@ -219,6 +222,9 @@ class PaymentController {
                     }
                     if (($schedule['status'] ?? '') === 'Cancelled') {
                         return ['error' => 'Cancelled reservations cannot be paid', 'code' => 409];
+                    }
+                    if ($isNewPayment && in_array(($schedule['status'] ?? ''), ['Confirmed', 'Completed'], true)) {
+                        return ['error' => 'This reservation has already been confirmed or completed', 'code' => 409];
                     }
                     $lot = $lotModel->findById($schedule['lot_id']);
                     if (!$lot) {
@@ -241,6 +247,9 @@ class PaymentController {
                     if (($schedule['status'] ?? '') === 'Cancelled') {
                         return ['error' => 'Cancelled reservations cannot be paid', 'code' => 409];
                     }
+                    if ($isNewPayment && in_array(($schedule['status'] ?? ''), ['Confirmed', 'Completed'], true)) {
+                        return ['error' => 'This reservation has already been confirmed or completed', 'code' => 409];
+                    }
 
                     $lot = $lotModel->findById($schedule['lot_id']);
                     if (!$lot) {
@@ -261,6 +270,9 @@ class PaymentController {
                 $lot = $lotModel->findById($referenceId);
                 if (!$lot) {
                     return ['error' => 'Lot reference not found', 'code' => 404];
+                }
+                if ($isNewPayment && ($lot['status'] ?? '') !== 'Available') {
+                    return ['error' => 'Only available lots can be purchased directly', 'code' => 409];
                 }
 
                 return [
@@ -284,6 +296,9 @@ class PaymentController {
                 }
                 if (($cremation['status'] ?? '') === 'Cancelled') {
                     return ['error' => 'Cancelled cremation records cannot be paid', 'code' => 409];
+                }
+                if ($isNewPayment && in_array(($cremation['status'] ?? ''), ['Confirmed', 'Completed'], true)) {
+                    return ['error' => 'This cremation booking has already been confirmed or completed', 'code' => 409];
                 }
 
                 $columbarium = !empty($cremation['columbarium']) ? ' (' . $cremation['columbarium'] . ')' : '';
@@ -394,9 +409,22 @@ class PaymentController {
 
         $userModel = new User();
         $userRole = strtolower((string) $userModel->getRole($userId));
-        $referenceCheck = $this->validatePaymentReference($transactionType, $data['reference_id'] ?? null, $userId, $userRole, $data['reference_kind'] ?? null);
+        $referenceCheck = $this->validatePaymentReference($transactionType, $data['reference_id'] ?? null, $userId, $userRole, $data['reference_kind'] ?? null, true);
         if (isset($referenceCheck['error'])) {
             return $referenceCheck;
+        }
+
+        // Batch 2: Prevent duplicate payment if a verified payment already exists for this reference
+        $verifiedPayment = $this->paymentModel->findVerifiedByReference(
+            $transactionType,
+            $referenceCheck['reference_id'],
+            $referenceCheck['reference_kind'] ?? null
+        );
+        if ($verifiedPayment) {
+            return [
+                'error' => 'A verified payment already exists for this reference',
+                'code' => 409,
+            ];
         }
 
         $receiptFile = $data['receipt_file'] ?? null;
@@ -549,15 +577,33 @@ class PaymentController {
             ? ($data['reference_kind'] ?? null)
             : ($existing['reference_kind'] ?? null);
 
+        $isChangingReference = (array_key_exists('reference_id', $data) && (string) $data['reference_id'] !== (string) $existing['reference_id'])
+            || (array_key_exists('transaction_type', $data) && $transactionType !== $existing['transaction_type']);
+
         $referenceCheck = $this->validatePaymentReference(
             $transactionType,
             $data['reference_id'] ?? $existing['reference_id'],
             $userId,
             $userRole,
-            $referenceKindInput
+            $referenceKindInput,
+            $isChangingReference
         );
         if (isset($referenceCheck['error'])) {
             return $referenceCheck;
+        }
+
+        if ($isChangingReference) {
+            $verifiedPayment = $this->paymentModel->findVerifiedByReference(
+                $transactionType,
+                $referenceCheck['reference_id'],
+                $referenceCheck['reference_kind'] ?? null
+            );
+            if ($verifiedPayment && (int) $verifiedPayment['payment_id'] !== (int) $id) {
+                return [
+                    'error' => 'A verified payment already exists for this reference',
+                    'code' => 409,
+                ];
+            }
         }
 
         $receiptFile = $data['receipt_file'] ?? null;
@@ -1407,12 +1453,42 @@ class PaymentController {
             $referenceKind = in_array($data['reference_kind'] ?? null, ['schedule', 'lot'], true) ? $data['reference_kind'] : null;
 
             // Server-side ownership and reference validation
-            $referenceCheck = $this->validatePaymentReference($transactionType, $referenceId, $userId, $userRole, $referenceKind);
+            $referenceCheck = $this->validatePaymentReference($transactionType, $referenceId, $userId, $userRole, $referenceKind, true);
             if (isset($referenceCheck['error'])) {
                 return $referenceCheck;
             }
             $referenceId = $referenceCheck['reference_id'];
             $referenceKind = $referenceCheck['reference_kind'] ?? null;
+        }
+
+        // Batch 2: Duplicate payment check - ensure reference has not already been verified
+        $verifiedPayment = $this->paymentModel->findVerifiedByReference($transactionType, $referenceId, $referenceKind);
+        if ($verifiedPayment) {
+            return [
+                'error' => 'A verified payment already exists for this ' . strtolower($transactionType) . ' reference',
+                'code' => 409,
+            ];
+        }
+
+        // Batch 2: Ensure reservation or cremation booking is not already confirmed or completed
+        if ($referenceKind === 'schedule') {
+            $scheduleModel = new Schedule();
+            $sched = $scheduleModel->findById($referenceId);
+            if ($sched && in_array($sched['status'] ?? '', ['Confirmed', 'Completed'], true)) {
+                return [
+                    'error' => 'This reservation has already been confirmed or completed',
+                    'code' => 409,
+                ];
+            }
+        } elseif ($transactionType === 'Cremation') {
+            $cremationModel = new Cremation();
+            $crem = $cremationModel->findById($referenceId);
+            if ($crem && in_array($crem['status'] ?? '', ['Confirmed', 'Completed'], true)) {
+                return [
+                    'error' => 'This cremation booking has already been confirmed or completed',
+                    'code' => 409,
+                ];
+            }
         }
 
         // 3. Authoritative server-side price resolution
