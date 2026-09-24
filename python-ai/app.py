@@ -46,10 +46,13 @@ DB_CONFIG = {
     'port': int(os.getenv('DB_PORT', '3306')),
     'database': os.getenv('DB_NAME', 'cemetery_db'),
     'user': os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', ''),
+    'password': os.getenv('DB_PASSWORD') or os.getenv('DB_PASS', ''),
     'charset': 'utf8mb4',
     'autocommit': True,
 }
+
+if os.getenv('DB_SSL', 'false').lower() in ('1', 'true', 'yes'):
+    DB_CONFIG['ssl_verify_cert'] = os.getenv('DB_SSL_VERIFY', 'false').lower() in ('1', 'true', 'yes')
 
 # BATCH AI-6 (AI Architecture Audit, 2026-09-02): this service uses two
 # DIFFERENT, deliberate data-access patterns — documented here once, rather
