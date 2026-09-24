@@ -1,13 +1,21 @@
 FROM php:8.2-apache
 
-# Install PDO MySQL, cURL, CA certificates, Python 3, pip, and build tools
+# Install PDO MySQL, cURL, CA certificates, Python 3, and pre-compiled data science packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
     python3-venv \
+    python3-numpy \
+    python3-pandas \
+    python3-scipy \
+    python3-sklearn \
+    python3-statsmodels \
+    python3-flask \
+    python3-flask-cors \
+    python3-dotenv \
+    gunicorn \
     ca-certificates \
     libcurl4-openssl-dev \
-    build-essential \
     && docker-php-ext-install pdo pdo_mysql curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -23,10 +31,10 @@ WORKDIR /var/www/html
 # Copy codebase
 COPY . /var/www/html/
 
-# Setup Python virtual environment and install AI dependencies
-RUN python3 -m venv /opt/venv
+# Setup Python virtual environment with system site packages and install remaining pip dependencies
+RUN python3 -m venv --system-site-packages /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-RUN pip install --no-cache-dir -r /var/www/html/python-ai/requirements.txt
+RUN pip install --no-cache-dir google-genai mysql-connector-python
 
 # Create required storage directories and set proper permissions
 RUN mkdir -p /var/www/html/backend/storage/uploads \
