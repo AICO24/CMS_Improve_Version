@@ -3083,6 +3083,18 @@
         grid-template-columns: 1fr;
     }
 
+    .operations-row {
+        grid-auto-rows: auto;
+    }
+
+    .operations-row > .card,
+    .ops-card {
+        height: auto;
+        min-height: 240px;
+        max-height: none;
+        overflow: visible;
+    }
+
     .card.fb-profile-hero {
         margin-bottom: 4px;
     }
@@ -3352,6 +3364,136 @@
         font-weight: 500 !important;
     }
 }
+
+/* Phones & Small Screens (<=480px) */
+@media (max-width: 480px) {
+    .content-area {
+        padding: 10px 8px;
+    }
+    .fb-cover-banner {
+        height: 96px;
+    }
+    .fb-cover-controls {
+        top: 8px;
+        right: 8px;
+        left: 8px;
+        justify-content: space-between;
+        gap: 6px;
+    }
+    .fb-weather-pill {
+        padding: 3px 8px;
+        font-size: 0.65rem;
+    }
+    .fb-weather-pill .weather-condition {
+        display: none;
+    }
+    .fb-cover-badge {
+        padding: 3px 8px;
+        font-size: 0.65rem;
+    }
+    .fb-cover-badge span {
+        font-size: 0.65rem;
+    }
+    .fb-profile-body {
+        padding: 0 12px 14px;
+    }
+    .fb-avatar-container {
+        margin-top: -38px;
+    }
+    .fb-avatar-wrap {
+        width: 76px;
+        height: 76px;
+    }
+    .fb-avatar {
+        font-size: 1.85rem;
+    }
+    .fb-avatar__online-dot {
+        width: 18px;
+        height: 18px;
+        border-width: 3px;
+        bottom: 4px;
+        right: 4px;
+    }
+    .fb-profile-name {
+        font-size: 1.25rem;
+    }
+    .fb-greeting-tag {
+        font-size: 0.76rem;
+    }
+    .fb-meta-bar {
+        font-size: 0.70rem;
+        gap: 4px 8px;
+    }
+    .fb-meta-sep {
+        display: none;
+    }
+    .fb-profile-actions {
+        width: 100%;
+        gap: 6px;
+    }
+    .fb-profile-actions .fb-btn {
+        flex: 1 1 calc(50% - 6px);
+        height: 38px;
+        padding: 0 10px;
+        font-size: 0.78rem;
+    }
+    .fb-profile-actions .fb-btn--icon {
+        flex: 0 0 38px;
+        width: 38px;
+    }
+    .card.attention-card {
+        padding: 12px;
+    }
+    .attention-card__action-btn {
+        width: 100%;
+        height: 36px;
+        font-size: 0.82rem;
+        justify-content: center;
+    }
+    .attention-card__summary {
+        white-space: normal;
+    }
+    .stats-row > .stat-card {
+        padding: 14px 14px;
+    }
+    .stats-row > .stat-card .stat-value {
+        font-size: clamp(1.4rem, 6vw, 1.8rem);
+        word-break: break-word;
+    }
+    .stats-row > .stat-card .stat-title {
+        font-size: 0.80rem;
+    }
+    .stats-row > .stat-card .stat-sub {
+        font-size: 0.74rem;
+    }
+    .ops-card {
+        padding: 14px 12px;
+    }
+    .ops-metric-value {
+        font-size: 1.1rem;
+    }
+    .ops-action-btn {
+        height: 36px;
+        font-size: 0.8rem;
+    }
+    .section-label {
+        font-size: 0.85rem;
+        margin: 16px 0 8px;
+    }
+    .admin-dashboard-footer,
+    .staff-dashboard-footer {
+        margin-top: 16px;
+        padding-bottom: 16px;
+    }
+    .footer-links {
+        flex-wrap: wrap;
+        gap: 6px 10px;
+    }
+    .footer-link-sep {
+        display: none;
+    }
+}
+
 
 /* =========================================================================
    COMPLIANCE & ADMINISTRATIVE WATCH ROW (MATCHING OPERATIONS QUEUES)

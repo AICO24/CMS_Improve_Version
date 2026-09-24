@@ -1188,7 +1188,23 @@ html {
 
 @media (max-width: 768px) {
     .content-area {
-        padding: 16px;
+        padding: 14px 12px;
+    }
+    .card.fb-profile-hero {
+        margin-bottom: 8px;
+    }
+    .fb-cover-banner {
+        height: 110px;
+    }
+    .fb-cover-controls {
+        top: 10px;
+        right: 12px;
+        gap: 6px;
+    }
+    .fb-weather-pill,
+    .fb-cover-badge {
+        padding: 4px 10px;
+        font-size: 0.68rem;
     }
     .fb-profile-body {
         padding: 0 16px 16px;
@@ -1201,11 +1217,11 @@ html {
         margin-top: -45px;
     }
     .fb-avatar-wrap {
-        width: 90px;
-        height: 90px;
+        width: 88px;
+        height: 88px;
     }
     .fb-avatar {
-        font-size: 2.3rem;
+        font-size: 2.2rem;
     }
     .fb-profile-main {
         width: 100%;
@@ -1213,33 +1229,50 @@ html {
         align-items: center;
         padding-top: 0;
         gap: 14px;
+        min-width: 0;
     }
     .fb-profile-info {
         align-items: center;
+        width: 100%;
+        min-width: 0;
     }
     .fb-name-row {
         justify-content: center;
+        width: 100%;
+    }
+    .fb-profile-name {
+        font-size: 1.45rem;
+        word-break: break-word;
     }
     .fb-meta-bar {
         justify-content: center;
         font-size: 0.74rem;
-        gap: 8px;
+        gap: 6px 10px;
+        flex-wrap: wrap;
     }
     .fb-profile-actions {
         width: 100%;
         justify-content: center;
         flex-wrap: wrap;
+        gap: 8px;
     }
     .dashboard-user-stats {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+        gap: 12px;
     }
     .citizen-action-toolbar {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
         gap: 14px;
+        padding: 16px;
     }
     .citizen-action-btn {
         width: 100%;
+        justify-content: center;
+    }
+    .card-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
     }
     .dashboard-footer-inner {
         grid-template-columns: 1fr;
@@ -1256,18 +1289,145 @@ html {
         padding: 10px 0;
     }
     .footer-col--right { align-items: center; padding-left: 0; }
-    .footer-links { justify-content: center; }
+    .footer-links { justify-content: center; flex-wrap: wrap; gap: 6px 10px; }
+    .footer-link-sep { display: none; }
 }
 
-@media (max-width: 420px) {
+/* Phones & Small Screens (<=480px) */
+@media (max-width: 480px) {
     .content-area {
+        padding: 10px 8px;
+    }
+    .fb-cover-banner {
+        height: 96px;
+    }
+    .fb-cover-controls {
+        top: 8px;
+        right: 8px;
+        left: 8px;
+        justify-content: space-between;
+        gap: 6px;
+    }
+    .fb-weather-pill {
+        padding: 3px 8px;
+        font-size: 0.65rem;
+    }
+    .fb-weather-pill .weather-condition {
+        display: none;
+    }
+    .fb-cover-badge {
+        padding: 3px 8px;
+        font-size: 0.65rem;
+    }
+    .fb-cover-badge span {
+        font-size: 0.65rem;
+    }
+    .fb-profile-body {
+        padding: 0 12px 14px;
+    }
+    .fb-avatar-container {
+        margin-top: -38px;
+    }
+    .fb-avatar-wrap {
+        width: 76px;
+        height: 76px;
+    }
+    .fb-avatar {
+        font-size: 1.85rem;
+    }
+    .fb-avatar__online-dot {
+        width: 18px;
+        height: 18px;
+        border-width: 3px;
+        bottom: 4px;
+        right: 4px;
+    }
+    .fb-profile-name {
+        font-size: 1.25rem;
+    }
+    .fb-greeting-tag {
+        font-size: 0.76rem;
+    }
+    .fb-meta-bar {
+        font-size: 0.70rem;
+        gap: 4px 8px;
+    }
+    .fb-meta-sep {
+        display: none;
+    }
+    .fb-profile-actions {
+        width: 100%;
+        gap: 6px;
+    }
+    .fb-profile-actions .fb-btn {
+        flex: 1 1 calc(50% - 6px);
+        height: 38px;
+        padding: 0 10px;
+        font-size: 0.78rem;
+    }
+    .fb-profile-actions .fb-btn--icon {
+        flex: 0 0 38px;
+        width: 38px;
+    }
+    .citizen-action-toolbar {
         padding: 12px;
+        gap: 12px;
+    }
+    .citizen-action-left {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .citizen-action-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+    }
+    .citizen-action-text h4 {
+        font-size: 0.92rem;
+    }
+    .citizen-action-text p {
+        font-size: 0.78rem;
+        line-height: 1.4;
+    }
+    .citizen-action-btn {
+        width: 100%;
+        height: 40px;
+        font-size: 0.8rem;
+    }
+    .dashboard-user-stats {
+        grid-template-columns: 1fr;
+        gap: 10px;
     }
     .dashboard-user-stats > .stat-card {
-        padding: 14px 16px;
+        padding: 14px 14px;
     }
     .dashboard-user-stats > .stat-card .stat-value {
-        font-size: 1.45rem;
+        font-size: clamp(1.4rem, 6vw, 1.8rem);
+        word-break: break-word;
+    }
+    .dashboard-user-stats > .stat-card .stat-title {
+        font-size: 0.82rem;
+    }
+    .dashboard-user-stats > .stat-card .stat-sub {
+        font-size: 0.74rem;
+    }
+    .chart-card__header {
+        padding: 10px 12px;
+    }
+    .chart-card__title {
+        font-size: 0.86rem;
+    }
+    .chart-card__badge {
+        font-size: 0.68rem;
+        padding: 2px 8px;
+    }
+    .recent-list {
+        padding: 8px 10px;
+    }
+    .section-label {
+        font-size: 0.85rem;
+        margin: 16px 0 8px;
     }
 }
 
