@@ -92,7 +92,7 @@ class ApiClient {
                 this.setToken(null);
                 localStorage.removeItem('user_session');
                 localStorage.removeItem('cemetery_session');
-                window.location.href = getLoginRedirectUrl();
+                window.location.replace(getLoginRedirectUrl());
             }
             // AI Architecture Audit (2026-09-02), manual-test follow-up:
             // callers previously had no reliable way to tell a 429
@@ -176,11 +176,19 @@ class ApiClient {
         return result;
     }
 
-    logout() {
-        this.setToken(null);
-        localStorage.removeItem('user_session');
-        localStorage.removeItem('cemetery_session');
-        window.location.href = getLoginRedirectUrl();
+    async logout() {
+        try {
+            if (this.token) {
+                await this.request('auth/logout', { method: 'POST' });
+            }
+        } catch (e) {
+            // Non-blocking: proceed with local cleanup even if network request fails
+        } finally {
+            this.setToken(null);
+            localStorage.removeItem('user_session');
+            localStorage.removeItem('cemetery_session');
+            window.location.replace(getLoginRedirectUrl());
+        }
     }
 }
 
@@ -447,18 +455,18 @@ async function requireRole(allowedRoles) {
     try {
         user = await api.getMe();
     } catch (error) {
-        window.location.href = getLoginRedirectUrl();
+        window.location.replace(getLoginRedirectUrl());
         return null;
     }
 
     if (!user || !user.user_id) {
-        window.location.href = getLoginRedirectUrl();
+        window.location.replace(getLoginRedirectUrl());
         return null;
     }
 
     const roleName = String(user.role || '').toLowerCase();
     if (Array.isArray(allowedRoles) && allowedRoles.length && !allowedRoles.includes(roleName)) {
-        window.location.href = getRoleDashboardPath(roleName);
+        window.location.replace(getRoleDashboardPath(roleName));
         return null;
     }
 
@@ -532,3 +540,25 @@ document.addEventListener('DOMContentLoaded', () => {
 if (typeof window !== 'undefined' && typeof window.initAiAssistant !== 'function') {
     window.initAiAssistant = function() { return null; };
 }
+
+// BFCache (Back-Forward Cache) Protection:
+// When navigating back after logout, browsers can restore DOM state from cache.
+// pageshow with event.persisted triggers if loaded from bfcache.
+window.addEventListener('pageshow', (event) => {
+    const token = localStorage.getItem('jwt_token');
+    const pathname = window.location.pathname || '';
+    const isPublicAuthPage = pathname.includes('/auth/') || pathname.endsWith('index.html') || pathname.endsWith('/');
+    if (event.persisted && !token && !isPublicAuthPage) {
+        window.location.replace(getLoginRedirectUrl());
+    }
+});
+
+// Centralized click handler for logout buttons across all views
+document.addEventListener('click', (e) => {
+    const logoutTarget = e.target.closest('#logoutBtn, .btn-logout, [data-action="logout"]');
+    if (logoutTarget) {
+        e.preventDefault();
+        api.logout();
+    }
+});
+

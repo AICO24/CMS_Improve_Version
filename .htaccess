@@ -46,3 +46,13 @@
 <Files "seedData.php">
     Require all denied
 </Files>
+
+# Security Hardening (Batch 1): Prevent client-side caching of HTML pages so
+# stale authenticated DOMs are never restored from disk or memory after logout.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(html|htm)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+</IfModule>

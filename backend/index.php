@@ -1,5 +1,8 @@
 <?php
 header('Content-Type: application/json');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 // Batch 12 (Batch 11 audit finding): every controller in this app eagerly
 // connects to the database via its model constructors, and AuthController

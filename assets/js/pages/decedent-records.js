@@ -344,12 +344,10 @@ document.addEventListener('DOMContentLoaded', async function () {
         };
     }
 
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-        localStorage.removeItem('jwt_token');
-        localStorage.removeItem('cemetery_session');
-        localStorage.removeItem('user_session');
-        window.location.href = `${getFrontendBasePath()}/auth/login.html`;
-    });
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => api.logout());
+    }
 
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.querySelector('.sidebar');
