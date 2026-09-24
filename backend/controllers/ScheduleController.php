@@ -135,6 +135,18 @@ class ScheduleController {
         $userId = is_array($user) ? ($user['user_id'] ?? null) : $user;
         $userRole = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
 
+        if ($userRole === 'user') {
+            $userModel = new User();
+            $userRecord = $userModel->findById($userId);
+            if ($userRecord && empty($userRecord['email_verified'])) {
+                return [
+                    'error' => 'Please verify your email address before reserving a schedule.',
+                    'code' => 403,
+                    'verification_required' => true,
+                ];
+            }
+        }
+
         // Full Automation, Admin-First (Batch 2): a citizen may book without
         // an existing decedent_records row — the person isn't registered yet.
         // Staff formalizes the real record later via linkDecedent(); until

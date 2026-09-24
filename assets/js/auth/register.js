@@ -10,6 +10,78 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    let registeredEmail = '';
+
+    const verificationPanel = document.getElementById('verificationPanel');
+    const verifyEmailDisplay = document.getElementById('verifyEmailDisplay');
+    const devCodeAlert = document.getElementById('devCodeAlert');
+    const verificationCodeInput = document.getElementById('verificationCodeInput');
+    const btnVerifyCode = document.getElementById('btnVerifyCode');
+    const btnResendCode = document.getElementById('btnResendCode');
+
+    if (btnVerifyCode) {
+        btnVerifyCode.addEventListener('click', async function() {
+            const code = verificationCodeInput.value.trim();
+            if (!code || code.length !== 6) {
+                alertBox.textContent = 'Please enter the 6-digit verification code sent to your email.';
+                alertBox.className = 'alert alert-danger show';
+                return;
+            }
+
+            if (typeof setButtonLoading === 'function') setButtonLoading(btnVerifyCode, true);
+            alertBox.className = 'alert';
+            alertBox.classList.remove('show');
+
+            try {
+                const res = await api.verifyContact(registeredEmail, code);
+                if (res && res.success) {
+                    alertBox.textContent = 'Email verified successfully! Redirecting to login...';
+                    alertBox.className = 'alert alert-success show';
+                    setTimeout(() => window.location.href = `${getFrontendBasePath()}/auth/login.html`, 1500);
+                } else {
+                    alertBox.textContent = (res && res.error) ? res.error : 'Invalid or expired verification code.';
+                    alertBox.className = 'alert alert-danger show';
+                    if (typeof setButtonLoading === 'function') setButtonLoading(btnVerifyCode, false);
+                }
+            } catch (err) {
+                alertBox.textContent = err.message || 'Verification failed. Please try again.';
+                alertBox.className = 'alert alert-danger show';
+                if (typeof setButtonLoading === 'function') setButtonLoading(btnVerifyCode, false);
+            }
+        });
+    }
+
+    if (btnResendCode) {
+        btnResendCode.addEventListener('click', async function() {
+            if (!registeredEmail) return;
+            btnResendCode.disabled = true;
+            btnResendCode.textContent = 'Sending...';
+
+            try {
+                const res = await api.resendVerification(registeredEmail);
+                if (res && res.success) {
+                    alertBox.textContent = 'A new 6-digit verification code has been dispatched.';
+                    alertBox.className = 'alert alert-info show';
+                    if (res.dev_verification_code && devCodeAlert) {
+                        devCodeAlert.textContent = 'Development Mode Code: ' + res.dev_verification_code;
+                        devCodeAlert.style.display = 'block';
+                    }
+                } else {
+                    alertBox.textContent = (res && res.error) ? res.error : 'Failed to resend code.';
+                    alertBox.className = 'alert alert-danger show';
+                }
+            } catch (err) {
+                alertBox.textContent = err.message || 'Failed to resend code.';
+                alertBox.className = 'alert alert-danger show';
+            } finally {
+                setTimeout(() => {
+                    btnResendCode.disabled = false;
+                    btnResendCode.textContent = 'Resend Code';
+                }, 3000);
+            }
+        });
+    }
+
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         const fullName = document.getElementById('full_name').value.trim();
@@ -77,12 +149,31 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await api.register(payload);
 
             if (result && result.success) {
-                alertBox.textContent = 'Registration successful! Redirecting to login...';
-                alertBox.classList.add('show', 'alert-success');
-                // Left disabled/loading intentionally: the button stays inert
-                // through the redirect delay below instead of resetting and
-                // inviting a second submit while the user waits.
-                setTimeout(() => window.location.href = `${getFrontendBasePath()}/auth/login.html`, 1500);
+                registeredEmail = email;
+
+                if (result.verification_required && verificationPanel) {
+                    form.style.display = 'none';
+                    const formHeader = document.querySelector('.register-form-header');
+                    if (formHeader) {
+                        formHeader.style.display = 'none';
+                    }
+                    const authDivider = document.querySelector('.auth-divider');
+                    if (authDivider) authDivider.style.display = 'none';
+
+                    verificationPanel.style.display = 'block';
+                    if (verifyEmailDisplay) verifyEmailDisplay.textContent = email;
+
+                    if (result.dev_verification_code && devCodeAlert) {
+                        devCodeAlert.textContent = 'Development Mode Code: ' + result.dev_verification_code;
+                        devCodeAlert.style.display = 'block';
+                    }
+
+                    if (verificationCodeInput) verificationCodeInput.focus();
+                } else {
+                    alertBox.textContent = 'Registration successful! Redirecting to login...';
+                    alertBox.classList.add('show', 'alert-success');
+                    setTimeout(() => window.location.href = `${getFrontendBasePath()}/auth/login.html`, 1500);
+                }
             } else {
                 alertBox.textContent = (result && result.error) ? result.error : 'Registration failed';
                 alertBox.classList.add('show', 'alert-danger');

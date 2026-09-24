@@ -1413,6 +1413,19 @@ class PaymentController {
             return ['error' => 'Unauthorized', 'code' => 401];
         }
 
+        // Contact verification check for citizen accounts
+        if ($userRole === 'user') {
+            $userModel = new User();
+            $userRecord = $userModel->findById($userId);
+            if ($userRecord && empty($userRecord['email_verified'])) {
+                return [
+                    'error' => 'Please verify your email address before initiating online checkout.',
+                    'code' => 403,
+                    'verification_required' => true,
+                ];
+            }
+        }
+
         // 1. Transaction type enforcement (Batch 3 strict boundary - supports Lot Purchase & Cremation)
         $rawType = $data['transaction_type'] ?? 'Lot Purchase';
         $transactionType = $this->normalizeTransactionType($rawType);

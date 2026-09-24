@@ -44,7 +44,12 @@ class User {
             $roleId = $roles['user'] ?? ($roles['staff'] ?? 2);
         }
 
-        $stmt = $this->db->prepare("INSERT INTO users (username, password_hash, full_name, email, contact_number, address, role_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
+        $emailVerified = isset($data['email_verified']) ? (int) $data['email_verified'] : 0;
+        $emailVerifiedAt = $emailVerified ? date('Y-m-d H:i:s') : null;
+        $tokenHash = $data['verification_token_hash'] ?? null;
+        $tokenExpiresAt = $data['verification_token_expires_at'] ?? null;
+
+        $stmt = $this->db->prepare("INSERT INTO users (username, password_hash, full_name, email, contact_number, address, role_id, is_active, email_verified, email_verified_at, verification_token_hash, verification_token_expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)");
         return $stmt->execute([
             $username,
             password_hash($data['password'], PASSWORD_BCRYPT),
@@ -53,6 +58,10 @@ class User {
             $data['contact_number'] ?? null,
             $data['address'] ?? null,
             $roleId,
+            $emailVerified,
+            $emailVerifiedAt,
+            $tokenHash,
+            $tokenExpiresAt,
         ]);
     }
 
@@ -112,7 +121,7 @@ class User {
     // their existing token naturally expires. Returns null if the account no
     // longer exists (e.g. deleted after the token was issued).
     public function getAuthStatus($userId) {
-        $stmt = $this->db->prepare("SELECT u.is_active, u.session_version, r.title FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.user_id = ?");
+        $stmt = $this->db->prepare("SELECT u.is_active, u.email_verified, u.session_version, r.title FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.user_id = ?");
         $stmt->execute([$userId]);
         $row = $stmt->fetch();
         if (!$row) {
@@ -121,6 +130,7 @@ class User {
 
         return [
             'is_active' => (bool) (int) $row['is_active'],
+            'email_verified' => (bool) (int) ($row['email_verified'] ?? 1),
             'role' => self::normalizeRoleKey($row['title']),
             'session_version' => (int) $row['session_version'],
         ];
@@ -327,6 +337,35 @@ class User {
         return $user;
     }
 
+    public function setVerificationToken($userId, $tokenHash, $expiresAt) {
+        $stmt = $this->db->prepare("UPDATE users SET verification_token_hash = ?, verification_token_expires_at = ? WHERE user_id = ?");
+        return $stmt->execute([$tokenHash, $expiresAt, $userId]);
+    }
+
+    public function clearVerificationToken($userId) {
+        $stmt = $this->db->prepare("UPDATE users SET verification_token_hash = NULL, verification_token_expires_at = NULL WHERE user_id = ?");
+        return $stmt->execute([$userId]);
+    }
+
+    public function markEmailVerified($userId) {
+        $stmt = $this->db->prepare("UPDATE users SET email_verified = 1, email_verified_at = NOW(), verification_token_hash = NULL, verification_token_expires_at = NULL WHERE user_id = ?");
+        return $stmt->execute([$userId]);
+    }
+
+    public function verifyContactCode($email, $code) {
+        $user = $this->findByEmail($email);
+        if (!$user || empty($user['verification_token_hash']) || empty($user['verification_token_expires_at'])) {
+            return null;
+        }
+        if (strtotime($user['verification_token_expires_at']) < time()) {
+            return null;
+        }
+        if (!hash_equals($user['verification_token_hash'], hash('sha256', $code))) {
+            return null;
+        }
+        return $user;
+    }
+
     public function repairDefaultUserHashes() {
         $defaults = [
             'admin' => 'admin123',
@@ -389,7 +428,7 @@ class User {
             if ($this->findByUsername($userData['username'])) {
                 continue;
             }
-            $stmt = $this->db->prepare("INSERT INTO users (username, password_hash, full_name, email, role_id, is_active) VALUES (?, ?, ?, ?, ?, 1)");
+            $stmt = $this->db->prepare("INSERT INTO users (username, password_hash, full_name, email, role_id, is_active, email_verified, email_verified_at) VALUES (?, ?, ?, ?, ?, 1, 1, NOW())");
             $stmt->execute([
                 $userData['username'],
                 password_hash($userData['password'], PASSWORD_BCRYPT),

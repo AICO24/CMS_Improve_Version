@@ -107,6 +107,7 @@ class AuthController {
             'username' => $user['username'],
             'role' => $role,
             'full_name' => $user['full_name'],
+            'email_verified' => (bool) ($user['email_verified'] ?? 0),
             // AUTH-004b: checked against the live value in
             // AuthMiddleware::authenticate() on every request — see
             // User::invalidateSessions()'s comment.
@@ -133,6 +134,7 @@ class AuthController {
                 'email' => $user['email'],
                 'role' => $role,
                 'is_active' => (bool) ($user['is_active'] ?? 1),
+                'email_verified' => (bool) ($user['email_verified'] ?? 0),
             ],
         ];
     }
@@ -220,6 +222,10 @@ class AuthController {
             return ['error' => 'Username already taken', 'code' => 409];
         }
 
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $tokenHash = hash('sha256', $code);
+        $expiresAt = date('Y-m-d H:i:s', time() + 86400); // 24 hours
+
         // Ignore any submitted role_id and always assign normal user role for anonymous registration.
         $data['role_id'] = $this->userModel->ensureUserRoleExists();
         $createData = [
@@ -230,6 +236,9 @@ class AuthController {
             'contact_number' => $data['contact_number'] ?? null,
             'address' => $data['address'] ?? null,
             'role_id' => $data['role_id'],
+            'email_verified' => 0,
+            'verification_token_hash' => $tokenHash,
+            'verification_token_expires_at' => $expiresAt,
         ];
 
         try {
@@ -260,27 +269,24 @@ class AuthController {
                     ['registered_email' => $created['email']]
                 );
             }
-            // Batch 14 (found during the Batch 13/14 audit of this file's
-            // User-model consumers, same class of issue as GET /users):
-            // $created is User::findByEmail()'s raw row — includes
-            // password_hash — and was being returned to the client as-is.
-            // The frontend (assets/js/auth/register.js) never reads this
-            // `user` field at all, so this only ever mattered for API
-            // consistency; kept present but reduced to the same safe
-            // subset login()/me() below already use, rather than dropped,
-            // to preserve the existing response shape for any other
-            // consumer.
-            return [
+            $response = [
                 'success' => true,
-                'message' => 'Registration successful',
+                'message' => 'Registration successful. Please verify your email with the 6-digit verification code.',
+                'verification_required' => true,
+                'email' => $data['email'],
                 'user' => $created ? [
                     'user_id' => $created['user_id'],
                     'username' => $created['username'],
                     'full_name' => $created['full_name'],
                     'email' => $created['email'],
                     'is_active' => (bool) ($created['is_active'] ?? 1),
+                    'email_verified' => false,
                 ] : null,
             ];
+            if (!$this->isProduction()) {
+                $response['dev_verification_code'] = $code;
+            }
+            return $response;
         }
         return ['error' => 'Registration failed', 'code' => 500];
     }
@@ -400,6 +406,78 @@ class AuthController {
         return ['success' => true, 'message' => 'Password reset successful'];
     }
 
+    public function verifyContact($data) {
+        $email = strtolower(trim((string) ($data['email'] ?? '')));
+        $code = trim((string) ($data['code'] ?? ''));
+
+        if ($email === '' || $code === '') {
+            return ['error' => 'Email and 6-digit verification code are required', 'code' => 400];
+        }
+
+        $user = $this->userModel->verifyContactCode($email, $code);
+        if (!$user) {
+            return ['error' => 'Invalid or expired verification code', 'code' => 400];
+        }
+
+        $this->userModel->markEmailVerified($user['user_id']);
+
+        $this->auditLogModel->log(
+            'Contact verification completed',
+            $user['user_id'],
+            $user['username'],
+            'Authentication',
+            $user['user_id'],
+            'Email successfully verified'
+        );
+
+        return [
+            'success' => true,
+            'message' => 'Email address verified successfully. You may now log in and access all services.',
+        ];
+    }
+
+    public function resendVerification($data) {
+        $email = strtolower(trim((string) ($data['email'] ?? '')));
+        if ($email === '') {
+            return ['error' => 'Email is required', 'code' => 400];
+        }
+
+        $user = $this->userModel->findByEmail($email);
+        if (!$user) {
+            return [
+                'success' => true,
+                'message' => 'If an unverified account exists for that email, a new verification code has been dispatched.',
+            ];
+        }
+
+        if (!empty($user['email_verified'])) {
+            return ['error' => 'This account has already been verified', 'code' => 400];
+        }
+
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $expiresAt = date('Y-m-d H:i:s', time() + 86400); // 24 hours
+        $this->userModel->setVerificationToken($user['user_id'], hash('sha256', $code), $expiresAt);
+
+        $this->auditLogModel->log(
+            'Verification code resent',
+            $user['user_id'],
+            $user['username'],
+            'Authentication',
+            $user['user_id'],
+            'New verification code generated'
+        );
+
+        $response = [
+            'success' => true,
+            'message' => 'A new 6-digit verification code has been generated.',
+        ];
+        if (!$this->isProduction()) {
+            $response['dev_verification_code'] = $code;
+        }
+
+        return $response;
+    }
+
     public function me($userId) {
         $user = $this->userModel->findById($userId);
         if (!$user) {
@@ -413,6 +491,8 @@ class AuthController {
             'email' => $user['email'],
             'role' => $this->userModel->getRole($userId),
             'is_active' => (bool) ($user['is_active'] ?? 1),
+            'email_verified' => (bool) ($user['email_verified'] ?? 0),
+            'email_verified_at' => $user['email_verified_at'] ?? null,
         ];
     }
 }

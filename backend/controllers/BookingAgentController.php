@@ -1358,6 +1358,21 @@ class BookingAgentController {
             return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
         }
 
+        // Contact verification check for public users finalizing bookings
+        $userRole = strtolower(trim((string) ($user['role'] ?? '')));
+        if ($userRole === 'user') {
+            $userModel = new User();
+            $userRecord = $userModel->findById($userId);
+            if ($userRecord && empty($userRecord['email_verified'])) {
+                return [
+                    'success' => false,
+                    'error' => 'Please verify your email address before finalizing your booking reservation.',
+                    'code' => 403,
+                    'verification_required' => true,
+                ];
+            }
+        }
+
         try {
             $draft = $this->draftModel->requireOwnership($draftId, $userId);
 
@@ -1403,6 +1418,21 @@ class BookingAgentController {
         [$userId, $username] = $this->resolveUserContext($user);
         if ($userId <= 0) {
             return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
+        }
+
+        // Contact verification check for public users finalizing bookings
+        $userRole = strtolower(trim((string) ($user['role'] ?? '')));
+        if ($userRole === 'user') {
+            $userModel = new User();
+            $userRecord = $userModel->findById($userId);
+            if ($userRecord && empty($userRecord['email_verified'])) {
+                return [
+                    'success' => false,
+                    'error' => 'Please verify your email address before finalizing your booking reservation.',
+                    'code' => 403,
+                    'verification_required' => true,
+                ];
+            }
         }
 
         try {

@@ -223,6 +223,34 @@ if ($path === 'auth/reset-password' && $requestMethod === 'POST') {
     exit;
 }
 
+if (($path === 'auth/verify-contact' || $path === 'auth/verify-email') && $requestMethod === 'POST') {
+    $input = readRequestBody();
+    $email = strtolower(trim((string) ($input['email'] ?? '')));
+    rateLimitOrFail('auth_verify_ip_' . $clientIp, 30, 600);
+    if ($email !== '') {
+        rateLimitOrFail('auth_verify_contact_' . $email, 10, 600);
+    }
+    $result = $controller->verifyContact($input);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if ($path === 'auth/resend-verification' && $requestMethod === 'POST') {
+    $input = readRequestBody();
+    $email = strtolower(trim((string) ($input['email'] ?? '')));
+    rateLimitOrFail('auth_resend_ip_' . $clientIp, 10, 600);
+    if ($email !== '') {
+        rateLimitOrFail('auth_resend_email_' . $email, 5, 600);
+    }
+    $result = $controller->resendVerification($input);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 if ($path === 'payments/webhook' && $requestMethod === 'POST') {
     require_once __DIR__ . '/../controllers/PaymentController.php';
     $rawBody = file_get_contents('php://input');

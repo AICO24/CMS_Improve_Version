@@ -53,6 +53,31 @@
 
                 <div id="alert" class="alert" role="alert" aria-live="polite"></div>
 
+                <!-- Email Verification Step Panel -->
+                <div id="verificationPanel" style="display: none; margin-top: 15px;">
+                    <div style="background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 20px;">
+                        <div style="width: 56px; height: 56px; line-height: 56px; border-radius: 50%; background: #eff6ff; color: #2563eb; font-size: 1.6rem; margin: 0 auto 12px;">
+                            <i class="fas fa-envelope-circle-check"></i>
+                        </div>
+                        <h3 style="margin: 0 0 8px; font-size: 1.15rem; color: #1e293b;">Verify Your Email</h3>
+                        <p style="margin: 0 0 14px; font-size: 0.88rem; color: #64748b; line-height: 1.4;">
+                            We've sent a 6-digit verification code to <strong id="verifyEmailDisplay" style="color: #0f172a;">your email</strong>. Please enter the code below to activate your account.
+                        </p>
+                        <div id="devCodeAlert" style="display: none; background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; margin-bottom: 14px; font-weight: 600;"></div>
+                        <div style="max-width: 260px; margin: 0 auto 16px;">
+                            <input type="text" id="verificationCodeInput" maxlength="6" placeholder="000000" style="text-align: center; letter-spacing: 6px; font-size: 1.5rem; font-weight: 700; height: 48px; width: 100%; border: 2px solid #cbd5e1; border-radius: 10px;" />
+                        </div>
+                        <button type="button" id="btnVerifyCode" class="btn-register" style="width: 100%; padding: 12px; font-size: 0.95rem;">
+                            <span>Verify Email</span>
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <div style="margin-top: 14px; font-size: 0.82rem;">
+                            <span style="color: #64748b;">Didn't receive code?</span>
+                            <button type="button" id="btnResendCode" style="background: none; border: none; color: #2563eb; font-weight: 600; cursor: pointer; text-decoration: underline; margin-left: 4px;">Resend Code</button>
+                        </div>
+                    </div>
+                </div>
+
                 <form id="registerForm" method="post" autocomplete="on">
                     <div class="form-grid">
                         <!-- Full Name -->

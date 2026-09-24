@@ -165,6 +165,20 @@ class ApiClient {
         });
     }
 
+    async verifyContact(email, code) {
+        return await this.request('auth/verify-contact', {
+            method: 'POST',
+            body: { email, code },
+        });
+    }
+
+    async resendVerification(email) {
+        return await this.request('auth/resend-verification', {
+            method: 'POST',
+            body: { email },
+        });
+    }
+
     async getMe() {
         const result = await this.request('auth/me', { method: 'GET' });
         if (result && result.role) {

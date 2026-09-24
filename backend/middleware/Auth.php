@@ -64,6 +64,7 @@ class AuthMiddleware {
         }
 
         $payload['role'] = $status['role'];
+        $payload['email_verified'] = (bool) ($status['email_verified'] ?? 1);
 
         return $payload;
     }
@@ -73,6 +74,24 @@ class AuthMiddleware {
         if (!in_array($user['role'], $allowedRoles, true)) {
             http_response_code(403);
             echo json_encode(['error' => 'Insufficient permissions']);
+            exit;
+        }
+
+        return $user;
+    }
+
+    public static function requireVerifiedContact() {
+        $user = self::authenticate();
+        if (in_array($user['role'], ['admin', 'staff'], true)) {
+            return $user;
+        }
+        if (empty($user['email_verified'])) {
+            http_response_code(403);
+            echo json_encode([
+                'error' => 'Account contact verification required before performing this action. Please verify your email.',
+                'code' => 403,
+                'verification_required' => true,
+            ]);
             exit;
         }
 

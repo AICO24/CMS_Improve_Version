@@ -127,6 +127,18 @@ class CremationController {
         $userRole = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
         $isCitizen = $userRole === 'user';
 
+        if ($isCitizen) {
+            $userModel = new User();
+            $userRecord = $userModel->findById($userId);
+            if ($userRecord && empty($userRecord['email_verified'])) {
+                return [
+                    'error' => 'Please verify your email address before booking a cremation service.',
+                    'code' => 403,
+                    'verification_required' => true,
+                ];
+            }
+        }
+
         // A citizen may book without an existing decedent_records row — the
         // person isn't registered yet. Staff formalizes the real record
         // later via linkDecedent(). Admin/staff bookings still require a
