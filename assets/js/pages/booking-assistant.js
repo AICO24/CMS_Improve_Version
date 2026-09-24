@@ -577,7 +577,9 @@
                 const altDates = res.alternative_dates || res.alternatives || res.recovery?.alternative_dates || [];
                 const altLots = res.alternative_lots || res.recovery?.alternative_lots || [];
 
-                if (res.pending_action) {
+                if (state.status === 'COMMITTED') {
+                    renderPromptChips();
+                } else if (res.pending_action) {
                     renderPendingActionChips(res.pending_action);
                 } else if (altDates.length > 0) {
                     const dateChips = altDates.map(d => ({
@@ -806,7 +808,9 @@
         }
 
         // Review & Confirm step text
-        if (state.status === 'AWAITING_CONFIRM' || state.status === 'COMMITTED') {
+        if (state.status === 'COMMITTED') {
+            hudReviewVal.textContent = 'Committed';
+        } else if (state.status === 'AWAITING_CONFIRM') {
             hudReviewVal.textContent = 'Confirmed';
         } else if (state.isReadyForReview || (state.status === 'READY_FOR_REVIEW' && state.missingFields.length === 0)) {
             hudReviewVal.textContent = 'Ready';
@@ -816,13 +820,31 @@
 
         // Confirm Button Eligibility (Strict Server Gate)
         const isEligibleToConfirm = (state.status === 'READY_FOR_REVIEW' || state.isReadyForReview) && state.missingFields.length === 0;
-        btnConfirmBooking.disabled = !isEligibleToConfirm || state.isLoading || state.status === 'AWAITING_CONFIRM';
-        if (state.status === 'AWAITING_CONFIRM') {
+        const disclaimerEl = document.getElementById('blueprintDisclaimer') || document.querySelector('.blueprint-disclaimer');
+        if (state.status === 'COMMITTED') {
+            btnConfirmBooking.disabled = true;
+            btnConfirmBooking.innerHTML = '<i class="fas fa-check-double"></i> Booking Finalized';
+            btnConfirmBooking.style.background = '#047857';
+            btnConfirmBooking.style.cursor = 'default';
+            if (disclaimerEl) {
+                disclaimerEl.textContent = 'This booking has been finalized and submitted to cemetery administration.';
+            }
+        } else if (state.status === 'AWAITING_CONFIRM') {
+            btnConfirmBooking.disabled = true;
             btnConfirmBooking.innerHTML = '<i class="fas fa-check-double"></i> Reservation Confirmed';
             btnConfirmBooking.style.background = '#047857';
+            btnConfirmBooking.style.cursor = 'default';
+            if (disclaimerEl) {
+                disclaimerEl.textContent = 'Reservation is confirmed and awaiting final commitment.';
+            }
         } else {
+            btnConfirmBooking.disabled = !isEligibleToConfirm || state.isLoading;
             btnConfirmBooking.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Booking Reservation';
             btnConfirmBooking.style.background = '';
+            btnConfirmBooking.style.cursor = '';
+            if (disclaimerEl) {
+                disclaimerEl.textContent = 'Confirmation prepares your booking draft for administrative processing.';
+            }
         }
 
         // Documentary Requirements HUD
@@ -910,7 +932,11 @@
 
         const chips = [];
 
-        if (state.status === 'COMMITTED' || state.status === 'AWAITING_CONFIRM') {
+        if (state.status === 'COMMITTED') {
+            chips.push({ text: '📋 View in My Bookings', action: () => { window.location.href = 'my-bookings.html'; } });
+            chips.push({ text: '📄 View Booking Voucher', action: () => showVoucherInChat() });
+            chips.push({ text: '🔄 Book Another Service', action: () => onRestartDraft() });
+        } else if (state.status === 'AWAITING_CONFIRM') {
             chips.push({ text: '📋 View in My Bookings', action: () => { window.location.href = 'my-bookings.html'; } });
             chips.push({ text: '📄 View Booking Voucher', action: () => showVoucherInChat() });
             chips.push({ text: '🔄 Book Another Service', action: () => onRestartDraft() });
@@ -935,16 +961,18 @@
             chips.push({ text: 'ℹ️ What information is needed?', action: () => sendChatTurn('What information do you still need from me?') });
         }
 
-        chips.push({
-            text: '📄 Requirements',
-            action: () => {
-                if (!state.draftId) {
-                    sendChatTurn('Ano ang mga documentary requirements para sa booking?');
-                } else {
-                    openDocModal();
+        if (state.status !== 'COMMITTED') {
+            chips.push({
+                text: '📄 Requirements',
+                action: () => {
+                    if (!state.draftId) {
+                        sendChatTurn('Ano ang mga documentary requirements para sa booking?');
+                    } else {
+                        openDocModal();
+                    }
                 }
-            }
-        });
+            });
+        }
 
         chips.forEach(chip => {
             const btn = createChip(chip.text, chip.action);
@@ -1345,7 +1373,7 @@
      * Open custom styled Booking Finalize Confirmation Modal
      */
     function openBookingConfirmModal() {
-        if (!bookingConfirmModal) return;
+        if (!bookingConfirmModal || state.status === 'COMMITTED') return;
         const isCremation = state.serviceType === 'cremation';
 
         // Service Type
@@ -1433,7 +1461,7 @@
      * Confirmation entry point: Opens modal instead of native browser confirm
      */
     function onConfirmBooking() {
-        if (!state.draftId) return;
+        if (!state.draftId || state.status === 'COMMITTED') return;
         openBookingConfirmModal();
     }
 
@@ -1441,7 +1469,7 @@
      * Finalize & Commit reservation via POST /api/booking-agent/drafts/{id}/confirm
      */
     async function executeFinalizeBooking() {
-        if (!state.draftId) return;
+        if (!state.draftId || state.status === 'COMMITTED') return;
 
         if (btnSubmitBookingConfirm) {
             btnSubmitBookingConfirm.disabled = true;
