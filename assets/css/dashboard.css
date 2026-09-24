@@ -730,7 +730,7 @@
 
 @media (max-width: 768px) {
     .content-area {
-        padding: 16px;
+        padding: 14px 12px;
     }
 
     .stats-row,
@@ -740,8 +740,10 @@
     }
 
     .sidebar {
-        width: 260px;
+        width: min(280px, 82vw);
         transform: translateX(-100%);
+        z-index: 1000;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.28);
     }
 
     .sidebar.collapsed {
@@ -755,49 +757,109 @@
 
     .main-content {
         margin-left: 0;
+        min-width: 0;
+        width: 100%;
     }
 
     .sidebar.collapsed ~ .main-content::before {
         content: "";
         position: fixed;
         inset: 0;
-        background: var(--overlay-scrim);
-        z-index: 90;
+        background: rgba(15, 23, 42, 0.45);
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
+        z-index: 990;
         pointer-events: none;
     }
 
-    /*
-       Top bar overflow fix — confirmed via a real authenticated
-       screenshot (document.documentElement.scrollWidth was 563-760px in
-       a 375px viewport, traced to .top-bar). Four icon buttons
-       (hamburger's sibling row + theme toggle + notification + profile
-       name/role text + logout) never wrapped or shrank at narrow
-       widths — the theme toggle added in this redesign made an
-       already-tight row tighter.
-
-       The .profile-text hide (the actual space-saver) is NOT here — at
-       least 2 page-specific files (payments.css, manage-reservations.css)
-       have their own unconditional `.profile-text{display:flex}`, which,
-       loading after this file, wins the cascade tie regardless of this
-       rule being wrapped in a media query. Same bug shape as the mobile
-       sidebar fix earlier. See reskin.css for the version that actually
-       applies everywhere (it loads after all page-specific CSS).
-       min-width:0 guards against the classic flexbox trap where a flex
-       item's default min-width:auto refuses to shrink below its
-       content's intrinsic width, forcing the whole row to overflow
-       instead of wrapping even with flex-wrap set.
-    */
     .top-bar {
-        flex-wrap: wrap;
-        gap: 8px;
         padding: 10px 14px;
+        gap: 8px;
     }
 
     .user-info {
         gap: 8px;
     }
+}
 
-    .main-content {
+/* Phones & Narrow Viewports (<=480px) */
+@media (max-width: 480px) {
+    .top-bar {
+        padding: 8px 12px;
+        gap: 6px;
+    }
+
+    .top-left {
+        gap: 8px;
+        flex: 1 1 auto;
         min-width: 0;
+    }
+
+    .hamburger {
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+    }
+
+    .top-bar #pageTitle,
+    .top-bar .top-left h3,
+    .top-left #pageTitle,
+    .top-left h3 {
+        font-size: 0.95rem;
+        padding-left: 6px;
+        border-left-width: 2.5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: calc(100vw - 210px);
+    }
+
+    .user-info {
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    .theme-toggle-btn,
+    .notification-icon {
+        width: 34px;
+        height: 34px;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+    }
+
+    .profile {
+        gap: 0;
+    }
+
+    .profile-avatar {
+        width: 34px;
+        height: 34px;
+        font-size: 0.85rem;
+    }
+
+    .profile-text {
+        display: none !important;
+    }
+
+    /* Collapse logout button into compact icon button on mobile */
+    .Btn.logout-btn,
+    .logout-btn.Btn {
+        width: 36px !important;
+        height: 36px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        justify-content: center !important;
+    }
+
+    .Btn.logout-btn .sign,
+    .logout-btn.Btn .sign {
+        width: 100% !important;
+        padding-left: 0 !important;
+        justify-content: center !important;
+    }
+
+    .Btn.logout-btn .text,
+    .logout-btn.Btn .text {
+        display: none !important;
     }
 }

@@ -94,9 +94,33 @@
    dashboard.css regardless of source order within that file. ---------- */
 @media (max-width: 768px) {
     .profile-text {
-        display: none;
+        display: none !important;
     }
 }
+
+@media (max-width: 480px) {
+    .Btn.logout-btn,
+    .logout-btn.Btn {
+        width: 36px !important;
+        height: 36px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        justify-content: center !important;
+    }
+
+    .Btn.logout-btn .sign,
+    .logout-btn.Btn .sign {
+        width: 100% !important;
+        padding-left: 0 !important;
+        justify-content: center !important;
+    }
+
+    .Btn.logout-btn .text,
+    .logout-btn.Btn .text {
+        display: none !important;
+    }
+}
+
 
 /* ---------- Tablet icon-rail: hide sidebar-footer name/role text ----------
    Same cascade-tie problem as .profile-text above: dashboard_admin.css,
