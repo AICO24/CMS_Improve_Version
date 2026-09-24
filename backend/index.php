@@ -23,11 +23,19 @@ try {
 
     $allowedOrigins = array_filter(array_map('trim', explode(',', (string) EnvironmentService::get('CORS_ALLOWED_ORIGINS', 'http://localhost'))));
     $requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    if ($requestOrigin !== '' && in_array($requestOrigin, $allowedOrigins, true)) {
-        header('Access-Control-Allow-Origin: ' . $requestOrigin);
+    $currentHost = $_SERVER['HTTP_HOST'] ?? '';
+    if ($requestOrigin !== '') {
+        $originHost = parse_url($requestOrigin, PHP_URL_HOST);
+        $serverHost = parse_url('http://' . $currentHost, PHP_URL_HOST);
+        if ($originHost === $serverHost || in_array($requestOrigin, $allowedOrigins, true) || strpos((string)$originHost, 'infinityfreeapp.com') !== false || $originHost === 'localhost' || $originHost === '127.0.0.1') {
+            header('Access-Control-Allow-Origin: ' . $requestOrigin);
+            header('Access-Control-Allow-Credentials: true');
+        }
+    } else {
+        header('Access-Control-Allow-Origin: *');
     }
     header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-    header('Access-Control-Allow-Headers: Authorization, Content-Type');
+    header('Access-Control-Allow-Headers: Authorization, Content-Type, X-Requested-With');
 
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
         exit(0);

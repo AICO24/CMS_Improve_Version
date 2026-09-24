@@ -4,6 +4,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (!form) return;
 
+    function clearErrors() {
+        form.querySelectorAll('.error-message').forEach(el => {
+            el.textContent = '';
+        });
+    }
+
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         const fullName = document.getElementById('full_name').value.trim();
@@ -44,11 +50,15 @@ document.addEventListener('DOMContentLoaded', function() {
             isValid = false;
         }
 
-        if (!isValid) return;
+        if (!isValid) {
+            alertBox.textContent = 'Please correct the highlighted form errors before submitting.';
+            alertBox.className = 'alert alert-danger show';
+            return;
+        }
 
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn && submitBtn.disabled) return;
-        setButtonLoading(submitBtn, true);
+        if (typeof setButtonLoading === 'function') setButtonLoading(submitBtn, true);
 
         try {
             // Public self-registration is User-only; staff/admin accounts are
@@ -66,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const result = await api.register(payload);
 
-            if (result.success) {
+            if (result && result.success) {
                 alertBox.textContent = 'Registration successful! Redirecting to login...';
                 alertBox.classList.add('show', 'alert-success');
                 // Left disabled/loading intentionally: the button stays inert
@@ -74,14 +84,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 // inviting a second submit while the user waits.
                 setTimeout(() => window.location.href = `${getFrontendBasePath()}/auth/login.html`, 1500);
             } else {
-                alertBox.textContent = result.error || 'Registration failed';
-                alertBox.classList.add('show');
-                setButtonLoading(submitBtn, false);
+                alertBox.textContent = (result && result.error) ? result.error : 'Registration failed';
+                alertBox.classList.add('show', 'alert-danger');
+                if (typeof setButtonLoading === 'function') setButtonLoading(submitBtn, false);
             }
         } catch (error) {
             alertBox.textContent = error.message || 'Registration failed. Please try again.';
-            alertBox.classList.add('show');
-            setButtonLoading(submitBtn, false);
+            alertBox.classList.add('show', 'alert-danger');
+            if (typeof setButtonLoading === 'function') setButtonLoading(submitBtn, false);
         }
     });
 });

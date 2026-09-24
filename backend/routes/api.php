@@ -116,14 +116,19 @@ function rateLimitOrFail($key, $limit, $windowSeconds) {
     exit;
 }
 
-$clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+$rawClientIp = $_SERVER['HTTP_CF_CONNECTING_IP']
+    ?? (isset($_SERVER['HTTP_X_FORWARDED_FOR']) ? trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0]) : null)
+    ?? $_SERVER['HTTP_X_REAL_IP']
+    ?? $_SERVER['REMOTE_ADDR']
+    ?? 'unknown';
+$clientIp = preg_replace('/[^a-zA-Z0-9._-]/', '_', (string) $rawClientIp);
 
 if ($path === 'auth/login' && $requestMethod === 'POST') {
     $input = readRequestBody();
     $identifier = strtolower(trim((string) ($input['username'] ?? $input['email'] ?? '')));
-    rateLimitOrFail('auth_login_ip_' . $clientIp, 20, 300);
+    rateLimitOrFail('auth_login_ip_' . $clientIp, 100, 300);
     if ($identifier !== '') {
-        rateLimitOrFail('auth_login_id_' . $identifier, 8, 300);
+        rateLimitOrFail('auth_login_id_' . $identifier, 20, 300);
     }
     $result = $controller->login($input);
     http_response_code($result['code'] ?? 200);
@@ -133,7 +138,7 @@ if ($path === 'auth/login' && $requestMethod === 'POST') {
 }
 
 if ($path === 'auth/register' && $requestMethod === 'POST') {
-    rateLimitOrFail('auth_register_ip_' . $clientIp, 5, 600);
+    rateLimitOrFail('auth_register_ip_' . $clientIp, 100, 300);
     $input = readRequestBody();
     $result = $controller->register($input);
     http_response_code($result['code'] ?? 200);
