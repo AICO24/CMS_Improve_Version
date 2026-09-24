@@ -271,8 +271,9 @@ CHAT_SYSTEM_PROMPT = (
     "- Set answered=true and write a short, warm, direct message ONLY when "
     "the user's message is a genuine question and knowledge_entries actually "
     "covers it.\n"
-    "- Set answered=false (message=null) when: the knowledge_entries don't "
-    "cover the topic; the message isn't really a question at all; or — this "
+    "- Set answered=false (message=null) when: the message is off-topic (e.g. "
+    "coding, programming, mathematics, cooking recipes, politics, non-cemetery topics); "
+    "the knowledge_entries don't cover the topic; the message isn't really a question at all; or — this "
     "is important — the message looks like an attempt to answer whichever "
     "slot the assistant had just asked about (given as pending_slot, e.g. a "
     "name, a number, a lot type, 'no preference', a date) rather than a real "
@@ -930,7 +931,7 @@ BOOKING_AGENT_SYSTEM_PROMPT = (
     "- RESUME_BOOKING: Citizen wants to continue an unfinished booking draft.\n"
     "- PROVIDE_INFORMATION: Citizen provides information or answering details.\n"
     "- GENERAL_INQUIRY: Citizen asks general informational questions about the cemetery, visiting/office hours, policies, pricing, payment methods, required documents, or sends greetings/chitchat (e.g. 'Ano visiting hours ninyo?', 'Magkano lot?', 'Hello po'). Answer directly using the Cemetery Knowledge Base.\n"
-    "- UNCLEAR: Ambiguous query or off-topic statement.\n\n"
+    "- UNCLEAR: Ambiguous query, nonsense statement, or ANY off-topic request unrelated to cemetery operations (e.g. coding/programming, general math/science equations, cooking recipes, political arguments, gaming, creative writing, non-cemetery customer service, or general trivia).\n\n"
     "Extraction & Normalization Rules:\n"
     "- Booking References: Recognize references like BUR-14, CREM-8, DFT-5, Booking #14, Schedule 22. Standardize to canonical format (e.g. BUR-14, CREM-8) and set booking_reference.\n"
     "- Dates: Normalize ALL dates to YYYY-MM-DD. For relative dates like 'tomorrow', 'in 2 weeks', or 'next Friday', compute against today's date provided in context.\n"
@@ -944,6 +945,9 @@ BOOKING_AGENT_SYSTEM_PROMPT = (
     "  * Tone: Empathetic, respectful, and comforting to grieving families.\n"
     "  * Language Mirroring: If citizen writes in Filipino/Taglish, reply in polite, warm Filipino/Taglish using 'po' / 'opo'. If they write in English, reply in compassionate, clear English.\n"
     "  * General Inquiries & FAQs: If the citizen asks an informational or FAQ question, answer accurately and compassionately using the knowledge entries provided. If they have an active booking draft, answer their question first, then add a polite segue offering to resume their booking draft.\n"
+    "  * Strict Off-Topic Guardrail: If the citizen message is off-topic (unrelated to cemetery operations, burial/cremation scheduling, lot/niche selection, visiting hours, documents, fees, or cemetery policies), classify intent strictly as UNCLEAR, leave all slots and extracted_fields null, and output a polite, compassionate refusal redirecting them back to cemetery services:\n"
+    "    - In Filipino/Taglish: 'Paumanhin po, maaari lamang po akong tumulong hinggil sa mga serbisyo ng sementeryo, booking ng libing o cremation, mga lote, oras ng pagbisita, at mga patakaran ng sementeryo. Paano ko po kayo matutulungan sa inyong mga kailangan sa sementeryo ngayon?'\n"
+    "    - In English: 'I can only assist with cemetery services, burial and cremation bookings, lot inquiries, visiting hours, and cemetery policies. How may I help you with our cemetery arrangements today?'\n"
     "  * Step-by-Step Dynamic Guidance:\n"
     "    1. Starting a booking / Missing Decedent: Acknowledge service, express condolences, and politely ask for the decedent's full name.\n"
     "    2. Decedent provided / Missing Date: Acknowledge the decedent, and ask for preferred date & time, noting cemetery services run Tuesday to Sunday (Mondays are closed for maintenance).\n"
@@ -1047,6 +1051,22 @@ def _extract_booking_deterministic(
         intent = 'GENERAL_INQUIRY'
     elif re.match(r'^(?:hi|hello|hey|kamusta|kumusta|magandang\s+(?:araw|umaga|hapon|gabi)|good\s+(?:morning|afternoon|evening|day))[\s!\.]*$', message.strip(), re.IGNORECASE):
         intent = 'GENERAL_INQUIRY'
+    # Guardrail: Check for clear off-topic inquiries
+    off_topic_patterns = [
+        r'\b(?:write|generate|debug|code|script|python|javascript|php|java|c\+\+|sql query|function|algorithm|html)\b',
+        r'\b(?:recipe|cook|ingredients|bake|pancit|adobo|sinigang|cake|cookie)\b',
+        r'\b(?:calculate|solve|equation|integral|derivative|math problem)\b',
+        r'\b(?:president|election|senator|congress|political party|politics|democrat|republican)\b',
+        r'\b(?:weather forecast|tomorrow\'s temperature|rain today)\b',
+        r'\b(?:tell me a joke|write a poem|write a story|sing a song)\b',
+        r'\b(?:who won the game|nba|football|basketball score)\b',
+    ]
+    is_cemetery_relevant = any(term in msg_lower for term in [
+        'cemetery', 'burial', 'cremat', 'interment', 'grave', 'plot', 'lot', 'niche', 'urn',
+        'decedent', 'deceased', 'libing', 'hukay', 'puntod', 'himlayan', 'patay', 'burol'
+    ])
+    if not is_cemetery_relevant and any(re.search(pat, msg_lower) for pat in off_topic_patterns):
+        intent = 'UNCLEAR'
     elif any(phrase in msg_lower for phrase in ['book', 'schedule', 'reserve', 'i want to book', 'arrange a burial', 'arrange a cremation', 'start booking']) and not draft.get('draft_id'):
         intent = 'CREATE_BOOKING'
 
@@ -1293,22 +1313,28 @@ def _extract_booking_deterministic(
     active_date = extracted_fields.get('preferred_date') or extracted_fields.get('cremation_date') or existing_data.get('preferred_date') or existing_data.get('cremation_date')
     active_lot = extracted_fields.get('lot_id') or existing_data.get('lot_id')
 
-    if intent == 'GENERAL_INQUIRY':
+    if intent == 'UNCLEAR':
+        for k in slots:
+            slots[k] = None
+        extracted_fields = {}
+        reply = ("Paumanhin po, maaari lamang po akong tumulong hinggil sa mga serbisyo ng sementeryo, booking ng libing o cremation, mga lote, oras ng pagbisita, at mga patakaran ng sementeryo. Paano ko po kayo matutulungan sa inyong mga kailangan sa sementeryo ngayon?"
+                 if is_tagalog else "I can only assist with cemetery services, burial and cremation bookings, lot inquiries, visiting hours, and cemetery policies. How may I help you with our cemetery arrangements today?")
+    elif intent == 'GENERAL_INQUIRY':
         if any(w in msg_lower for w in ['visiting', 'operating', 'oras ng bisita', 'anong oras bukas', 'kailan bukas', 'bukas ba', 'open hours', 'schedule ng bisita']):
-            reply = ("Ang sementeryo po ay bukas araw-araw mula 6:00 AM hanggang 6:00 PM para sa mga bisita. Ang administrative office naman po ay bukas mula Lunes hanggang Biyernes, 8:00 AM hanggang 5:00 PM."
-                     if is_tagalog else "The cemetery grounds are open daily from 6:00 AM to 6:00 PM for visitors. The administrative office is open Monday to Friday, 8:00 AM to 5:00 PM.")
+            reply = ("Ang sementeryo po ay bukas araw-araw mula 8:00 AM hanggang 5:00 PM para sa mga bisita. Ang administrative office naman po ay bukas Lunes hanggang Sabado mula 8:00 AM hanggang 4:00 PM."
+                     if is_tagalog else "The cemetery grounds are open daily from 8:00 AM to 5:00 PM for visitors. The administrative office is open Monday to Saturday from 8:00 AM to 4:00 PM.")
         elif any(w in msg_lower for w in ['saan', 'location', 'address', 'saan matatagpuan', 'saan ang sementeryo', 'saan ang opisina', 'where are you located', 'where is the cemetery']):
-            reply = ("Ang aming sementeryo at administrative office ay matatagpuan sa Main Memorial Park grounds malapit sa Main Gate."
-                     if is_tagalog else "Our cemetery grounds and administrative office are located at the Main Memorial Park grounds near the Main Gate.")
+            reply = ("Ang aming sementeryo at administrative office ay matatagpuan sa Himlayang Bayan Memorial Park, Main Gate Avenue."
+                     if is_tagalog else "Our cemetery grounds and administrative office are located at Himlayang Bayan Memorial Park, Main Gate Avenue.")
         elif any(w in msg_lower for w in ['magkano', 'presyo', 'fees', 'how much', 'bayad', 'payment', 'gcash', 'installment', 'price']):
-            reply = ("Ang mga bayarin ay nakadepende sa serbisyo (Traditional Burial o Cremation) at napiling lote o columbarium niche. Tumatanggap po kami ng Cash, GCash, Bank Transfer, at Credit Cards sa aming Administrative Office cashier."
-                     if is_tagalog else "Fees vary depending on whether you choose traditional burial or cremation, and your preferred lot or niche. We accept Cash, GCash, Bank Transfer, and major Credit Cards at our Administrative Office cashier.")
+            reply = ("Ang mga bayarin ay nakadepende sa serbisyo (Traditional Burial o Cremation) at napiling lote o columbarium niche. Tumatanggap po kami ng online payment via PayMongo (Cards, GCash, Maya), Cash sa opisina, at Bank Transfer."
+                     if is_tagalog else "Fees vary depending on whether you choose traditional burial or cremation, and your preferred lot or niche. We accept PayMongo online checkout (Cards, GCash, Maya), Cash at our office cashier, and direct Bank Transfer.")
         elif any(w in msg_lower for w in ['requirements', 'kailangan dalhin', 'dokumento', 'death certificate', 'permit']):
-            reply = ("Narito po ang mga kailangan: 1) Certified True Copy ng Death Certificate, 2) Burial Permit mula sa LGU/City Health Office, 3) Valid ID ng Claimant/Next-of-Kin, at 4) Deed of Sale o Lot Title (kung may umiiral na lote)."
-                     if is_tagalog else "Required documents are: 1) Certified True Copy of Death Certificate, 2) Burial Permit from the LGU/City Health Office, 3) Valid ID of Next-of-Kin/Claimant, and 4) Deed of Sale or Lot Title (if using an existing lot).")
+            reply = ("Narito po ang mga kailangan: 1) Certified True Copy ng Death Certificate, 2) Burial/Transfer Permit mula sa City Health Office/LGU, 3) Valid Government ID ng Claimant, at 4) Proof of relationship o Lot Title."
+                     if is_tagalog else "Required documents are: 1) Certified True Copy of Death Certificate, 2) Burial/Transfer Permit from the City Health Office or LGU, 3) Valid Government ID of Claimant, and 4) Proof of relationship or Lot Title.")
         elif any(w in msg_lower for w in ['serbisyo', 'services', 'inooffer']):
-            reply = ("Nag-aalok po kami ng Traditional Ground Burial, Cremation Services, at Columbarium Niches, kasama ang perpetual maintenance at care ng parke."
-                     if is_tagalog else "We offer Traditional Ground Burial, Cremation Services, and Columbarium Niches, complete with perpetual park care and maintenance.")
+            reply = ("Nag-aalok po kami ng Traditional Ground Burial (Lawn Lots at Family Estates), Cremation Services, at Columbarium Niches, kasama ang perpetual care at maintenance."
+                     if is_tagalog else "We offer Traditional Ground Burial (Lawn Lots and Family Estates), Cremation Services, and Columbarium Niches, complete with perpetual park care and maintenance.")
         else:
             reply = ("Magandang araw po! Ako po ang AI Booking Assistant ng sementeryo. Paano ko po kayo matutulungan sa inyong booking o katanungan ngayon?"
                      if is_tagalog else "Good day! I am your Cemetery AI Booking Assistant. How may I assist you with your booking or inquiries today?")
@@ -1433,6 +1459,15 @@ def _extract_booking_agent(
                         if merged_slots.get(k) not in (None, ''):
                             cleaned_extracted[k] = merged_slots[k]
 
+                reply = parsed.get('reply') or 'I have noted your booking request.'
+                if raw_intent == 'UNCLEAR':
+                    merged_slots = {k: None for k in merged_slots}
+                    cleaned_extracted = {}
+                    if not reply or reply == 'I have noted your booking request.':
+                        is_tagalog = bool(re.search(r'\b(po|opo|para|kay|sa|gusto|libing|ano|kailan|tatay|nanay|kapatid|asawa|lolo|lola|sino|paano|salamat|mali|dapat|namin|natin|ako|ko|mo|siya|bawal|paki|pili|anong|araw|oras)\b', message, re.IGNORECASE))
+                        reply = ("Paumanhin po, maaari lamang po akong tumulong hinggil sa mga serbisyo ng sementeryo, booking ng libing o cremation, mga lote, oras ng pagbisita, at mga patakaran ng sementeryo. Paano ko po kayo matutulungan sa inyong mga kailangan sa sementeryo ngayon?"
+                                 if is_tagalog else "I can only assist with cemetery services, burial and cremation bookings, lot inquiries, visiting hours, and cemetery policies. How may I help you with our cemetery arrangements today?")
+
                 return {
                     'intent': raw_intent,
                     'confidence': float(parsed.get('confidence', 0.95)),
@@ -1440,7 +1475,7 @@ def _extract_booking_agent(
                     'booking_reference': merged_slots.get('booking_reference'),
                     'slots': merged_slots,
                     'extracted_fields': cleaned_extracted,
-                    'reply': parsed.get('reply') or 'I have noted your booking request.'
+                    'reply': reply
                 }
     except Exception:
         pass
