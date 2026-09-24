@@ -1591,3 +1591,107 @@ body[data-theme="dark"] .btn-save.bookmarkBtn {
     background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
     color: #06170f;
 }
+
+/* ==========================================================================
+   Responsive Adaptations (Exceptions Page)
+   ========================================================================== */
+@media (max-width: 1024px) {
+    .stats-row.exceptions-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .content-area {
+        padding: 14px 12px;
+    }
+
+    .stats-row.exceptions-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .panel-filters-group {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 10px;
+    }
+
+    .panel-filters-group .search-field {
+        width: 100%;
+        min-width: 100%;
+        max-width: 100%;
+    }
+
+    .filter-select {
+        width: 100%;
+    }
+
+    .btn-secondary.btn-clear-all {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .table-container {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table-container .data-table {
+        min-width: 760px !important;
+    }
+
+    .pagination-container {
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+        text-align: center;
+    }
+
+    .pagination-btns {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .content-area {
+        padding: 10px 8px;
+    }
+
+    .exceptions-stats > .stat-card {
+        padding: 14px 12px;
+        min-height: 90px;
+    }
+
+    .exceptions-stats > .stat-card .stat-value {
+        font-size: clamp(1.35rem, 5.5vw, 1.75rem);
+        word-break: break-word;
+    }
+
+    .exceptions-stats > .stat-card .stat-title {
+        font-size: 0.78rem;
+    }
+
+    .exceptions-stats > .stat-card .stat-sub {
+        font-size: 0.72rem;
+    }
+
+    .chart-card {
+        padding: 12px 10px;
+    }
+
+    .chart-card__header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .chart-card__title {
+        font-size: 0.9rem;
+    }
+}
+

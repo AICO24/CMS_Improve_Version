@@ -1832,9 +1832,64 @@ body[data-theme="dark"] .modal-footer .btn-secondary:hover {
 
     .panel-filters-group .search-field {
         max-width: 100%;
+        width: 100%;
+    }
+
+    .filter-select {
+        width: 100%;
+    }
+
+    .btn-secondary.btn-clear-all {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .table-container {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table-container .data-table {
+        min-width: 680px !important;
+    }
+
+    .pagination-container {
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+        text-align: center;
+    }
+
+    .pagination-btns {
+        width: 100%;
+        justify-content: center;
     }
 
     .audit-detail-grid {
         grid-template-columns: 1fr;
     }
 }
+
+@media (max-width: 480px) {
+    .content-area {
+        padding: 10px 8px;
+    }
+
+    .audit-stats > .stat-card,
+    .audit-summary-row > .stat-card {
+        padding: 14px 12px;
+    }
+
+    .audit-stats > .stat-card .stat-value,
+    .audit-summary-row > .stat-card .stat-value {
+        font-size: clamp(1.35rem, 5.5vw, 1.75rem);
+        word-break: break-word;
+    }
+
+    .chart-card {
+        padding: 12px 10px;
+    }
+}
+

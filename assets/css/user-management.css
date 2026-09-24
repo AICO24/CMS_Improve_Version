@@ -3049,7 +3049,7 @@ body[data-theme="dark"] .modal-actions .btn-secondary:hover {
     }
 
     .table-container .data-table {
-        min-width: 0 !important;
+        min-width: 680px !important;
     }
 
     .bulk-toolbar {
@@ -3061,6 +3061,41 @@ body[data-theme="dark"] .modal-actions .btn-secondary:hover {
         justify-content: flex-start;
     }
 }
+
+@media (max-width: 480px) {
+    .content-area {
+        padding: 10px 8px !important;
+    }
+
+    .user-stats-row > .stat-card {
+        padding: 14px 12px;
+    }
+
+    .user-stats-row > .stat-card .stat-value {
+        font-size: clamp(1.35rem, 5.5vw, 1.75rem);
+    }
+
+    .toolbar-row {
+        padding: 10px 8px;
+    }
+
+    .toolbar-actions .btn-action-pill,
+    .toolbar-actions .btn-secondary,
+    .btn-create-user {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .bulk-toolbar__actions {
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .bulk-toolbar__actions button {
+        width: 100%;
+    }
+}
+
 
 /* Logout button styles */
 .logout-btn,

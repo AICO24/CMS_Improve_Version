@@ -2256,7 +2256,40 @@
     .section-counts {
         width: 100%;
     }
+
+    .lot-data-table {
+        min-width: 720px !important;
+    }
 }
+
+@media (max-width: 480px) {
+    .content-area {
+        padding: 10px 8px !important;
+    }
+
+    .lotmgmt-stats > .stat-card {
+        padding: 14px 12px;
+    }
+
+    .lotmgmt-stats > .stat-card .stat-value {
+        font-size: clamp(1.35rem, 5.5vw, 1.75rem);
+    }
+
+    .filter-controls {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .filter-controls select,
+    .btn-reset-filters {
+        width: 100%;
+    }
+
+    .lot-card {
+        padding: 12px;
+    }
+}
+
 
 /* ---------- INTERACTIVE GRID MATRIX LAYOUT ---------- */
 .view-mode-bar {

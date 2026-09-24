@@ -160,3 +160,35 @@
     color: var(--color-neutral-300);
     margin-bottom: var(--space-2);
 }
+
+/* --- Responsive Table Safeguards --- */
+@media (max-width: 768px) {
+    .table-scroll,
+    .table-container {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .table-search {
+        width: 100%;
+    }
+
+    .pagination-controls {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 10px;
+    }
+
+    .pagination-controls button {
+        width: 100%;
+    }
+}
