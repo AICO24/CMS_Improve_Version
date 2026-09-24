@@ -687,18 +687,27 @@ body[data-theme="dark"] .footer-inner {
     }
 }
 
-@media (max-width: 375px) {
+@media (max-width: 480px) {
     .content-area {
-        padding: 12px;
+        padding: 10px 8px;
     }
     .hero-card {
-        padding: 16px;
+        padding: 14px 12px;
     }
     .hero-content {
         flex-direction: column;
         align-items: flex-start;
+        gap: 8px;
+    }
+    .notifications-main-card {
+        padding: 12px 10px;
     }
     .notification-item {
-        padding: 14px 16px;
+        padding: 12px 10px;
+    }
+    .notification-actions {
+        width: 100%;
+        justify-content: flex-start;
     }
 }
+

@@ -95,3 +95,27 @@
 .modal-content.modal--sm { width: min(420px, 100%); }
 .modal-content.modal--md { width: min(560px, 100%); }
 .modal-content.modal--lg { width: min(760px, 100%); }
+
+/* --- Mobile Phone Safeguards --- */
+@media (max-width: 480px) {
+    .modal {
+        padding: 8px;
+    }
+
+    .modal-content {
+        padding: 16px 14px;
+        width: 100% !important;
+        max-height: 92dvh;
+    }
+
+    .modal-footer {
+        flex-direction: column-reverse;
+        gap: 8px;
+    }
+
+    .modal-footer > * {
+        width: 100% !important;
+        justify-content: center;
+    }
+}
+

@@ -608,16 +608,28 @@ body[data-theme="dark"] .security-card-text p {
     }
 }
 
-@media (max-width: 375px) {
+@media (max-width: 480px) {
     .content-area {
-        padding: 12px;
+        padding: 10px 8px;
+    }
+    .profile-hero-card {
+        padding: 14px 12px;
     }
     .profile-hero-avatar {
-        width: 56px;
-        height: 56px;
-        font-size: 1.8rem;
+        width: 64px;
+        height: 64px;
+        font-size: 2rem;
     }
     .profile-hero-name {
-        font-size: 1.15rem;
+        font-size: 1.25rem;
+    }
+    .profile-main-card {
+        padding: 14px 12px;
+    }
+    .btn-edit-profile,
+    .btn-change-password {
+        width: 100%;
+        justify-content: center;
     }
 }
+

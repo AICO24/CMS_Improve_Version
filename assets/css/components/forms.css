@@ -108,3 +108,12 @@
     accent-color: var(--color-primary-500);
     cursor: pointer;
 }
+
+@media (max-width: 480px) {
+    .form-group input,
+    .form-group select {
+        height: 42px;
+        font-size: 16px; /* Prevents auto-zoom on iOS Safari */
+    }
+}
+
