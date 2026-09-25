@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="../../assets/css/animations.css">
     <link rel="stylesheet" href="../../assets/css/shared/base.css">
     <link rel="stylesheet" href="../../assets/css/components/buttons.css">
-    <link rel="stylesheet" href="../../assets/css/auth/register.css?v=20260925c">
+    <link rel="stylesheet" href="../../assets/css/auth/register.css?v=20260925d">
     <script src="https://cdn.lordicon.com/lordicon.js"></script>
     <script>
         (function() {
@@ -48,7 +48,7 @@
                         trigger="loop"
                         delay="2000"
                         colors="primary:#ffffff,secondary:#7aa77a"
-                        style="width:60px;height:60px;">
+                        style="width:52px;height:52px;">
                     </lord-icon>
                 </div>
                 <h1>Create Account</h1>
@@ -57,7 +57,7 @@
                     <i class="fas fa-leaf"></i>
                     <span></span>
                 </div>
-                <p>Register as a citizen user to reserve burial slots, track payments, and manage your records.</p>
+                <p>Register your user account to reserve burial slots, track payments, and manage your records.</p>
             </div>
         </div>
 
@@ -65,261 +65,300 @@
             <div class="register-form-inner">
                 <div class="register-form-header">
                     <h2>Register a New Account</h2>
-                    <p class="register-subtitle">Complete the structured form below to create your citizen account</p>
+                    <p class="register-subtitle">Complete the form below to create your user account</p>
                 </div>
 
                 <div id="alert" class="alert" role="alert" aria-live="polite"></div>
 
                 <!-- Email Verification Step Panel -->
-                <div id="verificationPanel" style="display: none; margin-top: 15px;">
-                    <div style="background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 20px;">
-                        <div style="width: 56px; height: 56px; line-height: 56px; border-radius: 50%; background: #eff6ff; color: #2563eb; font-size: 1.6rem; margin: 0 auto 12px;">
+                <div id="verificationPanel" class="verification-panel" style="display: none;">
+                    <div class="verification-card">
+                        <div class="verification-icon-wrap">
                             <i class="fas fa-envelope-circle-check"></i>
                         </div>
-                        <h3 style="margin: 0 0 8px; font-size: 1.15rem; color: #1e293b;">Verify Your Email</h3>
-                        <p style="margin: 0 0 14px; font-size: 0.88rem; color: #64748b; line-height: 1.4;">
-                            We've sent a 6-digit verification code to <strong id="verifyEmailDisplay" style="color: #0f172a;">your email</strong>. Please enter the code below to activate your account.
+                        <h3>Verify Your Email</h3>
+                        <p class="verification-desc">
+                            We've sent a 6-digit verification code to <strong id="verifyEmailDisplay">your email</strong>. Please enter the code below to activate your account.
                         </p>
-                        <div id="devCodeAlert" style="display: none; background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; margin-bottom: 14px; font-weight: 600;"></div>
-                        <div style="max-width: 260px; margin: 0 auto 16px;">
-                            <input type="text" id="verificationCodeInput" maxlength="6" placeholder="000000" style="text-align: center; letter-spacing: 6px; font-size: 1.5rem; font-weight: 700; height: 48px; width: 100%; border: 2px solid #cbd5e1; border-radius: 10px;" />
+                        <div id="devCodeAlert" class="dev-code-alert" style="display: none;"></div>
+                        <div class="verification-input-wrap">
+                            <input type="text" id="verificationCodeInput" maxlength="6" placeholder="000000" />
                         </div>
-                        <button type="button" id="btnVerifyCode" class="btn-register" style="width: 100%; padding: 12px; font-size: 0.95rem;">
+                        <button type="button" id="btnVerifyCode" class="btn-register btn-verify">
                             <span>Verify Email</span>
                             <i class="fas fa-check"></i>
                         </button>
-                        <div style="margin-top: 14px; font-size: 0.82rem;">
-                            <span style="color: #64748b;">Didn't receive code?</span>
-                            <button type="button" id="btnResendCode" style="background: none; border: none; color: #2563eb; font-weight: 600; cursor: pointer; text-decoration: underline; margin-left: 4px;">Resend Code</button>
+                        <div class="verification-resend-wrap">
+                            <span>Didn't receive code?</span>
+                            <button type="button" id="btnResendCode" class="btn-resend">Resend Code</button>
                         </div>
                     </div>
                 </div>
 
                 <form id="registerForm" method="post" autocomplete="on">
                     <div class="register-cards-grid">
-                        <!-- Card 1: Personal & Contact Information -->
-                        <div class="register-card">
-                            <div class="register-card__header">
-                                <div class="card-step-badge card-step-badge--personal">
-                                    <i class="fas fa-id-card"></i>
-                                </div>
-                                <div class="card-header-titles">
-                                    <h3 class="register-card__title">Personal &amp; Contact Info</h3>
-                                    <p class="register-card__subtitle">Citizen identity and communication</p>
-                                </div>
-                            </div>
-
-                            <div class="card-inner-grid">
-                                <!-- First Name -->
-                                <div class="input-field col-6">
-                                    <label for="first_name">First Name <span class="req-star">*</span></label>
-                                    <div class="input-wrapper">
-                                        <span class="input-icon"><i class="fas fa-user"></i></span>
-                                        <input type="text" id="first_name" name="first_name" placeholder="First name" autocomplete="given-name" required aria-describedby="firstNameError">
+                        <!-- Column 1: Personal & Contact Information -->
+                        <div class="register-cards-col">
+                            <!-- Section 1: Personal Information -->
+                            <section class="register-card" aria-labelledby="sectionPersonalInfo">
+                                <div class="register-card__header">
+                                    <div class="card-step-badge card-step-badge--personal">
+                                        <i class="fas fa-user"></i>
                                     </div>
-                                    <div class="error-message" id="firstNameError" role="alert"></div>
+                                    <div class="card-header-titles">
+                                        <h3 id="sectionPersonalInfo" class="register-card__title">Personal Information</h3>
+                                        <p class="register-card__subtitle">Legal name and identity</p>
+                                    </div>
                                 </div>
 
-                                <!-- Middle Name -->
-                                <div class="input-field col-6">
-                                    <label for="middle_name">Middle Name <span class="label-badge">Optional</span></label>
-                                    <div class="input-wrapper">
-                                        <span class="input-icon"><i class="fas fa-user"></i></span>
-                                        <input type="text" id="middle_name" name="middle_name" placeholder="Middle name" autocomplete="additional-name" aria-describedby="middleNameError">
+                                <div class="card-inner-grid">
+                                    <!-- First Name -->
+                                    <div class="input-field col-6">
+                                        <label for="first_name">First Name <span class="req-star">*</span></label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon"><i class="fas fa-user"></i></span>
+                                            <input type="text" id="first_name" name="first_name" placeholder="First name" autocomplete="given-name" required aria-describedby="firstNameError">
+                                        </div>
+                                        <div class="error-message" id="firstNameError" role="alert"></div>
                                     </div>
-                                    <div class="error-message" id="middleNameError" role="alert"></div>
+
+                                    <!-- Middle Name -->
+                                    <div class="input-field col-6">
+                                        <label for="middle_name">Middle Name <span class="label-badge">Optional</span></label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon"><i class="fas fa-user"></i></span>
+                                            <input type="text" id="middle_name" name="middle_name" placeholder="Middle name" autocomplete="additional-name" aria-describedby="middleNameError">
+                                        </div>
+                                        <div class="error-message" id="middleNameError" role="alert"></div>
+                                    </div>
+
+                                    <!-- Last Name -->
+                                    <div class="input-field col-7">
+                                        <label for="last_name">Last Name <span class="req-star">*</span></label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon"><i class="fas fa-user"></i></span>
+                                            <input type="text" id="last_name" name="last_name" placeholder="Last name" autocomplete="family-name" required aria-describedby="lastNameError">
+                                        </div>
+                                        <div class="error-message" id="lastNameError" role="alert"></div>
+                                    </div>
+
+                                    <!-- Suffix -->
+                                    <div class="input-field col-5">
+                                        <label for="suffix">Suffix <span class="label-badge">Optional</span></label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon"><i class="fas fa-user-tag"></i></span>
+                                            <input type="text" id="suffix" name="suffix" placeholder="Jr., Sr., III" autocomplete="honorific-suffix" aria-describedby="suffixError">
+                                        </div>
+                                        <div class="error-message" id="suffixError" role="alert"></div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <!-- Section 2: Contact Information -->
+                            <section class="register-card" aria-labelledby="sectionContactInfo">
+                                <div class="register-card__header">
+                                    <div class="card-step-badge card-step-badge--contact">
+                                        <i class="fas fa-address-book"></i>
+                                    </div>
+                                    <div class="card-header-titles">
+                                        <h3 id="sectionContactInfo" class="register-card__title">Contact Information</h3>
+                                        <p class="register-card__subtitle">Email, mobile number, &amp; username</p>
+                                    </div>
                                 </div>
 
-                                <!-- Last Name -->
-                                <div class="input-field col-7">
-                                    <label for="last_name">Last Name <span class="req-star">*</span></label>
-                                    <div class="input-wrapper">
-                                        <span class="input-icon"><i class="fas fa-user"></i></span>
-                                        <input type="text" id="last_name" name="last_name" placeholder="Last name" autocomplete="family-name" required aria-describedby="lastNameError">
+                                <div class="card-inner-grid">
+                                    <!-- Email Address -->
+                                    <div class="input-field col-12">
+                                        <label for="email">Email Address <span class="req-star">*</span></label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon"><i class="fas fa-envelope"></i></span>
+                                            <input type="email" id="email" name="email" placeholder="name@example.com" autocomplete="email" required aria-describedby="emailError">
+                                        </div>
+                                        <div class="error-message" id="emailError" role="alert"></div>
                                     </div>
-                                    <div class="error-message" id="lastNameError" role="alert"></div>
-                                </div>
 
-                                <!-- Suffix -->
-                                <div class="input-field col-5">
-                                    <label for="suffix">Suffix <span class="label-badge">Optional</span></label>
-                                    <div class="input-wrapper">
-                                        <span class="input-icon"><i class="fas fa-user-tag"></i></span>
-                                        <input type="text" id="suffix" name="suffix" placeholder="Jr., Sr., III" autocomplete="honorific-suffix" aria-describedby="suffixError">
+                                    <!-- Contact Number -->
+                                    <div class="input-field col-6">
+                                        <label for="contact_number">Mobile No. <span class="label-badge">11 digits</span></label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon"><i class="fas fa-phone"></i></span>
+                                            <input type="tel" id="contact_number" name="contact_number" placeholder="09171234567" maxlength="11" inputmode="numeric" autocomplete="tel" aria-describedby="contactError">
+                                        </div>
+                                        <div class="error-message" id="contactError" role="alert"></div>
                                     </div>
-                                    <div class="error-message" id="suffixError" role="alert"></div>
-                                </div>
 
-                                <!-- Email Address -->
-                                <div class="input-field col-12">
-                                    <label for="email">Email Address <span class="req-star">*</span></label>
-                                    <div class="input-wrapper">
-                                        <span class="input-icon"><i class="fas fa-envelope"></i></span>
-                                        <input type="email" id="email" name="email" placeholder="name@example.com" autocomplete="email" required aria-describedby="emailError">
+                                    <!-- Username -->
+                                    <div class="input-field col-6">
+                                        <label for="username">Username <span class="label-badge">Optional</span></label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon"><i class="fas fa-user-circle"></i></span>
+                                            <input type="text" id="username" name="username" placeholder="Choose username" autocomplete="username" aria-describedby="usernameError">
+                                        </div>
+                                        <div class="error-message" id="usernameError" role="alert"></div>
                                     </div>
-                                    <div class="error-message" id="emailError" role="alert"></div>
                                 </div>
-
-                                <!-- Contact Number -->
-                                <div class="input-field col-6">
-                                    <label for="contact_number">Mobile No. <span class="label-badge">11 digits</span></label>
-                                    <div class="input-wrapper">
-                                        <span class="input-icon"><i class="fas fa-phone"></i></span>
-                                        <input type="tel" id="contact_number" name="contact_number" placeholder="09171234567" maxlength="11" inputmode="numeric" autocomplete="tel" aria-describedby="contactError">
-                                    </div>
-                                    <div class="error-message" id="contactError" role="alert"></div>
-                                </div>
-
-                                <!-- Username -->
-                                <div class="input-field col-6">
-                                    <label for="username">Username <span class="label-badge">Optional</span></label>
-                                    <div class="input-wrapper">
-                                        <span class="input-icon"><i class="fas fa-user-circle"></i></span>
-                                        <input type="text" id="username" name="username" placeholder="Choose username" autocomplete="username" aria-describedby="usernameError">
-                                    </div>
-                                    <div class="error-message" id="usernameError" role="alert"></div>
-                                </div>
-                            </div>
+                            </section>
                         </div>
 
-                        <!-- Card 2: Location & Account Security -->
-                        <div class="register-card">
-                            <div class="register-card__header">
-                                <div class="card-step-badge card-step-badge--location">
-                                    <i class="fas fa-map-location-dot"></i>
-                                </div>
-                                <div class="card-header-titles">
-                                    <h3 class="register-card__title">Location &amp; Security</h3>
-                                    <p class="register-card__subtitle">Address details &amp; password credentials</p>
-                                </div>
-                            </div>
-
-                            <div class="card-inner-grid">
-                                <!-- Region -->
-                                <div class="input-field col-6">
-                                    <label for="reg_region">Region</label>
-                                    <div class="input-wrapper">
-                                        <span class="input-icon"><i class="fas fa-globe-asia"></i></span>
-                                        <select id="reg_region" name="region" aria-describedby="regionError">
-                                            <option value="">-- Select Region --</option>
-                                        </select>
+                        <!-- Column 2: Address & Security -->
+                        <div class="register-cards-col">
+                            <!-- Section 3: Address -->
+                            <section class="register-card" aria-labelledby="sectionAddress">
+                                <div class="register-card__header">
+                                    <div class="card-step-badge card-step-badge--location">
+                                        <i class="fas fa-map-location-dot"></i>
                                     </div>
-                                    <div class="error-message" id="regionError" role="alert"></div>
-                                </div>
-
-                                <!-- Province -->
-                                <div class="input-field col-6">
-                                    <label for="reg_province">Province</label>
-                                    <div class="input-wrapper">
-                                        <span class="input-icon"><i class="fas fa-mountain"></i></span>
-                                        <select id="reg_province" name="province" disabled aria-describedby="provinceError">
-                                            <option value="">-- Select Province --</option>
-                                        </select>
-                                    </div>
-                                    <div class="error-message" id="provinceError" role="alert"></div>
-                                </div>
-
-                                <!-- City / Municipality -->
-                                <div class="input-field col-6">
-                                    <label for="reg_city">City / Municipality</label>
-                                    <div class="input-wrapper">
-                                        <span class="input-icon"><i class="fas fa-city"></i></span>
-                                        <select id="reg_city" name="city" disabled aria-describedby="cityError">
-                                            <option value="">-- Select City --</option>
-                                        </select>
-                                    </div>
-                                    <div class="error-message" id="cityError" role="alert"></div>
-                                </div>
-
-                                <!-- District -->
-                                <div class="input-field col-6">
-                                    <label for="reg_district">District</label>
-                                    <div class="input-wrapper">
-                                        <span class="input-icon"><i class="fas fa-landmark"></i></span>
-                                        <select id="reg_district" name="district" disabled aria-describedby="districtError">
-                                            <option value="">-- Select District --</option>
-                                        </select>
-                                    </div>
-                                    <div class="error-message" id="districtError" role="alert"></div>
-                                </div>
-
-                                <!-- Barangay -->
-                                <div class="input-field col-6">
-                                    <label for="reg_barangay">Barangay</label>
-                                    <div class="input-wrapper">
-                                        <span class="input-icon"><i class="fas fa-map-pin"></i></span>
-                                        <select id="reg_barangay" name="barangay" disabled aria-describedby="barangayError">
-                                            <option value="">-- Select Barangay --</option>
-                                        </select>
-                                    </div>
-                                    <div class="error-message" id="barangayError" role="alert"></div>
-                                </div>
-
-                                <!-- Street / House No. -->
-                                <div class="input-field col-6">
-                                    <label for="reg_street">Street / House No. <span class="label-badge">Optional</span></label>
-                                    <div class="input-wrapper">
-                                        <span class="input-icon"><i class="fas fa-road"></i></span>
-                                        <input type="text" id="reg_street" name="street" placeholder="e.g. 123 Rizal St." autocomplete="street-address">
+                                    <div class="card-header-titles">
+                                        <h3 id="sectionAddress" class="register-card__title">Address</h3>
+                                        <p class="register-card__subtitle">Philippine regional address</p>
                                     </div>
                                 </div>
 
-                                <!-- Hidden combined address for API compatibility -->
-                                <input type="hidden" id="address" name="address">
-                                <div class="col-12" id="addressErrorWrapper">
-                                    <div class="error-message" id="addressError" role="alert"></div>
+                                <div class="card-inner-grid">
+                                    <!-- Region -->
+                                    <div class="input-field col-6">
+                                        <label for="reg_region">Region</label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon"><i class="fas fa-globe-asia"></i></span>
+                                            <select id="reg_region" name="region" aria-describedby="regionError">
+                                                <option value="">-- Select Region --</option>
+                                            </select>
+                                        </div>
+                                        <div class="error-message" id="regionError" role="alert"></div>
+                                    </div>
+
+                                    <!-- Province -->
+                                    <div class="input-field col-6">
+                                        <label for="reg_province">Province</label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon"><i class="fas fa-mountain"></i></span>
+                                            <select id="reg_province" name="province" disabled aria-describedby="provinceError">
+                                                <option value="">-- Select Province --</option>
+                                            </select>
+                                        </div>
+                                        <div class="error-message" id="provinceError" role="alert"></div>
+                                    </div>
+
+                                    <!-- City / Municipality -->
+                                    <div class="input-field col-6">
+                                        <label for="reg_city">City / Municipality</label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon"><i class="fas fa-city"></i></span>
+                                            <select id="reg_city" name="city" disabled aria-describedby="cityError">
+                                                <option value="">-- Select City --</option>
+                                            </select>
+                                        </div>
+                                        <div class="error-message" id="cityError" role="alert"></div>
+                                    </div>
+
+                                    <!-- District -->
+                                    <div class="input-field col-6">
+                                        <label for="reg_district">District</label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon"><i class="fas fa-landmark"></i></span>
+                                            <select id="reg_district" name="district" disabled aria-describedby="districtError">
+                                                <option value="">-- Select District --</option>
+                                            </select>
+                                        </div>
+                                        <div class="error-message" id="districtError" role="alert"></div>
+                                    </div>
+
+                                    <!-- Barangay -->
+                                    <div class="input-field col-6">
+                                        <label for="reg_barangay">Barangay</label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon"><i class="fas fa-map-pin"></i></span>
+                                            <select id="reg_barangay" name="barangay" disabled aria-describedby="barangayError">
+                                                <option value="">-- Select Barangay --</option>
+                                            </select>
+                                        </div>
+                                        <div class="error-message" id="barangayError" role="alert"></div>
+                                    </div>
+
+                                    <!-- Street / House No. -->
+                                    <div class="input-field col-6">
+                                        <label for="reg_street">Street / House No. <span class="label-badge">Optional</span></label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon"><i class="fas fa-road"></i></span>
+                                            <input type="text" id="reg_street" name="street" placeholder="e.g. 123 Rizal St." autocomplete="street-address">
+                                        </div>
+                                    </div>
+
+                                    <!-- Hidden combined address for API compatibility -->
+                                    <input type="hidden" id="address" name="address">
+                                    <div class="col-12" id="addressErrorWrapper">
+                                        <div class="error-message" id="addressError" role="alert"></div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <!-- Section 4: Security -->
+                            <section class="register-card" aria-labelledby="sectionSecurity">
+                                <div class="register-card__header">
+                                    <div class="card-step-badge card-step-badge--security">
+                                        <i class="fas fa-shield-halved"></i>
+                                    </div>
+                                    <div class="card-header-titles">
+                                        <h3 id="sectionSecurity" class="register-card__title">Security</h3>
+                                        <p class="register-card__subtitle">Password credentials &amp; complexity</p>
+                                    </div>
                                 </div>
 
-                                <!-- Passwords -->
-                                <div class="input-field col-6">
-                                    <label for="password">Password <span class="req-star">*</span></label>
-                                    <div class="input-wrapper">
-                                        <span class="input-icon"><i class="fas fa-lock"></i></span>
-                                        <input type="password" id="password" name="new-password" placeholder="Create password" autocomplete="new-password" required aria-describedby="passwordError">
-                                        <button type="button" class="toggle-password" data-target="password" onclick="togglePassword('password')" aria-label="Show password">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
+                                <div class="card-inner-grid">
+                                    <!-- Password -->
+                                    <div class="input-field col-6">
+                                        <label for="password">Password <span class="req-star">*</span></label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon"><i class="fas fa-lock"></i></span>
+                                            <input type="password" id="password" name="new-password" placeholder="Create password" autocomplete="new-password" required aria-describedby="passwordError">
+                                            <button type="button" class="toggle-password" data-target="password" onclick="togglePassword('password')" aria-label="Show password">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                        <div class="error-message" id="passwordError" role="alert"></div>
                                     </div>
-                                    <div class="error-message" id="passwordError" role="alert"></div>
-                                </div>
 
-                                <div class="input-field col-6">
-                                    <label for="confirm_password">Confirm Password <span class="req-star">*</span></label>
-                                    <div class="input-wrapper">
-                                        <span class="input-icon"><i class="fas fa-shield-alt"></i></span>
-                                        <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm password" autocomplete="new-password" required aria-describedby="confirmError">
-                                        <button type="button" class="toggle-password" data-target="confirm_password" onclick="togglePassword('confirm_password')" aria-label="Show password">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
+                                    <div class="input-field col-6">
+                                        <label for="confirm_password">Confirm Password <span class="req-star">*</span></label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon"><i class="fas fa-shield-alt"></i></span>
+                                            <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm password" autocomplete="new-password" required aria-describedby="confirmError">
+                                            <button type="button" class="toggle-password" data-target="confirm_password" onclick="togglePassword('confirm_password')" aria-label="Show password">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                        <div class="error-message" id="confirmError" role="alert"></div>
                                     </div>
-                                    <div class="error-message" id="confirmError" role="alert"></div>
-                                </div>
 
-                                <!-- Password Checklist (spans full width, hidden until typing) -->
-                                <div class="password-checklist col-12" id="passwordChecklist" style="display: none;">
-                                    <div class="password-checklist__title">Password requirements:</div>
-                                    <div class="password-checklist__grid">
-                                        <div id="ruleLength" class="checklist-item"><i class="fas fa-circle-xmark"></i> At least 8 characters</div>
-                                        <div id="ruleUpper" class="checklist-item"><i class="fas fa-circle-xmark"></i> At least 1 uppercase letter</div>
-                                        <div id="ruleLower" class="checklist-item"><i class="fas fa-circle-xmark"></i> At least 1 lowercase letter</div>
-                                        <div id="ruleNumber" class="checklist-item"><i class="fas fa-circle-xmark"></i> At least 1 number (0-9)</div>
-                                        <div id="ruleSpecial" class="checklist-item"><i class="fas fa-circle-xmark"></i> At least 1 special char</div>
+                                    <!-- Password Checklist (spans full width, hidden until typing) -->
+                                    <div class="password-checklist col-12" id="passwordChecklist" style="display: none;">
+                                        <div class="password-checklist__title">Password requirements:</div>
+                                        <div class="password-checklist__grid">
+                                            <div id="ruleLength" class="checklist-item"><i class="fas fa-circle-xmark"></i> At least 8 characters</div>
+                                            <div id="ruleUpper" class="checklist-item"><i class="fas fa-circle-xmark"></i> At least 1 uppercase letter</div>
+                                            <div id="ruleLower" class="checklist-item"><i class="fas fa-circle-xmark"></i> At least 1 lowercase letter</div>
+                                            <div id="ruleNumber" class="checklist-item"><i class="fas fa-circle-xmark"></i> At least 1 number (0-9)</div>
+                                            <div id="ruleSpecial" class="checklist-item"><i class="fas fa-circle-xmark"></i> At least 1 special char</div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            </section>
                         </div>
                     </div>
 
-                    <!-- Clean Action Row Below Cards -->
+                    <!-- Clean Action Row with Clear Hierarchy -->
                     <div class="register-actions-row">
                         <button type="submit" class="btn-register">
                             <span>Register Account</span>
                             <i class="fas fa-arrow-right"></i>
                         </button>
-                        <a href="login.html" class="btn-sign-in-instead">
-                            <i class="fas fa-arrow-right-to-bracket"></i>
-                            <span>Already have an account? Sign in</span>
-                        </a>
+                        <div class="register-signin-prompt">
+                            <span>Already have an account?</span>
+                            <a href="login.html" class="btn-sign-in-instead">
+                                <span>Sign in</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
                     </div>
                 </form>
 

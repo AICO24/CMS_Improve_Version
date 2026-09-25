@@ -1,11 +1,12 @@
-/* ============================================
-   REGISTER PAGE — SPLIT-SCREEN CARD LAYOUT (Batch C)
-   Structured 2-card architecture:
-   - Card 1: Personal & Contact Information
-   - Card 2: Philippine Location & Security
-   Side-by-side on desktop, 100% free of internal scrollbars,
-   clean 50% grid alignment throughout.
-   ============================================ */
+/* ==========================================================================
+   REGISTER PAGE STYLESHEET
+   Cemetery Management System — Refined 4-Section Architecture:
+   - Section 1: Personal Information
+   - Section 2: Contact Information
+   - Section 3: Address (Philippine Hierarchy)
+   - Section 4: Security & Password Checklist
+   Balanced 2-column layout on desktop, clean single-column stack on mobile.
+   ========================================================================== */
 
 * {
     margin: 0;
@@ -14,20 +15,20 @@
 }
 
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1.25rem 1rem;
+    padding: 1.5rem 1rem;
     background: var(--color-neutral-900, #0f172a);
     position: relative;
     overflow-x: hidden;
 }
 
-/* ============================================
-   ANIMATED BACKGROUND (Backdrop only)
-   ============================================ */
+/* ==========================================================================
+   ANIMATED BACKGROUND
+   ========================================================================== */
 
 .bg-overlay {
     position: fixed;
@@ -53,40 +54,40 @@ body {
 
 @keyframes bgPulse {
     0% { opacity: 0.5; transform: scale(1); }
-    100% { opacity: 1; transform: scale(1.1); }
+    100% { opacity: 1; transform: scale(1.08); }
 }
 
-/* ============================================
+/* ==========================================================================
    SPLIT-SCREEN SHELL
-   ============================================ */
+   ========================================================================== */
 
 .register-shell {
     width: 100%;
-    max-width: 1240px;
+    max-width: 1220px;
     min-width: 0;
     position: relative;
     z-index: 1;
     display: flex;
-    background: #f8fbf9;
+    background: #ffffff;
     border-radius: 18px;
     overflow: hidden;
     box-shadow:
-        0 30px 60px -15px rgba(0, 0, 0, 0.55),
-        0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+        0 25px 50px -12px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(255, 255, 255, 0.08) inset;
 }
 
 .register-panel {
     display: flex;
 }
 
-/* --- Visual panel (Left photo panel) --- */
+/* --- Left Promotional / Visual Panel --- */
 
 .register-panel--visual {
     position: relative;
-    flex: 0 0 280px;
-    min-width: 280px;
-    max-width: 300px;
-    min-height: 480px;
+    flex: 0 0 240px;
+    min-width: 240px;
+    max-width: 250px;
+    min-height: 520px;
     align-items: flex-end;
 }
 
@@ -103,26 +104,26 @@ body {
     position: absolute;
     inset: 0;
     background:
-        linear-gradient(180deg, rgba(15, 23, 42, 0.35) 0%, rgba(15, 23, 42, 0.55) 55%, rgba(15, 23, 42, 0.92) 100%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.35) 0%, rgba(15, 23, 42, 0.6) 55%, rgba(15, 23, 42, 0.94) 100%),
         radial-gradient(circle at 30% 20%, rgba(44, 94, 71, 0.35) 0%, transparent 55%);
 }
 
 .register-panel__content {
     position: relative;
     z-index: 1;
-    padding: 1.5rem 1.25rem;
+    padding: 1.75rem 1.25rem;
     color: #ffffff;
     text-align: center;
     width: 100%;
 }
 
 .register-panel__icon {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.6rem;
 }
 
 .register-panel--visual h1 {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.5rem;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.45rem;
     font-weight: 700;
     line-height: 1.25;
     margin-bottom: 0.2rem;
@@ -130,10 +131,10 @@ body {
 }
 
 .register-panel--visual p {
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.85);
-    letter-spacing: 0.2px;
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.82);
+    letter-spacing: 0.1px;
     line-height: 1.45;
 }
 
@@ -141,20 +142,20 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    margin: 0.6rem 0;
+    gap: 10px;
+    margin: 0.55rem 0;
 }
 
 .divider span {
     flex: 1;
-    max-width: 50px;
+    max-width: 45px;
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(44, 94, 71, 0.2), transparent);
 }
 
 .divider i {
     color: #86efac;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     opacity: 0.7;
 }
 
@@ -167,77 +168,90 @@ body {
     opacity: 0.9;
 }
 
-/* --- Form panel (Right side) --- */
+/* --- Right Form Panel --- */
 
 .register-panel--form {
     flex: 1 1 auto;
     min-width: 0;
     overflow: visible;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
     justify-content: center;
-    padding: 1.15rem 1.75rem;
+    padding: 1.4rem 1.75rem;
     background:
-        radial-gradient(circle at 92% 8%, rgba(122, 167, 122, 0.12), transparent 28%),
-        linear-gradient(180deg, #ffffff 0%, #f6faf7 100%);
+        radial-gradient(circle at 95% 5%, rgba(44, 94, 71, 0.05), transparent 30%),
+        linear-gradient(180deg, #ffffff 0%, #f9fbf9 100%);
 }
 
 .register-form-inner {
     width: 100%;
     min-width: 0;
-    max-width: 900px;
+    max-width: 890px;
     margin: 0 auto;
 }
 
 .register-form-header {
-    margin-bottom: 0.65rem;
-    padding-bottom: 0.4rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
     border-bottom: 1px solid #e2e8f0;
 }
 
 .register-form-header h2 {
     font-family: 'Inter', sans-serif;
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: #0f172a;
     letter-spacing: -0.02em;
-    margin-bottom: 0.1rem;
+    margin-bottom: 0.15rem;
     line-height: 1.2;
 }
 
 .register-subtitle {
-    font-family: 'Inter', sans-serif;
     color: #64748b;
-    font-size: 0.78rem;
+    font-size: 0.785rem;
     font-weight: 400;
     line-height: 1.35;
 }
 
-/* ============================================
-   TWO-CARD STRUCTURED LAYOUT
-   ============================================ */
+/* ==========================================================================
+   4-SECTION STRUCTURED LAYOUT
+   ========================================================================== */
 
 .register-cards-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
-    margin-bottom: 0.7rem;
+    align-items: start;
+    margin-bottom: 0.75rem;
+}
+
+.register-cards-col {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
 }
 
 .register-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 11px 13px;
+    border-radius: 11px;
+    padding: 12px 14px;
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
     display: flex;
     flex-direction: column;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.register-card:focus-within {
+    border-color: #cbd5e1;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
 }
 
 .register-card__header {
     display: flex;
     align-items: center;
     gap: 9px;
-    margin-bottom: 8px;
+    margin-bottom: 9px;
     padding-bottom: 6px;
     border-bottom: 1px solid #f1f5f9;
 }
@@ -249,7 +263,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     flex-shrink: 0;
 }
 
@@ -258,9 +272,19 @@ body {
     color: #2c5e47;
 }
 
+.card-step-badge--contact {
+    background: rgba(13, 148, 136, 0.12);
+    color: #0d9488;
+}
+
 .card-step-badge--location {
     background: rgba(30, 64, 175, 0.1);
     color: #1d4ed8;
+}
+
+.card-step-badge--security {
+    background: rgba(99, 102, 241, 0.1);
+    color: #4f46e5;
 }
 
 .card-header-titles {
@@ -268,7 +292,7 @@ body {
 }
 
 .register-card__title {
-    font-size: 0.78rem;
+    font-size: 0.775rem;
     font-weight: 700;
     color: #1e293b;
     margin: 0;
@@ -284,14 +308,14 @@ body {
     line-height: 1.2;
 }
 
-/* ============================================
-   CARD INNER GRID — 12-column subgrid
-   ============================================ */
+/* ==========================================================================
+   CARD INNER GRID — 12-Column Subgrid
+   ========================================================================== */
 
 .card-inner-grid {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
-    gap: 6px 9px;
+    gap: 7px 9px;
 }
 
 .col-1  { grid-column: span 1; }
@@ -307,9 +331,9 @@ body {
 .col-11 { grid-column: span 11; }
 .col-12 { grid-column: span 12; }
 
-/* ============================================
+/* ==========================================================================
    INPUT FIELDS & LABELS
-   ============================================ */
+   ========================================================================== */
 
 .input-field {
     margin-bottom: 0;
@@ -319,11 +343,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.7125rem;
+    font-size: 0.725rem;
     font-weight: 600;
     color: #334155;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
     letter-spacing: -0.01em;
 }
 
@@ -331,7 +354,7 @@ body {
     font-weight: 500;
     color: #64748b;
     background: #f1f5f9;
-    font-size: 0.6rem;
+    font-size: 0.6125rem;
     padding: 1px 5px;
     border-radius: 4px;
     line-height: 1.2;
@@ -354,10 +377,10 @@ body {
 .input-icon {
     position: absolute;
     left: 10px;
-    color: #64748b;
+    color: #94a3b8;
     font-size: 0.75rem;
     pointer-events: none;
-    transition: color 0.2s;
+    transition: color 0.2s ease;
     z-index: 2;
     display: inline-flex;
     align-items: center;
@@ -376,16 +399,16 @@ body {
 .input-wrapper select {
     width: 100%;
     min-width: 0;
-    height: 35px;
-    min-height: 35px;
+    height: 36px;
+    min-height: 36px;
     padding: 6px 10px 6px 31px;
-    font-size: 0.8rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     border: 1.25px solid #cbd5e1;
     border-radius: 6px;
     background: #ffffff;
-    font-family: 'Inter', sans-serif;
-    transition: all 0.18s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    font-family: inherit;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
     outline: none;
     color: #0f172a;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
@@ -398,14 +421,15 @@ body {
     background-repeat: no-repeat;
     background-position: right 8px center;
     background-size: 14px 14px;
-    padding-right: 24px;
+    padding-right: 25px;
+    cursor: pointer;
 }
 
 .input-wrapper input:focus,
 .input-wrapper select:focus {
     border-color: #2c5e47;
     background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(44, 94, 71, 0.13);
+    box-shadow: 0 0 0 3px rgba(44, 94, 71, 0.12);
 }
 
 .input-wrapper select:disabled,
@@ -423,9 +447,9 @@ body {
     font-size: 0.78rem;
 }
 
-/* ============================================
-   PASSWORD TOGGLE
-   ============================================ */
+/* ==========================================================================
+   PASSWORD TOGGLE & CHECKLIST
+   ========================================================================== */
 
 .toggle-password {
     position: absolute;
@@ -435,7 +459,7 @@ body {
     cursor: pointer;
     color: #94a3b8;
     font-size: 0.78rem;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     z-index: 2;
     padding: 3px 5px;
     background: none;
@@ -454,36 +478,30 @@ body {
     outline-offset: 2px;
 }
 
-/* ============================================
-   PASSWORD CHECKLIST
-   ============================================ */
-
 .password-checklist {
     grid-column: 1 / -1;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
-    padding: 5px 10px;
-    margin-top: 1px;
+    padding: 6px 10px;
+    margin-top: 2px;
     animation: fadeSlide 0.2s ease;
 }
 
 .password-checklist__title {
-    font-family: 'Inter', sans-serif;
     font-size: 0.675rem;
     font-weight: 600;
     color: #334155;
-    margin-bottom: 3px;
+    margin-bottom: 4px;
 }
 
 .password-checklist__grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 2px 8px;
+    gap: 3px 8px;
 }
 
 .checklist-item {
-    font-family: 'Inter', sans-serif;
     font-size: 0.675rem;
     display: flex;
     align-items: center;
@@ -496,31 +514,34 @@ body {
     font-size: 0.65rem;
 }
 
-/* ============================================
-   UNIFIED ACTION ROW (Below Cards)
-   ============================================ */
+/* ==========================================================================
+   ACTION BUTTONS — CLEAR HIERARCHY
+   Primary: Prominent full-width button
+   Secondary: Clear subtle link/text prompt
+   ========================================================================== */
 
 .register-actions-row {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 10px;
-    margin-top: 0.45rem;
+    gap: 8px;
+    margin-top: 0.35rem;
 }
 
 .btn-register {
-    flex: 1.25;
+    width: 100%;
     background: linear-gradient(135deg, #2c5e47, #1b3d2e);
     color: #ffffff;
     border: none;
-    height: 38px;
-    min-height: 38px;
+    height: 40px;
+    min-height: 40px;
     padding: 0 16px;
     font-size: 0.85rem;
     font-weight: 600;
-    font-family: 'Inter', sans-serif;
+    font-family: inherit;
     border-radius: 7px;
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: all 0.22s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -531,7 +552,7 @@ body {
 .btn-register:hover {
     background: linear-gradient(135deg, #377659, #224c3a);
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(44, 94, 71, 0.3);
+    box-shadow: 0 6px 16px rgba(44, 94, 71, 0.28);
 }
 
 .btn-register:active {
@@ -543,33 +564,32 @@ body {
     outline-offset: 2px;
 }
 
-.btn-sign-in-instead {
-    flex: 1;
-    display: inline-flex;
+.register-signin-prompt {
+    display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    background: #ffffff;
+    font-size: 0.785rem;
+    color: #64748b;
+    margin-top: 1px;
+}
+
+.btn-sign-in-instead {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     color: #2c5e47;
-    border: 1.25px solid #a7d0b8;
-    height: 38px;
-    min-height: 38px;
-    padding: 0 12px;
-    font-size: 0.8rem;
     font-weight: 600;
-    font-family: 'Inter', sans-serif;
-    border-radius: 7px;
     text-decoration: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    font-size: 0.785rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.18s ease;
 }
 
 .btn-sign-in-instead:hover {
-    background: #f0f7f3;
-    border-color: #2c5e47;
     color: #1b3d2e;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+    background: rgba(44, 94, 71, 0.08);
 }
 
 .btn-sign-in-instead:focus-visible {
@@ -577,21 +597,108 @@ body {
     outline-offset: 2px;
 }
 
-/* ============================================
-   FOOTER
-   ============================================ */
+/* ==========================================================================
+   EMAIL VERIFICATION PANEL
+   ========================================================================== */
 
-.footer-text {
-    text-align: center;
-    margin-top: 0.45rem;
-    font-size: 0.675rem;
-    color: #94a3b8;
-    letter-spacing: 0.1px;
+.verification-panel {
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
 }
 
-/* ============================================
-   ALERT & ERROR MESSAGES
-   ============================================ */
+.verification-card {
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+
+.verification-icon-wrap {
+    width: 48px;
+    height: 48px;
+    line-height: 48px;
+    border-radius: 50%;
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 1.4rem;
+    margin: 0 auto 10px;
+}
+
+.verification-card h3 {
+    margin: 0 0 6px;
+    font-size: 1.1rem;
+    color: #1e293b;
+}
+
+.verification-desc {
+    margin: 0 0 12px;
+    font-size: 0.825rem;
+    color: #64748b;
+    line-height: 1.45;
+}
+
+.dev-code-alert {
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    color: #92400e;
+    padding: 7px 12px;
+    border-radius: 7px;
+    font-size: 0.8rem;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.verification-input-wrap {
+    max-width: 240px;
+    margin: 0 auto 14px;
+}
+
+.verification-input-wrap input {
+    text-align: center;
+    letter-spacing: 6px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    height: 44px;
+    width: 100%;
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+.verification-input-wrap input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.btn-verify {
+    max-width: 240px;
+    margin: 0 auto;
+}
+
+.verification-resend-wrap {
+    margin-top: 12px;
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.btn-resend {
+    background: none;
+    border: none;
+    color: #2563eb;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-left: 4px;
+    font-size: 0.8rem;
+    font-family: inherit;
+}
+
+/* ==========================================================================
+   ALERTS, ERRORS, & FOOTER
+   ========================================================================== */
 
 .alert {
     background: #fef2f2;
@@ -600,7 +707,7 @@ body {
     border-radius: 6px;
     margin-bottom: 0.5rem;
     color: #991b1b;
-    font-size: 0.78rem;
+    font-size: 0.775rem;
     font-weight: 600;
     display: none;
     animation: fadeSlide 0.2s ease;
@@ -634,11 +741,10 @@ body {
 }
 
 .error-message {
-    font-family: 'Inter', sans-serif;
     color: #dc2626;
     font-size: 0.675rem;
     font-weight: 500;
-    margin-top: 1px;
+    margin-top: 2px;
     margin-left: 1px;
     min-height: 0;
     line-height: 1.2;
@@ -648,18 +754,32 @@ body {
     display: none;
 }
 
-/* ============================================
+.footer-text {
+    text-align: center;
+    margin-top: 0.4rem;
+    font-size: 0.675rem;
+    color: #94a3b8;
+    letter-spacing: 0.1px;
+}
+
+/* ==========================================================================
    RESPONSIVE DESIGN
-   ============================================ */
+   - Tablet & Compact Desktop: Graceful scaling
+   - Mobile: Clean single-column stack
+   ========================================================================== */
 
 @media (max-width: 1080px) {
     .register-panel--visual {
-        flex: 0 0 240px;
-        min-width: 240px;
+        flex: 0 0 220px;
+        min-width: 220px;
+    }
+
+    .register-panel--form {
+        padding: 1.25rem 1.4rem;
     }
 }
 
-@media (max-width: 960px) {
+@media (max-width: 940px) {
     .register-shell {
         flex-direction: column;
         max-width: 600px;
@@ -667,9 +787,10 @@ body {
     }
 
     .register-panel--visual {
-        min-height: 120px;
+        min-height: 110px;
         flex: 0 0 auto;
         max-width: 100%;
+        width: 100%;
     }
 
     .register-panel--visual h1 {
@@ -682,22 +803,11 @@ body {
     }
 
     .register-panel__content {
-        padding: 1rem;
+        padding: 0.85rem 1rem;
     }
 
     .register-cards-grid {
         grid-template-columns: 1fr;
-    }
-
-    .register-actions-row {
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .btn-register,
-    .btn-sign-in-instead {
-        width: 100%;
-        flex: none;
     }
 }
 
@@ -711,14 +821,19 @@ body {
     }
 
     .register-panel--form {
-        padding: 1.1rem 0.85rem;
+        padding: 1rem 0.75rem;
     }
 
     .card-inner-grid {
         grid-template-columns: 1fr;
+        gap: 7px;
     }
 
     .col-1, .col-2, .col-3, .col-4, .col-5, .col-6, .col-7, .col-8, .col-9, .col-10, .col-11, .col-12 {
         grid-column: span 1;
+    }
+
+    .password-checklist__grid {
+        grid-template-columns: 1fr;
     }
 }
