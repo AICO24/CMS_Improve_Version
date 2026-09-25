@@ -176,10 +176,11 @@ class BookingAgentService {
                 }
             }
 
-            // Validate lot_id for burial bookings
+            // Validate lot_id for burial bookings (must exist and be Available)
             if ($field === 'lot_id') {
                 $lotId = (int) $value;
-                if ($lotId <= 0 || !$this->lotModel->findById($lotId)) {
+                $lot = $lotId > 0 ? $this->lotModel->findById($lotId) : null;
+                if (!$lot || strtolower((string)($lot['status'] ?? '')) !== 'available') {
                     $missing[] = 'lot_id';
                     continue;
                 }
@@ -669,6 +670,17 @@ class BookingAgentService {
                 $valRes = BookingDateResolver::validate((string)$v, $currentServiceType === 'burial');
                 if (!$valRes['valid']) {
                     continue;
+                }
+            }
+
+            // Guard lot availability for burial bookings (prevent selecting occupied/unavailable lots)
+            if ($k === 'lot_id' && !empty($v)) {
+                $lotCheck = $this->lotModel->findById((int) $v);
+                if (!$lotCheck || strtolower((string)($lotCheck['status'] ?? '')) !== 'available') {
+                    if ($intent === self::INTENT_UPDATE_FIELD) {
+                        throw new BookingDraftException("The selected lot is not available for booking.", 'LOT_NOT_AVAILABLE', 409);
+                    }
+                    continue; // Skip invalid or unavailable lot assignment
                 }
             }
 

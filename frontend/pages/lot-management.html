@@ -228,6 +228,13 @@
                             <select id="filterCategory" class="filter-select" aria-label="Filter by category">
                                 <option value="">All Categories</option>
                             </select>
+                            <select id="lotSortSelect" class="filter-select" aria-label="Sort lots by price or number">
+                                <option value="">Sort by...</option>
+                                <option value="lot_number_asc">Lot Number (Low to High)</option>
+                                <option value="lot_number_desc">Lot Number (High to Low)</option>
+                                <option value="price_asc">Price (Low to High)</option>
+                                <option value="price_desc">Price (High to Low)</option>
+                            </select>
                             <button type="button" class="btn-outline-danger" id="btnResetFilters"
                                 title="Reset all search queries and filters">
                                 <i class="fas fa-rotate-left"></i>

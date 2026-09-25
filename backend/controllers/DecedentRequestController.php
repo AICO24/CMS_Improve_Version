@@ -421,6 +421,11 @@ class DecedentRequestController {
             $this->autoLinkSchedules($id, (int) $data['decedent_id'], $user);
             $this->autoLinkCremations($id, (int) $data['decedent_id'], $user);
 
+            // Persist relationship kinship to decedent_records if not already set
+            if (!empty($request['relationship']) && empty($decedent['relationship'])) {
+                $this->decedentModel->update((int) $data['decedent_id'], ['relationship' => $request['relationship']]);
+            }
+
             // Decedent Records module audit, Batch L3: finalize a citizen's
             // booking-time attachment (Batch L1/L2) onto the real decedent
             // now that it exists — moves it into decedent_documents exactly

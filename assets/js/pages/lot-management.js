@@ -134,12 +134,14 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (activeFilters.section) params.set('section', activeFilters.section);
         if (activeFilters.block) params.set('block_id', activeFilters.block);
         if (activeFilters.status) params.set('status', activeFilters.status);
+        if (activeFilters.sort_by) params.set('sort_by', activeFilters.sort_by);
+        if (activeFilters.sort_order) params.set('sort_order', activeFilters.sort_order);
         const query = params.toString();
         return await apiRequest(query ? `lots?${query}` : 'lots');
     }
 
     function hasActiveFilters() {
-        return Boolean(filters.search || filters.category || filters.section || filters.block || filters.status);
+        return Boolean(filters.search || filters.category || filters.section || filters.block || filters.status || filters.sort_by);
     }
 
     async function loadStats() {
@@ -593,6 +595,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const categoryFilterSelect = document.getElementById('filterCategory');
     const sectionFilterSelect = document.getElementById('filterSection');
     const blockFilterSelect = document.getElementById('filterBlock');
+    const lotSortSelect = document.getElementById('lotSortSelect');
 
     // L3.3: re-fetches from the server whenever a filter is active, instead
     // of re-filtering the already-fully-loaded allLots array in the browser.
@@ -688,6 +691,19 @@ document.addEventListener('DOMContentLoaded', async function () {
                 }
             });
         }
+        if (filters.sort_by) {
+            const sortLabel = filters.sort_by === 'price'
+                ? `Sort: Price (${filters.sort_order === 'desc' ? 'High to Low' : 'Low to High'})`
+                : `Sort: Lot # (${filters.sort_order === 'desc' ? 'High to Low' : 'Low to High'})`;
+            chips.push({
+                label: sortLabel,
+                clear: () => {
+                    delete filters.sort_by;
+                    delete filters.sort_order;
+                    if (lotSortSelect) lotSortSelect.value = '';
+                }
+            });
+        }
 
         if (!chips.length) {
             activeChipsContainer.innerHTML = '';
@@ -773,16 +789,43 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 
+    if (lotSortSelect) {
+        lotSortSelect.addEventListener('change', () => {
+            const val = lotSortSelect.value;
+            if (val === 'price_asc') {
+                filters.sort_by = 'price';
+                filters.sort_order = 'asc';
+            } else if (val === 'price_desc') {
+                filters.sort_by = 'price';
+                filters.sort_order = 'desc';
+            } else if (val === 'lot_number_asc') {
+                filters.sort_by = 'lot_number';
+                filters.sort_order = 'asc';
+            } else if (val === 'lot_number_desc') {
+                filters.sort_by = 'lot_number';
+                filters.sort_order = 'desc';
+            } else {
+                delete filters.sort_by;
+                delete filters.sort_order;
+            }
+            renderActiveFilterChips();
+            refreshVisibleLots();
+        });
+    }
+
     document.getElementById('btnResetFilters').addEventListener('click', () => {
         filters.search = '';
         filters.category = '';
         filters.section = '';
         filters.block = '';
         filters.status = '';
+        delete filters.sort_by;
+        delete filters.sort_order;
         searchInput.value = '';
         categoryFilterSelect.value = '';
         sectionFilterSelect.value = '';
         if (blockFilterSelect) blockFilterSelect.value = '';
+        if (lotSortSelect) lotSortSelect.value = '';
         updateBlockFilterDropdown();
         updateActiveStatCard();
         updateActiveSubTabs();

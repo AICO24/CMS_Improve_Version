@@ -184,6 +184,7 @@ CREATE TABLE `decedent_records` (
   `cause_of_death` text COLLATE utf8mb4_general_ci,
   `contact_name` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `contact_number` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `relationship` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `is_cremated` enum('no','yes') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'no',
   `document_status` enum('pending_requirements','verified') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pending_requirements',
   `ash_storage` text COLLATE utf8mb4_general_ci,

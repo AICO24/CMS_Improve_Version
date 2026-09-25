@@ -95,6 +95,10 @@ class Lot {
     }
 
     private function applyFilters(&$sql, &$params, $filters) {
+        if (!empty($filters['section_id'])) {
+            $sql .= " AND s.section_id = ?";
+            $params[] = (int) $filters['section_id'];
+        }
         if (!empty($filters['section'])) {
             $sql .= " AND s.section_name = ?";
             $params[] = $filters['section'];
@@ -206,7 +210,19 @@ class Lot {
         $params = [];
         $this->applyFilters($sql, $params, $filters);
 
-        $sql .= " ORDER BY s.section_name, b.block_name, l.lot_number";
+        $sortBy = strtolower(trim((string) ($filters['sort_by'] ?? '')));
+        $sortOrder = strtoupper(trim((string) ($filters['sort_order'] ?? $filters['sort_dir'] ?? 'ASC')));
+        if (!in_array($sortOrder, ['ASC', 'DESC'], true)) {
+            $sortOrder = 'ASC';
+        }
+
+        if ($sortBy === 'price') {
+            $sql .= " ORDER BY l.price {$sortOrder}, s.section_name ASC, b.block_name ASC, CAST(l.lot_number AS UNSIGNED) ASC, l.lot_number ASC";
+        } elseif ($sortBy === 'lot_number') {
+            $sql .= " ORDER BY CAST(l.lot_number AS UNSIGNED) {$sortOrder}, l.lot_number {$sortOrder}, s.section_name ASC, b.block_name ASC";
+        } else {
+            $sql .= " ORDER BY s.section_name, b.block_name, CAST(l.lot_number AS UNSIGNED), l.lot_number";
+        }
 
         $page = null;
         $perPage = null;

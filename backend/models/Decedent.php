@@ -235,10 +235,11 @@ class Decedent {
                 cause_of_death,
                 contact_name,
                 contact_number,
+                relationship,
                 is_cremated,
                 ash_storage,
                 document_status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
         $success = $stmt->execute([
@@ -252,6 +253,7 @@ class Decedent {
             $data['cause_of_death'] ?? null,
             $data['contact_name'] ?? null,
             $data['contact_number'] ?? null,
+            $data['relationship'] ?? null,
             $data['is_cremated'] ?? 'no',
             $data['ash_storage'] ?? null,
             $data['document_status'] ?? 'pending_requirements',
@@ -278,6 +280,7 @@ class Decedent {
                 cause_of_death = ?,
                 contact_name = ?,
                 contact_number = ?,
+                relationship = COALESCE(?, relationship),
                 is_cremated = ?,
                 ash_storage = ?,
                 document_status = COALESCE(?, document_status)
@@ -295,6 +298,7 @@ class Decedent {
             $data['cause_of_death'] ?? null,
             $data['contact_name'] ?? null,
             $data['contact_number'] ?? null,
+            $data['relationship'] ?? null,
             $data['is_cremated'] ?? 'no',
             $data['ash_storage'] ?? null,
             $data['document_status'] ?? null,

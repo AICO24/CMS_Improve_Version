@@ -294,7 +294,7 @@ class DecedentController {
             }
 
             $changed = [];
-            foreach (['lot_id', 'first_name', 'last_name', 'middle_name', 'suffix', 'dob', 'dod', 'cause_of_death', 'contact_name', 'contact_number', 'is_cremated', 'ash_storage'] as $field) {
+            foreach (['lot_id', 'first_name', 'last_name', 'middle_name', 'suffix', 'dob', 'dod', 'cause_of_death', 'contact_name', 'contact_number', 'relationship', 'is_cremated', 'ash_storage'] as $field) {
                 if (!array_key_exists($field, $data)) {
                     continue;
                 }

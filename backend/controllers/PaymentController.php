@@ -3285,6 +3285,7 @@ class PaymentController {
             'cause_of_death' => null, // To follow
             'contact_name' => $contactName,
             'contact_number' => $contactNumber,
+            'relationship' => $request['relationship'] ?? null,
             'is_cremated' => $isCremation ? 'yes' : 'no',
             'ash_storage' => null,
             'document_status' => 'pending_requirements',

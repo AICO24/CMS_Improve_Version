@@ -421,6 +421,7 @@ if ($path === 'lot-types' && $requestMethod === 'GET') {
 if ($path === 'lots' && $requestMethod === 'GET') {
     $filters = [];
     if (isset($_GET['section'])) $filters['section'] = $_GET['section'];
+    if (isset($_GET['section_id'])) $filters['section_id'] = $_GET['section_id'];
     if (isset($_GET['lot_number'])) $filters['lot_number'] = $_GET['lot_number'];
     if (isset($_GET['lot_type'])) $filters['lot_type'] = $_GET['lot_type'];
     if (isset($_GET['category'])) $filters['lot_type'] = $_GET['category'];
@@ -429,6 +430,9 @@ if ($path === 'lots' && $requestMethod === 'GET') {
     if (isset($_GET['status'])) $filters['status'] = $_GET['status'];
     if (isset($_GET['block_id'])) $filters['block_id'] = $_GET['block_id'];
     if (isset($_GET['search'])) $filters['search'] = $_GET['search'];
+    if (isset($_GET['sort_by'])) $filters['sort_by'] = $_GET['sort_by'];
+    if (isset($_GET['sort_order'])) $filters['sort_order'] = $_GET['sort_order'];
+    if (isset($_GET['sort_dir'])) $filters['sort_order'] = $_GET['sort_dir'];
     $pagination = [];
     if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];
     if (isset($_GET['per_page'])) $pagination['per_page'] = $_GET['per_page'];

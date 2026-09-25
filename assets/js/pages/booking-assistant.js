@@ -32,9 +32,9 @@
     let chatComposerForm, chatThread, userInputMsg, btnSendMessage, btnRestartDraft, promptSuggestions;
     let blueprintStatusBadge, hudServiceVal, hudDecedentVal, hudAllocationVal, hudReviewVal;
     let hudServiceBadge, hudServiceDesc, hudDecedentName, hudRelationship, hudDate, hudAllocationLabel, hudAllocationDetails, hudLotActionBox, btnOpenLotPicker;
-    let btnEditDecedent, btnEditSchedule, hudMissingAlert, hudMissingList, hudMatchCard, hudMatchText;
+    let btnEditDecedent, btnEditRelationship, btnEditSchedule, hudMissingAlert, hudMissingList, hudMatchCard, hudMatchText;
     let btnConfirmBooking, blueprintPanel, btnToggleBlueprintMobile;
-    let lotPickerModal, btnCloseLotPicker, lotSearchFilter, lotSectionFilter, lotPickerSpinner, lotGridContainer, lotPickerEmpty;
+    let lotPickerModal, btnCloseLotPicker, lotSearchFilter, lotSectionFilter, lotSortPicker, lotPickerSpinner, lotGridContainer, lotPickerEmpty;
     let fieldEditModal, btnCloseFieldEdit, btnCancelFieldEdit, fieldEditForm, fieldEditTitle, fieldEditLabel, fieldEditInput, fieldEditHint;
     let bookingConfirmModal, btnCloseBookingConfirm, btnCancelBookingConfirm, btnSubmitBookingConfirm;
     let confirmModalService, confirmModalDecedent, confirmModalDate, confirmModalLot, confirmModalAllocationLabel, confirmModalDocsBadge;
@@ -157,6 +157,7 @@
         btnOpenLotPicker = document.getElementById('btnOpenLotPicker');
 
         btnEditDecedent = document.getElementById('btnEditDecedent');
+        btnEditRelationship = document.getElementById('btnEditRelationship');
         btnEditSchedule = document.getElementById('btnEditSchedule');
         hudMissingAlert = document.getElementById('hudMissingAlert');
         hudMissingList = document.getElementById('hudMissingList');
@@ -171,6 +172,7 @@
         btnCloseLotPicker = document.getElementById('btnCloseLotPicker');
         lotSearchFilter = document.getElementById('lotSearchFilter');
         lotSectionFilter = document.getElementById('lotSectionFilter');
+        lotSortPicker = document.getElementById('lotSortPicker');
         lotPickerSpinner = document.getElementById('lotPickerSpinner');
         lotGridContainer = document.getElementById('lotGridContainer');
         lotPickerEmpty = document.getElementById('lotPickerEmpty');
@@ -281,8 +283,10 @@
         if (btnCloseLotPicker) btnCloseLotPicker.addEventListener('click', closeLotPicker);
         if (lotSearchFilter) lotSearchFilter.addEventListener('input', filterLots);
         if (lotSectionFilter) lotSectionFilter.addEventListener('change', filterLots);
+        if (lotSortPicker) lotSortPicker.addEventListener('change', filterLots);
 
         if (btnEditDecedent) btnEditDecedent.addEventListener('click', () => openFieldEditor('decedent_name'));
+        if (btnEditRelationship) btnEditRelationship.addEventListener('click', () => openFieldEditor('relationship'));
         if (btnEditSchedule) btnEditSchedule.addEventListener('click', () => openFieldEditor(state.serviceType === 'cremation' ? 'cremation_date' : 'preferred_date'));
 
         if (btnCloseFieldEdit) btnCloseFieldEdit.addEventListener('click', closeFieldEditor);
@@ -1353,6 +1357,27 @@
             return matchSearch && matchSec;
         });
 
+        const sortVal = lotSortPicker ? lotSortPicker.value : '';
+        if (sortVal === 'price_asc') {
+            state.filteredLots.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+        } else if (sortVal === 'price_desc') {
+            state.filteredLots.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+        } else if (sortVal === 'lot_asc') {
+            state.filteredLots.sort((a, b) => {
+                const numA = parseInt(a.lot_number, 10);
+                const numB = parseInt(b.lot_number, 10);
+                if (!isNaN(numA) && !isNaN(numB) && numA !== numB) return numA - numB;
+                return String(a.lot_number).localeCompare(String(b.lot_number), undefined, { numeric: true });
+            });
+        } else if (sortVal === 'lot_desc') {
+            state.filteredLots.sort((a, b) => {
+                const numA = parseInt(a.lot_number, 10);
+                const numB = parseInt(b.lot_number, 10);
+                if (!isNaN(numA) && !isNaN(numB) && numA !== numB) return numB - numA;
+                return String(b.lot_number).localeCompare(String(a.lot_number), undefined, { numeric: true });
+            });
+        }
+
         renderLotGrid(state.filteredLots);
     }
 
@@ -1368,7 +1393,8 @@
         lots.forEach(lot => {
             const card = document.createElement('div');
             const isSelected = state.extractedData.lot_id === lot.lot_id;
-            card.className = 'lot-card-item' + (isSelected ? ' selected' : '');
+            const isAvailable = String(lot.status || '').toLowerCase() === 'available';
+            card.className = 'lot-card-item' + (isSelected ? ' selected' : '') + (!isAvailable ? ' disabled' : '');
 
             card.innerHTML = `
                 <div>
@@ -1382,16 +1408,19 @@
                     <div class="lot-card-price">
                         ₱${Number(lot.price || 0).toLocaleString()}
                     </div>
+                    ${!isAvailable ? `<div style="margin-top:6px;"><span class="badge" style="background:#ef4444;color:#fff;font-size:0.75rem;padding:2px 6px;border-radius:4px;font-weight:600;"><i class="fas fa-ban"></i> Fully Occupied / Unavailable</span></div>` : ''}
                 </div>
-                <button type="button" class="select-lot-btn" style="margin-top:10px;">
-                    ${isSelected ? '<i class="fas fa-check"></i> Selected' : '<i class="fas fa-check-circle"></i> Select This Lot'}
+                <button type="button" class="select-lot-btn" style="margin-top:10px;${!isAvailable ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${!isAvailable ? 'disabled' : ''}>
+                    ${isSelected ? '<i class="fas fa-check"></i> Selected' : (isAvailable ? '<i class="fas fa-check-circle"></i> Select This Lot' : '<i class="fas fa-ban"></i> Unavailable')}
                 </button>
             `;
 
-            card.querySelector('button').addEventListener('click', async () => {
-                closeLotPicker();
-                await updateDraftField('lot_id', lot.lot_id);
-            });
+            if (isAvailable) {
+                card.querySelector('button').addEventListener('click', async () => {
+                    closeLotPicker();
+                    await updateDraftField('lot_id', lot.lot_id);
+                });
+            }
 
             lotGridContainer.appendChild(card);
         });
@@ -1419,6 +1448,9 @@
             const minDate = new Date();
             minDate.setDate(minDate.getDate() + 1);
             fieldEditInput.min = minDate.toISOString().split('T')[0];
+        } else if (fieldName === 'relationship') {
+            fieldEditHint.textContent = 'Enter kinship to deceased (e.g. Father, Mother, Spouse, Child, Sibling, Relative, Friend).';
+            fieldEditInput.removeAttribute('min');
         } else {
             fieldEditHint.textContent = 'Enter the revised information accurately.';
             fieldEditInput.removeAttribute('min');
