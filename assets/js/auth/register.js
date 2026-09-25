@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const passwordInput = document.getElementById('password');
+    const passwordChecklist = document.getElementById('passwordChecklist');
     const ruleLength = document.getElementById('ruleLength');
     const ruleUpper = document.getElementById('ruleUpper');
     const ruleLower = document.getElementById('ruleLower');
@@ -125,7 +126,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (passwordInput) {
         passwordInput.addEventListener('input', function() {
-            checkPasswordComplexity(this.value);
+            const val = this.value;
+            if (passwordChecklist) {
+                if (val.length > 0) {
+                    passwordChecklist.style.display = 'block';
+                } else {
+                    passwordChecklist.style.display = 'none';
+                }
+            }
+            checkPasswordComplexity(val);
+        });
+
+        passwordInput.addEventListener('focus', function() {
+            if (passwordChecklist && this.value.length > 0) {
+                passwordChecklist.style.display = 'block';
+            }
         });
     }
 
@@ -209,6 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
             isValid = false;
         }
         if (!checkPasswordComplexity(password)) {
+            if (passwordChecklist) passwordChecklist.style.display = 'block';
             document.getElementById('passwordError').textContent = 'Password must meet all complexity requirements listed above';
             isValid = false;
         }
