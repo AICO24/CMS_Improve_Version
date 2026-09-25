@@ -129,10 +129,10 @@
 
                         <!-- Contact Number -->
                         <div class="input-field">
-                            <label for="contact_number">Contact Number <span class="label-hint">(PH mobile e.g. 0917 123 4567)</span></label>
+                            <label for="contact_number">Contact Number <span class="label-hint">(11 digits e.g. 09171234567)</span></label>
                             <div class="input-wrapper">
                                 <span class="input-icon"><i class="fas fa-phone"></i></span>
-                                <input type="tel" id="contact_number" name="contact_number" placeholder="09171234567 or +639171234567" autocomplete="tel" aria-describedby="contactError">
+                                <input type="tel" id="contact_number" name="contact_number" placeholder="09171234567" maxlength="11" inputmode="numeric" autocomplete="tel" aria-describedby="contactError">
                             </div>
                             <div class="error-message" id="contactError" role="alert"></div>
                         </div>

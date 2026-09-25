@@ -129,6 +129,33 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    const contactInput = document.getElementById('contact_number');
+    if (contactInput) {
+        // Enforce numeric only and hard truncate to 11 digits on paste or typing
+        contactInput.addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);
+        });
+
+        // Block typing non-numbers and prevent typing once 11 numbers are entered
+        contactInput.addEventListener('keydown', function(e) {
+            // Allow control keys (backspace, delete, tab, arrows)
+            const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'];
+            if (allowedKeys.includes(e.key) || e.ctrlKey || e.metaKey) {
+                return;
+            }
+            // Block non-digits
+            if (!/^[0-9]$/.test(e.key)) {
+                e.preventDefault();
+                return;
+            }
+            // Block typing when 11 digits are already present (unless text is selected for replacement)
+            const clean = this.value.replace(/[^0-9]/g, '');
+            if (clean.length >= 11 && this.selectionStart === this.selectionEnd) {
+                e.preventDefault();
+            }
+        });
+    }
+
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         const fullName = document.getElementById('full_name').value.trim();
@@ -157,17 +184,11 @@ document.addEventListener('DOMContentLoaded', function() {
             isValid = false;
         }
 
-        // Philippine mobile number validation (+63, 09, or 9 followed by 9 digits)
+        // Philippine mobile number validation (must be 11 digits starting with 09)
         if (contact) {
             const cleanDigits = contact.replace(/[^0-9]/g, '');
-            const isFormatAllowed = /^\+?[0-9\s\-()]+$/.test(contact);
-            const isValidPh = isFormatAllowed && (
-                (cleanDigits.startsWith('639') && cleanDigits.length === 12) ||
-                (cleanDigits.startsWith('09') && cleanDigits.length === 11) ||
-                (cleanDigits.startsWith('9') && cleanDigits.length === 10)
-            );
-            if (!isValidPh) {
-                document.getElementById('contactError').textContent = 'Enter a valid Philippine mobile number (e.g. 0917 123 4567 or +63 917 123 4567)';
+            if (!/^09\d{9}$/.test(cleanDigits)) {
+                document.getElementById('contactError').textContent = 'Contact number must be exactly 11 digits starting with 09 (e.g. 09171234567)';
                 isValid = false;
             }
         }
