@@ -9,15 +9,53 @@ class User {
     }
 
     public function findByUsername($username) {
-        $stmt = $this->db->prepare("SELECT * FROM users WHERE username = ?");
-        $stmt->execute([$username]);
+        $normalized = strtolower(trim((string) $username));
+        if ($normalized === '') {
+            return null;
+        }
+        $stmt = $this->db->prepare("SELECT * FROM users WHERE LOWER(TRIM(username)) = ? LIMIT 1");
+        $stmt->execute([$normalized]);
         return $stmt->fetch();
     }
 
     public function findByEmail($email) {
-        $stmt = $this->db->prepare("SELECT * FROM users WHERE email = ?");
-        $stmt->execute([$email]);
+        $normalized = strtolower(trim((string) $email));
+        if ($normalized === '') {
+            return null;
+        }
+        $stmt = $this->db->prepare("SELECT * FROM users WHERE LOWER(TRIM(email)) = ? LIMIT 1");
+        $stmt->execute([$normalized]);
         return $stmt->fetch();
+    }
+
+    public function isEmailTaken($email, $excludeUserId = null) {
+        $normalized = strtolower(trim((string) $email));
+        if ($normalized === '') {
+            return false;
+        }
+        if ($excludeUserId !== null) {
+            $stmt = $this->db->prepare("SELECT 1 FROM users WHERE LOWER(TRIM(email)) = ? AND user_id != ? LIMIT 1");
+            $stmt->execute([$normalized, (int) $excludeUserId]);
+        } else {
+            $stmt = $this->db->prepare("SELECT 1 FROM users WHERE LOWER(TRIM(email)) = ? LIMIT 1");
+            $stmt->execute([$normalized]);
+        }
+        return (bool) $stmt->fetchColumn();
+    }
+
+    public function isUsernameTaken($username, $excludeUserId = null) {
+        $normalized = strtolower(trim((string) $username));
+        if ($normalized === '') {
+            return false;
+        }
+        if ($excludeUserId !== null) {
+            $stmt = $this->db->prepare("SELECT 1 FROM users WHERE LOWER(TRIM(username)) = ? AND user_id != ? LIMIT 1");
+            $stmt->execute([$normalized, (int) $excludeUserId]);
+        } else {
+            $stmt = $this->db->prepare("SELECT 1 FROM users WHERE LOWER(TRIM(username)) = ? LIMIT 1");
+            $stmt->execute([$normalized]);
+        }
+        return (bool) $stmt->fetchColumn();
     }
 
     public function findById($id) {

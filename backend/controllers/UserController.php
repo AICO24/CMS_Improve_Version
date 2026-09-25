@@ -76,12 +76,12 @@ class UserController {
             return ['error' => 'Invalid role selected', 'code' => 400];
         }
 
-        if ($this->userModel->findByUsername($data['username'])) {
+        if ($this->userModel->isUsernameTaken($data['username'])) {
             return ['error' => 'Username already taken', 'code' => 409];
         }
 
-        if ($this->userModel->findByEmail($data['email'])) {
-            return ['error' => 'Email already registered', 'code' => 409];
+        if ($this->userModel->isEmailTaken($data['email'])) {
+            return ['error' => 'This email address is already in use by another account. Please use a different email.', 'code' => 409];
         }
 
         try {
@@ -122,19 +122,23 @@ class UserController {
             return ['error' => 'User not found', 'code' => 404];
         }
 
-        if (!empty($data['username']) && $data['username'] !== $existing['username']) {
-            if ($this->userModel->findByUsername($data['username'])) {
+        if (!empty($data['username'])) {
+            $normalizedUsername = trim((string)$data['username']);
+            if ($this->userModel->isUsernameTaken($normalizedUsername, $id)) {
                 return ['error' => 'Username already taken', 'code' => 409];
             }
+            $data['username'] = $normalizedUsername;
         }
 
-        if (!empty($data['email']) && $data['email'] !== $existing['email']) {
-            if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+        if (!empty($data['email'])) {
+            $normalizedEmail = strtolower(trim((string)$data['email']));
+            if (!filter_var($normalizedEmail, FILTER_VALIDATE_EMAIL)) {
                 return ['error' => 'A valid email address is required', 'code' => 400];
             }
-            if ($this->userModel->findByEmail($data['email'])) {
-                return ['error' => 'Email already registered', 'code' => 409];
+            if ($this->userModel->isEmailTaken($normalizedEmail, $id)) {
+                return ['error' => 'This email address is already in use by another account. Please use a different email.', 'code' => 409];
             }
+            $data['email'] = $normalizedEmail;
         }
 
         if (!empty($data['password'])) {
@@ -183,7 +187,14 @@ class UserController {
             }
         }
 
-        $result = $this->userModel->update($id, $data);
+        try {
+            $result = $this->userModel->update($id, $data);
+        } catch (PDOException $e) {
+            if ($e->getCode() === '23000') {
+                return ['error' => 'Username or email already in use by another account', 'code' => 409];
+            }
+            throw $e;
+        }
         if ($result) {
             if (!empty($data['password'])) {
                 // AUTH-004b (Auth audit, Batch AUTH-4b): an admin-driven

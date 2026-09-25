@@ -301,19 +301,12 @@ class AuthController {
             return ['error' => $pwdError, 'code' => 400];
         }
 
-        if ($this->userModel->findByEmail($data['email'])) {
-            return ['error' => 'Email already registered', 'code' => 409];
+        if ($this->userModel->isEmailTaken($data['email'])) {
+            return ['error' => 'This email address is already in use by another account. Please use a different email.', 'code' => 409];
         }
 
-        // AUTH-006 (Auth audit, Batch AUTH-2): only email was pre-checked —
-        // an explicitly chosen duplicate username reached User::create()'s
-        // INSERT unchecked, which throws PDOException on the table's UNIQUE
-        // key (PDO is ERRMODE_EXCEPTION — see backend/config/database.php).
-        // Nothing here caught it, so it surfaced via the global handler in
-        // backend/api/index.php as a misleading 503 "Service temporarily
-        // unavailable" instead of a 409.
-        if (!empty($data['username']) && $this->userModel->findByUsername($data['username'])) {
-            return ['error' => 'Username already taken', 'code' => 409];
+        if (!empty($data['username']) && $this->userModel->isUsernameTaken($data['username'])) {
+            return ['error' => 'This username is already taken. Please choose a different username.', 'code' => 409];
         }
 
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -644,7 +637,7 @@ class AuthController {
                 return ['error' => 'Current password is incorrect', 'code' => 401];
             }
 
-            if ($this->userModel->findByUsername($username)) {
+            if ($this->userModel->isUsernameTaken($username, $userId)) {
                 return ['error' => 'Username already taken', 'code' => 409];
             }
             $update['username'] = $username;
@@ -652,26 +645,31 @@ class AuthController {
 
         // Email
         if (isset($data['email'])) {
-            $email = trim((string) $data['email']);
+            $email = strtolower(trim((string) $data['email']));
             if ($email === '') {
-                return ['error' => 'Email cannot be empty', 'code' => 400];
-            }
-            if (strtolower($email) === strtolower($existing['email'])) {
-                return ['error' => 'New email cannot be the same as your current email', 'code' => 400];
+                return ['error' => 'Email address cannot be empty', 'code' => 400];
             }
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 return ['error' => 'A valid email address is required', 'code' => 400];
             }
-            if (isset($data['current_password']) && (string)$data['current_password'] !== '') {
-                if (!$this->userModel->verifyPassword((string)$data['current_password'], $existing)) {
-                    return ['error' => 'Current password is incorrect', 'code' => 401];
-                }
+            if (strtolower(trim($existing['email'])) === $email) {
+                return ['error' => 'New email cannot be the same as your current email address', 'code' => 400];
             }
-            if ($email !== $existing['email']) {
-                if ($this->userModel->findByEmail($email)) {
-                    return ['error' => 'Email already registered to another account', 'code' => 409];
-                }
+
+            // Security: Current password is required to authorize changing your email address
+            $currentPassword = (string) ($data['current_password'] ?? '');
+            if ($currentPassword === '') {
+                return ['error' => 'Current password is required to authorize changing your email address', 'code' => 400];
             }
+            if (!$this->userModel->verifyPassword($currentPassword, $existing)) {
+                return ['error' => 'Current password is incorrect', 'code' => 401];
+            }
+
+            // Strict: Disallow if email is already in use by ANY other account in the system
+            if ($this->userModel->isEmailTaken($email, $userId)) {
+                return ['error' => 'This email address is already in use by another account. Please use a different email.', 'code' => 409];
+            }
+
             $update['email'] = $email;
         }
 
@@ -689,7 +687,14 @@ class AuthController {
             return ['error' => 'No changes provided', 'code' => 400];
         }
 
-        $result = $this->userModel->update($userId, $update);
+        try {
+            $result = $this->userModel->update($userId, $update);
+        } catch (PDOException $e) {
+            if ($e->getCode() === '23000') {
+                return ['error' => 'This email address or username is already in use by another account. Please choose a different one.', 'code' => 409];
+            }
+            throw $e;
+        }
         if ($result) {
             $this->auditLogModel->log(
                 'Profile updated (self-service)',

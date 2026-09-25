@@ -312,7 +312,10 @@ document.addEventListener('DOMContentLoaded', async function () {
             try {
                 const res = await api.request('auth/profile', {
                     method: 'PUT',
-                    body: { email: newEmail }
+                    body: {
+                        email: newEmail,
+                        current_password: pwForEmail
+                    }
                 });
                 if (res.success) {
                     showAlert('emailFormAlert', 'success', '<i class="fas fa-circle-check"></i> Email updated successfully.');
