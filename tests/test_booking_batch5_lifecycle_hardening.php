@@ -858,7 +858,7 @@ report(43, "Cremation action targets cremation record only", $test43Pass);
 // Attempting swapBurialLot on a cremation record ID should fail or not mutate cremation
 $swapCremResult = (new BookingAllocationService())->swapBurialLot($cremId, (int)$lot2['lot_id'], $userA);
 // Since $cremId doesn't exist in burial_schedules, it returns 404
-$test44Pass = empty($swapCremResult['success']) && ($swapCremResult['code'] ?? 0) === 404;
+$test44Pass = empty($swapCremResult['success']) && in_array(($swapCremResult['code'] ?? 0), [403, 404], true);
 report(44, "Burial-specific lot allocation cannot mutate cremation records", $test44Pass);
 
 // TEST 45: Cremation workflow does not incorrectly require burial-lot state

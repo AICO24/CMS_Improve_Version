@@ -536,10 +536,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function loadReservationDetails(payment) {
-        if (payment.transaction_type !== 'Lot Purchase' || !payment.reference_id) {
-            return null;
-        }
+        if (!payment || !payment.reference_id) return null;
+        const tType = (payment.transaction_type || '').toLowerCase();
         try {
+            if (tType.includes('cremat')) {
+                const cremation = await api.request(`cremations/${payment.reference_id}`, { method: 'GET' });
+                return cremation && !cremation.error ? cremation : null;
+            }
             const schedule = await api.request(`schedules/${payment.reference_id}`, { method: 'GET' });
             return schedule && !schedule.error ? schedule : null;
         } catch (error) {
@@ -642,12 +645,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                         ${schedule ? `
                         <!-- Linked Reservation Details -->
                         <div class="receipt-linked-section">
-                            <div class="linked-section-title"><i class="fas fa-calendar-check"></i> Linked Reservation Particulars</div>
+                            <div class="linked-section-title"><i class="fas fa-calendar-check"></i> Linked Service Particulars</div>
                             <div class="linked-details-grid">
-                                <div><span>Lot #:</span> <strong>${escapeHtml(schedule.lot_number || 'N/A')}</strong></div>
+                                <div><span>${schedule.niche_number ? 'Niche #:' : 'Lot #:'}</span> <strong>${escapeHtml(schedule.niche_number || schedule.lot_number || 'N/A')}</strong></div>
                                 <div><span>Section:</span> <strong>${escapeHtml(schedule.section_name || 'N/A')}</strong></div>
-                                <div><span>Decedent:</span> <strong>${escapeHtml((schedule.first_name ? schedule.first_name + ' ' + (schedule.last_name || '') : 'N/A').trim())}</strong></div>
-                                <div><span>Burial Date:</span> <strong>${escapeHtml(schedule.schedule_date || 'N/A')}</strong></div>
+                                <div><span>Decedent:</span> <strong>${escapeHtml((schedule.first_name ? schedule.first_name + ' ' + (schedule.last_name || '') : (schedule.deceased_name || 'N/A')).trim())}</strong></div>
+                                <div><span>Date:</span> <strong>${escapeHtml(schedule.schedule_date || schedule.cremation_date || 'N/A')}</strong></div>
                             </div>
                         </div>
                         ` : ''}
@@ -720,17 +723,17 @@ document.addEventListener('DOMContentLoaded', async function() {
                     </details>
 
                     ${schedule ? `
-                    <!-- Linked Reservation Particulars -->
+                    <!-- Linked Service Particulars -->
                     <details class="view-collapsible-section" open style="margin-top: 10px;">
                         <summary class="view-section-summary">
-                            <span class="view-section-title"><i class="fas fa-calendar-check"></i> Linked Reservation</span>
+                            <span class="view-section-title"><i class="fas fa-calendar-check"></i> Linked Service</span>
                         </summary>
                         <div class="view-section-content">
                             <div class="linked-details-grid">
-                                <div><span>Lot #:</span> <strong>${escapeHtml(schedule.lot_number || 'N/A')}</strong></div>
+                                <div><span>${schedule.niche_number ? 'Niche #:' : 'Lot #:'}</span> <strong>${escapeHtml(schedule.niche_number || schedule.lot_number || 'N/A')}</strong></div>
                                 <div><span>Section:</span> <strong>${escapeHtml(schedule.section_name || 'N/A')}</strong></div>
-                                <div><span>Decedent:</span> <strong>${escapeHtml((schedule.first_name ? schedule.first_name + ' ' + (schedule.last_name || '') : 'N/A').trim())}</strong></div>
-                                <div><span>Burial Date:</span> <strong>${escapeHtml(schedule.schedule_date || 'N/A')}</strong></div>
+                                <div><span>Decedent:</span> <strong>${escapeHtml((schedule.first_name ? schedule.first_name + ' ' + (schedule.last_name || '') : (schedule.deceased_name || 'N/A')).trim())}</strong></div>
+                                <div><span>Date:</span> <strong>${escapeHtml(schedule.schedule_date || schedule.cremation_date || 'N/A')}</strong></div>
                             </div>
                         </div>
                     </details>
@@ -747,7 +750,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                                     <div class="doc-file-indicator doc-icon--image"><i class="fas fa-file-image"></i></div>
                                     <div class="document-entry-info">
                                         <span class="status-badge status-info doc-type-pill">Uploaded Proof</span>
-                                        <a href="${escapeHtml(payment.receipt_url)}" target="_blank" rel="noopener" class="receipt-download-link" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: #2563eb; text-decoration: none; margin-top: 4px;">
+                                        <a href="${escapeHtml(payment.receipt_url)}" target="_blank" rel="noopener" class="receipt-download-link" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: #166534; text-decoration: none; margin-top: 4px;">
                                             <span>View Uploaded Proof</span>
                                             <i class="fas fa-arrow-up-right-from-square"></i>
                                         </a>

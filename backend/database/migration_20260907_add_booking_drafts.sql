@@ -11,7 +11,6 @@
 --
 -- Run this once against the application database.
 
-CREATE TABLE IF NOT EXISTS `booking_drafts` (
 DROP TABLE IF EXISTS `booking_drafts`;
 
 CREATE TABLE `booking_drafts` (

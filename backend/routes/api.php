@@ -306,6 +306,32 @@ if ($path === 'auth/me' && $requestMethod === 'GET') {
     exit;
 }
 
+if ($path === 'auth/profile' && $requestMethod === 'GET') {
+    echo json_encode($controller->me($user['user_id']));
+    exit;
+}
+
+if ($path === 'auth/profile' && $requestMethod === 'PUT') {
+    $input = readRequestBody();
+    $result = $controller->updateProfile($user['user_id'], $input);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if ($path === 'auth/change-password' && $requestMethod === 'POST') {
+    rateLimitOrFail('changepw_ip_' . $clientIp, 10, 300);
+    rateLimitOrFail('changepw_user_' . $user['user_id'], 5, 300);
+    $input = readRequestBody();
+    $result = $controller->changePassword($user['user_id'], $input);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+
 $lotController = new LotController();
 $decedentController = new DecedentController();
 $decedentRequestController = new DecedentRequestController();

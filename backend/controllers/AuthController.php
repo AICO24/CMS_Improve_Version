@@ -575,14 +575,309 @@ class AuthController {
         }
 
         return [
-            'user_id' => $user['user_id'],
-            'username' => $user['username'],
-            'full_name' => $user['full_name'],
-            'email' => $user['email'],
-            'role' => $this->userModel->getRole($userId),
-            'is_active' => (bool) ($user['is_active'] ?? 1),
-            'email_verified' => (bool) ($user['email_verified'] ?? 0),
+            'user_id'           => $user['user_id'],
+            'username'          => $user['username'],
+            'full_name'         => $user['full_name'],
+            'email'             => $user['email'],
+            'contact_number'    => $user['contact_number'] ?? null,
+            'address'           => $user['address'] ?? null,
+            'role'              => $this->userModel->getRole($userId),
+            'is_active'         => (bool) ($user['is_active'] ?? 1),
+            'email_verified'    => (bool) ($user['email_verified'] ?? 0),
             'email_verified_at' => $user['email_verified_at'] ?? null,
         ];
+    }
+
+    // Self-service profile update (citizen/any authenticated user).
+    // Only fields the user is allowed to change on their own account —
+    // role_id and is_active are deliberately excluded so a user cannot
+    // escalate their own privileges.
+    public function updateProfile($userId, $data) {
+        $existing = $this->userModel->findById($userId);
+        if (!$existing) {
+            return ['error' => 'User not found', 'code' => 404];
+        }
+
+        $update = [];
+
+        // Full name
+        if (isset($data['full_name'])) {
+            $full_name = trim((string) $data['full_name']);
+            if ($full_name === '') {
+                return ['error' => 'Full name cannot be empty', 'code' => 400];
+            }
+            $update['full_name'] = $full_name;
+        }
+
+        // Username
+        if (isset($data['username'])) {
+            $username = trim((string) $data['username']);
+            if ($username === '') {
+                return ['error' => 'Username cannot be empty', 'code' => 400];
+            }
+            if (strtolower($username) === strtolower($existing['username'])) {
+                return ['error' => 'New username cannot be the same as your current username', 'code' => 400];
+            }
+            if (strlen($username) < 3 || strlen($username) > 30) {
+                return ['error' => 'Username must be between 3 and 30 characters', 'code' => 400];
+            }
+            if (!preg_match('/^[a-zA-Z0-9_.-]+$/', $username)) {
+                return ['error' => 'Username can only contain letters, numbers, dots, hyphens, and underscores', 'code' => 400];
+            }
+            if (ctype_digit($username)) {
+                return ['error' => 'Username cannot be purely numeric', 'code' => 400];
+            }
+            $reserved = ['admin', 'administrator', 'root', 'user', 'guest', 'superuser', 'system', 'null', 'undefined', 'test', 'anonymous', 'moderator', 'support', 'owner'];
+            if (in_array(strtolower($username), $reserved, true)) {
+                return ['error' => 'This username is reserved or not allowed', 'code' => 400];
+            }
+            if (isset($data['username_confirm']) && $username !== trim((string)$data['username_confirm'])) {
+                return ['error' => 'New username and confirmation do not match', 'code' => 400];
+            }
+
+            // Security: Current password is required to change username
+            $currentPassword = (string) ($data['current_password'] ?? '');
+            if ($currentPassword === '') {
+                return ['error' => 'Current password is required to authorize changing your username', 'code' => 400];
+            }
+            if (!$this->userModel->verifyPassword($currentPassword, $existing)) {
+                return ['error' => 'Current password is incorrect', 'code' => 401];
+            }
+
+            if ($this->userModel->findByUsername($username)) {
+                return ['error' => 'Username already taken', 'code' => 409];
+            }
+            $update['username'] = $username;
+        }
+
+        // Email
+        if (isset($data['email'])) {
+            $email = trim((string) $data['email']);
+            if ($email === '') {
+                return ['error' => 'Email cannot be empty', 'code' => 400];
+            }
+            if (strtolower($email) === strtolower($existing['email'])) {
+                return ['error' => 'New email cannot be the same as your current email', 'code' => 400];
+            }
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return ['error' => 'A valid email address is required', 'code' => 400];
+            }
+            if (isset($data['current_password']) && (string)$data['current_password'] !== '') {
+                if (!$this->userModel->verifyPassword((string)$data['current_password'], $existing)) {
+                    return ['error' => 'Current password is incorrect', 'code' => 401];
+                }
+            }
+            if ($email !== $existing['email']) {
+                if ($this->userModel->findByEmail($email)) {
+                    return ['error' => 'Email already registered to another account', 'code' => 409];
+                }
+            }
+            $update['email'] = $email;
+        }
+
+        // Contact number (nullable)
+        if (array_key_exists('contact_number', $data)) {
+            $update['contact_number'] = trim((string) ($data['contact_number'] ?? '')) ?: null;
+        }
+
+        // Address (nullable)
+        if (array_key_exists('address', $data)) {
+            $update['address'] = trim((string) ($data['address'] ?? '')) ?: null;
+        }
+
+        if (empty($update)) {
+            return ['error' => 'No changes provided', 'code' => 400];
+        }
+
+        $result = $this->userModel->update($userId, $update);
+        if ($result) {
+            $this->auditLogModel->log(
+                'Profile updated (self-service)',
+                $userId,
+                $existing['username'],
+                'User',
+                $userId,
+                array_keys($update)
+            );
+
+            $token = null;
+            if (isset($update['username'])) {
+                $status = $this->userModel->getAuthStatus($userId);
+                $newVersion = $status['session_version'] ?? 1;
+                $role = $this->userModel->getRole($userId);
+                $token = JWTConfig::encode([
+                    'user_id'         => $userId,
+                    'username'        => $update['username'],
+                    'role'            => $role,
+                    'session_version' => $newVersion,
+                    'iat'             => time(),
+                    'exp'             => time() + (int)(getenv('JWT_EXPIRY') ?: 3600),
+                ]);
+            }
+
+            $response = ['success' => true, 'message' => 'Profile updated successfully'];
+            if ($token) {
+                $response['token'] = $token;
+                $response['username'] = $update['username'];
+            }
+            return $response;
+        }
+
+        return ['error' => 'Failed to update profile', 'code' => 500];
+    }
+
+    // Self-service password change. Requires the current password to prevent
+    // someone who left a tab open from silently changing the account password.
+    // On success, invalidates all other sessions so any stolen token can't
+    // outlive the change — the current session re-issues a fresh token in
+    // the same response so the user isn't logged out on the page they're on.
+    public function changePassword($userId, $data) {
+        $currentPassword = (string) ($data['current_password'] ?? '');
+        $newPassword     = (string) ($data['new_password'] ?? '');
+        $confirmPassword = (string) ($data['confirm_password'] ?? '');
+
+        if ($currentPassword === '' || $newPassword === '' || $confirmPassword === '') {
+            return ['error' => 'All three password fields are required', 'code' => 400];
+        }
+
+        if ($newPassword !== $confirmPassword) {
+            return ['error' => 'New password and confirmation do not match', 'code' => 400];
+        }
+
+        if ($currentPassword === $newPassword) {
+            return ['error' => 'New password cannot be the same as your current password', 'code' => 400];
+        }
+
+        if (strlen($newPassword) < 8) {
+            return ['error' => 'New password must be at least 8 characters', 'code' => 400];
+        }
+
+        // Strength: require at least one uppercase and one digit
+        if (!preg_match('/[A-Z]/', $newPassword)) {
+            return ['error' => 'Password must contain at least one uppercase letter', 'code' => 400];
+        }
+        if (!preg_match('/[0-9]/', $newPassword)) {
+            return ['error' => 'Password must contain at least one number', 'code' => 400];
+        }
+
+        $user = $this->userModel->findById($userId);
+        if (!$user) {
+            return ['error' => 'User not found', 'code' => 404];
+        }
+
+        if (!$this->userModel->verifyPassword($currentPassword, $user)) {
+            $this->auditLogModel->log(
+                'Failed self-service password change (wrong current password)',
+                $userId,
+                $user['username'],
+                'Authentication',
+                $userId,
+                'Incorrect current password supplied'
+            );
+            return ['error' => 'Current password is incorrect', 'code' => 401];
+        }
+
+        // Prevent reusing existing password hash
+        if ($this->userModel->verifyPassword($newPassword, $user)) {
+            return ['error' => 'New password cannot be the same as your current password', 'code' => 400];
+        }
+
+        // Security: Disallow common / easily guessed passwords and patterns
+        $secError = self::validatePasswordSecurity($newPassword, $user['username'] ?? '');
+        if ($secError) {
+            return ['error' => $secError, 'code' => 400];
+        }
+
+        $logoutAll = !empty($data['logout_all']);
+
+        $this->userModel->updatePasswordHash($userId, password_hash($newPassword, PASSWORD_BCRYPT));
+        // Invalidate all prior sessions (session_version increment) so any
+        // stolen or lingering tokens are immediately rejected.
+        $this->userModel->invalidateSessions($userId);
+
+        $this->auditLogModel->log(
+            'Password changed (self-service)',
+            $userId,
+            $user['username'],
+            'Authentication',
+            $userId,
+            $logoutAll ? 'Password changed successfully; user opted to logout of all sessions' : 'Password changed successfully; user retained current session'
+        );
+
+        if ($logoutAll) {
+            return [
+                'success'    => true,
+                'message'    => 'Password changed successfully. You have been logged out of all sessions.',
+                'logout_all' => true
+            ];
+        }
+
+        // Re-issue a fresh JWT so the current tab stays logged in
+        // (session_version just incremented, so the old token would
+        // otherwise be rejected on the very next request).
+        $newVersion = $this->userModel->getAuthStatus($userId)['session_version'] ?? 1;
+        $role = $this->userModel->getRole($userId);
+        $token = JWTConfig::encode([
+            'user_id'         => $userId,
+            'username'        => $user['username'],
+            'role'            => $role,
+            'session_version' => $newVersion,
+            'iat'             => time(),
+            'exp'             => time() + (int)(getenv('JWT_EXPIRY') ?: 3600),
+        ]);
+
+        return [
+            'success'    => true,
+            'message'    => 'Password changed successfully',
+            'token'      => $token,
+            'logout_all' => false
+        ];
+    }
+
+    public static function validatePasswordSecurity($password, $username = '') {
+        $lower = strtolower($password);
+
+        // Disallow common / dictionary passwords
+        $commonList = [
+            '12345678', '123456789', '1234567890', '0987654321', '987654321',
+            'password', 'password1', 'password123', 'admin123', 'admin1234', 'administrator',
+            'qwerty123', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm123',
+            'letmein123', 'welcome123', 'iloveyou123', 'changeme123',
+            'cemetery123', 'cmsadmin123', 'cmsstaff123', 'cmsuser123',
+            'test1234', 'test12345', 'pass1234', 'pass12345', 'default123'
+        ];
+
+        foreach ($commonList as $common) {
+            if ($lower === $common || (strpos($lower, $common) !== false && strlen($password) <= strlen($common) + 3)) {
+                return 'Password is too common or easily guessed. Please choose a more secure password.';
+            }
+        }
+
+        // Disallow containing the username
+        if (!empty($username) && strlen($username) >= 3) {
+            if (stripos($lower, strtolower($username)) !== false) {
+                return 'Password cannot contain your username.';
+            }
+        }
+
+        // Disallow 4+ consecutive identical characters (e.g. 'aaaa', '1111')
+        if (preg_match('/(.)\1{3,}/', $password)) {
+            return 'Password cannot contain 4 or more repeated characters.';
+        }
+
+        // Disallow sequential numbers of 4+ digits (e.g. '1234', '2345', '4321')
+        if (preg_match('/(0123|1234|2345|3456|4567|5678|6789|7890|9876|8765|7654|6543|5432|4321|3210)/', $password)) {
+            return 'Password cannot contain sequential number patterns (e.g. 1234, 4321).';
+        }
+
+        // Disallow sequential alphabetical runs of 4+ letters
+        $sequences = ['abcd', 'bcde', 'cdef', 'defg', 'efgh', 'fghi', 'ghij', 'hijk', 'ijkl', 'jklm', 'klmn', 'lmno', 'mnop', 'nopq', 'opqr', 'pqrs', 'qrst', 'rstu', 'stuv', 'tuvw', 'uvwx', 'vwxy', 'wxyz', 'dcba', 'edcb', 'fedc', 'gfed', 'hgfe', 'ihgf', 'jihg', 'kjih', 'lkji', 'mlkj', 'nmlk', 'onml', 'ponm', 'qpon', 'rqpo', 'srqp', 'tsrq', 'utsr', 'vuts', 'wvut', 'xwvu', 'yxwv', 'zyxw'];
+        foreach ($sequences as $seq) {
+            if (stripos($lower, $seq) !== false) {
+                return 'Password cannot contain sequential letter patterns (e.g. abcd).';
+            }
+        }
+
+        return null;
     }
 }

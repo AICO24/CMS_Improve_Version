@@ -39,7 +39,7 @@ class PaymentController {
     }
 
     public function mine($userId, $filters = [], $pagination = []) {
-        $filters['received_by'] = $userId;
+        $filters['user_id'] = (int) $userId;
         return $this->paginate($filters, $pagination);
     }
 

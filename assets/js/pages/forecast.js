@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (badge) {
                 const count = Number(result?.count) || 0;
                 badge.innerText = count > 99 ? '99+' : count;
-                badge.style.display = count > 0 ? 'flex' : 'none';
+                badge.style.display = 'flex';
                 badge.setAttribute('aria-label', `${count} unread notifications`);
             }
         } catch (e) {

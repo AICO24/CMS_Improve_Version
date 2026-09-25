@@ -95,7 +95,7 @@ $userA = ['user_id' => $userAId, 'username' => 'batch4_test_user_a'];
 $userB = ['user_id' => $userBId, 'username' => 'batch4_test_user_b'];
 
 // Find an available lot for testing
-$stmtLot = $db->query("SELECT lot_id, lot_number, section_name FROM v_available_lots LIMIT 2");
+$stmtLot = $db->query("SELECT lot_id, lot_number, section_name FROM v_available_lots WHERE section_name NOT LIKE 'Batch %' LIMIT 2");
 $sampleLots = $stmtLot->fetchAll(PDO::FETCH_ASSOC);
 $testLotA = $sampleLots[0];
 $testLotB = $sampleLots[1] ?? $sampleLots[0];

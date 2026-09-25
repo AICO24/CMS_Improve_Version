@@ -362,7 +362,7 @@ class BookingAgentController {
             if ($cand) {
                 $cand = preg_replace('/^(?:nanay|tatay|ina|ama|kapatid|kuya|ate|asawa|lolo|lola)\s+/i', '', $cand);
                 $cand = preg_replace('/\s+(?:nanay|tatay|ina|ama|kapatid|asawa|lolo|lola|po|siya|ko|my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$/i', '', $cand);
-                $cand = preg_replace('/\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$/i', '', $cand);
+                $cand = preg_replace('/\s+\b(?:on|at|in|sa|ng|petsang|prefer|preferably|date|burial|cremation|schedule|service|january|february|march|april|may|june|july|august|september|sept|sep|october|oct|november|nov|december|dec)\b.*$/i', '', $cand);
                 $cand = preg_replace('/\s+(?:po|opo)$/i', '', $cand);
                 $cand = trim($cand, " \t\n\r\0\x0B:.,");
 
@@ -1164,7 +1164,7 @@ class BookingAgentController {
                 if ($cand) {
                     $cand = preg_replace('/^(?:nanay|tatay|ina|ama|kapatid|kuya|ate|asawa|lolo|lola)\s+/i', '', $cand);
                     $cand = preg_replace('/\s+(?:nanay|tatay|ina|ama|kapatid|asawa|lolo|lola|po|siya|ko|my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$/i', '', $cand);
-                    $cand = preg_replace('/\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$/i', '', $cand);
+                    $cand = preg_replace('/\s+\b(?:on|at|in|sa|ng|petsang|prefer|preferably|date|burial|cremation|schedule|service|january|february|march|april|may|june|july|august|september|sept|sep|october|oct|november|nov|december|dec)\b.*$/i', '', $cand);
                     $cand = preg_replace('/\s+(?:po|opo)$/i', '', $cand);
                     $cand = trim($cand, " \t\n\r\0\x0B:.,");
 

@@ -1,16 +1,18 @@
 /* dashboard_admin.css – sidebar fixed, no internal scroll */
 .dashboard-body {
-    background:
-        radial-gradient(circle at 14% 8%, rgba(44, 94, 71, 0.10), transparent 28%),
-        radial-gradient(circle at 88% 18%, rgba(37, 99, 235, 0.08), transparent 24%),
-        linear-gradient(180deg, #f6faf7 0%, #f4f7fa 42%, #eef3f7 100%);
+    position: relative;
+    min-height: 100vh;
+    background-color: #f7fbf8;
     font-family: 'Inter', sans-serif;
     color: #243736;
+    overflow-x: hidden;
 }
 
 .dashboard-container {
     display: flex;
     min-height: 100vh;
+    position: relative;
+    z-index: 1;
 }
 
 /* Sidebar sizing/position now comes solely from the shared responsive
@@ -142,22 +144,14 @@
     position: relative;
     flex: 1;
     min-height: 100vh;
-    background:
-        radial-gradient(circle at 12% 6%, rgba(44, 94, 71, 0.20), transparent 32%),
-        radial-gradient(circle at 88% 14%, rgba(37, 99, 235, 0.14), transparent 28%),
-        linear-gradient(180deg, #eef8f1 0%, #f4f7fa 44%, #eaf0f4 100%);
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
     isolation: isolate;
 }
 
 .main-content::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    background:
-        radial-gradient(circle at 20% 28%, rgba(122, 167, 122, 0.34), transparent 24%),
-        radial-gradient(circle at 78% 42%, rgba(43, 54, 88, 0.16), transparent 26%),
-        linear-gradient(135deg, rgba(44, 94, 71, 0.14), rgba(37, 99, 235, 0.09) 45%, rgba(244, 247, 250, 0));
+    display: none;
 }
 
 /* margin-left/transition and .sidebar.collapsed pin/unpin now come from the shared dashboard.css (Batch 3 / Phase 8) */

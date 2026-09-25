@@ -21,6 +21,12 @@ class Payment {
     // ended it, exactly like the AuditLog defect did.
 
     private function applyFilters(&$sql, &$params, $filters) {
+        if (!empty($filters['user_id'])) {
+            $sql .= " AND (p.received_by = ? OR ref_schedule.created_by = ? OR ref_cremation.created_by = ?)";
+            $params[] = (int) $filters['user_id'];
+            $params[] = (int) $filters['user_id'];
+            $params[] = (int) $filters['user_id'];
+        }
         if (!empty($filters['transaction_type'])) {
             $sql .= " AND p.transaction_type = ?";
             $params[] = $filters['transaction_type'];
@@ -81,9 +87,11 @@ class Payment {
             LEFT JOIN users u ON p.received_by = u.user_id
             LEFT JOIN users v ON p.verified_by = v.user_id
             LEFT JOIN burial_schedules ref_schedule
-                   ON p.reference_kind = 'schedule' AND p.reference_id = ref_schedule.schedule_id
+                   ON (p.reference_kind = 'schedule' OR p.reference_kind IS NULL OR p.reference_kind = '') AND p.reference_id = ref_schedule.schedule_id
+            LEFT JOIN cremation_records ref_cremation
+                   ON (p.transaction_type = 'Cremation' OR p.reference_kind = 'cremation') AND p.reference_id = ref_cremation.cremation_id
             LEFT JOIN lots lot_price
-                   ON (p.reference_kind = 'schedule' AND lot_price.lot_id = ref_schedule.lot_id)
+                   ON ((p.reference_kind = 'schedule' OR p.reference_kind IS NULL OR p.reference_kind = '') AND lot_price.lot_id = ref_schedule.lot_id)
                    OR (p.reference_kind = 'lot' AND lot_price.lot_id = p.reference_id)
             WHERE 1=1
         ";
@@ -117,7 +125,12 @@ class Payment {
     }
 
     public function countAll($filters = []) {
-        $sql = "SELECT COUNT(*) AS total FROM payments p WHERE 1=1";
+        $sql = "SELECT COUNT(*) AS total FROM payments p
+            LEFT JOIN burial_schedules ref_schedule
+                   ON (p.reference_kind = 'schedule' OR p.reference_kind IS NULL OR p.reference_kind = '') AND p.reference_id = ref_schedule.schedule_id
+            LEFT JOIN cremation_records ref_cremation
+                   ON (p.transaction_type = 'Cremation' OR p.reference_kind = 'cremation') AND p.reference_id = ref_cremation.cremation_id
+            WHERE 1=1";
         $params = [];
         $this->applyFilters($sql, $params, $filters);
 
