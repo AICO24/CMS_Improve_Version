@@ -148,12 +148,93 @@ class AuthController {
         return strtolower((string) EnvironmentService::get('APP_ENV', 'local')) === 'production';
     }
 
+    private function isDevOrTesting() {
+        $env = strtolower((string) EnvironmentService::get('APP_ENV', 'local'));
+        return in_array($env, ['local', 'testing', 'dev', 'development'], true);
+    }
+
     // AUTH-012: human-readable label for the login role-mismatch message —
     // mirrors ROLE_LABELS in assets/js/shared/api.js so the wording matches
     // what the frontend already shows elsewhere.
     private static function roleLabel($role) {
         $labels = ['admin' => 'Administrator', 'staff' => 'Staff', 'user' => 'User'];
         return $labels[$role] ?? ucfirst((string) $role);
+    }
+
+    /**
+     * Enforce strict password complexity:
+     * Minimum 8 characters, at least 1 uppercase, 1 lowercase, 1 number, and 1 special character.
+     *
+     * @param string $password
+     * @return string|null Error message or null if valid
+     */
+    public static function validatePasswordComplexity($password) {
+        $password = (string) $password;
+        if (strlen($password) < 8) {
+            return 'Password must be at least 8 characters long';
+        }
+        if (!preg_match('/[A-Z]/', $password)) {
+            return 'Password must contain at least one uppercase letter (A-Z)';
+        }
+        if (!preg_match('/[a-z]/', $password)) {
+            return 'Password must contain at least one lowercase letter (a-z)';
+        }
+        if (!preg_match('/[0-9]/', $password)) {
+            return 'Password must contain at least one number (0-9)';
+        }
+        if (!preg_match('/[^a-zA-Z0-9]/', $password)) {
+            return 'Password must contain at least one special character (!@#$%^&*...)';
+        }
+        return null;
+    }
+
+    /**
+     * Validate and normalize contact numbers to Philippine standard format (+639XXXXXXXXX).
+     *
+     * @param string $phone
+     * @param bool $isRequired
+     * @return array ['valid' => bool, 'normalized' => string|null, 'error' => string|null]
+     */
+    public static function validateAndNormalizePhone($phone, $isRequired = false) {
+        $phone = trim((string) $phone);
+        if ($phone === '') {
+            if ($isRequired) {
+                return ['valid' => false, 'normalized' => null, 'error' => 'Contact number is required'];
+            }
+            return ['valid' => true, 'normalized' => null, 'error' => null];
+        }
+
+        // Must only contain digits, spaces, hyphens, parentheses, and optional leading +
+        if (!preg_match('/^\+?[0-9\s\-()]+$/', $phone)) {
+            return [
+                'valid' => false,
+                'normalized' => null,
+                'error' => 'Contact number contains invalid characters. Only digits and standard phone separators are allowed.',
+            ];
+        }
+
+        // Clean down to numeric digits only
+        $digits = preg_replace('/[^0-9]/', '', $phone);
+
+        // Standard Philippine mobile numbers:
+        // Case 1: 639XXXXXXXXX (12 digits)
+        if (str_starts_with($digits, '639') && strlen($digits) === 12) {
+            return ['valid' => true, 'normalized' => '+63' . substr($digits, 2), 'error' => null];
+        }
+        // Case 2: 09XXXXXXXXX (11 digits)
+        if (str_starts_with($digits, '09') && strlen($digits) === 11) {
+            return ['valid' => true, 'normalized' => '+63' . substr($digits, 1), 'error' => null];
+        }
+        // Case 3: 9XXXXXXXXX (10 digits)
+        if (str_starts_with($digits, '9') && strlen($digits) === 10) {
+            return ['valid' => true, 'normalized' => '+63' . $digits, 'error' => null];
+        }
+
+        return [
+            'valid' => false,
+            'normalized' => null,
+            'error' => 'Contact number must be a valid Philippine mobile number (e.g. +63 917 123 4567 or 0917 123 4567)',
+        ];
     }
 
     public function register($data) {
@@ -183,10 +264,6 @@ class AuthController {
             return ['error' => 'Full name must be 2 to 120 characters', 'code' => 400];
         }
 
-        // AUTH-009 (Auth audit, Batch AUTH-2): register.js's own email check
-        // is only `.includes('@')` and, being client-side, is trivially
-        // bypassed entirely — this was the only real validation actually in
-        // force.
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
             return ['error' => 'A valid email address is required', 'code' => 400];
         }
@@ -195,16 +272,33 @@ class AuthController {
             return ['error' => 'Username must be 3 to 40 characters and use only letters, numbers, dots, underscores, or hyphens', 'code' => 400];
         }
 
-        if ($data['contact_number'] !== '' && !preg_match('/^[0-9+() -]{7,20}$/', $data['contact_number'])) {
-            return ['error' => 'Contact number format is invalid', 'code' => 400];
+        // Contact Number validation & normalization (+63 Philippine standard)
+        $phoneResult = self::validateAndNormalizePhone($data['contact_number'], false);
+        if (!$phoneResult['valid']) {
+            return ['error' => $phoneResult['error'], 'code' => 400];
+        }
+        $data['contact_number'] = $phoneResult['normalized'];
+
+        // Address validation: if provided, must be meaningful (at least 5 characters) and not whitespace-only
+        if ($data['address'] !== '') {
+            if (strlen($data['address']) < 5) {
+                return ['error' => 'Address must be at least 5 characters long', 'code' => 400];
+            }
+            if (strlen($data['address']) > 255) {
+                return ['error' => 'Address must not exceed 255 characters', 'code' => 400];
+            }
+        } else {
+            $data['address'] = null;
         }
 
         if ($data['password'] !== $data['confirm_password']) {
             return ['error' => 'Password confirmation does not match', 'code' => 400];
         }
 
-        if (strlen($data['password']) < 8) {
-            return ['error' => 'Password must be at least 8 characters', 'code' => 400];
+        // Password complexity enforcement (minimum 8 chars, uppercase, lowercase, number, special char)
+        $pwdError = self::validatePasswordComplexity($data['password']);
+        if ($pwdError !== null) {
+            return ['error' => $pwdError, 'code' => 400];
         }
 
         if ($this->userModel->findByEmail($data['email'])) {
@@ -283,7 +377,7 @@ class AuthController {
                     'email_verified' => false,
                 ] : null,
             ];
-            if (!$this->isProduction()) {
+            if (!$this->isProduction() && $this->isDevOrTesting()) {
                 $response['dev_verification_code'] = $code;
             }
             return $response;
@@ -338,13 +432,7 @@ class AuthController {
         );
 
         $genericResponse['expires_in_minutes'] = 10;
-        if (!$this->isProduction()) {
-            // Dev-mode stand-in: no SMTP/mail capability exists in this
-            // codebase yet, so the code is returned directly instead of
-            // emailed. isProduction() keeps this off on a real deployment
-            // regardless of that — see its own comment. When real email
-            // delivery is added later, remove this block and send the code
-            // instead — verifyResetCode()/resetPassword() don't need to change.
+        if (!$this->isProduction() && $this->isDevOrTesting()) {
             $genericResponse['dev_code'] = $code;
         }
         return $genericResponse;
@@ -377,8 +465,10 @@ class AuthController {
         if ($password !== $confirmPassword) {
             return ['error' => 'Password confirmation does not match', 'code' => 400];
         }
-        if (strlen($password) < 6) {
-            return ['error' => 'Password must be at least 6 characters', 'code' => 400];
+        // Password complexity enforcement
+        $pwdError = self::validatePasswordComplexity($password);
+        if ($pwdError !== null) {
+            return ['error' => $pwdError, 'code' => 400];
         }
 
         $user = $this->userModel->verifyResetCode($email, $code);
@@ -471,7 +561,7 @@ class AuthController {
             'success' => true,
             'message' => 'A new 6-digit verification code has been generated.',
         ];
-        if (!$this->isProduction()) {
+        if (!$this->isProduction() && $this->isDevOrTesting()) {
             $response['dev_verification_code'] = $code;
         }
 

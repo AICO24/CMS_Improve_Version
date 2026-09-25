@@ -53,15 +53,26 @@ function getRoleDashboardPath(role) {
 
 class ApiClient {
     constructor() {
-        this.token = localStorage.getItem('jwt_token');
+        this.token = localStorage.getItem('jwt_token') || sessionStorage.getItem('jwt_token') || null;
     }
 
-    setToken(token) {
+    getToken() {
+        return this.token || localStorage.getItem('jwt_token') || sessionStorage.getItem('jwt_token') || null;
+    }
+
+    setToken(token, remember = true) {
         this.token = token;
         if (token) {
-            localStorage.setItem('jwt_token', token);
+            if (remember) {
+                localStorage.setItem('jwt_token', token);
+                sessionStorage.removeItem('jwt_token');
+            } else {
+                sessionStorage.setItem('jwt_token', token);
+                localStorage.removeItem('jwt_token');
+            }
         } else {
             localStorage.removeItem('jwt_token');
+            sessionStorage.removeItem('jwt_token');
         }
     }
 
@@ -91,7 +102,9 @@ class ApiClient {
             if (response.status === 401) {
                 this.setToken(null);
                 localStorage.removeItem('user_session');
+                sessionStorage.removeItem('user_session');
                 localStorage.removeItem('cemetery_session');
+                sessionStorage.removeItem('cemetery_session');
                 window.location.replace(getLoginRedirectUrl());
             }
             // AI Architecture Audit (2026-09-02), manual-test follow-up:
@@ -102,6 +115,8 @@ class ApiClient {
             // directly instead.
             const requestError = new Error(data.error || 'Request failed');
             requestError.status = response.status;
+            requestError.code = data.code;
+            requestError.verification_required = Boolean(data.verification_required);
             throw requestError;
         }
 
@@ -123,7 +138,7 @@ class ApiClient {
         });
 
         if (result.token) {
-            this.setToken(result.token);
+            this.setToken(result.token, Boolean(rememberMe));
         }
 
         // Normalize role value to 'admin' or 'staff' when possible
@@ -200,7 +215,9 @@ class ApiClient {
         } finally {
             this.setToken(null);
             localStorage.removeItem('user_session');
+            sessionStorage.removeItem('user_session');
             localStorage.removeItem('cemetery_session');
+            sessionStorage.removeItem('cemetery_session');
             window.location.replace(getLoginRedirectUrl());
         }
     }
@@ -559,7 +576,7 @@ if (typeof window !== 'undefined' && typeof window.initAiAssistant !== 'function
 // When navigating back after logout, browsers can restore DOM state from cache.
 // pageshow with event.persisted triggers if loaded from bfcache.
 window.addEventListener('pageshow', (event) => {
-    const token = localStorage.getItem('jwt_token');
+    const token = localStorage.getItem('jwt_token') || sessionStorage.getItem('jwt_token');
     const pathname = window.location.pathname || '';
     const isPublicAuthPage = pathname.includes('/auth/') || pathname.endsWith('index.html') || pathname.endsWith('/');
     if (event.persisted && !token && !isPublicAuthPage) {

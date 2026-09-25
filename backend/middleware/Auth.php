@@ -80,9 +80,9 @@ class AuthMiddleware {
         return $user;
     }
 
-    public static function requireVerifiedContact() {
-        $user = self::authenticate();
-        if (in_array($user['role'], ['admin', 'staff'], true)) {
+    public static function requireVerifiedContact($existingUser = null) {
+        $user = $existingUser ?: self::authenticate();
+        if (in_array($user['role'] ?? '', ['admin', 'staff'], true)) {
             return $user;
         }
         if (empty($user['email_verified'])) {

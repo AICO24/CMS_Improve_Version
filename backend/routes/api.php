@@ -601,6 +601,7 @@ if (preg_match('/^schedules\/(\d+)$/', $path, $matches) && $requestMethod === 'G
 }
 
 if ($path === 'schedules' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireVerifiedContact($user);
     $input = readRequestBody();
     $result = $scheduleController->store($input, $user);
     http_response_code($result['code'] ?? 200);
@@ -747,7 +748,7 @@ if (preg_match('/^cremations\/(\d+)$/', $path, $matches) && $requestMethod === '
 // happens inside CremationController::store() itself, mirroring how
 // 'schedules' (POST) is wide open with the same internal branching.
 if ($path === 'cremations' && $requestMethod === 'POST') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $user = AuthMiddleware::requireVerifiedContact($user);
     $input = readRequestBody();
     $result = $cremationController->store($input, $user);
     http_response_code($result['code'] ?? 200);
@@ -999,7 +1000,7 @@ if ($path === 'payments/readiness' && $requestMethod === 'GET') {
 }
 
 if ($path === 'payments/checkout-session' && $requestMethod === 'POST') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $user = AuthMiddleware::requireVerifiedContact($user);
     $input = readRequestBody();
     $result = $paymentController->createCheckoutSession($input, $user);
     http_response_code($result['code'] ?? 200);
@@ -1009,7 +1010,7 @@ if ($path === 'payments/checkout-session' && $requestMethod === 'POST') {
 }
 
 if ($path === 'payments' && $requestMethod === 'POST') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $user = AuthMiddleware::requireVerifiedContact($user);
     $input = readRequestBody();
     $result = $paymentController->store($input, $user['user_id']);
     http_response_code($result['code'] ?? 200);
@@ -1921,7 +1922,7 @@ if ($path === 'decedent-requests/mine' && $requestMethod === 'GET') {
 }
 
 if ($path === 'decedent-requests' && $requestMethod === 'POST') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $user = AuthMiddleware::requireVerifiedContact($user);
     $input = readRequestBody();
     $result = $decedentRequestController->store($input, $user);
     http_response_code($result['code'] ?? 200);
@@ -1935,7 +1936,7 @@ if ($path === 'decedent-requests' && $requestMethod === 'POST') {
 // any) before staff formalizes a real decedent record — see
 // DecedentRequestController::uploadAttachment()'s own comment.
 if (preg_match('/^decedent-requests\/(\d+)\/attachment$/', $path, $matches) && $requestMethod === 'POST') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $user = AuthMiddleware::requireVerifiedContact($user);
     $input = readRequestBody();
     $file = $input['files']['attachment_file'] ?? null;
     $result = $decedentRequestController->uploadAttachment($matches[1], $file, $user);
@@ -2061,7 +2062,7 @@ if (preg_match('/^booking-agent\/drafts?\/(\d+)\/update-field$/', $path, $matche
 }
 
 if (preg_match('/^booking-agent\/drafts?\/(\d+)\/confirm$/', $path, $matches) && $requestMethod === 'POST') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $user = AuthMiddleware::requireVerifiedContact($user);
     $input = readRequestBody();
     $result = $bookingAgentController->confirm((int) $matches[1], $user, $input);
     http_response_code($result['code'] ?? 200);
@@ -2071,7 +2072,7 @@ if (preg_match('/^booking-agent\/drafts?\/(\d+)\/confirm$/', $path, $matches) &&
 }
 
 if (preg_match('/^booking-agent\/drafts?\/(\d+)\/finalize$/', $path, $matches) && $requestMethod === 'POST') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $user = AuthMiddleware::requireVerifiedContact($user);
     $result = $bookingAgentController->finalize((int) $matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -2109,7 +2110,7 @@ if (preg_match('/^booking-agent\/drafts?\/(\d+)$/', $path, $matches) && $request
 
 // Documentary Requirements: Upload requirement document for booking draft
 if (preg_match('/^booking-agent\/drafts?\/(\d+)\/documents$/', $path, $matches) && $requestMethod === 'POST') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $user = AuthMiddleware::requireVerifiedContact($user);
     $input = readRequestBody();
     $file = $input['files']['document_file'] ?? ($_FILES['document_file'] ?? null);
     $docType = $input['document_type'] ?? ($_POST['document_type'] ?? ($input['doc_type'] ?? ($_POST['doc_type'] ?? 'death_certificate')));

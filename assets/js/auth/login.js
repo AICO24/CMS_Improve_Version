@@ -59,13 +59,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.success) {
                 if (rememberMe) {
                     localStorage.setItem('remembered_login', JSON.stringify({ username }));
+                    localStorage.setItem('user_session', JSON.stringify(result.user));
+                    localStorage.setItem('cemetery_session', JSON.stringify(result.user));
+                    sessionStorage.removeItem('user_session');
+                    sessionStorage.removeItem('cemetery_session');
                 } else {
                     localStorage.removeItem('remembered_login');
+                    sessionStorage.setItem('user_session', JSON.stringify(result.user));
+                    sessionStorage.setItem('cemetery_session', JSON.stringify(result.user));
+                    localStorage.removeItem('user_session');
+                    localStorage.removeItem('cemetery_session');
                 }
-                result.user.remembered = Boolean(result.remembered);
-                result.user.expires_in = result.expires_in || null;
-                localStorage.setItem('user_session', JSON.stringify(result.user));
-                localStorage.setItem('cemetery_session', JSON.stringify(result.user));
                 alertBox.textContent = 'Login successful! Redirecting...';
                 alertBox.classList.add('show', 'alert-success');
                 const adminDashboardPath = '/pages/dashboard_admin.html';

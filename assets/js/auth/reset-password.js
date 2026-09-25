@@ -16,6 +16,53 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    const passwordInput = document.getElementById('password');
+    const ruleLength = document.getElementById('ruleLength');
+    const ruleUpper = document.getElementById('ruleUpper');
+    const ruleLower = document.getElementById('ruleLower');
+    const ruleNumber = document.getElementById('ruleNumber');
+    const ruleSpecial = document.getElementById('ruleSpecial');
+
+    function updateRule(el, isPassed) {
+        if (!el) return;
+        const icon = el.querySelector('i');
+        if (isPassed) {
+            el.style.color = '#15803d';
+            if (icon) {
+                icon.className = 'fas fa-circle-check';
+                icon.style.color = '#16a34a';
+            }
+        } else {
+            el.style.color = '#64748b';
+            if (icon) {
+                icon.className = 'fas fa-circle-xmark';
+                icon.style.color = '#94a3b8';
+            }
+        }
+    }
+
+    function checkPasswordComplexity(pwd) {
+        const hasLength = (pwd || '').length >= 8;
+        const hasUpper = /[A-Z]/.test(pwd || '');
+        const hasLower = /[a-z]/.test(pwd || '');
+        const hasNumber = /[0-9]/.test(pwd || '');
+        const hasSpecial = /[^a-zA-Z0-9]/.test(pwd || '');
+
+        updateRule(ruleLength, hasLength);
+        updateRule(ruleUpper, hasUpper);
+        updateRule(ruleLower, hasLower);
+        updateRule(ruleNumber, hasNumber);
+        updateRule(ruleSpecial, hasSpecial);
+
+        return hasLength && hasUpper && hasLower && hasNumber && hasSpecial;
+    }
+
+    if (passwordInput) {
+        passwordInput.addEventListener('input', function() {
+            checkPasswordComplexity(this.value);
+        });
+    }
+
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         const password = document.getElementById('password').value;
@@ -26,8 +73,8 @@ document.addEventListener('DOMContentLoaded', function() {
         alertBox.classList.remove('show');
 
         let isValid = true;
-        if (password.length < 6) {
-            document.getElementById('passwordError').textContent = 'Password must be at least 6 characters';
+        if (!checkPasswordComplexity(password)) {
+            document.getElementById('passwordError').textContent = 'Password must meet all complexity requirements listed above';
             isValid = false;
         }
         if (password !== confirm) {

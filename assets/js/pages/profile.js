@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    if (!localStorage.getItem('jwt_token')) {
+    if (!localStorage.getItem('jwt_token') && !sessionStorage.getItem('jwt_token')) {
         window.location.href = `${getFrontendBasePath()}/auth/login.html`;
         return;
     }

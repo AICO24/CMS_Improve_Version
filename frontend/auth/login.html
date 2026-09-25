@@ -18,8 +18,8 @@
     <script>
         (function() {
             try {
-                const token = localStorage.getItem('jwt_token');
-                const session = JSON.parse(localStorage.getItem('user_session') || 'null');
+                const token = localStorage.getItem('jwt_token') || sessionStorage.getItem('jwt_token');
+                const session = JSON.parse(localStorage.getItem('user_session') || sessionStorage.getItem('user_session') || 'null');
                 if (token && session && session.role) {
                     const role = String(session.role).toLowerCase();
                     const target = role === 'admin'
@@ -32,8 +32,11 @@
                 }
             } catch (error) {
                 localStorage.removeItem('jwt_token');
+                sessionStorage.removeItem('jwt_token');
                 localStorage.removeItem('user_session');
+                sessionStorage.removeItem('user_session');
                 localStorage.removeItem('cemetery_session');
+                sessionStorage.removeItem('cemetery_session');
             }
         })();
     </script>

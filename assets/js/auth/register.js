@@ -82,6 +82,53 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    const passwordInput = document.getElementById('password');
+    const ruleLength = document.getElementById('ruleLength');
+    const ruleUpper = document.getElementById('ruleUpper');
+    const ruleLower = document.getElementById('ruleLower');
+    const ruleNumber = document.getElementById('ruleNumber');
+    const ruleSpecial = document.getElementById('ruleSpecial');
+
+    function updateRule(el, isPassed) {
+        if (!el) return;
+        const icon = el.querySelector('i');
+        if (isPassed) {
+            el.style.color = '#15803d';
+            if (icon) {
+                icon.className = 'fas fa-circle-check';
+                icon.style.color = '#16a34a';
+            }
+        } else {
+            el.style.color = '#64748b';
+            if (icon) {
+                icon.className = 'fas fa-circle-xmark';
+                icon.style.color = '#94a3b8';
+            }
+        }
+    }
+
+    function checkPasswordComplexity(pwd) {
+        const hasLength = (pwd || '').length >= 8;
+        const hasUpper = /[A-Z]/.test(pwd || '');
+        const hasLower = /[a-z]/.test(pwd || '');
+        const hasNumber = /[0-9]/.test(pwd || '');
+        const hasSpecial = /[^a-zA-Z0-9]/.test(pwd || '');
+
+        updateRule(ruleLength, hasLength);
+        updateRule(ruleUpper, hasUpper);
+        updateRule(ruleLower, hasLower);
+        updateRule(ruleNumber, hasNumber);
+        updateRule(ruleSpecial, hasSpecial);
+
+        return hasLength && hasUpper && hasLower && hasNumber && hasSpecial;
+    }
+
+    if (passwordInput) {
+        passwordInput.addEventListener('input', function() {
+            checkPasswordComplexity(this.value);
+        });
+    }
+
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         const fullName = document.getElementById('full_name').value.trim();
@@ -109,16 +156,39 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('usernameError').textContent = 'Use 3-40 letters, numbers, dots, underscores, or hyphens';
             isValid = false;
         }
-        if (contact && !/^[0-9+() -]{7,20}$/.test(contact)) {
-            document.getElementById('contactError').textContent = 'Enter a valid contact number';
-            isValid = false;
+
+        // Philippine mobile number validation (+63, 09, or 9 followed by 9 digits)
+        if (contact) {
+            const cleanDigits = contact.replace(/[^0-9]/g, '');
+            const isFormatAllowed = /^\+?[0-9\s\-()]+$/.test(contact);
+            const isValidPh = isFormatAllowed && (
+                (cleanDigits.startsWith('639') && cleanDigits.length === 12) ||
+                (cleanDigits.startsWith('09') && cleanDigits.length === 11) ||
+                (cleanDigits.startsWith('9') && cleanDigits.length === 10)
+            );
+            if (!isValidPh) {
+                document.getElementById('contactError').textContent = 'Enter a valid Philippine mobile number (e.g. 0917 123 4567 or +63 917 123 4567)';
+                isValid = false;
+            }
         }
+
+        // Address validation: minimum 5 characters if provided
+        if (address) {
+            if (address.length < 5) {
+                document.getElementById('addressError').textContent = 'Address must be at least 5 characters long';
+                isValid = false;
+            } else if (address.length > 255) {
+                document.getElementById('addressError').textContent = 'Address must not exceed 255 characters';
+                isValid = false;
+            }
+        }
+
         if (password !== confirm) {
             document.getElementById('confirmError').textContent = 'Passwords do not match';
             isValid = false;
         }
-        if (password.length < 8) {
-            document.getElementById('passwordError').textContent = 'Password must be at least 8 characters';
+        if (!checkPasswordComplexity(password)) {
+            document.getElementById('passwordError').textContent = 'Password must meet all complexity requirements listed above';
             isValid = false;
         }
 

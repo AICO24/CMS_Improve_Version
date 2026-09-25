@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/AuditLog.php';
+require_once __DIR__ . '/AuthController.php';
 
 class UserController {
     private $userModel;
@@ -58,8 +59,17 @@ class UserController {
             return ['error' => 'A valid email address is required', 'code' => 400];
         }
 
-        if (strlen($data['password']) < 6) {
-            return ['error' => 'Password must be at least 6 characters', 'code' => 400];
+        $pwdError = AuthController::validatePasswordComplexity($data['password']);
+        if ($pwdError !== null) {
+            return ['error' => $pwdError, 'code' => 400];
+        }
+
+        if (!empty($data['contact_number'])) {
+            $phoneResult = AuthController::validateAndNormalizePhone($data['contact_number'], false);
+            if (!$phoneResult['valid']) {
+                return ['error' => $phoneResult['error'], 'code' => 400];
+            }
+            $data['contact_number'] = $phoneResult['normalized'];
         }
 
         if (!$this->userModel->roleIdExists($data['role_id'])) {
@@ -127,8 +137,19 @@ class UserController {
             }
         }
 
-        if (!empty($data['password']) && strlen($data['password']) < 6) {
-            return ['error' => 'Password must be at least 6 characters', 'code' => 400];
+        if (!empty($data['password'])) {
+            $pwdError = AuthController::validatePasswordComplexity($data['password']);
+            if ($pwdError !== null) {
+                return ['error' => $pwdError, 'code' => 400];
+            }
+        }
+
+        if (isset($data['contact_number']) && $data['contact_number'] !== '') {
+            $phoneResult = AuthController::validateAndNormalizePhone($data['contact_number'], false);
+            if (!$phoneResult['valid']) {
+                return ['error' => $phoneResult['error'], 'code' => 400];
+            }
+            $data['contact_number'] = $phoneResult['normalized'];
         }
 
         $data['role_id'] = isset($data['role_id']) ? (int) $data['role_id'] : $existing['role_id'];
