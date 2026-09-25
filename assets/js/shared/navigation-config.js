@@ -288,13 +288,21 @@
             allowedRoles: ['admin', 'staff', 'user'],
             showInSidebar: true,
             sidebarGroup: 'Account',
-            label: 'Profile',
-            icon: 'fa-id-card',
+            label: {
+                admin: 'Profile',
+                staff: 'Profile',
+                user: 'Account Settings'
+            },
+            icon: {
+                admin: 'fa-id-card',
+                staff: 'fa-id-card',
+                user: 'fa-gear'
+            },
             navigationOrder: 70,
         },
         {
             route: 'settings.html',
-            allowedRoles: ['admin', 'staff', 'user'],
+            allowedRoles: ['admin', 'staff'],
             showInSidebar: true,
             sidebarGroup: 'Account',
             label: 'Settings',
@@ -448,9 +456,11 @@
 
         function renderLink(item) {
             const isActive = item.route === activeRoute;
+            const label = (item.label && typeof item.label === 'object') ? (item.label[roleName] || item.label.default || '') : item.label;
+            const icon = (item.icon && typeof item.icon === 'object') ? (item.icon[roleName] || item.icon.default || 'fa-circle') : item.icon;
             return '<a href="' + item.route + '" class="nav-item' + (isActive ? ' active' : '') + '">' +
-                   '<i class="fas ' + item.icon + ' icon"></i> ' +
-                   '<span>' + item.label + '</span></a>';
+                   '<i class="fas ' + icon + ' icon"></i> ' +
+                   '<span>' + label + '</span></a>';
         }
 
         const htmlChunks = [];

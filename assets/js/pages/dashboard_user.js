@@ -47,8 +47,10 @@ const renderSchedules = (schedules) => {
     }
 
     schedules.slice(0, 4).forEach(s => {
-        const title = `${s.lot_number || 'Plot Arrangement'} • ${s.section_name || 'Standard Section'}`;
-        const subtitle = `${formatDateTime(s.schedule_date, s.schedule_time)} • Status: ${s.status || 'Scheduled'}`;
+        const title = s.allocation || `${s.lot_number ? 'Lot #' + s.lot_number : 'Plot Arrangement'}${s.section_name ? ' • ' + s.section_name : ''}`;
+        const dateStr = s.schedule_date || s.booking_date;
+        const serviceBadge = s.service_type ? ` (${s.service_type.charAt(0).toUpperCase() + s.service_type.slice(1)})` : '';
+        const subtitle = `${formatDateTime(dateStr, s.schedule_time)} • Status: ${s.status || 'Scheduled'}${serviceBadge}`;
         list.appendChild(buildListItem(title, subtitle));
     });
 };
@@ -176,36 +178,87 @@ const loadDashboard = async () => {
     // Update live footer
     updateFooterTimestamp();
 
-    const [notificationsUnread, notifications, allSchedules, payments] = await Promise.all([
+    const [notificationsUnread, notifications, allSchedules, payments, unifiedBookingsRes] = await Promise.all([
         api.request('notifications/unread-count', { method: 'GET' }).catch(() => ({ count: 0 })),
         api.request('notifications', { method: 'GET' }).catch(() => []),
         api.request('schedules/mine', { method: 'GET' }).catch(() => []),
         api.request('payments/mine', { method: 'GET' }).catch(() => []),
+        api.request('bookings/mine', { method: 'GET' }).catch(() => ({ data: [] })),
     ]);
 
-    const activeSchedules = Array.isArray(allSchedules)
-        ? allSchedules.filter(s => ['pending', 'confirmed'].includes(String(s.status).toLowerCase()))
-        : [];
-    const upcomingSchedules = Array.isArray(allSchedules)
-        ? allSchedules.filter(s => {
-            const scheduleDate = new Date(s.schedule_date);
-            return !Number.isNaN(scheduleDate.getTime()) && scheduleDate >= new Date(new Date().toISOString().split('T')[0]);
-        })
-        : [];
-    const pendingPayments = Array.isArray(payments)
-        ? payments.filter(p => String(p.verification_status).toLowerCase() === 'pending').length
-        : 0;
-    const lastPaymentStatus = Array.isArray(payments) && payments.length ? payments[0].verification_status : 'No payments';
+    const schedulesList = Array.isArray(allSchedules)
+        ? allSchedules
+        : (allSchedules && Array.isArray(allSchedules.data) ? allSchedules.data : []);
 
-    // Update status cards
-    updateText('activeReservationCount', String(activeSchedules.length));
-    updateText('activeReservationText', activeSchedules.length ? `${activeSchedules.length} active service booking${activeSchedules.length > 1 ? 's' : ''}.` : 'No active reservations yet.');
-    
-    updateText('paymentStatusCount', String(pendingPayments));
-    updateText('paymentStatusText', pendingPayments > 0 ? `${pendingPayments} payment${pendingPayments > 1 ? 's' : ''} pending verification.` : (payments.length ? `Latest standing: ${lastPaymentStatus}` : 'No payment activity recorded.'));
-    
+    const bookingsList = unifiedBookingsRes && Array.isArray(unifiedBookingsRes.data)
+        ? unifiedBookingsRes.data
+        : (Array.isArray(unifiedBookingsRes) ? unifiedBookingsRes : []);
+
+    const paymentsList = Array.isArray(payments)
+        ? payments
+        : (payments && Array.isArray(payments.data) ? payments.data : []);
+
+    // Active Reservations (combines burial schedules & cremation bookings, including active drafts)
+    const activeBookings = bookingsList.length > 0
+        ? bookingsList.filter(b => ['pending', 'confirmed', 'scheduled', 'awaiting_confirm'].includes(String(b.status).toLowerCase()) || (b.is_draft && !['cancelled', 'expired'].includes(String(b.status).toLowerCase())))
+        : schedulesList.filter(s => ['pending', 'confirmed'].includes(String(s.status).toLowerCase()));
+
+    const activeCount = activeBookings.length;
+    updateText('activeReservationCount', String(activeCount));
+    updateText('activeReservationText', activeCount > 0 ? `${activeCount} active service booking${activeCount > 1 ? 's' : ''}.` : 'No active reservations yet.');
+
+    // Upcoming Schedules (from burial schedules or unified bookings)
+    const sourceSchedules = schedulesList.length > 0 ? schedulesList : bookingsList;
+    const todayStr = new Date().toLocaleDateString('en-CA');
+    const upcomingSchedules = sourceSchedules.filter(s => {
+        const dateStr = s.schedule_date || s.booking_date;
+        if (!dateStr) return false;
+        return dateStr >= todayStr;
+    });
     updateText('scheduleCount', String(upcomingSchedules.length));
     updateText('scheduleText', upcomingSchedules.length ? `${upcomingSchedules.length} upcoming service event${upcomingSchedules.length > 1 ? 's' : ''}.` : 'No upcoming burial schedules.');
+
+    // Payment Status KPI
+    const totalPayments = paymentsList.length;
+    const pendingPayments = paymentsList.filter(p => String(p.verification_status).toLowerCase() === 'pending').length;
+    const verifiedPayments = paymentsList.filter(p => String(p.verification_status).toLowerCase() === 'verified').length;
+    const rejectedPayments = paymentsList.filter(p => String(p.verification_status).toLowerCase() === 'rejected').length;
+
+    // Schedule-based fallback if paymentsList is empty but schedule has payment status
+    let schedVerified = 0;
+    let schedPending = 0;
+    schedulesList.forEach(s => {
+        const ps = String(s.payment_status || '').toLowerCase();
+        if (ps === 'verified') schedVerified++;
+        if (ps === 'pending') schedPending++;
+    });
+
+    const totalVerified = verifiedPayments || schedVerified;
+    const totalPending = pendingPayments || schedPending;
+
+    let displayStatusVal = '0';
+    let displayStatusText = 'No payment activity recorded.';
+
+    if (totalPending > 0) {
+        displayStatusVal = totalPending > 1 ? `${totalPending} Pending` : 'Pending';
+        displayStatusText = `${totalPending} payment${totalPending > 1 ? 's' : ''} awaiting verification.`;
+    } else if (totalVerified > 0) {
+        displayStatusVal = 'Verified';
+        displayStatusText = `${totalVerified} verified payment${totalVerified > 1 ? 's' : ''}. Up to date.`;
+    } else if (rejectedPayments > 0) {
+        displayStatusVal = 'Rejected';
+        displayStatusText = `${rejectedPayments} payment${rejectedPayments > 1 ? 's' : ''} rejected. Please check history.`;
+    } else if (totalPayments > 0) {
+        const latest = paymentsList[0];
+        displayStatusVal = latest.verification_status || 'Recorded';
+        displayStatusText = `Latest standing: ${displayStatusVal}.`;
+    } else {
+        displayStatusVal = '0';
+        displayStatusText = 'No payment activity recorded.';
+    }
+
+    updateText('paymentStatusCount', displayStatusVal);
+    updateText('paymentStatusText', displayStatusText);
 
     const unreadCount = Number(notificationsUnread.count || 0);
     updateText('unreadNotificationsCount', String(unreadCount));
@@ -219,7 +272,10 @@ const loadDashboard = async () => {
     }
 
     renderSchedules(upcomingSchedules);
-    renderNotifications(Array.isArray(notifications) ? notifications : []);
+    const notificationsItems = Array.isArray(notifications)
+        ? notifications
+        : (notifications && Array.isArray(notifications.data) ? notifications.data : []);
+    renderNotifications(notificationsItems);
 };
 
 const attachEvents = () => {

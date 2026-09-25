@@ -260,7 +260,7 @@ const PAGE_ROLE_ACCESS = (typeof window !== 'undefined' && window.CMS_NAVIGATION
         'my-records.html': ['user'],
         'notifications.html': ['admin', 'staff', 'user'],
         'profile.html': ['admin', 'staff', 'user'],
-        'settings.html': ['admin', 'staff', 'user'],
+        'settings.html': ['admin', 'staff'],
     };
 
 // Dynamic getter to always check live CMS_NAVIGATION if loaded in the DOM
@@ -424,8 +424,7 @@ const ROLE_SIDEBAR_LINKS = {
             ['payment-history.html', 'fa-receipt', 'Payment History'],
         ] },
         { group: 'Account', items: [
-            ['profile.html', 'fa-id-card', 'Profile'],
-            ['settings.html', 'fa-gear', 'Settings'],
+            ['profile.html', 'fa-gear', 'Account Settings'],
         ] },
     ],
 };

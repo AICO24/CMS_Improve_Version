@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile | Cemetery Management</title>
+    <title>Account Settings | Cemetery Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -23,6 +23,7 @@
     <link rel="stylesheet" href="../../assets/css/ambient-swirl.css?v=1">
     <link rel="stylesheet" href="../../assets/css/dashboard_user.css?v=4">
     <link rel="stylesheet" href="../../assets/css/profile.css">
+    <link rel="stylesheet" href="../../assets/css/settings.css?v=3">
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
     <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=2">
 </head>
@@ -71,8 +72,7 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                        <a href="profile.html" class="nav-item active"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
-                        <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
+                        <a href="profile.html" class="nav-item active"><i class="fas fa-gear icon"></i> <span>Account Settings</span></a>
                     </div>
                 </div>
             </div>
@@ -94,7 +94,7 @@
                             <path class="line" d="M7 16H27"></path>
                         </svg>
                     </label>
-                    <h3 id="pageTitle">Profile</h3>
+                    <h3 id="pageTitle">Account Settings</h3>
                 </div>
                 <div class="user-info">
                     <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false" aria-label="Toggle dark/light theme"><i class="fas fa-moon"></i></button>
@@ -149,7 +149,7 @@
                         </div>
                         <div class="fb-profile-main">
                             <div class="fb-profile-info">
-                                <div class="fb-greeting-tag" id="welcomeSalutation">Personal Profile</div>
+                                <div class="fb-greeting-tag" id="welcomeSalutation">Account Settings</div>
                                 <div class="fb-name-row">
                                     <h2 class="fb-profile-name" id="welcomeUserName">Citizen User</h2>
                                     <span class="fb-verified-badge" title="Verified Citizen Account"><i class="fas fa-circle-check"></i></span>
@@ -177,9 +177,9 @@
                                 </div>
                             </div>
                             <div class="fb-profile-actions">
-                                <a href="settings.html" class="fb-btn fb-btn--primary">
+                                <a href="#settingsSection" class="fb-btn fb-btn--primary">
                                     <i class="fas fa-sliders"></i>
-                                    <span>Settings</span>
+                                    <span>Configure</span>
                                 </a>
                                 <a href="notifications.html" class="fb-btn fb-btn--secondary">
                                     <i class="fas fa-bell"></i>
@@ -191,46 +191,583 @@
                 </div>
 
                 <!-- Section Label -->
-                <p class="section-label"><i class="fas fa-shield-halved"></i> Credentials & Details</p>
+                <p class="section-label"><i class="fas fa-address-card"></i> Credentials &amp; Details</p>
 
                 <!-- Main Profile Information Card -->
-                <div class="profile-main-card">
-                    <div class="profile-card-header">
-                        <div class="profile-card-title-group">
-                            <h4><i class="fas fa-id-badge" style="color: var(--color-primary-600, #2c5e47);"></i> Account Information</h4>
-                            <p>Your account details as registered with the Cemetery Management System.</p>
+                <div class="settings-main-card profile-settings-card">
+                    <!-- Card Header -->
+                    <div class="settings-card-header">
+                        <div class="settings-card-title-group" style="display:flex; align-items:center; gap:14px;">
+                            <div class="profile-card-header-icon">
+                                <i class="fas fa-id-card-clip"></i>
+                            </div>
+                            <div>
+                                <h4>Account Credentials &amp; Identity</h4>
+                                <p>Verified personal identification, registered handle, and security privileges in CMS.</p>
+                            </div>
                         </div>
-                        <span class="profile-card-badge">Account</span>
+                        <span class="settings-card-badge"><i class="fas fa-circle-check"></i> Verified Account</span>
                     </div>
 
+                    <!-- Credential Details Grid (Structured Rectangles with Visible Borders) -->
                     <div class="profile-details-grid">
                         <div class="detail-row">
-                            <span class="detail-label"><i class="fas fa-user"></i> Full Name</span>
+                            <div class="detail-label">
+                                <i class="fas fa-user"></i>
+                                <span>Full Legal Name</span>
+                            </div>
                             <strong id="profileFullName">—</strong>
+                            <div class="detail-subtext">
+                                <i class="fas fa-id-badge"></i> Primary registered account holder
+                            </div>
                         </div>
+
                         <div class="detail-row">
-                            <span class="detail-label"><i class="fas fa-at"></i> Username</span>
+                            <div class="detail-label">
+                                <i class="fas fa-at"></i>
+                                <span>System Username</span>
+                            </div>
                             <strong id="profileUsername">—</strong>
+                            <div class="detail-subtext">
+                                <i class="fas fa-user-tag"></i> Unique login &amp; security identifier
+                            </div>
                         </div>
+
                         <div class="detail-row">
-                            <span class="detail-label"><i class="fas fa-envelope"></i> Email Address</span>
+                            <div class="detail-label">
+                                <i class="fas fa-envelope"></i>
+                                <span>Email Address</span>
+                            </div>
                             <strong id="profileEmail">—</strong>
+                            <div class="detail-subtext">
+                                <i class="fas fa-bell"></i> Official dispatch &amp; receipt notifications
+                            </div>
                         </div>
+
                         <div class="detail-row">
-                            <span class="detail-label"><i class="fas fa-shield-halved"></i> Assigned Role</span>
+                            <div class="detail-label">
+                                <i class="fas fa-shield-halved"></i>
+                                <span>Assigned Role</span>
+                            </div>
                             <strong id="profileRole">—</strong>
+                            <div class="detail-subtext">
+                                <i class="fas fa-user-gear"></i> Role-based authorization &amp; privileges
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Security Advisory Box (Accented Rectangle) -->
+                    <div class="profile-security-box">
+                        <div class="sec-box-header">
+                            <div class="sec-box-icon">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                            <div class="sec-box-title">
+                                <h5>Account Security &amp; Data Privacy</h5>
+                                <p>Your session is protected via secure token authentication with role-based access control. All profile modifications and session activities are securely audited.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. Footer Actions Bar -->
+                    <div class="profile-form-footer">
+                        <div class="profile-security-guarantee">
+                            <i class="fas fa-shield-halved"></i>
+                            <span>Encrypted identity storage • Audited transactions • Strict privacy safeguard</span>
+                        </div>
+                        <a href="#settingsSection" class="sform-btn profile-submit-btn" style="text-decoration:none;">
+                            <i class="fas fa-sliders"></i> Modify Credentials
+                        </a>
+                    </div>
+                </div>
+
+                <div id="settingsSection" style="scroll-margin-top: 24px;"></div>
+
+                <!-- ══ CHANGE EMAIL ═══════════════════════════════════════ -->
+                <p class="section-label"><i class="fas fa-envelope"></i> Email Address</p>
+                <div class="settings-main-card email-settings-card">
+                    <!-- Card Header -->
+                    <div class="settings-card-header">
+                        <div class="settings-card-title-group" style="display:flex; align-items:center; gap:14px;">
+                            <div class="email-card-header-icon">
+                                <i class="fas fa-envelope-open-text"></i>
+                            </div>
+                            <div>
+                                <h4>Email Configuration</h4>
+                                <p>Manage your primary contact email address, notifications delivery, and security verification.</p>
+                            </div>
+                        </div>
+                        <span class="settings-card-badge"><i class="fas fa-shield-halved"></i> Security Protected</span>
+                    </div>
+
+                    <div id="emailFormAlert" class="sform-alert" style="display:none"></div>
+
+                    <!-- 1. Current Registered Email Display Banner (Crisp lines & clear status) -->
+                    <div class="email-current-banner">
+                        <div class="email-banner-left">
+                            <div class="email-avatar-icon">
+                                <i class="fas fa-at"></i>
+                            </div>
+                            <div class="email-info-meta">
+                                <div class="email-meta-label">
+                                    <span class="email-meta-caption">CURRENT REGISTERED EMAIL</span>
+                                    <span class="email-status-tag"><i class="fas fa-circle-check"></i> Primary Contact</span>
+                                </div>
+                                <div class="email-meta-address" id="emailCurrentDisplay">
+                                    Loading…
+                                </div>
+                                <div class="email-meta-subtext">
+                                    <i class="fas fa-bell"></i> Official receipts, reservation updates, and security alerts are dispatched to this address.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="email-banner-badge">
+                            <span class="email-pulse-dot"></span> Active Contact
+                        </div>
+                        <!-- Hidden current email input to ensure full backward compatibility with any JS lookup -->
+                        <input type="hidden" id="emailCurrent" value="">
+                    </div>
+
+                    <!-- 2. Form Section for Updating Email -->
+                    <form id="emailForm" class="sform email-custom-form" autocomplete="off" novalidate>
+                        <!-- Form Sub-Panel: New Contact Address -->
+                        <div class="email-form-panel">
+                            <div class="panel-section-title">
+                                <span class="panel-step-badge">1</span>
+                                <div>
+                                    <h5>New Contact Address</h5>
+                                    <p>Enter and verify your new email address</p>
+                                </div>
+                            </div>
+
+                            <div class="email-inputs-grid">
+                                <div class="sform-field">
+                                    <label for="emailNew">
+                                        <span>New Email Address</span>
+                                        <span class="required-star">*</span>
+                                    </label>
+                                    <div class="sform-input-wrap">
+                                        <i class="fas fa-envelope-circle-check sform-icon"></i>
+                                        <input type="email" id="emailNew" name="email" placeholder="example@domain.com" autocomplete="email">
+                                    </div>
+                                    <span class="sform-field-hint"><i class="fas fa-circle-info"></i> Enter a valid active email address</span>
+                                </div>
+
+                                <div class="sform-field">
+                                    <label for="emailConfirm">
+                                        <span>Confirm New Email</span>
+                                        <span class="required-star">*</span>
+                                    </label>
+                                    <div class="sform-input-wrap">
+                                        <i class="fas fa-check-double sform-icon"></i>
+                                        <input type="email" id="emailConfirm" name="email_confirm" placeholder="Repeat new email address">
+                                    </div>
+                                    <span class="sform-match-hint" id="emailMatchHint"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Sub-Panel: Security Verification Box -->
+                        <div class="email-security-box">
+                            <div class="sec-box-header">
+                                <div class="sec-box-icon">
+                                    <i class="fas fa-lock"></i>
+                                </div>
+                                <div class="sec-box-title">
+                                    <h5>Security Authorization Required</h5>
+                                    <p>To protect your account against unauthorized changes, please verify your current password before updating.</p>
+                                </div>
+                            </div>
+
+                            <div class="sform-field sec-field-single">
+                                <label for="emailPassword">
+                                    <span>Current Password</span>
+                                    <span class="required-star">*</span>
+                                </label>
+                                <div class="sform-input-wrap sform-input-wrap--pw">
+                                    <i class="fas fa-lock sform-icon"></i>
+                                    <input type="password" id="emailPassword" name="email_current_password" placeholder="Enter your current password" autocomplete="current-password">
+                                    <button type="button" class="sform-eye" aria-label="Toggle password visibility" data-target="emailPassword"><i class="fas fa-eye"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions Bar -->
+                        <div class="email-form-footer">
+                            <div class="email-security-guarantee">
+                                <i class="fas fa-shield-halved"></i>
+                                <span>Zero downtime • Instant uniqueness check • End-to-end authorized</span>
+                            </div>
+                            <button type="submit" class="sform-btn email-submit-btn" id="emailSaveBtn">
+                                <i class="fas fa-paper-plane"></i> Update Email Address
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ══ CHANGE USERNAME ══════════════════════════════════════ -->
+                <p class="section-label"><i class="fas fa-at"></i> Username</p>
+                <div class="settings-main-card username-settings-card">
+                    <!-- Card Header -->
+                    <div class="settings-card-header">
+                        <div class="settings-card-title-group" style="display:flex; align-items:center; gap:14px;">
+                            <div class="username-card-header-icon">
+                                <i class="fas fa-user-pen"></i>
+                            </div>
+                            <div>
+                                <h4>Username Configuration</h4>
+                                <p>Manage your unique account handle, system login identity, and security authorization.</p>
+                            </div>
+                        </div>
+                        <span class="settings-card-badge"><i class="fas fa-shield-halved"></i> Security Protected</span>
+                    </div>
+
+                    <div id="usernameFormAlert" class="sform-alert" style="display:none"></div>
+
+                    <!-- 1. Current Registered Username Display Banner (Crisp lines & clear status) -->
+                    <div class="username-current-banner">
+                        <div class="username-banner-left">
+                            <div class="username-avatar-icon">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="username-info-meta">
+                                <div class="username-meta-label">
+                                    <span class="username-meta-caption">CURRENT REGISTERED USERNAME</span>
+                                    <span class="username-status-tag"><i class="fas fa-circle-check"></i> Primary Handle</span>
+                                </div>
+                                <div class="username-meta-address" id="usernameCurrentDisplay">
+                                    Loading…
+                                </div>
+                                <div class="username-meta-subtext">
+                                    <i class="fas fa-id-badge"></i> Used for system logins, account identifier tags, and audit logging.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="username-banner-badge">
+                            <span class="username-pulse-dot"></span> Active Handle
+                        </div>
+                        <!-- Hidden current username input to ensure full backward compatibility with JS lookups -->
+                        <input type="hidden" id="usernameCurrent" value="">
+                    </div>
+
+                    <!-- 2. Form Section for Updating Username -->
+                    <form id="usernameForm" class="sform username-custom-form" autocomplete="off" novalidate>
+                        <!-- Form Sub-Panel: New Account Handle -->
+                        <div class="username-form-panel">
+                            <div class="panel-section-title">
+                                <span class="panel-step-badge">1</span>
+                                <div>
+                                    <h5>New Account Handle</h5>
+                                    <p>Enter and verify your new unique username</p>
+                                </div>
+                            </div>
+
+                            <div class="username-inputs-grid">
+                                <div class="sform-field">
+                                    <label for="usernameNew">
+                                        <span>New Username</span>
+                                        <span class="required-star">*</span>
+                                    </label>
+                                    <div class="sform-input-wrap">
+                                        <i class="fas fa-user-tag sform-icon"></i>
+                                        <input type="text" id="usernameNew" name="username" placeholder="Enter new username" autocomplete="username">
+                                    </div>
+                                    <!-- Requirements checklist styled like change password -->
+                                    <ul class="pw-req-list" id="unReqList" style="margin-top: 8px;">
+                                        <li class="pw-req" id="unReqLen"><i class="fas fa-circle-xmark"></i> 3 to 30 characters</li>
+                                        <li class="pw-req" id="unReqFormat"><i class="fas fa-circle-xmark"></i> Letters, numbers, and _ . - only (no spaces)</li>
+                                        <li class="pw-req" id="unReqDiff"><i class="fas fa-circle-xmark"></i> Different from current username</li>
+                                    </ul>
+                                </div>
+
+                                <div class="sform-field">
+                                    <label for="usernameConfirm">
+                                        <span>Confirm New Username</span>
+                                        <span class="required-star">*</span>
+                                    </label>
+                                    <div class="sform-input-wrap">
+                                        <i class="fas fa-check-double sform-icon"></i>
+                                        <input type="text" id="usernameConfirm" name="username_confirm" placeholder="Repeat new username">
+                                    </div>
+                                    <span class="sform-match-hint" id="usernameMatchHint"></span>
+                                    <span class="sform-field-hint" style="margin-top: 8px;"><i class="fas fa-circle-info"></i> Username confirmation must match precisely</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Sub-Panel: Security Verification Box -->
+                        <div class="username-security-box">
+                            <div class="sec-box-header">
+                                <div class="sec-box-icon">
+                                    <i class="fas fa-lock"></i>
+                                </div>
+                                <div class="sec-box-title">
+                                    <h5>Security Authorization Required</h5>
+                                    <p>To protect your account against unauthorized handle changes, please verify your current password before updating.</p>
+                                </div>
+                            </div>
+
+                            <div class="sform-field sec-field-single">
+                                <label for="usernamePassword">
+                                    <span>Current Password</span>
+                                    <span class="required-star">*</span>
+                                </label>
+                                <div class="sform-input-wrap sform-input-wrap--pw">
+                                    <i class="fas fa-lock sform-icon"></i>
+                                    <input type="password" id="usernamePassword" name="username_current_password" placeholder="Enter your current password" autocomplete="current-password">
+                                    <button type="button" class="sform-eye" aria-label="Toggle password visibility" data-target="usernamePassword"><i class="fas fa-eye"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions Bar -->
+                        <div class="username-form-footer">
+                            <div class="username-security-guarantee">
+                                <i class="fas fa-shield-halved"></i>
+                                <span>Instant uniqueness check • Secure identity update • Session persistent</span>
+                            </div>
+                            <button type="submit" class="sform-btn username-submit-btn" id="usernameSaveBtn">
+                                <i class="fas fa-user-check"></i> Update Username
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ══ CHANGE PASSWORD ════════════════════════════════════ -->
+                <p class="section-label"><i class="fas fa-shield-halved"></i> Security &amp; Password</p>
+                <div class="settings-main-card password-settings-card">
+                    <!-- Card Header -->
+                    <div class="settings-card-header">
+                        <div class="settings-card-title-group" style="display:flex; align-items:center; gap:14px;">
+                            <div class="password-card-header-icon">
+                                <i class="fas fa-key"></i>
+                            </div>
+                            <div>
+                                <h4>Password &amp; Security Credentials</h4>
+                                <p>Manage your account login credentials, cryptographic security, and multi-session access.</p>
+                            </div>
+                        </div>
+                        <span class="settings-card-badge"><i class="fas fa-shield-halved"></i> Security Protected</span>
+                    </div>
+
+                    <div id="passwordFormAlert" class="sform-alert" style="display:none"></div>
+
+                    <!-- 1. Current Protection Overview Display Banner (Crisp lines & clear status) -->
+                    <div class="password-current-banner">
+                        <div class="password-banner-left">
+                            <div class="password-avatar-icon">
+                                <i class="fas fa-shield-halved"></i>
+                            </div>
+                            <div class="password-info-meta">
+                                <div class="password-meta-label">
+                                    <span class="password-meta-caption">AUTHENTICATION CREDENTIALS</span>
+                                    <span class="password-status-tag"><i class="fas fa-shield-check"></i> Bcrypt Encrypted</span>
+                                </div>
+                                <div class="password-meta-address">
+                                    ••••••••••••••••
+                                </div>
+                                <div class="password-meta-subtext">
+                                    <i class="fas fa-lock"></i> Protected by salt &amp; secure hash algorithm. Never stored or visible in plaintext.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="password-banner-badge">
+                            <span class="password-pulse-dot"></span> Active Protection
+                        </div>
+                    </div>
+
+                    <!-- 2. Form Section for Updating Password -->
+                    <form id="passwordForm" class="sform password-custom-form" autocomplete="off" novalidate>
+                        <!-- Form Sub-Panel: Step 1 - Security Verification Box -->
+                        <div class="password-security-box">
+                            <div class="sec-box-header">
+                                <div class="sec-box-icon">
+                                    <i class="fas fa-lock"></i>
+                                </div>
+                                <div class="sec-box-title">
+                                    <h5>Step 1: Current Password Verification</h5>
+                                    <p>To protect your account against unauthorized changes, please verify your current password before updating.</p>
+                                </div>
+                            </div>
+
+                            <div class="sform-field sec-field-single">
+                                <label for="pwCurrent">
+                                    <span>Current Password</span>
+                                    <span class="required-star">*</span>
+                                </label>
+                                <div class="sform-input-wrap sform-input-wrap--pw">
+                                    <i class="fas fa-lock sform-icon"></i>
+                                    <input type="password" id="pwCurrent" name="current_password" placeholder="Enter current password" autocomplete="current-password">
+                                    <button type="button" class="sform-eye" aria-label="Toggle password visibility" data-target="pwCurrent"><i class="fas fa-eye"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Sub-Panel: Step 2 - New Password Credentials -->
+                        <div class="password-form-panel">
+                            <div class="panel-section-title">
+                                <span class="panel-step-badge">2</span>
+                                <div>
+                                    <h5>Step 2: New Password Configuration</h5>
+                                    <p>Choose a strong, complex password that meets security criteria</p>
+                                </div>
+                            </div>
+
+                            <div class="password-inputs-grid">
+                                <div class="sform-field">
+                                    <label for="pwNew">
+                                        <span>New Password</span>
+                                        <span class="required-star">*</span>
+                                    </label>
+                                    <div class="sform-input-wrap sform-input-wrap--pw">
+                                        <i class="fas fa-lock-open sform-icon"></i>
+                                        <input type="password" id="pwNew" name="new_password" placeholder="Min 8 chars, 1 uppercase, 1 number" autocomplete="new-password">
+                                        <button type="button" class="sform-eye" aria-label="Toggle password visibility" data-target="pwNew"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                    <!-- Strength bar -->
+                                    <div class="pw-strength-bar" id="pwStrengthBar" aria-live="polite">
+                                        <div class="pw-strength-track">
+                                            <div class="pw-strength-fill" id="pwStrengthFill"></div>
+                                        </div>
+                                        <span class="pw-strength-label" id="pwStrengthLabel"></span>
+                                    </div>
+                                    <!-- Requirements checklist -->
+                                    <ul class="pw-req-list" id="pwReqList" style="margin-top: 8px;">
+                                        <li class="pw-req" id="pwReqLen"><i class="fas fa-circle-xmark"></i> At least 8 characters</li>
+                                        <li class="pw-req" id="pwReqUpper"><i class="fas fa-circle-xmark"></i> One uppercase letter</li>
+                                        <li class="pw-req" id="pwReqNum"><i class="fas fa-circle-xmark"></i> One number</li>
+                                        <li class="pw-req" id="pwReqDiff"><i class="fas fa-circle-xmark"></i> Different from current password</li>
+                                    </ul>
+                                </div>
+
+                                <div class="sform-field">
+                                    <label for="pwConfirm">
+                                        <span>Confirm New Password</span>
+                                        <span class="required-star">*</span>
+                                    </label>
+                                    <div class="sform-input-wrap sform-input-wrap--pw">
+                                        <i class="fas fa-check-double sform-icon"></i>
+                                        <input type="password" id="pwConfirm" name="confirm_password" placeholder="Repeat new password" autocomplete="new-password">
+                                        <button type="button" class="sform-eye" aria-label="Toggle password visibility" data-target="pwConfirm"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                    <span class="sform-match-hint" id="pwMatchHint"></span>
+                                    <span class="sform-field-hint" style="margin-top: 8px;"><i class="fas fa-circle-info"></i> Passwords must match before updating credentials</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions Bar -->
+                        <div class="password-form-footer">
+                            <div class="password-security-guarantee">
+                                <i class="fas fa-shield-halved"></i>
+                                <span>Session management prompt • Bcrypt password hashing • Comprehensive audit log</span>
+                            </div>
+                            <button type="submit" class="sform-btn password-submit-btn" id="passwordSaveBtn">
+                                <i class="fas fa-shield-check"></i> Change Password
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ══ APPEARANCE ════════════════════════════════════════ -->
+                <p class="section-label"><i class="fas fa-palette"></i> Interface &amp; Appearance</p>
+                <div class="settings-main-card">
+                    <div class="settings-card-header">
+                        <div class="settings-card-title-group">
+                            <h4><i class="fas fa-circle-half-stroke" style="color:var(--color-primary-600,#2c5e47)"></i> Theme Preferences</h4>
+                            <p>Customize your viewing experience. Switch between daylight and dark modes at any time.</p>
+                        </div>
+                        <span class="settings-card-badge">Display</span>
+                    </div>
+                    <div class="theme-choice-grid">
+                        <div class="theme-choice-card theme-choice-light" id="themeSelectLight" role="button" tabindex="0" title="Switch to Light Theme">
+                            <div class="theme-preview light-preview">
+                                <div class="preview-header"></div>
+                                <div class="preview-body">
+                                    <div class="preview-sidebar"></div>
+                                    <div class="preview-content">
+                                        <div class="preview-bar"></div>
+                                        <div class="preview-box"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="theme-choice-info">
+                                <div class="theme-choice-title"><i class="fas fa-sun"></i><span>Light Mode</span></div>
+                                <p>Crisp, high-contrast daylight interface for standard ambient lighting.</p>
+                            </div>
+                            <span class="theme-choice-status"><i class="fas fa-check"></i> Standard Daylight</span>
+                        </div>
+                        <div class="theme-choice-card theme-choice-dark" id="themeSelectDark" role="button" tabindex="0" title="Switch to Dark Theme">
+                            <div class="theme-preview dark-preview">
+                                <div class="preview-header"></div>
+                                <div class="preview-body">
+                                    <div class="preview-sidebar"></div>
+                                    <div class="preview-content">
+                                        <div class="preview-bar"></div>
+                                        <div class="preview-box"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="theme-choice-info">
+                                <div class="theme-choice-title"><i class="fas fa-moon"></i><span>Dark Mode</span></div>
+                                <p>Sleek, low-light interface optimized to reduce eye fatigue in dark environments.</p>
+                            </div>
+                            <span class="theme-choice-status"><i class="fas fa-check"></i> Night Atmosphere</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Security Advisory Card -->
-                <div class="profile-security-card">
-                    <div class="security-card-icon">
-                        <i class="fas fa-lock"></i>
+                <!-- ══ NOTIFICATION PREFERENCES ══════════════════════════ -->
+                <p class="section-label"><i class="fas fa-bell"></i> Notification Preferences</p>
+                <div class="settings-main-card">
+                    <div class="settings-card-header">
+                        <div class="settings-card-title-group">
+                            <h4><i class="fas fa-sliders" style="color:var(--color-primary-600,#2c5e47)"></i> Notification Preferences</h4>
+                            <p>Configure notifications for upcoming bookings, payments, and cemetery advisories.</p>
+                        </div>
+                        <span class="settings-card-badge">Alerts</span>
                     </div>
-                    <div class="security-card-text">
-                        <h5>Account Security & Privacy</h5>
-                        <p>Your session is protected via secure token authentication. For any account modifications, credentials reset, or contact information changes, please reach out to cemetery administration.</p>
+                    <div class="preferences-list">
+                        <div class="preference-item">
+                            <div class="preference-info">
+                                <div class="preference-title"><i class="fas fa-calendar-check"></i> Booking &amp; Burial Schedule Updates</div>
+                                <p>Receive reminders and confirmation notices for upcoming services.</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked aria-label="Toggle booking schedule alerts">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="preference-item">
+                            <div class="preference-info">
+                                <div class="preference-title"><i class="fas fa-credit-card"></i> Payment &amp; Receipt Notifications</div>
+                                <p>Get automated status updates when payments are verified.</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked aria-label="Toggle payment alerts">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="preference-item">
+                            <div class="preference-info">
+                                <div class="preference-title"><i class="fas fa-hourglass-half"></i> Lot Expiration &amp; Renewal Alerts</div>
+                                <p>Timely notifications regarding lease expirations and renewal windows.</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked aria-label="Toggle expiration alerts">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="preference-item">
+                            <div class="preference-info">
+                                <div class="preference-title"><i class="fas fa-bullhorn"></i> System Advisories &amp; Maintenance</div>
+                                <p>Official announcements and operational schedules from cemetery administration.</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked aria-label="Toggle system announcements">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -243,7 +780,7 @@
                                 <span class="footer-brand__icon"><i class="fas fa-tree"></i></span>
                                 <div class="footer-brand__text">
                                     <span class="footer-brand__name">Cemetery Management System</span>
-                                    <span class="footer-brand__version">Citizen Portal &nbsp;·&nbsp; Profile</span>
+                                    <span class="footer-brand__version">Citizen Portal &nbsp;·&nbsp; Account Settings</span>
                                 </div>
                             </div>
                             <p class="footer-copy">&copy; <span id="footerYear">2026</span> All rights reserved.</p>
@@ -283,6 +820,64 @@
                         </div>
                     </div>
                 </footer>
+
+                <!-- ══ CHANGE PASSWORD SESSION MODAL ══════════════════════════ -->
+                <div id="changePwSessionModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="changePwModalTitle">
+                    <div class="modal-content modal--md" style="max-width: 500px; border: 1px solid var(--color-border); box-shadow: 0 20px 40px -10px rgba(0,0,0,0.3); border-radius: 16px;">
+                        <button type="button" class="close" id="pwModalCloseBtn" aria-label="Close dialog">&times;</button>
+                        <div class="modal-header" style="align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 16px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(44, 94, 71, 0.12); color: var(--color-primary-600, #2c5e47); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                                    <i class="fas fa-shield-halved"></i>
+                                </div>
+                                <div>
+                                    <h4 id="changePwModalTitle" style="margin: 0; font-size: 1.15rem; font-weight: 700;">Password Change Confirmation</h4>
+                                    <p style="margin: 2px 0 0 0; font-size: 0.85rem; color: var(--color-text-secondary, #64748b);">Session Persistence Options</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-body" style="padding: 20px 0 16px 0;">
+                            <p style="margin: 0 0 14px 0; font-size: 0.95rem; line-height: 1.5; color: var(--color-text, #1e293b);">
+                                Would you like to <strong>log out of all active sessions</strong> or <strong>keep login</strong> on this device?
+                            </p>
+                            <div style="background: var(--color-surface-subtle, rgba(0,0,0,0.03)); border: 1px solid var(--color-border, #e2e8f0); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px;">
+                                <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.875rem;">
+                                    <span style="width: 22px; height: 22px; border-radius: 6px; background: rgba(220, 38, 38, 0.12); color: #dc2626; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">
+                                        <i class="fas fa-arrow-right-from-bracket" style="font-size: 0.75rem;"></i>
+                                    </span>
+                                    <div>
+                                        <strong style="color: var(--color-text, #0f172a);">Yes — Logout all sessions</strong>
+                                        <div style="color: var(--color-text-secondary, #64748b); font-size: 0.82rem; margin-top: 2px;">
+                                            Signs you out of all sessions across all devices. You will need to log in again with your new password.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.875rem;">
+                                    <span style="width: 22px; height: 22px; border-radius: 6px; background: rgba(22, 163, 74, 0.12); color: #16a34a; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">
+                                        <i class="fas fa-check" style="font-size: 0.75rem;"></i>
+                                    </span>
+                                    <div>
+                                        <strong style="color: var(--color-text, #0f172a);">No — Keep login</strong>
+                                        <div style="color: var(--color-text-secondary, #64748b); font-size: 0.82rem; margin-top: 2px;">
+                                            Keeps your session active on this browser so you can continue without logging in again.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer" style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; border-top: 1px solid var(--color-border); padding-top: 16px; margin-top: 8px;">
+                            <button type="button" class="sform-btn" id="pwModalCancelBtn" style="background: transparent; color: var(--color-text-secondary, #64748b); border: 1px solid var(--color-border); padding: 9px 18px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; margin-right: auto;">
+                                Cancel
+                            </button>
+                            <button type="button" class="sform-btn" id="pwModalYesBtn" style="background: #dc2626; color: #fff; border: none; padding: 9px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 7px; transition: background 0.15s ease;">
+                                <i class="fas fa-sign-out-alt"></i> Yes
+                            </button>
+                            <button type="button" class="sform-btn" id="pwModalNoBtn" style="background: var(--color-primary-600, #2c5e47); color: #fff; border: none; padding: 9px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 7px; transition: background 0.15s ease;">
+                                <i class="fas fa-check"></i> No
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -292,5 +887,34 @@
     <script src="../../assets/js/pages/profile.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
+    <script>
+    (function() {
+        function updateCards() {
+            var isDark = document.body.getAttribute('data-theme') === 'dark';
+            var lightCard = document.getElementById('themeSelectLight');
+            var darkCard = document.getElementById('themeSelectDark');
+            if (lightCard) lightCard.classList.toggle('active', !isDark);
+            if (darkCard) darkCard.classList.toggle('active', isDark);
+        }
+        function setTheme(t) {
+            document.body.setAttribute('data-theme', t);
+            try { localStorage.setItem('cms-theme', t); } catch(e) {}
+            var btn = document.getElementById('themeToggleBtn');
+            if (btn) {
+                var icon = btn.querySelector('i');
+                if (icon) icon.className = t === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+                btn.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false');
+            }
+            updateCards();
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCards();
+            document.getElementById('themeSelectLight')?.addEventListener('click', function() { setTheme('light'); });
+            document.getElementById('themeSelectDark')?.addEventListener('click', function() { setTheme('dark'); });
+        });
+        var observer = new MutationObserver(updateCards);
+        observer.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
+    })();
+    </script>
 </body>
 </html>

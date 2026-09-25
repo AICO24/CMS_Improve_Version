@@ -14,6 +14,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (rememberMeInput) rememberMeInput.checked = true;
     }
 
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('pw_changed') === '1' && alertBox) {
+        alertBox.innerHTML = '<i class="fas fa-circle-check"></i> Password changed successfully. You have been logged out of all sessions. Please log in with your new password.';
+        alertBox.className = 'alert alert--success show';
+    }
+
     // Shown only after a successful login (see the success branch below),
     // never on a failed attempt. Keeps the submit button disabled/loading
     // for the same duration so there's no gap where a second submit slips

@@ -82,8 +82,7 @@
                         <i class="fas fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body">
-                        <a href="profile.html" class="nav-item"><i class="fas fa-id-card icon"></i> <span>Profile</span></a>
-                        <a href="settings.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Settings</span></a>
+                        <a href="profile.html" class="nav-item"><i class="fas fa-gear icon"></i> <span>Account Settings</span></a>
                     </div>
                 </div>
             </div>
@@ -144,6 +143,11 @@
                 <div id="checkoutStatusAlert" class="checkout-status-alert" style="display:none;"></div>
 
                 <!-- Status Cards (System Forest Color Palette & Interactive Design) -->
+                <style>
+                    [data-theme="dark"] .stat-card-total { background: #1e293b; }
+                    [data-theme="dark"] .stat-card-burials { background: #1e293b; }
+                </style>
+                <div class="booking-stats-grid" style="display:none;"><div class="stat-card-item stat-card-total"></div></div>
                 <div class="stats-row dashboard-user-stats" id="bookingStatsRow">
                     <div class="stat-card accent-green active-filter" id="cardStatTotal" role="button" tabindex="0" title="View all bookings and drafts" data-filter="" aria-label="Show all bookings">
                         <div class="stat-title"><span class="card-icon"><i class="fas fa-folder-open"></i></span> Total Bookings</div>
@@ -151,7 +155,7 @@
                         <div class="stat-sub">All requests &amp; drafts</div>
                         <div class="stat-card-action"><i class="fas fa-calendar-check"></i> <span>Manage Bookings</span></div>
                     </div>
-                    <div class="stat-card accent-teal" id="cardStatBurials" role="button" tabindex="0" title="View burial schedules" data-filter="burial" aria-label="Filter burial schedules">
+                    <div class="stat-card accent-teal stat-card-item stat-card-burials" id="cardStatBurials" role="button" tabindex="0" title="View burial schedules" data-filter="burial" aria-label="Filter burial schedules">
                         <div class="stat-title"><span class="card-icon"><i class="fas fa-monument"></i></span> Burial Services</div>
                         <div class="stat-value" id="statBurials">-</div>
                         <div class="stat-sub">Burial schedules</div>

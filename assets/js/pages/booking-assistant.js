@@ -266,6 +266,11 @@
                 btnToggleBlueprintMobile.innerHTML = isVis
                     ? '<i class="fas fa-comments"></i> <span id="blueprintToggleText">Chat</span>'
                     : '<i class="fas fa-clipboard-list"></i> <span id="blueprintToggleText">Summary</span>';
+                if (isVis) {
+                    blueprintPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else if (chatComposerForm || chatThread) {
+                    (chatComposerForm || chatThread).scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             });
         }
 
@@ -377,6 +382,27 @@
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     openNotifications();
+                }
+            });
+        }
+
+        // Mobile Reservation Summary Toggle & Smooth Scroll
+        const mobileSummaryToggleBtn = document.getElementById('btnToggleBlueprintMobile');
+        const blueprintPanelEl = document.getElementById('blueprintPanel');
+        const chatThreadEl = document.getElementById('chatThread');
+        const blueprintToggleText = document.getElementById('blueprintToggleText');
+
+        if (mobileSummaryToggleBtn && blueprintPanelEl) {
+            mobileSummaryToggleBtn.addEventListener('click', () => {
+                const rect = blueprintPanelEl.getBoundingClientRect();
+                const isBlueprintVisibleInView = (rect.top >= 0 && rect.top < window.innerHeight * 0.5);
+
+                if (isBlueprintVisibleInView) {
+                    chatThreadEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    if (blueprintToggleText) blueprintToggleText.textContent = 'Summary';
+                } else {
+                    blueprintPanelEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    if (blueprintToggleText) blueprintToggleText.textContent = 'Chat';
                 }
             });
         }

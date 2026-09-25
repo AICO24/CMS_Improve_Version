@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // rather than the admin/staff-only payments/revenue* endpoints.
     async function loadOwnPaymentsForStats() {
         const result = await api.request(`payments/mine?${filterParams().toString()}`, { method: 'GET' }).catch(() => []);
-        return Array.isArray(result) ? result : [];
+        return Array.isArray(result) ? result : (result && Array.isArray(result.data) ? result.data : []);
     }
 
     function formatCurrency(amount) {
@@ -199,9 +199,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         }).join('');
 
         tbody.querySelectorAll('.btn-view').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const id = btn.closest('tr').dataset.id;
                 showViewModal(id);
+            });
+        });
+
+        tbody.querySelectorAll('tr[data-id]').forEach(row => {
+            row.style.cursor = 'pointer';
+            row.addEventListener('click', (e) => {
+                if (e.target.closest('button, a')) return;
+                const id = row.dataset.id;
+                if (id) showViewModal(id);
             });
         });
     }
@@ -276,57 +286,248 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function loadReservationDetails(payment) {
-        if (payment.transaction_type !== 'Lot Purchase' || !payment.reference_id) {
-            return null;
-        }
-        try {
-            const schedule = await api.request(`schedules/${payment.reference_id}`, { method: 'GET' });
-            return schedule && !schedule.error ? schedule : null;
-        } catch (error) {
-            return null;
-        }
-    }
+        if (!payment || !payment.reference_id) return null;
+        const refKind = String(payment.reference_kind || '').toLowerCase();
+        const transType = String(payment.transaction_type || '').toLowerCase();
 
-    function renderReservationSection(schedule) {
-        if (!schedule) return '';
-        return `
-            <div class="detail-section-title">Reservation Details</div>
-            <div class="detail-row"><span>Lot Number</span><strong>${schedule.lot_number || '—'}</strong></div>
-            <div class="detail-row"><span>Section</span><strong>${schedule.section_name || '—'}</strong></div>
-            <div class="detail-row"><span>Decedent</span><strong>${schedule.first_name ? `${schedule.first_name} ${schedule.last_name || ''}`.trim() : '—'}</strong></div>
-            <div class="detail-row"><span>Burial Date</span><strong>${schedule.schedule_date || '—'}${schedule.schedule_time ? ' · ' + schedule.schedule_time : ''}</strong></div>
-            <div class="detail-row"><span>Reservation Status</span><strong>${schedule.status || '—'}</strong></div>
-            <div class="detail-section-title">Payment Details</div>
-        `;
+        try {
+            if (refKind === 'cremation' || transType.includes('cremation')) {
+                const cremation = await api.request(`cremations/${payment.reference_id}`, { method: 'GET' });
+                if (cremation && !cremation.error) {
+                    return {
+                        is_cremation: true,
+                        service_type: 'Cremation Service',
+                        lot_number: cremation.niche_number ? `Niche #${cremation.niche_number}` : 'Columbarium Unit',
+                        section_name: cremation.columbarium_name || 'Sanctuario Columbarium',
+                        first_name: cremation.first_name || '',
+                        last_name: cremation.last_name || '',
+                        provisional_name: cremation.provisional_name || '',
+                        schedule_date: cremation.cremation_date || cremation.schedule_date || '—',
+                        schedule_time: cremation.cremation_time || cremation.schedule_time || '',
+                        status: cremation.status || 'Active'
+                    };
+                }
+            }
+
+            // Default to schedule / lot purchase
+            const schedule = await api.request(`schedules/${payment.reference_id}`, { method: 'GET' });
+            if (schedule && !schedule.error) {
+                return {
+                    is_cremation: false,
+                    service_type: 'Burial Service',
+                    lot_number: schedule.lot_number ? `Lot #${schedule.lot_number}` : 'Designated Plot',
+                    section_name: schedule.section_name || 'Garden Section',
+                    first_name: schedule.first_name || '',
+                    last_name: schedule.last_name || '',
+                    provisional_name: schedule.provisional_name || '',
+                    schedule_date: schedule.schedule_date || '—',
+                    schedule_time: schedule.schedule_time || '',
+                    status: schedule.status || 'Active'
+                };
+            }
+        } catch (error) {
+            console.warn('Could not load linked reservation details:', error);
+        }
+        return null;
     }
 
     async function showViewModal(id) {
         try {
             const payment = await api.request(`payments/${id}`, { method: 'GET' });
-            const schedule = await loadReservationDetails(payment);
+            const linkedService = await loadReservationDetails(payment);
+
+            const status = (payment.verification_status || 'Pending').trim();
+            const isVerified = status.toLowerCase() === 'verified';
+            const isRejected = status.toLowerCase() === 'rejected';
+
+            let statusBadgeHtml = '';
+            if (isVerified) {
+                statusBadgeHtml = `<span class="payhist-status-pill payhist-status-pill--verified"><i class="fas fa-circle-check"></i> Verified</span>`;
+            } else if (isRejected) {
+                statusBadgeHtml = `<span class="payhist-status-pill payhist-status-pill--rejected"><i class="fas fa-circle-xmark"></i> Rejected</span>`;
+            } else {
+                statusBadgeHtml = `<span class="payhist-status-pill payhist-status-pill--pending"><i class="fas fa-clock"></i> Pending Review</span>`;
+            }
+
+            const formattedAmount = formatCurrency(payment.amount);
+            const paymentDate = payment.payment_date || (payment.created_at ? payment.created_at.split(' ')[0] : '—');
+            const receiptNo = payment.receipt_number || `RCPT-2026-${payment.payment_id}`;
+
             const details = `
-                ${renderReservationSection(schedule)}
-                <div class="detail-row"><span>Receipt Number</span><strong>${payment.receipt_number || '—'}</strong></div>
-                <div class="detail-row"><span>Transaction Type</span><strong>${payment.transaction_type || '—'}</strong></div>
-                <div class="detail-row"><span>Reference ID</span><strong>${payment.reference_id || '—'}</strong></div>
-                <div class="detail-row"><span>Amount</span><strong>${formatCurrency(payment.amount)}</strong></div>
-                <div class="detail-row"><span>Payment Date</span><strong>${payment.payment_date || '—'}</strong></div>
-                <div class="detail-row"><span>Payment Method</span><strong>${payment.payment_method || '—'}</strong></div>
-                <div class="detail-row"><span>Verification Status</span><span class="status-badge ${statusBadgeClass(payment.verification_status || 'Pending')}">${payment.verification_status || 'Pending'}</span></div>
-                <div class="detail-row"><span>Verified At</span><strong>${payment.verified_at || '—'}</strong></div>
-                <div class="detail-row"><span>Receipt</span><strong>${payment.receipt_url ? `<a href="${payment.receipt_url}" target="_blank">Download</a>` : 'Not attached'}</strong></div>
-                <div class="detail-row"><span>Notes</span><strong>${payment.notes || '—'}</strong></div>
+                <div class="payhist-voucher-document">
+                    <!-- 1. Hero Financial Showcase Banner -->
+                    <div class="payhist-hero-banner">
+                        <div class="payhist-hero-amount-group">
+                            <span class="payhist-hero-label">TOTAL AMOUNT SETTLED</span>
+                            <div class="payhist-hero-amount">${formattedAmount}</div>
+                            <div class="payhist-hero-meta">
+                                <span><i class="fas fa-receipt"></i> ${escapeHtml(receiptNo)}</span>
+                                <span class="payhist-hero-dot">•</span>
+                                <span><i class="fas fa-calendar-day"></i> ${escapeHtml(paymentDate)}</span>
+                            </div>
+                        </div>
+                        <div class="payhist-hero-status-group">
+                            <span class="payhist-hero-status-label">PAYMENT STATUS</span>
+                            ${statusBadgeHtml}
+                        </div>
+                    </div>
+
+                    <!-- 2. Dual-Column Structured Grid -->
+                    <div class="payhist-grid-layout">
+                        <!-- Card A: Transaction Particulars -->
+                        <div class="payhist-card">
+                            <div class="payhist-card-header">
+                                <span class="payhist-card-icon"><i class="fas fa-wallet"></i></span>
+                                <h4 class="payhist-card-title">Transaction Particulars</h4>
+                            </div>
+                            <div class="payhist-card-body">
+                                <div class="payhist-data-row">
+                                    <span class="data-label">Payment Method</span>
+                                    <strong class="data-value">${escapeHtml(payment.payment_method || 'PayMongo Checkout')}</strong>
+                                </div>
+                                <div class="payhist-data-row">
+                                    <span class="data-label">Transaction Type</span>
+                                    <strong class="data-value">${escapeHtml(payment.transaction_type || 'Lot Purchase')}</strong>
+                                </div>
+                                <div class="payhist-data-row">
+                                    <span class="data-label">Service Reference</span>
+                                    <strong class="data-value payhist-ref-badge">${escapeHtml(payment.reference_label || (payment.reference_id ? (payment.reference_kind ? payment.reference_kind.toUpperCase() + ' #' + payment.reference_id : 'Ref #' + payment.reference_id) : 'Account Payment'))}</strong>
+                                </div>
+                                <div class="payhist-data-row">
+                                    <span class="data-label">Payer / Handled By</span>
+                                    <strong class="data-value">${escapeHtml(payment.received_by_name || 'Citizen User')}</strong>
+                                </div>
+                                <div class="payhist-data-row">
+                                    <span class="data-label">Verification Standing</span>
+                                    <strong class="data-value">${payment.verified_by_name ? `Verified by ${escapeHtml(payment.verified_by_name)}` : (isVerified ? 'Official System Verification' : 'Awaiting Administrative Review')}</strong>
+                                </div>
+                                ${payment.verified_at ? `
+                                <div class="payhist-data-row">
+                                    <span class="data-label">Verified Timestamp</span>
+                                    <strong class="data-value">${escapeHtml(payment.verified_at)}</strong>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Card B: Linked Service / Reservation Allocation -->
+                        <div class="payhist-card">
+                            <div class="payhist-card-header">
+                                <span class="payhist-card-icon"><i class="fas fa-map-location-dot"></i></span>
+                                <h4 class="payhist-card-title">Linked Service Allocation</h4>
+                            </div>
+                            <div class="payhist-card-body">
+                                ${linkedService ? `
+                                    <div class="payhist-data-row">
+                                        <span class="data-label">Service Type</span>
+                                        <strong class="data-value">${escapeHtml(linkedService.service_type || 'Burial Service')}</strong>
+                                    </div>
+                                    <div class="payhist-data-row">
+                                        <span class="data-label">Plot / Allocation</span>
+                                        <strong class="data-value">${escapeHtml(linkedService.lot_number || 'Plot Location')}</strong>
+                                    </div>
+                                    <div class="payhist-data-row">
+                                        <span class="data-label">Memorial Ground</span>
+                                        <strong class="data-value">${escapeHtml(linkedService.section_name || 'Garden Section')}</strong>
+                                    </div>
+                                    <div class="payhist-data-row">
+                                        <span class="data-label">Registered Decedent</span>
+                                        <strong class="data-value">${escapeHtml((linkedService.first_name ? linkedService.first_name + ' ' + (linkedService.last_name || '') : linkedService.provisional_name || '—').trim())}</strong>
+                                    </div>
+                                    <div class="payhist-data-row">
+                                        <span class="data-label">Service Schedule</span>
+                                        <strong class="data-value">${escapeHtml(linkedService.schedule_date || 'TBD')}${linkedService.schedule_time ? ' · ' + escapeHtml(linkedService.schedule_time) : ''}</strong>
+                                    </div>
+                                    <div class="payhist-data-row">
+                                        <span class="data-label">Booking Standing</span>
+                                        <strong class="data-value payhist-badge-confirmed">${escapeHtml(linkedService.status || 'Confirmed')}</strong>
+                                    </div>
+                                ` : `
+                                    <div class="payhist-unlinked-state">
+                                        <i class="fas fa-circle-info"></i>
+                                        <p>This transaction is credited directly to your citizen account and general services.</p>
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Documentation & Audit Notes -->
+                    <div class="payhist-card payhist-card--full">
+                        <div class="payhist-card-header">
+                            <span class="payhist-card-icon"><i class="fas fa-file-check"></i></span>
+                            <h4 class="payhist-card-title">Documentation &amp; Official Notes</h4>
+                        </div>
+                        <div class="payhist-card-body">
+                            <div class="payhist-docs-grid">
+                                <div class="payhist-proof-item">
+                                    <span class="data-label">Proof of Payment Document</span>
+                                    ${payment.receipt_url ? `
+                                        <a href="${escapeHtml(payment.receipt_url)}" target="_blank" rel="noopener" class="payhist-proof-btn">
+                                            <i class="fas fa-paperclip"></i>
+                                            <span>View Attached Proof Document</span>
+                                            <i class="fas fa-arrow-up-right-from-square"></i>
+                                        </a>
+                                    ` : `
+                                        <div class="payhist-digital-record">
+                                            <i class="fas fa-shield-halved"></i>
+                                            <span>Digital Transaction Record • Verified via Payment Gateway</span>
+                                        </div>
+                                    `}
+                                </div>
+                                <div class="payhist-notes-item">
+                                    <span class="data-label">Remarks &amp; Audit Notes</span>
+                                    <div class="payhist-notes-box">
+                                        ${payment.notes ? escapeHtml(payment.notes) : 'Standard transaction recorded and filed under citizen portal account.'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. Official Voucher Seal Banner -->
+                    <div class="payhist-seal-strip">
+                        <div class="payhist-seal-left">
+                            <i class="fas fa-tree"></i>
+                            <span>OFFICIAL FINANCIAL VOUCHER • CEMETERY MANAGEMENT SYSTEM</span>
+                        </div>
+                        <div class="payhist-seal-right">
+                            <span>Voucher ID: #VCH-${escapeHtml(payment.payment_id)}</span>
+                        </div>
+                    </div>
+                </div>
             `;
+
             document.getElementById('viewDetails').innerHTML = details;
             document.getElementById('viewModal').style.display = 'flex';
         } catch (error) {
+            console.error('Failed to load payment details:', error);
             alert('Failed to load payment: ' + error.message);
         }
     }
 
-    document.querySelector('#viewModal .close-view').addEventListener('click', () => document.getElementById('viewModal').style.display = 'none');
+    // Modal Dismiss & Print Event Listeners
+    const closeModal = () => {
+        const modal = document.getElementById('viewModal');
+        if (modal) modal.style.display = 'none';
+    };
+
+    document.getElementById('closeViewModalTop')?.addEventListener('click', closeModal);
+    document.getElementById('closeViewModalBottom')?.addEventListener('click', closeModal);
+    document.querySelector('#viewModal .close-view')?.addEventListener('click', closeModal);
+
     window.addEventListener('click', (e) => {
-        if (e.target === document.getElementById('viewModal')) document.getElementById('viewModal').style.display = 'none';
+        if (e.target === document.getElementById('viewModal')) closeModal();
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.getElementById('viewModal')?.style.display === 'flex') {
+            closeModal();
+        }
+    });
+
+    document.getElementById('printPaymentReceiptBtn')?.addEventListener('click', () => {
+        window.print();
     });
 
     function debounce(fn, delay = 300) {
