@@ -90,14 +90,36 @@ document.addEventListener('DOMContentLoaded', async function() {
     const userFields = {
         userId: document.getElementById('userId'),
         username: document.getElementById('username'),
-        fullName: document.getElementById('fullName'),
+        firstName: document.getElementById('firstName'),
+        middleName: document.getElementById('middleName'),
+        lastName: document.getElementById('lastName'),
+        suffix: document.getElementById('suffix'),
         email: document.getElementById('email'),
         contactNumber: document.getElementById('contactNumber'),
+        userRegion: document.getElementById('userRegion'),
+        userProvince: document.getElementById('userProvince'),
+        userCity: document.getElementById('userCity'),
+        userDistrict: document.getElementById('userDistrict'),
+        userBarangay: document.getElementById('userBarangay'),
+        userStreet: document.getElementById('userStreet'),
         address: document.getElementById('address'),
         role: document.getElementById('role'),
         password: document.getElementById('password'),
         isActive: document.getElementById('isActive'),
     };
+
+    let modalLocationController = null;
+    if (window.PhilippineLocations && typeof window.PhilippineLocations.initHierarchy === 'function' && userFields.userRegion) {
+        modalLocationController = window.PhilippineLocations.initHierarchy({
+            regionSelect: userFields.userRegion,
+            provinceSelect: userFields.userProvince,
+            citySelect: userFields.userCity,
+            districtSelect: userFields.userDistrict,
+            barangaySelect: userFields.userBarangay,
+            streetInput: userFields.userStreet,
+            combinedAddressInput: userFields.address
+        });
+    }
 
     let selectedUserIds = new Set();
     const pagination = createPagination({
@@ -427,10 +449,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (modalSubtitle) modalSubtitle.textContent = 'Create a new account and assign access.';
         userFields.userId.value = '';
         userFields.username.value = '';
-        userFields.fullName.value = '';
+        if (userFields.firstName) userFields.firstName.value = '';
+        if (userFields.middleName) userFields.middleName.value = '';
+        if (userFields.lastName) userFields.lastName.value = '';
+        if (userFields.suffix) userFields.suffix.value = '';
         userFields.email.value = '';
         userFields.contactNumber.value = '';
-        userFields.address.value = '';
+        if (modalLocationController) {
+            modalLocationController.reset();
+        } else {
+            userFields.address.value = '';
+        }
         userFields.role.value = 'staff';
         userFields.password.value = '';
         userFields.isActive.value = '1';
@@ -480,10 +509,50 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (modalSubtitle) modalSubtitle.textContent = 'Update account details and permissions.';
             userFields.userId.value = user.user_id;
             userFields.username.value = user.username;
-            userFields.fullName.value = user.full_name;
+
+            // Name fields
+            if (userFields.firstName) userFields.firstName.value = user.first_name || '';
+            if (userFields.middleName) userFields.middleName.value = user.middle_name || '';
+            if (userFields.lastName) userFields.lastName.value = user.last_name || '';
+            if (userFields.suffix) userFields.suffix.value = user.suffix || '';
+
+            // Fallback parsing if first_name wasn't stored separately yet
+            if (userFields.firstName && !user.first_name && user.full_name) {
+                const parts = user.full_name.trim().split(/\s+/);
+                if (parts.length === 1) {
+                    userFields.firstName.value = parts[0];
+                } else if (parts.length === 2) {
+                    userFields.firstName.value = parts[0];
+                    userFields.lastName.value = parts[1];
+                } else {
+                    userFields.firstName.value = parts.slice(0, -1).join(' ');
+                    userFields.lastName.value = parts[parts.length - 1];
+                }
+            }
+
             userFields.email.value = user.email;
             userFields.contactNumber.value = user.contact_number || '';
             userFields.address.value = user.address || '';
+
+            // Set location values if controller is available
+            if (modalLocationController) {
+                if (user.region || user.province || user.city || user.district || user.barangay) {
+                    modalLocationController.setValues({
+                        region: user.region,
+                        province: user.province,
+                        city: user.city,
+                        district: user.district,
+                        barangay: user.barangay
+                    });
+                } else if (user.address && window.PhilippineLocations?.parseAddress) {
+                    const parsed = window.PhilippineLocations.parseAddress(user.address);
+                    modalLocationController.setValues(parsed);
+                } else {
+                    modalLocationController.reset();
+                    if (userFields.address) userFields.address.value = user.address || '';
+                }
+            }
+
             const currentRole = (user.role_title || user.role || 'staff').toLowerCase();
             userFields.role.value = currentRole.includes('admin') ? 'admin' : (currentRole.includes('user') ? 'user' : 'staff');
             userFields.password.value = '';
@@ -504,14 +573,42 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     userForm.addEventListener('submit', async function(e) {
         e.preventDefault();
+        const firstName = userFields.firstName ? userFields.firstName.value.trim() : '';
+        const middleName = userFields.middleName ? userFields.middleName.value.trim() : '';
+        const lastName = userFields.lastName ? userFields.lastName.value.trim() : '';
+        const suffix = userFields.suffix ? userFields.suffix.value.trim() : '';
+
+        if (!firstName) {
+            alert('First name is required.');
+            if (userFields.firstName) userFields.firstName.focus();
+            return;
+        }
+        if (!lastName) {
+            alert('Last name is required.');
+            if (userFields.lastName) userFields.lastName.focus();
+            return;
+        }
+
+        const fullName = `${firstName} ${middleName ? middleName + ' ' : ''}${lastName}${suffix ? ' ' + suffix : ''}`.trim();
+        const locVals = modalLocationController ? modalLocationController.getValues() : {};
+
         const roleVal = userFields.role.value;
         const roleId = roleVal === 'admin' ? 1 : (roleVal === 'user' ? 3 : 2);
         const payload = {
             username: userFields.username.value.trim(),
-            full_name: userFields.fullName.value.trim(),
+            first_name: firstName,
+            middle_name: middleName || null,
+            last_name: lastName,
+            suffix: suffix || null,
+            full_name: fullName,
             email: userFields.email.value.trim(),
             contact_number: userFields.contactNumber.value.trim(),
-            address: userFields.address.value.trim(),
+            region: locVals.region || null,
+            province: locVals.province || null,
+            city: locVals.city || null,
+            district: locVals.district || null,
+            barangay: locVals.barangay || null,
+            address: userFields.address.value.trim() || locVals.combinedAddress || null,
             role_id: roleId,
             is_active: parseInt(userFields.isActive.value, 10),
         };

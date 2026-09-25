@@ -131,7 +131,18 @@ class AuthController {
                 'user_id' => $user['user_id'],
                 'username' => $user['username'],
                 'full_name' => $user['full_name'],
+                'first_name' => $user['first_name'] ?? null,
+                'middle_name' => $user['middle_name'] ?? null,
+                'last_name' => $user['last_name'] ?? null,
+                'suffix' => $user['suffix'] ?? null,
                 'email' => $user['email'],
+                'contact_number' => $user['contact_number'] ?? null,
+                'address' => $user['address'] ?? null,
+                'region' => $user['region'] ?? null,
+                'province' => $user['province'] ?? null,
+                'city' => $user['city'] ?? null,
+                'district' => $user['district'] ?? null,
+                'barangay' => $user['barangay'] ?? null,
                 'role' => $role,
                 'is_active' => (bool) ($user['is_active'] ?? 1),
                 'email_verified' => (bool) ($user['email_verified'] ?? 0),
@@ -247,11 +258,79 @@ class AuthController {
         }
 
         // Anonymous registration is limited to normal users only.
-        $data['full_name'] = trim((string) ($data['full_name'] ?? ''));
+        $firstName = trim((string) ($data['first_name'] ?? ''));
+        $middleName = trim((string) ($data['middle_name'] ?? ''));
+        $lastName = trim((string) ($data['last_name'] ?? ''));
+        $suffix = trim((string) ($data['suffix'] ?? ''));
+
+        if ($firstName !== '' || $lastName !== '') {
+            if ($firstName === '') {
+                return ['error' => 'First name is required', 'code' => 400];
+            }
+            if ($lastName === '') {
+                return ['error' => 'Last name is required', 'code' => 400];
+            }
+            $assembledFullName = $firstName;
+            if ($middleName !== '') {
+                $assembledFullName .= ' ' . $middleName;
+            }
+            if ($lastName !== '') {
+                $assembledFullName .= ' ' . $lastName;
+            }
+            if ($suffix !== '') {
+                $assembledFullName .= ' ' . $suffix;
+            }
+            $data['full_name'] = $assembledFullName;
+            $data['first_name'] = $firstName;
+            $data['middle_name'] = $middleName ?: null;
+            $data['last_name'] = $lastName;
+            $data['suffix'] = $suffix ?: null;
+        } else {
+            $data['full_name'] = trim((string) ($data['full_name'] ?? ''));
+            if ($data['full_name'] !== '') {
+                require_once __DIR__ . '/DecedentRequestController.php';
+                $parsed = DecedentRequestController::parseFullName($data['full_name']);
+                $data['first_name'] = $parsed['first_name'] ?: $data['full_name'];
+                $data['middle_name'] = $parsed['middle_name'] ?: null;
+                $data['last_name'] = $parsed['last_name'] ?: 'User';
+                $data['suffix'] = $parsed['suffix'] ?: null;
+            }
+        }
+
         $data['email'] = strtolower(trim((string) ($data['email'] ?? '')));
         $data['username'] = trim((string) ($data['username'] ?? ''));
         $data['contact_number'] = trim((string) ($data['contact_number'] ?? ''));
         $data['address'] = trim((string) ($data['address'] ?? ''));
+
+        // Cascading Location hierarchy support: Region -> Province -> City -> District -> Barangay
+        $region = trim((string) ($data['region'] ?? ''));
+        $province = trim((string) ($data['province'] ?? ''));
+        $city = trim((string) ($data['city'] ?? ''));
+        $district = trim((string) ($data['district'] ?? ''));
+        $barangay = trim((string) ($data['barangay'] ?? ''));
+
+        if ($region !== '' || $province !== '' || $city !== '' || $district !== '' || $barangay !== '') {
+            if ($region === '') return ['error' => 'Region is required in location selection', 'code' => 400];
+            if ($province === '') return ['error' => 'Province is required in location selection', 'code' => 400];
+            if ($city === '') return ['error' => 'City / Municipality is required in location selection', 'code' => 400];
+            if ($district === '') return ['error' => 'District is required in location selection', 'code' => 400];
+            if ($barangay === '') return ['error' => 'Barangay is required in location selection', 'code' => 400];
+
+            if ($data['address'] === '') {
+                $addrParts = [];
+                if (!empty($data['street_address'])) {
+                    $addrParts[] = trim((string) $data['street_address']);
+                }
+                $addrParts[] = "Brgy. $barangay";
+                $addrParts[] = $district;
+                $addrParts[] = $city;
+                if ($province !== $city && $province !== 'Metro Manila') {
+                    $addrParts[] = $province;
+                }
+                $addrParts[] = $region;
+                $data['address'] = implode(', ', $addrParts);
+            }
+        }
 
         $required = ['full_name', 'email', 'password', 'confirm_password'];
         foreach ($required as $field) {
@@ -571,9 +650,18 @@ class AuthController {
             'user_id'           => $user['user_id'],
             'username'          => $user['username'],
             'full_name'         => $user['full_name'],
+            'first_name'        => $user['first_name'] ?? null,
+            'middle_name'       => $user['middle_name'] ?? null,
+            'last_name'         => $user['last_name'] ?? null,
+            'suffix'            => $user['suffix'] ?? null,
             'email'             => $user['email'],
             'contact_number'    => $user['contact_number'] ?? null,
             'address'           => $user['address'] ?? null,
+            'region'            => $user['region'] ?? null,
+            'province'          => $user['province'] ?? null,
+            'city'              => $user['city'] ?? null,
+            'district'          => $user['district'] ?? null,
+            'barangay'          => $user['barangay'] ?? null,
             'role'              => $this->userModel->getRole($userId),
             'is_active'         => (bool) ($user['is_active'] ?? 1),
             'email_verified'    => (bool) ($user['email_verified'] ?? 0),
@@ -593,13 +681,86 @@ class AuthController {
 
         $update = [];
 
-        // Full name
-        if (isset($data['full_name'])) {
+        // Name handling: Standardized (First Name, Middle Name, Last Name, Suffix)
+        if (isset($data['first_name']) || isset($data['last_name'])) {
+            $firstName = trim((string) ($data['first_name'] ?? $existing['first_name'] ?? ''));
+            $lastName = trim((string) ($data['last_name'] ?? $existing['last_name'] ?? ''));
+            $middleName = isset($data['middle_name']) ? trim((string) $data['middle_name']) : ($existing['middle_name'] ?? null);
+            $suffix = isset($data['suffix']) ? trim((string) $data['suffix']) : ($existing['suffix'] ?? null);
+
+            if ($firstName === '') {
+                return ['error' => 'First name is required', 'code' => 400];
+            }
+            if ($lastName === '') {
+                return ['error' => 'Last name is required', 'code' => 400];
+            }
+
+            $update['first_name'] = $firstName;
+            $update['middle_name'] = $middleName ?: null;
+            $update['last_name'] = $lastName;
+            $update['suffix'] = $suffix ?: null;
+
+            $assembled = trim("$firstName " . ($middleName ? "$middleName " : '') . "$lastName" . ($suffix ? " $suffix" : ''));
+            $update['full_name'] = $assembled;
+        } elseif (isset($data['full_name'])) {
             $full_name = trim((string) $data['full_name']);
             if ($full_name === '') {
                 return ['error' => 'Full name cannot be empty', 'code' => 400];
             }
             $update['full_name'] = $full_name;
+
+            require_once __DIR__ . '/DecedentRequestController.php';
+            $parsed = DecedentRequestController::parseFullName($full_name);
+            $update['first_name'] = $parsed['first_name'];
+            $update['middle_name'] = $parsed['middle_name'];
+            $update['last_name'] = $parsed['last_name'];
+            $update['suffix'] = $parsed['suffix'];
+        }
+
+        // Location handling: Region -> Province -> City/Municipality -> District -> Barangay
+        if (array_key_exists('region', $data) || array_key_exists('province', $data) || array_key_exists('city', $data) || array_key_exists('district', $data) || array_key_exists('barangay', $data)) {
+            $region = array_key_exists('region', $data) ? trim((string) ($data['region'] ?? '')) : ($existing['region'] ?? null);
+            $province = array_key_exists('province', $data) ? trim((string) ($data['province'] ?? '')) : ($existing['province'] ?? null);
+            $city = array_key_exists('city', $data) ? trim((string) ($data['city'] ?? '')) : ($existing['city'] ?? null);
+            $district = array_key_exists('district', $data) ? trim((string) ($data['district'] ?? '')) : ($existing['district'] ?? null);
+            $barangay = array_key_exists('barangay', $data) ? trim((string) ($data['barangay'] ?? '')) : ($existing['barangay'] ?? null);
+
+            // Hierarchy validation: child cannot exist without direct parent
+            if ($province && !$region) {
+                return ['error' => 'Region is required when Province is selected', 'code' => 400];
+            }
+            if ($city && (!$province || !$region)) {
+                return ['error' => 'Region and Province are required when City is selected', 'code' => 400];
+            }
+            if ($district && !$city) {
+                return ['error' => 'City is required when District is selected', 'code' => 400];
+            }
+            if ($barangay && !$city) {
+                return ['error' => 'City is required when Barangay is selected', 'code' => 400];
+            }
+
+            $update['region'] = $region ?: null;
+            $update['province'] = $province ?: null;
+            $update['city'] = $city ?: null;
+            $update['district'] = $district ?: null;
+            $update['barangay'] = $barangay ?: null;
+
+            // If an explicit address wasn't passed, compose address from location parts
+            if (!isset($data['address'])) {
+                $parts = array_filter([$barangay, $district, $city, $province, $region]);
+                if (!empty($parts)) {
+                    $update['address'] = implode(', ', $parts);
+                }
+            }
+        }
+
+        // Address validation
+        if (array_key_exists('address', $data)) {
+            $address = trim((string) ($data['address'] ?? ''));
+            if ($address !== '' && strlen($address) < 5) {
+                return ['error' => 'Address must be at least 5 characters long', 'code' => 400];
+            }
+            $update['address'] = $address ?: null;
         }
 
         // Username

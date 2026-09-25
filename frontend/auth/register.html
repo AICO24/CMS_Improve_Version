@@ -97,39 +97,64 @@
 
                 <form id="registerForm" method="post" autocomplete="on">
                     <div class="form-grid">
-                        <!-- Full Name -->
-                        <div class="input-field">
-                            <label for="full_name">Full Name</label>
+                        <!-- Names (Row 1) -->
+                        <div class="input-field col-4">
+                            <label for="first_name">First Name <span class="req-star">*</span></label>
                             <div class="input-wrapper">
                                 <span class="input-icon"><i class="fas fa-user"></i></span>
-                                <input type="text" id="full_name" name="full_name" placeholder="Enter full name" autocomplete="name" required aria-describedby="fullNameError">
+                                <input type="text" id="first_name" name="first_name" placeholder="First name" autocomplete="given-name" required aria-describedby="firstNameError">
                             </div>
-                            <div class="error-message" id="fullNameError" role="alert"></div>
+                            <div class="error-message" id="firstNameError" role="alert"></div>
                         </div>
 
-                        <!-- Email -->
-                        <div class="input-field">
-                            <label for="email">Email Address</label>
+                        <div class="input-field col-3">
+                            <label for="middle_name">Middle Name <span class="label-hint">(opt)</span></label>
+                            <div class="input-wrapper">
+                                <span class="input-icon"><i class="fas fa-user"></i></span>
+                                <input type="text" id="middle_name" name="middle_name" placeholder="Middle name" autocomplete="additional-name" aria-describedby="middleNameError">
+                            </div>
+                            <div class="error-message" id="middleNameError" role="alert"></div>
+                        </div>
+
+                        <div class="input-field col-3">
+                            <label for="last_name">Last Name <span class="req-star">*</span></label>
+                            <div class="input-wrapper">
+                                <span class="input-icon"><i class="fas fa-user"></i></span>
+                                <input type="text" id="last_name" name="last_name" placeholder="Last name" autocomplete="family-name" required aria-describedby="lastNameError">
+                            </div>
+                            <div class="error-message" id="lastNameError" role="alert"></div>
+                        </div>
+
+                        <div class="input-field col-2">
+                            <label for="suffix">Suffix <span class="label-hint">(opt)</span></label>
+                            <div class="input-wrapper">
+                                <span class="input-icon"><i class="fas fa-user-tag"></i></span>
+                                <input type="text" id="suffix" name="suffix" placeholder="Jr/Sr" autocomplete="honorific-suffix" aria-describedby="suffixError">
+                            </div>
+                            <div class="error-message" id="suffixError" role="alert"></div>
+                        </div>
+
+                        <!-- Account & Contact (Row 2) -->
+                        <div class="input-field col-5">
+                            <label for="email">Email Address <span class="req-star">*</span></label>
                             <div class="input-wrapper">
                                 <span class="input-icon"><i class="fas fa-envelope"></i></span>
-                                <input type="email" id="email" name="email" placeholder="Enter email address" autocomplete="email" required aria-describedby="emailError">
+                                <input type="email" id="email" name="email" placeholder="Enter email" autocomplete="email" required aria-describedby="emailError">
                             </div>
                             <div class="error-message" id="emailError" role="alert"></div>
                         </div>
 
-                        <!-- Username -->
-                        <div class="input-field">
+                        <div class="input-field col-4">
                             <label for="username">Username <span class="label-hint">(optional)</span></label>
                             <div class="input-wrapper">
                                 <span class="input-icon"><i class="fas fa-user-circle"></i></span>
-                                <input type="text" id="username" name="username" placeholder="Choose a username" autocomplete="username" aria-describedby="usernameError">
+                                <input type="text" id="username" name="username" placeholder="Choose username" autocomplete="username" aria-describedby="usernameError">
                             </div>
                             <div class="error-message" id="usernameError" role="alert"></div>
                         </div>
 
-                        <!-- Contact Number -->
-                        <div class="input-field">
-                            <label for="contact_number">Contact Number <span class="label-hint">(11 digits)</span></label>
+                        <div class="input-field col-3">
+                            <label for="contact_number">Contact No. <span class="label-hint">(11 digits)</span></label>
                             <div class="input-wrapper">
                                 <span class="input-icon"><i class="fas fa-phone"></i></span>
                                 <input type="tel" id="contact_number" name="contact_number" placeholder="09171234567" maxlength="11" inputmode="numeric" autocomplete="tel" aria-describedby="contactError">
@@ -137,22 +162,89 @@
                             <div class="error-message" id="contactError" role="alert"></div>
                         </div>
 
-                        <!-- Address -->
-                        <div class="input-field input-field--full">
-                            <label for="address">Address <span class="label-hint">(optional)</span></label>
+                        <!-- Location Section Tag -->
+                        <div class="col-12 location-section-divider">
+                            <span class="location-section-title"><i class="fas fa-map-location-dot"></i> Location &amp; Address</span>
+                            <span class="location-section-line"></span>
+                        </div>
+
+                        <!-- Region, Province, City (Row 3) -->
+                        <div class="input-field col-4">
+                            <label for="reg_region">Region</label>
                             <div class="input-wrapper">
-                                <span class="input-icon"><i class="fas fa-map-marker-alt"></i></span>
-                                <input type="text" id="address" name="address" placeholder="Enter address (min. 5 chars if provided)" autocomplete="street-address" aria-describedby="addressError">
+                                <span class="input-icon"><i class="fas fa-globe-asia"></i></span>
+                                <select id="reg_region" name="region" aria-describedby="regionError">
+                                    <option value="">-- Select Region --</option>
+                                </select>
                             </div>
+                            <div class="error-message" id="regionError" role="alert"></div>
+                        </div>
+
+                        <div class="input-field col-4">
+                            <label for="reg_province">Province</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon"><i class="fas fa-mountain"></i></span>
+                                <select id="reg_province" name="province" disabled aria-describedby="provinceError">
+                                    <option value="">-- Select Province --</option>
+                                </select>
+                            </div>
+                            <div class="error-message" id="provinceError" role="alert"></div>
+                        </div>
+
+                        <div class="input-field col-4">
+                            <label for="reg_city">City / Municipality</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon"><i class="fas fa-city"></i></span>
+                                <select id="reg_city" name="city" disabled aria-describedby="cityError">
+                                    <option value="">-- Select City --</option>
+                                </select>
+                            </div>
+                            <div class="error-message" id="cityError" role="alert"></div>
+                        </div>
+
+                        <!-- District, Barangay, Street (Row 4) -->
+                        <div class="input-field col-4">
+                            <label for="reg_district">District</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon"><i class="fas fa-landmark"></i></span>
+                                <select id="reg_district" name="district" disabled aria-describedby="districtError">
+                                    <option value="">-- Select District --</option>
+                                </select>
+                            </div>
+                            <div class="error-message" id="districtError" role="alert"></div>
+                        </div>
+
+                        <div class="input-field col-4">
+                            <label for="reg_barangay">Barangay</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon"><i class="fas fa-map-pin"></i></span>
+                                <select id="reg_barangay" name="barangay" disabled aria-describedby="barangayError">
+                                    <option value="">-- Select Barangay --</option>
+                                </select>
+                            </div>
+                            <div class="error-message" id="barangayError" role="alert"></div>
+                        </div>
+
+                        <div class="input-field col-4">
+                            <label for="reg_street">Street / House No. <span class="label-hint">(opt)</span></label>
+                            <div class="input-wrapper">
+                                <span class="input-icon"><i class="fas fa-road"></i></span>
+                                <input type="text" id="reg_street" name="street" placeholder="e.g. 123 Rizal St." autocomplete="street-address">
+                            </div>
+                        </div>
+
+                        <!-- Hidden combined address for API compatibility -->
+                        <input type="hidden" id="address" name="address">
+                        <div class="col-12" id="addressErrorWrapper">
                             <div class="error-message" id="addressError" role="alert"></div>
                         </div>
 
-                        <!-- Password -->
-                        <div class="input-field">
-                            <label for="password">Password</label>
+                        <!-- Passwords (Row 5) -->
+                        <div class="input-field col-6">
+                            <label for="password">Password <span class="req-star">*</span></label>
                             <div class="input-wrapper">
                                 <span class="input-icon"><i class="fas fa-lock"></i></span>
-                                <input type="password" id="password" name="new-password" placeholder="Create a password" autocomplete="new-password" required aria-describedby="passwordError">
+                                <input type="password" id="password" name="new-password" placeholder="Create password" autocomplete="new-password" required aria-describedby="passwordError">
                                 <button type="button" class="toggle-password" data-target="password" onclick="togglePassword('password')" aria-label="Show password">
                                     <i class="fas fa-eye"></i>
                                 </button>
@@ -160,12 +252,11 @@
                             <div class="error-message" id="passwordError" role="alert"></div>
                         </div>
 
-                        <!-- Confirm Password -->
-                        <div class="input-field">
-                            <label for="confirm_password">Confirm Password</label>
+                        <div class="input-field col-6">
+                            <label for="confirm_password">Confirm Password <span class="req-star">*</span></label>
                             <div class="input-wrapper">
                                 <span class="input-icon"><i class="fas fa-shield-alt"></i></span>
-                                <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm your password" autocomplete="new-password" required aria-describedby="confirmError">
+                                <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm password" autocomplete="new-password" required aria-describedby="confirmError">
                                 <button type="button" class="toggle-password" data-target="confirm_password" onclick="togglePassword('confirm_password')" aria-label="Show password">
                                     <i class="fas fa-eye"></i>
                                 </button>
@@ -173,8 +264,8 @@
                             <div class="error-message" id="confirmError" role="alert"></div>
                         </div>
 
-                        <!-- Password Checklist (spans both columns, hidden until typing) -->
-                        <div class="password-checklist input-field--full" id="passwordChecklist" style="display: none;">
+                        <!-- Password Checklist (spans full width, hidden until typing) -->
+                        <div class="password-checklist col-12" id="passwordChecklist" style="display: none;">
                             <div class="password-checklist__title">Password requirements:</div>
                             <div class="password-checklist__grid">
                                 <div id="ruleLength" class="checklist-item"><i class="fas fa-circle-xmark"></i> At least 8 characters</div>
@@ -208,6 +299,7 @@
 
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/shared/button-loading.js"></script>
+    <script src="../../assets/js/shared/philippine-locations.js"></script>
     <script src="../../assets/js/auth/register.js"></script>
     <script>
         function togglePassword(fieldId) {

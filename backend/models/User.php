@@ -87,14 +87,56 @@ class User {
         $tokenHash = $data['verification_token_hash'] ?? null;
         $tokenExpiresAt = $data['verification_token_expires_at'] ?? null;
 
-        $stmt = $this->db->prepare("INSERT INTO users (username, password_hash, full_name, email, contact_number, address, role_id, is_active, email_verified, email_verified_at, verification_token_hash, verification_token_expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)");
+        $firstName = trim((string) ($data['first_name'] ?? ''));
+        $middleName = trim((string) ($data['middle_name'] ?? ''));
+        $lastName = trim((string) ($data['last_name'] ?? ''));
+        $suffix = trim((string) ($data['suffix'] ?? ''));
+
+        if ($firstName !== '' || $lastName !== '') {
+            $assembledFullName = $firstName;
+            if ($middleName !== '') {
+                $assembledFullName .= ' ' . $middleName;
+            }
+            if ($lastName !== '') {
+                $assembledFullName .= ' ' . $lastName;
+            }
+            if ($suffix !== '') {
+                $assembledFullName .= ' ' . $suffix;
+            }
+            $fullName = $assembledFullName;
+        } else {
+            $fullName = trim((string) ($data['full_name'] ?? ''));
+            require_once __DIR__ . '/../controllers/DecedentRequestController.php';
+            $parsed = DecedentRequestController::parseFullName($fullName);
+            $firstName = $parsed['first_name'];
+            $middleName = $parsed['middle_name'];
+            $lastName = $parsed['last_name'];
+            $suffix = $parsed['suffix'];
+        }
+
+        $region = $data['region'] ?? null;
+        $province = $data['province'] ?? null;
+        $city = $data['city'] ?? null;
+        $district = $data['district'] ?? null;
+        $barangay = $data['barangay'] ?? null;
+
+        $stmt = $this->db->prepare("INSERT INTO users (username, password_hash, full_name, first_name, middle_name, last_name, suffix, email, contact_number, address, region, province, city, district, barangay, role_id, is_active, email_verified, email_verified_at, verification_token_hash, verification_token_expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)");
         return $stmt->execute([
             $username,
             password_hash($data['password'], PASSWORD_BCRYPT),
-            $data['full_name'],
+            $fullName,
+            $firstName ?: null,
+            $middleName ?: null,
+            $lastName ?: null,
+            $suffix ?: null,
             $data['email'],
             $data['contact_number'] ?? null,
             $data['address'] ?? null,
+            $region,
+            $province,
+            $city,
+            $district,
+            $barangay,
             $roleId,
             $emailVerified,
             $emailVerifiedAt,
@@ -294,6 +336,36 @@ class User {
             $fields[] = 'full_name = ?';
             $params[] = $data['full_name'];
         }
+        if (array_key_exists('first_name', $data)) {
+            $fields[] = 'first_name = ?';
+            $params[] = $data['first_name'] !== '' ? $data['first_name'] : null;
+        }
+        if (array_key_exists('middle_name', $data)) {
+            $fields[] = 'middle_name = ?';
+            $params[] = $data['middle_name'] !== '' ? $data['middle_name'] : null;
+        }
+        if (array_key_exists('last_name', $data)) {
+            $fields[] = 'last_name = ?';
+            $params[] = $data['last_name'] !== '' ? $data['last_name'] : null;
+        }
+        if (array_key_exists('suffix', $data)) {
+            $fields[] = 'suffix = ?';
+            $params[] = $data['suffix'] !== '' ? $data['suffix'] : null;
+        }
+
+        // Auto-recalculate full_name if individual name components are updated without explicit full_name
+        if ((isset($data['first_name']) || isset($data['last_name'])) && empty($data['full_name'])) {
+            $fn = $data['first_name'] ?? '';
+            $mn = $data['middle_name'] ?? '';
+            $ln = $data['last_name'] ?? '';
+            $suf = $data['suffix'] ?? '';
+            $assembled = trim("$fn " . ($mn ? "$mn " : '') . "$ln" . ($suf ? " $suf" : ''));
+            if ($assembled !== '') {
+                $fields[] = 'full_name = ?';
+                $params[] = $assembled;
+            }
+        }
+
         if (!empty($data['email'])) {
             $fields[] = 'email = ?';
             $params[] = $data['email'];
@@ -305,6 +377,26 @@ class User {
         if (array_key_exists('address', $data)) {
             $fields[] = 'address = ?';
             $params[] = $data['address'];
+        }
+        if (array_key_exists('region', $data)) {
+            $fields[] = 'region = ?';
+            $params[] = $data['region'] !== '' ? $data['region'] : null;
+        }
+        if (array_key_exists('province', $data)) {
+            $fields[] = 'province = ?';
+            $params[] = $data['province'] !== '' ? $data['province'] : null;
+        }
+        if (array_key_exists('city', $data)) {
+            $fields[] = 'city = ?';
+            $params[] = $data['city'] !== '' ? $data['city'] : null;
+        }
+        if (array_key_exists('district', $data)) {
+            $fields[] = 'district = ?';
+            $params[] = $data['district'] !== '' ? $data['district'] : null;
+        }
+        if (array_key_exists('barangay', $data)) {
+            $fields[] = 'barangay = ?';
+            $params[] = $data['barangay'] !== '' ? $data['barangay'] : null;
         }
         if (isset($data['role_id'])) {
             $fields[] = 'role_id = ?';

@@ -42,6 +42,59 @@ class UserController {
     }
 
     public function store($data, $actor = null) {
+        $firstName = trim((string) ($data['first_name'] ?? ''));
+        $middleName = trim((string) ($data['middle_name'] ?? ''));
+        $lastName = trim((string) ($data['last_name'] ?? ''));
+        $suffix = trim((string) ($data['suffix'] ?? ''));
+
+        if ($firstName !== '' || $lastName !== '') {
+            if ($firstName === '') {
+                return ['error' => 'First name is required', 'code' => 400];
+            }
+            if ($lastName === '') {
+                return ['error' => 'Last name is required', 'code' => 400];
+            }
+            $assembledFullName = $firstName;
+            if ($middleName !== '') {
+                $assembledFullName .= ' ' . $middleName;
+            }
+            if ($lastName !== '') {
+                $assembledFullName .= ' ' . $lastName;
+            }
+            if ($suffix !== '') {
+                $assembledFullName .= ' ' . $suffix;
+            }
+            $data['full_name'] = $assembledFullName;
+        }
+
+        if (array_key_exists('region', $data) || array_key_exists('province', $data) || array_key_exists('city', $data) || array_key_exists('district', $data) || array_key_exists('barangay', $data)) {
+            $region = trim((string) ($data['region'] ?? ''));
+            $province = trim((string) ($data['province'] ?? ''));
+            $city = trim((string) ($data['city'] ?? ''));
+            $district = trim((string) ($data['district'] ?? ''));
+            $barangay = trim((string) ($data['barangay'] ?? ''));
+
+            if ($province && !$region) {
+                return ['error' => 'Region is required when Province is selected', 'code' => 400];
+            }
+            if ($city && (!$province || !$region)) {
+                return ['error' => 'Region and Province are required when City is selected', 'code' => 400];
+            }
+            if ($district && !$city) {
+                return ['error' => 'City is required when District is selected', 'code' => 400];
+            }
+            if ($barangay && !$city) {
+                return ['error' => 'City is required when Barangay is selected', 'code' => 400];
+            }
+        }
+
+        if (isset($data['address'])) {
+            $addr = trim((string) $data['address']);
+            if ($addr !== '' && strlen($addr) < 5) {
+                return ['error' => 'Address must be at least 5 characters long', 'code' => 400];
+            }
+        }
+
         $required = ['username', 'password', 'full_name', 'email', 'role_id'];
         foreach ($required as $field) {
             if (empty($data[$field]) && $data[$field] !== '0') {
@@ -49,12 +102,6 @@ class UserController {
             }
         }
 
-        // User Management audit follow-up: this endpoint had none of the
-        // input validation AuthController::register() has (that gap is why
-        // it was previously possible for a nonexistent role_id, a malformed
-        // email, or a 1-character password to reach the database
-        // unguarded) — added here to match, since this is now the one
-        // place admin/staff accounts actually get created.
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
             return ['error' => 'A valid email address is required', 'code' => 400];
         }
@@ -179,11 +226,68 @@ class UserController {
             $data['password_hash'] = password_hash($data['password'], PASSWORD_BCRYPT);
         }
 
+        if (isset($data['first_name']) || isset($data['last_name'])) {
+            $firstName = trim((string) ($data['first_name'] ?? $existing['first_name'] ?? ''));
+            $middleName = trim((string) ($data['middle_name'] ?? $existing['middle_name'] ?? ''));
+            $lastName = trim((string) ($data['last_name'] ?? $existing['last_name'] ?? ''));
+            $suffix = trim((string) ($data['suffix'] ?? $existing['suffix'] ?? ''));
+
+            if ($firstName === '') {
+                return ['error' => 'First name cannot be empty', 'code' => 400];
+            }
+            if ($lastName === '') {
+                return ['error' => 'Last name cannot be empty', 'code' => 400];
+            }
+            $assembledFullName = $firstName;
+            if ($middleName !== '') {
+                $assembledFullName .= ' ' . $middleName;
+            }
+            if ($lastName !== '') {
+                $assembledFullName .= ' ' . $lastName;
+            }
+            if ($suffix !== '') {
+                $assembledFullName .= ' ' . $suffix;
+            }
+            $data['full_name'] = $assembledFullName;
+            $data['first_name'] = $firstName;
+            $data['middle_name'] = $middleName ?: null;
+            $data['last_name'] = $lastName;
+            $data['suffix'] = $suffix ?: null;
+        }
+
+        if (array_key_exists('region', $data) || array_key_exists('province', $data) || array_key_exists('city', $data) || array_key_exists('district', $data) || array_key_exists('barangay', $data)) {
+            $region = array_key_exists('region', $data) ? trim((string) ($data['region'] ?? '')) : ($existing['region'] ?? null);
+            $province = array_key_exists('province', $data) ? trim((string) ($data['province'] ?? '')) : ($existing['province'] ?? null);
+            $city = array_key_exists('city', $data) ? trim((string) ($data['city'] ?? '')) : ($existing['city'] ?? null);
+            $district = array_key_exists('district', $data) ? trim((string) ($data['district'] ?? '')) : ($existing['district'] ?? null);
+            $barangay = array_key_exists('barangay', $data) ? trim((string) ($data['barangay'] ?? '')) : ($existing['barangay'] ?? null);
+
+            if ($province && !$region) {
+                return ['error' => 'Region is required when Province is selected', 'code' => 400];
+            }
+            if ($city && (!$province || !$region)) {
+                return ['error' => 'Region and Province are required when City is selected', 'code' => 400];
+            }
+            if ($district && !$city) {
+                return ['error' => 'City is required when District is selected', 'code' => 400];
+            }
+            if ($barangay && !$city) {
+                return ['error' => 'City is required when Barangay is selected', 'code' => 400];
+            }
+        }
+
+        if (isset($data['address'])) {
+            $addr = trim((string) $data['address']);
+            if ($addr !== '' && strlen($addr) < 5) {
+                return ['error' => 'Address must be at least 5 characters long', 'code' => 400];
+            }
+        }
+
         $changes = [];
-        $compareFields = ['username', 'full_name', 'email', 'contact_number', 'address', 'role_id', 'is_active'];
+        $compareFields = ['username', 'full_name', 'first_name', 'middle_name', 'last_name', 'suffix', 'email', 'contact_number', 'address', 'region', 'province', 'city', 'district', 'barangay', 'role_id', 'is_active'];
         foreach ($compareFields as $field) {
             if (array_key_exists($field, $data) && $data[$field] != $existing[$field]) {
-                $changes[$field] = ['from' => $existing[$field], 'to' => $data[$field]];
+                $changes[$field] = ['from' => $existing[$field] ?? null, 'to' => $data[$field]];
             }
         }
 
@@ -392,9 +496,18 @@ class UserController {
             'user_id' => $user['user_id'],
             'username' => $user['username'],
             'full_name' => $user['full_name'],
+            'first_name' => $user['first_name'] ?? null,
+            'middle_name' => $user['middle_name'] ?? null,
+            'last_name' => $user['last_name'] ?? null,
+            'suffix' => $user['suffix'] ?? null,
             'email' => $user['email'],
             'contact_number' => $user['contact_number'] ?? null,
             'address' => $user['address'] ?? null,
+            'region' => $user['region'] ?? null,
+            'province' => $user['province'] ?? null,
+            'city' => $user['city'] ?? null,
+            'district' => $user['district'] ?? null,
+            'barangay' => $user['barangay'] ?? null,
             'role_id' => (int) $user['role_id'],
             'role' => $role,
             'role_title' => $roleTitle,

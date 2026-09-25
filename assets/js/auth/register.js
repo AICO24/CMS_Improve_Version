@@ -171,9 +171,34 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Initialize Philippine Locations Cascading Controller
+    let locationController = null;
+    const regionSelect = document.getElementById('reg_region');
+    const provinceSelect = document.getElementById('reg_province');
+    const citySelect = document.getElementById('reg_city');
+    const districtSelect = document.getElementById('reg_district');
+    const barangaySelect = document.getElementById('reg_barangay');
+    const streetInput = document.getElementById('reg_street');
+    const addressInput = document.getElementById('address');
+
+    if (window.PhilippineLocations && typeof window.PhilippineLocations.initHierarchy === 'function' && regionSelect) {
+        locationController = window.PhilippineLocations.initHierarchy({
+            regionSelect: regionSelect,
+            provinceSelect: provinceSelect,
+            citySelect: citySelect,
+            districtSelect: districtSelect,
+            barangaySelect: barangaySelect,
+            streetInput: streetInput,
+            combinedAddressInput: addressInput
+        });
+    }
+
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
-        const fullName = document.getElementById('full_name').value.trim();
+        const firstName = (document.getElementById('first_name')?.value || '').trim();
+        const middleName = (document.getElementById('middle_name')?.value || '').trim();
+        const lastName = (document.getElementById('last_name')?.value || '').trim();
+        const suffix = (document.getElementById('suffix')?.value || '').trim();
         const email = document.getElementById('email').value.trim().toLowerCase();
         const username = document.getElementById('username').value.trim();
         const contact = document.getElementById('contact_number').value.trim();
@@ -186,10 +211,31 @@ document.addEventListener('DOMContentLoaded', function() {
         alertBox.classList.remove('show');
 
         let isValid = true;
-        if (fullName.length < 2 || fullName.length > 120) {
-            document.getElementById('fullNameError').textContent = 'Full name must be 2 to 120 characters';
+
+        // Name validation
+        if (!firstName || firstName.length < 2 || firstName.length > 60) {
+            const errEl = document.getElementById('firstNameError');
+            if (errEl) errEl.textContent = 'First name is required (2 to 60 characters)';
             isValid = false;
         }
+        if (middleName && middleName.length > 60) {
+            const errEl = document.getElementById('middleNameError');
+            if (errEl) errEl.textContent = 'Middle name must not exceed 60 characters';
+            isValid = false;
+        }
+        if (!lastName || lastName.length < 2 || lastName.length > 60) {
+            const errEl = document.getElementById('lastNameError');
+            if (errEl) errEl.textContent = 'Last name is required (2 to 60 characters)';
+            isValid = false;
+        }
+        if (suffix && suffix.length > 15) {
+            const errEl = document.getElementById('suffixError');
+            if (errEl) errEl.textContent = 'Suffix must not exceed 15 characters';
+            isValid = false;
+        }
+
+        const fullName = `${firstName} ${middleName ? middleName + ' ' : ''}${lastName}${suffix ? ' ' + suffix : ''}`.trim();
+
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             document.getElementById('emailError').textContent = 'Enter a valid email address';
             isValid = false;
@@ -243,12 +289,23 @@ document.addEventListener('DOMContentLoaded', function() {
             // Public self-registration is User-only; staff/admin accounts are
             // created by an administrator via User Management. Backend
             // assigns the User role automatically.
+            const locVals = locationController ? locationController.getValues() : {};
+
             const payload = {
+                first_name: firstName,
+                middle_name: middleName || null,
+                last_name: lastName,
+                suffix: suffix || null,
                 full_name: fullName,
                 email: email,
                 username: username || null,
                 contact_number: contact || null,
-                address: address || null,
+                region: locVals.region || null,
+                province: locVals.province || null,
+                city: locVals.city || null,
+                district: locVals.district || null,
+                barangay: locVals.barangay || null,
+                address: address || locVals.combinedAddress || null,
                 password: password,
                 confirm_password: confirm,
             };

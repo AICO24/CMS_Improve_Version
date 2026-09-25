@@ -35,6 +35,43 @@ document.addEventListener('DOMContentLoaded', async function() {
         setText('profileEmail', user.email || '—');
         setText('profileRole', roleLabel);
 
+        const fn = user.first_name || '';
+        const mn = user.middle_name || '';
+        const ln = user.last_name || '';
+        const suf = user.suffix || '';
+        let firstNameDisplay = fn;
+        let middleNameDisplay = mn;
+        let lastNameDisplay = ln;
+        let suffixDisplay = suf;
+        if (!fn && !ln && user.full_name) {
+            const parts = user.full_name.trim().split(/\s+/);
+            if (parts.length === 1) {
+                firstNameDisplay = parts[0];
+            } else if (parts.length === 2) {
+                firstNameDisplay = parts[0];
+                lastNameDisplay = parts[1];
+            } else {
+                firstNameDisplay = parts.slice(0, -1).join(' ');
+                lastNameDisplay = parts[parts.length - 1];
+            }
+        }
+
+        setText('profileFirstName', firstNameDisplay || '—');
+        setText('profileMiddleName', middleNameDisplay || '—');
+        setText('profileLastName', lastNameDisplay || '—');
+        setText('profileSuffix', suffixDisplay || '—');
+        setText('profileContact', user.contact_number || '—');
+        setText('profileAddress', user.address || '—');
+
+        const locParts = [
+            user.region,
+            user.province,
+            user.city,
+            user.district,
+            user.barangay ? `Brgy. ${user.barangay}` : ''
+        ].filter(Boolean);
+        setText('profileLocationHierarchy', locParts.length ? locParts.join(' → ') : '—');
+
         const dateEl = document.getElementById('welcomeCurrentDate');
         if (dateEl) {
             const today = new Date();
