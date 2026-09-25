@@ -31,7 +31,8 @@ try {
         $originHost = parse_url($requestOrigin, PHP_URL_HOST);
         $serverHost = parse_url('http://' . $currentHost, PHP_URL_HOST);
         $isInfinityFreeDomain = (bool) preg_match('/(infinityfreeapp\.com|epizy\.com|rf\.gd|42web\.io|great-site\.net)$/i', (string) $originHost);
-        if ($originHost === $serverHost || in_array($requestOrigin, $allowedOrigins, true) || $isInfinityFreeDomain || $originHost === 'localhost' || $originHost === '127.0.0.1') {
+        $isNgrokDomain = (bool) preg_match('/(ngrok-free\.dev|ngrok-free\.app|ngrok\.io)$/i', (string) $originHost);
+        if ($originHost === $serverHost || in_array($requestOrigin, $allowedOrigins, true) || $isInfinityFreeDomain || $isNgrokDomain || $originHost === 'localhost' || $originHost === '127.0.0.1') {
             header('Access-Control-Allow-Origin: ' . $requestOrigin);
             header('Access-Control-Allow-Credentials: true');
         }
