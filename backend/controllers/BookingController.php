@@ -106,6 +106,10 @@ class BookingController {
             'payment_id'             => !empty($s['payment_id']) ? (int) $s['payment_id'] : null,
             'notes'                  => $s['notes'] ?? null,
             'has_exception'          => ($s['status'] ?? '') === 'Pending' && !empty($exceptionIds[$schedId]),
+            'documents'              => $s['documents'] ?? [],
+            'document_summary'       => $s['document_summary'] ?? null,
+            'document_status'        => $s['document_summary']['status'] ?? 'pending_physical',
+            'document_count'         => $s['document_summary']['uploaded_count'] ?? 0,
             'created_at'             => $s['created_at'] ?? null,
             'updated_at'             => $s['updated_at'] ?? null,
             'raw'                    => $s,
@@ -154,6 +158,10 @@ class BookingController {
             'payment_id'             => !empty($c['payment_id']) ? (int) $c['payment_id'] : null,
             'notes'                  => $c['notes'] ?? null,
             'has_exception'          => ($c['status'] ?? '') === 'Pending' && !empty($exceptionIds[$cremId]),
+            'documents'              => $c['documents'] ?? [],
+            'document_summary'       => $c['document_summary'] ?? null,
+            'document_status'        => $c['document_summary']['status'] ?? 'pending_physical',
+            'document_count'         => $c['document_summary']['uploaded_count'] ?? 0,
             'created_at'             => $c['created_at'] ?? null,
             'updated_at'             => $c['updated_at'] ?? null,
             'raw'                    => $c,
@@ -394,6 +402,19 @@ class BookingController {
         }
 
         return ['error' => "Invalid service type '{$service}'. Must be 'burial' or 'cremation'", 'code' => 400];
+    }
+
+    /**
+     * POST /api/bookings/{service}/{id}/documents
+     * Attach an official requirement document (Death Certificate, Permit, Valid ID) directly to a booking.
+     */
+    public function uploadDocument(string $service, int $id, ?array $file, string $docType, $user): array {
+        if (!$file) {
+            return ['error' => 'No valid document file was uploaded', 'code' => 400];
+        }
+        require_once __DIR__ . '/../services/BookingDocumentService.php';
+        $docService = new BookingDocumentService();
+        return $docService->uploadBookingDocument($service, $id, $file, $docType, $user);
     }
 
     /**

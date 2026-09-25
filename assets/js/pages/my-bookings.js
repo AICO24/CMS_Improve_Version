@@ -569,6 +569,73 @@
                         </div>
                     </div>
 
+                    <!-- Documentary Requirements Block (Batch 7) -->
+                    ${(() => {
+                        const docSummary = record.document_summary || {
+                            uploaded_count: 0,
+                            total_required: 3,
+                            all_uploaded: false,
+                            status: 'pending_physical',
+                            status_label: 'Pending Physical Presentation',
+                            badge_class: 'pending',
+                            workflow_guidance: 'Original physical certificates must be presented at the cemetery office prior to burial or cremation service authorization.'
+                        };
+                        const docItems = (Array.isArray(record.documents) && record.documents.length > 0) ? record.documents : [
+                            { doc_type: 'death_certificate', title: 'Death Certificate', description: 'PSA or Local Civil Registrar Certified True Copy', is_uploaded: false },
+                            { doc_type: 'burial_permit', title: serviceType === 'cremation' ? 'Cremation Permit' : 'Burial Permit', description: 'City Health Office / LGU Permit', is_uploaded: false },
+                            { doc_type: 'valid_id', title: 'Valid Government ID', description: 'Valid Government-issued ID of Informant / Claimant', is_uploaded: false }
+                        ];
+
+                        let docBadgeColor = '#64748b';
+                        let docBadgeBg = '#f1f5f9';
+                        if (docSummary.all_uploaded || docSummary.status === 'complete') {
+                            docBadgeColor = '#166534';
+                            docBadgeBg = '#dcfce7';
+                        } else if (docSummary.uploaded_count > 0 || docSummary.status === 'partial') {
+                            docBadgeColor = '#92400e';
+                            docBadgeBg = '#fef3c7';
+                        }
+
+                        return `
+                            <div style="background:var(--color-surface-soft);padding:14px 16px;border-radius:var(--radius-md);border:1px solid var(--color-border);">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+                                    <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--color-text-muted);">
+                                        <i class="fas fa-file-shield"></i> Documentary Requirements
+                                    </div>
+                                    <span style="display:inline-block;padding:3px 10px;border-radius:var(--radius-sm);font-size:0.78rem;font-weight:700;background:${docBadgeBg};color:${docBadgeColor};">
+                                        ${escapeHtml(docSummary.status_label)}
+                                    </span>
+                                </div>
+                                <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;">
+                                    ${docItems.map(d => {
+                                        const isUploaded = Boolean(d.is_uploaded);
+                                        return `
+                                            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:6px;background:${isUploaded ? '#f0fdf4' : '#fafaf9'};border:1px solid ${isUploaded ? '#bbf7d0' : '#e2e8f0'};font-size:0.83rem;">
+                                                <div>
+                                                    <strong style="color:var(--color-text);">${escapeHtml(d.title)}</strong>
+                                                    <small style="display:block;color:var(--color-text-muted);font-size:0.72rem;">${escapeHtml(d.description || '')}</small>
+                                                </div>
+                                                <div style="text-align:right;">
+                                                    <span style="display:inline-flex;align-items:center;gap:3px;font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:4px;background:${isUploaded ? '#dcfce7' : '#fef3c7'};color:${isUploaded ? '#166534' : '#92400e'};">
+                                                        <i class="fas ${isUploaded ? 'fa-check' : 'fa-hourglass-start'}"></i> ${isUploaded ? 'Uploaded Online' : 'Bring to Office'}
+                                                    </span>
+                                                    ${isUploaded && d.file_url ? `
+                                                        <a href="${escapeHtml(d.file_url)}" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:2px;font-size:0.72rem;color:#0284c7;text-decoration:none;">
+                                                            <i class="fas fa-arrow-up-right-from-square"></i> View File
+                                                        </a>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                                <div style="margin-top:8px;font-size:0.78rem;color:var(--color-text-muted);line-height:1.35;">
+                                    <i class="fas fa-circle-info"></i> ${escapeHtml(docSummary.workflow_guidance)}
+                                </div>
+                            </div>
+                        `;
+                    })()}
+
                     <div>
                         <label style="font-size:0.75rem;color:var(--color-text-muted);font-weight:600;display:block;margin-bottom:2px;">Notes &amp; Special Instructions</label>
                         <p style="font-size:0.85rem;color:var(--color-text-muted);margin:4px 0 0 0;">${escapeHtml(notes)}</p>

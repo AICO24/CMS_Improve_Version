@@ -124,6 +124,13 @@ class ScheduleController {
             return ['error' => 'You may only view your own reservations', 'code' => 403];
         }
 
+        // Batch 7: Resolve canonical document requirements (death_certificate, burial_permit, valid_id)
+        require_once __DIR__ . '/../services/BookingDocumentService.php';
+        $docService = new BookingDocumentService();
+        $docData = $docService->resolveDocuments('burial', (int) $id, $schedule);
+        $schedule['documents'] = $docData['documents'];
+        $schedule['document_summary'] = $docData['summary'];
+
         return $schedule;
     }
 

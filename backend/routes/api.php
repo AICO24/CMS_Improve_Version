@@ -2241,6 +2241,18 @@ if (preg_match('/^bookings\/(burial|cremation)\/(\d+)$/', $path, $matches) && $r
     exit;
 }
 
+if (preg_match('/^bookings\/(burial|cremation)\/(\d+)\/documents$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $input = readRequestBody();
+    $file = $input['files']['document_file'] ?? null;
+    $docType = $input['document_type'] ?? '';
+    $result = $bookingController->uploadDocument($matches[1], (int) $matches[2], $file, $docType, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 if (preg_match('/^bookings\/(burial|cremation)\/(\d+)$/', $path, $matches) && in_array($requestMethod, ['POST', 'PUT'], true)) {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $input = readRequestBody();

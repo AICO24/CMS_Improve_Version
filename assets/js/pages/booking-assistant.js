@@ -1549,6 +1549,18 @@
                 confirmModalDocsBadge.style.color = '#64748b';
                 confirmModalDocsBadge.style.background = '#f1f5f9';
             }
+
+            // Dynamic explanation of document submission & hybrid policy (Batch 7)
+            const warningTextEl = document.getElementById('bookingConfirmWarningText');
+            if (warningTextEl) {
+                if (count === 3) {
+                    warningTextEl.textContent = 'All 3 documentary requirements are attached online. Cemetery administration will verify document authenticity prior to service execution.';
+                } else if (count > 0) {
+                    warningTextEl.textContent = `You have uploaded ${count} of 3 required documents. Per municipal cemetery policy, you may finalize your booking now and present the remaining original physical certificates (Death Certificate / Permit) at the cemetery office prior to the service.`;
+                } else {
+                    warningTextEl.textContent = 'No documents uploaded online yet. You may finalize your reservation now to lock your preferred date and lot; please present physical copies of your PSA/LCR Death Certificate and Permit at the office for verification.';
+                }
+            }
         }
 
         if (btnSubmitBookingConfirm) {
@@ -1745,6 +1757,17 @@
                         <span class="voucher-item-label">${isCremation ? 'Columbarium' : 'Burial Lot'}</span>
                         <strong class="voucher-item-val">${isCremation ? (escapeHtml(state.extractedData.preferred_columbarium || 'Assigned on arrival')) : (state.selectedLotDetails ? `Lot ${escapeHtml(state.selectedLotDetails.lot_number)} (${escapeHtml(state.selectedLotDetails.section_name)})` : `Lot #${state.extractedData.lot_id}`)}</strong>
                     </div>
+                </div>
+                <!-- Documentary Requirements Status Notice (Batch 7) -->
+                <div style="margin: 10px 14px; padding: 9px 12px; background: #f8fafc; border-radius: 6px; font-size: 0.78rem; border-left: 3px solid #10b981; color: #334155; line-height: 1.35;">
+                    ${(() => {
+                        const docs = state.extractedData.documents || {};
+                        const docCount = [docs.death_certificate, docs.burial_permit, docs.valid_id].filter(Boolean).length;
+                        if (docCount === 3) {
+                            return '<i class="fas fa-file-circle-check" style="color:#059669; margin-right:4px;"></i><strong>Documents Complete:</strong> All 3 required documents are on file. Cemetery staff will verify before final authorization.';
+                        }
+                        return '<i class="fas fa-file-circle-exclamation" style="color:#d97706; margin-right:4px;"></i><strong>Document Notice:</strong> ' + (docCount > 0 ? `${docCount} of 3 documents uploaded online.` : 'Physical documents pending.') + ' Please present original PSA/LCR Death Certificate and Permit at the cemetery administration office.';
+                    })()}
                 </div>
                 <div class="voucher-action-footer">
                     <span class="voucher-footer-note">
@@ -2124,6 +2147,26 @@
 
     async function uploadDocFile(docType, file, key) {
         if (!state.draftId) return;
+
+        // Batch 7: Client-side validation with clear, explanatory feedback
+        const MAX_BYTES = 10 * 1024 * 1024; // 10MB limit
+        if (file.size > MAX_BYTES) {
+            const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+            const errMsg = `Ang file (${sizeMb}MB) ay lumampas sa 10MB limit. Pakibawasan ang laki o mag-upload ng mas maliit na kopya.`;
+            if (typeof showToast === 'function') showToast(errMsg, 'error');
+            appendAssistantMessage(`⚠️ Hindi na-upload: ${errMsg}`);
+            return;
+        }
+
+        const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!allowedExtensions.includes(ext)) {
+            const errMsg = `Hindi suportadong file format (.${ext}). Tanging PDF, JPG, at PNG lamang ang tinatanggap para sa dokumento.`;
+            if (typeof showToast === 'function') showToast(errMsg, 'error');
+            appendAssistantMessage(`⚠️ Hindi na-upload: ${errMsg}`);
+            return;
+        }
+
         const btnUpload = document.getElementById(`btnUpload${key}`);
         if (btnUpload) {
             btnUpload.disabled = true;

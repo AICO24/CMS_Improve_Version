@@ -116,6 +116,13 @@ class CremationController {
         if ($user && !in_array($userRole, ['admin', 'staff'], true) && (int) $record['created_by'] !== (int) $userId) {
             return ['error' => 'You may only view your own cremation requests', 'code' => 403];
         }
+        // Batch 7: Resolve canonical document requirements (death_certificate, burial_permit, valid_id)
+        require_once __DIR__ . '/../services/BookingDocumentService.php';
+        $docService = new BookingDocumentService();
+        $docData = $docService->resolveDocuments('cremation', (int) $id, $record);
+        $record['documents'] = $docData['documents'];
+        $record['document_summary'] = $docData['summary'];
+
         return $record;
     }
 

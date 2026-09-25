@@ -707,6 +707,32 @@ document.addEventListener('DOMContentLoaded', async function() {
         const contactPhone = data.contact_number || (data.raw && (data.raw.contact_number || data.raw.phone || data.raw.created_by_phone)) || '';
         const relationship = data.relationship || (data.raw && data.raw.relationship) || 'Family / Next of Kin';
 
+        // Documentary Requirements calculation (Batch 7)
+        const docSummary = data.document_summary || {
+            uploaded_count: 0,
+            total_required: 3,
+            all_uploaded: false,
+            status: 'pending_physical',
+            status_label: 'Pending Physical Presentation',
+            badge_class: 'pending',
+            workflow_guidance: 'Original physical certificates must be presented at the cemetery office prior to burial or cremation service authorization.'
+        };
+        const docItems = (Array.isArray(data.documents) && data.documents.length > 0) ? data.documents : [
+            { doc_type: 'death_certificate', title: 'Death Certificate', description: 'PSA or Local Civil Registrar Certified True Copy', is_uploaded: false },
+            { doc_type: 'burial_permit', title: isBurial ? 'Burial Permit' : 'Cremation Permit', description: 'City Health Office / LGU Permit', is_uploaded: false },
+            { doc_type: 'valid_id', title: 'Valid Government ID', description: 'ID of Informant / Claimant', is_uploaded: false }
+        ];
+
+        function buildDocStatusBadge(summary) {
+            if (summary.all_uploaded || summary.status === 'complete') {
+                return '<span class="status-badge confirmed" title="All 3 required documents verified or uploaded"><i class="fas fa-file-circle-check"></i> Docs Complete (3/3)</span>';
+            }
+            if (summary.uploaded_count > 0 || summary.status === 'partial') {
+                return `<span class="status-badge pending" title="Some documents uploaded. Remaining required at office."><i class="fas fa-file-lines"></i> Docs Partial (${summary.uploaded_count}/3)</span>`;
+            }
+            return '<span class="status-badge" style="background:#f1f5f9;color:#64748b;" title="Physical original certificates required at office"><i class="fas fa-file-circle-exclamation"></i> Docs Pending (At Office)</span>';
+        }
+
         detailModalBody.innerHTML = `
             <!-- Simplified Executive Summary Banner -->
             <div class="view-summary-panel">
@@ -720,6 +746,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <div class="view-summary-badges">
                         ${buildStatusBadge(data.status)}
                         ${buildPaymentBadge({ payment_status: paymentStatusStr })}
+                        ${buildDocStatusBadge(docSummary)}
                     </div>
                 </div>
             </div>
@@ -778,6 +805,56 @@ document.addEventListener('DOMContentLoaded', async function() {
                 </div>
             </div>
 
+            <!-- Documentary Requirements & Verification Panel (Batch 7) -->
+            <div class="view-documents-panel">
+                <div class="view-documents-header">
+                    <span class="compact-group-title"><i class="fas fa-file-shield"></i> Documentary Requirements &amp; Verification</span>
+                    <span class="doc-summary-pill ${escapeHtml(docSummary.badge_class || 'pending')}">
+                        <i class="fas ${docSummary.all_uploaded ? 'fa-circle-check' : 'fa-clock'}"></i>
+                        ${escapeHtml(docSummary.status_label || 'Pending Physical Presentation')}
+                    </span>
+                </div>
+                <div class="doc-workflow-note">
+                    <i class="fas fa-circle-info"></i> ${escapeHtml(docSummary.workflow_guidance || '')}
+                </div>
+                <div class="doc-checklist-grid">
+                    ${docItems.map(doc => {
+                        const isUploaded = Boolean(doc.is_uploaded);
+                        const fileUrl = doc.file_url || (doc.file_path ? (doc.file_path.startsWith('/') ? doc.file_path : `/backend/${doc.file_path.replace(/^\.?\//, '')}`) : '');
+                        return `
+                            <div class="doc-item-card ${isUploaded ? 'is-uploaded' : 'is-pending'}">
+                                <div class="doc-item-head">
+                                    <div class="doc-item-title">
+                                        <i class="fas ${isUploaded ? 'fa-file-check text-success' : 'fa-file-lines text-muted'}"></i>
+                                        <span>${escapeHtml(doc.title)}</span>
+                                    </div>
+                                    <span class="doc-item-badge ${isUploaded ? 'doc-uploaded' : 'doc-pending'}">
+                                        <i class="fas ${isUploaded ? 'fa-check' : 'fa-hourglass-start'}"></i>
+                                        ${isUploaded ? 'Uploaded' : 'At Office'}
+                                    </span>
+                                </div>
+                                <div class="doc-item-desc">${escapeHtml(doc.description || '')}</div>
+                                <div class="doc-item-footer">
+                                    ${isUploaded && fileUrl ? `
+                                        <a href="${escapeHtml(fileUrl)}" target="_blank" rel="noopener noreferrer" class="btn-doc-view" title="${escapeHtml(doc.original_filename || 'View Document')}">
+                                            <i class="fas fa-arrow-up-right-from-square"></i> View File
+                                        </a>
+                                        <small style="color:#64748b; font-size:0.68rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:110px;" title="${escapeHtml(doc.original_filename || '')}">
+                                            ${escapeHtml(doc.original_filename || 'Attached')}
+                                        </small>
+                                    ` : `
+                                        <span style="font-size:0.68rem; color:#854d0e;"><i class="fas fa-building"></i> Physical Original</span>
+                                        <button type="button" class="btn-doc-upload staff-upload-trigger" data-doctype="${escapeHtml(doc.doc_type)}" data-booking-id="${id}" data-service="${serviceType}">
+                                            <i class="fas fa-upload"></i> Attach
+                                        </button>
+                                    `}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+
             ${data.notes ? `
             <div class="view-note-pill">
                 <i class="fas fa-circle-info"></i>
@@ -785,6 +862,72 @@ document.addEventListener('DOMContentLoaded', async function() {
             </div>
             ` : ''}
         `;
+
+        // Wire staff document upload buttons (Batch 7)
+        detailModalBody.querySelectorAll('.staff-upload-trigger').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const docType = btn.getAttribute('data-doctype');
+                const bookingId = btn.getAttribute('data-booking-id');
+                const sType = btn.getAttribute('data-service');
+
+                let fileInput = document.getElementById('staffDocUploadInput');
+                if (!fileInput) {
+                    fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.id = 'staffDocUploadInput';
+                    fileInput.accept = '.pdf,.jpg,.jpeg,.png';
+                    fileInput.style.display = 'none';
+                    document.body.appendChild(fileInput);
+                }
+
+                fileInput.onchange = async () => {
+                    const file = fileInput.files && fileInput.files[0];
+                    if (!file) return;
+
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('document_file', file);
+                        formData.append('document_type', docType);
+
+                        const token = api.getToken ? api.getToken() : localStorage.getItem('token');
+                        const appBase = window.getAppOrigin ? window.getAppOrigin() : (window.location.pathname.includes('/CMS') ? `${window.location.origin}/CMS` : window.location.origin);
+                        const resRaw = await fetch(`${appBase}/backend/routes/api.php?path=bookings/${sType}/${bookingId}/documents`, {
+                            method: 'POST',
+                            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                            body: formData
+                        });
+                        const res = await resRaw.json();
+
+                        if (res && res.success) {
+                            if (typeof showToast === 'function') {
+                                showToast(`${docType.replace(/_/g, ' ')} attached successfully!`, 'success');
+                            }
+                            // Refresh detail modal
+                            await viewBookingDetails(sType, bookingId);
+                            // Refresh background bookings list
+                            loadAndRenderBookings();
+                        } else {
+                            const errMsg = res?.error || 'Failed to upload document.';
+                            if (typeof showToast === 'function') showToast(errMsg, 'error');
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-upload"></i> Attach';
+                        }
+                    } catch (err) {
+                        console.error('Staff upload failed:', err);
+                        if (typeof showToast === 'function') showToast('Error uploading document file.', 'error');
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-upload"></i> Attach';
+                    } finally {
+                        fileInput.value = '';
+                    }
+                };
+
+                fileInput.click();
+            });
+        });
 
         // Modal Footer Actions
         const canComplete = data.status === 'Confirmed' || data.status === 'Scheduled';
