@@ -133,7 +133,7 @@ class AIService {
      * @return array
      */
     public function extractBookingAgent($payload, $timeoutSeconds = null) {
-        return $this->request('/api/booking-agent/extract', 'POST', $payload, $timeoutSeconds ?? 5);
+        return $this->request('/api/booking-agent/extract', 'POST', $payload, $timeoutSeconds);
     }
 
     private function request($path, $method = 'GET', $data = null, $timeoutSeconds = null) {
@@ -146,7 +146,7 @@ class AIService {
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, $timeoutSeconds !== null ? (int) $timeoutSeconds : $this->timeout);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
         curl_setopt($ch, CURLOPT_FAILONERROR, false);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json']);
 

@@ -1048,8 +1048,6 @@ def _extract_booking_deterministic(
         intent = 'RESCHEDULE_BOOKING'
     elif any(phrase in msg_lower for phrase in ['spelled', 'misspelled', 'spelling', 'typo', 'incorrect', 'surname is actually', 'name is actually', 'should be', 'last name is', 'dapat', 'mali ang spelling', 'mali ang pangalan', 'correct my information', 'correct the information', 'the relationship should be', 'it should be', 'palitan ang']):
         intent = 'CORRECT_BOOKING_DETAILS'
-    elif any(phrase in msg_lower for phrase in ['change the preferred date', 'change the date', 'change date to', 'change preferred date', 'change the schedule', 'change schedule', 'update date', 'edit date', 'actually change']):
-        intent = 'UPDATE_FIELD' if not draft.get('booking_id') else 'RESCHEDULE_BOOKING'
     elif any(phrase in msg_lower for phrase in ['change my booking', 'update my booking', 'modify my booking', 'edit my booking']):
         intent = 'UPDATE_BOOKING'
     elif any(phrase in msg_lower for phrase in ['availability', 'available', 'is it free', 'is there space', 'open slots', 'any available', 'may available', 'available ba', 'may slot', 'may bakante', 'pwede pa ba', 'is available', 'do you have available']):
@@ -1319,7 +1317,7 @@ def _extract_booking_deterministic(
                 candidate_name = re.sub(r'^(?:nanay|tatay|ina|ama|kuya|ate|lolo|lola|asawa)\s+', '', candidate_name, flags=re.IGNORECASE).strip()
                 # Clean off trailing clauses and Tagalog politeness
                 candidate_name = re.sub(r'\s+(?:my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$', '', candidate_name, flags=re.IGNORECASE).strip()
-                candidate_name = re.sub(r'\s+\b(?:on|at|in|sa|ng|petsang|prefer|preferably|date|burial|cremation|schedule|service|january|february|march|april|may|june|july|august|september|sept|sep|october|oct|november|nov|december|dec)\b.*$', '', candidate_name, flags=re.IGNORECASE).strip()
+                candidate_name = re.sub(r'\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$', '', candidate_name, flags=re.IGNORECASE).strip()
                 candidate_name = re.sub(r'\s+(?:po|opo)$', '', candidate_name, flags=re.IGNORECASE).strip()
 
                 # Normalize inverted "Last, First" comma format (e.g. "Nicolas, Nicolas" -> "Nicolas Nicolas")
