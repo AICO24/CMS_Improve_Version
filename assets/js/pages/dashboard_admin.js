@@ -572,523 +572,618 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
     loadAiBriefing();
 
-    try {
+    // ── Local Timezone Date Formatting & Period Bounds ──────────────────────
+    function formatLocalDate(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function getPeriodBounds(period = 'monthly') {
         const now = new Date();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-        const todayStr = now.toISOString().slice(0, 10);
+        const todayStr = formatLocalDate(now);
+        let startDate;
 
-        const [occRes, revSumRes, revMonthRes, paymentsRes] = await Promise.allSettled([
-            api.request('reports/occupancy', { method: 'GET' }),
-            api.request(`payments/revenue?date_from=${monthStart}&date_to=${todayStr}`, { method: 'GET' }),
-            api.request(`payments/revenue-by-month?year=${now.getFullYear()}`, { method: 'GET' }),
-            api.request(`payments?date_from=${new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().slice(0, 10)}&date_to=${new Date().toISOString().slice(0, 10)}`, { method: 'GET' })
-        ]);
-
-        const occupancy = occRes.status === 'fulfilled' ? occRes.value : {};
-        const revenueSummary = revSumRes.status === 'fulfilled' ? revSumRes.value : {};
-        const revenueByMonth = revMonthRes.status === 'fulfilled' ? revMonthRes.value : [];
-        let payments = paymentsRes.status === 'fulfilled' ? paymentsRes.value : [];
-
-        if ((!Array.isArray(payments) && !(payments && Array.isArray(payments.data))) || (Array.isArray(payments) && payments.length === 0)) {
-            try {
-                payments = await api.request('payments', { method: 'GET' });
-            } catch (e) {
-                payments = [];
-            }
+        if (period === 'weekly') {
+            const d = new Date(now);
+            const day = d.getDay();
+            const diff = (day === 0 ? 6 : day - 1);
+            d.setDate(d.getDate() - diff);
+            startDate = formatLocalDate(d);
+        } else if (period === 'yearly') {
+            startDate = `${now.getFullYear()}-01-01`;
+        } else {
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            startDate = `${y}-${m}-01`;
         }
-        // Operational Queues: The obsolete citizen lot recommendation card was
-        // replaced with the admin Operational Queues card in dashboard_admin.html.
-        // No orphaned schedules/recommend or AI burial assistant calls remain.
-        // Safe retrieval of occupancy summary
-        const summary = (occupancy && occupancy.summary) ? occupancy.summary : {};
-        const totalLots = Number(summary.total) || 0;
-        const availableLots = Number(summary.available) || 0;
 
-        // Load User statistics and Payments/Transactions count
-        let totalUsersCount = 0;
-        let activeUsersCount = 0;
-        let inactiveUsersCount = 0;
-        let totalTxCount = 0;
+        return { startDate, endDate: todayStr, period };
+    }
 
+    let currentAdminPeriod = 'monthly';
+    let revenueChartInstance = null;
+    let capacityChartInstance = null;
+
+    async function loadMainDashboardData(period = 'monthly') {
         try {
-            const [allUsersRes, inactiveUsersRes, allPaymentsRes] = await Promise.all([
-                api.request('users?per_page=1', { method: 'GET' }).catch(() => null),
-                api.request('users?is_active=0&per_page=1', { method: 'GET' }).catch(() => null),
-                api.request('payments?per_page=1', { method: 'GET' }).catch(() => null),
+            const bounds = getPeriodBounds(period);
+            const now = new Date();
+            const threeMonthsAgo = new Date(now);
+            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+            const threeMonthsAgoStr = formatLocalDate(threeMonthsAgo);
+
+            const [occRes, revStatsRes, revSumRes, revMonthRes, paymentsRes] = await Promise.allSettled([
+                api.request('reports/occupancy', { method: 'GET' }),
+                api.request(`payments/stats?period=${period}`, { method: 'GET' }),
+                api.request(`payments/revenue?date_from=${bounds.startDate}&date_to=${bounds.endDate}`, { method: 'GET' }),
+                api.request(`payments/revenue-by-month?year=${now.getFullYear()}`, { method: 'GET' }),
+                api.request(`payments?date_from=${threeMonthsAgoStr}&date_to=${bounds.endDate}`, { method: 'GET' })
             ]);
 
-            totalUsersCount = (allUsersRes && allUsersRes.meta && typeof allUsersRes.meta.total === 'number')
-                ? allUsersRes.meta.total
-                : (Array.isArray(allUsersRes && allUsersRes.data) ? allUsersRes.data.length : 0);
+            const occupancy = occRes.status === 'fulfilled' ? occRes.value : {};
+            const paymentStats = revStatsRes.status === 'fulfilled' ? revStatsRes.value : {};
+            const revenueSummary = revSumRes.status === 'fulfilled' ? revSumRes.value : {};
+            const revenueByMonth = revMonthRes.status === 'fulfilled' ? revMonthRes.value : [];
+            let payments = paymentsRes.status === 'fulfilled' ? paymentsRes.value : [];
 
-            inactiveUsersCount = (inactiveUsersRes && inactiveUsersRes.meta && typeof inactiveUsersRes.meta.total === 'number')
-                ? inactiveUsersRes.meta.total
-                : 0;
-
-            activeUsersCount = Math.max(0, totalUsersCount - inactiveUsersCount);
-
-            if (allPaymentsRes && allPaymentsRes.meta && typeof allPaymentsRes.meta.total === 'number') {
-                totalTxCount = allPaymentsRes.meta.total;
-            } else if (Array.isArray(payments)) {
-                totalTxCount = payments.length;
-            } else if (payments && Array.isArray(payments.data)) {
-                totalTxCount = payments.data.length;
-            }
-        } catch (e) {
-            console.warn('Failed to load user/transaction stats for dashboard cards', e);
-        }
-
-        setText('statTotalUsers', totalUsersCount.toString());
-        setText('statActiveUsers', activeUsersCount.toString());
-        setText('statInactiveUsers', inactiveUsersCount.toString());
-        setText('statTotalTransactions', totalTxCount > 0 ? totalTxCount.toString() : (Array.isArray(payments) ? payments.length.toString() : '0'));
-
-        // Interactive Quick Navigation & Accessible Stat Cards (mirrors manage-reservations functionality)
-        document.querySelectorAll('.stats-row > .stat-card').forEach((card) => {
-            const targetHref = card.getAttribute('data-href');
-            if (!targetHref || card.dataset.navBound) return;
-            card.dataset.navBound = 'true';
-
-            function triggerCardAction() {
-                card.classList.add('is-active-filter');
-                card.setAttribute('aria-pressed', 'true');
-                window.location.href = targetHref;
-            }
-
-            card.addEventListener('click', triggerCardAction);
-            card.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    triggerCardAction();
+            if ((!Array.isArray(payments) && !(payments && Array.isArray(payments.data))) || (Array.isArray(payments) && payments.length === 0)) {
+                try {
+                    payments = await api.request('payments', { method: 'GET' });
+                } catch (e) {
+                    payments = [];
                 }
-            });
-        });
-
-        // Interactive Operations Metrics & Queue Status Cards
-        document.querySelectorAll('.ops-metric[data-filter-href]').forEach((metric) => {
-            const targetHref = metric.getAttribute('data-filter-href');
-            if (!targetHref || metric.dataset.navBound) return;
-            metric.dataset.navBound = 'true';
-
-            function triggerMetricAction(e) {
-                e.stopPropagation();
-                metric.classList.add('is-active-filter');
-                window.location.href = targetHref;
             }
 
-            metric.addEventListener('click', triggerMetricAction);
-            metric.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    triggerMetricAction(e);
+            const summary = (occupancy && occupancy.summary) ? occupancy.summary : {};
+            const totalLots = Number(summary.total) || 0;
+            const availableLots = Number(summary.available) || 0;
+
+            // Load User statistics and Payments/Transactions count
+            let totalUsersCount = 0;
+            let activeUsersCount = 0;
+            let inactiveUsersCount = 0;
+            let totalTxCount = 0;
+
+            try {
+                const [allUsersRes, inactiveUsersRes, allPaymentsRes] = await Promise.all([
+                    api.request('users?per_page=1', { method: 'GET' }).catch(() => null),
+                    api.request('users?is_active=0&per_page=1', { method: 'GET' }).catch(() => null),
+                    api.request('payments?per_page=1', { method: 'GET' }).catch(() => null),
+                ]);
+
+                totalUsersCount = (allUsersRes && allUsersRes.meta && typeof allUsersRes.meta.total === 'number')
+                    ? allUsersRes.meta.total
+                    : (Array.isArray(allUsersRes && allUsersRes.data) ? allUsersRes.data.length : 0);
+
+                inactiveUsersCount = (inactiveUsersRes && inactiveUsersRes.meta && typeof inactiveUsersRes.meta.total === 'number')
+                    ? inactiveUsersRes.meta.total
+                    : 0;
+
+                activeUsersCount = Math.max(0, totalUsersCount - inactiveUsersCount);
+
+                if (allPaymentsRes && allPaymentsRes.meta && typeof allPaymentsRes.meta.total === 'number') {
+                    totalTxCount = allPaymentsRes.meta.total;
+                } else if (Array.isArray(payments)) {
+                    totalTxCount = payments.length;
+                } else if (payments && Array.isArray(payments.data)) {
+                    totalTxCount = payments.data.length;
                 }
-            });
-        });
-
-        document.querySelectorAll('.ops-card[data-href]').forEach((card) => {
-            const targetHref = card.getAttribute('data-href');
-            if (!targetHref || card.dataset.navBound) return;
-            card.dataset.navBound = 'true';
-
-            card.addEventListener('click', (e) => {
-                if (e.target.closest('a, button, [data-filter-href]')) return;
-                window.location.href = targetHref;
-            });
-        });
-
-        // Availability card metric blocks
-        setText('availMapAvailable', availableLots.toString());
-        setText('availMapTotal', totalLots.toString());
-        const fillPct = totalLots > 0 ? Math.round(((totalLots - availableLots) / totalLots) * 100) : 0;
-        setText('availMapPct', totalLots > 0 ? `${fillPct}%` : '—');
-        const fillEl = document.getElementById('availOccupancyFill');
-        if (fillEl) fillEl.style.width = `${fillPct}%`;
-
-
-
-        const recentList = document.getElementById('recentList');
-        const formatTransactionLabel = payment => {
-            if (!payment) return 'Payment';
-            if (payment.transaction_type && payment.transaction_type.trim() !== '') {
-                return payment.transaction_type;
+            } catch (e) {
+                console.warn('Failed to load user/transaction stats for dashboard cards', e);
             }
-            if (payment.payment_method && payment.payment_method.trim() !== '') {
-                return `${payment.payment_method} Payment`;
+
+            // Populate Overview Stat Cards
+            setText('statTotalUsers', totalUsersCount.toString());
+            setText('statActiveUsers', activeUsersCount.toString());
+            setText('statInactiveUsers', inactiveUsersCount.toString());
+
+            // Bind Revenue & Transaction KPIs to DOM (Finding K & N fix)
+            const periodRev = Number(paymentStats.total_revenue ?? paymentStats.total ?? revenueSummary.total) || 0;
+            const periodTx = Number(paymentStats.transaction_count ?? paymentStats.count ?? revenueSummary.count) || 0;
+
+            setText('statTotalRevenue', formatCurrency(periodRev));
+            setText('statMonthlyRevenue', formatCurrency(periodRev));
+
+            const revTitleEl = document.getElementById('statRevenueTitle');
+            if (revTitleEl) {
+                if (period === 'weekly') revTitleEl.textContent = 'Weekly Revenue';
+                else if (period === 'yearly') revTitleEl.textContent = 'Annual Revenue';
+                else revTitleEl.textContent = 'Monthly Revenue';
             }
-            return 'Payment';
-        };
 
-        const paymentRecords = Array.isArray(payments) ? payments : (payments && Array.isArray(payments.data) ? payments.data : []);
-
-        if (recentList) {
-            recentList.innerHTML = '';
-            if (paymentRecords.length > 0) {
-                paymentRecords.slice(0, 5).forEach(payment => {
-                    const item = document.createElement('li');
-                    item.className = 'recent-item';
-                    item.innerHTML = `
-                        <div class="recent-item-title">${formatTransactionLabel(payment)}</div>
-                        <div class="recent-item-meta">${payment.receipt_number || 'No receipt'} · ${payment.payment_date || 'Unknown date'}</div>
-                        <div class="recent-item-amount">${formatCurrency(payment.amount)}</div>
-                    `;
-                    recentList.appendChild(item);
-                });
+            const revSubEl = document.getElementById('statRevenueSub');
+            if (revSubEl) {
+                const periodLabel = period === 'weekly' ? 'this week' : (period === 'yearly' ? 'this year' : 'this month');
+                revSubEl.innerHTML = `<span id="statTotalTransactions">${periodTx}</span> logged transactions ${periodLabel}`;
             } else {
-                const emptyItem = document.createElement('li');
-                emptyItem.className = 'recent-item empty';
-                emptyItem.textContent = 'No recent transactions available.';
-                recentList.appendChild(emptyItem);
+                setText('statTotalTransactions', periodTx > 0 ? periodTx.toString() : (totalTxCount > 0 ? totalTxCount.toString() : '0'));
             }
-        }
 
-        const chartCanvas = document.getElementById('occChart');
-        if (chartCanvas && typeof Chart !== 'undefined') {
-            const ctx = chartCanvas.getContext('2d');
+            // Interactive Quick Navigation & Accessible Stat Cards
+            document.querySelectorAll('.stats-row > .stat-card').forEach((card) => {
+                const targetHref = card.getAttribute('data-href');
+                if (!targetHref || card.dataset.navBound) return;
+                card.dataset.navBound = 'true';
 
-            // Build full 12-month series matching reports page
-            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const monthlyDataMap = new Map();
-            if (Array.isArray(revenueByMonth)) {
-                revenueByMonth.forEach(item => {
-                    const m = Number(item.month);
-                    if (m >= 1 && m <= 12) {
-                        monthlyDataMap.set(m, Number(item.total) || 0);
+                function triggerCardAction() {
+                    card.classList.add('is-active-filter');
+                    card.setAttribute('aria-pressed', 'true');
+                    window.location.href = targetHref;
+                }
+
+                card.addEventListener('click', triggerCardAction);
+                card.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        triggerCardAction();
                     }
                 });
-            }
+            });
 
-            const currentYear = now.getFullYear();
-            const labels = monthNames.map(name => `${name} ${currentYear}`);
-            const dataPoints = monthNames.map((_, idx) => monthlyDataMap.get(idx + 1) || 0);
+            // Interactive Operations Metrics & Queue Status Cards
+            document.querySelectorAll('.ops-metric[data-filter-href]').forEach((metric) => {
+                const targetHref = metric.getAttribute('data-filter-href');
+                if (!targetHref || metric.dataset.navBound) return;
+                metric.dataset.navBound = 'true';
 
-            // Calculate totals and financial metrics from live single-source-of-truth
-            const grandTotal = dataPoints.reduce((sum, val) => sum + val, 0);
-            const currentMonthIdx = now.getMonth(); // 0-indexed (0 = Jan)
-            const currentMonthRevenue = dataPoints[currentMonthIdx] || 0;
-            const validPaymentAmounts = paymentRecords.map(p => Number(p.amount) || 0).filter(a => a > 0);
-            const avgPayment = validPaymentAmounts.length > 0
-                ? (validPaymentAmounts.reduce((a, b) => a + b, 0) / validPaymentAmounts.length)
-                : (totalTxCount > 0 && grandTotal > 0 ? (grandTotal / totalTxCount) : 0);
+                function triggerMetricAction(e) {
+                    e.stopPropagation();
+                    metric.classList.add('is-active-filter');
+                    window.location.href = targetHref;
+                }
 
-            setText('finYtdTotal', formatCurrency(grandTotal));
-            setText('finMonthTotal', formatCurrency(currentMonthRevenue));
-            setText('finAvgTotal', formatCurrency(avgPayment));
-            setText('finTxTotal', totalTxCount.toString());
+                metric.addEventListener('click', triggerMetricAction);
+                metric.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        triggerMetricAction(e);
+                    }
+                });
+            });
 
-            const chartSubEl = document.getElementById('chartRevenueSub');
-            if (chartSubEl) {
-                chartSubEl.textContent = `Year-to-date total: ${formatCurrency(grandTotal)} (${currentYear})`;
-            }
-            const legendTextEl = document.getElementById('chartLegendText');
-            if (legendTextEl) {
-                legendTextEl.textContent = `Monthly Revenue (${currentYear})`;
-            }
+            document.querySelectorAll('.ops-card[data-href]').forEach((card) => {
+                const targetHref = card.getAttribute('data-href');
+                if (!targetHref || card.dataset.navBound) return;
+                card.dataset.navBound = 'true';
 
-            const isDark = () => document.body.getAttribute('data-theme') === 'dark';
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('a, button, [data-filter-href]')) return;
+                    window.location.href = targetHref;
+                });
+            });
 
-            function getChartColors() {
-                const dark = isDark();
-                return {
-                    labelColor: dark ? '#e2e8f0' : '#092118',
-                    tickColor: dark ? '#cbd5e1' : '#1e293b',
-                    gridColor: dark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.10)',
-                    barBorder: dark ? '#34d399' : '#0f766e',
-                    barHover: dark ? '#10b981' : '#0f766e',
-                };
-            }
+            // Availability card metric blocks
+            setText('availMapAvailable', availableLots.toString());
+            setText('availMapTotal', totalLots.toString());
+            const fillPct = totalLots > 0 ? Math.round(((totalLots - availableLots) / totalLots) * 100) : 0;
+            setText('availMapPct', totalLots > 0 ? `${fillPct}%` : '—');
+            const fillEl = document.getElementById('availOccupancyFill');
+            if (fillEl) fillEl.style.width = `${fillPct}%`;
 
-            function createBarGradient(ctx, height = 240) {
-                const dark = isDark();
-                const grad = ctx.createLinearGradient(0, 0, 0, height);
-                if (dark) {
-                    grad.addColorStop(0, 'rgba(52, 211, 153, 0.95)');
-                    grad.addColorStop(0.65, 'rgba(16, 185, 129, 0.70)');
-                    grad.addColorStop(1, 'rgba(5, 150, 105, 0.35)');
+            // Recent Transactions List
+            const recentList = document.getElementById('recentList');
+            const formatTransactionLabel = payment => {
+                if (!payment) return 'Payment';
+                if (payment.transaction_type && payment.transaction_type.trim() !== '') {
+                    return payment.transaction_type;
+                }
+                if (payment.payment_method && payment.payment_method.trim() !== '') {
+                    return `${payment.payment_method} Payment`;
+                }
+                return 'Payment';
+            };
+
+            const paymentRecords = Array.isArray(payments) ? payments : (payments && Array.isArray(payments.data) ? payments.data : []);
+
+            if (recentList) {
+                recentList.innerHTML = '';
+                if (paymentRecords.length > 0) {
+                    paymentRecords.slice(0, 5).forEach(payment => {
+                        const item = document.createElement('li');
+                        item.className = 'recent-item';
+                        item.innerHTML = `
+                            <div class="recent-item-title">${formatTransactionLabel(payment)}</div>
+                            <div class="recent-item-meta">${payment.receipt_number || 'No receipt'} · ${payment.payment_date || 'Unknown date'}</div>
+                            <div class="recent-item-amount">${formatCurrency(payment.amount)}</div>
+                        `;
+                        recentList.appendChild(item);
+                    });
                 } else {
-                    grad.addColorStop(0, 'rgba(15, 118, 110, 0.90)');
-                    grad.addColorStop(0.65, 'rgba(15, 118, 110, 0.60)');
-                    grad.addColorStop(1, 'rgba(15, 118, 110, 0.18)');
+                    const emptyItem = document.createElement('li');
+                    emptyItem.className = 'recent-item empty';
+                    emptyItem.textContent = 'No recent transactions available.';
+                    recentList.appendChild(emptyItem);
                 }
-                return grad;
             }
 
-            const currentThemeColors = getChartColors();
-            let revenueChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels,
-                    datasets: [{
-                        label: `Monthly Revenue (${currentYear})`,
-                        data: dataPoints,
-                        backgroundColor: createBarGradient(ctx),
-                        borderColor: currentThemeColors.barBorder,
-                        borderWidth: 1.5,
-                        borderRadius: 6,
-                        borderSkipped: false,
-                        maxBarThickness: 44,
-                        hoverBackgroundColor: currentThemeColors.barHover,
-                        hoverBorderColor: currentThemeColors.barBorder,
-                        hoverBorderWidth: 2,
-                    }],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    layout: {
-                        padding: {
-                            top: 8,
-                            right: 12,
-                            bottom: 4,
-                            left: 8,
+            // Monthly/Period Revenue Chart
+            const chartCanvas = document.getElementById('occChart');
+            if (chartCanvas && typeof Chart !== 'undefined') {
+                const ctx = chartCanvas.getContext('2d');
+
+                // Build full 12-month series matching reports page
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const monthlyDataMap = new Map();
+                if (Array.isArray(revenueByMonth)) {
+                    revenueByMonth.forEach(item => {
+                        const m = Number(item.month);
+                        if (m >= 1 && m <= 12) {
+                            monthlyDataMap.set(m, Number(item.total) || 0);
                         }
+                    });
+                }
+
+                const currentYear = now.getFullYear();
+                const labels = monthNames.map(name => `${name} ${currentYear}`);
+                const dataPoints = monthNames.map((_, idx) => monthlyDataMap.get(idx + 1) || 0);
+
+                // Calculate totals and financial metrics from live single-source-of-truth
+                const grandTotal = Number(paymentStats.all_time_revenue ?? paymentStats.ytd_revenue) || dataPoints.reduce((sum, val) => sum + val, 0);
+                const currentMonthIdx = now.getMonth();
+                const currentMonthRevenue = dataPoints[currentMonthIdx] || 0;
+                const validPaymentAmounts = paymentRecords.map(p => Number(p.amount) || 0).filter(a => a > 0);
+                const avgPayment = Number(paymentStats.average_transaction) || (validPaymentAmounts.length > 0
+                    ? (validPaymentAmounts.reduce((a, b) => a + b, 0) / validPaymentAmounts.length)
+                    : (totalTxCount > 0 && grandTotal > 0 ? (grandTotal / totalTxCount) : 0));
+
+                setText('finYtdTotal', formatCurrency(paymentStats.ytd_revenue ?? grandTotal));
+                setText('finMonthTotal', formatCurrency(periodRev > 0 ? periodRev : currentMonthRevenue));
+                setText('finAvgTotal', formatCurrency(avgPayment));
+                setText('finTxTotal', (paymentStats.transaction_count ?? totalTxCount).toString());
+
+                const chartSubEl = document.getElementById('chartRevenueSub');
+                if (chartSubEl) {
+                    chartSubEl.textContent = `Year-to-date total: ${formatCurrency(paymentStats.ytd_revenue ?? grandTotal)} (${currentYear})`;
+                }
+                const legendTextEl = document.getElementById('chartLegendText');
+                if (legendTextEl) {
+                    legendTextEl.textContent = `Monthly Revenue (${currentYear})`;
+                }
+
+                // Update period chip label if present
+                const monthLegendLabel = document.querySelector('.chart-legend-chip:nth-child(2) .legend-chip-label');
+                if (monthLegendLabel) {
+                    if (period === 'weekly') monthLegendLabel.textContent = 'This Week:';
+                    else if (period === 'yearly') monthLegendLabel.textContent = 'This Year:';
+                    else monthLegendLabel.textContent = 'This Month:';
+                }
+
+                const isDark = () => document.body.getAttribute('data-theme') === 'dark';
+
+                function getChartColors() {
+                    const dark = isDark();
+                    return {
+                        labelColor: dark ? '#e2e8f0' : '#092118',
+                        tickColor: dark ? '#cbd5e1' : '#1e293b',
+                        gridColor: dark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.10)',
+                        barBorder: dark ? '#34d399' : '#0f766e',
+                        barHover: dark ? '#10b981' : '#0f766e',
+                    };
+                }
+
+                function createBarGradient(ctx, height = 240) {
+                    const dark = isDark();
+                    const grad = ctx.createLinearGradient(0, 0, 0, height);
+                    if (dark) {
+                        grad.addColorStop(0, 'rgba(52, 211, 153, 0.95)');
+                        grad.addColorStop(0.65, 'rgba(16, 185, 129, 0.70)');
+                        grad.addColorStop(1, 'rgba(5, 150, 105, 0.35)');
+                    } else {
+                        grad.addColorStop(0, 'rgba(15, 118, 110, 0.90)');
+                        grad.addColorStop(0.65, 'rgba(15, 118, 110, 0.60)');
+                        grad.addColorStop(1, 'rgba(15, 118, 110, 0.18)');
+                    }
+                    return grad;
+                }
+
+                const currentThemeColors = getChartColors();
+
+                if (revenueChartInstance) {
+                    revenueChartInstance.destroy();
+                    revenueChartInstance = null;
+                }
+
+                revenueChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: `Monthly Revenue (${currentYear})`,
+                            data: dataPoints,
+                            backgroundColor: createBarGradient(ctx),
+                            borderColor: currentThemeColors.barBorder,
+                            borderWidth: 1.5,
+                            borderRadius: 6,
+                            borderSkipped: false,
+                            maxBarThickness: 44,
+                            hoverBackgroundColor: currentThemeColors.barHover,
+                            hoverBorderColor: currentThemeColors.barBorder,
+                            hoverBorderWidth: 2,
+                        }],
                     },
-                    animation: {
-                        duration: 900,
-                        easing: 'easeOutCubic',
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                            titleColor: '#ffffff',
-                            bodyColor: '#34d399',
-                            titleFont: { size: 13, weight: '800', family: "'Inter', sans-serif" },
-                            bodyFont: { size: 13, weight: '700', family: "'Inter', sans-serif" },
-                            padding: 12,
-                            cornerRadius: 8,
-                            borderColor: 'rgba(255, 255, 255, 0.20)',
-                            borderWidth: 1,
-                            callbacks: {
-                                label: ctx => ` Revenue: ${formatCurrency(ctx.parsed.y)}`
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: {
+                            padding: {
+                                top: 8,
+                                right: 12,
+                                bottom: 4,
+                                left: 8,
                             }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Month',
-                                color: currentThemeColors.labelColor,
-                                font: { size: 13, weight: '800', family: "'Inter', sans-serif" },
-                                padding: { top: 8 }
+                        },
+                        animation: {
+                            duration: 900,
+                            easing: 'easeOutCubic',
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
                             },
-                            ticks: {
-                                maxRotation: 0,
-                                autoSkip: false,
-                                font: { size: 12, weight: '700', family: "'Inter', sans-serif" },
-                                color: currentThemeColors.tickColor,
-                                callback: function (val, index) {
-                                    return monthNames[index] || '';
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                titleColor: '#ffffff',
+                                bodyColor: '#34d399',
+                                titleFont: { size: 13, weight: '800', family: "'Inter', sans-serif" },
+                                bodyFont: { size: 13, weight: '700', family: "'Inter', sans-serif" },
+                                padding: 12,
+                                cornerRadius: 8,
+                                borderColor: 'rgba(255, 255, 255, 0.20)',
+                                borderWidth: 1,
+                                callbacks: {
+                                    label: c => ` Revenue: ${formatCurrency(c.parsed.y)}`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Month',
+                                    color: currentThemeColors.labelColor,
+                                    font: { size: 13, weight: '800', family: "'Inter', sans-serif" },
+                                    padding: { top: 8 }
+                                },
+                                ticks: {
+                                    maxRotation: 0,
+                                    autoSkip: false,
+                                    font: { size: 12, weight: '700', family: "'Inter', sans-serif" },
+                                    color: currentThemeColors.tickColor,
+                                    callback: function (val, index) {
+                                        return monthNames[index] || '';
+                                    }
+                                },
+                                grid: {
+                                    display: false,
                                 }
                             },
-                            grid: {
-                                display: false,
-                            }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Amount (PHP)',
-                                color: currentThemeColors.labelColor,
-                                font: { size: 13, weight: '800', family: "'Inter', sans-serif" },
-                                padding: { bottom: 8 }
-                            },
-                            ticks: {
-                                precision: 0,
-                                font: { size: 12, weight: '700', family: "'Inter', sans-serif" },
-                                color: currentThemeColors.tickColor,
-                                maxTicksLimit: 6,
-                                callback: value => {
-                                    if (Math.abs(value) >= 1000000) return `₱${(value / 1000000).toFixed(value % 1000000 ? 1 : 0)}M`;
-                                    if (Math.abs(value) >= 1000) return `₱${(value / 1000).toFixed(value % 1000 ? 1 : 0)}k`;
-                                    return `₱${value}`;
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Amount (PHP)',
+                                    color: currentThemeColors.labelColor,
+                                    font: { size: 13, weight: '800', family: "'Inter', sans-serif" },
+                                    padding: { bottom: 8 }
                                 },
+                                ticks: {
+                                    precision: 0,
+                                    font: { size: 12, weight: '700', family: "'Inter', sans-serif" },
+                                    color: currentThemeColors.tickColor,
+                                    maxTicksLimit: 6,
+                                    callback: value => {
+                                        if (Math.abs(value) >= 1000000) return `₱${(value / 1000000).toFixed(value % 1000000 ? 1 : 0)}M`;
+                                        if (Math.abs(value) >= 1000) return `₱${(value / 1000).toFixed(value % 1000 ? 1 : 0)}k`;
+                                        return `₱${value}`;
+                                    },
+                                },
+                                grid: {
+                                    color: currentThemeColors.gridColor,
+                                    drawBorder: false,
+                                }
                             },
-                            grid: {
-                                color: currentThemeColors.gridColor,
-                                drawBorder: false,
-                            }
                         },
                     },
-                },
-            });
+                });
 
-            // Watch for dark/light theme switch and dynamically update chart axes & colors
-            const themeObserver = new MutationObserver(() => {
-                if (!revenueChartInstance) return;
-                const updated = getChartColors();
-                revenueChartInstance.options.scales.x.title.color = updated.labelColor;
-                revenueChartInstance.options.scales.x.ticks.color = updated.tickColor;
-                revenueChartInstance.options.scales.y.title.color = updated.labelColor;
-                revenueChartInstance.options.scales.y.ticks.color = updated.tickColor;
-                revenueChartInstance.options.scales.y.grid.color = updated.gridColor;
+                if (!window._adminChartThemeObserverAttached) {
+                    window._adminChartThemeObserverAttached = true;
+                    const themeObserver = new MutationObserver(() => {
+                        if (!revenueChartInstance) return;
+                        const updated = getChartColors();
+                        revenueChartInstance.options.scales.x.title.color = updated.labelColor;
+                        revenueChartInstance.options.scales.x.ticks.color = updated.tickColor;
+                        revenueChartInstance.options.scales.y.title.color = updated.labelColor;
+                        revenueChartInstance.options.scales.y.ticks.color = updated.tickColor;
+                        revenueChartInstance.options.scales.y.grid.color = updated.gridColor;
 
-                if (revenueChartInstance.data.datasets[0]) {
-                    revenueChartInstance.data.datasets[0].backgroundColor = createBarGradient(ctx);
-                    revenueChartInstance.data.datasets[0].borderColor = updated.barBorder;
-                    revenueChartInstance.data.datasets[0].hoverBackgroundColor = updated.barHover;
-                    revenueChartInstance.data.datasets[0].hoverBorderColor = updated.barBorder;
+                        if (revenueChartInstance.data.datasets[0]) {
+                            revenueChartInstance.data.datasets[0].backgroundColor = createBarGradient(ctx);
+                            revenueChartInstance.data.datasets[0].borderColor = updated.barBorder;
+                            revenueChartInstance.data.datasets[0].hoverBackgroundColor = updated.barHover;
+                            revenueChartInstance.data.datasets[0].hoverBorderColor = updated.barBorder;
+                        }
+                        revenueChartInstance.update('none');
+                    });
+                    themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
                 }
-                revenueChartInstance.update('none');
-            });
-            themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
-        }
-
-        // =====================================================================
-        // Capacity Forecasting Pie / Doughnut Chart & Live Insight
-        // =====================================================================
-        const occupiedLots = Number(summary.occupied) || 0;
-        const reservedLots = Number(summary.reserved) || 0;
-        const otherLots = Math.max(0, totalLots - (availableLots + occupiedLots + reservedLots));
-
-        const availPct = totalLots > 0 ? Math.round((availableLots / totalLots) * 100) : 0;
-        const occPct = totalLots > 0 ? Math.round((occupiedLots / totalLots) * 100) : 0;
-        const resPct = totalLots > 0 ? Math.round((reservedLots / totalLots) * 100) : 0;
-
-        // Populate capacity metrics pills
-        setText('capStatAvailable', availableLots.toLocaleString());
-        setText('capStatAvailPct', `(${availPct}%)`);
-        setText('capStatOccupied', occupiedLots.toLocaleString());
-        setText('capStatOccupiedPct', `(${occPct}%)`);
-        setText('capStatReserved', reservedLots.toLocaleString());
-        setText('capStatReservedPct', `(${resPct}%)`);
-        setText('capStatTotal', totalLots.toLocaleString());
-        setText('capacityCenterPct', `${availPct}%`);
-
-        // Generate versatile, data-driven dynamic insight in plain English
-        const insightEl = document.getElementById('capacityInsightText');
-        if (insightEl) {
-            if (totalLots <= 0) {
-                insightEl.innerHTML = `No cemetery lot data is currently recorded. Once lots are mapped, capacity utilization and space forecasting will update automatically here.`;
-            } else {
-                let statusLabel = 'Optimal';
-                let recommendation = 'Available inventory is sufficient for regular burial assignments and upcoming reservations.';
-
-                if (availableLots === 0) {
-                    statusLabel = 'Full Capacity';
-                    recommendation = 'All lots are occupied or reserved. Immediate land expansion, niche conversion, or plot recycling is required.';
-                } else if (availPct <= 10) {
-                    statusLabel = 'Critical Capacity';
-                    recommendation = 'Remaining space is critically low. Section re-allocations or expansion plans should be prioritized soon.';
-                } else if (availPct <= 25) {
-                    statusLabel = 'Limited Capacity';
-                    recommendation = 'Lot availability is becoming tight. Consider monitoring upcoming reservations and lease expirations.';
-                } else if (availPct <= 50) {
-                    statusLabel = 'Moderate';
-                    recommendation = 'Over half of the cemetery is occupied. Current capacity remains stable for routine bookings.';
-                }
-
-                insightEl.innerHTML = `
-                    The cemetery currently has <strong>${availableLots.toLocaleString()} available lots (${availPct}%)</strong> remaining out of a total capacity of <strong>${totalLots.toLocaleString()} lots</strong>. 
-                    <strong>${occupiedLots.toLocaleString()} lots (${occPct}%)</strong> are occupied and <strong>${reservedLots.toLocaleString()} lots (${resPct}%)</strong> are on hold. 
-                    Overall capacity status is <strong class="insight-highlight">${statusLabel}</strong> — ${recommendation}
-                `;
             }
-        }
 
-        // Initialize Capacity Forecasting Doughnut Chart
-        const capacityCanvas = document.getElementById('capacityForecastChart');
-        if (capacityCanvas && typeof Chart !== 'undefined') {
-            const capCtx = capacityCanvas.getContext('2d');
+            // =====================================================================
+            // Capacity Forecasting Pie / Doughnut Chart & Live Insight
+            // =====================================================================
+            const occupiedLots = Number(summary.occupied) || 0;
+            const reservedLots = Number(summary.reserved) || 0;
+            const otherLots = Math.max(0, totalLots - (availableLots + occupiedLots + reservedLots));
 
-            // Handle edge case when totalLots is 0
-            const chartData = totalLots > 0 
-                ? [availableLots, occupiedLots, reservedLots, otherLots].filter((_, i) => i < 3 || otherLots > 0)
-                : [1];
-            const chartLabels = totalLots > 0
-                ? (otherLots > 0 ? ['Available Space', 'Occupied Lots', 'Reserved Lots', 'Expired/Other'] : ['Available Space', 'Occupied Lots', 'Reserved Lots'])
-                : ['No Data'];
-            const chartColors = totalLots > 0
-                ? (otherLots > 0 ? ['#16a34a', '#16382b', '#64748b', '#94a3b8'] : ['#16a34a', '#16382b', '#64748b'])
-                : ['#cbd5e1'];
+            const availPct = totalLots > 0 ? Math.round((availableLots / totalLots) * 100) : 0;
+            const occPct = totalLots > 0 ? Math.round((occupiedLots / totalLots) * 100) : 0;
+            const resPct = totalLots > 0 ? Math.round((reservedLots / totalLots) * 100) : 0;
 
-            // Render unified brand legends under chart
-            const legendsContainer = document.getElementById('capacityChartLegends');
-            if (legendsContainer) {
-                const legendItems = [
-                    { label: 'Available Space', dotClass: 'legend-dot--green', count: availableLots, pct: availPct },
-                    { label: 'Occupied Lots', dotClass: 'legend-dot--dark', count: occupiedLots, pct: occPct },
-                    { label: 'Reserved Lots', dotClass: 'legend-dot--slate', count: reservedLots, pct: resPct },
-                ];
-                if (otherLots > 0) {
-                    const othPct = totalLots > 0 ? Math.round((otherLots / totalLots) * 100) : 0;
-                    legendItems.push({ label: 'Expired/Other', dotClass: 'legend-dot--slate', count: otherLots, pct: othPct });
+            // Populate capacity metrics pills
+            setText('capStatAvailable', availableLots.toLocaleString());
+            setText('capStatAvailPct', `(${availPct}%)`);
+            setText('capStatOccupied', occupiedLots.toLocaleString());
+            setText('capStatOccupiedPct', `(${occPct}%)`);
+            setText('capStatReserved', reservedLots.toLocaleString());
+            setText('capStatReservedPct', `(${resPct}%)`);
+            setText('capStatTotal', totalLots.toLocaleString());
+            setText('capacityCenterPct', `${availPct}%`);
+
+            // Generate versatile, data-driven dynamic insight in plain English
+            const insightEl = document.getElementById('capacityInsightText');
+            if (insightEl) {
+                if (totalLots <= 0) {
+                    insightEl.innerHTML = `No cemetery lot data is currently recorded. Once lots are mapped, capacity utilization and space forecasting will update automatically here.`;
+                } else {
+                    let statusLabel = 'Optimal';
+                    let recommendation = 'Available inventory is sufficient for regular burial assignments and upcoming reservations.';
+
+                    if (availableLots === 0) {
+                        statusLabel = 'Full Capacity';
+                        recommendation = 'All lots are occupied or reserved. Immediate land expansion, niche conversion, or plot recycling is required.';
+                    } else if (availPct <= 10) {
+                        statusLabel = 'Critical Capacity';
+                        recommendation = 'Remaining space is critically low. Section re-allocations or expansion plans should be prioritized soon.';
+                    } else if (availPct <= 25) {
+                        statusLabel = 'Limited Capacity';
+                        recommendation = 'Lot availability is becoming tight. Consider monitoring upcoming reservations and lease expirations.';
+                    } else if (availPct <= 50) {
+                        statusLabel = 'Moderate';
+                        recommendation = 'Over half of the cemetery is occupied. Current capacity remains stable for routine bookings.';
+                    }
+
+                    insightEl.innerHTML = `
+                        The cemetery currently has <strong>${availableLots.toLocaleString()} available lots (${availPct}%)</strong> remaining out of a total capacity of <strong>${totalLots.toLocaleString()} lots</strong>. 
+                        <strong>${occupiedLots.toLocaleString()} lots (${occPct}%)</strong> are occupied and <strong>${reservedLots.toLocaleString()} lots (${resPct}%)</strong> are on hold. 
+                        Overall capacity status is <strong class="insight-highlight">${statusLabel}</strong> — ${recommendation}
+                    `;
                 }
+            }
 
-                legendsContainer.innerHTML = legendItems.map(item => `
-                    <div class="capacity-legend-row" title="${item.label}: ${item.count.toLocaleString()} lots (${item.pct}%)">
-                        <div class="capacity-legend-left">
-                            <span class="legend-dot ${item.dotClass}"></span>
-                            <span class="capacity-legend-name">${item.label}</span>
+            // Initialize Capacity Forecasting Doughnut Chart
+            const capacityCanvas = document.getElementById('capacityForecastChart');
+            if (capacityCanvas && typeof Chart !== 'undefined') {
+                const capCtx = capacityCanvas.getContext('2d');
+
+                const chartData = totalLots > 0 
+                    ? [availableLots, occupiedLots, reservedLots, otherLots].filter((_, i) => i < 3 || otherLots > 0)
+                    : [1];
+                const chartLabels = totalLots > 0
+                    ? (otherLots > 0 ? ['Available Space', 'Occupied Lots', 'Reserved Lots', 'Expired/Other'] : ['Available Space', 'Occupied Lots', 'Reserved Lots'])
+                    : ['No Data'];
+                const chartColors = totalLots > 0
+                    ? (otherLots > 0 ? ['#16a34a', '#16382b', '#64748b', '#94a3b8'] : ['#16a34a', '#16382b', '#64748b'])
+                    : ['#cbd5e1'];
+
+                // Render unified brand legends under chart
+                const legendsContainer = document.getElementById('capacityChartLegends');
+                if (legendsContainer) {
+                    const legendItems = [
+                        { label: 'Available Space', dotClass: 'legend-dot--green', count: availableLots, pct: availPct },
+                        { label: 'Occupied Lots', dotClass: 'legend-dot--dark', count: occupiedLots, pct: occPct },
+                        { label: 'Reserved Lots', dotClass: 'legend-dot--slate', count: reservedLots, pct: resPct },
+                    ];
+                    if (otherLots > 0) {
+                        const othPct = totalLots > 0 ? Math.round((otherLots / totalLots) * 100) : 0;
+                        legendItems.push({ label: 'Expired/Other', dotClass: 'legend-dot--slate', count: otherLots, pct: othPct });
+                    }
+
+                    legendsContainer.innerHTML = legendItems.map(item => `
+                        <div class="capacity-legend-row" title="${item.label}: ${item.count.toLocaleString()} lots (${item.pct}%)">
+                            <div class="capacity-legend-left">
+                                <span class="legend-dot ${item.dotClass}"></span>
+                                <span class="capacity-legend-name">${item.label}</span>
+                            </div>
+                            <strong class="capacity-legend-value">${item.count.toLocaleString()} (${item.pct}%)</strong>
                         </div>
-                        <strong class="capacity-legend-value">${item.count.toLocaleString()} (${item.pct}%)</strong>
-                    </div>
-                `).join('');
-            }
+                    `).join('');
+                }
 
-            new Chart(capCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: chartLabels,
-                    datasets: [{
-                        data: chartData,
-                        backgroundColor: chartColors,
-                        hoverBackgroundColor: chartColors,
-                        borderColor: '#ffffff',
-                        borderWidth: 2,
-                        hoverOffset: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '72%',
-                    animation: {
-                        duration: 1000,
-                        easing: 'easeOutQuart'
+                if (capacityChartInstance) {
+                    capacityChartInstance.destroy();
+                    capacityChartInstance = null;
+                }
+
+                capacityChartInstance = new Chart(capCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            data: chartData,
+                            backgroundColor: chartColors,
+                            hoverBackgroundColor: chartColors,
+                            borderColor: '#ffffff',
+                            borderWidth: 2,
+                            hoverOffset: 6
+                        }]
                     },
-                    plugins: {
-                        legend: {
-                            display: false
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '72%',
+                        animation: {
+                            duration: 1000,
+                            easing: 'easeOutQuart'
                         },
-                        tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                            titleColor: '#ffffff',
-                            bodyColor: '#34d399',
-                            titleFont: { size: 12, weight: '700', family: "'Inter', sans-serif" },
-                            bodyFont: { size: 12, weight: '600', family: "'Inter', sans-serif" },
-                            padding: 10,
-                            cornerRadius: 8,
-                            borderColor: 'rgba(255, 255, 255, 0.15)',
-                            borderWidth: 1,
-                            callbacks: {
-                                label: ctx => {
-                                    if (totalLots <= 0) return ' No data available';
-                                    const val = Number(ctx.parsed) || 0;
-                                    const pct = Math.round((val / totalLots) * 100);
-                                    return ` ${ctx.label}: ${val.toLocaleString()} lots (${pct}%)`;
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                titleColor: '#ffffff',
+                                bodyColor: '#34d399',
+                                titleFont: { size: 12, weight: '700', family: "'Inter', sans-serif" },
+                                bodyFont: { size: 12, weight: '600', family: "'Inter', sans-serif" },
+                                padding: 10,
+                                cornerRadius: 8,
+                                borderColor: 'rgba(255, 255, 255, 0.15)',
+                                borderWidth: 1,
+                                callbacks: {
+                                    label: ctx => {
+                                        if (totalLots <= 0) return ' No data available';
+                                        const val = Number(ctx.parsed) || 0;
+                                        const pct = Math.round((val / totalLots) * 100);
+                                        return ` ${ctx.label}: ${val.toLocaleString()} lots (${pct}%)`;
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
-        }
-    } catch (error) {
-        console.error('Dashboard load failed', error);
-        if (error.message && error.message.toLowerCase().includes('unauthorized')) {
-            api.logout();
-            return;
-        }
-        // Graceful handling without locking out or showing disturbing error banners
-        const errorBox = document.querySelector('.dashboard-error');
-        if (errorBox) {
-            errorBox.remove();
+                });
+            }
+        } catch (error) {
+            console.error('Dashboard load failed', error);
+            if (error.message && error.message.toLowerCase().includes('unauthorized')) {
+                api.logout();
+                return;
+            }
+            const errorBox = document.querySelector('.dashboard-error');
+            if (errorBox) {
+                errorBox.remove();
+            }
         }
     }
+
+    // Initial load
+    await loadMainDashboardData('monthly');
+
+    // Attach Period Filter click handlers
+    document.querySelectorAll('.dashboard-period-filter .period-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const selected = btn.getAttribute('data-period');
+            if (!selected || selected === currentAdminPeriod) return;
+
+            document.querySelectorAll('.dashboard-period-filter .period-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            currentAdminPeriod = selected;
+            await loadMainDashboardData(currentAdminPeriod);
+        });
+    });
 });
 
 /* =========================================================================

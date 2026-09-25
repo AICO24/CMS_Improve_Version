@@ -259,7 +259,15 @@
                     </div>
                 </div>
 
-                <p class="section-label"><i class="fas fa-chart-pie"></i> System Overview</p>
+                <div class="section-header-row">
+                    <p class="section-label" style="margin:0;"><i class="fas fa-chart-pie"></i> System Overview</p>
+                    <div class="dashboard-period-filter" role="group" aria-label="Dashboard period filter">
+                        <span class="period-filter-label"><i class="fas fa-calendar-days"></i> Period:</span>
+                        <button type="button" class="period-btn" data-period="weekly">Weekly</button>
+                        <button type="button" class="period-btn active" data-period="monthly">Monthly</button>
+                        <button type="button" class="period-btn" data-period="yearly">Yearly</button>
+                    </div>
+                </div>
                 <div class="stats-row">
                     <div class="stat-card" role="button" tabindex="0" title="View all registered users in User Management" data-href="user-management.html" aria-pressed="false">
                         <div class="stat-title">
@@ -287,11 +295,11 @@
                     </div>
                     <div class="stat-card" role="button" tabindex="0" title="View all logged financial transactions in Payments" data-href="payments.html" aria-pressed="false">
                         <div class="stat-title">
-                            <span>Total Transactions</span>
+                            <span id="statRevenueTitle">Monthly Revenue</span>
                             <span class="card-icon"><i class="fas fa-receipt"></i></span>
                         </div>
-                        <div class="stat-value" id="statTotalTransactions">-</div>
-                        <div class="stat-sub">Logged transactions</div>
+                        <div class="stat-value" id="statTotalRevenue">₱0.00</div>
+                        <div class="stat-sub" id="statRevenueSub"><span id="statTotalTransactions">0</span> logged transactions</div>
                     </div>
                 </div>
                 <!-- Cremation module audit, Batch E: previously zero cremation

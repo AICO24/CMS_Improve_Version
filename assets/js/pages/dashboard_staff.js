@@ -473,45 +473,97 @@ document.addEventListener('DOMContentLoaded', async function () {
     // =========================================================================
     // 6. MAIN DATA RETRIEVAL (OCCUPANCY, REVENUE & TRANSACTIONS)
     // =========================================================================
-    try {
+    // ── Local Timezone Date Formatting & Period Bounds ──────────────────────
+    function formatLocalDate(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function getPeriodBounds(period = 'monthly') {
         const now = new Date();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-        const todayStr = now.toISOString().slice(0, 10);
+        const todayStr = formatLocalDate(now);
+        let startDate;
 
-        const [occRes, revSumRes, revMonthRes, paymentsRes] = await Promise.allSettled([
-            api.request('reports/occupancy', { method: 'GET' }),
-            api.request(`payments/revenue?date_from=${monthStart}&date_to=${todayStr}`, { method: 'GET' }),
-            api.request(`payments/revenue-by-month?year=${now.getFullYear()}`, { method: 'GET' }),
-            api.request(`payments?date_from=${new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().slice(0, 10)}&date_to=${new Date().toISOString().slice(0, 10)}`, { method: 'GET' })
-        ]);
+        if (period === 'weekly') {
+            const d = new Date(now);
+            const day = d.getDay();
+            const diff = (day === 0 ? 6 : day - 1);
+            d.setDate(d.getDate() - diff);
+            startDate = formatLocalDate(d);
+        } else if (period === 'yearly') {
+            startDate = `${now.getFullYear()}-01-01`;
+        } else {
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            startDate = `${y}-${m}-01`;
+        }
 
-        const occupancy = occRes.status === 'fulfilled' ? occRes.value : {};
-        const revenueSummary = revSumRes.status === 'fulfilled' ? revSumRes.value : {};
-        const revenueByMonth = revMonthRes.status === 'fulfilled' ? revMonthRes.value : [];
-        let payments = paymentsRes.status === 'fulfilled' ? paymentsRes.value : [];
+        return { startDate, endDate: todayStr, period };
+    }
 
-        if ((!Array.isArray(payments) && !(payments && Array.isArray(payments.data))) || (Array.isArray(payments) && payments.length === 0)) {
-            try {
-                payments = await api.request('payments', { method: 'GET' });
-            } catch (e) {
-                payments = [];
+    let currentStaffPeriod = 'monthly';
+    let revenueChartInstance = null;
+    let capacityChartInstance = null;
+
+    async function loadMainStaffDashboardData(period = 'monthly') {
+        try {
+            const bounds = getPeriodBounds(period);
+            const now = new Date();
+            const threeMonthsAgo = new Date(now);
+            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+            const threeMonthsAgoStr = formatLocalDate(threeMonthsAgo);
+
+            const [occRes, revStatsRes, revSumRes, revMonthRes, paymentsRes] = await Promise.allSettled([
+                api.request('reports/occupancy', { method: 'GET' }),
+                api.request(`payments/stats?period=${period}`, { method: 'GET' }),
+                api.request(`payments/revenue?date_from=${bounds.startDate}&date_to=${bounds.endDate}`, { method: 'GET' }),
+                api.request(`payments/revenue-by-month?year=${now.getFullYear()}`, { method: 'GET' }),
+                api.request(`payments?date_from=${threeMonthsAgoStr}&date_to=${bounds.endDate}`, { method: 'GET' })
+            ]);
+
+            const occupancy = occRes.status === 'fulfilled' ? occRes.value : {};
+            const paymentStats = revStatsRes.status === 'fulfilled' ? revStatsRes.value : {};
+            const revenueSummary = revSumRes.status === 'fulfilled' ? revSumRes.value : {};
+            const revenueByMonth = revMonthRes.status === 'fulfilled' ? revMonthRes.value : [];
+            let payments = paymentsRes.status === 'fulfilled' ? paymentsRes.value : [];
+
+            if ((!Array.isArray(payments) && !(payments && Array.isArray(payments.data))) || (Array.isArray(payments) && payments.length === 0)) {
+                try {
+                    payments = await api.request('payments', { method: 'GET' });
+                } catch (e) {
+                    payments = [];
+                }
             }
-        }
 
-        const summary = (occupancy && occupancy.summary) ? occupancy.summary : {};
-        const totalLots = Number(summary.total) || 0;
-        const availableLots = Number(summary.available) || 0;
-        const occupiedLots = Number(summary.occupied) || 0;
-        const reservedLots = Number(summary.reserved) || 0;
-        const otherLots = Math.max(0, totalLots - (availableLots + occupiedLots + reservedLots));
+            const summary = (occupancy && occupancy.summary) ? occupancy.summary : {};
+            const totalLots = Number(summary.total) || 0;
+            const availableLots = Number(summary.available) || 0;
+            const occupiedLots = Number(summary.occupied) || 0;
+            const reservedLots = Number(summary.reserved) || 0;
+            const otherLots = Math.max(0, totalLots - (availableLots + occupiedLots + reservedLots));
 
-        // Populate Top Operational Stat Cards
-        setText('statAvailableLots', availableLots.toLocaleString());
-        setText('statOccupiedLots', occupiedLots.toLocaleString());
-        if (totalBookingsPendingCount === 0) {
-            setText('statPendingBookings', '0');
-        }
-        setText('statMonthlyRevenue', formatCurrency(Number(revenueSummary.total) || 0));
+            // Populate Top Operational Stat Cards
+            setText('statAvailableLots', availableLots.toLocaleString());
+            setText('statOccupiedLots', occupiedLots.toLocaleString());
+            if (totalBookingsPendingCount === 0) {
+                setText('statPendingBookings', '0');
+            }
+
+            const periodRev = (paymentStats && typeof paymentStats.total_revenue === 'number')
+                ? paymentStats.total_revenue
+                : (Number(revenueSummary.total) || 0);
+
+            setText('statMonthlyRevenue', formatCurrency(periodRev));
+
+            // Update title and subtitle to match current period
+            const periodTitle = period.charAt(0).toUpperCase() + period.slice(1);
+            setText('staffRevenueTitle', `${periodTitle} Collections`);
+            const revSubEl = document.getElementById('staffRevenueSub');
+            if (revSubEl) {
+                revSubEl.textContent = `Counter collections (${period})`;
+            }
 
         // Interactive Quick Navigation & Accessible Stat Cards
         document.querySelectorAll('.stats-row > .stat-card').forEach((card) => {
@@ -686,7 +738,11 @@ document.addEventListener('DOMContentLoaded', async function () {
             }
 
             const currentThemeColors = getChartColors();
-            let revenueChartInstance = new Chart(ctx, {
+            if (revenueChartInstance) {
+                revenueChartInstance.destroy();
+                revenueChartInstance = null;
+            }
+            revenueChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels,
@@ -884,7 +940,11 @@ document.addEventListener('DOMContentLoaded', async function () {
                 `).join('');
             }
 
-            new Chart(capCtx, {
+            if (capacityChartInstance) {
+                capacityChartInstance.destroy();
+                capacityChartInstance = null;
+            }
+            capacityChartInstance = new Chart(capCtx, {
                 type: 'doughnut',
                 data: {
                     labels: chartLabels,
@@ -929,18 +989,36 @@ document.addEventListener('DOMContentLoaded', async function () {
                     }
                 }
             });
-        }
-    } catch (error) {
-        console.error('Staff Dashboard load failed', error);
-        if (error.message && error.message.toLowerCase().includes('unauthorized')) {
-            api.logout();
-            return;
-        }
-        const errorBox = document.querySelector('.dashboard-error');
-        if (errorBox) {
-            errorBox.remove();
+            }
+        } catch (error) {
+            console.error('Staff Dashboard load failed', error);
+            if (error.message && error.message.toLowerCase().includes('unauthorized')) {
+                api.logout();
+                return;
+            }
+            const errorBox = document.querySelector('.dashboard-error');
+            if (errorBox) {
+                errorBox.remove();
+            }
         }
     }
+
+    // Initial load
+    await loadMainStaffDashboardData('monthly');
+
+    // Attach Period Filter click handlers
+    document.querySelectorAll('.dashboard-period-filter .period-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const selected = btn.getAttribute('data-period');
+            if (!selected || selected === currentStaffPeriod) return;
+
+            document.querySelectorAll('.dashboard-period-filter .period-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            currentStaffPeriod = selected;
+            await loadMainStaffDashboardData(currentStaffPeriod);
+        });
+    });
 });
 
 /* =========================================================================

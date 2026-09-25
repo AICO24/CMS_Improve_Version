@@ -389,19 +389,105 @@ class Payment {
     }
 
     public function getRevenue($filters = []) {
-        $sql = "SELECT SUM(amount) AS total, COUNT(*) AS count FROM payments WHERE 1=1";
+        $sql = "SELECT SUM(amount) AS total, COUNT(*) AS count FROM payments WHERE verification_status != 'Rejected'";
         $params = [];
         if (!empty($filters['date_from'])) {
-            $sql .= " AND payment_date >= ?";
+            $sql .= " AND COALESCE(payment_date, DATE(created_at)) >= ?";
             $params[] = $filters['date_from'];
         }
         if (!empty($filters['date_to'])) {
-            $sql .= " AND payment_date <= ?";
+            $sql .= " AND COALESCE(payment_date, DATE(created_at)) <= ?";
             $params[] = $filters['date_to'];
+        }
+        if (!empty($filters['verification_status'])) {
+            $sql .= " AND verification_status = ?";
+            $params[] = $filters['verification_status'];
         }
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetch();
+    }
+
+    public function getStats($period = 'monthly', $filters = []) {
+        $period = strtolower(trim((string)$period));
+        if (!in_array($period, ['weekly', 'monthly', 'yearly'])) {
+            $period = 'monthly';
+        }
+
+        $now = new DateTime('now');
+        $currentDate = $now->format('Y-m-d');
+
+        if (!empty($filters['date_from']) && !empty($filters['date_to'])) {
+            $startDate = $filters['date_from'];
+            $endDate = $filters['date_to'];
+        } elseif ($period === 'weekly') {
+            $startOfWeek = clone $now;
+            $dayOfWeek = (int)$startOfWeek->format('N'); // 1 = Monday, 7 = Sunday
+            $startOfWeek->modify('-' . ($dayOfWeek - 1) . ' days');
+            $startDate = $startOfWeek->format('Y-m-d');
+            $endDate = $currentDate;
+        } elseif ($period === 'yearly') {
+            $startDate = $now->format('Y-01-01');
+            $endDate = $currentDate;
+        } else { // monthly
+            $startDate = $now->format('Y-m-01');
+            $endDate = $currentDate;
+        }
+
+        $stmt = $this->db->prepare("
+            SELECT 
+                COALESCE(SUM(amount), 0) AS total_revenue,
+                COUNT(*) AS transaction_count,
+                COALESCE(SUM(CASE WHEN verification_status = 'Verified' THEN amount ELSE 0 END), 0) AS verified_revenue,
+                COALESCE(SUM(CASE WHEN verification_status = 'Pending' THEN 1 ELSE 0 END), 0) AS pending_count,
+                COALESCE(SUM(CASE WHEN verification_status = 'Verified' THEN 1 ELSE 0 END), 0) AS verified_count
+            FROM payments
+            WHERE verification_status != 'Rejected'
+              AND COALESCE(payment_date, DATE(created_at)) >= ?
+              AND COALESCE(payment_date, DATE(created_at)) <= ?
+        ");
+        $stmt->execute([$startDate, $endDate]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        // All-time and YTD totals
+        $ytdStart = $now->format('Y-01-01');
+        $stmtYtd = $this->db->prepare("
+            SELECT COALESCE(SUM(amount), 0) AS ytd_revenue, COUNT(*) AS ytd_count
+            FROM payments
+            WHERE verification_status != 'Rejected'
+              AND COALESCE(payment_date, DATE(created_at)) >= ?
+        ");
+        $stmtYtd->execute([$ytdStart]);
+        $ytd = $stmtYtd->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        $stmtAll = $this->db->query("
+            SELECT COALESCE(SUM(amount), 0) AS all_time_revenue, COUNT(*) AS all_time_count
+            FROM payments
+            WHERE verification_status != 'Rejected'
+        ");
+        $all = $stmtAll->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        $tot = (float)($row['total_revenue'] ?? 0);
+        $cnt = (int)($row['transaction_count'] ?? 0);
+        $avg = $cnt > 0 ? round($tot / $cnt, 2) : 0.0;
+
+        return [
+            'period' => $period,
+            'date_from' => $startDate,
+            'date_to' => $endDate,
+            'total' => $tot,
+            'total_revenue' => $tot,
+            'count' => $cnt,
+            'transaction_count' => $cnt,
+            'average_transaction' => $avg,
+            'verified_revenue' => (float)($row['verified_revenue'] ?? 0),
+            'pending_count' => (int)($row['pending_count'] ?? 0),
+            'verified_count' => (int)($row['verified_count'] ?? 0),
+            'ytd_revenue' => (float)($ytd['ytd_revenue'] ?? 0),
+            'ytd_count' => (int)($ytd['ytd_count'] ?? 0),
+            'all_time_revenue' => (float)($all['all_time_revenue'] ?? 0),
+            'all_time_count' => (int)($all['all_time_count'] ?? 0),
+        ];
     }
 
     public function getRevenueByMonth($year = null) {

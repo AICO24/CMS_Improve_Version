@@ -365,4 +365,61 @@ class ReportController {
         $stmt = $this->db->query($sql);
         return $stmt->fetchAll();
     }
+
+    public function dashboardSummary($period = 'monthly') {
+        $period = strtolower(trim((string)$period));
+        if (!in_array($period, ['weekly', 'monthly', 'yearly'])) {
+            $period = 'monthly';
+        }
+
+        $paymentStats = $this->paymentModel->getStats($period);
+        $lotStats = $this->lotModel->getStats();
+
+        $startDate = $paymentStats['date_from'];
+        $endDate = $paymentStats['date_to'];
+
+        // Query schedule operational metrics
+        $schedules = ['total' => 0, 'pending' => 0, 'confirmed' => 0];
+        try {
+            $stmtSched = $this->db->prepare("
+                SELECT 
+                    COUNT(*) AS total,
+                    COALESCE(SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END), 0) AS pending,
+                    COALESCE(SUM(CASE WHEN status = 'Confirmed' THEN 1 ELSE 0 END), 0) AS confirmed
+                FROM schedules
+                WHERE schedule_date >= ? AND schedule_date <= ?
+            ");
+            $stmtSched->execute([$startDate, $endDate]);
+            $schedules = $stmtSched->fetch(PDO::FETCH_ASSOC) ?: $schedules;
+        } catch (Exception $e) {
+            // graceful fallback
+        }
+
+        // Query cremation operational metrics
+        $cremations = ['total' => 0, 'pending' => 0, 'scheduled' => 0];
+        try {
+            $stmtCrem = $this->db->prepare("
+                SELECT 
+                    COUNT(*) AS total,
+                    COALESCE(SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END), 0) AS pending,
+                    COALESCE(SUM(CASE WHEN status = 'Scheduled' THEN 1 ELSE 0 END), 0) AS scheduled
+                FROM cremation_requests
+                WHERE cremation_date >= ? AND cremation_date <= ?
+            ");
+            $stmtCrem->execute([$startDate, $endDate]);
+            $cremations = $stmtCrem->fetch(PDO::FETCH_ASSOC) ?: $cremations;
+        } catch (Exception $e) {
+            // graceful fallback
+        }
+
+        return [
+            'period' => $period,
+            'date_from' => $startDate,
+            'date_to' => $endDate,
+            'revenue' => $paymentStats,
+            'occupancy' => $lotStats,
+            'schedules' => $schedules,
+            'cremations' => $cremations,
+        ];
+    }
 }

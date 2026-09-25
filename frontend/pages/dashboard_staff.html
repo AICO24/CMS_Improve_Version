@@ -218,7 +218,15 @@
                 </div>
 
                 <!-- Top Operational KPI Stats Row -->
-                <p class="section-label"><i class="fas fa-chart-pie"></i> Operational Overview</p>
+                <div class="section-header-row">
+                    <p class="section-label" style="margin:0;"><i class="fas fa-chart-pie"></i> Operational Overview</p>
+                    <div class="dashboard-period-filter" role="group" aria-label="Dashboard period filter">
+                        <span class="period-filter-label"><i class="fas fa-calendar-days"></i> Period:</span>
+                        <button type="button" class="period-btn" data-period="weekly">Weekly</button>
+                        <button type="button" class="period-btn active" data-period="monthly">Monthly</button>
+                        <button type="button" class="period-btn" data-period="yearly">Yearly</button>
+                    </div>
+                </div>
                 <div class="stats-row">
                     <div class="stat-card" role="button" tabindex="0" title="View available lots in Lot Management" data-href="lot-management.html?status=Available" aria-pressed="false">
                         <div class="stat-title">
@@ -246,11 +254,11 @@
                     </div>
                     <div class="stat-card" role="button" tabindex="0" title="View recorded payments in Payments" data-href="payments.html" aria-pressed="false">
                         <div class="stat-title">
-                            <span>Monthly Collections</span>
+                            <span id="staffRevenueTitle">Monthly Collections</span>
                             <span class="card-icon"><i class="fas fa-receipt"></i></span>
                         </div>
                         <div class="stat-value" id="statMonthlyRevenue">-</div>
-                        <div class="stat-sub">Counter payments this month</div>
+                        <div class="stat-sub" id="staffRevenueSub">Counter payments this month</div>
                     </div>
                 </div>
 

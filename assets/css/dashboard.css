@@ -863,3 +863,81 @@
         display: none !important;
     }
 }
+
+/* ── Dashboard Period Filter Toolbar (Weekly / Monthly / Yearly) ── */
+.section-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 20px 0 10px 0;
+}
+
+.dashboard-period-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #edf2f0;
+    padding: 3px 4px;
+    border-radius: 9999px;
+    border: 1px solid #d1ded8;
+}
+
+.period-filter-label {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #4b6358;
+    padding: 0 4px 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.period-btn {
+    border: none;
+    background: transparent;
+    color: #4b6358;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.period-btn:hover {
+    color: #1e332a;
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.period-btn.active {
+    background: #2c5e47;
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+body[data-theme="dark"] .dashboard-period-filter {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme="dark"] .period-filter-label {
+    color: #94a3b8;
+}
+
+body[data-theme="dark"] .period-btn {
+    color: #94a3b8;
+}
+
+body[data-theme="dark"] .period-btn:hover {
+    color: #f1f5f9;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme="dark"] .period-btn.active {
+    background: #10b981;
+    color: #042f2e;
+    font-weight: 700;
+}

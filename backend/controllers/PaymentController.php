@@ -1373,6 +1373,10 @@ class PaymentController {
         return ['success' => true, 'message' => 'Payment deleted'];
     }
 
+    public function getStats($period = 'monthly', $filters = []) {
+        return $this->paymentModel->getStats($period, $filters);
+    }
+
     public function revenue($filters = []) {
         return $this->paymentModel->getRevenue($filters);
     }

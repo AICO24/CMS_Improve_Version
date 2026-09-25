@@ -4870,43 +4870,73 @@ body[data-theme="dark"] .aging-badge.aging-warning {
     body {
         background: #ffffff !important;
         color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
+    /* Completely hide all background page UI, navigation, sidebars, headers, cards, tables and extraneous controls */
+    .dashboard-container,
     .sidebar,
     .top-bar,
+    .main-content,
+    .content-area,
+    .chart-card,
+    .table-container,
+    .data-table,
+    .pagination-controls,
     .payment-control-panel,
     .payment-stats,
     .payments-table-shell,
-    .pagination-controls,
     .payments-footer,
-    .close-view,
-    .no-print,
+    .section-label,
+    .active-filter-chips,
+    .fb-profile-hero,
+    .ambient-swirl-canvas,
+    .ambient-swirl-container,
+    #paymentModal,
+    #deleteModal,
     #aiAssistantMount,
-    #aiAssistantMountRecord {
+    #aiAssistantMountRecord,
+    .no-print,
+    .close-view,
+    .deck-header,
+    .deck-footer,
+    .deck-close-btn,
+    .btn-print,
+    .btn-print-clearance,
+    .deck-pane--right {
         display: none !important;
     }
 
+    /* Display ONLY the view modal voucher */
     #viewModal,
-    .modal-deck-overlay,
-    .modal {
+    .modal-deck-overlay {
         display: block !important;
         position: static !important;
+        inset: auto !important;
         background: none !important;
         padding: 0 !important;
+        margin: 0 !important;
         box-shadow: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
     }
 
     .modal-deck-card,
     .modal-deck-card--view,
     .payment-detail-modal,
-    .modal-content {
+    .modal-content,
+    .resmodal-window {
         box-shadow: none !important;
         border: none !important;
         max-width: 100% !important;
         width: 100% !important;
         padding: 0 !important;
+        margin: 0 !important;
         overflow: visible !important;
         max-height: none !important;
+        background: transparent !important;
     }
 
     .split-deck-body,
@@ -4915,25 +4945,29 @@ body[data-theme="dark"] .aging-badge.aging-warning {
         overflow: visible !important;
         max-height: none !important;
         padding: 0 !important;
+        margin: 0 !important;
         background: none !important;
     }
 
-    .deck-pane {
+    .deck-pane,
+    .deck-pane--left {
+        width: 100% !important;
+        max-width: 100% !important;
         padding: 0 !important;
+        margin: 0 !important;
         overflow: visible !important;
         max-height: none !important;
         border: none !important;
     }
 
-    .deck-header,
-    .deck-footer {
-        display: none !important;
-    }
-
     .official-receipt-sheet {
-        padding: 0 !important;
-        border: 1px solid #000000;
+        border: 2px solid #1e293b !important;
+        border-radius: 8px !important;
         padding: 24px !important;
+        margin: 0 auto !important;
+        max-width: 720px !important;
+        box-sizing: border-box !important;
+        background: #ffffff !important;
     }
 
     .receipt-amount-card {

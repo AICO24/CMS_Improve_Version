@@ -1166,6 +1166,16 @@ if (preg_match('/^payments\/(\d+)$/', $path, $matches) && $requestMethod === 'DE
     exit;
 }
 
+if ($path === 'payments/stats' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $period = $_GET['period'] ?? 'monthly';
+    $filters = [];
+    if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
+    if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
+    echo json_encode($paymentController->getStats($period, $filters));
+    exit;
+}
+
 if ($path === 'payments/revenue' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $filters = [];
@@ -1475,6 +1485,13 @@ if ($path === 'reports/expiration' && $requestMethod === 'GET') {
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
     echo json_encode($reportController->expiration($pagination, $filters));
+    exit;
+}
+
+if ($path === 'reports/dashboard-summary' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $period = $_GET['period'] ?? 'monthly';
+    echo json_encode($reportController->dashboardSummary($period));
     exit;
 }
 
