@@ -46,6 +46,60 @@
     let lastFocusedElementBeforeModal = null;
 
     /**
+     * Sanitizes errors to prevent exposing raw connection errors, internal stack traces,
+     * IP addresses, ports, or technical exceptions to citizens.
+     */
+    function sanitizeUserErrorMessage(errOrMsg, defaultMsg = 'I encountered a temporary issue processing your request. Please try again.') {
+        const rawMsg = typeof errOrMsg === 'string'
+            ? errOrMsg
+            : (errOrMsg?.message || errOrMsg?.error || '');
+
+        if (!rawMsg) return defaultMsg;
+
+        // Log original raw technical detail securely in console for developers/administrators
+        console.error('[AI Assistant]', errOrMsg);
+
+        const lower = rawMsg.toLowerCase();
+
+        // Technical / connection / provider errors to conceal
+        const technicalSignatures = [
+            'curl error',
+            'failed to fetch',
+            'networkerror',
+            'network error',
+            'connection refused',
+            '127.0.0.1',
+            'localhost',
+            'port 5001',
+            ':5001',
+            'pdoexception',
+            'sqlstate',
+            'stack trace',
+            'traceback',
+            'fatal error',
+            'uncaught exception',
+            'err_ai_offline',
+            'internal server error',
+            '500 internal',
+            '502 bad gateway',
+            '503 service',
+            '504 gateway'
+        ];
+
+        for (const sig of technicalSignatures) {
+            if (lower.includes(sig)) {
+                return 'The AI assistant is temporarily unavailable or experiencing connection issues. Please try again in a few moments, or reach out to our cemetery administration directly for urgent assistance.';
+            }
+        }
+
+        if (rawMsg.length > 250 || rawMsg.includes('{') || rawMsg.includes('}')) {
+            return defaultMsg;
+        }
+
+        return rawMsg;
+    }
+
+    /**
      * Initialization entry point
      */
     async function init() {
@@ -403,7 +457,7 @@
                         renderPromptChips();
                         return;
                     } else if (draftRes && draftRes.error) {
-                        appendAssistantMessage(`⚠️ Could not resume Draft #${escapeHtml(paramDraftId)}: ${escapeHtml(draftRes.error)}`);
+                        appendAssistantMessage(`⚠️ Could not resume Draft #${escapeHtml(paramDraftId)}: ${escapeHtml(sanitizeUserErrorMessage(draftRes.error, 'The draft could not be retrieved.'))}`);
                     }
                 } catch (err) {
                     console.warn(`Could not load draft #${paramDraftId}:`, err);
@@ -603,7 +657,7 @@
                     renderPromptChips();
                 }
             } else {
-                appendAssistantMessage(res?.error || 'I encountered an issue processing your request. Please try again.');
+                appendAssistantMessage(sanitizeUserErrorMessage(res?.error, 'I encountered an issue processing your request. Please try again.'));
             }
         } catch (err) {
             removeTypingIndicator(typingEl);
@@ -613,7 +667,7 @@
                 if (typeof showToast === 'function') showToast('Rate limit reached. Please wait a moment.', 'warning');
                 startRateLimitCooldown(5);
             } else {
-                appendAssistantMessage('⚠️ Connection error: ' + (err?.message || 'Please check your network and try again.'));
+                appendAssistantMessage('⚠️ ' + sanitizeUserErrorMessage(err, 'The AI assistant is temporarily unavailable. Please check your connection and try again.'));
             }
         } finally {
             // Do NOT unlock loading if rate limit cooldown is actively holding the button
@@ -1107,12 +1161,12 @@
                 updateBlueprintHUD();
                 renderPromptChips();
             } else {
-                appendAssistantMessage(`⚠️ ${res?.error || 'Could not execute the confirmed action.'}`);
+                appendAssistantMessage(`⚠️ ${sanitizeUserErrorMessage(res?.error, 'Could not execute the confirmed action.')}`);
                 renderPromptChips();
             }
         } catch (err) {
             removeTypingIndicator(typingEl);
-            appendAssistantMessage(`⚠️ Failed to confirm action: ${err?.message || 'Please try again.'}`);
+            appendAssistantMessage(`⚠️ Failed to confirm action: ${sanitizeUserErrorMessage(err, 'Please try again.')}`);
             renderPromptChips();
         } finally {
             setLoading(false);
@@ -1133,7 +1187,7 @@
             renderPromptChips();
         } catch (err) {
             removeTypingIndicator(typingEl);
-            appendAssistantMessage(`⚠️ Failed to reject action: ${err?.message || 'Please try again.'}`);
+            appendAssistantMessage(`⚠️ Failed to reject action: ${sanitizeUserErrorMessage(err, 'Please try again.')}`);
             renderPromptChips();
         } finally {
             setLoading(false);
@@ -1199,11 +1253,11 @@
                 renderPromptChips();
                 if (typeof showToast === 'function') showToast('Field updated successfully', 'success');
             } else {
-                appendAssistantMessage(res.error || 'Failed to update field.');
-                if (typeof showToast === 'function') showToast(res.error || 'Failed to update field', 'error');
+                appendAssistantMessage(sanitizeUserErrorMessage(res?.error, 'Failed to update field.'));
+                if (typeof showToast === 'function') showToast(sanitizeUserErrorMessage(res?.error, 'Failed to update field'), 'error');
             }
         } catch (e) {
-            appendAssistantMessage(`Error updating field: ${e.message}`);
+            appendAssistantMessage(`Error updating field: ${sanitizeUserErrorMessage(e, 'Unable to update field at this time.')}`);
         } finally {
             setLoading(false);
         }
@@ -1232,7 +1286,7 @@
         } catch (e) {
             lotPickerSpinner.style.display = 'none';
             lotPickerEmpty.style.display = 'block';
-            lotPickerEmpty.querySelector('p').textContent = 'Could not load available lots: ' + e.message;
+            lotPickerEmpty.querySelector('p').textContent = sanitizeUserErrorMessage(e, 'Could not load available lots: Please try again later.');
         }
     }
 
@@ -1522,12 +1576,12 @@
                     if (typeof showToast === 'function') showToast(successMsg, 'success');
                 }
             } else {
-                appendAssistantMessage(res?.error || 'Failed to confirm reservation.');
-                if (typeof showToast === 'function') showToast(res?.error || 'Failed to confirm', 'error');
+                appendAssistantMessage(sanitizeUserErrorMessage(res?.error, 'Failed to confirm reservation.'));
+                if (typeof showToast === 'function') showToast(sanitizeUserErrorMessage(res?.error, 'Failed to confirm'), 'error');
             }
         } catch (e) {
             closeBookingConfirmModal();
-            appendAssistantMessage(`Error confirming booking: ${e.message}`);
+            appendAssistantMessage(`Error confirming booking: ${sanitizeUserErrorMessage(e, 'Unable to confirm booking at this time. Please try again or contact administration.')}`);
         } finally {
             setLoading(false);
             updateBlueprintHUD();
@@ -2047,12 +2101,13 @@
                 updateBlueprintHUD();
                 refreshDocModalState();
             } else {
-                const err = res?.error || 'Failed to upload document';
+                const err = sanitizeUserErrorMessage(res?.error, 'Failed to upload document');
                 if (typeof showToast === 'function') showToast(err, 'error');
                 appendAssistantMessage(`⚠️ Hindi na-upload ang dokumento: ${err}`);
             }
         } catch (err) {
-            if (typeof showToast === 'function') showToast(err.message || 'Upload failed', 'error');
+            const errText = sanitizeUserErrorMessage(err, 'Upload failed');
+            if (typeof showToast === 'function') showToast(errText, 'error');
         } finally {
             if (btnUpload) {
                 btnUpload.disabled = false;
@@ -2077,10 +2132,10 @@
                 updateBlueprintHUD();
                 refreshDocModalState();
             } else {
-                if (typeof showToast === 'function') showToast(res?.error || 'Failed to remove document', 'error');
+                if (typeof showToast === 'function') showToast(sanitizeUserErrorMessage(res?.error, 'Failed to remove document'), 'error');
             }
         } catch (err) {
-            if (typeof showToast === 'function') showToast(err.message || 'Delete failed', 'error');
+            if (typeof showToast === 'function') showToast(sanitizeUserErrorMessage(err, 'Delete failed'), 'error');
         }
     }
 

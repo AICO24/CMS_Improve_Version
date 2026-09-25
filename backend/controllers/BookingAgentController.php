@@ -813,6 +813,19 @@ class BookingAgentController {
             );
         }
 
+        // Purely Advisory intent: UNCLEAR / Out-of-Scope (Off-topic refusal without mutating draft)
+        if ($intent === BookingAgentService::INTENT_UNCLEAR) {
+            return $this->handleUnclearOrOffTopic(
+                $message,
+                $currentDraft,
+                $replyMessage,
+                $confidence,
+                $contextResolution,
+                $slots,
+                $extractedReference
+            );
+        }
+
         // 6. Authoritatively Update Draft via BookingAgentService for intake/draft interactions
         $processPayload = [
             'intent'           => $intent,
@@ -906,6 +919,66 @@ class BookingAgentController {
             } else {
                 $serviceType = 'burial';
             }
+        }
+
+        // Guardrail: Check for clear off-topic inquiries
+        $offTopicPatterns = [
+            '/\b(?:write|generate|debug|code|script|python|javascript|php|java|c\+\+|sql query|function|algorithm|html|css)\b/i',
+            '/\b(?:recipe|cook|ingredients|bake|pancit|adobo|sinigang|cake|cookie|ulam|lutuin)\b/i',
+            '/\b(?:calculate|solve|equation|integral|derivative|math problem)\b/i',
+            '/\b(?:president|election|senator|congress|political party|politics|democrat|republican|politika)\b/i',
+            '/\b(?:weather forecast|tomorrow\'s temperature|rain today|uulan ba|panahon ngayon)\b/i',
+            '/\b(?:tell me a joke|write a poem|write a story|sing a song|kumanta ka|tula)\b/i',
+            '/\b(?:who won the game|nba|football|basketball score|pba)\b/i',
+            '/\b(?:bitcoin|crypto|forex|stock market)\b/i',
+            '/\b(?:translate to french|translate to spanish|translate to japanese)\b/i',
+        ];
+
+        $isCemeteryRelevant = (bool) preg_match('/\b(cemetery|burial|cremat|interment|grave|plot|lot|niche|urn|decedent|deceased|libing|hukay|puntod|himlayan|patay|burol|sementeryo|makati|columbarium|lawn|mausoleum|kabaong|casket|nitso|libingan|cremation)\b/i', $msgLower);
+
+        $isOffTopic = false;
+        if (!$isCemeteryRelevant) {
+            foreach ($offTopicPatterns as $pattern) {
+                if (preg_match($pattern, $msgLower)) {
+                    $isOffTopic = true;
+                    break;
+                }
+            }
+        }
+
+        if ($isOffTopic) {
+            $isTag = $this->isTagalog($message);
+            $refusalReply = $isTag
+                ? "Paumanhin po, maaari lamang po akong tumulong hinggil sa mga serbisyo ng sementeryo, booking ng libing o cremation, mga lote, oras ng pagbisita, at mga patakaran ng sementeryo. Paano ko po kayo matutulungan sa inyong mga kailangan sa sementeryo ngayon?"
+                : "I can only assist with cemetery services, burial and cremation bookings, lot inquiries, visiting hours, and cemetery policies. How may I help you with our cemetery arrangements today?";
+
+            return [
+                'intent'            => BookingAgentService::INTENT_UNCLEAR,
+                'confidence'        => 0.95,
+                'service_type'      => $serviceType,
+                'booking_reference' => null,
+                'slots'             => [
+                    'service_type'          => $serviceType,
+                    'decedent_name'         => null,
+                    'relationship'          => null,
+                    'preferred_date'        => null,
+                    'cremation_date'        => null,
+                    'target_date'           => null,
+                    'booking_reference'     => null,
+                    'lot_identifier'        => null,
+                    'lot_id'                => null,
+                    'section'               => null,
+                    'block'                 => null,
+                    'preferred_columbarium' => null,
+                    'correction_field'      => null,
+                    'corrected_value'       => null,
+                    'notes'                 => null,
+                    'preferred_time'        => null,
+                ],
+                'extracted_fields'  => [],
+                'reply'             => $refusalReply,
+                'is_off_topic'      => true,
+            ];
         }
 
         // Intent Classification
@@ -1906,6 +1979,74 @@ class BookingAgentController {
     }
 
     /**
+     * Handle UNCLEAR or out-of-scope queries (off-topic guardrail) purely as an advisory refusal
+     * without modifying active booking drafts.
+     */
+    private function handleUnclearOrOffTopic(
+        string $message,
+        ?array $currentDraft,
+        string $replyMessage,
+        float $confidence,
+        array $contextResolution,
+        array $slots,
+        ?string $extractedReference
+    ): array {
+        $isTag = $this->isTagalog($message);
+        if (empty($replyMessage) || str_contains($replyMessage, 'updated your booking') || str_contains($replyMessage, 'noted your booking request')) {
+            $replyMessage = $isTag
+                ? "Paumanhin po, maaari lamang po akong tumulong hinggil sa mga serbisyo ng sementeryo, booking ng libing o cremation, mga lote, oras ng pagbisita, at mga patakaran ng sementeryo. Paano ko po kayo matutulungan sa inyong mga kailangan sa sementeryo ngayon?"
+                : "I can only assist with cemetery services, burial and cremation bookings, lot inquiries, visiting hours, and cemetery policies. How may I help you with our cemetery arrangements today?";
+        }
+
+        $activeExtractedData = [];
+        $activeMissingFields = [];
+        $serviceType = $currentDraft['service_type'] ?? null;
+        if (!empty($currentDraft)) {
+            $freshDraft = null;
+            if (!empty($currentDraft['draft_id'])) {
+                $freshDraft = $this->draftModel->findById((int)$currentDraft['draft_id']);
+            }
+            $draftRef = $freshDraft ?: $currentDraft;
+            $activeExtractedData = !empty($draftRef['extracted_data'])
+                ? (is_string($draftRef['extracted_data']) ? json_decode($draftRef['extracted_data'], true) : $draftRef['extracted_data'])
+                : [];
+            $activeMissingFields = !empty($draftRef['missing_fields'])
+                ? (is_string($draftRef['missing_fields']) ? json_decode($draftRef['missing_fields'], true) : $draftRef['missing_fields'])
+                : [];
+        }
+
+        // Conversational segue: If user has an active draft, offer to resume
+        if (!empty($currentDraft) && !empty($activeExtractedData['decedent_name'])) {
+            $decName = $activeExtractedData['decedent_name'];
+            $segue = $isTag
+                ? "\n\nNais po ba ninyong ipagpatuloy ang pag-aayos ng booking para kay **{$decName}**?"
+                : "\n\nWould you like to continue arranging the booking for **{$decName}**?";
+            if (!str_contains($replyMessage, $decName)) {
+                $replyMessage .= $segue;
+            }
+        }
+
+        return [
+            'success'              => true,
+            'intent'               => BookingAgentService::INTENT_UNCLEAR,
+            'intent_confidence'    => $confidence,
+            'advisory'             => true,
+            'is_off_topic'         => true,
+            'reply'                => $replyMessage,
+            'draft_id'             => !empty($currentDraft['draft_id']) ? (int) $currentDraft['draft_id'] : null,
+            'draft_status'         => $currentDraft['status'] ?? null,
+            'service_type'         => $serviceType,
+            'extracted_data'       => $activeExtractedData,
+            'missing_fields'       => $activeMissingFields,
+            'missing_requirements' => $activeMissingFields,
+            'context_resolution'   => $contextResolution,
+            'slots'                => $slots,
+            'booking_reference'    => $extractedReference,
+            'code'                 => 200,
+        ];
+    }
+
+    /**
      * Resolve FAQ response from ai_knowledge table or bilingual defaults.
      */
     private function resolveFaqAnswer(string $msgLower, bool $isTag): string {
@@ -1914,8 +2055,26 @@ class BookingAgentController {
             $topicKey = 'visiting_hours';
         } elseif (preg_match('/\b(saan|location|address|saan matatagpuan|saan ang sementeryo|saan ang opisina|where are you located|where is the cemetery|how to get there)\b/i', $msgLower)) {
             $topicKey = 'cemetery_location';
+        } elseif (preg_match('/\b(refund|cancellation|cancel|ibabalik ba|pera pabalik|bawiin|cancellation policy|refund policy)\b/i', $msgLower)) {
+            $topicKey = 'cancellation_policy';
         } elseif (preg_match('/\b(magkano|presyo|fees|how much|bayad|payment|mode of payment|gcash|installment|price)\b/i', $msgLower)) {
             $topicKey = (str_contains($msgLower, 'payment') || str_contains($msgLower, 'bayad') || str_contains($msgLower, 'gcash')) ? 'payment_instructions' : 'fees_and_pricing';
+        } elseif (preg_match('/\b(columbarium|niche|urn|cremains|abo|ilang urn)\b/i', $msgLower)) {
+            $topicKey = 'columbarium_and_niche_rules';
+        } elseif (preg_match('/\b(lawn lot|mausoleum|family estate|lot type|types of lot|uri ng lote|klase ng lote)\b/i', $msgLower)) {
+            $topicKey = 'lot_type_differences';
+        } elseif (preg_match('/\b(lease|5 years|renewal|grace period|perpetual care|mapapaso|matatapos ang lease)\b/i', $msgLower)) {
+            $topicKey = 'lease_terms_and_renewals';
+        } elseif (preg_match('/\b(exhumation|relocation|hukayin|ilipat ang labi|transfer of remains|disinterment)\b/i', $msgLower)) {
+            $topicKey = 'exhumation_and_relocation';
+        } elseif (preg_match('/\b(lunes|monday|closed on monday|bakit sarado|maintenance)\b/i', $msgLower)) {
+            $topicKey = 'booking_lead_time';
+        } elseif (preg_match('/\b(provisional|hospital certificate|delayed death certificate|pending death certificate|wala pang death certificate)\b/i', $msgLower)) {
+            $topicKey = 'provisional_registration_policy';
+        } elseif (preg_match('/\b(role|roles|permission|permissions|responsibilities|admin|staff|citizen|tungkol sa account)\b/i', $msgLower)) {
+            $topicKey = 'user_roles';
+        } elseif (preg_match('/\b(structure|section|block|layout|hierarchy)\b/i', $msgLower)) {
+            $topicKey = 'cemetery_structure';
         } elseif (preg_match('/\b(requirements|kailangan dalhin|dokumento|death certificate|permit)\b/i', $msgLower)) {
             $topicKey = 'required_documents';
         } elseif (preg_match('/\b(serbisyo|services|inooffer)\b/i', $msgLower)) {
@@ -1936,6 +2095,28 @@ class BookingAgentController {
             }
         }
 
+        // Dynamic search in ai_knowledge table for keyword matches
+        try {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->query("SELECT topic, content FROM ai_knowledge");
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $row) {
+                $topicWords = explode('_', strtolower((string)$row['topic']));
+                $matchedWordCount = 0;
+                foreach ($topicWords as $tw) {
+                    if (strlen($tw) >= 3 && str_contains($msgLower, $tw)) {
+                        $matchedWordCount++;
+                    }
+                }
+                if ($matchedWordCount >= 2 && !empty($row['content'])) {
+                    return trim($row['content']);
+                }
+            }
+        } catch (Throwable $t) {
+            // ignore
+        }
+
+        // Authoritative static bilingual fallbacks
         if ($topicKey === 'visiting_hours') {
             return $isTag
                 ? "Ang sementeryo po ay bukas araw-araw mula 6:00 AM hanggang 6:00 PM para sa mga bisita. Ang administrative office naman po ay bukas mula Lunes hanggang Biyernes, 8:00 AM hanggang 5:00 PM para sa mga transaksyon."
@@ -1956,6 +2137,50 @@ class BookingAgentController {
             return $isTag
                 ? "Nag-aalok po kami ng Traditional Ground Burial, Cremation Services, at Columbarium Niches, kasama ang perpetual care at maintenance ng parke."
                 : "We provide Traditional Ground Burial, Cremation Services, and Columbarium Niches, with perpetual park care and maintenance.";
+        } elseif ($topicKey === 'cancellation_policy') {
+            return $isTag
+                ? "Maaari po ninyong kanselahin ang hindi pa bayad na reservation nang walang bayad. Para sa mga nakumpirmang booking na may bayad, ang cancellation na naipasa nang 48 oras bago ang serbisyo ay may 100% refund. Ang 24-48 oras ay may 80% refund (20% admin fee), at non-refundable naman po kapag mas mababa sa 24 oras."
+                : "Unpaid reservations can be cancelled at any time without fee. For paid confirmed bookings, cancellations submitted at least 48 hours in advance receive a 100% refund; 24-48 hours receive an 80% refund (20% admin fee); cancellations under 24 hours are non-refundable.";
+        } elseif ($topicKey === 'columbarium_and_niche_rules') {
+            return $isTag
+                ? "Ang aming Columbarium ay may Standard Niches (hanggang 2 urns) at Family Niches (hanggang 4 urns). Ang sukat ng urn ay hindi dapat lumagpas sa 8 pulgada ang lapad at 10 pulgada ang taas. Ang pag-release ng cremains ay para lamang sa awtorisadong claimant na may valid government ID."
+                : "Our Columbarium features Standard Niches (holding up to 2 urns) and Family Niches (holding up to 4 urns). Standard urn dimensions must not exceed 8 inches in diameter by 10 inches in height.";
+        } elseif ($topicKey === 'lot_type_differences') {
+            return $isTag
+                ? "Nag-aalok kami ng Lawn Lots (Standard, Deluxe, at Premium underground double-depth plots na may marble/granite marker), Family Estate Mausoleums (para sa pribadong libingan), at Columbarium Niches para sa cremains."
+                : "We offer Lawn Lots (Standard, Deluxe, and Premium underground double-depth plots with flat markers), Family Estate Mausoleums for private interment, and Columbarium Niches for cremains.";
+        } elseif ($topicKey === 'lease_terms_and_renewals') {
+            return $isTag
+                ? "Ang mga lawn lot interments ay sumasailalim sa renewable 5-year lease na may kasamang perpetual care at maintenance. Nagpapadala po kami ng renewal notice 90 at 30 araw bago mag-expire, na may 60-day grace period."
+                : "Lawn lot interments operate on a renewable 5-year lease agreement which includes perpetual park care and maintenance. Renewal notices are sent 90 and 30 days prior to expiration, with a 60-day grace period.";
+        } elseif ($topicKey === 'exhumation_and_relocation') {
+            return $isTag
+                ? "Alinsunod sa Sanitation Code of the Philippines (PD 856), ang skeletal exhumation ay nangangailangan ng hindi bababa sa 3 taon para sa non-communicable diseases o 5 taon para sa communicable diseases, kasama ang Exhumation Permit at Transfer Clearance mula sa City Health Office."
+                : "Per the Philippine Sanitation Code (PD 856), skeletal exhumation requires a minimum interment duration of 3 years (non-communicable) or 5 years (communicable), plus an Exhumation Permit and Transfer Clearance from the City Health Office.";
+        } elseif ($topicKey === 'booking_lead_time') {
+            return $isTag
+                ? "Ang mga libing po ay isinasagawa mula Martes hanggang Linggo (8:00 AM – 4:00 PM). Sarado po ang sementeryo tuwing Lunes para sa grounds maintenance at kalinisan. Inirerekomenda po ang booking nang hindi bababa sa 24 hanggang 48 oras bago ang libing."
+                : "Burials run Tuesday through Sunday (8:00 AM – 4:00 PM). The cemetery is closed Mondays for grounds maintenance and sanitation. We recommend booking at least 24 to 48 hours in advance.";
+        } elseif ($topicKey === 'user_roles') {
+            return $isTag
+                ? "May 3 tungkulin sa CMS: 1) Administrator - namamahala sa buong sistema, accounts, pricing, at reports; 2) Staff - nag-iinspeksyon ng mga dokumento, nagkukumpirma ng cash/bank payments, at nagpapatupad ng schedule; 3) Citizen/User - nagbu-book ng libing/cremation, nagbabayad online, at sumusubaybay sa kanilang records."
+                : "There are 3 user roles: 1) Administrator manages system configuration, accounts, pricing, and reports; 2) Staff reviews documents, verifies manual payments, and manages daily schedule execution; 3) Citizen/User books burial/cremation services, pays online, and tracks their records.";
+        } elseif ($topicKey === 'cemetery_structure') {
+            return $isTag
+                ? "Ang sementeryo po ay nahahati sa Sections (hal. Section A - Garden of Peace), Blocks (mga subdivision na may daanan), at Lots (mga indibidwal na lote, hal. A-01-14). Ang columbarium naman po ay may mga building wings at vertical tiers/levels."
+                : "The cemetery is structured into Sections (e.g. Section A), Blocks (subdivisions with pathways), and individual Lots (e.g. A-01-14). The columbarium is divided into building wings and vertical niche tiers/levels.";
+        }
+
+        // Unknown Question: If user asks a question about cemetery/memorial services but answer is not cataloged
+        $isQuestion = str_contains($msgLower, '?')
+            || (bool) preg_match('/\b(ano|paano|kailan|saan|pwede\s+ba|maaari\s+ba|mayroon\s+ba|meron\s+ba|sino|bakit|how|what|when|where|can\s+i|is\s+there|do\s+you|why|tell\s+me)\b/i', $msgLower);
+
+        $hasCemeteryContext = (bool) preg_match('/\b(cemetery|burial|cremat|interment|grave|plot|lot|niche|urn|decedent|deceased|libing|hukay|puntod|himlayan|patay|burol|sementeryo|makati|columbarium|lawn|mausoleum|kabaong|casket|nitso|libingan|cremation)\b/i', $msgLower);
+
+        if ($isQuestion || $hasCemeteryContext) {
+            return $isTag
+                ? "Paumanhin po, wala pa po sa aming kasalukuyang talaan ng kaalaman ang tiyak na kasagutan sa inyong katanungan tungkol sa sementeryo. Mangyaring makipag-ugnayan po sa Cemetery Administration Office sa (02) 8123-4567 o bumisita Lunes hanggang Sabado (8:00 AM – 4:00 PM) para sa karagdagang tulong."
+                : "I don't have that specific information in our cemetery knowledge catalog yet. Please contact the Cemetery Administration Office directly at (02) 8123-4567 or visit during office hours (Monday to Saturday, 8:00 AM – 4:00 PM) for personalized assistance.";
         }
 
         return $isTag

@@ -312,9 +312,34 @@ def _fetch_knowledge_base() -> List[Dict[str, str]]:
         rows = cursor.fetchall()
         cursor.close()
         conn.close()
-        return rows
+        if rows:
+            return rows
     except Exception:
-        return []
+        pass
+
+    # Markdown documentation fallback if DB table is unpopulated or DB is unreachable
+    knowledge = []
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    candidates = [
+        os.path.join(base_dir, 'docs', 'CMS_BUSINESS_KNOWLEDGE.md'),
+        os.path.join(base_dir, 'docs', 'ai', 'CMS_BUSINESS_KNOWLEDGE.md'),
+    ]
+    for md_path in candidates:
+        if os.path.exists(md_path):
+            try:
+                with open(md_path, 'r', encoding='utf-8') as f:
+                    text = f.read()
+                sections = re.split(r'\n##\s+', text)
+                for sec in sections[1:]:
+                    lines = sec.strip().split('\n', 1)
+                    topic = lines[0].strip()
+                    content = lines[1].strip() if len(lines) > 1 else ''
+                    knowledge.append({'topic': topic, 'content': content})
+                if knowledge:
+                    return knowledge
+            except Exception:
+                pass
+    return []
 
 
 def _answer_question(
@@ -1053,20 +1078,39 @@ def _extract_booking_deterministic(
         intent = 'GENERAL_INQUIRY'
     # Guardrail: Check for clear off-topic inquiries
     off_topic_patterns = [
-        r'\b(?:write|generate|debug|code|script|python|javascript|php|java|c\+\+|sql query|function|algorithm|html)\b',
-        r'\b(?:recipe|cook|ingredients|bake|pancit|adobo|sinigang|cake|cookie)\b',
+        r'\b(?:write|generate|debug|code|script|python|javascript|php|java|c\+\+|sql query|function|algorithm|html|css)\b',
+        r'\b(?:recipe|cook|ingredients|bake|pancit|adobo|sinigang|cake|cookie|ulam|lutuin)\b',
         r'\b(?:calculate|solve|equation|integral|derivative|math problem)\b',
-        r'\b(?:president|election|senator|congress|political party|politics|democrat|republican)\b',
-        r'\b(?:weather forecast|tomorrow\'s temperature|rain today)\b',
-        r'\b(?:tell me a joke|write a poem|write a story|sing a song)\b',
-        r'\b(?:who won the game|nba|football|basketball score)\b',
+        r'\b(?:president|election|senator|congress|political party|politics|democrat|republican|politika)\b',
+        r'\b(?:weather forecast|tomorrow\'s temperature|rain today|uulan ba|panahon ngayon)\b',
+        r'\b(?:tell me a joke|write a poem|write a story|sing a song|kumanta ka|tula)\b',
+        r'\b(?:who won the game|nba|football|basketball score|pba)\b',
+        r'\b(?:bitcoin|crypto|forex|stock market)\b',
+        r'\b(?:translate to french|translate to spanish|translate to japanese)\b',
     ]
     is_cemetery_relevant = any(term in msg_lower for term in [
         'cemetery', 'burial', 'cremat', 'interment', 'grave', 'plot', 'lot', 'niche', 'urn',
-        'decedent', 'deceased', 'libing', 'hukay', 'puntod', 'himlayan', 'patay', 'burol'
+        'decedent', 'deceased', 'libing', 'hukay', 'puntod', 'himlayan', 'patay', 'burol',
+        'sementeryo', 'makati', 'columbarium', 'lawn', 'mausoleum', 'kabaong', 'casket', 'nitso', 'libingan', 'cremation'
     ])
     if not is_cemetery_relevant and any(re.search(pat, msg_lower) for pat in off_topic_patterns):
-        intent = 'UNCLEAR'
+        is_tag = any(w in msg_lower for w in ['po', 'opo', 'ano', 'paano', 'kailan', 'saan', 'salamat', 'kumusta', 'lutuin', 'ulam', 'tula'])
+        refusal_reply = (
+            "Paumanhin po, maaari lamang po akong tumulong hinggil sa mga serbisyo ng sementeryo, booking ng libing o cremation, mga lote, oras ng pagbisita, at mga patakaran ng sementeryo. Paano ko po kayo matutulungan sa inyong mga kailangan sa sementeryo ngayon?"
+            if is_tag else
+            "I can only assist with cemetery services, burial and cremation bookings, lot inquiries, visiting hours, and cemetery policies. How may I help you with our cemetery arrangements today?"
+        )
+        return {
+            'intent': 'UNCLEAR',
+            'confidence': 0.95,
+            'slots': {},
+            'assistant_reply': refusal_reply,
+            'suggested_actions': [
+                {'action': 'view_services', 'label': 'View Cemetery Services'},
+                {'action': 'ask_requirements', 'label': 'Documentary Requirements'},
+                {'action': 'visiting_hours', 'label': 'Visiting Hours'}
+            ]
+        }
     elif any(phrase in msg_lower for phrase in ['book', 'schedule', 'reserve', 'i want to book', 'arrange a burial', 'arrange a cremation', 'start booking']) and not draft.get('draft_id'):
         intent = 'CREATE_BOOKING'
 
@@ -1505,16 +1549,28 @@ def extract_booking_agent_endpoint():
             'result': result
         })
     except Exception as exc:
-        fallback = _extract_booking_deterministic(
-            message if 'message' in locals() else '',
-            draft_context if 'draft_context' in locals() else {},
-            user_bookings if 'user_bookings' in locals() else []
-        )
-        return jsonify({
-            'success': True,
-            'result': fallback,
-            'fallback': True
-        })
+        logging.getLogger('app').warning(f"Error in extract_booking_agent_endpoint: {exc}")
+        try:
+            fallback = _extract_booking_deterministic(
+                message if 'message' in locals() else '',
+                draft_context if 'draft_context' in locals() else {},
+                user_bookings if 'user_bookings' in locals() else []
+            )
+            return jsonify({
+                'success': True,
+                'result': fallback,
+                'fallback': True
+            })
+        except Exception as fallback_exc:
+            logging.getLogger('app').error(f"Fallback extraction failed: {fallback_exc}")
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 'ERR_AI_OFFLINE',
+                    'user_message': 'The AI assistant service is temporarily unavailable. Please try again or contact cemetery support.'
+                },
+                'result': None
+            }), 503
 
 
 
