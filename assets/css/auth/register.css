@@ -63,7 +63,7 @@ body {
 
 .register-shell {
     width: 100%;
-    max-width: 1220px;
+    max-width: 880px;
     min-width: 0;
     position: relative;
     z-index: 1;
@@ -72,7 +72,7 @@ body {
     border-radius: 18px;
     overflow: hidden;
     box-shadow:
-        0 25px 50px -12px rgba(0, 0, 0, 0.5),
+        0 25px 50px -12px rgba(0, 0, 0, 0.45),
         0 0 0 1px rgba(255, 255, 255, 0.08) inset;
 }
 
@@ -84,10 +84,10 @@ body {
 
 .register-panel--visual {
     position: relative;
-    flex: 0 0 240px;
-    min-width: 240px;
-    max-width: 250px;
-    min-height: 520px;
+    flex: 0 0 260px;
+    min-width: 260px;
+    max-width: 270px;
+    min-height: 560px;
     align-items: flex-end;
 }
 
@@ -177,7 +177,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 1.4rem 1.75rem;
+    padding: 1.6rem 2rem;
     background:
         radial-gradient(circle at 95% 5%, rgba(44, 94, 71, 0.05), transparent 30%),
         linear-gradient(180deg, #ffffff 0%, #f9fbf9 100%);
@@ -186,57 +186,184 @@ body {
 .register-form-inner {
     width: 100%;
     min-width: 0;
-    max-width: 890px;
+    max-width: 560px;
     margin: 0 auto;
 }
 
 .register-form-header {
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.6rem;
     border-bottom: 1px solid #e2e8f0;
 }
 
 .register-form-header h2 {
     font-family: 'Inter', sans-serif;
-    font-size: 1.25rem;
+    font-size: 1.35rem;
     font-weight: 700;
     color: #0f172a;
     letter-spacing: -0.02em;
-    margin-bottom: 0.15rem;
-    line-height: 1.2;
+    margin-bottom: 0.2rem;
+    line-height: 1.25;
 }
 
 .register-subtitle {
     color: #64748b;
-    font-size: 0.785rem;
+    font-size: 0.825rem;
     font-weight: 400;
-    line-height: 1.35;
+    line-height: 1.4;
 }
 
 /* ==========================================================================
-   4-SECTION STRUCTURED LAYOUT
+   2-STEP REGISTRATION STEPPER
    ========================================================================== */
 
-.register-cards-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    align-items: start;
-    margin-bottom: 0.75rem;
+.register-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.15rem;
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
 }
 
-.register-cards-col {
+.stepper-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    cursor: default;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.stepper-step.clickable {
+    cursor: pointer;
+}
+
+.stepper-step.clickable:hover .stepper-title {
+    color: #2c5e47;
+}
+
+.stepper-badge {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.825rem;
+    font-weight: 700;
+    background: #ffffff;
+    color: #64748b;
+    border: 2px solid #cbd5e1;
+    transition: all 0.25s ease;
+    flex-shrink: 0;
+}
+
+.stepper-badge .step-check {
+    display: none;
+    font-size: 0.75rem;
+}
+
+.stepper-step.active .stepper-badge {
+    background: #2c5e47;
+    color: #ffffff;
+    border-color: #2c5e47;
+    box-shadow: 0 0 0 3px rgba(44, 94, 71, 0.18);
+}
+
+.stepper-step.completed .stepper-badge {
+    background: #10b981;
+    color: #ffffff;
+    border-color: #059669;
+}
+
+.stepper-step.completed .stepper-badge .step-num {
+    display: none;
+}
+
+.stepper-step.completed .stepper-badge .step-check {
+    display: inline-block;
+}
+
+.stepper-text {
     display: flex;
     flex-direction: column;
-    gap: 11px;
+    min-width: 0;
 }
+
+.stepper-title {
+    font-size: 0.825rem;
+    font-weight: 600;
+    color: #64748b;
+    line-height: 1.25;
+    transition: color 0.2s ease;
+}
+
+.stepper-step.active .stepper-title {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.stepper-step.completed .stepper-title {
+    color: #059669;
+    font-weight: 600;
+}
+
+.stepper-sub {
+    font-size: 0.715rem;
+    color: #94a3b8;
+    line-height: 1.2;
+}
+
+.stepper-divider {
+    width: 36px;
+    height: 2px;
+    background: #e2e8f0;
+    margin: 0 10px;
+    border-radius: 2px;
+    transition: background 0.25s ease;
+    flex-shrink: 0;
+}
+
+.stepper-divider.completed {
+    background: #10b981;
+}
+
+/* ==========================================================================
+   STEP PANES & TRANSITIONS
+   ========================================================================== */
+
+.register-step-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: stepFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes stepFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==========================================================================
+   SECTION CARDS
+   ========================================================================== */
 
 .register-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 11px;
-    padding: 12px 14px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
     display: flex;
     flex-direction: column;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -244,26 +371,26 @@ body {
 
 .register-card:focus-within {
     border-color: #cbd5e1;
-    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
 }
 
 .register-card__header {
     display: flex;
     align-items: center;
-    gap: 9px;
-    margin-bottom: 9px;
-    padding-bottom: 6px;
+    gap: 10px;
+    margin-bottom: 11px;
+    padding-bottom: 8px;
     border-bottom: 1px solid #f1f5f9;
 }
 
 .card-step-badge {
-    width: 28px;
-    height: 28px;
-    border-radius: 7px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.78rem;
+    font-size: 0.85rem;
     flex-shrink: 0;
 }
 
@@ -292,19 +419,19 @@ body {
 }
 
 .register-card__title {
-    font-size: 0.775rem;
+    font-size: 0.825rem;
     font-weight: 700;
     color: #1e293b;
     margin: 0;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    line-height: 1.2;
+    line-height: 1.25;
 }
 
 .register-card__subtitle {
-    font-size: 0.675rem;
+    font-size: 0.725rem;
     color: #64748b;
-    margin: 1px 0 0 0;
+    margin: 2px 0 0 0;
     line-height: 1.2;
 }
 
@@ -315,7 +442,7 @@ body {
 .card-inner-grid {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
-    gap: 7px 9px;
+    gap: 9px 10px;
 }
 
 .col-1  { grid-column: span 1; }
@@ -332,7 +459,7 @@ body {
 .col-12 { grid-column: span 12; }
 
 /* ==========================================================================
-   INPUT FIELDS & LABELS
+   INPUT FIELDS & LABELS (High Legibility Overhaul)
    ========================================================================== */
 
 .input-field {
@@ -343,10 +470,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 0.725rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: #334155;
-    margin-bottom: 3px;
+    margin-bottom: 4px;
     letter-spacing: -0.01em;
 }
 
@@ -354,8 +481,8 @@ body {
     font-weight: 500;
     color: #64748b;
     background: #f1f5f9;
-    font-size: 0.6125rem;
-    padding: 1px 5px;
+    font-size: 0.685rem;
+    padding: 1.5px 6px;
     border-radius: 4px;
     line-height: 1.2;
 }
@@ -370,15 +497,15 @@ body {
     position: relative;
     display: flex;
     align-items: center;
-    border-radius: 6px;
+    border-radius: 7px;
     transition: transform 180ms ease, box-shadow 220ms ease;
 }
 
 .input-icon {
     position: absolute;
-    left: 10px;
+    left: 11px;
     color: #94a3b8;
-    font-size: 0.75rem;
+    font-size: 0.825rem;
     pointer-events: none;
     transition: color 0.2s ease;
     z-index: 2;
@@ -388,7 +515,7 @@ body {
 }
 
 .input-icon i {
-    font-size: 0.75rem;
+    font-size: 0.825rem;
 }
 
 .input-wrapper:focus-within .input-icon {
@@ -399,13 +526,13 @@ body {
 .input-wrapper select {
     width: 100%;
     min-width: 0;
-    height: 36px;
-    min-height: 36px;
-    padding: 6px 10px 6px 31px;
-    font-size: 0.8125rem;
+    height: 38px;
+    min-height: 38px;
+    padding: 6px 10px 6px 33px;
+    font-size: 0.85rem;
     font-weight: 500;
     border: 1.25px solid #cbd5e1;
-    border-radius: 6px;
+    border-radius: 7px;
     background: #ffffff;
     font-family: inherit;
     transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
@@ -419,9 +546,9 @@ body {
     -webkit-appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2364748b' viewBox='0 0 20 20'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 8px center;
+    background-position: right 9px center;
     background-size: 14px 14px;
-    padding-right: 25px;
+    padding-right: 28px;
     cursor: pointer;
 }
 
@@ -429,7 +556,7 @@ body {
 .input-wrapper select:focus {
     border-color: #2c5e47;
     background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(44, 94, 71, 0.12);
+    box-shadow: 0 0 0 3px rgba(44, 94, 71, 0.14);
 }
 
 .input-wrapper select:disabled,
@@ -444,7 +571,7 @@ body {
 .input-wrapper input::placeholder {
     color: #94a3b8;
     font-weight: 400;
-    font-size: 0.78rem;
+    font-size: 0.815rem;
 }
 
 /* ==========================================================================
@@ -453,15 +580,15 @@ body {
 
 .toggle-password {
     position: absolute;
-    right: 7px;
+    right: 8px;
     top: 50%;
     transform: translateY(-50%);
     cursor: pointer;
     color: #94a3b8;
-    font-size: 0.78rem;
+    font-size: 0.825rem;
     transition: all 0.2s ease;
     z-index: 2;
-    padding: 3px 5px;
+    padding: 4px 6px;
     background: none;
     border: none;
     font-family: inherit;
@@ -482,50 +609,56 @@ body {
     grid-column: 1 / -1;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 6px 10px;
+    border-radius: 8px;
+    padding: 8px 12px;
     margin-top: 2px;
     animation: fadeSlide 0.2s ease;
 }
 
 .password-checklist__title {
-    font-size: 0.675rem;
+    font-size: 0.725rem;
     font-weight: 600;
     color: #334155;
-    margin-bottom: 4px;
+    margin-bottom: 5px;
 }
 
 .password-checklist__grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 3px 8px;
+    gap: 4px 10px;
 }
 
 .checklist-item {
-    font-size: 0.675rem;
+    font-size: 0.715rem;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     color: #64748b;
     transition: color 0.15s ease;
 }
 
 .checklist-item i {
-    font-size: 0.65rem;
+    font-size: 0.7rem;
 }
 
 /* ==========================================================================
-   ACTION BUTTONS — CLEAR HIERARCHY
-   Primary: Prominent full-width button
-   Secondary: Clear subtle link/text prompt
+   ACTION BUTTONS & STEP NAVIGATION
    ========================================================================== */
 
 .register-actions-row {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    margin-top: 0.35rem;
+    gap: 9px;
+    margin-top: 0.5rem;
+}
+
+.register-actions-row--split {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
 }
 
 .btn-register {
@@ -533,13 +666,13 @@ body {
     background: linear-gradient(135deg, #2c5e47, #1b3d2e);
     color: #ffffff;
     border: none;
-    height: 40px;
-    min-height: 40px;
-    padding: 0 16px;
-    font-size: 0.85rem;
+    height: 42px;
+    min-height: 42px;
+    padding: 0 18px;
+    font-size: 0.885rem;
     font-weight: 600;
     font-family: inherit;
-    border-radius: 7px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.22s ease;
     display: inline-flex;
@@ -564,14 +697,49 @@ body {
     outline-offset: 2px;
 }
 
+.btn-step-back {
+    height: 42px;
+    min-height: 42px;
+    padding: 0 18px;
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    color: #475569;
+    font-weight: 600;
+    font-size: 0.85rem;
+    font-family: inherit;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-step-back:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+.btn-step-back:focus-visible {
+    outline: 2px solid #2c5e47;
+    outline-offset: 2px;
+}
+
+.btn-step-submit {
+    flex: 1;
+}
+
 .register-signin-prompt {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    font-size: 0.785rem;
+    font-size: 0.8rem;
     color: #64748b;
-    margin-top: 1px;
+    margin-top: 2px;
 }
 
 .btn-sign-in-instead {
@@ -581,7 +749,7 @@ body {
     color: #2c5e47;
     font-weight: 600;
     text-decoration: none;
-    font-size: 0.785rem;
+    font-size: 0.8rem;
     padding: 2px 6px;
     border-radius: 4px;
     transition: all 0.18s ease;
@@ -703,11 +871,11 @@ body {
 .alert {
     background: #fef2f2;
     border-left: 4px solid #ef4444;
-    padding: 7px 11px;
+    padding: 8px 12px;
     border-radius: 6px;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.65rem;
     color: #991b1b;
-    font-size: 0.775rem;
+    font-size: 0.8rem;
     font-weight: 600;
     display: none;
     animation: fadeSlide 0.2s ease;
@@ -742,12 +910,12 @@ body {
 
 .error-message {
     color: #dc2626;
-    font-size: 0.675rem;
+    font-size: 0.725rem;
     font-weight: 500;
-    margin-top: 2px;
+    margin-top: 3px;
     margin-left: 1px;
     min-height: 0;
-    line-height: 1.2;
+    line-height: 1.25;
 }
 
 .error-message:empty {
@@ -756,33 +924,20 @@ body {
 
 .footer-text {
     text-align: center;
-    margin-top: 0.4rem;
-    font-size: 0.675rem;
+    margin-top: 0.6rem;
+    font-size: 0.725rem;
     color: #94a3b8;
     letter-spacing: 0.1px;
 }
 
 /* ==========================================================================
    RESPONSIVE DESIGN
-   - Tablet & Compact Desktop: Graceful scaling
-   - Mobile: Clean single-column stack
    ========================================================================== */
 
-@media (max-width: 1080px) {
-    .register-panel--visual {
-        flex: 0 0 220px;
-        min-width: 220px;
-    }
-
-    .register-panel--form {
-        padding: 1.25rem 1.4rem;
-    }
-}
-
-@media (max-width: 940px) {
+@media (max-width: 860px) {
     .register-shell {
         flex-direction: column;
-        max-width: 600px;
+        max-width: 540px;
         margin: 1rem auto;
     }
 
@@ -805,10 +960,6 @@ body {
     .register-panel__content {
         padding: 0.85rem 1rem;
     }
-
-    .register-cards-grid {
-        grid-template-columns: 1fr;
-    }
 }
 
 @media (max-width: 580px) {
@@ -821,12 +972,25 @@ body {
     }
 
     .register-panel--form {
-        padding: 1rem 0.75rem;
+        padding: 1rem 0.85rem;
+    }
+
+    .register-stepper {
+        padding: 0.6rem 0.75rem;
+    }
+
+    .stepper-sub {
+        display: none;
+    }
+
+    .stepper-divider {
+        width: 20px;
+        margin: 0 6px;
     }
 
     .card-inner-grid {
         grid-template-columns: 1fr;
-        gap: 7px;
+        gap: 8px;
     }
 
     .col-1, .col-2, .col-3, .col-4, .col-5, .col-6, .col-7, .col-8, .col-9, .col-10, .col-11, .col-12 {
@@ -836,4 +1000,14 @@ body {
     .password-checklist__grid {
         grid-template-columns: 1fr;
     }
+
+    .register-actions-row--split {
+        flex-direction: row;
+        gap: 8px;
+    }
+
+    .btn-step-back {
+        padding: 0 14px;
+    }
 }
+

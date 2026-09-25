@@ -193,8 +193,163 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // ── Multi-Step Wizard Controller ───────────────────────────
+    const step1Pane = document.getElementById('step1Pane');
+    const step2Pane = document.getElementById('step2Pane');
+    const stepperStep1 = document.getElementById('stepperStep1');
+    const stepperStep2 = document.getElementById('stepperStep2');
+    const stepperDivider = document.getElementById('stepperDivider');
+    const btnNextStep = document.getElementById('btnNextStep');
+    const btnPrevStep = document.getElementById('btnPrevStep');
+    const registerStepper = document.getElementById('registerStepper');
+
+    function goToStep(stepNum) {
+        if (stepNum === 1) {
+            if (step1Pane) step1Pane.style.display = 'flex';
+            if (step2Pane) step2Pane.style.display = 'none';
+            if (stepperStep1) {
+                stepperStep1.classList.add('active');
+                stepperStep1.classList.remove('completed');
+            }
+            if (stepperStep2) {
+                stepperStep2.classList.remove('active', 'completed');
+            }
+            if (stepperDivider) {
+                stepperDivider.classList.remove('active');
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else if (stepNum === 2) {
+            if (step1Pane) step1Pane.style.display = 'none';
+            if (step2Pane) step2Pane.style.display = 'flex';
+            if (stepperStep1) {
+                stepperStep1.classList.remove('active');
+                stepperStep1.classList.add('completed');
+            }
+            if (stepperStep2) {
+                stepperStep2.classList.add('active');
+                stepperStep2.classList.remove('completed');
+            }
+            if (stepperDivider) {
+                stepperDivider.classList.add('active');
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
+    function validateStep1() {
+        const firstName = (document.getElementById('first_name')?.value || '').trim();
+        const middleName = (document.getElementById('middle_name')?.value || '').trim();
+        const lastName = (document.getElementById('last_name')?.value || '').trim();
+        const suffix = (document.getElementById('suffix')?.value || '').trim();
+        const email = (document.getElementById('email')?.value || '').trim().toLowerCase();
+        const username = (document.getElementById('username')?.value || '').trim();
+        const contact = (document.getElementById('contact_number')?.value || '').trim();
+
+        ['firstNameError', 'middleNameError', 'lastNameError', 'suffixError', 'emailError', 'contactError', 'usernameError'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '';
+        });
+        alertBox.className = 'alert';
+        alertBox.classList.remove('show');
+
+        let isValid = true;
+        let firstInvalidField = null;
+
+        // Name validation
+        if (!firstName || firstName.length < 2 || firstName.length > 60) {
+            const errEl = document.getElementById('firstNameError');
+            if (errEl) errEl.textContent = 'First name is required (2 to 60 characters)';
+            isValid = false;
+            if (!firstInvalidField) firstInvalidField = document.getElementById('first_name');
+        }
+        if (middleName && middleName.length > 60) {
+            const errEl = document.getElementById('middleNameError');
+            if (errEl) errEl.textContent = 'Middle name must not exceed 60 characters';
+            isValid = false;
+            if (!firstInvalidField) firstInvalidField = document.getElementById('middle_name');
+        }
+        if (!lastName || lastName.length < 2 || lastName.length > 60) {
+            const errEl = document.getElementById('lastNameError');
+            if (errEl) errEl.textContent = 'Last name is required (2 to 60 characters)';
+            isValid = false;
+            if (!firstInvalidField) firstInvalidField = document.getElementById('last_name');
+        }
+        if (suffix && suffix.length > 15) {
+            const errEl = document.getElementById('suffixError');
+            if (errEl) errEl.textContent = 'Suffix must not exceed 15 characters';
+            isValid = false;
+            if (!firstInvalidField) firstInvalidField = document.getElementById('suffix');
+        }
+
+        // Email validation
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            const errEl = document.getElementById('emailError');
+            if (errEl) errEl.textContent = 'A valid email address is required';
+            isValid = false;
+            if (!firstInvalidField) firstInvalidField = document.getElementById('email');
+        }
+
+        // Username validation (optional, but restricted format if provided)
+        if (username && !/^[a-zA-Z0-9._-]{3,40}$/.test(username)) {
+            const errEl = document.getElementById('usernameError');
+            if (errEl) errEl.textContent = 'Use 3-40 letters, numbers, dots, underscores, or hyphens';
+            isValid = false;
+            if (!firstInvalidField) firstInvalidField = document.getElementById('username');
+        }
+
+        // Philippine mobile number validation (must be 11 digits starting with 09)
+        if (contact) {
+            const cleanDigits = contact.replace(/[^0-9]/g, '');
+            if (!/^09\d{9}$/.test(cleanDigits)) {
+                const errEl = document.getElementById('contactError');
+                if (errEl) errEl.textContent = 'Contact number must be exactly 11 digits starting with 09 (e.g. 09171234567)';
+                isValid = false;
+                if (!firstInvalidField) firstInvalidField = document.getElementById('contact_number');
+            }
+        }
+
+        if (!isValid) {
+            alertBox.textContent = 'Please complete the required personal and contact details before proceeding.';
+            alertBox.className = 'alert alert-danger show';
+            if (firstInvalidField) firstInvalidField.focus();
+        }
+
+        return isValid;
+    }
+
+    if (btnNextStep) {
+        btnNextStep.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (validateStep1()) {
+                goToStep(2);
+            }
+        });
+    }
+
+    if (btnPrevStep) {
+        btnPrevStep.addEventListener('click', function(e) {
+            e.preventDefault();
+            goToStep(1);
+        });
+    }
+
+    if (stepperStep1) {
+        stepperStep1.addEventListener('click', function() {
+            if (stepperStep1.classList.contains('completed')) {
+                goToStep(1);
+            }
+        });
+    }
+
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
+
+        // Defensive: Ensure Step 1 is valid before proceeding with submit
+        if (!validateStep1()) {
+            goToStep(1);
+            return;
+        }
+
         const firstName = (document.getElementById('first_name')?.value || '').trim();
         const middleName = (document.getElementById('middle_name')?.value || '').trim();
         const lastName = (document.getElementById('last_name')?.value || '').trim();
@@ -206,53 +361,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const password = document.getElementById('password').value;
         const confirm = document.getElementById('confirm_password').value;
 
-        clearErrors();
+        // Clear Step 2 errors
+        ['addressError', 'passwordError', 'confirmError'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '';
+        });
         alertBox.className = 'alert';
         alertBox.classList.remove('show');
 
         let isValid = true;
-
-        // Name validation
-        if (!firstName || firstName.length < 2 || firstName.length > 60) {
-            const errEl = document.getElementById('firstNameError');
-            if (errEl) errEl.textContent = 'First name is required (2 to 60 characters)';
-            isValid = false;
-        }
-        if (middleName && middleName.length > 60) {
-            const errEl = document.getElementById('middleNameError');
-            if (errEl) errEl.textContent = 'Middle name must not exceed 60 characters';
-            isValid = false;
-        }
-        if (!lastName || lastName.length < 2 || lastName.length > 60) {
-            const errEl = document.getElementById('lastNameError');
-            if (errEl) errEl.textContent = 'Last name is required (2 to 60 characters)';
-            isValid = false;
-        }
-        if (suffix && suffix.length > 15) {
-            const errEl = document.getElementById('suffixError');
-            if (errEl) errEl.textContent = 'Suffix must not exceed 15 characters';
-            isValid = false;
-        }
-
         const fullName = `${firstName} ${middleName ? middleName + ' ' : ''}${lastName}${suffix ? ' ' + suffix : ''}`.trim();
-
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            document.getElementById('emailError').textContent = 'Enter a valid email address';
-            isValid = false;
-        }
-        if (username && !/^[a-zA-Z0-9._-]{3,40}$/.test(username)) {
-            document.getElementById('usernameError').textContent = 'Use 3-40 letters, numbers, dots, underscores, or hyphens';
-            isValid = false;
-        }
-
-        // Philippine mobile number validation (must be 11 digits starting with 09)
-        if (contact) {
-            const cleanDigits = contact.replace(/[^0-9]/g, '');
-            if (!/^09\d{9}$/.test(cleanDigits)) {
-                document.getElementById('contactError').textContent = 'Contact number must be exactly 11 digits starting with 09 (e.g. 09171234567)';
-                isValid = false;
-            }
-        }
 
         const streetVal = (document.getElementById('reg_street')?.value || '').trim();
         address = (document.getElementById('address')?.value || '').trim();
@@ -333,6 +451,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (result.verification_required && verificationPanel) {
                     form.style.display = 'none';
+                    if (registerStepper) {
+                        registerStepper.style.display = 'none';
+                    }
                     const formHeader = document.querySelector('.register-form-header');
                     if (formHeader) {
                         formHeader.style.display = 'none';
