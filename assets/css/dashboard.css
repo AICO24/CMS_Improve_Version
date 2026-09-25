@@ -1,4 +1,6 @@
 /* Shared dashboard layout and component styles */
+@import url('./components/notifications-popover.css');
+
 .dashboard-body {
     background: var(--color-bg);
     font-family: 'Inter', sans-serif;

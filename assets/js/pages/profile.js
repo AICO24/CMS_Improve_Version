@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', async function() {
+    let profileLocationController = null;
     if (!localStorage.getItem('jwt_token') && !sessionStorage.getItem('jwt_token')) {
         window.location.href = `${getFrontendBasePath()}/auth/login.html`;
         return;
@@ -107,6 +108,49 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (usernameCurrent) usernameCurrent.value = user.username || '';
         const usernameCurrentDisplay = document.getElementById('usernameCurrentDisplay');
         if (usernameCurrentDisplay) usernameCurrentDisplay.textContent = user.username || '—';
+
+        // Pre-fill Personal Information Form Inputs
+        const inputFn = document.getElementById('profile_first_name');
+        if (inputFn) inputFn.value = fn || firstNameDisplay || '';
+        const inputMn = document.getElementById('profile_middle_name');
+        if (inputMn) inputMn.value = mn || middleNameDisplay || '';
+        const inputLn = document.getElementById('profile_last_name');
+        if (inputLn) inputLn.value = ln || lastNameDisplay || '';
+        const inputSuf = document.getElementById('profile_suffix');
+        if (inputSuf) inputSuf.value = suf || suffixDisplay || '';
+        const inputContact = document.getElementById('profile_contact_number');
+        if (inputContact) inputContact.value = user.contact_number || '';
+
+        // Initialize Philippine Locations Cascading Controller
+        if (window.PhilippineLocations && typeof window.PhilippineLocations.initHierarchy === 'function' && document.getElementById('profile_region')) {
+            profileLocationController = window.PhilippineLocations.initHierarchy({
+                regionSelect: document.getElementById('profile_region'),
+                provinceSelect: document.getElementById('profile_province'),
+                citySelect: document.getElementById('profile_city'),
+                districtSelect: document.getElementById('profile_district'),
+                barangaySelect: document.getElementById('profile_barangay'),
+                streetInput: document.getElementById('profile_street'),
+                combinedAddressInput: document.getElementById('profile_address_combined')
+            });
+
+            if (profileLocationController) {
+                let locToSet = {
+                    region: user.region || '',
+                    province: user.province || '',
+                    city: user.city || '',
+                    district: user.district || '',
+                    barangay: user.barangay || '',
+                    street: user.street || ''
+                };
+                if (!locToSet.region && user.address && typeof window.PhilippineLocations.parseAddress === 'function') {
+                    const parsed = window.PhilippineLocations.parseAddress(user.address);
+                    if (parsed.region || parsed.city) {
+                        locToSet = parsed;
+                    }
+                }
+                profileLocationController.setValues(locToSet);
+            }
+        }
 
         renderSidebarForRole(user.role);
         if (typeof window.initSidebarNav === 'function') {
@@ -325,6 +369,119 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     if (usernameNew)     usernameNew.addEventListener('input', updateLiveUsernameChecks);
     if (usernameConfirm) usernameConfirm.addEventListener('input', checkUsernameMatch);
+
+    // ─── FORM: Personal Information & Residence ──────────────────────────────
+    const personalInfoForm = document.getElementById('personalInfoForm');
+    if (personalInfoForm) {
+        personalInfoForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            hideAlert('personalInfoAlert');
+            const btn = document.getElementById('personalInfoSaveBtn');
+
+            const firstNameEl = document.getElementById('profile_first_name');
+            const middleNameEl = document.getElementById('profile_middle_name');
+            const lastNameEl = document.getElementById('profile_last_name');
+            const suffixEl = document.getElementById('profile_suffix');
+            const contactEl = document.getElementById('profile_contact_number');
+
+            const fnVal = (firstNameEl?.value || '').trim();
+            const mnVal = (middleNameEl?.value || '').trim();
+            const lnVal = (lastNameEl?.value || '').trim();
+            const sufVal = (suffixEl?.value || '').trim();
+            const phoneVal = (contactEl?.value || '').trim();
+
+            if (!fnVal) {
+                showAlert('personalInfoAlert', 'error', 'First name is required.');
+                firstNameEl?.focus();
+                return;
+            }
+            if (!lnVal) {
+                showAlert('personalInfoAlert', 'error', 'Last name is required.');
+                lastNameEl?.focus();
+                return;
+            }
+
+            if (phoneVal) {
+                const digits = phoneVal.replace(/\D/g, '');
+                const validPhone = (digits.length === 11 && digits.startsWith('09')) ||
+                                   (digits.length === 12 && digits.startsWith('639')) ||
+                                   (digits.length === 10 && digits.startsWith('9'));
+                if (!validPhone) {
+                    showAlert('personalInfoAlert', 'error', 'Please enter a valid Philippine mobile number (e.g. 0917 123 4567 or +63 917 123 4567).');
+                    contactEl?.focus();
+                    return;
+                }
+            }
+
+            const locVals = profileLocationController ? profileLocationController.getValues() : {};
+            const streetVal = (document.getElementById('profile_street')?.value || '').trim();
+
+            const payload = {
+                first_name: fnVal,
+                middle_name: mnVal || null,
+                last_name: lnVal,
+                suffix: sufVal || null,
+                contact_number: phoneVal || null,
+                region: locVals.region || null,
+                province: locVals.province || null,
+                city: locVals.city || null,
+                district: locVals.district || null,
+                barangay: locVals.barangay || null,
+                address: locVals.combinedAddress || streetVal || null
+            };
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+            }
+
+            try {
+                const res = await api.updateProfile(payload);
+                if (res && (res.success || !res.error)) {
+                    showAlert('personalInfoAlert', 'success', '<i class="fas fa-circle-check"></i> Personal information and address updated successfully.');
+
+                    // Update live identity headers and details grid
+                    const assembledName = [fnVal, mnVal, lnVal, sufVal].filter(Boolean).join(' ');
+                    setText('userName', assembledName);
+                    setText('sidebarUserName', assembledName);
+                    setText('welcomeUserName', assembledName);
+                    setText('profileFullName', assembledName);
+                    setText('profileFirstName', fnVal);
+                    setText('profileMiddleName', mnVal || '—');
+                    setText('profileLastName', lnVal);
+                    setText('profileSuffix', sufVal || '—');
+                    setText('profileContact', payload.contact_number || '—');
+
+                    const newLocParts = [
+                        locVals.region,
+                        locVals.province,
+                        locVals.city,
+                        locVals.district,
+                        locVals.barangay ? `Brgy. ${locVals.barangay}` : ''
+                    ].filter(Boolean);
+                    setText('profileLocationHierarchy', newLocParts.length ? newLocParts.join(' → ') : '—');
+                    setText('profileAddress', payload.address || '—');
+
+                    // Synchronize local session storage
+                    try {
+                        const sess = JSON.parse(localStorage.getItem('user_session') || sessionStorage.getItem('user_session') || '{}');
+                        sess.full_name = assembledName;
+                        if (localStorage.getItem('user_session')) localStorage.setItem('user_session', JSON.stringify(sess));
+                        if (sessionStorage.getItem('user_session')) sessionStorage.setItem('user_session', JSON.stringify(sess));
+                    } catch(e) {}
+                } else {
+                    showAlert('personalInfoAlert', 'error', res.error || 'Failed to update personal information.');
+                }
+            } catch (err) {
+                showAlert('personalInfoAlert', 'error', err.message || 'An unexpected error occurred while saving.');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-floppy-disk"></i> Save Personal Details';
+                }
+            }
+        });
+    }
 
     // ─── FORM: Email ─────────────────────────────────────────────────────────
     const emailForm = document.getElementById('emailForm');

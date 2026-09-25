@@ -28,6 +28,43 @@ class User {
         return $stmt->fetch();
     }
 
+    public function findByEmailOrPhone($identifier) {
+        $trimmed = trim((string) $identifier);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        // Check if email
+        if (filter_var($trimmed, FILTER_VALIDATE_EMAIL) || strpos($trimmed, '@') !== false) {
+            return $this->findByEmail($trimmed);
+        }
+
+        // Check if Philippine mobile phone
+        $digits = preg_replace('/[^0-9]/', '', $trimmed);
+        if (strlen($digits) >= 10 && strlen($digits) <= 12) {
+            $last10 = substr($digits, -10);
+            if ($last10[0] === '9') {
+                $candidates = [
+                    '+63' . $last10,
+                    '0' . $last10,
+                    $last10,
+                    '63' . $last10
+                ];
+                $stmt = $this->db->prepare("SELECT * FROM users WHERE contact_number IN (?, ?, ?, ?) LIMIT 1");
+                $stmt->execute($candidates);
+                $row = $stmt->fetch();
+                if ($row) {
+                    return $row;
+                }
+            }
+        }
+
+        // Fallback: direct check against email, contact_number, or username
+        $stmt = $this->db->prepare("SELECT * FROM users WHERE LOWER(TRIM(email)) = ? OR contact_number = ? OR LOWER(TRIM(username)) = ? LIMIT 1");
+        $stmt->execute([strtolower($trimmed), $trimmed, strtolower($trimmed)]);
+        return $stmt->fetch() ?: null;
+    }
+
     public function isEmailTaken($email, $excludeUserId = null) {
         $normalized = strtolower(trim((string) $email));
         if ($normalized === '') {
@@ -450,11 +487,11 @@ class User {
     }
 
     // Verifies a plaintext reset code against the stored hash for this
-    // email and confirms it hasn't expired. Returns the user row on
-    // success, or null if the email is unknown, no code is pending, the
+    // email/phone identifier and confirms it hasn't expired. Returns the user row on
+    // success, or null if unknown, no code is pending, the
     // code doesn't match, or it has expired.
-    public function verifyResetCode($email, $code) {
-        $user = $this->findByEmail($email);
+    public function verifyResetCode($identifier, $code) {
+        $user = $this->findByEmailOrPhone($identifier);
         if (!$user || empty($user['reset_token_hash']) || empty($user['reset_token_expires_at'])) {
             return null;
         }

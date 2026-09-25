@@ -360,6 +360,190 @@
 
                 <div id="settingsSection" style="scroll-margin-top: 24px;"></div>
 
+                <!-- ══ PERSONAL INFORMATION & RESIDENCE ═════════════════════ -->
+                <p class="section-label"><i class="fas fa-user-pen"></i> Personal Information &amp; Address</p>
+                <div class="settings-main-card personal-info-settings-card">
+                    <!-- Card Header -->
+                    <div class="settings-card-header">
+                        <div class="settings-card-title-group" style="display:flex; align-items:center; gap:14px;">
+                            <div class="profile-card-header-icon" style="width:40px; height:40px; border-radius:10px; background:rgba(44,94,71,0.12); color:var(--color-primary-600, #2c5e47); display:flex; align-items:center; justify-content:center; font-size:1.15rem;">
+                                <i class="fas fa-id-card"></i>
+                            </div>
+                            <div>
+                                <h4>Personal Information &amp; Residence</h4>
+                                <p>Update your legal name, registered Philippine mobile number, and residential location hierarchy.</p>
+                            </div>
+                        </div>
+                        <span class="settings-card-badge"><i class="fas fa-id-badge"></i> Citizen Identity</span>
+                    </div>
+
+                    <div id="personalInfoAlert" class="sform-alert" style="display:none"></div>
+
+                    <form id="personalInfoForm" class="sform" autocomplete="off" novalidate>
+                        <!-- Form Sub-Panel: Legal Name Components -->
+                        <div class="email-form-panel">
+                            <div class="panel-section-title">
+                                <span class="panel-step-badge">1</span>
+                                <div>
+                                    <h5>Legal Name Information</h5>
+                                    <p>Standardized name structure matching official civil records</p>
+                                </div>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 14px;">
+                                <div class="sform-field">
+                                    <label for="profile_first_name">
+                                        <span>First Name</span>
+                                        <span class="required-star">*</span>
+                                    </label>
+                                    <div class="sform-input-wrap">
+                                        <i class="fas fa-user sform-icon"></i>
+                                        <input type="text" id="profile_first_name" name="first_name" placeholder="Given name" required>
+                                    </div>
+                                    <span class="sform-field-hint" id="profileFirstNameError" style="color:var(--color-danger, #dc2626); font-size:0.8rem;"></span>
+                                </div>
+
+                                <div class="sform-field">
+                                    <label for="profile_middle_name">
+                                        <span>Middle Name</span>
+                                        <span style="font-size:0.75rem; color:var(--color-text-muted, #888); font-weight:normal;">(Optional)</span>
+                                    </label>
+                                    <div class="sform-input-wrap">
+                                        <i class="fas fa-user sform-icon"></i>
+                                        <input type="text" id="profile_middle_name" name="middle_name" placeholder="Middle name / initial">
+                                    </div>
+                                </div>
+
+                                <div class="sform-field">
+                                    <label for="profile_last_name">
+                                        <span>Last Name / Surname</span>
+                                        <span class="required-star">*</span>
+                                    </label>
+                                    <div class="sform-input-wrap">
+                                        <i class="fas fa-user sform-icon"></i>
+                                        <input type="text" id="profile_last_name" name="last_name" placeholder="Family surname" required>
+                                    </div>
+                                    <span class="sform-field-hint" id="profileLastNameError" style="color:var(--color-danger, #dc2626); font-size:0.8rem;"></span>
+                                </div>
+
+                                <div class="sform-field">
+                                    <label for="profile_suffix">
+                                        <span>Suffix</span>
+                                        <span style="font-size:0.75rem; color:var(--color-text-muted, #888); font-weight:normal;">(Optional)</span>
+                                    </label>
+                                    <div class="sform-input-wrap">
+                                        <i class="fas fa-tag sform-icon"></i>
+                                        <select id="profile_suffix" name="suffix" style="width:100%; border:none; background:transparent; padding:9px 12px 9px 36px; font-family:inherit; font-size:0.9rem; color:inherit; outline:none;">
+                                            <option value="">None</option>
+                                            <option value="Jr.">Jr.</option>
+                                            <option value="Sr.">Sr.</option>
+                                            <option value="II">II</option>
+                                            <option value="III">III</option>
+                                            <option value="IV">IV</option>
+                                            <option value="V">V</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Sub-Panel: Contact Number & Geographic Hierarchy -->
+                        <div class="email-form-panel" style="margin-top: 18px;">
+                            <div class="panel-section-title">
+                                <span class="panel-step-badge">2</span>
+                                <div>
+                                    <h5>Contact &amp; Philippine Geographic Address</h5>
+                                    <p>Cascading location selector compliant with PSGC standards</p>
+                                </div>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 14px;">
+                                <div class="sform-field" style="grid-column: 1 / -1;">
+                                    <label for="profile_contact_number">
+                                        <span>Philippine Mobile Contact</span>
+                                        <span style="font-size:0.75rem; color:var(--color-text-muted, #888); font-weight:normal;">(+63 / 09...)</span>
+                                    </label>
+                                    <div class="sform-input-wrap">
+                                        <i class="fas fa-mobile-screen sform-icon"></i>
+                                        <input type="text" id="profile_contact_number" name="contact_number" placeholder="0917 123 4567 or +63 917 123 4567">
+                                    </div>
+                                    <span class="sform-field-hint" id="profileContactError" style="color:var(--color-danger, #dc2626); font-size:0.8rem;"></span>
+                                </div>
+
+                                <div class="sform-field">
+                                    <label for="profile_region"><span>Region</span></label>
+                                    <div class="sform-input-wrap">
+                                        <i class="fas fa-map sform-icon"></i>
+                                        <select id="profile_region" name="region" style="width:100%; border:none; background:transparent; padding:9px 12px 9px 36px; font-family:inherit; font-size:0.9rem; color:inherit; outline:none;">
+                                            <option value="">Select Region</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="sform-field">
+                                    <label for="profile_province"><span>Province</span></label>
+                                    <div class="sform-input-wrap">
+                                        <i class="fas fa-location-dot sform-icon"></i>
+                                        <select id="profile_province" name="province" style="width:100%; border:none; background:transparent; padding:9px 12px 9px 36px; font-family:inherit; font-size:0.9rem; color:inherit; outline:none;">
+                                            <option value="">Select Province</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="sform-field">
+                                    <label for="profile_city"><span>City / Municipality</span></label>
+                                    <div class="sform-input-wrap">
+                                        <i class="fas fa-city sform-icon"></i>
+                                        <select id="profile_city" name="city" style="width:100%; border:none; background:transparent; padding:9px 12px 9px 36px; font-family:inherit; font-size:0.9rem; color:inherit; outline:none;">
+                                            <option value="">Select City / Municipality</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="sform-field">
+                                    <label for="profile_district"><span>District</span></label>
+                                    <div class="sform-input-wrap">
+                                        <i class="fas fa-layer-group sform-icon"></i>
+                                        <select id="profile_district" name="district" style="width:100%; border:none; background:transparent; padding:9px 12px 9px 36px; font-family:inherit; font-size:0.9rem; color:inherit; outline:none;">
+                                            <option value="">Select District</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="sform-field">
+                                    <label for="profile_barangay"><span>Barangay</span></label>
+                                    <div class="sform-input-wrap">
+                                        <i class="fas fa-signs-post sform-icon"></i>
+                                        <select id="profile_barangay" name="barangay" style="width:100%; border:none; background:transparent; padding:9px 12px 9px 36px; font-family:inherit; font-size:0.9rem; color:inherit; outline:none;">
+                                            <option value="">Select Barangay</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="sform-field" style="grid-column: 1 / -1;">
+                                    <label for="profile_street"><span>Street Address / House / Unit</span></label>
+                                    <div class="sform-input-wrap">
+                                        <i class="fas fa-house sform-icon"></i>
+                                        <input type="text" id="profile_street" name="street" placeholder="e.g. Unit 4B, 123 Rosal St., Greenpark Village">
+                                    </div>
+                                </div>
+                            </div>
+                            <input type="hidden" id="profile_address_combined">
+                        </div>
+
+                        <!-- Form Actions Bar -->
+                        <div class="email-form-footer" style="margin-top: 20px;">
+                            <div class="email-security-guarantee">
+                                <i class="fas fa-shield-halved"></i>
+                                <span>Verified citizen records • PSGC standard hierarchy • Audit-logged</span>
+                            </div>
+                            <button type="submit" class="sform-btn" id="personalInfoSaveBtn" style="background:var(--color-primary-600, #2c5e47); color:#fff; border:none; border-radius:8px; padding:10px 22px; font-weight:600; font-size:0.92rem; display:inline-flex; align-items:center; gap:8px; cursor:pointer;">
+                                <i class="fas fa-floppy-disk"></i> Save Personal Details
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
                 <!-- ══ CHANGE EMAIL ═══════════════════════════════════════ -->
                 <p class="section-label"><i class="fas fa-envelope"></i> Email Address</p>
                 <div class="settings-main-card email-settings-card">
@@ -960,6 +1144,7 @@
     </div>
 
     <script src="../../assets/js/shared/navigation-config.js"></script>
+    <script src="../../assets/js/shared/philippine-locations.js"></script>
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/pages/profile.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>

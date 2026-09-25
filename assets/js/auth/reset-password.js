@@ -4,14 +4,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (!form) return;
 
-    const email = sessionStorage.getItem('reset_email');
+    const identifier = sessionStorage.getItem('reset_identifier') || sessionStorage.getItem('reset_email');
     const code = sessionStorage.getItem('reset_code');
     const verified = sessionStorage.getItem('reset_code_verified') === 'true';
 
     // Defense-in-depth for the UI flow only — the actual security boundary
     // is server-side: resetPassword() on the backend re-validates the code
     // and its expiry itself, regardless of what the client sends here.
-    if (!email || !code || !verified) {
+    if (!identifier || !code || !verified) {
         window.location.href = 'forgot-password.html';
         return;
     }
@@ -88,8 +88,9 @@ document.addEventListener('DOMContentLoaded', function() {
         setButtonLoading(submitBtn, true);
 
         try {
-            const result = await api.resetPassword(email, code, password, confirm);
+            const result = await api.resetPassword(identifier, code, password, confirm);
             if (result.success) {
+                sessionStorage.removeItem('reset_identifier');
                 sessionStorage.removeItem('reset_email');
                 sessionStorage.removeItem('reset_dev_code');
                 sessionStorage.removeItem('reset_code');

@@ -8,19 +8,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (!form) return;
 
-    let pendingEmail = null;
+    let pendingIdentifier = null;
 
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
-        const email = document.getElementById('email').value.trim();
+        const inputVal = document.getElementById('email').value.trim();
 
         document.getElementById('emailError').textContent = '';
         alertBox.classList.remove('show');
         devCodePanel.classList.remove('show');
         continueWrap.style.display = 'none';
 
-        if (!email || !email.includes('@')) {
-            document.getElementById('emailError').textContent = 'Valid email required';
+        const isEmail = inputVal.includes('@') && inputVal.includes('.');
+        const digits = inputVal.replace(/\D/g, '');
+        const isPhone = (digits.length === 11 && digits.startsWith('09')) ||
+                        (digits.length === 12 && digits.startsWith('639')) ||
+                        (digits.length === 10 && digits.startsWith('9'));
+
+        if (!isEmail && !isPhone) {
+            document.getElementById('emailError').textContent = 'Please enter a valid email address or 11-digit mobile number (e.g. 09171234567)';
             return;
         }
 
@@ -29,24 +35,24 @@ document.addEventListener('DOMContentLoaded', function() {
         setButtonLoading(submitBtn, true);
 
         try {
-            const result = await api.forgotPassword(email);
+            const result = await api.forgotPassword(inputVal);
             setButtonLoading(submitBtn, false);
 
-            alertBox.textContent = result.message || 'If an account exists for that email, a verification code has been generated.';
+            alertBox.textContent = result.message || 'If an account matches our records, a verification code has been generated.';
             alertBox.classList.add('show', 'alert-success');
 
+            pendingIdentifier = inputVal;
+            sessionStorage.setItem('reset_identifier', inputVal);
+            sessionStorage.setItem('reset_email', inputVal);
+            sessionStorage.removeItem('reset_code_verified');
+
             if (result.dev_code) {
-                pendingEmail = email;
                 devCodeValue.textContent = result.dev_code;
                 devCodePanel.classList.add('show');
-                continueWrap.style.display = 'block';
-
-                // Carried forward to the verify/reset steps. sessionStorage
-                // (not localStorage) so it doesn't linger past this tab/flow.
-                sessionStorage.setItem('reset_email', email);
                 sessionStorage.setItem('reset_dev_code', result.dev_code);
-                sessionStorage.removeItem('reset_code_verified');
             }
+
+            continueWrap.style.display = 'block';
         } catch (error) {
             setButtonLoading(submitBtn, false);
             alertBox.textContent = error.message || 'Something went wrong. Please try again.';
@@ -55,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     continueBtn.addEventListener('click', function() {
-        if (!pendingEmail) return;
+        if (!pendingIdentifier) return;
         window.location.href = 'verify-reset-code.html';
     });
 });

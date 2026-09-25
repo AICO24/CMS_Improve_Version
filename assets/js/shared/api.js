@@ -159,24 +159,34 @@ class ApiClient {
         });
     }
 
-    async forgotPassword(email) {
+    async forgotPassword(identifier) {
+        const payload = {};
+        if (typeof identifier === 'object' && identifier !== null) {
+            Object.assign(payload, identifier);
+        } else {
+            const id = String(identifier || '').trim();
+            payload.identifier = id;
+            payload.email = id;
+        }
         return await this.request('auth/forgot-password', {
             method: 'POST',
-            body: { email },
+            body: payload,
         });
     }
 
-    async verifyResetCode(email, code) {
+    async verifyResetCode(identifier, code) {
+        const id = String(identifier || '').trim();
         return await this.request('auth/verify-reset-code', {
             method: 'POST',
-            body: { email, code },
+            body: { identifier: id, email: id, code },
         });
     }
 
-    async resetPassword(email, code, password, confirmPassword) {
+    async resetPassword(identifier, code, password, confirmPassword) {
+        const id = String(identifier || '').trim();
         return await this.request('auth/reset-password', {
             method: 'POST',
-            body: { email, code, password, confirm_password: confirmPassword },
+            body: { identifier: id, email: id, code, password, confirm_password: confirmPassword },
         });
     }
 
@@ -203,6 +213,40 @@ class ApiClient {
             else result.role = r;
         }
         return result;
+    }
+
+    async updateProfile(profileData) {
+        return await this.request('auth/profile', {
+            method: 'PUT',
+            body: profileData,
+        });
+    }
+
+    async getNotifications(params = {}) {
+        let query = '';
+        if (params && typeof params === 'object') {
+            const usp = new URLSearchParams();
+            for (const [k, v] of Object.entries(params)) {
+                if (v !== undefined && v !== null && v !== '') {
+                    usp.append(k, v);
+                }
+            }
+            const s = usp.toString();
+            if (s) query = '?' + s;
+        }
+        return await this.request(`notifications${query}`, { method: 'GET' });
+    }
+
+    async getUnreadNotificationCount() {
+        return await this.request('notifications/unread-count', { method: 'GET' });
+    }
+
+    async markNotificationRead(id) {
+        return await this.request(`notifications/${id}/read`, { method: 'PUT' });
+    }
+
+    async markAllNotificationsRead() {
+        return await this.request('notifications/mark-all-read', { method: 'PUT' });
     }
 
     async logout() {
@@ -388,8 +432,6 @@ const ROLE_SIDEBAR_LINKS = {
             ['book-a-service.html', 'fa-handshake', 'Book a Service'],
             ['booking-assistant.html', 'fa-robot', 'Booking Assistant'],
             ['manage-bookings.html', 'fa-calendar-check', 'Manage Bookings'],
-            ['manage-reservations.html', 'fa-calendar-check', 'Manage Reservations'],
-            ['manage-cremations.html', 'fa-calendar-check', 'Manage Cremations'],
         ] },
         { group: 'Cemetery Management', items: [
             ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
@@ -420,7 +462,6 @@ const ROLE_SIDEBAR_LINKS = {
             ['my-records.html', 'fa-folder-open', 'My Records'],
         ] },
         { group: 'Finance', items: [
-            ['payments.html', 'fa-credit-card', 'Payments'],
             ['payment-history.html', 'fa-receipt', 'Payment History'],
         ] },
         { group: 'Account', items: [

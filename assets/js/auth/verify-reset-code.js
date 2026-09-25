@@ -9,8 +9,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (!form) return;
 
-    const email = sessionStorage.getItem('reset_email');
-    if (!email) {
+    const identifier = sessionStorage.getItem('reset_identifier') || sessionStorage.getItem('reset_email');
+    if (!identifier) {
         window.location.href = 'forgot-password.html';
         return;
     }
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (resendBtn.disabled) return;
         resendBtn.disabled = true;
         try {
-            const result = await api.forgotPassword(email);
+            const result = await api.forgotPassword(identifier);
             if (result.dev_code) {
                 sessionStorage.setItem('reset_dev_code', result.dev_code);
                 devCodeValue.textContent = result.dev_code;
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setButtonLoading(submitBtn, true);
 
         try {
-            await api.verifyResetCode(email, code);
+            await api.verifyResetCode(identifier, code);
             sessionStorage.setItem('reset_code', code);
             sessionStorage.setItem('reset_code_verified', 'true');
             window.location.href = 'reset-password.html';

@@ -473,20 +473,20 @@ class AuthController {
     }
 
     public function forgotPassword($data) {
-        $email = trim((string) ($data['email'] ?? ''));
-        if ($email === '') {
-            return ['error' => 'Email is required', 'code' => 400];
+        $identifier = trim((string) ($data['identifier'] ?? $data['email'] ?? $data['phone'] ?? ''));
+        if ($identifier === '') {
+            return ['error' => 'Email address or mobile number is required', 'code' => 400];
         }
 
         $genericResponse = [
             'success' => true,
-            'message' => 'If an account exists for that email, a verification code has been generated.',
+            'message' => 'If an account matches our records, a verification code has been generated.',
         ];
 
-        $user = $this->userModel->findByEmail($email);
+        $user = $this->userModel->findByEmailOrPhone($identifier);
         if (!$user) {
             // Same response whether or not the account exists, so this
-            // endpoint can't be used to enumerate registered emails.
+            // endpoint can't be used to enumerate registered emails or phones.
             return $genericResponse;
         }
 
@@ -511,13 +511,13 @@ class AuthController {
     }
 
     public function verifyResetCode($data) {
-        $email = trim((string) ($data['email'] ?? ''));
+        $identifier = trim((string) ($data['identifier'] ?? $data['email'] ?? $data['phone'] ?? ''));
         $code = trim((string) ($data['code'] ?? ''));
-        if ($email === '' || $code === '') {
-            return ['error' => 'Email and code are required', 'code' => 400];
+        if ($identifier === '' || $code === '') {
+            return ['error' => 'Account identifier and code are required', 'code' => 400];
         }
 
-        $user = $this->userModel->verifyResetCode($email, $code);
+        $user = $this->userModel->verifyResetCode($identifier, $code);
         if (!$user) {
             return ['error' => 'Invalid or expired code', 'code' => 400];
         }
@@ -526,24 +526,24 @@ class AuthController {
     }
 
     public function resetPassword($data) {
-        $email = trim((string) ($data['email'] ?? ''));
+        $identifier = trim((string) ($data['identifier'] ?? $data['email'] ?? $data['phone'] ?? ''));
         $code = trim((string) ($data['code'] ?? ''));
         $password = (string) ($data['password'] ?? '');
         $confirmPassword = (string) ($data['confirm_password'] ?? '');
 
-        if ($email === '' || $code === '' || $password === '' || $confirmPassword === '') {
-            return ['error' => 'Email, code, and both password fields are required', 'code' => 400];
+        if ($identifier === '' || $code === '' || $password === '' || $confirmPassword === '') {
+            return ['error' => 'Account identifier, code, and both password fields are required', 'code' => 400];
         }
         if ($password !== $confirmPassword) {
             return ['error' => 'Password confirmation does not match', 'code' => 400];
         }
-        // Password complexity enforcement
+        // Password complexity enforcement (Batch 1 rules)
         $pwdError = self::validatePasswordComplexity($password);
         if ($pwdError !== null) {
             return ['error' => $pwdError, 'code' => 400];
         }
 
-        $user = $this->userModel->verifyResetCode($email, $code);
+        $user = $this->userModel->verifyResetCode($identifier, $code);
         if (!$user) {
             return ['error' => 'Invalid or expired code', 'code' => 400];
         }
@@ -834,9 +834,18 @@ class AuthController {
             $update['email'] = $email;
         }
 
-        // Contact number (nullable)
+        // Contact number (nullable, normalized to Philippine standard +639XXXXXXXXX)
         if (array_key_exists('contact_number', $data)) {
-            $update['contact_number'] = trim((string) ($data['contact_number'] ?? '')) ?: null;
+            $rawPhone = trim((string) ($data['contact_number'] ?? ''));
+            if ($rawPhone !== '') {
+                $phoneValidation = self::validateAndNormalizePhone($rawPhone, false);
+                if (!$phoneValidation['valid']) {
+                    return ['error' => $phoneValidation['error'], 'code' => 400];
+                }
+                $update['contact_number'] = $phoneValidation['normalized'];
+            } else {
+                $update['contact_number'] = null;
+            }
         }
 
         // Address (nullable)

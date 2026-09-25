@@ -100,6 +100,18 @@
                 /* storage unavailable — toggle still applies for this page view */
             }
         });
+
+        // Batch 6: Automatically initialize notification popover component on pages with #notificationIcon
+        if (document.getElementById('notificationIcon')) {
+            if (typeof window.initNotificationPopover === 'function') {
+                window.initNotificationPopover();
+            } else if (!document.querySelector('script[src*="notifications-popover.js"]')) {
+                var notifScript = document.createElement('script');
+                var basePath = typeof window.getFrontendBasePath === 'function' ? window.getFrontendBasePath() : '../..';
+                notifScript.src = basePath + '/assets/js/components/notifications-popover.js';
+                document.body.appendChild(notifScript);
+            }
+        }
     }
 
     window.initSidebarNav = initSidebarNav;
