@@ -249,7 +249,11 @@ class ApiClient {
         return await this.request('notifications/mark-all-read', { method: 'PUT' });
     }
 
-    async logout() {
+    async logout(skipConfirm = false) {
+        if (!skipConfirm) {
+            showLogoutConfirmationModal();
+            return;
+        }
         try {
             if (this.token) {
                 await this.request('auth/logout', { method: 'POST' });
@@ -265,6 +269,221 @@ class ApiClient {
             window.location.replace(getLoginRedirectUrl());
         }
     }
+}
+
+/**
+ * Global Logout Confirmation Modal
+ * Provides an accessible, responsive confirmation dialog before terminating the session.
+ */
+function showLogoutConfirmationModal() {
+    let modal = document.getElementById('cmsLogoutConfirmModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'cmsLogoutConfirmModal';
+        modal.className = 'cms-modal-backdrop';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', 'cmsLogoutModalTitle');
+        modal.innerHTML = `
+            <div class="cms-modal-box">
+                <div class="cms-modal-header">
+                    <div class="cms-modal-icon">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </div>
+                    <div class="cms-modal-title-group">
+                        <h4 id="cmsLogoutModalTitle" class="cms-modal-title">Confirm Logout</h4>
+                        <p class="cms-modal-subtitle">Session Termination</p>
+                    </div>
+                </div>
+                <div class="cms-modal-body">
+                    <p class="cms-modal-message">Are you sure you want to log out?</p>
+                </div>
+                <div class="cms-modal-footer">
+                    <button type="button" id="cmsLogoutCancelBtn" class="cms-btn cms-btn--cancel">Cancel</button>
+                    <button type="button" id="cmsLogoutConfirmBtn" class="cms-btn cms-btn--confirm">Confirm Logout</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        if (!document.getElementById('cmsLogoutModalStyles')) {
+            const style = document.createElement('style');
+            style.id = 'cmsLogoutModalStyles';
+            style.textContent = `
+                .cms-modal-backdrop {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100vw;
+                    height: 100vh;
+                    background: rgba(15, 23, 42, 0.65);
+                    backdrop-filter: blur(4px);
+                    -webkit-backdrop-filter: blur(4px);
+                    display: none;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 999999;
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                }
+                .cms-modal-backdrop.cms-modal--show {
+                    display: flex;
+                    opacity: 1;
+                }
+                .cms-modal-box {
+                    background: var(--color-surface, #ffffff);
+                    color: var(--color-text, #1e293b);
+                    width: 90%;
+                    max-width: 440px;
+                    border-radius: 16px;
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                    border: 1px solid var(--color-border, #e2e8f0);
+                    padding: 24px;
+                    transform: scale(0.95);
+                    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                }
+                .cms-modal-backdrop.cms-modal--show .cms-modal-box {
+                    transform: scale(1);
+                }
+                .cms-modal-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                    margin-bottom: 16px;
+                }
+                .cms-modal-icon {
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 12px;
+                    background: rgba(239, 68, 68, 0.12);
+                    color: #dc2626;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    flex-shrink: 0;
+                }
+                .cms-modal-title-group {
+                    flex: 1;
+                }
+                .cms-modal-title {
+                    margin: 0;
+                    font-size: 1.15rem;
+                    font-weight: 700;
+                    color: var(--color-text, #0f172a);
+                }
+                .cms-modal-subtitle {
+                    margin: 2px 0 0 0;
+                    font-size: 0.82rem;
+                    color: var(--color-text-secondary, #64748b);
+                }
+                .cms-modal-body {
+                    margin-bottom: 24px;
+                }
+                .cms-modal-message {
+                    margin: 0;
+                    font-size: 0.95rem;
+                    line-height: 1.5;
+                    color: var(--color-text, #334155);
+                }
+                .cms-modal-footer {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 12px;
+                }
+                .cms-btn {
+                    padding: 9px 18px;
+                    border-radius: 8px;
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    border: 1px solid transparent;
+                    transition: all 0.15s ease;
+                }
+                .cms-btn--cancel {
+                    background: var(--color-surface-subtle, #f1f5f9);
+                    border-color: var(--color-border, #cbd5e1);
+                    color: var(--color-text, #334155);
+                }
+                .cms-btn--cancel:hover {
+                    background: #e2e8f0;
+                    color: #0f172a;
+                }
+                .cms-btn--confirm {
+                    background: #dc2626;
+                    border-color: #dc2626;
+                    color: #ffffff;
+                }
+                .cms-btn--confirm:hover {
+                    background: #b91c1c;
+                    border-color: #b91c1c;
+                }
+                .cms-btn:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+                [data-theme="dark"] .cms-modal-box {
+                    background: #1e293b;
+                    color: #f8fafc;
+                    border-color: #334155;
+                }
+                [data-theme="dark"] .cms-modal-title {
+                    color: #f8fafc;
+                }
+                [data-theme="dark"] .cms-modal-subtitle {
+                    color: #94a3b8;
+                }
+                [data-theme="dark"] .cms-modal-message {
+                    color: #cbd5e1;
+                }
+                [data-theme="dark"] .cms-btn--cancel {
+                    background: #334155;
+                    border-color: #475569;
+                    color: #e2e8f0;
+                }
+                [data-theme="dark"] .cms-btn--cancel:hover {
+                    background: #475569;
+                    color: #ffffff;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    const cancelBtn = modal.querySelector('#cmsLogoutCancelBtn');
+    const confirmBtn = modal.querySelector('#cmsLogoutConfirmBtn');
+
+    const closeModal = () => {
+        modal.classList.remove('cms-modal--show');
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 200);
+        document.removeEventListener('keydown', handleKeyDown);
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Escape') closeModal();
+    };
+
+    cancelBtn.onclick = () => {
+        closeModal();
+    };
+
+    modal.onclick = (e) => {
+        if (e.target === modal) closeModal();
+    };
+
+    confirmBtn.onclick = async () => {
+        confirmBtn.disabled = true;
+        cancelBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging out...';
+        await api.logout(true);
+    };
+
+    modal.style.display = 'flex';
+    void modal.offsetWidth;
+    modal.classList.add('cms-modal--show');
+    document.addEventListener('keydown', handleKeyDown);
 }
 
 const api = new ApiClient();

@@ -202,7 +202,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const email = document.getElementById('email').value.trim().toLowerCase();
         const username = document.getElementById('username').value.trim();
         const contact = document.getElementById('contact_number').value.trim();
-        const address = document.getElementById('address').value.trim();
+        let address = document.getElementById('address')?.value.trim() || '';
         const password = document.getElementById('password').value;
         const confirm = document.getElementById('confirm_password').value;
 
@@ -254,13 +254,29 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Address validation: minimum 5 characters if provided
+        const streetVal = (document.getElementById('reg_street')?.value || '').trim();
+        address = (document.getElementById('address')?.value || '').trim();
+        if (!address && streetVal) {
+            address = streetVal;
+        }
+        if (!address && locationController) {
+            const lv = locationController.getValues();
+            if (lv && lv.combinedAddress) {
+                address = lv.combinedAddress.trim();
+            }
+        }
+
+        // Address validation: minimum 5 characters and meaningful content if provided
         if (address) {
+            const alphaNumCount = (address.match(/[a-zA-Z0-9]/g) || []).length;
             if (address.length < 5) {
                 document.getElementById('addressError').textContent = 'Address must be at least 5 characters long';
                 isValid = false;
             } else if (address.length > 255) {
                 document.getElementById('addressError').textContent = 'Address must not exceed 255 characters';
+                isValid = false;
+            } else if (alphaNumCount < 3) {
+                document.getElementById('addressError').textContent = 'Please provide a valid address with street or location details';
                 isValid = false;
             }
         }

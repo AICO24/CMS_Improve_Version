@@ -223,10 +223,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     const pwMatchHint   = document.getElementById('pwMatchHint');
     const pwStrengthFill  = document.getElementById('pwStrengthFill');
     const pwStrengthLabel = document.getElementById('pwStrengthLabel');
-    const pwReqLen   = document.getElementById('pwReqLen');
-    const pwReqUpper = document.getElementById('pwReqUpper');
-    const pwReqNum   = document.getElementById('pwReqNum');
-    const pwReqDiff  = document.getElementById('pwReqDiff');
+    const pwReqLen     = document.getElementById('pwReqLen');
+    const pwReqUpper   = document.getElementById('pwReqUpper');
+    const pwReqLower   = document.getElementById('pwReqLower');
+    const pwReqNum     = document.getElementById('pwReqNum');
+    const pwReqSpecial = document.getElementById('pwReqSpecial');
+    const pwReqDiff    = document.getElementById('pwReqDiff');
 
     function updateReq(el, met) {
         if (!el) return;
@@ -288,30 +290,33 @@ document.addEventListener('DOMContentLoaded', async function() {
     function evalStrength(pw) {
         const len   = pw.length >= 8;
         const upper = /[A-Z]/.test(pw);
+        const lower = /[a-z]/.test(pw);
         const num   = /[0-9]/.test(pw);
         const spec  = /[^A-Za-z0-9]/.test(pw);
         const isCommon = checkCommonOrSequential(pw);
-        let score = [len, upper, num, spec].filter(Boolean).length;
+        let score = [len, upper, lower, num, spec].filter(Boolean).length;
         if (isCommon && score > 1) score = 1;
-        return { len, upper, num, score, isCommon };
+        return { len, upper, lower, num, spec, score, isCommon };
     }
 
     function updateLivePasswordChecks() {
         if (!pwNew) return;
         const val = pwNew.value;
         const curVal = pwCurrent ? pwCurrent.value : '';
-        const { len, upper, num, score, isCommon } = evalStrength(val);
+        const { len, upper, lower, num, spec, score, isCommon } = evalStrength(val);
 
-        updateReq(pwReqLen,   len);
-        updateReq(pwReqUpper, upper);
-        updateReq(pwReqNum,   num);
+        updateReq(pwReqLen,     len);
+        updateReq(pwReqUpper,   upper);
+        updateReq(pwReqLower,   lower);
+        updateReq(pwReqNum,     num);
+        updateReq(pwReqSpecial, spec);
         const isDiff = Boolean(val && (!curVal || val !== curVal));
-        updateReq(pwReqDiff,  isDiff);
+        updateReq(pwReqDiff,    isDiff);
 
-        const labels = ['', isCommon ? 'Weak (Common Pattern)' : 'Weak', 'Fair', 'Good', 'Strong'];
-        const classes = ['', 'pw-weak', 'pw-fair', 'pw-good', 'pw-strong'];
+        const labels = ['', isCommon ? 'Weak (Common Pattern)' : 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
+        const classes = ['', 'pw-weak', 'pw-weak', 'pw-fair', 'pw-good', 'pw-strong'];
         if (pwStrengthFill) {
-            pwStrengthFill.style.width = (val ? (score / 4 * 100) : 0) + '%';
+            pwStrengthFill.style.width = (val ? (score / 5 * 100) : 0) + '%';
             pwStrengthFill.className = 'pw-strength-fill ' + (val ? (classes[score] || '') : '');
         }
         if (pwStrengthLabel) pwStrengthLabel.textContent = val ? (labels[score] || '') : '';
@@ -724,7 +729,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (pwStrengthFill)  { pwStrengthFill.style.width = '0'; pwStrengthFill.className = 'pw-strength-fill'; }
                 if (pwStrengthLabel) pwStrengthLabel.textContent = '';
                 if (pwMatchHint)     { pwMatchHint.textContent = ''; pwMatchHint.className = 'sform-match-hint'; }
-                [pwReqLen, pwReqUpper, pwReqNum].forEach(el => updateReq(el, false));
+                [pwReqLen, pwReqUpper, pwReqLower, pwReqNum, pwReqSpecial, pwReqDiff].forEach(el => updateReq(el, false));
             } else {
                 closeSessionModal();
                 showAlert('passwordFormAlert', 'error', res.error || 'Failed to change password.');
@@ -759,13 +764,19 @@ document.addEventListener('DOMContentLoaded', async function() {
                 showAlert('passwordFormAlert', 'error', 'New password and confirmation do not match.'); return;
             }
             if (newPw.length < 8) {
-                showAlert('passwordFormAlert', 'error', 'Password must be at least 8 characters.'); return;
+                showAlert('passwordFormAlert', 'error', 'Password must be at least 8 characters long.'); return;
             }
             if (!/[A-Z]/.test(newPw)) {
-                showAlert('passwordFormAlert', 'error', 'Password must contain at least one uppercase letter.'); return;
+                showAlert('passwordFormAlert', 'error', 'Password must contain at least one uppercase letter (A-Z).'); return;
+            }
+            if (!/[a-z]/.test(newPw)) {
+                showAlert('passwordFormAlert', 'error', 'Password must contain at least one lowercase letter (a-z).'); return;
             }
             if (!/[0-9]/.test(newPw)) {
-                showAlert('passwordFormAlert', 'error', 'Password must contain at least one number.'); return;
+                showAlert('passwordFormAlert', 'error', 'Password must contain at least one number (0-9).'); return;
+            }
+            if (!/[^a-zA-Z0-9]/.test(newPw)) {
+                showAlert('passwordFormAlert', 'error', 'Password must contain at least one special character (!@#$%^&*...).'); return;
             }
             if (current.trim() === newPw.trim()) {
                 showAlert('passwordFormAlert', 'error', 'New password cannot be the same as your current password.'); return;

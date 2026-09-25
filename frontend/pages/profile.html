@@ -882,7 +882,7 @@
                                     </label>
                                     <div class="sform-input-wrap sform-input-wrap--pw">
                                         <i class="fas fa-lock-open sform-icon"></i>
-                                        <input type="password" id="pwNew" name="new_password" placeholder="Min 8 chars, 1 uppercase, 1 number" autocomplete="new-password">
+                                        <input type="password" id="pwNew" name="new_password" placeholder="Min 8 chars, uppercase, lowercase, number, symbol" autocomplete="new-password">
                                         <button type="button" class="sform-eye" aria-label="Toggle password visibility" data-target="pwNew"><i class="fas fa-eye"></i></button>
                                     </div>
                                     <!-- Strength bar -->
@@ -895,8 +895,10 @@
                                     <!-- Requirements checklist -->
                                     <ul class="pw-req-list" id="pwReqList" style="margin-top: 8px;">
                                         <li class="pw-req" id="pwReqLen"><i class="fas fa-circle-xmark"></i> At least 8 characters</li>
-                                        <li class="pw-req" id="pwReqUpper"><i class="fas fa-circle-xmark"></i> One uppercase letter</li>
-                                        <li class="pw-req" id="pwReqNum"><i class="fas fa-circle-xmark"></i> One number</li>
+                                        <li class="pw-req" id="pwReqUpper"><i class="fas fa-circle-xmark"></i> One uppercase letter (A-Z)</li>
+                                        <li class="pw-req" id="pwReqLower"><i class="fas fa-circle-xmark"></i> One lowercase letter (a-z)</li>
+                                        <li class="pw-req" id="pwReqNum"><i class="fas fa-circle-xmark"></i> One number (0-9)</li>
+                                        <li class="pw-req" id="pwReqSpecial"><i class="fas fa-circle-xmark"></i> One special character (!@#$%...)</li>
                                         <li class="pw-req" id="pwReqDiff"><i class="fas fa-circle-xmark"></i> Different from current password</li>
                                     </ul>
                                 </div>

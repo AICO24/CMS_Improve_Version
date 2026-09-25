@@ -366,6 +366,9 @@ class AuthController {
             if (strlen($data['address']) > 255) {
                 return ['error' => 'Address must not exceed 255 characters', 'code' => 400];
             }
+            if (preg_match_all('/[a-zA-Z0-9]/', $data['address']) < 3) {
+                return ['error' => 'Please provide a valid address with street or location details', 'code' => 400];
+            }
         } else {
             $data['address'] = null;
         }
@@ -850,7 +853,21 @@ class AuthController {
 
         // Address (nullable)
         if (array_key_exists('address', $data)) {
-            $update['address'] = trim((string) ($data['address'] ?? '')) ?: null;
+            $addr = trim((string) ($data['address'] ?? ''));
+            if ($addr !== '') {
+                if (strlen($addr) < 5) {
+                    return ['error' => 'Address must be at least 5 characters long', 'code' => 400];
+                }
+                if (strlen($addr) > 255) {
+                    return ['error' => 'Address must not exceed 255 characters', 'code' => 400];
+                }
+                if (preg_match_all('/[a-zA-Z0-9]/', $addr) < 3) {
+                    return ['error' => 'Please provide a valid address with street or location details', 'code' => 400];
+                }
+                $update['address'] = $addr;
+            } else {
+                $update['address'] = null;
+            }
         }
 
         if (empty($update)) {
@@ -923,16 +940,10 @@ class AuthController {
             return ['error' => 'New password cannot be the same as your current password', 'code' => 400];
         }
 
-        if (strlen($newPassword) < 8) {
-            return ['error' => 'New password must be at least 8 characters', 'code' => 400];
-        }
-
-        // Strength: require at least one uppercase and one digit
-        if (!preg_match('/[A-Z]/', $newPassword)) {
-            return ['error' => 'Password must contain at least one uppercase letter', 'code' => 400];
-        }
-        if (!preg_match('/[0-9]/', $newPassword)) {
-            return ['error' => 'Password must contain at least one number', 'code' => 400];
+        // Password complexity enforcement (minimum 8 chars, uppercase, lowercase, number, special char)
+        $pwdError = self::validatePasswordComplexity($newPassword);
+        if ($pwdError !== null) {
+            return ['error' => $pwdError, 'code' => 400];
         }
 
         $user = $this->userModel->findById($userId);
