@@ -3,7 +3,20 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CodeRebels Cemetery Management</title>
+    <title>Cemetery Management System — Smart Burial Scheduling &amp; Operations</title>
+    <meta name="description" content="Centralized platform for cemetery lot management, burial and cremation scheduling, civil documentary requirements, and verified online payments." />
+    <!-- Early theme initialization to eliminate flash of light/dark mode -->
+    <script>
+        (function() {
+            try {
+                var theme = localStorage.getItem('cms-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.body.setAttribute('data-theme', theme);
+                });
+            } catch (e) {}
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
@@ -17,11 +30,14 @@
     <link rel="stylesheet" href="../assets/css/landingpage.css" />
 </head>
 <body>
+    <a href="#main" class="skip-link">Skip to main content</a>
     <div id="navbar-placeholder"></div>
-    <main>
+    <main id="main">
         <div id="hero-placeholder"></div>
         <div id="features-placeholder"></div>
         <div id="how-it-works-placeholder"></div>
+        <div id="ai-placeholder"></div>
+        <div id="requirements-placeholder"></div>
         <div id="main-content"></div>
     </main>
     <div id="page-footer"></div>
