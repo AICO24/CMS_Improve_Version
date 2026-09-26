@@ -31,16 +31,28 @@
         return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
     }
 
-    function getIconForType(type) {
-        const t = String(type || '').toLowerCase();
+    function getIconForType(type, title) {
+        const t = (String(type || '') + ' ' + String(title || '')).toLowerCase();
         if (t.includes('payment') || t.includes('receipt')) return 'fa-receipt';
-        if (t.includes('booking') || t.includes('reservation')) return 'fa-calendar-check';
         if (t.includes('cremation')) return 'fa-fire';
         if (t.includes('burial')) return 'fa-monument';
-        if (t.includes('security') || t.includes('auth')) return 'fa-shield-halved';
-        if (t.includes('expiration') || t.includes('alert')) return 'fa-hourglass-half';
-        if (t.includes('exception')) return 'fa-triangle-exclamation';
+        if (t.includes('booking') || t.includes('reservation')) return 'fa-calendar-check';
+        if (t.includes('security') || t.includes('auth') || t.includes('password')) return 'fa-shield-halved';
+        if (t.includes('expiration') || t.includes('expired') || t.includes('overdue')) return 'fa-hourglass-half';
+        if (t.includes('capacity') || t.includes('critical') || t.includes('forecast')) return 'fa-chart-pie';
+        if (t.includes('cancel') || t.includes('exception') || t.includes('failed') || t.includes('reject')) return 'fa-triangle-exclamation';
         return 'fa-bell';
+    }
+
+    function getCategoryForType(type, title) {
+        const t = (String(type || '') + ' ' + String(title || '')).toLowerCase();
+        if (t.includes('payment') || t.includes('receipt')) return 'payment';
+        if (t.includes('cremation')) return 'cremation';
+        if (t.includes('burial') || t.includes('booking') || t.includes('reservation')) return 'booking';
+        if (t.includes('capacity') || t.includes('expiration') || t.includes('alert') || t.includes('critical') || t.includes('overdue')) return 'warning';
+        if (t.includes('cancel') || t.includes('exception') || t.includes('failed') || t.includes('reject')) return 'danger';
+        if (t.includes('security') || t.includes('auth') || t.includes('password')) return 'security';
+        return 'info';
     }
 
     function escapeHtml(str) {
@@ -178,12 +190,13 @@
             const recent = notifications.slice(0, 15);
             listEl.innerHTML = recent.map(n => {
                 const isUnread = !n.is_read || n.is_read === '0' || n.is_read === 0;
-                const iconClass = getIconForType(n.notification_type);
+                const iconClass = getIconForType(n.notification_type, n.title);
+                const category = getCategoryForType(n.notification_type, n.title);
                 const timeText = formatRelativeTime(n.created_at);
 
                 return `
-                    <div class="notif-popover-item ${isUnread ? 'is-unread' : ''}" data-id="${n.notification_id}" role="button" tabindex="0">
-                        <div class="notif-item-icon">
+                    <div class="notif-popover-item ${isUnread ? 'is-unread' : ''}" data-id="${n.notification_id}" data-category="${category}" role="button" tabindex="0">
+                        <div class="notif-item-icon notif-item-icon--${category}">
                             <i class="fas ${iconClass}"></i>
                         </div>
                         <div class="notif-item-content">
