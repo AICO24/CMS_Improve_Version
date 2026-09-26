@@ -641,12 +641,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             const bounds = getPeriodBounds(period);
             const now = new Date();
 
-            let chartPromise;
-            if (period === 'yearly') {
-                chartPromise = api.request(`payments/revenue-by-month?year=${now.getFullYear()}`, { method: 'GET' });
-            } else {
-                chartPromise = api.request(`payments/revenue-by-day?date_from=${bounds.startDate}&date_to=${bounds.endDate}`, { method: 'GET' });
-            }
+            const chartPromise = api.request(`payments/revenue-by-month?year=${now.getFullYear()}`, { method: 'GET' });
 
             const [occRes, revStatsRes, revSumRes, chartRes, paymentsRes] = await Promise.allSettled([
                 api.request('reports/occupancy', { method: 'GET' }),
@@ -838,94 +833,40 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (chartCanvas && typeof Chart !== 'undefined') {
                 const ctx = chartCanvas.getContext('2d');
 
-                let labels = [];
-                let dataPoints = [];
-                let chartDatasetLabel = '';
-                let xAxisTitle = 'Period';
-                let chartMainTitle = 'Revenue by Month';
-                let chartSubText = '';
-                let chartLegendTitle = '';
-
                 const currentYear = now.getFullYear();
                 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const curMonthNum = now.getMonth() + 1; // 1-12
+                const monthlyDataMap = new Map();
+                let computedYtd = 0;
+                let curMonthRev = 0;
 
-                if (period === 'weekly') {
-                    // Weekly: 7 daily points for current Monday–Sunday week
-                    const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    const dayOfWeek = mon.getDay();
-                    const diffToMon = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
-                    mon.setDate(mon.getDate() - diffToMon);
-
-                    const weekDayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                    const dailyMap = new Map();
-                    if (Array.isArray(revenueSeriesData)) {
-                        revenueSeriesData.forEach(item => {
-                            if (item.date) dailyMap.set(item.date, Number(item.total) || 0);
-                        });
-                    }
-
-                    const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
-                    for (let i = 0; i < 7; i++) {
-                        const cur = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i);
-                        const dateStr = formatLocalDate(cur);
-                        const dayLabel = `${weekDayNames[i]} (${cur.getMonth() + 1}/${cur.getDate()})`;
-                        labels.push(dayLabel);
-                        dataPoints.push(dailyMap.get(dateStr) || 0);
-                    }
-
-                    chartMainTitle = 'Weekly Revenue Breakdown';
-                    chartDatasetLabel = `Daily Revenue (Week of ${monthNames[mon.getMonth()]} ${mon.getDate()})`;
-                    xAxisTitle = 'Day of Week';
-                    chartSubText = `Daily performance for current week (${formatLocalDate(mon)} to ${formatLocalDate(sun)})`;
-                    chartLegendTitle = 'Daily Revenue (This Week)';
-
-                } else if (period === 'monthly') {
-                    // Monthly: one point per calendar day up to today
-                    const currentMonthIdx = now.getMonth();
-                    const curMonthName = monthNames[currentMonthIdx];
-                    const todayDate = now.getDate();
-
-                    const dailyMap = new Map();
-                    if (Array.isArray(revenueSeriesData)) {
-                        revenueSeriesData.forEach(item => {
-                            if (item.date) dailyMap.set(item.date, Number(item.total) || 0);
-                        });
-                    }
-
-                    for (let d = 1; d <= todayDate; d++) {
-                        const cur = new Date(currentYear, currentMonthIdx, d);
-                        const dateStr = formatLocalDate(cur);
-                        labels.push(`${curMonthName} ${d}`);
-                        dataPoints.push(dailyMap.get(dateStr) || 0);
-                    }
-
-                    chartMainTitle = `Daily Revenue (${curMonthName} ${currentYear})`;
-                    chartDatasetLabel = `Daily Revenue (${curMonthName} 1–${todayDate})`;
-                    xAxisTitle = `Day of Month (${curMonthName})`;
-                    chartSubText = `Daily collections for ${curMonthName} ${currentYear} (Day 1 to ${todayDate})`;
-                    chartLegendTitle = `Daily Revenue (${curMonthName})`;
-
-                } else {
-                    // Yearly: monthly revenue Jan through Dec of current year (preserve zero-value months)
-                    const monthlyDataMap = new Map();
-                    if (Array.isArray(revenueSeriesData)) {
-                        revenueSeriesData.forEach(item => {
-                            const m = Number(item.month);
-                            if (m >= 1 && m <= 12) {
-                                monthlyDataMap.set(m, Number(item.total) || 0);
+                if (Array.isArray(revenueSeriesData)) {
+                    revenueSeriesData.forEach(item => {
+                        const m = Number(item.month);
+                        const total = Number(item.total) || 0;
+                        if (m >= 1 && m <= 12) {
+                            monthlyDataMap.set(m, total);
+                            computedYtd += total;
+                            if (m === curMonthNum) {
+                                curMonthRev = total;
                             }
-                        });
-                    }
-
-                    labels = monthNames.map(name => `${name} ${currentYear}`);
-                    dataPoints = monthNames.map((_, idx) => monthlyDataMap.get(idx + 1) || 0);
-
-                    chartMainTitle = `Revenue by Month (${currentYear})`;
-                    chartDatasetLabel = `Monthly Revenue (${currentYear})`;
-                    xAxisTitle = 'Month';
-                    chartSubText = `Monthly performance for calendar year ${currentYear}`;
-                    chartLegendTitle = `Monthly Revenue (${currentYear})`;
+                        }
+                    });
                 }
+
+                const labels = monthNames;
+                const dataPoints = monthNames.map((_, idx) => monthlyDataMap.get(idx + 1) || 0);
+
+                const chartMainTitle = 'Revenue by Month';
+                const chartDatasetLabel = `Monthly Revenue (${currentYear})`;
+                const xAxisTitle = 'Month';
+
+                const grandTotal = (paymentStats && typeof paymentStats.ytd_revenue === 'number' && paymentStats.ytd_revenue > 0)
+                    ? paymentStats.ytd_revenue
+                    : (computedYtd > 0 ? computedYtd : (Number(paymentStats.all_time_revenue ?? revenueSummary.total) || 0));
+
+                const chartSubText = `Year-to-date total: ${formatCurrency(grandTotal)} (${currentYear})`;
+                const chartLegendTitle = `Monthly Revenue (${currentYear})`;
 
                 // Update chart headings & legends in UI
                 const chartCardEl = chartCanvas.closest('.chart-card');
@@ -938,25 +879,21 @@ document.addEventListener('DOMContentLoaded', async function () {
                 const legendTextEl = document.getElementById('chartLegendText');
                 if (legendTextEl) legendTextEl.textContent = chartLegendTitle;
 
+                if (curMonthRev === 0 && paymentStats && typeof paymentStats.total_revenue === 'number') {
+                    curMonthRev = paymentStats.total_revenue;
+                }
+
                 // Calculate totals and financial metrics from live single-source-of-truth
-                const grandTotal = Number(paymentStats.all_time_revenue ?? paymentStats.ytd_revenue) || 0;
                 const validPaymentAmounts = paymentRecords.map(p => Number(p.amount) || 0).filter(a => a > 0);
+                const periodTxCount = (paymentStats.transaction_count ?? periodTx);
                 const avgPayment = Number(paymentStats.average_transaction) || (validPaymentAmounts.length > 0
                     ? (validPaymentAmounts.reduce((a, b) => a + b, 0) / validPaymentAmounts.length)
-                    : (periodTx > 0 && periodRev > 0 ? (periodRev / periodTx) : 0));
+                    : (periodTxCount > 0 && grandTotal > 0 ? (grandTotal / periodTxCount) : 0));
 
-                setText('finYtdTotal', formatCurrency(paymentStats.ytd_revenue ?? grandTotal));
-                setText('finMonthTotal', formatCurrency(periodRev));
+                setText('finYtdTotal', formatCurrency(grandTotal));
+                setText('finMonthTotal', formatCurrency(curMonthRev > 0 ? curMonthRev : periodRev));
                 setText('finAvgTotal', formatCurrency(avgPayment));
-                setText('finTxTotal', (paymentStats.transaction_count ?? periodTx).toString());
-
-                // Update period chip label if present
-                const monthLegendLabel = document.querySelector('.chart-legend-chip:nth-child(2) .legend-chip-label');
-                if (monthLegendLabel) {
-                    if (period === 'weekly') monthLegendLabel.textContent = 'This Week:';
-                    else if (period === 'yearly') monthLegendLabel.textContent = 'This Year:';
-                    else monthLegendLabel.textContent = 'This Month:';
-                }
+                setText('finTxTotal', periodTxCount.toString());
 
                 const isDark = () => document.body.getAttribute('data-theme') === 'dark';
 
@@ -966,8 +903,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                         labelColor: dark ? '#e2e8f0' : '#092118',
                         tickColor: dark ? '#cbd5e1' : '#1e293b',
                         gridColor: dark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.10)',
-                        barBorder: dark ? '#34d399' : '#0f766e',
-                        barHover: dark ? '#10b981' : '#0f766e',
+                        barBorder: dark ? '#34d399' : '#10b981',
+                        barHover: dark ? '#10b981' : '#059669',
                     };
                 }
 
@@ -979,9 +916,9 @@ document.addEventListener('DOMContentLoaded', async function () {
                         grad.addColorStop(0.65, 'rgba(16, 185, 129, 0.70)');
                         grad.addColorStop(1, 'rgba(5, 150, 105, 0.35)');
                     } else {
-                        grad.addColorStop(0, 'rgba(15, 118, 110, 0.90)');
-                        grad.addColorStop(0.65, 'rgba(15, 118, 110, 0.60)');
-                        grad.addColorStop(1, 'rgba(15, 118, 110, 0.18)');
+                        grad.addColorStop(0, 'rgba(52, 211, 153, 0.85)');
+                        grad.addColorStop(0.65, 'rgba(52, 211, 153, 0.50)');
+                        grad.addColorStop(1, 'rgba(52, 211, 153, 0.12)');
                     }
                     return grad;
                 }
@@ -1005,7 +942,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                             borderWidth: 1.5,
                             borderRadius: 6,
                             borderSkipped: false,
-                            maxBarThickness: period === 'monthly' ? 24 : 44,
+                            maxBarThickness: 44,
                             hoverBackgroundColor: currentThemeColors.barHover,
                             hoverBorderColor: currentThemeColors.barBorder,
                             hoverBorderWidth: 2,
@@ -1024,7 +961,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                             }
                         },
                         animation: {
-                            duration: 700,
+                            duration: 800,
                             easing: 'easeOutCubic',
                         },
                         plugins: {
@@ -1056,15 +993,13 @@ document.addEventListener('DOMContentLoaded', async function () {
                                     padding: { top: 6 }
                                 },
                                 ticks: {
-                                    autoSkip: true,
-                                    autoSkipPadding: 14,
+                                    autoSkip: false,
                                     maxRotation: 0,
                                     minRotation: 0,
-                                    maxTicksLimit: 12,
                                     font: { size: 11, weight: '700', family: "'Inter', sans-serif" },
                                     color: currentThemeColors.tickColor,
                                     callback: function (val, index) {
-                                        return labels[index] || '';
+                                        return monthNames[index] || '';
                                     }
                                 },
                                 grid: {
