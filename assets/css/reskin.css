@@ -49,7 +49,7 @@
    model mechanisms stacking to ~20px per boundary (sidebar audit,
    Batch 1). Now a single 10px gap is the only mechanism. */
 .sidebar-nav {
-    gap: 10px;
+    gap: 4px;
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-width: none;
@@ -65,8 +65,8 @@
 }
 
 .sidebar .nav-item {
-    min-height: 40px;
-    padding: 9px 12px;
+    min-height: 38px;
+    padding: 8px 12px;
 }
 
 .nav-group-body {
@@ -74,17 +74,18 @@
 }
 
 .nav-group-header {
-    padding: 8px 12px;
-    font-size: 0.68rem;
-    color: #a0aec0;
+    padding: 7px 10px 4px 10px;
+    font-size: 0.66rem;
+    color: #8fa0b5;
 }
 
 /* ---------- Bronze accent: active/selected state ---------- */
 .sidebar .nav-item.active,
 .nav-item.active {
-    background: rgba(179, 129, 63, 0.25);
+    background: rgba(217, 184, 132, 0.18);
     color: #ffffff !important;
     border-left: 3px solid #d9b884;
+    border-radius: 8px;
 }
 
 .sidebar .nav-item.active .icon,

@@ -57,7 +57,7 @@
         if (brandSpan && brandSpan.dataset.brandFormatted !== '1') {
             brandSpan.dataset.brandFormatted = '1';
             brandSpan.className = 'brand-text';
-            brandSpan.innerHTML = '<span class="brand-title">Cemetery Management</span><span class="brand-sub">System</span>';
+            brandSpan.innerHTML = '<span class="brand-title">Cemetery Management</span><span class="brand-sub">SYSTEM</span>';
         }
     }
 
