@@ -1014,6 +1014,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        resizeDelay: 100,
                         layout: {
                             padding: {
                                 top: 8,
@@ -1051,12 +1052,14 @@ document.addEventListener('DOMContentLoaded', async function () {
                                     display: true,
                                     text: xAxisTitle,
                                     color: currentThemeColors.labelColor,
-                                    font: { size: 13, weight: '800', family: "'Inter', sans-serif" },
-                                    padding: { top: 8 }
+                                    font: { size: 12, weight: '800', family: "'Inter', sans-serif" },
+                                    padding: { top: 6 }
                                 },
                                 ticks: {
+                                    autoSkip: true,
+                                    autoSkipPadding: 10,
                                     maxRotation: period === 'monthly' ? 45 : 0,
-                                    autoSkip: period === 'monthly',
+                                    minRotation: 0,
                                     maxTicksLimit: period === 'monthly' ? 16 : 12,
                                     font: { size: 11, weight: '700', family: "'Inter', sans-serif" },
                                     color: currentThemeColors.tickColor,
@@ -1074,12 +1077,12 @@ document.addEventListener('DOMContentLoaded', async function () {
                                     display: true,
                                     text: 'Amount (PHP)',
                                     color: currentThemeColors.labelColor,
-                                    font: { size: 13, weight: '800', family: "'Inter', sans-serif" },
-                                    padding: { bottom: 8 }
+                                    font: { size: 12, weight: '800', family: "'Inter', sans-serif" },
+                                    padding: { bottom: 6 }
                                 },
                                 ticks: {
                                     precision: 0,
-                                    font: { size: 12, weight: '700', family: "'Inter', sans-serif" },
+                                    font: { size: 11, weight: '700', family: "'Inter', sans-serif" },
                                     color: currentThemeColors.tickColor,
                                     maxTicksLimit: 6,
                                     callback: value => {
@@ -1092,8 +1095,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                                     color: currentThemeColors.gridColor,
                                     drawBorder: false,
                                 }
-                            },
-                        },
+                            }
+                        }
                     },
                 });
 
