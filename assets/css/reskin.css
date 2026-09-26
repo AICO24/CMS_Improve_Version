@@ -82,10 +82,10 @@
 /* ---------- Bronze accent: active/selected state ---------- */
 .sidebar .nav-item.active,
 .nav-item.active {
-    background: rgba(217, 184, 132, 0.18);
+    background: rgba(217, 184, 132, 0.18) !important;
     color: #ffffff !important;
-    border-left: 3px solid #d9b884;
-    border-radius: 8px;
+    border-left: 3px solid #d9b884 !important;
+    border-radius: 8px !important;
 }
 
 .sidebar .nav-item.active .icon,

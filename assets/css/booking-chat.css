@@ -225,12 +225,7 @@
     font-weight: 600;
 }
 
-/* Sidebar Nav Consistency with Admin Dashboard */
-.sidebar .nav-item.active {
-    background: #7aa77a !important;
-    color: #06321a !important;
-    font-weight: 700 !important;
-}
+/* Sidebar styles handled uniformly by sidebar-nav-groups.css & reskin.css */
 
 .sidebar .nav-item:hover {
     background: rgba(255, 255, 255, 0.05);
