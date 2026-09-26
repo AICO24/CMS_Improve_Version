@@ -250,24 +250,26 @@
         </main>
     </div>
 
-    <!-- ── Booking Detail View Modal (Simplified & Compact Executive Design) ── -->
+    <!-- ── Booking Detail View Modal (Normalized System Design) ── -->
     <div class="modal" id="bookingDetailModal" role="dialog" aria-modal="true" aria-labelledby="detailModalTitle">
-        <div class="modal-content modal--view">
-            <button type="button" class="close-view" id="closeDetailModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
-            <div class="modal-header-compact view-modal-header">
-                <div class="modal-header-icon-wrap view-header-icon">
-                    <i class="fas fa-calendar-check"></i>
+        <div class="modal-content modal--lg modal--booking-detail">
+            <div class="modal-header">
+                <div class="modal-header-left">
+                    <div class="modal-header-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div>
+                        <h3 id="detailModalTitle" class="modal-title">Booking Details</h3>
+                        <p class="modal-subtitle">Service schedule, allocation, and settlement</p>
+                    </div>
                 </div>
-                <div>
-                    <h3 id="detailModalTitle">Booking &amp; Service Details</h3>
-                    <p class="modal-header-subtitle">Ceremony schedule, plot/niche allocation, and accounting settlement</p>
-                </div>
+                <button type="button" class="close-view" id="closeDetailModal" aria-label="Close modal"><i class="fas fa-xmark"></i></button>
             </div>
 
-            <!-- View Details Container (Simplified Executive Specs Card) -->
-            <div id="bookingDetailBody"></div>
+            <!-- View Details Container -->
+            <div class="modal-body modal-body--booking-detail" id="bookingDetailBody"></div>
 
-            <!-- Collapsible Activity & Audit Trail Drawer (Optional Expand) -->
+            <!-- Collapsible Activity & Audit Trail Drawer -->
             <details class="activity-timeline-drawer" id="bookingActivityDrawer">
                 <summary class="activity-drawer-summary">
                     <span><i class="fas fa-clock-rotate-left"></i> Activity &amp; Audit Trail</span>
@@ -276,8 +278,8 @@
                 <div id="bookingActivityTimeline" class="activity-timeline"></div>
             </details>
 
-            <div class="view-modal-footer" id="bookingDetailFooter">
-                <button type="button" class="btn-secondary" id="closeDetailModalBtn">Close</button>
+            <div class="modal-footer" id="bookingDetailFooter">
+                <button type="button" class="btn btn-secondary btn--sm" id="closeDetailModalBtn">Close</button>
             </div>
         </div>
     </div>
@@ -285,55 +287,58 @@
     <!-- ── Cash / Offline Payment & Instant Completion Modal ── -->
     <div class="modal" id="cashPaymentModal" role="dialog" aria-modal="true" aria-labelledby="cashModalTitle">
         <div class="modal-content modal--cash">
-            <button type="button" class="close-view" id="closeCashModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
-            <div class="modal-header-compact">
-                <div class="modal-header-icon-wrap" style="background: rgba(217, 119, 6, 0.15); color: #d97706;">
-                    <i class="fas fa-money-bill-wave"></i>
+            <div class="modal-header modal-header--cash">
+                <div class="modal-header-left">
+                    <div class="modal-header-icon modal-header-icon--cash">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <div>
+                        <h3 id="cashModalTitle" class="modal-title">Record Cash Payment</h3>
+                        <p class="modal-subtitle">Verify settlement and complete the booking</p>
+                    </div>
                 </div>
-                <div>
-                    <h3 id="cashModalTitle">Record Cash / Offline Payment</h3>
-                    <p class="modal-header-subtitle">Instantly verify settlement and trigger completion automation</p>
-                </div>
+                <button type="button" class="close-view close-view--cash" id="closeCashModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
             </div>
             <form id="cashPaymentForm">
-                <div class="modal-body">
+                <div class="modal-body modal-body--cash">
                     <input type="hidden" id="cashPaymentTargetId">
                     <input type="hidden" id="cashPaymentServiceType">
-                    
-                    <div class="form-group">
-                        <label for="cashPaymentAmount">Amount received (&#8369;) <span class="required-star">*</span></label>
-                        <input type="number" id="cashPaymentAmount" min="0.01" step="0.01" required placeholder="0.00">
+
+                    <div class="cash-form-group">
+                        <label class="cash-form-label" for="cashPaymentAmount">Amount Received <span class="cash-currency">(&#8369;)</span> <span class="required-star">*</span></label>
+                        <input type="number" id="cashPaymentAmount" class="cash-form-input cash-form-input--amount" min="0.01" step="0.01" required placeholder="0.00">
                     </div>
-                    <div class="form-group">
-                        <label for="cashPaymentMethod">Payment method</label>
-                        <select id="cashPaymentMethod" class="filter-select">
+
+                    <div class="cash-form-group">
+                        <label class="cash-form-label" for="cashPaymentMethod">Payment Method</label>
+                        <select id="cashPaymentMethod" class="cash-form-input cash-form-select">
                             <option value="Cash">Cash</option>
                             <option value="Check">Check</option>
                             <option value="Bank Transfer">Bank Transfer</option>
                             <option value="Other">Other</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label for="cashPaymentReceipt">Official Receipt / Reference <span class="muted">(optional — leave blank to auto-generate)</span></label>
-                        <input type="text" id="cashPaymentReceipt" placeholder="Leave blank to auto-generate official receipt number">
+
+                    <div class="cash-form-group">
+                        <label class="cash-form-label" for="cashPaymentReceipt">Official Receipt / Reference <span class="cash-form-optional">optional — leave blank to auto-generate</span></label>
+                        <input type="text" id="cashPaymentReceipt" class="cash-form-input" placeholder="Leave blank to auto-generate receipt number">
                     </div>
-                    <div class="cash-payment-info-box">
-                        <i class="fas fa-circle-info"></i>
-                        <p id="cashPaymentHelpText">
-                            Marks the booking Completed, records a Verified payment in Revenue Reports, and automatically triggers post-completion resource automation.
-                        </p>
+
+                    <div class="cash-info-box">
+                        <p id="cashPaymentHelpText">Marks the booking <strong>Completed</strong>, records a verified payment in Revenue Reports, and triggers post-completion resource automation.</p>
                     </div>
                 </div>
-                <div class="modal-form-actions modal-footer">
-                    <button type="button" class="btn-secondary" id="cancelCashModal">Cancel</button>
-                    <button type="submit" class="btn-save bookmarkBtn" id="submitCashPayment">
-                        <span class="IconContainer"><i class="fas fa-check icon"></i></span>
-                        <span class="text">Confirm &amp; Complete</span>
+                <div class="modal-footer modal-footer--cash">
+                    <button type="button" class="btn-cancel-clean" id="cancelCashModal">Cancel</button>
+                    <button type="submit" class="btn-action-cash btn-action-cash--submit" id="submitCashPayment">
+                        <i class="fas fa-check"></i>
+                        <span>Confirm &amp; Complete</span>
                     </button>
                 </div>
             </form>
         </div>
     </div>
+
 
     <!-- ── Scripts ── -->
     <script src="../../assets/js/shared/navigation-config.js"></script>

@@ -67,8 +67,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         onChange: refreshAll,
     });
 
-    document.getElementById('logoutBtn').addEventListener('click', () => {
+    document.getElementById('logoutBtn')?.addEventListener('click', () => {
         api.logout();
+    });
+
+    // Notification bell — navigate to notifications page on click
+    document.getElementById('notificationIcon')?.addEventListener('click', () => {
+        window.location.href = `${getFrontendBasePath()}/pages/notifications.html`;
     });
 
     const toggleBtn = document.getElementById('toggleSidebar');
@@ -87,9 +92,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 badge.innerText = result.count || 0;
                 badge.style.display = result.count > 0 ? 'flex' : 'none';
             }
-        } catch (e) {
-            console.error('Failed to load notification count:', e);
-        }
+        } catch (e) { /* silent — badge is non-critical */ }
     }
 
     function currentFilters() {

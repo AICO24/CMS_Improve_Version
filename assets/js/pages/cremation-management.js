@@ -15,9 +15,28 @@ document.addEventListener('DOMContentLoaded', async function() {
         ],
     });
 
-    document.getElementById('logoutBtn').addEventListener('click', () => {
+    document.getElementById('logoutBtn')?.addEventListener('click', () => {
         api.logout();
     });
+
+    // Notification bell — navigate to notifications page on click
+    document.getElementById('notificationIcon')?.addEventListener('click', () => {
+        window.location.href = `${getFrontendBasePath()}/pages/notifications.html`;
+    });
+
+    // Notification unread badge
+    async function updateNotificationBadge() {
+        try {
+            const result = await api.request('notifications/unread-count', { method: 'GET' });
+            const badge = document.getElementById('notificationBadge');
+            if (badge) {
+                badge.innerText = result.count || 0;
+                badge.style.display = result.count > 0 ? 'flex' : 'none';
+            }
+        } catch (e) { /* silent — badge is non-critical */ }
+    }
+    updateNotificationBadge();
+    setInterval(updateNotificationBadge, 30000);
 
     // --- State Management ---
     let allNiches = [];

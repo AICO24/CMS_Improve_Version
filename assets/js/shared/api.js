@@ -531,7 +531,7 @@ const PAGE_ROLE_ACCESS = (typeof window !== 'undefined' && window.CMS_NAVIGATION
         'my-records.html': ['user'],
         'notifications.html': ['admin', 'staff', 'user'],
         'profile.html': ['admin', 'staff', 'user'],
-        'settings.html': ['admin', 'staff'],
+        'settings.html': ['admin', 'staff', 'user'],
     };
 
 // Dynamic getter to always check live CMS_NAVIGATION if loaded in the DOM
@@ -611,7 +611,7 @@ function filterSidebarByRole(role) {
 // filtering it. Every other page (single-role pages, and admin/staff
 // pages that already carry their own full nav list, e.g. ai.html) keeps
 // the existing filterSidebarByRole behavior untouched.
-const PAGES_NEEDING_SIDEBAR_REBUILD = ['payments.html', 'notifications.html', 'profile.html', 'settings.html'];
+const PAGES_NEEDING_SIDEBAR_REBUILD = ['payments.html', 'notifications.html', 'profile.html'];
 
 // Canonical sidebar structure, one per role — matches the grouped
 // architecture established in Batches 1-4 (Dashboard as a bare top-level
@@ -648,9 +648,8 @@ const ROLE_SIDEBAR_LINKS = {
         ] },
         { group: 'System', items: [
             ['user-management.html', 'fa-users', 'User Management'],
-            ['settings.html', 'fa-gear', 'Settings'],
             ['audit.html', 'fa-clipboard-list', 'Audit Logs'],
-            ['profile.html', 'fa-id-card', 'Profile'],
+            ['profile.html', 'fa-gear', 'Account Settings'],
         ] },
     ],
     staff: [
@@ -674,8 +673,7 @@ const ROLE_SIDEBAR_LINKS = {
             ['exceptions.html', 'fa-triangle-exclamation', 'System Exceptions'],
         ] },
         { group: 'Account', items: [
-            ['profile.html', 'fa-id-card', 'Profile'],
-            ['settings.html', 'fa-gear', 'Settings'],
+            ['profile.html', 'fa-gear', 'Account Settings'],
         ] },
     ],
     user: [
