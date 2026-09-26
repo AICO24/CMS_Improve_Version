@@ -584,22 +584,51 @@ document.addEventListener('DOMContentLoaded', async function () {
         const now = new Date();
         const todayStr = formatLocalDate(now);
         let startDate;
+        let endDate = todayStr;
 
         if (period === 'weekly') {
-            const d = new Date(now);
+            const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const day = d.getDay();
             const diff = (day === 0 ? 6 : day - 1);
             d.setDate(d.getDate() - diff);
             startDate = formatLocalDate(d);
+
+            const sun = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 6);
+            endDate = formatLocalDate(sun);
         } else if (period === 'yearly') {
             startDate = `${now.getFullYear()}-01-01`;
+            endDate = todayStr;
         } else {
             const y = now.getFullYear();
             const m = String(now.getMonth() + 1).padStart(2, '0');
             startDate = `${y}-${m}-01`;
+            endDate = todayStr;
         }
 
-        return { startDate, endDate: todayStr, period };
+        return { startDate, endDate, period };
+    }
+
+    function setPeriodFilterLoading(isLoading) {
+        const periodButtons = document.querySelectorAll('.dashboard-period-filter .period-btn');
+        periodButtons.forEach(b => {
+            b.style.pointerEvents = isLoading ? 'none' : '';
+            b.style.opacity = isLoading ? '0.7' : '';
+        });
+
+        const periodEls = [
+            document.getElementById('statTotalRevenue')?.closest('.stat-card'),
+            document.getElementById('occChart')?.closest('.chart-card'),
+            document.getElementById('recentList')?.closest('.card')
+        ].filter(Boolean);
+
+        periodEls.forEach(el => {
+            if (isLoading) {
+                el.style.transition = 'opacity 0.2s ease';
+                el.style.opacity = '0.5';
+            } else {
+                el.style.opacity = '1';
+            }
+        });
     }
 
     let currentAdminPeriod = 'monthly';
@@ -607,25 +636,30 @@ document.addEventListener('DOMContentLoaded', async function () {
     let capacityChartInstance = null;
 
     async function loadMainDashboardData(period = 'monthly') {
+        setPeriodFilterLoading(true);
         try {
             const bounds = getPeriodBounds(period);
             const now = new Date();
-            const threeMonthsAgo = new Date(now);
-            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-            const threeMonthsAgoStr = formatLocalDate(threeMonthsAgo);
 
-            const [occRes, revStatsRes, revSumRes, revMonthRes, paymentsRes] = await Promise.allSettled([
+            let chartPromise;
+            if (period === 'yearly') {
+                chartPromise = api.request(`payments/revenue-by-month?year=${now.getFullYear()}`, { method: 'GET' });
+            } else {
+                chartPromise = api.request(`payments/revenue-by-day?date_from=${bounds.startDate}&date_to=${bounds.endDate}`, { method: 'GET' });
+            }
+
+            const [occRes, revStatsRes, revSumRes, chartRes, paymentsRes] = await Promise.allSettled([
                 api.request('reports/occupancy', { method: 'GET' }),
-                api.request(`payments/stats?period=${period}`, { method: 'GET' }),
+                api.request(`payments/stats?period=${period}&date_from=${bounds.startDate}&date_to=${bounds.endDate}`, { method: 'GET' }),
                 api.request(`payments/revenue?date_from=${bounds.startDate}&date_to=${bounds.endDate}`, { method: 'GET' }),
-                api.request(`payments/revenue-by-month?year=${now.getFullYear()}`, { method: 'GET' }),
-                api.request(`payments?date_from=${threeMonthsAgoStr}&date_to=${bounds.endDate}`, { method: 'GET' })
+                chartPromise,
+                api.request(`payments?date_from=${bounds.startDate}&date_to=${bounds.endDate}&per_page=10`, { method: 'GET' })
             ]);
 
             const occupancy = occRes.status === 'fulfilled' ? occRes.value : {};
             const paymentStats = revStatsRes.status === 'fulfilled' ? revStatsRes.value : {};
             const revenueSummary = revSumRes.status === 'fulfilled' ? revSumRes.value : {};
-            const revenueByMonth = revMonthRes.status === 'fulfilled' ? revMonthRes.value : [];
+            const revenueSeriesData = chartRes.status === 'fulfilled' ? chartRes.value : [];
             let payments = paymentsRes.status === 'fulfilled' ? paymentsRes.value : [];
 
             if ((!Array.isArray(payments) && !(payments && Array.isArray(payments.data))) || (Array.isArray(payments) && payments.length === 0)) {
@@ -793,7 +827,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                 } else {
                     const emptyItem = document.createElement('li');
                     emptyItem.className = 'recent-item empty';
-                    emptyItem.textContent = 'No recent transactions available.';
+                    const periodName = period === 'weekly' ? 'this week' : (period === 'yearly' ? 'this year' : 'this month');
+                    emptyItem.textContent = `No transactions recorded for ${periodName}.`;
                     recentList.appendChild(emptyItem);
                 }
             }
@@ -803,44 +838,117 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (chartCanvas && typeof Chart !== 'undefined') {
                 const ctx = chartCanvas.getContext('2d');
 
-                // Build full 12-month series matching reports page
-                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                const monthlyDataMap = new Map();
-                if (Array.isArray(revenueByMonth)) {
-                    revenueByMonth.forEach(item => {
-                        const m = Number(item.month);
-                        if (m >= 1 && m <= 12) {
-                            monthlyDataMap.set(m, Number(item.total) || 0);
-                        }
-                    });
-                }
+                let labels = [];
+                let dataPoints = [];
+                let chartDatasetLabel = '';
+                let xAxisTitle = 'Period';
+                let chartMainTitle = 'Revenue by Month';
+                let chartSubText = '';
+                let chartLegendTitle = '';
 
                 const currentYear = now.getFullYear();
-                const labels = monthNames.map(name => `${name} ${currentYear}`);
-                const dataPoints = monthNames.map((_, idx) => monthlyDataMap.get(idx + 1) || 0);
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+                if (period === 'weekly') {
+                    // Weekly: 7 daily points for current Monday–Sunday week
+                    const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    const dayOfWeek = mon.getDay();
+                    const diffToMon = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
+                    mon.setDate(mon.getDate() - diffToMon);
+
+                    const weekDayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                    const dailyMap = new Map();
+                    if (Array.isArray(revenueSeriesData)) {
+                        revenueSeriesData.forEach(item => {
+                            if (item.date) dailyMap.set(item.date, Number(item.total) || 0);
+                        });
+                    }
+
+                    const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
+                    for (let i = 0; i < 7; i++) {
+                        const cur = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i);
+                        const dateStr = formatLocalDate(cur);
+                        const dayLabel = `${weekDayNames[i]} (${cur.getMonth() + 1}/${cur.getDate()})`;
+                        labels.push(dayLabel);
+                        dataPoints.push(dailyMap.get(dateStr) || 0);
+                    }
+
+                    chartMainTitle = 'Weekly Revenue Breakdown';
+                    chartDatasetLabel = `Daily Revenue (Week of ${monthNames[mon.getMonth()]} ${mon.getDate()})`;
+                    xAxisTitle = 'Day of Week';
+                    chartSubText = `Daily performance for current week (${formatLocalDate(mon)} to ${formatLocalDate(sun)})`;
+                    chartLegendTitle = 'Daily Revenue (This Week)';
+
+                } else if (period === 'monthly') {
+                    // Monthly: one point per calendar day up to today
+                    const currentMonthIdx = now.getMonth();
+                    const curMonthName = monthNames[currentMonthIdx];
+                    const todayDate = now.getDate();
+
+                    const dailyMap = new Map();
+                    if (Array.isArray(revenueSeriesData)) {
+                        revenueSeriesData.forEach(item => {
+                            if (item.date) dailyMap.set(item.date, Number(item.total) || 0);
+                        });
+                    }
+
+                    for (let d = 1; d <= todayDate; d++) {
+                        const cur = new Date(currentYear, currentMonthIdx, d);
+                        const dateStr = formatLocalDate(cur);
+                        labels.push(`${curMonthName} ${d}`);
+                        dataPoints.push(dailyMap.get(dateStr) || 0);
+                    }
+
+                    chartMainTitle = `Daily Revenue (${curMonthName} ${currentYear})`;
+                    chartDatasetLabel = `Daily Revenue (${curMonthName} 1–${todayDate})`;
+                    xAxisTitle = `Day of Month (${curMonthName})`;
+                    chartSubText = `Daily collections for ${curMonthName} ${currentYear} (Day 1 to ${todayDate})`;
+                    chartLegendTitle = `Daily Revenue (${curMonthName})`;
+
+                } else {
+                    // Yearly: monthly revenue Jan through Dec of current year (preserve zero-value months)
+                    const monthlyDataMap = new Map();
+                    if (Array.isArray(revenueSeriesData)) {
+                        revenueSeriesData.forEach(item => {
+                            const m = Number(item.month);
+                            if (m >= 1 && m <= 12) {
+                                monthlyDataMap.set(m, Number(item.total) || 0);
+                            }
+                        });
+                    }
+
+                    labels = monthNames.map(name => `${name} ${currentYear}`);
+                    dataPoints = monthNames.map((_, idx) => monthlyDataMap.get(idx + 1) || 0);
+
+                    chartMainTitle = `Revenue by Month (${currentYear})`;
+                    chartDatasetLabel = `Monthly Revenue (${currentYear})`;
+                    xAxisTitle = 'Month';
+                    chartSubText = `Monthly performance for calendar year ${currentYear}`;
+                    chartLegendTitle = `Monthly Revenue (${currentYear})`;
+                }
+
+                // Update chart headings & legends in UI
+                const chartCardEl = chartCanvas.closest('.chart-card');
+                const chartTitleEl = chartCardEl?.querySelector('.chart-card__title');
+                if (chartTitleEl) chartTitleEl.textContent = chartMainTitle;
+
+                const chartSubEl = document.getElementById('chartRevenueSub');
+                if (chartSubEl) chartSubEl.textContent = chartSubText;
+
+                const legendTextEl = document.getElementById('chartLegendText');
+                if (legendTextEl) legendTextEl.textContent = chartLegendTitle;
 
                 // Calculate totals and financial metrics from live single-source-of-truth
-                const grandTotal = Number(paymentStats.all_time_revenue ?? paymentStats.ytd_revenue) || dataPoints.reduce((sum, val) => sum + val, 0);
-                const currentMonthIdx = now.getMonth();
-                const currentMonthRevenue = dataPoints[currentMonthIdx] || 0;
+                const grandTotal = Number(paymentStats.all_time_revenue ?? paymentStats.ytd_revenue) || 0;
                 const validPaymentAmounts = paymentRecords.map(p => Number(p.amount) || 0).filter(a => a > 0);
                 const avgPayment = Number(paymentStats.average_transaction) || (validPaymentAmounts.length > 0
                     ? (validPaymentAmounts.reduce((a, b) => a + b, 0) / validPaymentAmounts.length)
-                    : (totalTxCount > 0 && grandTotal > 0 ? (grandTotal / totalTxCount) : 0));
+                    : (periodTx > 0 && periodRev > 0 ? (periodRev / periodTx) : 0));
 
                 setText('finYtdTotal', formatCurrency(paymentStats.ytd_revenue ?? grandTotal));
-                setText('finMonthTotal', formatCurrency(periodRev > 0 ? periodRev : currentMonthRevenue));
+                setText('finMonthTotal', formatCurrency(periodRev));
                 setText('finAvgTotal', formatCurrency(avgPayment));
-                setText('finTxTotal', (paymentStats.transaction_count ?? totalTxCount).toString());
-
-                const chartSubEl = document.getElementById('chartRevenueSub');
-                if (chartSubEl) {
-                    chartSubEl.textContent = `Year-to-date total: ${formatCurrency(paymentStats.ytd_revenue ?? grandTotal)} (${currentYear})`;
-                }
-                const legendTextEl = document.getElementById('chartLegendText');
-                if (legendTextEl) {
-                    legendTextEl.textContent = `Monthly Revenue (${currentYear})`;
-                }
+                setText('finTxTotal', (paymentStats.transaction_count ?? periodTx).toString());
 
                 // Update period chip label if present
                 const monthLegendLabel = document.querySelector('.chart-legend-chip:nth-child(2) .legend-chip-label');
@@ -890,14 +998,14 @@ document.addEventListener('DOMContentLoaded', async function () {
                     data: {
                         labels,
                         datasets: [{
-                            label: `Monthly Revenue (${currentYear})`,
+                            label: chartDatasetLabel,
                             data: dataPoints,
                             backgroundColor: createBarGradient(ctx),
                             borderColor: currentThemeColors.barBorder,
                             borderWidth: 1.5,
                             borderRadius: 6,
                             borderSkipped: false,
-                            maxBarThickness: 44,
+                            maxBarThickness: period === 'monthly' ? 24 : 44,
                             hoverBackgroundColor: currentThemeColors.barHover,
                             hoverBorderColor: currentThemeColors.barBorder,
                             hoverBorderWidth: 2,
@@ -915,7 +1023,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                             }
                         },
                         animation: {
-                            duration: 900,
+                            duration: 700,
                             easing: 'easeOutCubic',
                         },
                         plugins: {
@@ -941,18 +1049,19 @@ document.addEventListener('DOMContentLoaded', async function () {
                             x: {
                                 title: {
                                     display: true,
-                                    text: 'Month',
+                                    text: xAxisTitle,
                                     color: currentThemeColors.labelColor,
                                     font: { size: 13, weight: '800', family: "'Inter', sans-serif" },
                                     padding: { top: 8 }
                                 },
                                 ticks: {
-                                    maxRotation: 0,
-                                    autoSkip: false,
-                                    font: { size: 12, weight: '700', family: "'Inter', sans-serif" },
+                                    maxRotation: period === 'monthly' ? 45 : 0,
+                                    autoSkip: period === 'monthly',
+                                    maxTicksLimit: period === 'monthly' ? 16 : 12,
+                                    font: { size: 11, weight: '700', family: "'Inter', sans-serif" },
                                     color: currentThemeColors.tickColor,
                                     callback: function (val, index) {
-                                        return monthNames[index] || '';
+                                        return labels[index] || '';
                                     }
                                 },
                                 grid: {
@@ -1013,6 +1122,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
             // =====================================================================
             // Capacity Forecasting Pie / Doughnut Chart & Live Insight
+            // (Current-state snapshot: only initialized once, not destroyed on period change)
             // =====================================================================
             const occupiedLots = Number(summary.occupied) || 0;
             const reservedLots = Number(summary.reserved) || 0;
@@ -1063,9 +1173,9 @@ document.addEventListener('DOMContentLoaded', async function () {
                 }
             }
 
-            // Initialize Capacity Forecasting Doughnut Chart
+            // Initialize Capacity Forecasting Doughnut Chart once (prevent unnecessary destroy/recreate)
             const capacityCanvas = document.getElementById('capacityForecastChart');
-            if (capacityCanvas && typeof Chart !== 'undefined') {
+            if (!capacityChartInstance && capacityCanvas && typeof Chart !== 'undefined') {
                 const capCtx = capacityCanvas.getContext('2d');
 
                 const chartData = totalLots > 0 
@@ -1100,11 +1210,6 @@ document.addEventListener('DOMContentLoaded', async function () {
                             <strong class="capacity-legend-value">${item.count.toLocaleString()} (${item.pct}%)</strong>
                         </div>
                     `).join('');
-                }
-
-                if (capacityChartInstance) {
-                    capacityChartInstance.destroy();
-                    capacityChartInstance = null;
                 }
 
                 capacityChartInstance = new Chart(capCtx, {
@@ -1165,6 +1270,8 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (errorBox) {
                 errorBox.remove();
             }
+        } finally {
+            setPeriodFilterLoading(false);
         }
     }
 

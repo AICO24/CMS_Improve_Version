@@ -497,6 +497,27 @@ class Payment {
         return $stmt->fetchAll();
     }
 
+    public function getRevenueByDay($filters = []) {
+        $sql = "SELECT DATE(COALESCE(payment_date, created_at)) AS date, 
+                       COALESCE(SUM(amount), 0) AS total, 
+                       COUNT(*) AS count 
+                FROM payments 
+                WHERE verification_status != 'Rejected'";
+        $params = [];
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND DATE(COALESCE(payment_date, created_at)) >= ?";
+            $params[] = $filters['date_from'];
+        }
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND DATE(COALESCE(payment_date, created_at)) <= ?";
+            $params[] = $filters['date_to'];
+        }
+        $sql .= " GROUP BY DATE(COALESCE(payment_date, created_at)) ORDER BY date ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function getRevenueByYear($filters = []) {
         $sql = "SELECT YEAR(payment_date) AS year, SUM(amount) AS total FROM payments WHERE 1=1";
         $params = [];

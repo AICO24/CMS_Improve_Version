@@ -1192,6 +1192,15 @@ if ($path === 'payments/revenue-by-month' && $requestMethod === 'GET') {
     exit;
 }
 
+if ($path === 'payments/revenue-by-day' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $filters = [];
+    if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
+    if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
+    echo json_encode($paymentController->revenueByDay($filters));
+    exit;
+}
+
 if ($path === 'payments/revenue-by-year' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $filters = [];
