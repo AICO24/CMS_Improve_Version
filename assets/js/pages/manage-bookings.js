@@ -6,6 +6,25 @@ document.addEventListener('DOMContentLoaded', async function() {
         api.logout();
     });
 
+    // Notification bell — navigate to notifications page on click
+    document.getElementById('notificationIcon')?.addEventListener('click', () => {
+        window.location.href = `${getFrontendBasePath()}/pages/notifications.html`;
+    });
+
+    // Notification unread badge
+    async function updateNotificationBadge() {
+        try {
+            const result = await api.request('notifications/unread-count', { method: 'GET' });
+            const badge = document.getElementById('notificationBadge');
+            if (badge) {
+                badge.innerText = result.count || 0;
+                badge.style.display = result.count > 0 ? 'flex' : 'none';
+            }
+        } catch (e) { /* silent — badge is non-critical */ }
+    }
+    updateNotificationBadge();
+    setInterval(updateNotificationBadge, 30000);
+
     // Sidebar collapse setup
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.querySelector('.sidebar');
@@ -14,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             sidebar.classList.toggle('collapsed');
         });
     }
+
 
     // AI Assistant mount
     if (typeof initAiAssistant === 'function' && document.querySelector('#aiAssistantMount')) {
@@ -723,144 +743,264 @@ document.addEventListener('DOMContentLoaded', async function() {
             { doc_type: 'valid_id', title: 'Valid Government ID', description: 'ID of Informant / Claimant', is_uploaded: false }
         ];
 
-        function buildDocStatusBadge(summary) {
-            if (summary.all_uploaded || summary.status === 'complete') {
-                return '<span class="status-badge confirmed" title="All 3 required documents verified or uploaded"><i class="fas fa-file-circle-check"></i> Docs Complete (3/3)</span>';
+        // Location breakdown
+        let primaryLocation = '';
+        let secondaryLocation = '';
+        if (isBurial) {
+            primaryLocation = data.lot_number && data.lot_number !== 'N/A' ? `Lot ${data.lot_number}` : 'Unassigned Lot';
+            secondaryLocation = data.section_name && data.section_name !== 'N/A' ? data.section_name : 'General Grounds';
+        } else {
+            primaryLocation = data.niche_number && data.niche_number !== 'N/A' ? `Niche ${data.niche_number}` : 'Unassigned Niche';
+            secondaryLocation = data.columbarium && data.columbarium !== 'N/A' ? data.columbarium : 'Columbarium Vault';
+        }
+        const summaryLocation = `${primaryLocation} · ${secondaryLocation}`;
+
+        // Schedule formatting
+        const rawDate = data.schedule_date || data.date_raw || data.date_time || '';
+        const rawTime = data.schedule_time || data.time_raw || '';
+        let formattedDateStr = rawDate || 'Date to be determined';
+        let formattedTimeStr = '';
+
+        let datePart = rawDate;
+        let timePart = rawTime;
+        if (typeof rawDate === 'string' && rawDate.includes(' ') && !timePart) {
+            const split = rawDate.split(' ');
+            datePart = split[0];
+            timePart = split.slice(1).join(' ');
+        }
+        if (datePart && datePart !== 'N/A') {
+            try {
+                const parts = String(datePart).split('-');
+                if (parts.length === 3) {
+                    const year = Number(parts[0]);
+                    const month = Number(parts[1]) - 1;
+                    const day = Number(parts[2]);
+                    const d = new Date(year, month, day);
+                    if (!isNaN(d.getTime())) {
+                        formattedDateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    }
+                }
+            } catch (_) {
+                formattedDateStr = datePart;
             }
-            if (summary.uploaded_count > 0 || summary.status === 'partial') {
-                return `<span class="status-badge pending" title="Some documents uploaded. Remaining required at office."><i class="fas fa-file-lines"></i> Docs Partial (${summary.uploaded_count}/3)</span>`;
+        }
+        if (timePart) {
+            try {
+                const timeComponents = timePart.split(':');
+                if (timeComponents.length >= 2) {
+                    let hour = parseInt(timeComponents[0], 10);
+                    const minute = timeComponents[1];
+                    const ampm = hour >= 12 ? 'PM' : 'AM';
+                    hour = hour % 12 || 12;
+                    formattedTimeStr = `${hour}:${minute} ${ampm}`;
+                } else {
+                    formattedTimeStr = timePart;
+                }
+            } catch (_) {
+                formattedTimeStr = timePart;
             }
-            return '<span class="status-badge" style="background:#f1f5f9;color:#64748b;" title="Physical original certificates required at office"><i class="fas fa-file-circle-exclamation"></i> Docs Pending (At Office)</span>';
         }
 
+        // Status pill helper
+        const statusClean = String(data.status || 'Pending').trim();
+        const sLower = statusClean.toLowerCase();
+        let statusPillClass = 'status-pill--pending';
+
+        if (sLower === 'confirmed') {
+            statusPillClass = 'status-pill--confirmed';
+        } else if (sLower === 'scheduled') {
+            statusPillClass = 'status-pill--scheduled';
+        } else if (sLower === 'completed') {
+            statusPillClass = 'status-pill--completed';
+        } else if (sLower === 'cancelled') {
+            statusPillClass = 'status-pill--cancelled';
+        }
+
+        const isPaid = paymentStatusStr.toLowerCase() === 'paid';
+        const canComplete = data.status === 'Confirmed' || data.status === 'Scheduled';
+        const canCash = data.status === 'Pending';
+        const canCancel = (data.status === 'Pending' || data.status === 'Confirmed' || data.status === 'Scheduled');
+
         detailModalBody.innerHTML = `
-            <!-- Simplified Executive Summary Banner -->
-            <div class="view-summary-panel">
-                <div class="view-summary-top">
-                    <div class="view-summary-title">
-                        <span class="ref-pill" title="${escapeHtml(data.ref_label || '')}">#${id}</span>
-                        ${buildServiceBadge(serviceType)}
-                        <h3 class="view-decedent-heading">${escapeHtml(decedentDisplay)}</h3>
-                        ${isProvisional ? '<span class="status-badge pending"><i class="fas fa-user-clock"></i> Provisional</span>' : ''}
-                    </div>
-                    <div class="view-summary-badges">
-                        ${buildStatusBadge(data.status)}
-                        ${buildPaymentBadge({ payment_status: paymentStatusStr })}
-                        ${buildDocStatusBadge(docSummary)}
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3-Column Compact Specifications Grid (No Scrolling, Table-Compatible) -->
-            <div class="view-compact-grid">
-                <!-- Column 1: Service Allocation -->
-                <div class="compact-info-group">
-                    <span class="compact-group-title"><i class="fas fa-calendar-check"></i> Service Allocation</span>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Schedule</span>
-                        <div class="compact-val">${formatScheduleCell(data.schedule_date || data.date_raw || data.date_time, data.schedule_time || data.time_raw)}</div>
-                    </div>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">${isBurial ? 'Plot / Section' : 'Columbarium / Niche'}</span>
-                        <div class="compact-val">${formatLocationCell({ service_type: serviceType, lot_number: data.lot_number, section_name: data.section_name, niche_number: data.niche_number, columbarium: data.columbarium })}</div>
-                    </div>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Interment Mode</span>
-                        <div class="compact-val">${isBurial ? 'Ground Interment' : 'Columbarium Inurnment'}</div>
+            <div class="booking-view-clean">
+                <!-- Hero Header: Dark Green Accented Identity -->
+                <div class="bview-hero">
+                    <div class="bview-hero-top">
+                        <div class="bview-decedent-block">
+                            <span class="bview-service-badge">${isBurial ? 'Ground Burial' : 'Cremation Service'}</span>
+                            <h3 class="bview-decedent-name">${escapeHtml(decedentDisplay)}</h3>
+                            <div class="bview-meta-line">
+                                <span class="bview-meta-ref">Booking #${id}</span>
+                                <span class="bview-meta-sep">&bull;</span>
+                                <span class="bview-meta-loc">${escapeHtml(primaryLocation)}, ${escapeHtml(secondaryLocation)}</span>
+                                ${isProvisional ? '<span class="bview-meta-sep">&bull;</span><span class="bview-provisional-tag">Provisional Record</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="bview-status-block">
+                            <span class="bview-status-pill ${statusPillClass}">
+                                ${escapeHtml(statusClean)}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Column 2: Applicant & Contact -->
-                <div class="compact-info-group">
-                    <span class="compact-group-title"><i class="fas fa-user-group"></i> Applicant &amp; Contact</span>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Requested By</span>
-                        <div class="compact-val" title="${escapeHtml(applicantName)}"><strong>${escapeHtml(applicantName)}</strong></div>
-                    </div>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Contact Phone</span>
-                        <div class="compact-val">${contactPhone ? `<a href="tel:${escapeHtml(contactPhone)}" class="phone-link"><i class="fas fa-phone"></i> ${escapeHtml(contactPhone)}</a>` : '—'}</div>
-                    </div>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Relationship</span>
-                        <div class="compact-val">${escapeHtml(relationship)}</div>
-                    </div>
-                </div>
-
-                <!-- Column 3: Accounting & Settlement -->
-                <div class="compact-info-group">
-                    <span class="compact-group-title"><i class="fas fa-receipt"></i> Accounting &amp; Settlement</span>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Settlement Fee</span>
-                        <div class="compact-val"><strong style="color:#0f2e22; font-size:0.92rem;">&#8369;${paymentAmountFormatted}</strong></div>
-                    </div>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Payment Method</span>
-                        <div class="compact-val">${escapeHtml(paymentMethodStr)}</div>
-                    </div>
-                    <div class="compact-kv-row">
-                        <span class="compact-key">Receipt / Date</span>
-                        <div class="compact-val"><code>${escapeHtml(paymentReceiptStr)}</code> &bull; <small style="color:#64748b;">${escapeHtml(paymentDateStr)}</small></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Documentary Requirements & Verification Panel (Batch 7) -->
-            <div class="view-documents-panel">
-                <div class="view-documents-header">
-                    <span class="compact-group-title"><i class="fas fa-file-shield"></i> Documentary Requirements &amp; Verification</span>
-                    <span class="doc-summary-pill ${escapeHtml(docSummary.badge_class || 'pending')}">
-                        <i class="fas ${docSummary.all_uploaded ? 'fa-circle-check' : 'fa-clock'}"></i>
-                        ${escapeHtml(docSummary.status_label || 'Pending Physical Presentation')}
-                    </span>
-                </div>
-                <div class="doc-workflow-note">
-                    <i class="fas fa-circle-info"></i> ${escapeHtml(docSummary.workflow_guidance || '')}
-                </div>
-                <div class="doc-checklist-grid">
-                    ${docItems.map(doc => {
-                        const isUploaded = Boolean(doc.is_uploaded);
-                        const fileUrl = doc.file_url || (doc.file_path ? (doc.file_path.startsWith('/') ? doc.file_path : `/backend/${doc.file_path.replace(/^\.?\//, '')}`) : '');
-                        return `
-                            <div class="doc-item-card ${isUploaded ? 'is-uploaded' : 'is-pending'}">
-                                <div class="doc-item-head">
-                                    <div class="doc-item-title">
-                                        <i class="fas ${isUploaded ? 'fa-file-check text-success' : 'fa-file-lines text-muted'}"></i>
-                                        <span>${escapeHtml(doc.title)}</span>
-                                    </div>
-                                    <span class="doc-item-badge ${isUploaded ? 'doc-uploaded' : 'doc-pending'}">
-                                        <i class="fas ${isUploaded ? 'fa-check' : 'fa-hourglass-start'}"></i>
-                                        ${isUploaded ? 'Uploaded' : 'At Office'}
-                                    </span>
-                                </div>
-                                <div class="doc-item-desc">${escapeHtml(doc.description || '')}</div>
-                                <div class="doc-item-footer">
-                                    ${isUploaded && fileUrl ? `
-                                        <a href="${escapeHtml(fileUrl)}" target="_blank" rel="noopener noreferrer" class="btn-doc-view" title="${escapeHtml(doc.original_filename || 'View Document')}">
-                                            <i class="fas fa-arrow-up-right-from-square"></i> View File
-                                        </a>
-                                        <small style="color:#64748b; font-size:0.68rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:110px;" title="${escapeHtml(doc.original_filename || '')}">
-                                            ${escapeHtml(doc.original_filename || 'Attached')}
-                                        </small>
-                                    ` : `
-                                        <span style="font-size:0.68rem; color:#854d0e;"><i class="fas fa-building"></i> Physical Original</span>
-                                        <button type="button" class="btn-doc-upload staff-upload-trigger" data-doctype="${escapeHtml(doc.doc_type)}" data-booking-id="${id}" data-service="${serviceType}">
-                                            <i class="fas fa-upload"></i> Attach
-                                        </button>
-                                    `}
+                <!-- 2-Column Uncongested Information Grid -->
+                <div class="bview-grid">
+                    <!-- Column 1: Schedule & Location -->
+                    <div class="bview-card">
+                        <h4 class="bview-card-title">Schedule &amp; Interment</h4>
+                        <div class="bview-fields">
+                            <div class="bview-field">
+                                <span class="bview-field-label">Ceremony Schedule</span>
+                                <div class="bview-field-value bview-highlight-text">
+                                    ${escapeHtml(formattedDateStr)}${formattedTimeStr ? ` &mdash; ${escapeHtml(formattedTimeStr)}` : ''}
                                 </div>
                             </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
+                            <div class="bview-field">
+                                <span class="bview-field-label">${isBurial ? 'Plot / Section Assignment' : 'Niche / Columbarium'}</span>
+                                <div class="bview-field-value">
+                                    <strong>${escapeHtml(primaryLocation)}</strong>
+                                    <span class="bview-sub-text">${escapeHtml(secondaryLocation)}</span>
+                                </div>
+                            </div>
+                            <div class="bview-field">
+                                <span class="bview-field-label">Interment Mode</span>
+                                <div class="bview-field-value">${isBurial ? 'Ground Burial Ceremony' : 'Columbarium Inurnment'}</div>
+                            </div>
+                        </div>
+                    </div>
 
-            ${data.notes ? `
-            <div class="view-note-pill">
-                <i class="fas fa-circle-info"></i>
-                <span><strong>Special Note:</strong> ${escapeHtml(data.notes)}</span>
+                    <!-- Column 2: Applicant & Contact -->
+                    <div class="bview-card">
+                        <h4 class="bview-card-title">Applicant &amp; Contact</h4>
+                        <div class="bview-fields">
+                            <div class="bview-field">
+                                <span class="bview-field-label">Requested By</span>
+                                <div class="bview-field-value bview-highlight-text">
+                                    ${escapeHtml(applicantName)}
+                                </div>
+                            </div>
+                            <div class="bview-field">
+                                <span class="bview-field-label">Relationship to Deceased</span>
+                                <div class="bview-field-value">${escapeHtml(relationship)}</div>
+                            </div>
+                            <div class="bview-field">
+                                <span class="bview-field-label">Contact Phone</span>
+                                <div class="bview-field-value">
+                                    ${contactPhone ? `
+                                    <a href="tel:${escapeHtml(contactPhone)}" class="bview-contact-link">
+                                        ${escapeHtml(contactPhone)}
+                                    </a>
+                                    ` : '<span class="text-muted">No contact number</span>'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Financial & Accounting Summary Bar -->
+                <div class="bview-payment-bar">
+                    <div class="bview-pay-item bview-pay-item--main">
+                        <span class="bview-pay-label">Settlement Fee</span>
+                        <span class="bview-pay-amount">&#8369;${paymentAmountFormatted}</span>
+                    </div>
+
+                    <div class="bview-pay-divider"></div>
+
+                    <div class="bview-pay-item">
+                        <span class="bview-pay-label">Payment Status</span>
+                        <span class="bview-pay-status-pill ${isPaid ? 'is-paid' : 'is-unpaid'}">
+                            ${escapeHtml(paymentStatusStr)}
+                        </span>
+                    </div>
+
+                    <div class="bview-pay-divider"></div>
+
+                    <div class="bview-pay-item">
+                        <span class="bview-pay-label">Payment Method</span>
+                        <span class="bview-pay-text">${escapeHtml(paymentMethodStr)}</span>
+                    </div>
+
+                    ${paymentReceiptStr && paymentReceiptStr !== '—' ? `
+                    <div class="bview-pay-divider"></div>
+                    <div class="bview-pay-item">
+                        <span class="bview-pay-label">Receipt / Reference</span>
+                        <span class="bview-pay-code"><code>${escapeHtml(paymentReceiptStr)}</code></span>
+                    </div>
+                    ` : ''}
+
+                    ${paymentDateStr && paymentDateStr !== '—' ? `
+                    <div class="bview-pay-divider"></div>
+                    <div class="bview-pay-item">
+                        <span class="bview-pay-label">Settled On</span>
+                        <span class="bview-pay-text">${escapeHtml(paymentDateStr)}</span>
+                    </div>
+                    ` : ''}
+
+                    ${!isPaid && canCash ? `
+                    <div class="bview-pay-item bview-pay-item--action">
+                        <button type="button" class="btn-action-cash btn-action-cash--bar" id="barActionCash"><i class="fas fa-money-bill-wave"></i> Record Cash</button>
+                    </div>
+                    ` : ''}
+                </div>
+
+                <!-- Documentary Requirements & Verification Panel (Batch 7) -->
+                <div class="view-documents-panel" style="margin-top: 14px;">
+                    <div class="view-documents-header">
+                        <span class="compact-group-title"><i class="fas fa-file-shield"></i> Documentary Requirements &amp; Verification</span>
+                        <span class="doc-summary-pill ${escapeHtml(docSummary.badge_class || 'pending')}">
+                            <i class="fas ${docSummary.all_uploaded ? 'fa-circle-check' : 'fa-clock'}"></i>
+                            ${escapeHtml(docSummary.status_label || 'Pending Physical Presentation')}
+                        </span>
+                    </div>
+                    <div class="doc-workflow-note">
+                        <i class="fas fa-circle-info"></i> ${escapeHtml(docSummary.workflow_guidance || '')}
+                    </div>
+                    <div class="doc-checklist-grid">
+                        ${docItems.map(doc => {
+                            const isUploaded = Boolean(doc.is_uploaded);
+                            const fileUrl = doc.file_url || (doc.file_path ? (doc.file_path.startsWith('/') ? doc.file_path : `/backend/${doc.file_path.replace(/^\.?\//, '')}`) : '');
+                            return `
+                                <div class="doc-item-card ${isUploaded ? 'is-uploaded' : 'is-pending'}">
+                                    <div class="doc-item-head">
+                                        <div class="doc-item-title">
+                                            <i class="fas ${isUploaded ? 'fa-file-check text-success' : 'fa-file-lines text-muted'}"></i>
+                                            <span>${escapeHtml(doc.title)}</span>
+                                        </div>
+                                        <span class="doc-item-badge ${isUploaded ? 'doc-uploaded' : 'doc-pending'}">
+                                            <i class="fas ${isUploaded ? 'fa-check' : 'fa-hourglass-start'}"></i>
+                                            ${isUploaded ? 'Uploaded' : 'At Office'}
+                                        </span>
+                                    </div>
+                                    <div class="doc-item-desc">${escapeHtml(doc.description || '')}</div>
+                                    <div class="doc-item-footer">
+                                        ${isUploaded && fileUrl ? `
+                                            <a href="${escapeHtml(fileUrl)}" target="_blank" rel="noopener noreferrer" class="btn-doc-view" title="${escapeHtml(doc.original_filename || 'View Document')}">
+                                                <i class="fas fa-arrow-up-right-from-square"></i> View File
+                                            </a>
+                                            <small style="color:#64748b; font-size:0.68rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:110px;" title="${escapeHtml(doc.original_filename || '')}">
+                                                ${escapeHtml(doc.original_filename || 'Attached')}
+                                            </small>
+                                        ` : `
+                                            <span style="font-size:0.68rem; color:#854d0e;"><i class="fas fa-building"></i> Physical Original</span>
+                                            <button type="button" class="btn-doc-upload staff-upload-trigger" data-doctype="${escapeHtml(doc.doc_type)}" data-booking-id="${id}" data-service="${serviceType}">
+                                                <i class="fas fa-upload"></i> Attach
+                                            </button>
+                                        `}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                ${data.notes ? `
+                <div class="bview-note">
+                    <span class="bview-note-label">Special Remarks</span>
+                    <p class="bview-note-text">${escapeHtml(data.notes)}</p>
+                </div>
+                ` : ''}
             </div>
-            ` : ''}
         `;
 
         // Wire staff document upload buttons (Batch 7)
@@ -929,22 +1069,27 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
         });
 
-        // Modal Footer Actions
-        const canComplete = data.status === 'Confirmed' || data.status === 'Scheduled';
-        const canCash = data.status === 'Pending';
-        const canCancel = (data.status === 'Pending' || data.status === 'Confirmed' || data.status === 'Scheduled');
-
+        // Modal Footer Actions — variables already declared above template
         detailModalFooter.innerHTML = `
-            ${canCash ? `<button type="button" class="btn-secondary" id="modalActionCash" style="color:#d97706; border-color:#fde68a; background:#fffbeb;"><i class="fas fa-money-bill-wave"></i> Record Cash</button>` : ''}
-            ${canComplete ? `<button type="button" class="btn-secondary" id="modalActionComplete" style="color:#059669; border-color:#a7f3d0; background:#ecfdf5;"><i class="fas fa-check"></i> Mark Complete</button>` : ''}
-            ${canCancel ? `<button type="button" class="btn-secondary" id="modalActionCancel" style="color:#dc2626; border-color:#fecaca; background:#fef2f2;"><i class="fas fa-xmark"></i> Cancel Booking</button>` : ''}
-            <button type="button" class="btn-secondary" id="closeDetailModalBtn">Close</button>
+            ${canCancel ? `<button type="button" class="btn-cancel-clean" id="modalActionCancel"><i class="fas fa-xmark"></i> Cancel Booking</button>` : ''}
+            <div style="flex: 1;"></div>
+            ${canCash ? `<button type="button" class="btn-action-cash" id="modalActionCash"><i class="fas fa-money-bill-wave"></i> Record Cash</button>` : ''}
+            ${canComplete ? `<button type="button" class="btn btn-primary btn--sm" id="modalActionComplete"><i class="fas fa-check"></i> Mark Complete</button>` : ''}
+            <button type="button" class="btn btn-secondary btn--sm" id="closeDetailModalBtn">Close</button>
         `;
 
         // Wire footer action buttons
         const modalActionCash = document.getElementById('modalActionCash');
         if (modalActionCash) {
             modalActionCash.addEventListener('click', () => {
+                closeDetailModal();
+                openCashModal(serviceType, id);
+            });
+        }
+
+        const barActionCash = document.getElementById('barActionCash');
+        if (barActionCash) {
+            barActionCash.addEventListener('click', () => {
                 closeDetailModal();
                 openCashModal(serviceType, id);
             });

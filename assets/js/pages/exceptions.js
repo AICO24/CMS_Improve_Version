@@ -25,8 +25,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         ],
     });
 
-    document.getElementById('logoutBtn').addEventListener('click', () => {
+    document.getElementById('logoutBtn')?.addEventListener('click', () => {
         api.logout();
+    });
+
+    // Notification bell — navigate to notifications page on click
+    document.getElementById('notificationIcon')?.addEventListener('click', () => {
+        window.location.href = `${getFrontendBasePath()}/pages/notifications.html`;
     });
 
     const toggleBtn = document.getElementById('toggleSidebar');

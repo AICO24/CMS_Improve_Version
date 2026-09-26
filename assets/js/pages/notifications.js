@@ -13,6 +13,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         logoutBtn.addEventListener('click', () => api.logout());
     }
 
+    const notifBtn = document.getElementById('notificationIcon');
+    if (notifBtn) {
+        notifBtn.addEventListener('click', async () => {
+            await loadNotifications();
+            await updateNotificationBadge();
+        });
+    }
+
     async function updateNotificationBadge() {
         try {
             const result = await api.request('notifications/unread-count', { method: 'GET' });

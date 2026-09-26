@@ -288,30 +288,22 @@
             allowedRoles: ['admin', 'staff', 'user'],
             showInSidebar: true,
             sidebarGroup: 'Account',
-            label: {
-                admin: 'Profile',
-                staff: 'Profile',
-                user: 'Account Settings'
-            },
-            icon: {
-                admin: 'fa-id-card',
-                staff: 'fa-id-card',
-                user: 'fa-gear'
-            },
-            navigationOrder: 70,
-        },
-        {
-            route: 'settings.html',
-            allowedRoles: ['admin', 'staff'],
-            showInSidebar: true,
-            sidebarGroup: 'Account',
-            label: 'Settings',
+            label: 'Account Settings',
             icon: 'fa-gear',
-            navigationOrder: 71,
+            navigationOrder: 70,
         },
 
         // ==================== HIDDEN / UTILITY ROUTES ====================
         // Accessible and authorized for all roles, but intentionally hidden from the sidebar navigation
+        {
+            route: 'settings.html',
+            allowedRoles: ['admin', 'staff', 'user'],
+            showInSidebar: false,
+            sidebarGroup: null,
+            label: 'Settings (Redirect)',
+            icon: 'fa-gear',
+            navigationOrder: 98,
+        },
         {
             route: 'notifications.html',
             allowedRoles: ['admin', 'staff', 'user'],
