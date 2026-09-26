@@ -12,6 +12,7 @@ function getFrontendBasePath() {
     const prefix = currentPath.includes('/CMS') ? '/CMS' : '';
     return `${window.location.origin}${prefix}/frontend`;
 }
+window.getFrontendBasePath = getFrontendBasePath;
 
 function getAppOrigin() {
     const currentPath = window.location.pathname || '';
@@ -20,12 +21,19 @@ function getAppOrigin() {
         appBase = currentPath.split('/frontend/')[0];
     } else if (currentPath.includes('/frontend')) {
         appBase = currentPath.split('/frontend')[0];
+    } else if (currentPath.includes('/assets/')) {
+        appBase = currentPath.split('/assets/')[0];
     } else if (currentPath.includes('/CMS')) {
         appBase = '/CMS';
     }
     return `${window.location.origin}${appBase}`;
 }
 window.getAppOrigin = getAppOrigin;
+
+function getAssetsBasePath() {
+    return `${getAppOrigin()}/assets`;
+}
+window.getAssetsBasePath = getAssetsBasePath;
 
 const basePath = window.location.pathname.includes('/frontend/')
     ? window.location.pathname.split('/frontend/')[0]

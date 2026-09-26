@@ -65,8 +65,10 @@
         if (!document.querySelector('link[href*="notifications-popover.css"]')) {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
-            const basePath = typeof window.getFrontendBasePath === 'function' ? window.getFrontendBasePath() : '../..';
-            link.href = `${basePath}/assets/css/components/notifications-popover.css`;
+            const assetsPath = typeof window.getAssetsBasePath === 'function'
+                ? window.getAssetsBasePath()
+                : (typeof window.getAppOrigin === 'function' ? `${window.getAppOrigin()}/assets` : '../../assets');
+            link.href = `${assetsPath}/css/components/notifications-popover.css`;
             document.head.appendChild(link);
         }
 

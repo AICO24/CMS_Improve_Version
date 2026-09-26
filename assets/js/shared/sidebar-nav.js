@@ -22,7 +22,30 @@
   never attach a second one to the same persistent button.
 */
 (function () {
+    function initNotificationComponent() {
+        if (!document.getElementById('notificationIcon')) return;
+
+        if (typeof window.initNotificationPopover === 'function') {
+            window.initNotificationPopover();
+        } else if (!document.querySelector('script[src*="notifications-popover.js"]')) {
+            var notifScript = document.createElement('script');
+            var assetsPath = typeof window.getAssetsBasePath === 'function'
+                ? window.getAssetsBasePath()
+                : (typeof window.getAppOrigin === 'function' ? window.getAppOrigin() + '/assets' : '../../assets');
+            notifScript.src = assetsPath + '/js/components/notifications-popover.js';
+            notifScript.onload = function () {
+                if (typeof window.initNotificationPopover === 'function') {
+                    window.initNotificationPopover();
+                }
+            };
+            document.body.appendChild(notifScript);
+        }
+    }
+
     function initSidebarNav() {
+        // Automatically initialize notification popover component on pages with #notificationIcon
+        initNotificationComponent();
+
         var sidebar = document.querySelector('.sidebar');
         if (!sidebar) return;
 
@@ -79,38 +102,27 @@
         // 1025px). Persists across sidebar rebuilds, so guard it the same
         // way as the group headers above.
         var railBtn = document.getElementById('railToggleBtn');
-        if (!railBtn || railBtn.dataset.sidebarNavBound === '1') return;
-        railBtn.dataset.sidebarNavBound = '1';
+        if (railBtn && railBtn.dataset.sidebarNavBound !== '1') {
+            railBtn.dataset.sidebarNavBound = '1';
 
-        var stored = null;
-        try {
-            stored = localStorage.getItem('cms-sidebar-rail');
-        } catch (e) {
-            /* storage unavailable — falls through to default expanded state */
-        }
-        if (stored === '1') {
-            sidebar.classList.add('rail-manual');
-        }
-
-        railBtn.addEventListener('click', function () {
-            var isRail = sidebar.classList.toggle('rail-manual');
+            var stored = null;
             try {
-                localStorage.setItem('cms-sidebar-rail', isRail ? '1' : '0');
+                stored = localStorage.getItem('cms-sidebar-rail');
             } catch (e) {
-                /* storage unavailable — toggle still applies for this page view */
+                /* storage unavailable — falls through to default expanded state */
             }
-        });
+            if (stored === '1') {
+                sidebar.classList.add('rail-manual');
+            }
 
-        // Batch 6: Automatically initialize notification popover component on pages with #notificationIcon
-        if (document.getElementById('notificationIcon')) {
-            if (typeof window.initNotificationPopover === 'function') {
-                window.initNotificationPopover();
-            } else if (!document.querySelector('script[src*="notifications-popover.js"]')) {
-                var notifScript = document.createElement('script');
-                var basePath = typeof window.getFrontendBasePath === 'function' ? window.getFrontendBasePath() : '../..';
-                notifScript.src = basePath + '/assets/js/components/notifications-popover.js';
-                document.body.appendChild(notifScript);
-            }
+            railBtn.addEventListener('click', function () {
+                var isRail = sidebar.classList.toggle('rail-manual');
+                try {
+                    localStorage.setItem('cms-sidebar-rail', isRail ? '1' : '0');
+                } catch (e) {
+                    /* storage unavailable — toggle still applies for this page view */
+                }
+            });
         }
     }
 
