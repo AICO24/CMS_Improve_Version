@@ -879,10 +879,10 @@ document.addEventListener('DOMContentLoaded', async function () {
                     chartLegendTitle = 'Daily Revenue (This Week)';
 
                 } else if (period === 'monthly') {
-                    // Monthly: one point per calendar day up to today
+                    // Monthly: grouped by weeks of the current month (Week 1 to Week 4/5)
                     const currentMonthIdx = now.getMonth();
                     const curMonthName = monthNames[currentMonthIdx];
-                    const todayDate = now.getDate();
+                    const daysInMonth = new Date(currentYear, currentMonthIdx + 1, 0).getDate();
 
                     const dailyMap = new Map();
                     if (Array.isArray(revenueSeriesData)) {
@@ -891,18 +891,32 @@ document.addEventListener('DOMContentLoaded', async function () {
                         });
                     }
 
-                    for (let d = 1; d <= todayDate; d++) {
-                        const cur = new Date(currentYear, currentMonthIdx, d);
-                        const dateStr = formatLocalDate(cur);
-                        labels.push(`${curMonthName} ${d}`);
-                        dataPoints.push(dailyMap.get(dateStr) || 0);
+                    const weekRanges = [
+                        { label: `Week 1 (${curMonthName} 1–7)`, start: 1, end: 7 },
+                        { label: `Week 2 (${curMonthName} 8–14)`, start: 8, end: 14 },
+                        { label: `Week 3 (${curMonthName} 15–21)`, start: 15, end: 21 },
+                        { label: `Week 4 (${curMonthName} 22–28)`, start: 22, end: 28 },
+                    ];
+                    if (daysInMonth > 28) {
+                        weekRanges.push({ label: `Week 5 (${curMonthName} 29–${daysInMonth})`, start: 29, end: daysInMonth });
                     }
 
-                    chartMainTitle = `Daily Revenue (${curMonthName} ${currentYear})`;
-                    chartDatasetLabel = `Daily Revenue (${curMonthName} 1–${todayDate})`;
-                    xAxisTitle = `Day of Month (${curMonthName})`;
-                    chartSubText = `Daily collections for ${curMonthName} ${currentYear} (Day 1 to ${todayDate})`;
-                    chartLegendTitle = `Daily Revenue (${curMonthName})`;
+                    weekRanges.forEach(w => {
+                        labels.push(w.label);
+                        let weekSum = 0;
+                        for (let d = w.start; d <= w.end; d++) {
+                            const cur = new Date(currentYear, currentMonthIdx, d);
+                            const dateStr = formatLocalDate(cur);
+                            weekSum += (dailyMap.get(dateStr) || 0);
+                        }
+                        dataPoints.push(weekSum);
+                    });
+
+                    chartMainTitle = `Monthly Revenue Breakdown (${curMonthName} ${currentYear})`;
+                    chartDatasetLabel = `Weekly Revenue (${curMonthName} ${currentYear})`;
+                    xAxisTitle = `Weeks of ${curMonthName}`;
+                    chartSubText = `Weekly breakdown of collections for ${curMonthName} ${currentYear}`;
+                    chartLegendTitle = `Monthly Revenue (${curMonthName})`;
 
                 } else {
                     // Yearly: monthly revenue Jan through Dec of current year (preserve zero-value months)
@@ -1005,7 +1019,9 @@ document.addEventListener('DOMContentLoaded', async function () {
                             borderWidth: 1.5,
                             borderRadius: 6,
                             borderSkipped: false,
-                            maxBarThickness: period === 'monthly' ? 24 : 44,
+                            categoryPercentage: 0.85,
+                            barPercentage: 0.85,
+                            maxBarThickness: 48,
                             hoverBackgroundColor: currentThemeColors.barHover,
                             hoverBorderColor: currentThemeColors.barBorder,
                             hoverBorderWidth: 2,
@@ -1052,11 +1068,9 @@ document.addEventListener('DOMContentLoaded', async function () {
                                     display: false,
                                 },
                                 ticks: {
-                                    autoSkip: period === 'monthly',
-                                    autoSkipPadding: 14,
+                                    autoSkip: false,
                                     maxRotation: 0,
                                     minRotation: 0,
-                                    maxTicksLimit: period === 'monthly' ? 12 : undefined,
                                     font: { size: 11, weight: '700', family: "'Inter', sans-serif" },
                                     color: currentThemeColors.tickColor,
                                     callback: function (val, index) {
