@@ -42,12 +42,75 @@
         }
     }
 
+    function formatBrand(sidebar) {
+        var brand = sidebar.querySelector('.brand');
+        if (!brand) return;
+
+        brand.setAttribute('title', 'Cemetery Management System');
+        var brandIcon = brand.querySelector('i');
+        if (brandIcon) {
+            brandIcon.setAttribute('title', 'Cemetery Management System');
+            brandIcon.setAttribute('aria-label', 'Cemetery Management System');
+        }
+
+        var brandSpan = brand.querySelector('span');
+        if (brandSpan && brandSpan.dataset.brandFormatted !== '1') {
+            brandSpan.dataset.brandFormatted = '1';
+            brandSpan.className = 'brand-text';
+            brandSpan.innerHTML = '<span class="brand-title">Cemetery Management</span><span class="brand-sub">System</span>';
+        }
+    }
+
+    function ensureAccessibleTooltips(sidebar) {
+        sidebar.querySelectorAll('.nav-item').forEach(function (item) {
+            if (!item.getAttribute('title')) {
+                var span = item.querySelector('span:not(.icon)');
+                if (span && span.textContent.trim()) {
+                    var title = span.textContent.trim();
+                    item.setAttribute('title', title);
+                    item.setAttribute('aria-label', title);
+                }
+            }
+        });
+
+        var userChip = sidebar.querySelector('.user-chip');
+        if (userChip && !userChip.getAttribute('title')) {
+            var userName = userChip.querySelector('#sidebarUserName');
+            var userRole = userChip.querySelector('#sidebarUserRole');
+            var nameText = userName ? userName.textContent.trim() : '';
+            var roleText = userRole ? userRole.textContent.trim() : '';
+            var titleText = nameText + (roleText ? ' (' + roleText + ')' : '');
+            if (titleText.trim()) {
+                userChip.setAttribute('title', titleText.trim());
+            }
+        }
+    }
+
+    function syncActiveNav(sidebar) {
+        var currentPage = (window.location.pathname.split('/').pop() || '').split('?')[0].split('#')[0];
+        var isDashboard = !currentPage || currentPage === 'index.html' || currentPage.indexOf('dashboard_') === 0;
+
+        sidebar.querySelectorAll('.nav-item[href]').forEach(function (link) {
+            var href = link.getAttribute('href');
+            if (!href) return;
+            var linkPage = href.split('?')[0].split('#')[0].split('/').pop();
+            var isMatch = isDashboard
+                ? (linkPage === currentPage || (!currentPage && linkPage.indexOf('dashboard_') === 0))
+                : (linkPage === currentPage);
+            link.classList.toggle('active', isMatch);
+        });
+    }
+
     function initSidebarNav() {
         // Automatically initialize notification popover component on pages with #notificationIcon
         initNotificationComponent();
 
         var sidebar = document.querySelector('.sidebar');
         if (!sidebar) return;
+
+        formatBrand(sidebar);
+        ensureAccessibleTooltips(sidebar);
+        syncActiveNav(sidebar);
 
         var groups = Array.prototype.slice.call(sidebar.querySelectorAll('.nav-group'));
 

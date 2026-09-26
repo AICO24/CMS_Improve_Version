@@ -458,7 +458,7 @@
             const isActive = item.route === activeRoute;
             const label = (item.label && typeof item.label === 'object') ? (item.label[roleName] || item.label.default || '') : item.label;
             const icon = (item.icon && typeof item.icon === 'object') ? (item.icon[roleName] || item.icon.default || 'fa-circle') : item.icon;
-            return '<a href="' + item.route + '" class="nav-item' + (isActive ? ' active' : '') + '">' +
+            return '<a href="' + item.route + '" class="nav-item' + (isActive ? ' active' : '') + '" title="' + label + '" aria-label="' + label + '">' +
                    '<i class="fas ' + icon + ' icon"></i> ' +
                    '<span>' + label + '</span></a>';
         }

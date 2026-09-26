@@ -1,26 +1,7 @@
-/*
-  Sidebar nav groups + manual icon-rail (desktop only).
-
-  Every layout-affecting rule here is scoped to @media (min-width: 1025px)
-  on purpose: the existing responsive shell in dashboard.css (553-611)
-  already owns the auto icon-rail at 769-1024px and the off-canvas
-  drawer at <=768px via the hamburger's .collapsed class. Keeping this
-  file's rules mutually exclusive with that range (instead of relying on
-  cascade order) is what stops history repeating — the same "two rules,
-  equal specificity, one silently wins everywhere" pattern that broke
-  the sidebar on 6 pages in the first place (see Phase 1).
-
-  .rail-manual (this file) and .collapsed (dashboard.css, driven by the
-  hamburger) are deliberately different classes so the two toggles can
-  never contend for the same property.
-
-  IMPORTANT: base/unconditional rules for a selector must come BEFORE
-  any @media block that overrides them for a narrower range — equal
-  specificity means source order decides the tie, so a later
-  unconditional rule would silently beat an earlier media-scoped one
-  regardless of viewport (this bit us once already while writing this
-  file; keep new rules in that order).
-*/
+/* ==========================================================================
+   Sidebar Navigation Groups + Manual Icon-Rail (Shared Component)
+   Refined Branding, Active State & Group Hierarchy
+   ========================================================================== */
 
 /* Base sidebar and nav scroll/overflow definitions */
 .sidebar {
@@ -33,6 +14,7 @@
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
+    min-height: 0;
 }
 
 .sidebar-nav::-webkit-scrollbar {
@@ -41,51 +23,73 @@
     height: 0;
 }
 
-.nav-group-header {
-    width: 100%;
+/* ---------- 1. Sidebar Header & Compact Branding ---------- */
+.sidebar .sidebar-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    background: none;
-    border: none;
-    color: #a9b3c9;
-    cursor: pointer;
-    padding: 9px 12px;
-    font-size: 0.68rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    font-weight: 700;
-    font-family: 'Inter', sans-serif;
-    transition: color 0.16s ease;
-}
-
-.nav-group-header:hover {
-    color: #ffffff;
-}
-
-.nav-group-header .chev {
-    font-size: 0.65rem;
-    transition: transform 0.2s ease;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     flex-shrink: 0;
 }
 
-/* Base accordion: collapsed by default across desktop and mobile */
-.nav-group-body {
+.sidebar .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+    text-decoration: none;
+    cursor: default;
+}
+
+.sidebar .brand i {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    flex-shrink: 0;
+    font-size: 0.95rem;
+    background: rgba(255, 255, 255, 0.12);
+    color: #a3e635;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    transition: transform 0.2s ease;
+}
+
+.sidebar .brand:hover i {
+    transform: scale(1.04);
+}
+
+.sidebar .brand-text {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    max-height: 0;
+    line-height: 1.15;
+    min-width: 0;
     overflow: hidden;
-    transition: max-height 0.28s ease;
 }
 
-.nav-group.open .nav-group-body {
-    max-height: 1000px;
+.sidebar .brand-title {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
 }
 
-.nav-group.open .nav-group-header .chev {
-    transform: rotate(180deg);
+.sidebar .brand-sub {
+    font-size: 0.67rem;
+    font-weight: 600;
+    color: #d9b884;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1.2;
 }
 
 #railToggleBtn {
@@ -100,31 +104,184 @@
     color: #cbd6cd;
     cursor: pointer;
     flex-shrink: 0;
-    transition: background 0.2s ease, transform 0.2s ease;
+    transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
 }
 
 #railToggleBtn:hover {
-    background: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
 }
 
 .sidebar.rail-manual #railToggleBtn {
     transform: rotate(180deg);
 }
 
-/* Higher specificity (.sidebar .sidebar-header, not just .sidebar-header)
-   so this wins regardless of link order against any page-specific
-   .sidebar-header rule. */
-.sidebar .sidebar-header {
+/* ---------- 2. Section Groups (Single-Open Accordion) ---------- */
+.nav-group {
+    margin-bottom: 2px;
+}
+
+.nav-group-header {
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+    background: none;
+    border: none;
+    color: #a0aec0;
+    cursor: pointer;
+    padding: 8px 12px;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    border-radius: 6px;
+    transition: color 0.18s ease, background 0.18s ease;
+    margin-top: 4px;
 }
 
-/* ---------- Desktop-only overrides (>=1025px) ---------- */
+.nav-group-header:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.nav-group-header .chev {
+    font-size: 0.62rem;
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+    opacity: 0.75;
+}
+
+.nav-group.open .nav-group-header .chev {
+    transform: rotate(180deg);
+    opacity: 1;
+}
+
+.nav-group-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.28s ease;
+}
+
+.nav-group.open .nav-group-body {
+    max-height: 1000px;
+}
+
+/* ---------- 3. Nav Items & Active State ---------- */
+.sidebar .nav-item {
+    width: 100%;
+    min-height: 40px;
+    justify-content: flex-start;
+    align-items: center;
+    text-align: left;
+    padding: 9px 12px;
+    display: flex;
+    gap: 10px;
+    color: #d6def3;
+    border-radius: 8px;
+    margin: 0;
+    transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+    position: relative;
+    z-index: 1;
+    pointer-events: auto;
+    border-left: 3px solid transparent;
+}
+
+.sidebar .nav-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+    transform: translateX(3px);
+}
+
+.sidebar .nav-item.active {
+    background: rgba(179, 129, 63, 0.25);
+    color: #ffffff !important;
+    border-left-color: #d9b884;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar .nav-item.active .icon {
+    color: #d9b884;
+}
+
+/* ---------- 4. Account Footer & User Chip Area ---------- */
+.sidebar-footer {
+    padding: 10px 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.user-chip {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 7px 10px;
+    border-radius: 9px;
+    cursor: default;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: all 0.2s ease;
+}
+
+.user-chip:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.user-chip i {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    color: #d9b884;
+    flex-shrink: 0;
+}
+
+.user-chip div {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.user-chip span {
+    display: block;
+    font-weight: 600;
+    font-size: 0.84rem;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.25;
+}
+
+.user-chip small {
+    color: #94a3b8;
+    font-size: 0.69rem;
+    font-weight: 500;
+    text-transform: capitalize;
+    line-height: 1.2;
+}
+
+/* ---------- 5. Desktop-Only Overrides (>=1025px) ---------- */
 @media (min-width: 1025px) {
-    /* Manual icon-rail (desktop only) — a second, independent collapse
-       mode from the hamburger's .collapsed. */
+    #railToggleBtn {
+        display: flex;
+    }
+
+    /* Manual icon-rail mode */
     .sidebar.rail-manual {
         width: 70px;
     }
@@ -133,26 +290,58 @@
         margin-left: 70px;
     }
 
-    .sidebar.rail-manual .nav-group-body {
-        max-height: none !important;
+    .sidebar.rail-manual .sidebar-header {
+        padding: 12px 6px;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .sidebar.rail-manual .brand {
+        justify-content: center;
+        flex: 0 0 auto;
     }
 
     .sidebar.rail-manual .brand span,
     .sidebar.rail-manual .nav-item span:not(.icon),
-    .sidebar.rail-manual .user-chip div {
-        display: none;
-    }
-
+    .sidebar.rail-manual .user-chip div,
     .sidebar.rail-manual .nav-group-header {
-        display: none;
+        display: none !important;
     }
 
-    .sidebar.rail-manual .nav-group-header .chev {
-        display: none;
+    .sidebar.rail-manual .nav-group-body {
+        max-height: none !important;
+        overflow: visible;
+        gap: 4px;
     }
 
-    #railToggleBtn {
-        display: flex;
+    .sidebar.rail-manual .nav-item {
+        justify-content: center;
+        padding: 9px 0;
+        border-left: none;
+    }
+
+    .sidebar.rail-manual .nav-item:hover {
+        transform: none;
+    }
+
+    .sidebar.rail-manual .nav-item.active {
+        box-shadow: inset 4px 0 0 #d9b884;
+        border-left: none;
+    }
+
+    .sidebar.rail-manual .nav-item .icon {
+        margin: 0 auto;
+    }
+
+    .sidebar.rail-manual .user-chip {
+        justify-content: center;
+        padding: 6px 0;
+        background: transparent;
+        border-color: transparent;
+    }
+
+    .sidebar.rail-manual .user-chip i {
+        margin: 0 auto;
     }
 
     .sidebar.rail-manual .sidebar-nav {
@@ -165,19 +354,58 @@
     }
 }
 
-/* ---------- Tablet icon-rail range (769-1024px) ---------- */
+/* ---------- 6. Tablet Icon-Rail Range (769-1024px) ---------- */
 @media (min-width: 769px) and (max-width: 1024px) {
-    /* Labels are hidden everywhere in this range (dashboard.css
-       564-567), so a text-only header row has nothing to show — hide
-       the whole row rather than leave an empty clickable bar. */
-    .nav-group-header {
-        display: none;
+    .sidebar .sidebar-header {
+        padding: 12px 6px;
+        justify-content: center;
     }
 
-    /* Flat icon list when headers are hidden in tablet rail */
+    .sidebar .brand {
+        justify-content: center;
+    }
+
+    .sidebar .brand span,
+    .sidebar .nav-item span:not(.icon),
+    .sidebar .user-chip div,
+    .sidebar .nav-group-header {
+        display: none !important;
+    }
+
     .nav-group-body {
         max-height: none;
         overflow: visible;
+        gap: 4px;
+    }
+
+    .sidebar .nav-item {
+        justify-content: center;
+        padding: 9px 0;
+        border-left: none;
+    }
+
+    .sidebar .nav-item:hover {
+        transform: none;
+    }
+
+    .sidebar .nav-item.active {
+        box-shadow: inset 4px 0 0 #d9b884;
+        border-left: none;
+    }
+
+    .sidebar .nav-item .icon {
+        margin: 0 auto;
+    }
+
+    .sidebar .user-chip {
+        justify-content: center;
+        padding: 6px 0;
+        background: transparent;
+        border-color: transparent;
+    }
+
+    .sidebar .user-chip i {
+        margin: 0 auto;
     }
 
     .sidebar-nav {
@@ -188,4 +416,38 @@
     .sidebar-nav::-webkit-scrollbar {
         display: none;
     }
+}
+
+/* ---------- 7. Dark Mode Consistency ---------- */
+[data-theme="dark"] .sidebar .brand-title,
+.dashboard-body[data-theme="dark"] .sidebar .brand-title {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .sidebar .brand-sub,
+.dashboard-body[data-theme="dark"] .sidebar .brand-sub {
+    color: #6ee7b7;
+}
+
+[data-theme="dark"] .sidebar .nav-item.active,
+.dashboard-body[data-theme="dark"] .sidebar .nav-item.active {
+    background: rgba(44, 94, 71, 0.32) !important;
+    border-left-color: #34d399 !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .sidebar .nav-item.active .icon,
+.dashboard-body[data-theme="dark"] .sidebar .nav-item.active .icon {
+    color: #34d399 !important;
+}
+
+[data-theme="dark"] .sidebar.rail-manual .nav-item.active,
+.dashboard-body[data-theme="dark"] .sidebar.rail-manual .nav-item.active {
+    box-shadow: inset 4px 0 0 #34d399 !important;
+    border-left: none !important;
+}
+
+[data-theme="dark"] .sidebar .user-chip i,
+.dashboard-body[data-theme="dark"] .sidebar .user-chip i {
+    color: #34d399;
 }

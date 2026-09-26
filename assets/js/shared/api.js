@@ -710,10 +710,10 @@ function renderSidebarForRole(role) {
     const entries = ROLE_SIDEBAR_LINKS[String(role || '').toLowerCase()];
     if (!entries) return;
 
-    const currentPage = window.location.pathname.split('/').pop();
+    const currentPage = (window.location.pathname.split('/').pop() || '').split('?')[0].split('#')[0];
     const renderItem = ([href, icon, label]) => {
         const isActive = href === currentPage;
-        return `<a href="${href}" class="nav-item${isActive ? ' active' : ''}"><i class="fas ${icon} icon"></i> <span>${label}</span></a>`;
+        return `<a href="${href}" class="nav-item${isActive ? ' active' : ''}" title="${label}" aria-label="${label}"><i class="fas ${icon} icon"></i> <span>${label}</span></a>`;
     };
 
     nav.innerHTML = entries.map((entry) => {
@@ -742,6 +742,10 @@ function setUserDisplay(user) {
         const el = document.getElementById(id);
         if (el) el.textContent = label;
     });
+    const userChip = document.querySelector('.sidebar .user-chip');
+    if (userChip) {
+        userChip.setAttribute('title', `${name} (${label})`);
+    }
 }
 
 // Shared route guard. Call first thing in a protected page's DOMContentLoaded
@@ -823,14 +827,13 @@ document.addEventListener('keydown', (e) => {
 // script); role-based visibility/redirects are handled afterward by
 // requireRole(), which each protected page calls explicitly.
 document.addEventListener('DOMContentLoaded', () => {
-    const currentPage = window.location.pathname.split('/').pop();
+    const currentPage = (window.location.pathname.split('/').pop() || '').split('?')[0].split('#')[0];
 
     document.querySelectorAll('.sidebar .nav-item').forEach(link => {
         const href = link.getAttribute('href');
         if (!href) return;
-        if (getPageFileName(href) === currentPage) {
-            link.classList.add('active');
-        }
+        const isMatch = getPageFileName(href) === currentPage;
+        link.classList.toggle('active', isMatch);
     });
 });
 
