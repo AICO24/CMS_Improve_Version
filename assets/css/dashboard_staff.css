@@ -2381,57 +2381,40 @@
 }
 
 .chart-bottom-legends {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
     gap: 8px;
-    margin-top: 12px;
+    margin-top: auto;
     padding-top: 10px;
     border-top: 1px solid #e2e8f0;
     width: 100%;
     box-sizing: border-box;
 }
 
-/* Medium width: 2x2 grid (YTD Revenue & This Month / Avg Tx & Total Tx) */
-@container chartcard (max-width: 840px) {
+@media (max-width: 640px) {
     .chart-bottom-legends {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-/* Small width: 1 column clean vertical stack */
-@container chartcard (max-width: 440px) {
-    .chart-bottom-legends {
-        grid-template-columns: minmax(0, 1fr);
-    }
-}
-
-/* Standard media query fallbacks */
-@media (max-width: 992px) {
-    .chart-bottom-legends {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 480px) {
-    .chart-bottom-legends {
-        grid-template-columns: minmax(0, 1fr);
+        justify-content: flex-start;
+        gap: 6px;
     }
 }
 
 .chart-legend-chip {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: flex-start;
     gap: 6px;
     background: #f8fafc;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
-    padding: 6px 10px;
+    padding: 5px 11px;
     font-size: 0.74rem;
     line-height: 1.25;
     min-width: 0;
-    min-height: 34px;
+    min-height: 0;
     box-sizing: border-box;
+    flex: 0 0 auto;
 }
 
 .legend-dot {
@@ -2469,8 +2452,8 @@
     color: #0f172a;
     font-weight: 800;
     white-space: nowrap;
-    margin-left: auto;
-    padding-left: 6px;
+    margin-left: 2px;
+    padding-left: 0;
     flex-shrink: 0;
 }
 
@@ -2481,15 +2464,15 @@
 
 .chart-frame canvas {
     display: block;
+    width: 100% !important;
+    height: 100% !important;
     max-width: 100%;
 }
 
 .chart-frame--md {
     flex: 1 1 auto;
     position: relative;
-    min-height: 260px;
-    height: 300px;
-    max-height: 380px;
+    min-height: 280px;
     width: 100%;
 }
 
