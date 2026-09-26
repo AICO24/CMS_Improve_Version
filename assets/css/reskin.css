@@ -48,6 +48,10 @@
    `.nav-group + .nav-group{margin-top}` below — two independent box
    model mechanisms stacking to ~20px per boundary (sidebar audit,
    Batch 1). Now a single 10px gap is the only mechanism. */
+.sidebar {
+    background: #141c2e !important;
+}
+
 .sidebar-nav {
     gap: 4px;
     overflow-y: auto;
