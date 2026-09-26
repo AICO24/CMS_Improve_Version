@@ -230,10 +230,17 @@
     line-height: 1.2;
 }
 
+/* ---------- Universal Top Bar Stacking Context (All Pages) ---------- */
+.top-bar {
+    position: relative !important;
+    z-index: 100 !important;
+}
+
 /* ---------- Universal Top Bar Notification Icon & Badge (All Pages) ---------- */
 .top-bar .notification-icon,
 .notification-icon {
     position: relative !important;
+    z-index: 1050 !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;

@@ -193,6 +193,8 @@
 }
 
 .top-bar {
+    position: relative;
+    z-index: 100;
     background: var(--color-white);
     padding: 12px 20px;
     display: flex;

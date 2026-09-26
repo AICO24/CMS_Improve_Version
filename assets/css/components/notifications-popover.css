@@ -1,6 +1,13 @@
 /* Notifications Popover Dropdown Component (Batch 6) */
+.top-bar {
+    position: relative !important;
+    z-index: 100 !important;
+}
+
+.top-bar .notification-icon,
 .notification-icon {
-    position: relative;
+    position: relative !important;
+    z-index: 1050 !important;
 }
 
 .notification-popover {
