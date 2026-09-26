@@ -639,6 +639,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         setPeriodFilterLoading(true);
         try {
             const bounds = getPeriodBounds(period);
+            const now = new Date();
             let chartPromise;
             if (period === 'yearly') {
                 chartPromise = api.request(`payments/revenue-by-month?year=${now.getFullYear()}`, { method: 'GET' });
