@@ -7,6 +7,8 @@
     '#hero-placeholder': `${basePath}src/components/sections/hero.html`,
     '#features-placeholder': `${basePath}src/components/sections/features.html`,
     '#how-it-works-placeholder': `${basePath}src/components/sections/how-it-works.html`,
+    '#ai-placeholder': `${basePath}src/components/sections/ai-showcase.html`,
+    '#requirements-placeholder': `${basePath}src/components/sections/requirements.html`,
     '#main-content': `${basePath}src/components/sections/developer-team.html`,
     '#page-footer': `${basePath}src/components/layout/footer.html`
   };
