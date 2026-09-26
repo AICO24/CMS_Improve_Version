@@ -2171,6 +2171,7 @@
 .card.chart-card {
     container-type: inline-size;
     container-name: chartcard;
+    justify-content: space-between;
 }
 
 .card.transactions .chart-card__badge {
@@ -2370,7 +2371,7 @@
     border-radius: var(--radius-md, 8px);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.90));
     border: 1px solid rgba(226, 232, 240, 0.9);
-    padding: 10px 12px 6px;
+    padding: 0;
     box-sizing: border-box;
 }
 
@@ -2380,11 +2381,12 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: auto;
+    margin-top: 14px;
     padding-top: 10px;
     border-top: 1px solid #e2e8f0;
     width: 100%;
     box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 @media (max-width: 640px) {
@@ -2457,16 +2459,16 @@
 
 
 .chart-frame canvas {
-    display: block;
+    position: absolute;
+    inset: 0;
     width: 100% !important;
     height: 100% !important;
-    max-width: 100%;
 }
 
 .chart-frame--md {
-    flex: 1 1 auto;
     position: relative;
-    min-height: 280px;
+    flex: 1 1 0px;
+    min-height: 220px;
     width: 100%;
 }
 

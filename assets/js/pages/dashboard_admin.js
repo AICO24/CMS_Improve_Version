@@ -971,7 +971,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     };
                 }
 
-                function createBarGradient(ctx, height = 240) {
+                function createBarGradient(ctx, height = 280) {
                     const dark = isDark();
                     const grad = ctx.createLinearGradient(0, 0, 0, height);
                     if (dark) {
@@ -1000,7 +1000,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                         datasets: [{
                             label: chartDatasetLabel,
                             data: dataPoints,
-                            backgroundColor: createBarGradient(ctx),
+                            backgroundColor: createBarGradient(ctx, 280),
                             borderColor: currentThemeColors.barBorder,
                             borderWidth: 1.5,
                             borderRadius: 6,
@@ -1019,8 +1019,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                             padding: {
                                 top: 8,
                                 right: 12,
-                                bottom: 4,
-                                left: 8,
+                                bottom: 2,
+                                left: 6,
                             }
                         },
                         animation: {
@@ -1049,11 +1049,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                         scales: {
                             x: {
                                 title: {
-                                    display: true,
-                                    text: xAxisTitle,
-                                    color: currentThemeColors.labelColor,
-                                    font: { size: 12, weight: '800', family: "'Inter', sans-serif" },
-                                    padding: { top: 6 }
+                                    display: false,
                                 },
                                 ticks: {
                                     autoSkip: period === 'monthly',
