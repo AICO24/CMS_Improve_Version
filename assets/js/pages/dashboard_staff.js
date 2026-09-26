@@ -916,10 +916,10 @@ document.addEventListener('DOMContentLoaded', async function () {
                             },
                             ticks: {
                                 autoSkip: true,
-                                autoSkipPadding: 10,
-                                maxRotation: period === 'monthly' ? 45 : 0,
+                                autoSkipPadding: 14,
+                                maxRotation: 0,
                                 minRotation: 0,
-                                maxTicksLimit: period === 'monthly' ? 16 : 12,
+                                maxTicksLimit: 12,
                                 font: { size: 11, weight: '700', family: "'Inter', sans-serif" },
                                 color: currentThemeColors.tickColor,
                                 callback: function (val, index) {

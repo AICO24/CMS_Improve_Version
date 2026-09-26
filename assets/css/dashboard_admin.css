@@ -2168,6 +2168,11 @@
     box-sizing: border-box;
 }
 
+.card.chart-card {
+    container-type: inline-size;
+    container-name: chartcard;
+}
+
 .card.transactions .chart-card__badge {
     transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
@@ -2371,11 +2376,40 @@
 
 .chart-bottom-legends {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
     margin-top: 12px;
     padding-top: 10px;
     border-top: 1px solid #e2e8f0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Medium width: 2x2 grid (YTD Revenue & This Month / Avg Tx & Total Tx) */
+@container chartcard (max-width: 840px) {
+    .chart-bottom-legends {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Small width: 1 column clean vertical stack */
+@container chartcard (max-width: 440px) {
+    .chart-bottom-legends {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* Standard media query fallbacks */
+@media (max-width: 992px) {
+    .chart-bottom-legends {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .chart-bottom-legends {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 .chart-legend-chip {
@@ -2386,10 +2420,11 @@
     background: #f8fafc;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
-    padding: 5px 10px;
+    padding: 6px 10px;
     font-size: 0.74rem;
     line-height: 1.25;
     min-width: 0;
+    min-height: 34px;
     box-sizing: border-box;
 }
 
@@ -2421,8 +2456,7 @@
     color: #475569;
     font-weight: 600;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex-shrink: 0;
 }
 
 .legend-chip-val {
@@ -2430,7 +2464,8 @@
     font-weight: 800;
     white-space: nowrap;
     margin-left: auto;
-    padding-left: 4px;
+    padding-left: 6px;
+    flex-shrink: 0;
 }
 
 .legend-chip-val--accent {
