@@ -511,116 +511,136 @@
 
             const paymentInfo = resolvePaymentDisplay(record, isDraft, serviceType);
 
-            bookingDetailBody.innerHTML = `
-                <div style="display:flex;flex-direction:column;gap:16px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--color-border);">
-                        <div>
-                            <span style="font-size:0.75rem;text-transform:uppercase;color:var(--color-text-muted);font-weight:700;">Reference</span>
-                            <div style="font-family:monospace;font-size:1.15rem;font-weight:700;color:var(--color-text);">${escapeHtml(item.booking_reference || '-')}</div>
-                        </div>
-                        <div>
-                            <span style="display:inline-block;padding:4px 10px;border-radius:var(--radius-sm);font-size:0.8rem;font-weight:700;text-transform:uppercase;background:${serviceType === 'burial' ? 'var(--color-success-soft);color:var(--color-success-strong);' : 'var(--color-primary-50);color:var(--color-primary-700);'}">
-                                <i class="fas ${serviceType === 'burial' ? 'fa-monument' : 'fa-fire'}"></i> ${escapeHtml(serviceType || 'Service')}
-                            </span>
-                        </div>
-                    </div>
+            // Documentary Requirements Pre-computation
+            const docSummary = record.document_summary || {
+                uploaded_count: 0,
+                total_required: 3,
+                all_uploaded: false,
+                status: 'pending_physical',
+                status_label: 'Pending Physical Submission',
+                badge_class: 'pending',
+                workflow_guidance: 'No documents submitted online yet. Per municipal cemetery policy, applicant must present physical copies of Death Certificate and Permit at the office prior to burial/cremation.'
+            };
+            const docItems = (Array.isArray(record.documents) && record.documents.length > 0) ? record.documents : [
+                { doc_type: 'death_certificate', title: 'Death Certificate', description: 'PSA or Local Civil Registrar Certified True Copy', is_uploaded: false },
+                { doc_type: 'burial_permit', title: serviceType === 'cremation' ? 'Cremation Permit' : 'Burial Permit', description: 'City Health Office / Local Government Unit Permit', is_uploaded: false },
+                { doc_type: 'valid_id', title: 'Valid Government ID', description: 'Government-issued ID of Informant / Next-of-Kin (Claimant)', is_uploaded: false }
+            ];
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-                        <div>
-                            <label style="font-size:0.75rem;color:var(--color-text-muted);font-weight:600;display:block;margin-bottom:2px;">Decedent</label>
-                            <strong style="color:var(--color-text);font-size:0.95rem;">${escapeHtml(item.decedent_name || 'Pending Formal Record')}</strong>
+            let docBadgeColor = '#64748b';
+            let docBadgeBg = '#f1f5f9';
+            if (docSummary.all_uploaded || docSummary.status === 'complete') {
+                docBadgeColor = '#166534';
+                docBadgeBg = '#dcfce7';
+            } else if (docSummary.uploaded_count > 0 || docSummary.status === 'partial') {
+                docBadgeColor = '#92400e';
+                docBadgeBg = '#fef3c7';
+            }
+
+            bookingDetailBody.innerHTML = `
+                <div class="booking-detail-deck">
+                    <!-- Top Strip: Reference & Badges -->
+                    <div class="booking-detail-top-strip">
+                        <div class="booking-detail-ref-group">
+                            <span class="booking-detail-ref-label">Reference</span>
+                            <span class="booking-detail-ref-code">${escapeHtml(item.booking_reference || '-')}</span>
                         </div>
-                        <div>
-                            <label style="font-size:0.75rem;color:var(--color-text-muted);font-weight:600;display:block;margin-bottom:2px;">Current Status</label>
-                            <span style="display:inline-block;padding:3px 10px;border-radius:var(--radius-sm);font-size:0.8rem;font-weight:600;background:var(--color-surface-soft);color:var(--color-text);">
+                        <div class="booking-detail-tags">
+                            <span class="booking-detail-service-tag ${serviceType === 'burial' ? 'service-tag--burial' : 'service-tag--cremation'}">
+                                <i class="fas ${serviceType === 'burial' ? 'fa-monument' : 'fa-fire'}"></i> ${escapeHtml((serviceType || 'Service').toUpperCase())}
+                            </span>
+                            <span class="booking-detail-status-pill">
                                 ${escapeHtml(formatBookingStatus(record.status || item.status, isDraft))}
                             </span>
                         </div>
-                        <div>
-                            <label style="font-size:0.75rem;color:var(--color-text-muted);font-weight:600;display:block;margin-bottom:2px;">Scheduled Date / Time</label>
-                            <span style="color:var(--color-text);font-size:0.9rem;">${escapeHtml(displayDate)} ${escapeHtml(displayTime)}</span>
-                        </div>
-                        <div>
-                            <label style="font-size:0.75rem;color:var(--color-text-muted);font-weight:600;display:block;margin-bottom:2px;">Allocation</label>
-                            <span style="color:var(--color-text);font-size:0.9rem;">${escapeHtml(item.allocation || 'Standard')}</span>
-                        </div>
                     </div>
 
-                    <div style="background:var(--color-surface-soft);padding:14px 16px;border-radius:var(--radius-md);border:1px solid var(--color-border);">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
-                            <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--color-text-muted);">Payment Information</div>
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <span style="display:inline-block;padding:3px 10px;border-radius:var(--radius-sm);font-size:0.78rem;font-weight:700;background:${paymentInfo.badgeBg};color:${paymentInfo.badgeColor};">
-                                    ${escapeHtml(paymentInfo.statusText)}
-                                </span>
-                                ${record.payment_id && record.gateway_checkout_session_id && record.verification_status !== 'Verified' ? `
-                                    <button type="button" class="btn btn-secondary" id="btnSyncPaymentModal" style="height:28px;padding:0 8px;font-size:0.75rem;" title="Check real-time status from PayMongo">
-                                        <i class="fas fa-arrows-rotate"></i> Check Status
-                                    </button>
-                                ` : ''}
+                    <!-- 2-Column Balanced Deck -->
+                    <div class="booking-detail-split-grid">
+                        <!-- Left Column: Core Schedule & Payment -->
+                        <div class="booking-detail-col">
+                            <!-- Booking Core Info Card -->
+                            <div class="booking-detail-card">
+                                <div class="booking-detail-card-head">
+                                    <span class="booking-detail-card-title"><i class="fas fa-id-card"></i> Schedule &amp; Allocation</span>
+                                </div>
+                                <div class="booking-detail-meta-grid">
+                                    <div class="booking-meta-item">
+                                        <label>Decedent</label>
+                                        <strong>${escapeHtml(item.decedent_name || 'Pending Formal Record')}</strong>
+                                    </div>
+                                    <div class="booking-meta-item">
+                                        <label>Scheduled Date &amp; Time</label>
+                                        <span>${escapeHtml(displayDate)} ${escapeHtml(displayTime)}</span>
+                                    </div>
+                                    <div class="booking-meta-item booking-meta-item--full">
+                                        <label>Allocation</label>
+                                        <span class="booking-allocation-text">${escapeHtml(item.allocation || 'Standard')}</span>
+                                    </div>
+                                    ${notes && notes !== 'None' ? `
+                                        <div class="booking-meta-item booking-meta-item--full">
+                                            <label>Notes &amp; Special Instructions</label>
+                                            <span class="booking-notes-text">${escapeHtml(notes)}</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+
+                            <!-- Payment Information Card -->
+                            <div class="booking-detail-card booking-payment-card">
+                                <div class="booking-detail-card-head">
+                                    <span class="booking-detail-card-title"><i class="fas fa-receipt"></i> Payment Information</span>
+                                    <div class="booking-payment-actions">
+                                        <span class="booking-payment-status-badge" style="background:${paymentInfo.badgeBg};color:${paymentInfo.badgeColor};">
+                                            ${escapeHtml(paymentInfo.statusText)}
+                                        </span>
+                                        ${record.payment_id && record.gateway_checkout_session_id && record.verification_status !== 'Verified' ? `
+                                            <button type="button" class="btn btn-secondary btn-sync-payment" id="btnSyncPaymentModal" title="Check real-time status from PayMongo">
+                                                <i class="fas fa-arrows-rotate"></i> Check Status
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                <div class="booking-payment-row">
+                                    <div class="payment-stat">
+                                        <span class="payment-stat-label">Amount</span>
+                                        <strong class="payment-stat-val">${escapeHtml(paymentAmount)}</strong>
+                                    </div>
+                                    <div class="payment-stat">
+                                        <span class="payment-stat-label">Method</span>
+                                        <strong class="payment-stat-val">${escapeHtml(record.payment_method || (serviceType === 'burial' ? 'PayMongo' : 'Standard'))}</strong>
+                                    </div>
+                                </div>
+                                <div class="booking-payment-note">
+                                    <i class="fas fa-info-circle"></i> <span>${escapeHtml(paymentInfo.explanation)}</span>
+                                </div>
                             </div>
                         </div>
-                        <div style="display:flex;justify-content:space-between;font-size:0.9rem;margin-bottom:6px;color:var(--color-text);">
-                            <span>Amount: <strong>${escapeHtml(paymentAmount)}</strong></span>
-                            <span>Method: <strong>${escapeHtml(record.payment_method || (serviceType === 'burial' ? 'PayMongo' : 'Standard'))}</strong></span>
-                        </div>
-                        <div style="font-size:0.8rem;color:var(--color-text-muted);">
-                            <i class="fas fa-info-circle"></i> ${escapeHtml(paymentInfo.explanation)}
-                        </div>
-                    </div>
 
-                    <!-- Documentary Requirements Block (Batch 7) -->
-                    ${(() => {
-                        const docSummary = record.document_summary || {
-                            uploaded_count: 0,
-                            total_required: 3,
-                            all_uploaded: false,
-                            status: 'pending_physical',
-                            status_label: 'Pending Physical Presentation',
-                            badge_class: 'pending',
-                            workflow_guidance: 'Original physical certificates must be presented at the cemetery office prior to burial or cremation service authorization.'
-                        };
-                        const docItems = (Array.isArray(record.documents) && record.documents.length > 0) ? record.documents : [
-                            { doc_type: 'death_certificate', title: 'Death Certificate', description: 'PSA or Local Civil Registrar Certified True Copy', is_uploaded: false },
-                            { doc_type: 'burial_permit', title: serviceType === 'cremation' ? 'Cremation Permit' : 'Burial Permit', description: 'City Health Office / LGU Permit', is_uploaded: false },
-                            { doc_type: 'valid_id', title: 'Valid Government ID', description: 'Valid Government-issued ID of Informant / Claimant', is_uploaded: false }
-                        ];
-
-                        let docBadgeColor = '#64748b';
-                        let docBadgeBg = '#f1f5f9';
-                        if (docSummary.all_uploaded || docSummary.status === 'complete') {
-                            docBadgeColor = '#166534';
-                            docBadgeBg = '#dcfce7';
-                        } else if (docSummary.uploaded_count > 0 || docSummary.status === 'partial') {
-                            docBadgeColor = '#92400e';
-                            docBadgeBg = '#fef3c7';
-                        }
-
-                        return `
-                            <div style="background:var(--color-surface-soft);padding:14px 16px;border-radius:var(--radius-md);border:1px solid var(--color-border);">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
-                                    <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--color-text-muted);">
-                                        <i class="fas fa-file-shield"></i> Documentary Requirements
-                                    </div>
-                                    <span style="display:inline-block;padding:3px 10px;border-radius:var(--radius-sm);font-size:0.78rem;font-weight:700;background:${docBadgeBg};color:${docBadgeColor};">
+                        <!-- Right Column: Documentary Requirements -->
+                        <div class="booking-detail-col">
+                            <div class="booking-detail-card booking-docs-card">
+                                <div class="booking-detail-card-head">
+                                    <span class="booking-detail-card-title"><i class="fas fa-file-shield"></i> Documentary Requirements</span>
+                                    <span class="booking-doc-status-badge" style="background:${docBadgeBg};color:${docBadgeColor};">
                                         ${escapeHtml(docSummary.status_label)}
                                     </span>
                                 </div>
-                                <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;">
+                                <div class="booking-doc-list">
                                     ${docItems.map(d => {
                                         const isUploaded = Boolean(d.is_uploaded);
                                         return `
-                                            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:6px;background:${isUploaded ? '#f0fdf4' : '#fafaf9'};border:1px solid ${isUploaded ? '#bbf7d0' : '#e2e8f0'};font-size:0.83rem;">
-                                                <div>
-                                                    <strong style="color:var(--color-text);">${escapeHtml(d.title)}</strong>
-                                                    <small style="display:block;color:var(--color-text-muted);font-size:0.72rem;">${escapeHtml(d.description || '')}</small>
+                                            <div class="booking-doc-row ${isUploaded ? 'is-uploaded' : 'is-pending'}">
+                                                <div class="booking-doc-meta">
+                                                    <div class="booking-doc-name">${escapeHtml(d.title)}</div>
+                                                    <small class="booking-doc-desc">${escapeHtml(d.description || '')}</small>
                                                 </div>
-                                                <div style="text-align:right;">
-                                                    <span style="display:inline-flex;align-items:center;gap:3px;font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:4px;background:${isUploaded ? '#dcfce7' : '#fef3c7'};color:${isUploaded ? '#166534' : '#92400e'};">
+                                                <div class="booking-doc-badge-col">
+                                                    <span class="booking-doc-badge ${isUploaded ? 'badge--uploaded' : 'badge--pending'}">
                                                         <i class="fas ${isUploaded ? 'fa-check' : 'fa-hourglass-start'}"></i> ${isUploaded ? 'Uploaded Online' : 'Bring to Office'}
                                                     </span>
                                                     ${isUploaded && d.file_url ? `
-                                                        <a href="${escapeHtml(d.file_url)}" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:2px;font-size:0.72rem;color:#0284c7;text-decoration:none;">
+                                                        <a href="${escapeHtml(d.file_url)}" target="_blank" rel="noopener noreferrer" class="booking-doc-link">
                                                             <i class="fas fa-arrow-up-right-from-square"></i> View File
                                                         </a>
                                                     ` : ''}
@@ -629,16 +649,12 @@
                                         `;
                                     }).join('')}
                                 </div>
-                                <div style="margin-top:8px;font-size:0.78rem;color:var(--color-text-muted);line-height:1.35;">
-                                    <i class="fas fa-circle-info"></i> ${escapeHtml(docSummary.workflow_guidance)}
+                                <div class="booking-doc-guidance">
+                                    <i class="fas fa-circle-info"></i>
+                                    <span>${escapeHtml(docSummary.workflow_guidance)}</span>
                                 </div>
                             </div>
-                        `;
-                    })()}
-
-                    <div>
-                        <label style="font-size:0.75rem;color:var(--color-text-muted);font-weight:600;display:block;margin-bottom:2px;">Notes &amp; Special Instructions</label>
-                        <p style="font-size:0.85rem;color:var(--color-text-muted);margin:4px 0 0 0;">${escapeHtml(notes)}</p>
+                        </div>
                     </div>
                 </div>
             `;

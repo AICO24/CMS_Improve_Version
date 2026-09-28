@@ -1059,3 +1059,441 @@ body[data-theme="dark"] .dashboard-footer-inner {
     }
 }
 
+/* ==========================================================================
+   Zero-Scroll Booking Details Modal Deck (Citizen / My Bookings)
+   ========================================================================== */
+#bookingDetailModal .modal-content.booking-detail-modal-deck {
+    max-width: 860px !important;
+    width: 95vw !important;
+    padding: 0;
+    border-radius: var(--radius-lg, 12px);
+    overflow: hidden;
+    background: var(--color-surface, #ffffff);
+    box-shadow: 0 20px 48px rgba(15, 23, 42, 0.22);
+    border: 1px solid var(--color-border, #e2e8f0);
+}
+
+#bookingDetailModal .modal-header {
+    padding: 12px 18px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#bookingDetailModal .modal-body {
+    padding: 12px 18px;
+    max-height: calc(88vh - 100px);
+    overflow-y: auto;
+}
+
+#bookingDetailModal .modal-footer {
+    padding: 10px 18px;
+    border-top: 1px solid var(--color-border, #e2e8f0);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: var(--color-surface, #ffffff);
+}
+
+/* ── Top Strip: Reference & Service Tag ── */
+.booking-detail-top-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 12px;
+    background: var(--color-surface-soft, #f8fafc);
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid var(--color-border, #e2e8f0);
+    margin-bottom: 10px;
+}
+
+.booking-detail-ref-group {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.booking-detail-ref-label {
+    font-size: 0.70rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-text-muted, #64748b);
+    letter-spacing: 0.05em;
+}
+
+.booking-detail-ref-code {
+    font-family: monospace;
+    font-size: 1.12rem;
+    font-weight: 700;
+    color: var(--color-text, #0f172a);
+}
+
+.booking-detail-tags {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.booking-detail-service-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: var(--radius-sm, 6px);
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.service-tag--burial {
+    background: var(--color-success-soft, #ecfdf5);
+    color: var(--color-success-strong, #047857);
+}
+
+.service-tag--cremation {
+    background: var(--color-primary-50, #eff6ff);
+    color: var(--color-primary-700, #1d4ed8);
+}
+
+.booking-detail-status-pill {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: var(--radius-sm, 6px);
+    font-size: 0.76rem;
+    font-weight: 600;
+    background: var(--color-surface, #ffffff);
+    color: var(--color-text, #0f172a);
+    border: 1px solid var(--color-border, #e2e8f0);
+}
+
+/* ── 2-Column Split Grid ── */
+.booking-detail-split-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.12fr;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.booking-detail-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ── Detail Cards ── */
+.booking-detail-card {
+    background: var(--color-surface-soft, #f8fafc);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-md, 8px);
+    padding: 9px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.booking-detail-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.booking-detail-card-title {
+    font-size: 0.70rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-text-muted, #64748b);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.04em;
+}
+
+/* Meta Grid (Left Card 1) */
+.booking-detail-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 10px;
+}
+
+.booking-meta-item label {
+    font-size: 0.68rem;
+    color: var(--color-text-muted, #64748b);
+    font-weight: 600;
+    display: block;
+    margin-bottom: 1px;
+}
+
+.booking-meta-item strong {
+    color: var(--color-text, #0f172a);
+    font-size: 0.86rem;
+    display: block;
+    line-height: 1.25;
+}
+
+.booking-meta-item span {
+    color: var(--color-text, #0f172a);
+    font-size: 0.80rem;
+    display: block;
+    line-height: 1.25;
+}
+
+.booking-meta-item--full {
+    grid-column: 1 / -1;
+}
+
+.booking-allocation-text {
+    font-weight: 500;
+    color: var(--color-text, #0f172a);
+}
+
+.booking-notes-text {
+    font-size: 0.76rem !important;
+    color: var(--color-text-muted, #64748b) !important;
+    font-style: italic;
+    line-height: 1.25;
+}
+
+/* Payment Card (Left Card 2) */
+.booking-payment-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.booking-payment-status-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: var(--radius-sm, 6px);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.btn-sync-payment {
+    height: 24px;
+    padding: 0 7px;
+    font-size: 0.70rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1;
+}
+
+.booking-payment-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--color-surface, #ffffff);
+    padding: 5px 9px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border, #e2e8f0);
+}
+
+.payment-stat-label {
+    font-size: 0.68rem;
+    color: var(--color-text-muted, #64748b);
+    display: block;
+}
+
+.payment-stat-val {
+    font-size: 0.86rem;
+    color: var(--color-text, #0f172a);
+}
+
+.booking-payment-note {
+    font-size: 0.72rem;
+    color: var(--color-text-muted, #64748b);
+    line-height: 1.25;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Documentary Requirements Card (Right Column) */
+.booking-docs-card {
+    height: 100%;
+}
+
+.booking-doc-status-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: var(--radius-sm, 6px);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.booking-doc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.booking-doc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 8px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    gap: 6px;
+    transition: background-color 150ms ease;
+}
+
+.booking-doc-row.is-uploaded {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+}
+
+.booking-doc-row.is-pending {
+    background: #fafaf9;
+    border: 1px solid #e2e8f0;
+}
+
+.booking-doc-meta {
+    min-width: 0;
+    flex: 1;
+}
+
+.booking-doc-name {
+    font-weight: 600;
+    color: var(--color-text, #0f172a);
+    font-size: 0.78rem;
+    line-height: 1.2;
+}
+
+.booking-doc-desc {
+    display: block;
+    color: var(--color-text-muted, #64748b);
+    font-size: 0.68rem;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.booking-doc-badge-col {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.booking-doc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.booking-doc-badge.badge--uploaded {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.booking-doc-badge.badge--pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.booking-doc-link {
+    display: block;
+    margin-top: 1px;
+    font-size: 0.66rem;
+    color: #0284c7;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.booking-doc-link:hover {
+    text-decoration: underline;
+}
+
+.booking-doc-guidance {
+    margin-top: auto;
+    font-size: 0.70rem;
+    color: var(--color-text-muted, #64748b);
+    line-height: 1.25;
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    padding-top: 2px;
+}
+
+.booking-doc-guidance i {
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+/* ── Dark Theme Support for Zero-Scroll Booking Details Modal ── */
+.dashboard-body[data-theme="dark"] #bookingDetailModal .modal-content.booking-detail-modal-deck {
+    background: #121c17 !important;
+    border-color: rgba(52, 211, 153, 0.25) !important;
+    color: #f1f5f9 !important;
+}
+
+.dashboard-body[data-theme="dark"] #bookingDetailModal .modal-header,
+.dashboard-body[data-theme="dark"] #bookingDetailModal .modal-footer {
+    background: #121c17 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: #ffffff !important;
+}
+
+.dashboard-body[data-theme="dark"] .booking-detail-top-strip,
+.dashboard-body[data-theme="dark"] .booking-detail-card {
+    background: #182620 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-body[data-theme="dark"] .booking-detail-ref-code,
+.dashboard-body[data-theme="dark"] .booking-meta-item strong,
+.dashboard-body[data-theme="dark"] .booking-meta-item span,
+.dashboard-body[data-theme="dark"] .payment-stat-val,
+.dashboard-body[data-theme="dark"] .booking-doc-name {
+    color: #f8fafc !important;
+}
+
+.dashboard-body[data-theme="dark"] .booking-detail-ref-label,
+.dashboard-body[data-theme="dark"] .booking-detail-card-title,
+.dashboard-body[data-theme="dark"] .booking-meta-item label,
+.dashboard-body[data-theme="dark"] .payment-stat-label,
+.dashboard-body[data-theme="dark"] .booking-doc-desc,
+.dashboard-body[data-theme="dark"] .booking-doc-guidance,
+.dashboard-body[data-theme="dark"] .booking-payment-note {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .booking-detail-status-pill {
+    background: #23352c !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #f1f5f9 !important;
+}
+
+.dashboard-body[data-theme="dark"] .booking-payment-row {
+    background: #141f1a !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-body[data-theme="dark"] .booking-doc-row.is-pending {
+    background: #1b2822 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-body[data-theme="dark"] .booking-doc-row.is-uploaded {
+    background: rgba(16, 185, 129, 0.12) !important;
+    border-color: rgba(16, 185, 129, 0.28) !important;
+}
+
+/* Responsive adjustment for small viewports */
+@media (max-width: 768px) {
+    .booking-detail-split-grid {
+        grid-template-columns: 1fr;
+    }
+    #bookingDetailModal .modal-body {
+        max-height: 80vh;
+    }
+}
+
