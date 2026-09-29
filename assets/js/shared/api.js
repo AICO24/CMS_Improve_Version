@@ -516,7 +516,7 @@ const PAGE_ROLE_ACCESS = (typeof window !== 'undefined' && window.CMS_NAVIGATION
         'relocation-management.html': ['admin'],
         'expiration-monitoring.html': ['admin'],
         'decedent-records.html': ['admin', 'staff'],
-        'payments.html': ['admin', 'staff', 'user'],
+        'payments.html': ['admin'],
         'reports.html': ['admin'],
         'forecast.html': ['admin'],
         'user-management.html': ['admin'],
@@ -665,9 +665,6 @@ const ROLE_SIDEBAR_LINKS = {
         ] },
         { group: 'Records', items: [
             ['decedent-records.html', 'fa-folder-open', 'Decedent Records'],
-        ] },
-        { group: 'Finance', items: [
-            ['payments.html', 'fa-credit-card', 'Payments'],
         ] },
         { group: 'System', items: [
             ['exceptions.html', 'fa-triangle-exclamation', 'System Exceptions'],

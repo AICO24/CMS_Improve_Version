@@ -1,13 +1,9 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    const currentUser = await requireRole(['admin', 'staff', 'user']);
+    const currentUser = await requireRole(['admin']);
     if (!currentUser) return;
 
-    // System-Wide AI Assistant: page-level, always visible in the header —
-    // admin/staff only (this page is also reachable by citizens viewing
-    // their own payments, same guard the per-record assistant below uses).
-    // The per-payment one below (mounted fresh in the view modal) is a
-    // separate instance for "explain this specific payment".
-    if (currentUser.role === 'admin' || currentUser.role === 'staff') {
+    // System-Wide AI Assistant: page-level, always visible in the header — admin only
+    if (currentUser.role === 'admin') {
         initAiAssistant({
             mountSelector: '#aiAssistantMount',
             context: { scope: 'module', module: 'Payment' },
