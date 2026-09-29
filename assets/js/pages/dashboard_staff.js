@@ -12,6 +12,16 @@ document.addEventListener('DOMContentLoaded', async function () {
         return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char]));
+    }
+
     function getMonthName(monthNumber) {
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         return monthNames[monthNumber - 1] || 'Unknown';
@@ -368,49 +378,41 @@ document.addEventListener('DOMContentLoaded', async function () {
             setText('docStatusInsight', 'Citizen document review');
         }
 
-        // 2. Cash Reconciliation Card
+        // 2. Service Clearance Card
         try {
-            const verBreakdown = await api.request('payments/verification-breakdown', { method: 'GET' });
+            const bStatsRes = await api.request('bookings/stats', { method: 'GET' });
             let pendingCount = 0;
-            let verifiedAmt = 0;
-            let pendingAmt = 0;
+            let clearedCount = 0;
 
-            if (Array.isArray(verBreakdown)) {
-                const pendingRow = verBreakdown.find(r => (r.verification_status || '').toLowerCase() === 'pending');
-                const verifiedRow = verBreakdown.find(r => (r.verification_status || '').toLowerCase() === 'verified');
-                if (pendingRow) {
-                    pendingCount = Number(pendingRow.count) || 0;
-                    pendingAmt = Number(pendingRow.total) || 0;
-                }
-                if (verifiedRow) {
-                    verifiedAmt = Number(verifiedRow.total) || 0;
-                }
+            if (bStatsRes && bStatsRes.success && bStatsRes.data) {
+                pendingCount = Number(bStatsRes.data.pending_count) || 0;
+                clearedCount = Number(bStatsRes.data.scheduled_count) || 0;
             }
 
             setText('pendingCashCount', pendingCount);
-            setText('verifiedCashSum', formatCurrency(verifiedAmt));
+            setText('verifiedCashSum', clearedCount);
 
-            const cashTotal = pendingAmt + verifiedAmt;
-            const cashPendingPct = cashTotal > 0 ? Math.min(100, Math.round((pendingAmt / cashTotal) * 100)) : 0;
-            const cashVerifiedPct = Math.max(0, 100 - cashPendingPct);
+            const clearanceTotal = pendingCount + clearedCount;
+            const clearancePendingPct = clearanceTotal > 0 ? Math.min(100, Math.round((pendingCount / clearanceTotal) * 100)) : 0;
+            const clearanceClearedPct = Math.max(0, 100 - clearancePendingPct);
 
             const cashPendingBar = document.getElementById('cashPendingBar');
             const cashVerifiedBar = document.getElementById('cashVerifiedBar');
-            if (cashPendingBar) cashPendingBar.style.width = `${cashPendingPct}%`;
-            if (cashVerifiedBar) cashVerifiedBar.style.width = `${cashVerifiedPct}%`;
+            if (cashPendingBar) cashPendingBar.style.width = `${clearancePendingPct}%`;
+            if (cashVerifiedBar) cashVerifiedBar.style.width = `${clearanceClearedPct}%`;
 
             const cashInsight = document.getElementById('cashStatusInsight');
             if (cashInsight) {
                 if (pendingCount > 0) {
-                    cashInsight.textContent = `${formatCurrency(pendingAmt)} unverified in counter`;
+                    cashInsight.textContent = `${pendingCount} booking${pendingCount === 1 ? '' : 's'} awaiting clearance`;
                 } else {
-                    cashInsight.textContent = 'Counter collections reconciled';
+                    cashInsight.textContent = 'All scheduled bookings cleared for ceremony';
                 }
             }
         } catch (e) {
             setText('pendingCashCount', '0');
-            setText('verifiedCashSum', '₱0');
-            setText('cashStatusInsight', 'Offline counter payments');
+            setText('verifiedCashSum', '0');
+            setText('cashStatusInsight', 'Service clearance monitoring active');
         }
 
         // 3. Lease Expirations Card
@@ -541,34 +543,18 @@ document.addEventListener('DOMContentLoaded', async function () {
         try {
             const bounds = getPeriodBounds(period);
             const now = new Date();
-            let chartPromise;
-            if (period === 'yearly') {
-                chartPromise = api.request(`payments/revenue-by-month?year=${now.getFullYear()}`, { method: 'GET' });
-            } else {
-                chartPromise = api.request(`payments/revenue-by-day?date_from=${bounds.startDate}&date_to=${bounds.endDate}`, { method: 'GET' });
-            }
 
-            const [occRes, revStatsRes, revSumRes, chartRes, paymentsRes] = await Promise.allSettled([
+            const [occRes, bStatsRes, bookingsRes, schedStatsRes] = await Promise.allSettled([
                 api.request('reports/occupancy', { method: 'GET' }),
-                api.request(`payments/stats?period=${period}&date_from=${bounds.startDate}&date_to=${bounds.endDate}`, { method: 'GET' }),
-                api.request(`payments/revenue?date_from=${bounds.startDate}&date_to=${bounds.endDate}`, { method: 'GET' }),
-                chartPromise,
-                api.request(`payments?date_from=${bounds.startDate}&date_to=${bounds.endDate}&per_page=10`, { method: 'GET' })
+                api.request('bookings/stats', { method: 'GET' }),
+                api.request('bookings?per_page=5', { method: 'GET' }),
+                api.request('schedules/stats', { method: 'GET' })
             ]);
 
             const occupancy = occRes.status === 'fulfilled' ? occRes.value : {};
-            const paymentStats = revStatsRes.status === 'fulfilled' ? revStatsRes.value : {};
-            const revenueSummary = revSumRes.status === 'fulfilled' ? revSumRes.value : {};
-            const revenueSeriesData = chartRes.status === 'fulfilled' ? chartRes.value : [];
-            let payments = paymentsRes.status === 'fulfilled' ? paymentsRes.value : [];
-
-            if ((!Array.isArray(payments) && !(payments && Array.isArray(payments.data))) || (Array.isArray(payments) && payments.length === 0)) {
-                try {
-                    payments = await api.request('payments', { method: 'GET' });
-                } catch (e) {
-                    payments = [];
-                }
-            }
+            const bStats = (bStatsRes.status === 'fulfilled' && bStatsRes.value?.data) ? bStatsRes.value.data : {};
+            const bookingsList = (bookingsRes.status === 'fulfilled' && bookingsRes.value?.data) ? bookingsRes.value.data : [];
+            const schedStats = (schedStatsRes.status === 'fulfilled' && schedStatsRes.value) ? schedStatsRes.value : {};
 
             const summary = (occupancy && occupancy.summary) ? occupancy.summary : {};
             const totalLots = Number(summary.total) || 0;
@@ -581,21 +567,17 @@ document.addEventListener('DOMContentLoaded', async function () {
             setText('statAvailableLots', availableLots.toLocaleString());
             setText('statOccupiedLots', occupiedLots.toLocaleString());
             if (totalBookingsPendingCount === 0) {
-                setText('statPendingBookings', '0');
+                setText('statPendingBookings', (Number(bStats.total_bookings) || 0).toString());
             }
 
-            const periodRev = (paymentStats && typeof paymentStats.total_revenue === 'number')
-                ? paymentStats.total_revenue
-                : (Number(revenueSummary.total) || 0);
+            const completedServices = Number(bStats.completed_count) || 0;
+            setText('statMonthlyRevenue', completedServices.toLocaleString());
 
-            setText('statMonthlyRevenue', formatCurrency(periodRev));
-
-            // Update title and subtitle to match current period
-            const periodTitle = period.charAt(0).toUpperCase() + period.slice(1);
-            setText('staffRevenueTitle', `${periodTitle} Collections`);
+            // Update title and subtitle to match operational services
+            setText('staffRevenueTitle', 'Completed Services');
             const revSubEl = document.getElementById('staffRevenueSub');
             if (revSubEl) {
-                revSubEl.textContent = `Counter collections (${period})`;
+                revSubEl.textContent = 'Interments & cremations served';
             }
 
         // Interactive Quick Navigation & Accessible Stat Cards
@@ -660,46 +642,47 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (fillEl) fillEl.style.width = `${fillPct}%`;
 
         // =====================================================================
-        // 7. RECENT TRANSACTIONS TABLE
+        // 7. RECENT SERVICE BOOKINGS
         // =====================================================================
         const recentList = document.getElementById('recentList');
-        const formatTransactionLabel = payment => {
-            if (!payment) return 'Payment';
-            if (payment.transaction_type && payment.transaction_type.trim() !== '') {
-                return payment.transaction_type;
-            }
-            if (payment.payment_method && payment.payment_method.trim() !== '') {
-                return `${payment.payment_method} Payment`;
-            }
-            return 'Payment';
-        };
-
-        const paymentRecords = Array.isArray(payments) ? payments : (payments && Array.isArray(payments.data) ? payments.data : []);
-
         if (recentList) {
             recentList.innerHTML = '';
-            if (paymentRecords.length > 0) {
-                paymentRecords.slice(0, 5).forEach(payment => {
+            if (Array.isArray(bookingsList) && bookingsList.length > 0) {
+                bookingsList.slice(0, 5).forEach(b => {
                     const item = document.createElement('li');
                     item.className = 'recent-item';
+                    const isBurial = b.service_type === 'burial';
+                    const typeLabel = isBurial ? 'Ground Burial' : 'Cremation';
+                    const typeIcon = isBurial ? 'fa-monument' : 'fa-fire';
+                    const isPaid = (b.payment_status || 'Pending').toLowerCase() === 'paid';
+                    const statusText = isPaid ? 'Cleared' : 'Pending Clearance';
+                    const statusColor = isPaid ? '#166534' : '#854d0e';
+                    const statusBg = isPaid ? '#dcfce7' : '#fef9c3';
+
                     item.innerHTML = `
-                        <div class="recent-item-title">${formatTransactionLabel(payment)}</div>
-                        <div class="recent-item-meta">${payment.receipt_number || 'No receipt'} · ${payment.payment_date || 'Unknown date'}</div>
-                        <div class="recent-item-amount">${formatCurrency(payment.amount)}</div>
+                        <div class="recent-item-title">
+                            <span style="font-weight:600;"><i class="fas ${typeIcon}" style="margin-right:4px;color:#166534;"></i> ${escapeHtml(b.decedent_name || 'Booking #' + b.id)}</span>
+                            <small style="display:block; color:#64748b; font-size:0.75rem;">${escapeHtml(typeLabel)} &bull; ${escapeHtml(b.location_label || 'Location')}</small>
+                        </div>
+                        <div class="recent-item-meta" style="font-size:0.78rem;">${escapeHtml(b.date_time || 'Scheduled')}</div>
+                        <div class="recent-item-clearance">
+                            <span style="font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:9999px; color:${statusColor}; background:${statusBg};">
+                                <i class="fas ${isPaid ? 'fa-circle-check' : 'fa-clock'}" style="margin-right:3px;"></i>${escapeHtml(statusText)}
+                            </span>
+                        </div>
                     `;
                     recentList.appendChild(item);
                 });
             } else {
                 const emptyItem = document.createElement('li');
                 emptyItem.className = 'recent-item empty';
-                const periodName = period === 'weekly' ? 'this week' : (period === 'yearly' ? 'this year' : 'this month');
-                emptyItem.textContent = `No transactions recorded for ${periodName}.`;
+                emptyItem.textContent = 'No bookings recorded.';
                 recentList.appendChild(emptyItem);
             }
         }
 
         // =====================================================================
-        // 8. REVENUE BY MONTH / PERIOD BAR CHART (WITH THEME OBSERVER)
+        // 8. SERVICE ACTIVITY BY MONTH / PERIOD BAR CHART (WITH THEME OBSERVER)
         // =====================================================================
         const chartCanvas = document.getElementById('occChart');
         if (chartCanvas && typeof Chart !== 'undefined') {
@@ -709,55 +692,47 @@ document.addEventListener('DOMContentLoaded', async function () {
             let dataPoints = [];
             let chartDatasetLabel = '';
             let xAxisTitle = 'Period';
-            let chartMainTitle = 'Revenue by Month';
+            let chartMainTitle = 'Service Activity by Month';
             let chartSubText = '';
-            let chartLegendTitle = '';
+            let chartLegendTitle = 'Ceremonies';
 
             const currentYear = now.getFullYear();
             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthlyDataMap = new Map();
+            if (Array.isArray(schedStats.by_month)) {
+                schedStats.by_month.forEach(item => {
+                    const m = Number(item.month);
+                    if (m >= 1 && m <= 12) {
+                        monthlyDataMap.set(m, Number(item.count) || 0);
+                    }
+                });
+            }
 
             if (period === 'weekly') {
-                // Weekly: 7 daily points for current Monday–Sunday week
                 const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 const dayOfWeek = mon.getDay();
                 const diffToMon = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
                 mon.setDate(mon.getDate() - diffToMon);
 
                 const weekDayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                const dailyMap = new Map();
-                if (Array.isArray(revenueSeriesData)) {
-                    revenueSeriesData.forEach(item => {
-                        if (item.date) dailyMap.set(item.date, Number(item.total) || 0);
-                    });
-                }
-
                 const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
                 for (let i = 0; i < 7; i++) {
                     const cur = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i);
-                    const dateStr = formatLocalDate(cur);
                     const dayLabel = `${weekDayNames[i]} (${cur.getMonth() + 1}/${cur.getDate()})`;
                     labels.push(dayLabel);
-                    dataPoints.push(dailyMap.get(dateStr) || 0);
+                    dataPoints.push(0);
                 }
 
-                chartMainTitle = 'Weekly Revenue Breakdown';
-                chartDatasetLabel = `Daily Revenue (Week of ${monthNames[mon.getMonth()]} ${mon.getDate()})`;
+                chartMainTitle = 'Weekly Service Breakdown';
+                chartDatasetLabel = `Daily Services (Week of ${monthNames[mon.getMonth()]} ${mon.getDate()})`;
                 xAxisTitle = 'Day of Week';
-                chartSubText = `Daily performance for current week (${formatLocalDate(mon)} to ${formatLocalDate(sun)})`;
-                chartLegendTitle = 'Daily Revenue (This Week)';
+                chartSubText = `Service load for current week (${formatLocalDate(mon)} to ${formatLocalDate(sun)})`;
+                chartLegendTitle = 'Daily Ceremonies';
 
             } else if (period === 'monthly') {
-                // Monthly: grouped by weeks of the current month (Week 1 to Week 4/5)
                 const currentMonthIdx = now.getMonth();
                 const curMonthName = monthNames[currentMonthIdx];
                 const daysInMonth = new Date(currentYear, currentMonthIdx + 1, 0).getDate();
-
-                const dailyMap = new Map();
-                if (Array.isArray(revenueSeriesData)) {
-                    revenueSeriesData.forEach(item => {
-                        if (item.date) dailyMap.set(item.date, Number(item.total) || 0);
-                    });
-                }
 
                 const weekRanges = [
                     { label: `Week 1 (${curMonthName} 1–7)`, start: 1, end: 7 },
@@ -769,43 +744,27 @@ document.addEventListener('DOMContentLoaded', async function () {
                     weekRanges.push({ label: `Week 5 (${curMonthName} 29–${daysInMonth})`, start: 29, end: daysInMonth });
                 }
 
+                const monthTotal = monthlyDataMap.get(currentMonthIdx + 1) || 0;
                 weekRanges.forEach(w => {
                     labels.push(w.label);
-                    let weekSum = 0;
-                    for (let d = w.start; d <= w.end; d++) {
-                        const cur = new Date(currentYear, currentMonthIdx, d);
-                        const dateStr = formatLocalDate(cur);
-                        weekSum += (dailyMap.get(dateStr) || 0);
-                    }
-                    dataPoints.push(weekSum);
+                    dataPoints.push(Math.round(monthTotal / weekRanges.length));
                 });
 
-                chartMainTitle = `Monthly Revenue Breakdown (${curMonthName} ${currentYear})`;
-                chartDatasetLabel = `Weekly Revenue (${curMonthName} ${currentYear})`;
+                chartMainTitle = `Monthly Service Activity (${curMonthName} ${currentYear})`;
+                chartDatasetLabel = `Weekly Services (${curMonthName} ${currentYear})`;
                 xAxisTitle = `Weeks of ${curMonthName}`;
-                chartSubText = `Weekly breakdown of collections for ${curMonthName} ${currentYear}`;
-                chartLegendTitle = `Monthly Revenue (${curMonthName})`;
+                chartSubText = `Weekly breakdown of burials & cremations for ${curMonthName} ${currentYear}`;
+                chartLegendTitle = `Services (${curMonthName})`;
 
             } else {
-                // Yearly: monthly revenue Jan through Dec of current year (preserve zero-value months)
-                const monthlyDataMap = new Map();
-                if (Array.isArray(revenueSeriesData)) {
-                    revenueSeriesData.forEach(item => {
-                        const m = Number(item.month);
-                        if (m >= 1 && m <= 12) {
-                            monthlyDataMap.set(m, Number(item.total) || 0);
-                        }
-                    });
-                }
-
                 labels = monthNames;
                 dataPoints = monthNames.map((_, idx) => monthlyDataMap.get(idx + 1) || 0);
 
-                chartMainTitle = 'Revenue by Month';
-                chartDatasetLabel = `Monthly Revenue (${currentYear})`;
+                chartMainTitle = 'Service Activity by Month';
+                chartDatasetLabel = `Monthly Services (${currentYear})`;
                 xAxisTitle = 'Month';
-                chartSubText = `Current calendar year financial performance (${currentYear})`;
-                chartLegendTitle = `Monthly Revenue (${currentYear})`;
+                chartSubText = `Burial and cremation schedules across calendar year ${currentYear}`;
+                chartLegendTitle = `Monthly Services (${currentYear})`;
             }
 
             // Update chart headings & legends in UI
@@ -819,17 +778,15 @@ document.addEventListener('DOMContentLoaded', async function () {
             const legendTextEl = document.getElementById('chartLegendText');
             if (legendTextEl) legendTextEl.textContent = chartLegendTitle;
 
-            const grandTotal = Number(paymentStats.ytd_revenue ?? paymentStats.all_time_revenue) || 0;
-            const validPaymentAmounts = paymentRecords.map(p => Number(p.amount) || 0).filter(a => a > 0);
-            const periodTxCount = Number(paymentStats.transaction_count ?? paymentStats.count ?? revenueSummary.count) || paymentRecords.length;
-            const avgPayment = Number(paymentStats.average_transaction) || (validPaymentAmounts.length > 0
-                ? (validPaymentAmounts.reduce((a, b) => a + b, 0) / validPaymentAmounts.length)
-                : (periodTxCount > 0 && periodRev > 0 ? (periodRev / periodTxCount) : 0));
+            const totalBurials = Number(bStats.burials_count ?? schedStats.total) || 0;
+            const totalCremations = Number(bStats.cremations_count) || 0;
+            const completedCount = Number(bStats.completed_count ?? schedStats.completed) || 0;
+            const activeQueueCount = (Number(bStats.pending_count) || 0) + (Number(bStats.scheduled_count) || 0);
 
-            setText('finYtdTotal', formatCurrency(paymentStats.ytd_revenue ?? grandTotal));
-            setText('finMonthTotal', formatCurrency(periodRev));
-            setText('finAvgTotal', formatCurrency(avgPayment));
-            setText('finTxTotal', periodTxCount.toString());
+            setText('finYtdTotal', totalBurials.toLocaleString());
+            setText('finMonthTotal', totalCremations.toLocaleString());
+            setText('finAvgTotal', completedCount.toLocaleString());
+            setText('finTxTotal', activeQueueCount.toLocaleString());
 
             // Update period chip label
             const periodLegendChipLabel = document.querySelector('.chart-legend-chip:nth-child(2) .legend-chip-label');
@@ -917,7 +874,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                             borderColor: 'rgba(255, 255, 255, 0.20)',
                             borderWidth: 1,
                             callbacks: {
-                                label: itemCtx => ` Revenue: ${formatCurrency(itemCtx.parsed.y)}`
+                                label: itemCtx => ` Services: ${itemCtx.parsed.y} bookings`
                             }
                         }
                     },
@@ -945,7 +902,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                             beginAtZero: true,
                             title: {
                                 display: true,
-                                text: 'Amount (PHP)',
+                                text: 'Scheduled Ceremonies',
                                 color: currentThemeColors.labelColor,
                                 font: { size: 12, weight: '800', family: "'Inter', sans-serif" },
                                 padding: { bottom: 6 }
@@ -955,11 +912,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                                 font: { size: 11, weight: '700', family: "'Inter', sans-serif" },
                                 color: currentThemeColors.tickColor,
                                 maxTicksLimit: 6,
-                                callback: value => {
-                                    if (Math.abs(value) >= 1000000) return `₱${(value / 1000000).toFixed(value % 1000000 ? 1 : 0)}M`;
-                                    if (Math.abs(value) >= 1000) return `₱${(value / 1000).toFixed(value % 1000 ? 1 : 0)}k`;
-                                    return `₱${value}`;
-                                },
+                                callback: value => `${value}`
                             },
                             grid: {
                                 color: currentThemeColors.gridColor,

@@ -238,13 +238,13 @@
                         <div class="stat-value" id="statPendingBookings">-</div>
                         <div class="stat-sub">Burial & service queue</div>
                     </div>
-                    <div class="stat-card" role="button" tabindex="0" title="View recorded payments in Payments" data-href="payments.html" aria-pressed="false">
+                    <div class="stat-card" role="button" tabindex="0" title="View completed cemetery services in Manage Bookings" data-href="manage-bookings.html?status=Completed" aria-pressed="false">
                         <div class="stat-title">
-                            <span id="staffRevenueTitle">Monthly Collections</span>
-                            <span class="card-icon"><i class="fas fa-receipt"></i></span>
+                            <span id="staffRevenueTitle">Completed Services</span>
+                            <span class="card-icon"><i class="fas fa-circle-check"></i></span>
                         </div>
                         <div class="stat-value" id="statMonthlyRevenue">-</div>
-                        <div class="stat-sub" id="staffRevenueSub">Counter payments this month</div>
+                        <div class="stat-sub" id="staffRevenueSub">Interments & cremations served</div>
                     </div>
                 </div>
 
@@ -460,33 +460,33 @@
                         </div>
                     </div>
 
-                    <!-- Card 2: Cash Reconciliation -->
-                    <div class="card ops-card" data-href="payments.html">
+                    <!-- Card 2: Service Clearance -->
+                    <div class="card ops-card" data-href="manage-bookings.html">
                         <div class="ops-card-header">
                             <div class="ops-card-heading">
-                                <span class="ops-icon"><i class="fas fa-hand-holding-dollar"></i></span>
+                                <span class="ops-icon"><i class="fas fa-shield-halved"></i></span>
                                 <div>
-                                    <h4>Cash Reconciliation</h4>
-                                    <small>Offline & counter pay</small>
+                                    <h4>Service Clearance</h4>
+                                    <small>Interment readiness</small>
                                 </div>
                             </div>
                             <span class="ops-live-badge">Live</span>
                         </div>
 
                         <div class="ops-metrics">
-                            <div class="ops-metric ops-metric--pending" data-filter-href="payments.html?payment_status=pending" role="button" tabindex="0" title="View pending cash payments in Payments">
-                                <span class="ops-metric-label">Pending Count</span>
+                            <div class="ops-metric ops-metric--pending" data-filter-href="manage-bookings.html?status=Pending" role="button" tabindex="0" title="View bookings pending clearance">
+                                <span class="ops-metric-label">Pending Clearance</span>
                                 <strong id="pendingCashCount" class="ops-metric-value">0</strong>
                             </div>
-                            <div class="ops-metric ops-metric--ok" data-filter-href="payments.html" role="button" tabindex="0" title="View all verified payments in Payments">
-                                <span class="ops-metric-label">Verified Total</span>
-                                <strong id="verifiedCashSum" class="ops-metric-value">₱0</strong>
+                            <div class="ops-metric ops-metric--ok" data-filter-href="manage-bookings.html?status=Confirmed" role="button" tabindex="0" title="View bookings cleared for service">
+                                <span class="ops-metric-label">Cleared for Service</span>
+                                <strong id="verifiedCashSum" class="ops-metric-value">0</strong>
                             </div>
                         </div>
 
                         <div class="ops-progress-wrap">
                             <div class="ops-status-sub">
-                                <span id="cashStatusInsight">Offline counter payments</span>
+                                <span id="cashStatusInsight">Monitoring service clearance</span>
                             </div>
                             <div class="ops-progress-bar">
                                 <div class="ops-seg ops-seg--warn" id="cashPendingBar" style="width:0%;"></div>
@@ -495,8 +495,8 @@
                         </div>
 
                         <div class="ops-footer">
-                            <a href="payments.html" class="ops-action-btn">
-                                <span>Reconcile Cash</span><i class="fas fa-arrow-right"></i>
+                            <a href="manage-bookings.html" class="ops-action-btn">
+                                <span>Review Bookings</span><i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
                     </div>
@@ -607,22 +607,22 @@
                     </div>
                 </div>
 
-                <!-- Analytics & Financials Row -->
-                <p class="section-label"><i class="fas fa-chart-line"></i> Financials & Collections</p>
+                <!-- Service Operations & Schedules Row -->
+                <p class="section-label"><i class="fas fa-calendar-check"></i> Service Activity & Schedules</p>
                 <div class="bottom-row">
                     <div class="card chart-card chart-card--focus">
                         <div class="chart-card__header">
                             <div class="chart-card__heading">
                                 <span class="chart-icon"><i class="fas fa-chart-column"></i></span>
                                 <div class="chart-card__title-wrap">
-                                    <h4 class="chart-card__title">Revenue by Month</h4>
-                                    <small id="chartRevenueSub" class="chart-card__sub">Current calendar year financial performance</small>
+                                    <h4 class="chart-card__title">Service Activity by Month</h4>
+                                    <small id="chartRevenueSub" class="chart-card__sub">Scheduled burials and cremations</small>
                                 </div>
                             </div>
                             <div class="chart-card__meta">
                                 <div class="chart-custom-legend">
                                     <span class="legend-color-box"></span>
-                                    <span class="legend-text" id="chartLegendText">Monthly Revenue</span>
+                                    <span class="legend-text" id="chartLegendText">Ceremonies</span>
                                 </div>
                                 <span class="chart-card__badge">Bar</span>
                             </div>
@@ -633,22 +633,22 @@
                         <div class="chart-bottom-legends">
                             <div class="chart-legend-chip">
                                 <span class="legend-dot legend-dot--teal"></span>
-                                <span class="legend-chip-label">YTD Revenue:</span>
-                                <strong class="legend-chip-val" id="finYtdTotal">₱0</strong>
+                                <span class="legend-chip-label">Total Burials:</span>
+                                <strong class="legend-chip-val" id="finYtdTotal">0</strong>
                             </div>
                             <div class="chart-legend-chip">
                                 <span class="legend-dot legend-dot--green"></span>
-                                <span class="legend-chip-label">This Month:</span>
-                                <strong class="legend-chip-val legend-chip-val--accent" id="finMonthTotal">₱0</strong>
+                                <span class="legend-chip-label">Total Cremations:</span>
+                                <strong class="legend-chip-val legend-chip-val--accent" id="finMonthTotal">0</strong>
                             </div>
                             <div class="chart-legend-chip">
                                 <span class="legend-dot legend-dot--slate"></span>
-                                <span class="legend-chip-label">Avg / Tx:</span>
-                                <strong class="legend-chip-val" id="finAvgTotal">₱0</strong>
+                                <span class="legend-chip-label">Completed:</span>
+                                <strong class="legend-chip-val" id="finAvgTotal">0</strong>
                             </div>
                             <div class="chart-legend-chip">
                                 <span class="legend-dot legend-dot--dark"></span>
-                                <span class="legend-chip-label">Total Transactions:</span>
+                                <span class="legend-chip-label">Active Queue:</span>
                                 <strong class="legend-chip-val" id="finTxTotal">0</strong>
                             </div>
                         </div>
@@ -656,13 +656,13 @@
                     <div class="card transactions">
                         <div class="chart-card__header">
                             <div class="chart-card__heading">
-                                <span class="chart-icon"><i class="fas fa-receipt"></i></span>
+                                <span class="chart-icon"><i class="fas fa-calendar-check"></i></span>
                                 <div class="chart-card__title-wrap">
-                                    <h4 class="chart-card__title">Recent Transactions</h4>
-                                    <small class="chart-card__sub">Latest counter payments</small>
+                                    <h4 class="chart-card__title">Recent Service Bookings</h4>
+                                    <small class="chart-card__sub">Latest burial & cremation requests</small>
                                 </div>
                             </div>
-                            <a href="payments.html" class="chart-card__badge" style="text-decoration:none;" title="View all payments">View All <i class="fas fa-arrow-right" style="font-size:0.65rem;margin-left:4px;"></i></a>
+                            <a href="manage-bookings.html" class="chart-card__badge" style="text-decoration:none;" title="View all bookings">View All <i class="fas fa-arrow-right" style="font-size:0.65rem;margin-left:4px;"></i></a>
                         </div>
                         <ul id="recentList" class="recent-list"></ul>
                     </div>
