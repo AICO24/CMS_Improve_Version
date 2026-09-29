@@ -987,7 +987,7 @@ if ($path === 'payments/mine' && $requestMethod === 'GET') {
 }
 
 if ($path === 'payments' && $requestMethod === 'GET') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $user = AuthMiddleware::requireRole(['admin']);
     $filters = [];
     if (isset($_GET['transaction_type'])) $filters['transaction_type'] = $_GET['transaction_type'];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
@@ -1058,7 +1058,7 @@ if (preg_match('/^payments\/(\d+)$/', $path, $matches) && $requestMethod === 'GE
 }
 
 if (preg_match('/^payments\/(\d+)$/', $path, $matches) && $requestMethod === 'PUT') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
     $result = $paymentController->update($matches[1], $input, $user);
     http_response_code($result['code'] ?? 200);
@@ -1079,7 +1079,7 @@ if (preg_match('/^payments\/(\d+)\/verify$/', $path, $matches) && $requestMethod
 }
 
 if (preg_match('/^payments\/(\d+)\/sync-status$/', $path, $matches) && in_array($requestMethod, ['POST', 'GET'], true)) {
-    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $user = AuthMiddleware::requireRole(['admin', 'user']);
     $result = $paymentController->syncCheckoutSessionStatus((int) $matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
@@ -1124,7 +1124,7 @@ if (preg_match('/^refunds\/(\d+)\/reconcile-apply$/', $path, $matches) && $reque
 }
 
 if (preg_match('/^payments\/(\d+)\/refund$/', $path, $matches) && $requestMethod === 'POST') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $user = AuthMiddleware::requireRole(['admin']);
     $input = readRequestBody();
     if (!isset($input['idempotency_key'])) {
         $headerKey = $_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? ($_SERVER['HTTP_X_IDEMPOTENCY_KEY'] ?? null);
@@ -1167,7 +1167,7 @@ if (preg_match('/^payments\/(\d+)$/', $path, $matches) && $requestMethod === 'DE
 }
 
 if ($path === 'payments/stats' && $requestMethod === 'GET') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $user = AuthMiddleware::requireRole(['admin']);
     $period = $_GET['period'] ?? 'monthly';
     $filters = [];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
@@ -1177,7 +1177,7 @@ if ($path === 'payments/stats' && $requestMethod === 'GET') {
 }
 
 if ($path === 'payments/revenue' && $requestMethod === 'GET') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $user = AuthMiddleware::requireRole(['admin']);
     $filters = [];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
@@ -1186,14 +1186,14 @@ if ($path === 'payments/revenue' && $requestMethod === 'GET') {
 }
 
 if ($path === 'payments/revenue-by-month' && $requestMethod === 'GET') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $user = AuthMiddleware::requireRole(['admin']);
     $year = $_GET['year'] ?? date('Y');
     echo json_encode($paymentController->revenueByMonth($year));
     exit;
 }
 
 if ($path === 'payments/revenue-by-day' && $requestMethod === 'GET') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $user = AuthMiddleware::requireRole(['admin']);
     $filters = [];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
@@ -1202,7 +1202,7 @@ if ($path === 'payments/revenue-by-day' && $requestMethod === 'GET') {
 }
 
 if ($path === 'payments/revenue-by-year' && $requestMethod === 'GET') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $user = AuthMiddleware::requireRole(['admin']);
     $filters = [];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
@@ -1211,7 +1211,7 @@ if ($path === 'payments/revenue-by-year' && $requestMethod === 'GET') {
 }
 
 if ($path === 'payments/revenue-breakdown' && $requestMethod === 'GET') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $user = AuthMiddleware::requireRole(['admin']);
     $filters = [];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
@@ -1220,7 +1220,7 @@ if ($path === 'payments/revenue-breakdown' && $requestMethod === 'GET') {
 }
 
 if ($path === 'payments/verification-breakdown' && $requestMethod === 'GET') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $user = AuthMiddleware::requireRole(['admin']);
     $filters = [];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
@@ -1229,7 +1229,7 @@ if ($path === 'payments/verification-breakdown' && $requestMethod === 'GET') {
 }
 
 if ($path === 'payments/revenue-by-method' && $requestMethod === 'GET') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $user = AuthMiddleware::requireRole(['admin']);
     $filters = [];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];

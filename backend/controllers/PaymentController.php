@@ -367,7 +367,7 @@ class PaymentController {
 
         $userId = is_array($user) ? ($user['user_id'] ?? null) : $user;
         $userRole = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
-        if (!in_array($userRole, ['admin', 'staff'], true) && (int) $payment['received_by'] !== (int) $userId) {
+        if (!in_array($userRole, ['admin'], true) && (int) $payment['received_by'] !== (int) $userId) {
             return ['error' => 'You may only view your own payments', 'code' => 403];
         }
 
@@ -2467,7 +2467,7 @@ class PaymentController {
 
         $role = strtolower((string) ($user['role'] ?? ''));
         $userId = (int) ($user['user_id'] ?? 0);
-        if (!in_array($role, ['admin', 'staff'], true) && (int) ($payment['received_by'] ?? 0) !== $userId) {
+        if (!in_array($role, ['admin'], true) && (int) ($payment['received_by'] ?? 0) !== $userId) {
             return ['success' => false, 'error' => 'Unauthorized access to this payment record', 'code' => 403];
         }
 
@@ -3127,8 +3127,8 @@ class PaymentController {
      */
     public function refund(int $paymentId, array $data, array $user): array {
         $userRole = strtolower(trim((string) ($user['role'] ?? '')));
-        if ($userRole !== 'admin' && $userRole !== 'staff') {
-            return ['error' => 'Unauthorized: Only Admin and Staff can initiate refunds', 'code' => 403];
+        if ($userRole !== 'admin') {
+            return ['error' => 'Unauthorized: Only Admin can initiate refunds', 'code' => 403];
         }
 
         if (!isset($data['amount']) || !is_numeric($data['amount'])) {
