@@ -550,6 +550,9 @@ class ScheduleController {
         // bypass code path. See ensurePaymentForDirectCompletion() below.
         if (isset($data['status']) && $data['status'] === 'Completed'
             && $existing['status'] !== 'Confirmed' && $existing['status'] !== 'Completed') {
+            if ($userRole !== 'admin') {
+                return ['error' => 'Only authorized administrators/cashiers can record cash payments and directly complete unconfirmed bookings.', 'code' => 403];
+            }
             $paymentCheck = $this->ensurePaymentForDirectCompletion($id, $data, $user);
             if (isset($paymentCheck['error'])) {
                 return $paymentCheck;

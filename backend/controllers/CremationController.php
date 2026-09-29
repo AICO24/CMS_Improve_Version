@@ -547,6 +547,9 @@ class CremationController {
         // ensurePaymentForDirectCompletionForCremation() below.
         if (isset($data['status']) && $data['status'] === 'Completed'
             && $existing['status'] !== 'Scheduled' && $existing['status'] !== 'Completed') {
+            if ($userRole !== 'admin') {
+                return ['error' => 'Only authorized administrators/cashiers can record cash payments and directly complete unconfirmed cremation requests.', 'code' => 403];
+            }
             $paymentCheck = $this->ensurePaymentForDirectCompletionForCremation($id, $existing, $data, $userId);
             if (isset($paymentCheck['error'])) {
                 return $paymentCheck;

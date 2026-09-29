@@ -188,6 +188,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // mirrors manage-reservations.js's identical buildActionButtons() logic.
     function buildActionButtons(cremation, openExceptionIds) {
         const buttons = [];
+        const isAdmin = user.role === 'admin';
         buttons.push(`<button class="btn-row-action" data-action="view" data-id="${cremation.cremation_id}" title="View cremation details"><i class="fas fa-eye"></i> View</button>`);
 
         if (openExceptionIds.has(cremation.cremation_id)) {
@@ -205,7 +206,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // when an exception is already flagged above, matching
         // manage-reservations.js's identical convention — resolve that
         // first rather than offering two competing actions on the same row.
-        if (cremation.status === 'Pending' && !openExceptionIds.has(cremation.cremation_id)) {
+        if (cremation.status === 'Pending' && !openExceptionIds.has(cremation.cremation_id) && isAdmin) {
             const rowDue = cremation.payment_amount || cremation.price || cremation.total_amount || '';
             buttons.push(`<button class="btn-row-action btn-row-action--cash" data-action="complete-cash" data-id="${cremation.cremation_id}" data-amount="${rowDue}" title="Complete request via cash payment"><i class="fas fa-money-bill-wave"></i> Complete (Cash)</button>`);
         }
@@ -391,6 +392,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function openCashPaymentModal(id, amountDue = 0) {
+        if (user.role !== 'admin') {
+            showToast('Only authorized administrators/cashiers can record cash payments.', { type: 'error' });
+            return;
+        }
         cashPaymentCremationId.value = id;
         currentAmountDue = parseFloat(amountDue) || 0;
         cashPaymentAmount.value = currentAmountDue > 0 ? currentAmountDue.toFixed(2) : '';
@@ -407,6 +412,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     cashPaymentForm.addEventListener('submit', async function(event) {
         event.preventDefault();
+        if (user.role !== 'admin') {
+            showToast('Only authorized administrators/cashiers can record cash payments.', { type: 'error' });
+            return;
+        }
         const id = cashPaymentCremationId.value;
         const amount = parseFloat(cashPaymentAmount.value);
         if (isNaN(amount) || amount <= 0) {

@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             buttons.push(`<button class="btn-row-action btn-row-action--complete" data-action="complete" data-service="${item.service_type}" data-id="${item.id}" title="Mark Ceremony Completed" aria-label="Complete"><i class="fas fa-check"></i></button>`);
         }
 
-        if (item.status === 'Pending' && !item.has_exception) {
+        if (item.status === 'Pending' && !item.has_exception && isAdmin) {
             buttons.push(`<button class="btn-row-action btn-row-action--cash" data-action="complete-cash" data-service="${item.service_type}" data-id="${item.id}" title="Record Cash / Offline Payment & Complete" aria-label="Record Cash Payment"><i class="fas fa-money-bill-wave"></i></button>`);
         }
 
@@ -818,7 +818,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         const isPaid = paymentStatusStr.toLowerCase() === 'paid';
         const canComplete = data.status === 'Confirmed' || data.status === 'Scheduled';
-        const canCash = data.status === 'Pending';
+        const canCash = data.status === 'Pending' && (user.role === 'admin');
         const canCancel = (data.status === 'Pending' || data.status === 'Confirmed' || data.status === 'Scheduled');
 
         detailModalBody.innerHTML = `
@@ -1284,6 +1284,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // ── CASH PAYMENT & COMPLETION MODAL ─────────────────────────
     function openCashModal(serviceType, id) {
+        if (user.role !== 'admin') {
+            showToast('Only authorized administrators/cashiers can record cash payments.', { type: 'error' });
+            return;
+        }
         cashPaymentTargetId.value = id;
         cashPaymentServiceType.value = serviceType;
         cashPaymentAmount.value = '';
@@ -1312,6 +1316,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     cashPaymentForm.addEventListener('submit', async function(event) {
         event.preventDefault();
+        if (user.role !== 'admin') {
+            showToast('Only authorized administrators/cashiers can record cash payments.', { type: 'error' });
+            return;
+        }
         const id = cashPaymentTargetId.value;
         const serviceType = cashPaymentServiceType.value;
         const amount = parseFloat(cashPaymentAmount.value);

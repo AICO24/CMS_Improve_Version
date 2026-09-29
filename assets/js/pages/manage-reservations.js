@@ -249,7 +249,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // ensurePaymentForDirectCompletion() for what this actually does
         // server-side (creates a real, Verified Payment record too, so it
         // still shows up in Revenue Reports).
-        if (schedule.status === 'Pending' && !openExceptionIds.has(schedule.schedule_id)) {
+        if (schedule.status === 'Pending' && !openExceptionIds.has(schedule.schedule_id) && isAdmin) {
             const rawAmt = schedule.payment_amount || schedule.price || '';
             buttons.push(`<button class="btn-row-action btn-row-action--cash" data-action="complete-cash" data-id="${schedule.schedule_id}" data-amount="${rawAmt}" title="Complete reservation via cash payment"><i class="fas fa-money-bill-wave"></i> Complete (Cash)</button>`);
         }
@@ -447,6 +447,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function openCashPaymentModal(id, amountDue = 0) {
+        if (user.role !== 'admin') {
+            showToast('Only authorized administrators/cashiers can record cash payments.', { type: 'error' });
+            return;
+        }
         cashPaymentScheduleId.value = id;
         currentAmountDue = parseFloat(amountDue) || 0;
         cashPaymentAmount.value = currentAmountDue > 0 ? currentAmountDue.toFixed(2) : '';
@@ -463,6 +467,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     cashPaymentForm.addEventListener('submit', async function(event) {
         event.preventDefault();
+        if (user.role !== 'admin') {
+            showToast('Only authorized administrators/cashiers can record cash payments.', { type: 'error' });
+            return;
+        }
         const id = cashPaymentScheduleId.value;
         const amount = parseFloat(cashPaymentAmount.value);
         if (isNaN(amount) || amount <= 0) {
