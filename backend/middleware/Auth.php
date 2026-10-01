@@ -5,16 +5,25 @@ require_once __DIR__ . '/../models/User.php';
 class AuthMiddleware {
     public static function authenticate() {
         $headers = getallheaders();
-        $authHeader = $headers['Authorization'] ?? '';
+        $authHeader = $headers['Authorization'] ?? ($headers['authorization'] ?? '');
 
-        if (empty($authHeader) || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+        $token = null;
+        if (!empty($authHeader) && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            $token = $matches[1];
+        } elseif (!empty($_COOKIE['auth_token'])) {
+            $token = $_COOKIE['auth_token'];
+        } elseif (!empty($_GET['token'])) {
+            $token = $_GET['token'];
+        }
+
+        if (empty($token)) {
             http_response_code(401);
             echo json_encode(['error' => 'Authorization header required (Bearer token)']);
             exit;
         }
 
         try {
-            $decoded = JWTConfig::decode($matches[1]);
+            $decoded = JWTConfig::decode($token);
         } catch (Exception $e) {
             http_response_code(500);
             echo json_encode(['error' => 'JWT configuration error']);

@@ -62,6 +62,9 @@ function getRoleDashboardPath(role) {
 class ApiClient {
     constructor() {
         this.token = localStorage.getItem('jwt_token') || sessionStorage.getItem('jwt_token') || null;
+        if (this.token) {
+            document.cookie = `auth_token=${encodeURIComponent(this.token)}; path=/; SameSite=Lax`;
+        }
     }
 
     getToken() {
@@ -78,9 +81,11 @@ class ApiClient {
                 sessionStorage.setItem('jwt_token', token);
                 localStorage.removeItem('jwt_token');
             }
+            document.cookie = `auth_token=${encodeURIComponent(token)}; path=/; SameSite=Lax`;
         } else {
             localStorage.removeItem('jwt_token');
             sessionStorage.removeItem('jwt_token');
+            document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
         }
     }
 

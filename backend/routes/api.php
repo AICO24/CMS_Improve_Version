@@ -31,7 +31,9 @@ $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
 $basePath = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
 $path = trim(str_replace($basePath, '', str_replace('\\', '/', $parsedUri)), '/');
 
-if (!empty($query['route'])) {
+if (!empty($_GET['route'])) {
+    $path = trim((string) $_GET['route'], '/');
+} elseif (!empty($query['route'])) {
     $path = trim((string) $query['route'], '/');
 } elseif (preg_match('#^index\.php/(.+)$#', $path, $matches)) {
     $path = $matches[1];
@@ -1957,6 +1959,180 @@ if (preg_match('/^decedents\/(\d+)\/documents\/(\d+)$/', $path, $matches) && $re
     echo json_encode($result);
     exit;
 }
+
+// SEC-002: Secure file streaming endpoint for private civil documents, receipts, and relocation documents.
+if ($path === 'files/serve' && $requestMethod === 'GET') {
+    $type = (string) ($_GET['type'] ?? '');
+    $rawFile = (string) ($_GET['file'] ?? '');
+
+    $allowedRoots = [
+        'decedent-documents' => realpath(__DIR__ . '/../uploads/decedent-documents'),
+        'receipts' => realpath(__DIR__ . '/../uploads/receipts'),
+        'relocation-documents' => realpath(__DIR__ . '/../uploads/relocation-documents'),
+    ];
+
+    if (!isset($allowedRoots[$type]) || $allowedRoots[$type] === false) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid file category']);
+        exit;
+    }
+
+    $baseDir = $allowedRoots[$type];
+    $filename = basename($rawFile);
+
+    // Strict path traversal defense: no directory separators, no dot-dots, must match basename exactly
+    if ($filename === '' || $filename !== $rawFile || preg_match('/[\/\\\\]|\.\./', $rawFile)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid file path']);
+        exit;
+    }
+
+    $targetPath = $baseDir . DIRECTORY_SEPARATOR . $filename;
+    $realTarget = realpath($targetPath);
+
+    if ($realTarget === false || strpos($realTarget, $baseDir) !== 0 || !is_file($realTarget)) {
+        http_response_code(404);
+        echo json_encode(['error' => 'File not found']);
+        exit;
+    }
+
+    // 1. Authentication check
+    $user = AuthMiddleware::authenticate();
+    $role = strtolower(trim((string) ($user['role'] ?? 'user')));
+    $userId = (int) ($user['user_id'] ?? 0);
+
+    // 2. Ownership / Role authorization check
+    $isStaffOrAdmin = in_array($role, ['admin', 'staff'], true);
+
+    if (!$isStaffOrAdmin) {
+        $db = Database::getInstance()->getConnection();
+        $isAuthorized = false;
+
+        if ($type === 'receipts') {
+            $stmt = $db->prepare("
+                SELECT p.payment_id, p.received_by, p.reference_id, p.reference_kind,
+                       ref_sched.created_by AS sched_creator,
+                       ref_crem.created_by AS crem_creator,
+                       bd.user_id AS draft_creator
+                FROM payments p
+                LEFT JOIN burial_schedules ref_sched
+                       ON (p.reference_kind = 'schedule' OR p.reference_kind IS NULL OR p.reference_kind = '') AND p.reference_id = ref_sched.schedule_id
+                LEFT JOIN cremation_records ref_crem
+                       ON (p.transaction_type = 'Cremation' OR p.reference_kind = 'cremation') AND p.reference_id = ref_crem.cremation_id
+                LEFT JOIN booking_drafts bd
+                       ON p.reference_kind = 'draft' AND p.reference_id = bd.draft_id
+                WHERE p.receipt_url LIKE ?
+                LIMIT 1
+            ");
+            $stmt->execute(['%' . $filename]);
+            $paymentRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($paymentRow) {
+                if (
+                    ((int) ($paymentRow['received_by'] ?? 0) === $userId) ||
+                    ((int) ($paymentRow['sched_creator'] ?? 0) === $userId) ||
+                    ((int) ($paymentRow['crem_creator'] ?? 0) === $userId) ||
+                    ((int) ($paymentRow['draft_creator'] ?? 0) === $userId)
+                ) {
+                    $isAuthorized = true;
+                }
+            }
+        } elseif ($type === 'decedent-documents') {
+            $stmt = $db->prepare("
+                SELECT dd.document_id, dd.uploaded_by,
+                       bs.created_by AS sched_creator,
+                       cr.created_by AS crem_creator,
+                       dr.user_id AS request_creator
+                FROM decedent_documents dd
+                LEFT JOIN burial_schedules bs ON bs.decedent_id = dd.decedent_id
+                LEFT JOIN cremation_records cr ON cr.decedent_id = dd.decedent_id
+                LEFT JOIN decedent_requests dr ON dr.decedent_id = dd.decedent_id
+                WHERE dd.file_path LIKE ?
+                LIMIT 1
+            ");
+            $stmt->execute(['%' . $filename]);
+            $docRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($docRow) {
+                if (
+                    ((int) ($docRow['uploaded_by'] ?? 0) === $userId) ||
+                    ((int) ($docRow['sched_creator'] ?? 0) === $userId) ||
+                    ((int) ($docRow['crem_creator'] ?? 0) === $userId) ||
+                    ((int) ($docRow['request_creator'] ?? 0) === $userId)
+                ) {
+                    $isAuthorized = true;
+                }
+            }
+
+            if (!$isAuthorized) {
+                $drStmt = $db->prepare("SELECT request_id FROM decedent_requests WHERE attachment_path LIKE ? AND user_id = ? LIMIT 1");
+                $drStmt->execute(['%' . $filename, $userId]);
+                if ($drStmt->fetch()) {
+                    $isAuthorized = true;
+                }
+            }
+
+            if (!$isAuthorized) {
+                $draftStmt = $db->prepare("SELECT draft_id FROM booking_drafts WHERE user_id = ? AND extracted_data LIKE ? LIMIT 1");
+                $draftStmt->execute([$userId, '%' . $filename . '%']);
+                if ($draftStmt->fetch()) {
+                    $isAuthorized = true;
+                }
+            }
+        } elseif ($type === 'relocation-documents') {
+            $stmt = $db->prepare("
+                SELECT rd.document_id, rr.requester_user_id
+                FROM relocation_documents rd
+                JOIN relocation_requests rr ON rd.request_id = rr.request_id
+                WHERE rd.file_path LIKE ?
+                LIMIT 1
+            ");
+            $stmt->execute(['%' . $filename]);
+            $relocRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($relocRow && (int) ($relocRow['requester_user_id'] ?? 0) === $userId) {
+                $isAuthorized = true;
+            }
+        }
+
+        if (!$isAuthorized) {
+            http_response_code(403);
+            echo json_encode(['error' => 'You do not have permission to view or download this file']);
+            exit;
+        }
+    }
+
+    // 3. Controlled file streaming
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mimeType = $finfo ? finfo_file($finfo, $realTarget) : 'application/octet-stream';
+    if ($finfo) {
+        finfo_close($finfo);
+    }
+
+    $allowedMimes = [
+        'image/jpeg' => 'image/jpeg',
+        'image/png' => 'image/png',
+        'image/webp' => 'image/webp',
+        'application/pdf' => 'application/pdf',
+    ];
+    $contentType = $allowedMimes[$mimeType] ?? 'application/octet-stream';
+
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+
+    header('Content-Type: ' . $contentType);
+    header('Content-Length: ' . (string) filesize($realTarget));
+    header('Content-Disposition: inline; filename="' . addslashes($filename) . '"');
+    header('X-Content-Type-Options: nosniff');
+    header('Cache-Control: private, no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+
+    readfile($realTarget);
+    exit;
+}
+
 
 // Citizen-initiated decedent registration requests: bridges "citizen names
 // someone not yet in decedent_records" to staff's existing review/creation

@@ -82,9 +82,7 @@ try {
             http_response_code(500);
         }
         echo json_encode([
-            'error' => 'Internal server error: ' . $e->getMessage(),
-            'file' => basename($e->getFile()) . ':' . $e->getLine(),
-            'type' => get_class($e)
+            'error' => 'Internal server error'
         ]);
     }
     exit;

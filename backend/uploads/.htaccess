@@ -1,0 +1,8 @@
+# SEC-002: Disable directory browsing
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Route all requests for uploaded documents and receipts through the authenticated API streaming endpoint
+    RewriteRule ^(decedent-documents|receipts|relocation-documents)/(.*)$ ../api/index.php?route=files/serve&type=$1&file=$2 [L,QSA]
+</IfModule>

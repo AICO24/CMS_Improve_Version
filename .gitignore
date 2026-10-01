@@ -25,3 +25,8 @@ backend/uploads/decedent-documents/*.pdf
 Thumbs.db
 *.zip
 
+# Local scratch and deploy artifacts
+scratch/
+cms_deploy.zip
+
+

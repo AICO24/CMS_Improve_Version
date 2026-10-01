@@ -19,7 +19,17 @@ const formatDateTime = (dateValue, timeValue) => {
 const buildListItem = (title, subtitle) => {
     const li = document.createElement('li');
     li.className = 'recent-item';
-    li.innerHTML = `<div class="recent-item-title">${title}</div><div class="recent-item-meta">${subtitle}</div>`;
+
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'recent-item-title';
+    titleDiv.textContent = title;
+
+    const metaDiv = document.createElement('div');
+    metaDiv.className = 'recent-item-meta';
+    metaDiv.textContent = subtitle;
+
+    li.appendChild(titleDiv);
+    li.appendChild(metaDiv);
     return li;
 };
 
@@ -151,9 +161,16 @@ const populateWelcomeBanner = (currentUser) => {
     // Profile Avatar picture handling
     const avatarEl = document.getElementById('welcomeUserAvatar');
     if (avatarEl) {
+        avatarEl.innerHTML = '';
         const profilePicUrl = currentUser.profile_picture || currentUser.avatar_url || currentUser.photo;
-        if (profilePicUrl) {
-            avatarEl.innerHTML = `<img src="${profilePicUrl}" alt="${fullName}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-user\\'></i>'">`;
+        if (profilePicUrl && !profilePicUrl.startsWith('javascript:')) {
+            const img = document.createElement('img');
+            img.src = profilePicUrl;
+            img.alt = fullName;
+            img.onerror = () => {
+                avatarEl.innerHTML = '<i class="fas fa-user"></i>';
+            };
+            avatarEl.appendChild(img);
         } else {
             avatarEl.innerHTML = '<i class="fas fa-user"></i>';
         }

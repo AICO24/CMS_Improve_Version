@@ -21,14 +21,14 @@
     Require all denied
 </FilesMatch>
 
-# Deny the .git directory and everything inside it (e.g. /.git/config).
-# FilesMatch above only matches a request's own filename (e.g. "config"
-# for /.git/config does NOT start with a dot), so a separate rule
-# matching the path itself is required to actually block files nested
-# inside a dot-prefixed directory.
+# SEC-002: Disable directory browsing globally
+Options -Indexes
+
+# Deny the .git directory and internal storage (logs, cache, rate limits)
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule (^|/)\.git - [F,L]
+    RewriteRule (^|/)backend/storage(/|$) - [F,L]
 </IfModule>
 
 # Deny direct download of any .sql file anywhere under the document

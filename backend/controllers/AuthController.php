@@ -122,6 +122,15 @@ class AuthController {
             return ['error' => 'JWT configuration error', 'code' => 500];
         }
 
+        if (!headers_sent()) {
+            setcookie('auth_token', $token, [
+                'expires' => time() + $expiry,
+                'path' => '/',
+                'httponly' => false,
+                'samesite' => 'Lax'
+            ]);
+        }
+
         return [
             'success' => true,
             'token' => $token,
@@ -471,6 +480,14 @@ class AuthController {
     public function logout($data, $userId = null) {
         if ($userId !== null) {
             $this->userModel->invalidateSessions($userId);
+        }
+        if (!headers_sent()) {
+            setcookie('auth_token', '', [
+                'expires' => time() - 3600,
+                'path' => '/',
+                'httponly' => false,
+                'samesite' => 'Lax'
+            ]);
         }
         return ['success' => true, 'message' => 'Logged out'];
     }

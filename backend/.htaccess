@@ -1,4 +1,8 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule ^api(/.*)?$ api/index.php [L,QSA]
+
+    # SEC-002: Route private uploaded civil certificates and payment receipts through authenticated streaming
+    RewriteRule ^uploads/(decedent-documents|receipts|relocation-documents)/(.*)$ api/index.php?route=files/serve&type=$1&file=$2 [L,QSA]
 </IfModule>
+

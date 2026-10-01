@@ -131,9 +131,16 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Profile picture handling
         const avatarEl = document.getElementById('welcomeUserAvatar');
         if (avatarEl) {
+            avatarEl.innerHTML = '';
             const profilePicUrl = currentUser.profile_picture || currentUser.avatar_url || currentUser.photo;
-            if (profilePicUrl) {
-                avatarEl.innerHTML = `<img src="${profilePicUrl}" alt="${fullName}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-user\\'></i>'">`;
+            if (profilePicUrl && !profilePicUrl.startsWith('javascript:')) {
+                const img = document.createElement('img');
+                img.src = profilePicUrl;
+                img.alt = fullName;
+                img.onerror = () => {
+                    avatarEl.innerHTML = '<i class="fas fa-user"></i>';
+                };
+                avatarEl.appendChild(img);
             } else {
                 avatarEl.innerHTML = '<i class="fas fa-user"></i>';
             }

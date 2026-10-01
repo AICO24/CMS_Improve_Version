@@ -12,6 +12,16 @@ document.addEventListener('DOMContentLoaded', async function () {
         return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char]));
+    }
+
     function getMonthName(monthNumber) {
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         return monthNames[monthNumber - 1] || 'Unknown';
@@ -121,9 +131,16 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Profile picture handling
         const avatarEl = document.getElementById('welcomeUserAvatar');
         if (avatarEl) {
+            avatarEl.innerHTML = '';
             const profilePicUrl = currentUser.profile_picture || currentUser.avatar_url || currentUser.photo;
-            if (profilePicUrl) {
-                avatarEl.innerHTML = `<img src="${profilePicUrl}" alt="${fullName}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-user-tie\\'></i>'">`;
+            if (profilePicUrl && !profilePicUrl.startsWith('javascript:')) {
+                const img = document.createElement('img');
+                img.src = profilePicUrl;
+                img.alt = fullName;
+                img.onerror = () => {
+                    avatarEl.innerHTML = '<i class="fas fa-user-tie"></i>';
+                };
+                avatarEl.appendChild(img);
             } else {
                 avatarEl.innerHTML = '<i class="fas fa-user-tie"></i>';
             }
@@ -817,8 +834,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                         const item = document.createElement('li');
                         item.className = 'recent-item';
                         item.innerHTML = `
-                            <div class="recent-item-title">${formatTransactionLabel(payment)}</div>
-                            <div class="recent-item-meta">${payment.receipt_number || 'No receipt'} · ${payment.payment_date || 'Unknown date'}</div>
+                            <div class="recent-item-title">${escapeHtml(formatTransactionLabel(payment))}</div>
+                            <div class="recent-item-meta">${escapeHtml(payment.receipt_number || 'No receipt')} · ${escapeHtml(payment.payment_date || 'Unknown date')}</div>
                             <div class="recent-item-amount">${formatCurrency(payment.amount)}</div>
                         `;
                         recentList.appendChild(item);

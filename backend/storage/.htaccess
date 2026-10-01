@@ -1,0 +1,2 @@
+# SEC-002: Deny all direct HTTP access to internal server storage, logs, and rate limits
+Require all denied
