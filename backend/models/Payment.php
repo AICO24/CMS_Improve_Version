@@ -389,8 +389,9 @@ class Payment {
     }
 
     public function getRevenue($filters = []) {
-        $sql = "SELECT SUM(amount) AS total, COUNT(*) AS count FROM payments WHERE verification_status != 'Rejected'";
-        $params = [];
+        $statusFilter = !empty($filters['verification_status']) ? $filters['verification_status'] : 'Verified';
+        $sql = "SELECT SUM(amount) AS total, COUNT(*) AS count FROM payments WHERE verification_status = ?";
+        $params = [$statusFilter];
         if (!empty($filters['date_from'])) {
             $sql .= " AND COALESCE(payment_date, DATE(created_at)) >= ?";
             $params[] = $filters['date_from'];
@@ -398,10 +399,6 @@ class Payment {
         if (!empty($filters['date_to'])) {
             $sql .= " AND COALESCE(payment_date, DATE(created_at)) <= ?";
             $params[] = $filters['date_to'];
-        }
-        if (!empty($filters['verification_status'])) {
-            $sql .= " AND verification_status = ?";
-            $params[] = $filters['verification_status'];
         }
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
@@ -430,31 +427,30 @@ class Payment {
             $startDate = $now->format('Y-01-01');
             $endDate = $currentDate;
         } else { // monthly
-            $startDate = $now->format('Y-m-01');
+            $startDate = $now->format('Y-01-01');
             $endDate = $currentDate;
         }
 
         $stmt = $this->db->prepare("
             SELECT 
-                COALESCE(SUM(amount), 0) AS total_revenue,
-                COUNT(*) AS transaction_count,
+                COALESCE(SUM(CASE WHEN verification_status = 'Verified' THEN amount ELSE 0 END), 0) AS total_revenue,
+                COALESCE(SUM(CASE WHEN verification_status = 'Verified' THEN 1 ELSE 0 END), 0) AS transaction_count,
                 COALESCE(SUM(CASE WHEN verification_status = 'Verified' THEN amount ELSE 0 END), 0) AS verified_revenue,
                 COALESCE(SUM(CASE WHEN verification_status = 'Pending' THEN 1 ELSE 0 END), 0) AS pending_count,
                 COALESCE(SUM(CASE WHEN verification_status = 'Verified' THEN 1 ELSE 0 END), 0) AS verified_count
             FROM payments
-            WHERE verification_status != 'Rejected'
-              AND COALESCE(payment_date, DATE(created_at)) >= ?
+            WHERE COALESCE(payment_date, DATE(created_at)) >= ?
               AND COALESCE(payment_date, DATE(created_at)) <= ?
         ");
         $stmt->execute([$startDate, $endDate]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
-        // All-time and YTD totals
+        // All-time and YTD totals (Verified revenue only)
         $ytdStart = $now->format('Y-01-01');
         $stmtYtd = $this->db->prepare("
             SELECT COALESCE(SUM(amount), 0) AS ytd_revenue, COUNT(*) AS ytd_count
             FROM payments
-            WHERE verification_status != 'Rejected'
+            WHERE verification_status = 'Verified'
               AND COALESCE(payment_date, DATE(created_at)) >= ?
         ");
         $stmtYtd->execute([$ytdStart]);
@@ -463,7 +459,7 @@ class Payment {
         $stmtAll = $this->db->query("
             SELECT COALESCE(SUM(amount), 0) AS all_time_revenue, COUNT(*) AS all_time_count
             FROM payments
-            WHERE verification_status != 'Rejected'
+            WHERE verification_status = 'Verified'
         ");
         $all = $stmtAll->fetch(PDO::FETCH_ASSOC) ?: [];
 
@@ -492,7 +488,7 @@ class Payment {
 
     public function getRevenueByMonth($year = null) {
         $year = $year ?: date('Y');
-        $stmt = $this->db->prepare("SELECT MONTH(payment_date) AS month, SUM(amount) AS total FROM payments WHERE YEAR(payment_date) = ? GROUP BY MONTH(payment_date) ORDER BY MONTH(payment_date)");
+        $stmt = $this->db->prepare("SELECT MONTH(COALESCE(payment_date, DATE(created_at))) AS month, SUM(amount) AS total FROM payments WHERE verification_status = 'Verified' AND YEAR(COALESCE(payment_date, DATE(created_at))) = ? GROUP BY MONTH(COALESCE(payment_date, DATE(created_at))) ORDER BY month");
         $stmt->execute([$year]);
         return $stmt->fetchAll();
     }
@@ -502,7 +498,7 @@ class Payment {
                        COALESCE(SUM(amount), 0) AS total, 
                        COUNT(*) AS count 
                 FROM payments 
-                WHERE verification_status != 'Rejected'";
+                WHERE verification_status = 'Verified'";
         $params = [];
         if (!empty($filters['date_from'])) {
             $sql .= " AND DATE(COALESCE(payment_date, created_at)) >= ?";
@@ -519,31 +515,31 @@ class Payment {
     }
 
     public function getRevenueByYear($filters = []) {
-        $sql = "SELECT YEAR(payment_date) AS year, SUM(amount) AS total FROM payments WHERE 1=1";
+        $sql = "SELECT YEAR(COALESCE(payment_date, DATE(created_at))) AS year, SUM(amount) AS total FROM payments WHERE verification_status = 'Verified'";
         $params = [];
         if (!empty($filters['date_from'])) {
-            $sql .= " AND payment_date >= ?";
+            $sql .= " AND COALESCE(payment_date, DATE(created_at)) >= ?";
             $params[] = $filters['date_from'];
         }
         if (!empty($filters['date_to'])) {
-            $sql .= " AND payment_date <= ?";
+            $sql .= " AND COALESCE(payment_date, DATE(created_at)) <= ?";
             $params[] = $filters['date_to'];
         }
-        $sql .= " GROUP BY YEAR(payment_date) ORDER BY YEAR(payment_date) ASC";
+        $sql .= " GROUP BY year ORDER BY year ASC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
     }
 
     public function getRevenueBreakdown($filters = []) {
-        $sql = "SELECT transaction_type, SUM(amount) AS total, COUNT(*) AS count FROM payments WHERE 1=1";
+        $sql = "SELECT transaction_type, SUM(amount) AS total, COUNT(*) AS count FROM payments WHERE verification_status = 'Verified'";
         $params = [];
         if (!empty($filters['date_from'])) {
-            $sql .= " AND payment_date >= ?";
+            $sql .= " AND COALESCE(payment_date, DATE(created_at)) >= ?";
             $params[] = $filters['date_from'];
         }
         if (!empty($filters['date_to'])) {
-            $sql .= " AND payment_date <= ?";
+            $sql .= " AND COALESCE(payment_date, DATE(created_at)) <= ?";
             $params[] = $filters['date_to'];
         }
         $sql .= " GROUP BY transaction_type ORDER BY total DESC";
@@ -570,14 +566,14 @@ class Payment {
     }
 
     public function getRevenueByMethod($filters = []) {
-        $sql = "SELECT payment_method, SUM(amount) AS total, COUNT(*) AS count FROM payments WHERE 1=1";
+        $sql = "SELECT payment_method, SUM(amount) AS total, COUNT(*) AS count FROM payments WHERE verification_status = 'Verified'";
         $params = [];
         if (!empty($filters['date_from'])) {
-            $sql .= " AND payment_date >= ?";
+            $sql .= " AND COALESCE(payment_date, DATE(created_at)) >= ?";
             $params[] = $filters['date_from'];
         }
         if (!empty($filters['date_to'])) {
-            $sql .= " AND payment_date <= ?";
+            $sql .= " AND COALESCE(payment_date, DATE(created_at)) <= ?";
             $params[] = $filters['date_to'];
         }
         $sql .= " GROUP BY payment_method ORDER BY total DESC";

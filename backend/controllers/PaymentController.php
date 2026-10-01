@@ -177,7 +177,26 @@ class PaymentController {
     // (frontend now does, see payments.js/lot-management.js/booking-wizard.js)
     // it's trusted outright instead of re-guessed. Left null by legacy
     // callers and the payments modal's manual reference-entry fallback, which
-    // still need the original guess — see migration_20260902_add_payment_reference_kind.sql.
+    /**
+     * SEC-004: Helper to find active, legitimate reservation/booking owned by user for a lot.
+     * Prevents arbitrary lot purchasing by normal users while preserving legitimate booking flows.
+     */
+    private function findActiveUserScheduleForLot($lotId, $userId) {
+        if (empty($lotId) || empty($userId)) {
+            return null;
+        }
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("
+            SELECT schedule_id, lot_id, created_by, status
+            FROM burial_schedules
+            WHERE lot_id = ? AND created_by = ? AND status NOT IN ('Cancelled')
+            ORDER BY schedule_id DESC
+            LIMIT 1
+        ");
+        $stmt->execute([(int) $lotId, (int) $userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
     private function validatePaymentReference($transactionType, $referenceId, $userId, $userRole, $referenceKind = null, $isNewPayment = false) {
         $transactionType = $this->normalizeTransactionType($transactionType);
         if ($transactionType === null) {
@@ -201,6 +220,25 @@ class PaymentController {
                     $lot = $lotModel->findById($referenceId);
                     if (!$lot) {
                         return ['error' => 'Lot reference not found', 'code' => 404];
+                    }
+                    if ($roleName === 'user') {
+                        // SEC-004: Normal users cannot directly purchase arbitrary lots.
+                        // Payments involving lots must be tied to an authorized booking/reservation owned by the user.
+                        $userSchedule = $this->findActiveUserScheduleForLot($referenceId, $userId);
+                        if (!$userSchedule) {
+                            return ['error' => 'User payments must reference a valid reservation owned by your account', 'code' => 403];
+                        }
+                        if (($userSchedule['status'] ?? '') === 'Cancelled') {
+                            return ['error' => 'Cancelled reservations cannot be paid', 'code' => 409];
+                        }
+                        if ($isNewPayment && in_array(($userSchedule['status'] ?? ''), ['Confirmed', 'Completed'], true)) {
+                            return ['error' => 'This reservation has already been confirmed or completed', 'code' => 409];
+                        }
+                        return [
+                            'reference_id' => (int) $userSchedule['schedule_id'],
+                            'reference_kind' => 'schedule',
+                            'reference_label' => 'Reservation #' . $userSchedule['schedule_id'] . ' - Lot ' . ($lot['lot_number'] ?? $referenceId),
+                        ];
                     }
                     if ($isNewPayment && ($lot['status'] ?? '') !== 'Available') {
                         return ['error' => 'Only available lots can be purchased directly', 'code' => 409];
@@ -264,7 +302,23 @@ class PaymentController {
                 }
 
                 if ($roleName === 'user') {
-                    return ['error' => 'User payments must reference a valid reservation', 'code' => 403];
+                    // SEC-004: If referenceId is a lotId, verify if user has an authorized reservation on it
+                    $userSchedule = $this->findActiveUserScheduleForLot($referenceId, $userId);
+                    if ($userSchedule) {
+                        if (($userSchedule['status'] ?? '') === 'Cancelled') {
+                            return ['error' => 'Cancelled reservations cannot be paid', 'code' => 409];
+                        }
+                        if ($isNewPayment && in_array(($userSchedule['status'] ?? ''), ['Confirmed', 'Completed'], true)) {
+                            return ['error' => 'This reservation has already been confirmed or completed', 'code' => 409];
+                        }
+                        $lot = $lotModel->findById($referenceId);
+                        return [
+                            'reference_id' => (int) $userSchedule['schedule_id'],
+                            'reference_kind' => 'schedule',
+                            'reference_label' => 'Reservation #' . $userSchedule['schedule_id'] . ' - Lot ' . ($lot['lot_number'] ?? $referenceId),
+                        ];
+                    }
+                    return ['error' => 'User payments must reference a valid reservation owned by your account', 'code' => 403];
                 }
 
                 $lot = $lotModel->findById($referenceId);

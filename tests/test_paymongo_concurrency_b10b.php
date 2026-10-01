@@ -77,13 +77,13 @@ $lotBId = (int) $lotB['lot_id'];
 $userRows = $db->query("SELECT user_id, username FROM users WHERE role_id = (SELECT role_id FROM roles WHERE LOWER(title) = 'user' LIMIT 1) LIMIT 2")->fetchAll(PDO::FETCH_ASSOC);
 $buyerA = $userRows[0] ?? ['user_id' => 2, 'username' => 'buyer_a'];
 $buyerB = $userRows[1] ?? ['user_id' => 3, 'username' => 'buyer_b'];
-$buyerA['role'] = 'user';
+$buyerA['role'] = 'staff'; // Staff role authorized for direct walk-in lot purchase (SEC-004)
 $buyerB['role'] = 'user';
 $buyerAId = (int) $buyerA['user_id'];
 $buyerBId = (int) $buyerB['user_id'];
 
 // ============================================================================
-// TEST 1: Buyer A succeeds in obtaining active checkout lease for Lot X
+// TEST 1: Buyer A (Staff walk-in) succeeds in obtaining active checkout lease for Lot X
 // ============================================================================
 $resA = $paymentController->createCheckoutSession([
     'transaction_type' => 'Lot Purchase',
@@ -105,18 +105,26 @@ report(1, 'Buyer A succeeds in obtaining active checkout lease for Lot X',
 );
 
 // ============================================================================
-// TEST 2: Buyer B is rejected with 409 Conflict (lot_held_checkout) on direct checkout
+// TEST 2: SEC-004 blocks unreserved citizen with 403, and competing staff is blocked with 409 Conflict (lot_held_checkout)
 // ============================================================================
-$resBDirect = $paymentController->createCheckoutSession([
+$resBDirectUser = $paymentController->createCheckoutSession([
     'transaction_type' => 'Lot Purchase',
     'reference_id'     => $lotAId,
     'reference_kind'   => 'lot',
 ], $buyerB);
+$userBlockedBySec004 = ($resBDirectUser['code'] ?? 0) === 403;
 
-$directBlocked = ($resBDirect['code'] ?? 0) === 409 && ($resBDirect['reason_code'] ?? '') === 'lot_held_checkout';
-report(2, 'Buyer B is rejected with 409 Conflict (lot_held_checkout) on direct checkout',
-    $directBlocked,
-    "Expected 409 lot_held_checkout, got: " . json_encode($resBDirect)
+$competingStaff = ['user_id' => $buyerBId + 9999, 'username' => 'competing_staff', 'role' => 'staff'];
+$resBDirectStaff = $paymentController->createCheckoutSession([
+    'transaction_type' => 'Lot Purchase',
+    'reference_id'     => $lotAId,
+    'reference_kind'   => 'lot',
+], $competingStaff);
+$staffBlockedByLease = ($resBDirectStaff['code'] ?? 0) === 409 && ($resBDirectStaff['reason_code'] ?? '') === 'lot_held_checkout';
+
+report(2, 'SEC-004 blocks unreserved citizen with 403 and competing staff is rejected with 409 Conflict (lot_held_checkout)',
+    $userBlockedBySec004 && $staffBlockedByLease,
+    "Citizen: " . json_encode($resBDirectUser) . ", Staff: " . json_encode($resBDirectStaff)
 );
 
 // ============================================================================

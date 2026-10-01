@@ -350,24 +350,41 @@ report(9, 'PayMongo verification remains strictly webhook-driven (payment stays 
 );
 
 // =========================================================================
-// TEST 10: Batch 10B active checkout lease still applies
+// TEST 10: SEC-004 & Batch 10B active checkout lease verification
 // =========================================================================
-// Create another user attempting checkout on the same lot
+// Unauthorized user attempting direct lot checkout is blocked by SEC-004 with 403
 $userCitizen2 = [
     'user_id' => $userCitizen['user_id'] + 8888,
     'username' => 'competing_buyer_10c',
     'role' => 'user'
 ];
 
-$competingRes = $paymentController->createCheckoutSession([
+$competingUserRes = $paymentController->createCheckoutSession([
     'transaction_type' => 'Lot Purchase',
     'reference_id' => $lotId,
     'reference_kind' => 'lot',
 ], $userCitizen2);
 
-report(10, 'Batch 10B active checkout lease still blocks concurrent buyers with 409 Conflict',
-    isset($competingRes['code']) && $competingRes['code'] === 409 && ($competingRes['reason_code'] ?? '') === 'lot_held_checkout',
-    "Competing response: " . json_encode($competingRes)
+$userBlockedBySec004 = isset($competingUserRes['code']) && $competingUserRes['code'] === 403;
+
+// Authorized staff user attempting direct lot checkout on leased lot is blocked with 409 Conflict (lot_held_checkout)
+$userStaff = [
+    'user_id' => $userCitizen['user_id'] + 9999,
+    'username' => 'competing_staff_10c',
+    'role' => 'staff'
+];
+
+$competingStaffRes = $paymentController->createCheckoutSession([
+    'transaction_type' => 'Lot Purchase',
+    'reference_id' => $lotId,
+    'reference_kind' => 'lot',
+], $userStaff);
+
+$staffBlockedByLease = isset($competingStaffRes['code']) && $competingStaffRes['code'] === 409 && ($competingStaffRes['reason_code'] ?? '') === 'lot_held_checkout';
+
+report(10, 'SEC-004 blocks unreserved citizen with 403, and active lease blocks concurrent direct checkout with 409',
+    $userBlockedBySec004 && $staffBlockedByLease,
+    "Citizen: " . json_encode($competingUserRes) . ", Staff: " . json_encode($competingStaffRes)
 );
 
 // Clean up test data
