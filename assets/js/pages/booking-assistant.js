@@ -451,8 +451,8 @@
             if (user) {
                 const nameEls = [document.getElementById('userName'), document.getElementById('sidebarUserName')];
                 const roleEls = [document.getElementById('userRole'), document.getElementById('sidebarUserRole')];
-                const displayName = user.full_name || user.username || 'Client';
-                const displayRole = user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'Citizen User';
+                const displayName = user.full_name || user.username || 'User';
+                const displayRole = user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'User';
 
                 nameEls.forEach(el => { if (el) el.textContent = displayName; });
                 roleEls.forEach(el => { if (el) el.textContent = displayRole; });

@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                                 </div>
                                 <div class="payhist-data-row">
                                     <span class="data-label">Payer / Handled By</span>
-                                    <strong class="data-value">${escapeHtml(payment.received_by_name || 'Citizen User')}</strong>
+                                    <strong class="data-value">${escapeHtml(payment.received_by_name || 'User')}</strong>
                                 </div>
                                 <div class="payhist-data-row">
                                     <span class="data-label">Verification Standing</span>
@@ -445,7 +445,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                                 ` : `
                                     <div class="payhist-unlinked-state">
                                         <i class="fas fa-circle-info"></i>
-                                        <p>This transaction is credited directly to your citizen account and general services.</p>
+                                        <p>This transaction is credited directly to your user account and general services.</p>
                                     </div>
                                 `}
                             </div>
@@ -478,7 +478,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                                 <div class="payhist-notes-item">
                                     <span class="data-label">Remarks &amp; Audit Notes</span>
                                     <div class="payhist-notes-box">
-                                        ${payment.notes ? escapeHtml(payment.notes) : 'Standard transaction recorded and filed under citizen portal account.'}
+                                        ${payment.notes ? escapeHtml(payment.notes) : 'Standard transaction recorded and filed under user portal account.'}
                                     </div>
                                 </div>
                             </div>

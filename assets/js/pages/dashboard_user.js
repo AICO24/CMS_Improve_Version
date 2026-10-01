@@ -94,7 +94,7 @@ const populateWelcomeBanner = (currentUser) => {
 
     updateText('welcomeSalutation', greeting);
 
-    const fullName = currentUser.full_name || currentUser.username || 'Citizen User';
+    const fullName = currentUser.full_name || currentUser.username || 'User';
     updateText('welcomeUserName', fullName);
     updateText('welcomeUserUsername', `@${currentUser.username || 'user'}`);
 
@@ -182,12 +182,12 @@ const loadDashboard = async () => {
     if (!user) return;
 
     // Populate user profile info across sidebar and top-bar
-    const displayName = user.full_name || user.username || 'Citizen User';
+    const displayName = user.full_name || user.username || 'User';
     updateText('welcomeName', displayName);
     updateText('userName', displayName);
-    updateText('userRole', 'Citizen User');
+    updateText('userRole', 'User');
     updateText('sidebarUserName', displayName);
-    updateText('sidebarUserRole', 'Citizen User');
+    updateText('sidebarUserRole', 'User');
 
     // Populate Facebook-Style Profile Hero Card (Identical to Admin Dashboard)
     populateWelcomeBanner(user);

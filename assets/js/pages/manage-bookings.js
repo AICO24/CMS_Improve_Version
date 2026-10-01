@@ -723,7 +723,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const paymentDateStr = data.payment_date || (data.raw && data.raw.payment_date) || '—';
 
         // Applicant calculation
-        const applicantName = data.created_by_name || (data.raw && data.raw.created_by_name) || 'Citizen User';
+        const applicantName = data.created_by_name || (data.raw && data.raw.created_by_name) || 'User';
         const contactPhone = data.contact_number || (data.raw && (data.raw.contact_number || data.raw.phone || data.raw.created_by_phone)) || '';
         const relationship = data.relationship || (data.raw && data.raw.relationship) || 'Family / Next of Kin';
 

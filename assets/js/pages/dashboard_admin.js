@@ -432,7 +432,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         } catch (e) {
             setText('docPendingCount', '0');
             setText('docVerifiedCount', '—');
-            setText('docStatusInsight', 'Citizen document review');
+            setText('docStatusInsight', 'User document review');
         }
 
         // 4. Cash Reconciliation Card

@@ -382,7 +382,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         } catch (e) {
             setText('docPendingCount', '0');
             setText('docVerifiedCount', '—');
-            setText('docStatusInsight', 'Citizen document review');
+            setText('docStatusInsight', 'User document review');
         }
 
         // 2. Service Clearance Card

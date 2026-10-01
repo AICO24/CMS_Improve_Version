@@ -1222,9 +1222,9 @@ document.addEventListener('DOMContentLoaded', async function () {
                             <span class="dossier-tile-label">Burial Schedule</span>
                             <span class="dossier-tile-value">#${lot.schedule_id || 'N/A'} (${escapeHtml(lot.burial_status || 'Reserved')})</span>
                         </div>
-                        <a href="manage-reservations.html?search=${encodeURIComponent(lot.lot_number)}" class="btn-decedent-profile-link" style="margin-top: 4px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 700; color: #b45309; text-decoration: none;" title="Open Reservation Details">
+                        <a href="manage-bookings.html?search=${encodeURIComponent(lot.lot_number)}" class="btn-decedent-profile-link" style="margin-top: 4px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 700; color: #b45309; text-decoration: none;" title="Open Booking Details">
                             <i class="fas fa-calendar-check"></i>
-                            <span>View Reservation Details</span>
+                            <span>View Booking Details</span>
                             <i class="fas fa-arrow-up-right-from-square" style="font-size: 0.7rem;"></i>
                         </a>
                     </div>

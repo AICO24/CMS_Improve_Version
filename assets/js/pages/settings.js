@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     // ─── Populate top-bar / sidebar ──────────────────────────────────────────
-    const fullName  = currentUser.full_name  || currentUser.username || 'Client';
+    const fullName  = currentUser.full_name  || currentUser.username || 'User';
     const roleLabel = currentUser.role
         ? (currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1))
         : 'User';

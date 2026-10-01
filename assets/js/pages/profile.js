@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        const fullName = user.full_name || user.username || 'Client';
+        const fullName = user.full_name || user.username || 'User';
         const roleLabel = user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'User';
 
         const roleName = String(user.role || '').toLowerCase();

@@ -60,8 +60,8 @@
                                 a Service</span></a>
                         <a href="booking-assistant.html" class="nav-item"><i class="fas fa-robot icon"></i>
                             <span>Booking Assistant</span></a>
-                        <a href="manage-reservations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i>
-                            <span>Manage Reservations</span></a>
+                        <a href="manage-bookings.html" class="nav-item"><i class="fas fa-calendar-check icon"></i>
+                            <span>Manage Bookings</span></a>
                         <a href="manage-cremations.html" class="nav-item"><i class="fas fa-calendar-check icon"></i>
                             <span>Manage Cremations</span></a>
                         <a href="relocation-management.html" class="nav-item"><i class="fas fa-truck-moving icon"></i>
@@ -387,7 +387,7 @@
                     </div>
 
                     <!-- Card 3: Operational Queues -->
-                    <div class="card ops-card" data-href="manage-reservations.html">
+                    <div class="card ops-card" data-href="manage-bookings.html">
                         <div class="ops-card-header">
                             <div class="ops-card-heading">
                                 <span class="ops-icon"><i class="fas fa-calendar-check"></i></span>
@@ -400,11 +400,11 @@
                         </div>
 
                         <div class="ops-metrics">
-                            <div class="ops-metric ops-metric--pending" data-filter-href="manage-reservations.html?status=Pending" role="button" tabindex="0" title="Filter to Pending burial reservations">
+                            <div class="ops-metric ops-metric--pending" data-filter-href="manage-bookings.html?status=Pending" role="button" tabindex="0" title="Filter to Pending burial reservations">
                                 <span class="ops-metric-label">Pending</span>
                                 <strong id="burialPendingCount" class="ops-metric-value">0</strong>
                             </div>
-                            <div class="ops-metric ops-metric--ok" data-filter-href="manage-reservations.html?status=Confirmed" role="button" tabindex="0" title="Filter to Confirmed burial reservations">
+                            <div class="ops-metric ops-metric--ok" data-filter-href="manage-bookings.html?status=Confirmed" role="button" tabindex="0" title="Filter to Confirmed burial reservations">
                                 <span class="ops-metric-label">Confirmed</span>
                                 <strong id="burialConfirmedCount" class="ops-metric-value">0</strong>
                             </div>
@@ -421,8 +421,8 @@
                         </div>
 
                         <div class="ops-footer">
-                            <a href="manage-reservations.html" class="ops-action-btn">
-                                <span>Manage Reservations</span><i class="fas fa-arrow-right"></i>
+                            <a href="manage-bookings.html" class="ops-action-btn">
+                                <span>Manage Bookings</span><i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
                     </div>
@@ -580,7 +580,7 @@
 
                         <div class="ops-progress-wrap">
                             <div class="ops-status-sub">
-                                <span id="docStatusInsight">Citizen document reviews</span>
+                                <span id="docStatusInsight">User document reviews</span>
                             </div>
                             <div class="ops-progress-bar">
                                 <div class="ops-seg ops-seg--warn" id="docPendingBar" style="width:0%;"></div>

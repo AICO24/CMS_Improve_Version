@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const sidebarUserRole = document.getElementById('sidebarUserRole');
 
     const displayName = currentUser.name || currentUser.username || 'User';
-    const displayRole = currentUser.role ? (currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)) : 'Client';
+    const displayRole = currentUser.role ? (currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)) : 'User';
 
     if (userNameEl) userNameEl.textContent = displayName;
     if (userRoleEl) userRoleEl.textContent = displayRole;

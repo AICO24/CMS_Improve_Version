@@ -711,7 +711,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                         <div class="pending-requests-empty-state">
                             <i class="fas fa-inbox"></i>
                             <strong>No pending requests</strong>
-                            <span>Citizen-submitted decedent requests will appear here.</span>
+                            <span>User-submitted decedent requests will appear here.</span>
                         </div>
                     </td>
                 </tr>
@@ -722,13 +722,13 @@ document.addEventListener('DOMContentLoaded', async function () {
         pendingRequestsBody.innerHTML = pendingRequests.map((request) => {
             const hasDoc = Boolean(request.attachment_path);
             const docBadge = hasDoc
-                ? `<span class="status-badge status-info" title="Citizen uploaded document: ${escapeHtml(request.attachment_original_filename || 'Attachment')}"><i class="fas fa-paperclip"></i> Attachment</span>`
+                ? `<span class="status-badge status-info" title="User uploaded document: ${escapeHtml(request.attachment_original_filename || 'Attachment')}"><i class="fas fa-paperclip"></i> Attachment</span>`
                 : '';
             const scheduleBadge = request.linked_schedule_id
-                ? `<span class="status-badge status-warning" title="A citizen already booked and may have paid for this — finish the record so their burial can be marked Completed.">Burial #${escapeHtml(request.linked_schedule_id)}</span>`
+                ? `<span class="status-badge status-warning" title="A user already booked and may have paid for this — finish the record so their burial can be marked Completed.">Burial #${escapeHtml(request.linked_schedule_id)}</span>`
                 : '';
             const cremationBadge = request.linked_cremation_id
-                ? `<span class="status-badge status-warning" title="Citizen booked cremation — finish the record so their cremation can proceed.">Cremation #${escapeHtml(request.linked_cremation_id)}</span>`
+                ? `<span class="status-badge status-warning" title="User booked cremation — finish the record so their cremation can proceed.">Cremation #${escapeHtml(request.linked_cremation_id)}</span>`
                 : '';
             const dupBadge = request.possible_duplicate_of
                 ? `<span class="status-badge status-danger" title="Another pending request (#${escapeHtml(request.possible_duplicate_of)}: ${escapeHtml(request.possible_duplicate_name)}) looks similar — check before approving both.">Possible duplicate of #${escapeHtml(request.possible_duplicate_of)}</span>`
@@ -947,14 +947,14 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         banner.innerHTML = `
             <div class="banner-header">
-                <div class="banner-title"><i class="fas fa-clipboard-user"></i> Citizen Registration Request #${escapeHtml(request.request_id)}</div>
+                <div class="banner-title"><i class="fas fa-clipboard-user"></i> User Registration Request #${escapeHtml(request.request_id)}</div>
                 <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                     ${linkInfo}
                     ${docInfo}
                 </div>
             </div>
             <div class="banner-body">
-                <span>Requested by <strong>${escapeHtml(request.requested_by_name || 'Citizen')}</strong> ${rel ? '· ' + rel : ''}</span>
+                <span>Requested by <strong>${escapeHtml(request.requested_by_name || 'User')}</strong> ${rel ? '· ' + rel : ''}</span>
                 ${notes}
             </div>
         `;
@@ -978,12 +978,12 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (certPreviewImg) certPreviewImg.style.display = 'none';
             if (certPreviewPdf) {
                 certPreviewPdf.style.display = 'flex';
-                if (certPdfName) certPdfName.textContent = request.attachment_original_filename || 'Citizen Document (PDF)';
+                if (certPdfName) certPdfName.textContent = request.attachment_original_filename || 'User Document (PDF)';
             }
         }
 
         if (certificateUploadHint) {
-            certificateUploadHint.textContent = `Citizen document on file: ${request.attachment_original_filename || 'Attachment'}. Will be finalized into documents upon approval.`;
+            certificateUploadHint.textContent = `User document on file: ${request.attachment_original_filename || 'Attachment'}. Will be finalized into documents upon approval.`;
         }
     }
 
