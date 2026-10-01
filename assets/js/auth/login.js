@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
+    if (typeof redirectIfAuthenticated === 'function') {
+        redirectIfAuthenticated();
+    }
+
     const form = document.getElementById('loginForm');
     const alertBox = document.getElementById('alert');
     const authTransition = document.getElementById('authTransition');

@@ -1299,8 +1299,8 @@ if ($path === 'notifications/mark-all-read' && $requestMethod === 'PUT') {
 }
 
 if (preg_match('/^notifications\/(\d+)$/', $path, $matches) && $requestMethod === 'DELETE') {
-    $user = AuthMiddleware::requireRole(['admin', 'staff']);
-    $result = $notificationController->destroy($matches[1]);
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $notificationController->destroy($matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);
@@ -2295,6 +2295,11 @@ if (preg_match('/^booking-agent\/drafts?\/(\d+)\/update-field$/', $path, $matche
 
 if (preg_match('/^booking-agent\/drafts?\/(\d+)\/confirm$/', $path, $matches) && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireVerifiedContact($user);
+    if (!RateLimiter::allow('booking_agent_confirm_' . $user['user_id'], 20, 60)) {
+        http_response_code(429);
+        echo json_encode(['error' => 'Too many requests — please wait a moment before trying again.']);
+        exit;
+    }
     $input = readRequestBody();
     $result = $bookingAgentController->confirm((int) $matches[1], $user, $input);
     http_response_code($result['code'] ?? 200);
@@ -2305,6 +2310,11 @@ if (preg_match('/^booking-agent\/drafts?\/(\d+)\/confirm$/', $path, $matches) &&
 
 if (preg_match('/^booking-agent\/drafts?\/(\d+)\/finalize$/', $path, $matches) && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireVerifiedContact($user);
+    if (!RateLimiter::allow('booking_agent_finalize_' . $user['user_id'], 20, 60)) {
+        http_response_code(429);
+        echo json_encode(['error' => 'Too many requests — please wait a moment before trying again.']);
+        exit;
+    }
     $result = $bookingAgentController->finalize((int) $matches[1], $user);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);

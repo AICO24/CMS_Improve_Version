@@ -99,7 +99,7 @@ git push origin main
 | `JWT_EXPIRY` | `28800` | 8 hours session expiry |
 | `JWT_REMEMBER_EXPIRY` | `2592000` | 30 days remember-me |
 | `SEED_DEFAULT_USERS` | `false` | Hindi na kailangan dahil may seed data na sa SQL |
-| `CORS_ALLOWED_ORIGINS` | `*` | Pinapayagan ang API requests |
+| `CORS_ALLOWED_ORIGINS` | `https://cemetery-management-system.onrender.com` | Tahasang URL ng frontend domain (huwag gumamit ng '*' dahil bawal ito kasama ng credentials) |
 
 *(Opsyonal: Kung gagamitin ang PayMongo, ilagay din ang `PAYMONGO_ENV=test`, `PAYMONGO_PUBLIC_KEY`, at `PAYMONGO_SECRET_KEY`)*.
 

@@ -58,6 +58,38 @@ function getRoleDashboardPath(role) {
 
     return `${basePath}/pages/dashboard_user.html`;
 }
+window.getRoleDashboardPath = getRoleDashboardPath;
+
+/**
+ * AUTH-001: Centralized redirect helper for authentication pages (login, register, forgot-password).
+ * If the user has an active session, redirects to role-appropriate dashboard.
+ * Unauthenticated users remain on the auth page.
+ */
+async function redirectIfAuthenticated() {
+    try {
+        const token = localStorage.getItem('jwt_token') || sessionStorage.getItem('jwt_token');
+        const sessionRaw = localStorage.getItem('user_session') || sessionStorage.getItem('user_session');
+        const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+
+        if (token && session && session.role) {
+            window.location.replace(getRoleDashboardPath(session.role));
+            return true;
+        }
+
+        if (typeof api !== 'undefined' && (token || api.getToken())) {
+            const me = await api.getMe();
+            if (me && me.role && !me.error) {
+                localStorage.setItem('user_session', JSON.stringify(me));
+                window.location.replace(getRoleDashboardPath(me.role));
+                return true;
+            }
+        }
+    } catch (e) {
+        // Not authenticated
+    }
+    return false;
+}
+window.redirectIfAuthenticated = redirectIfAuthenticated;
 
 class ApiClient {
     constructor() {

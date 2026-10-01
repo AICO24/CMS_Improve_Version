@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
+    if (typeof redirectIfAuthenticated === 'function') {
+        redirectIfAuthenticated();
+    }
+
     const form = document.getElementById('registerForm');
     const alertBox = document.getElementById('alert');
 

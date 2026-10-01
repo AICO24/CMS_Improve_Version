@@ -24,7 +24,12 @@ try {
     require_once __DIR__ . '/bootstrap.php';
     require_once __DIR__ . '/services/EnvironmentService.php';
 
-    $allowedOrigins = array_filter(array_map('trim', explode(',', (string) EnvironmentService::get('CORS_ALLOWED_ORIGINS', 'http://localhost'))));
+    $rawAllowedOrigins = array_filter(array_map('trim', explode(',', (string) EnvironmentService::get('CORS_ALLOWED_ORIGINS', 'http://localhost'))));
+    // CONF-001: Wildcard '*' must never be combined with credentialed CORS requests.
+    // Disallow '*' from allowedOrigins so only explicit schemes/hosts are trusted.
+    $allowedOrigins = array_values(array_filter($rawAllowedOrigins, static function ($origin) {
+        return $origin !== '*';
+    }));
     $requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
     $currentHost = $_SERVER['HTTP_HOST'] ?? '';
     if ($requestOrigin !== '') {

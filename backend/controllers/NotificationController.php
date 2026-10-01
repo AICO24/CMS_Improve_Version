@@ -70,9 +70,14 @@ class NotificationController {
         return $result ? ['success' => true, 'message' => 'All notifications marked read'] : ['error' => 'Failed to update notifications', 'code' => 500];
     }
 
-    public function destroy($id) {
-        if (!$this->notificationModel->findById($id)) {
+    public function destroy($id, $user = null) {
+        $notification = $this->notificationModel->findById($id);
+        if (!$notification) {
             return ['error' => 'Notification not found', 'code' => 404];
+        }
+        $scopedUserId = self::scopeUserId($user);
+        if ($scopedUserId !== null && (int) ($notification['user_id'] ?? 0) !== (int) $scopedUserId) {
+            return ['error' => 'You may only delete your own notifications', 'code' => 403];
         }
         $result = $this->notificationModel->delete($id);
         return $result ? ['success' => true, 'message' => 'Notification deleted'] : ['error' => 'Failed to delete notification', 'code' => 500];
