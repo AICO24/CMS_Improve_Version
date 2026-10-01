@@ -110,7 +110,8 @@ CAPACITY_CRITICAL_THRESHOLD = 0.95
 # GenerateContentConfig, HttpOptions, response text extraction) now live
 # behind llm_provider.generate() — this file only ever passes plain model
 # name strings/prompts/timeouts into that call, never a Gemini SDK object.
-NARRATION_MODEL = 'gemini-3.6-flash'
+DEFAULT_GEMINI_MODEL = (os.getenv('GEMINI_MODEL') or 'gemini-2.5-flash').strip()
+NARRATION_MODEL = DEFAULT_GEMINI_MODEL
 
 def _plural(count: int, word: str) -> str:
     return word if count == 1 else f'{word}s'
@@ -164,7 +165,7 @@ def _narrate_outcome(status: str, count: Optional[int], preferences: Dict[str, A
 # invented from a vague word like "affordable" alone), and any failure/missing
 # key/timeout returns null so the caller falls back to its own "I couldn't
 # understand that" clarification — this endpoint never blocks the chat.
-EXTRACTION_MODEL = 'gemini-3.6-flash'
+EXTRACTION_MODEL = DEFAULT_GEMINI_MODEL
 
 EXTRACTION_SYSTEM_PROMPT = (
     "You extract burial-lot search preferences from one short user chat "
@@ -257,7 +258,7 @@ def _extract_preferences(message: str, lot_types: List[str], sections: List[str]
 # misleading answer. Same never-fail contract as narrate/extract above: any
 # missing key/timeout/parse failure resolves to answered: false so this
 # endpoint can never block the chat.
-CHAT_MODEL = 'gemini-3.6-flash'
+CHAT_MODEL = DEFAULT_GEMINI_MODEL
 
 CHAT_SYSTEM_PROMPT = (
     "You answer questions for a cemetery burial-scheduling assistant chat. "
@@ -672,7 +673,7 @@ def extract_preferences():
 # separate fields directly. The extracted fields only PRE-FILL those same
 # fields — the citizen still sees and can edit them, and still clicks
 # Continue booking themselves; this never submits anything on its own.
-DECEDENT_REQUEST_EXTRACTION_MODEL = 'gemini-3.6-flash'
+DECEDENT_REQUEST_EXTRACTION_MODEL = DEFAULT_GEMINI_MODEL
 
 DECEDENT_REQUEST_EXTRACTION_SYSTEM_PROMPT = (
     "You extract information about a deceased person from one short piece "
@@ -781,7 +782,7 @@ def extract_decedent_request():
 # clicks Save themselves, and the document itself is attached to the record
 # by the PHP side only after that Save succeeds — this endpoint never writes
 # anything anywhere, it only reads an image and returns text.
-CERTIFICATE_EXTRACTION_MODEL = 'gemini-3.6-flash'
+CERTIFICATE_EXTRACTION_MODEL = DEFAULT_GEMINI_MODEL
 
 CERTIFICATE_EXTRACTION_SYSTEM_PROMPT = (
     "You extract information from an image or PDF of a death certificate or "
@@ -1797,7 +1798,7 @@ def dashboard_digest():
 # send null here, on purpose, so a record view never drags in unrelated
 # modules. See ASSISTANT_SYSTEM_PROMPT below for how the model is told
 # this.
-ASSISTANT_MODEL = 'gemini-3.6-flash'
+ASSISTANT_MODEL = DEFAULT_GEMINI_MODEL
 
 ASSISTANT_SYSTEM_PROMPT = (
     "You are an AI assistant helping a cemetery-management-system "
@@ -1904,7 +1905,7 @@ def _get_capacity_snapshot() -> Dict[str, int]:
         cursor = conn.cursor(dictionary=True)
         cursor.execute(
             """
-            SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'Occupied' THEN 1 ELSE 0 END) AS occupied
+            SELECT COUNT(*) AS total, SUM(CASE WHEN status IN ('Occupied', 'Expired') THEN 1 ELSE 0 END) AS occupied
             FROM lots
             """
         )

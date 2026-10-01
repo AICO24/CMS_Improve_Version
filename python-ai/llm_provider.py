@@ -231,11 +231,25 @@ def _generate_with_gemini(
         else:
             contents = user_content
 
-        response = _gemini_client.models.generate_content(
-            model=model,
-            contents=contents,
-            config=genai_types.GenerateContentConfig(**config_kwargs),
-        )
+        try:
+            response = _gemini_client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=genai_types.GenerateContentConfig(**config_kwargs),
+            )
+        except Exception as exc:
+            # Models that do not support thinking levels (e.g. gemini-2.5-flash) throw 400 INVALID_ARGUMENT.
+            # Retry without thinking_config so both thinking-capable and standard models work seamlessly.
+            if 'thinking' in str(exc).lower() and 'thinking_config' in config_kwargs:
+                del config_kwargs['thinking_config']
+                response = _gemini_client.models.generate_content(
+                    model=model,
+                    contents=contents,
+                    config=genai_types.GenerateContentConfig(**config_kwargs),
+                )
+            else:
+                raise
+
         text = (response.text or '').strip()
         if not text:
             # A valid, empty response — not a provider failure (see module

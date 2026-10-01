@@ -635,12 +635,18 @@ class Cremation {
         return $combined;
     }
 
-    public function isNicheAvailable($nicheNumber, $columbarium = null) {
+    public function isNicheAvailable($nicheNumber, $columbarium = null, $excludeId = null) {
         $sql = "SELECT COUNT(*) as count FROM cremation_records WHERE niche_number = ? AND status != 'Cancelled'";
         $params = [$nicheNumber];
-        if (!empty($columbarium)) {
+        if ($columbarium !== null && $columbarium !== '') {
             $sql .= " AND columbarium = ?";
             $params[] = $columbarium;
+        } elseif ($columbarium === '') {
+            $sql .= " AND (columbarium = '' OR columbarium IS NULL)";
+        }
+        if (!empty($excludeId)) {
+            $sql .= " AND cremation_id != ?";
+            $params[] = (int) $excludeId;
         }
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);

@@ -269,7 +269,7 @@ class AIService {
                 }
             }
 
-            $capacitySql = "SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'Occupied' THEN 1 ELSE 0 END) AS occupied
+            $capacitySql = "SELECT COUNT(*) AS total, SUM(CASE WHEN status IN ('Occupied', 'Expired') THEN 1 ELSE 0 END) AS occupied
                             FROM lots";
             $capacityRow = $db->query($capacitySql)->fetch(PDO::FETCH_ASSOC) ?: [];
             $capacity = [

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/Relocation.php';
 require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/../models/Decedent.php';
@@ -289,31 +290,60 @@ class RelocationController {
             return ['error' => 'Request must be approved first', 'code' => 403];
         }
 
-        // Release source lot back to Available
-        $this->transitionLotStatus($request['from_lot_id'], 'Available', $userId, 'relocation.completed');
-        // Occupy destination lot
-        $this->transitionLotStatus($request['to_lot_id'], 'Occupied', $userId, 'relocation.completed');
+        $fromLotId = (int) $request['from_lot_id'];
+        $toLotId = (int) $request['to_lot_id'];
+        $deceasedId = !empty($request['deceased_id']) ? (int) $request['deceased_id'] : null;
 
-        // Automation fix: update the decedent's lot assignment to the destination lot
-        if (!empty($request['deceased_id']) && !empty($request['to_lot_id'])) {
-            $this->decedentModel->updateLotId($request['deceased_id'], $request['to_lot_id']);
+        $db = Database::getInstance();
+        $completed = false;
+        try {
+            $db->transaction(function () use ($id, $userId, $request, $fromLotId, $toLotId, $deceasedId, &$completed) {
+                // 1. Move relocated decedent to destination lot
+                if ($deceasedId && $toLotId) {
+                    $this->decedentModel->updateLotId($deceasedId, $toLotId);
+                }
+
+                // 2. Occupy destination lot
+                $this->transitionLotStatus($toLotId, 'Occupied', $userId, 'relocation.completed');
+
+                // 3. LOGIC-001: Only release source lot if NO other active occupants remain
+                $remainingOccupants = $this->decedentModel->countActiveByLotId($fromLotId);
+                if ($remainingOccupants === 0) {
+                    $hasActiveSchedule = $this->hasActiveScheduleForLot($fromLotId);
+                    if (!$hasActiveSchedule) {
+                        $this->transitionLotStatus($fromLotId, 'Available', $userId, 'relocation.completed');
+                    }
+                }
+                // If $remainingOccupants > 0, source lot remains occupied — preserve its existing occupied state!
+
+                // 4. Update relocation request status to Completed
+                $result = $this->relocationModel->updateStatus($id, 'Completed', $userId);
+                if (!$result) {
+                    throw new RuntimeException('Failed to update relocation status');
+                }
+
+                $this->auditLogModel->log(
+                    'Relocation completed',
+                    $userId,
+                    null,
+                    'Relocation',
+                    $id,
+                    [
+                        'deceased_id' => $deceasedId,
+                        'from_lot_id' => $fromLotId,
+                        'to_lot_id' => $toLotId,
+                        'remaining_occupants' => $remainingOccupants,
+                        'source_lot_released' => ($remainingOccupants === 0),
+                        'lot_updated_on_decedent' => true,
+                    ]
+                );
+                $completed = true;
+            });
+        } catch (Throwable $e) {
+            return ['error' => 'Failed to complete relocation: ' . $e->getMessage(), 'code' => 500];
         }
 
-        $result = $this->relocationModel->updateStatus($id, 'Completed', $userId);
-        if ($result) {
-            $this->auditLogModel->log(
-                'Relocation completed',
-                $userId,
-                null,
-                'Relocation',
-                $id,
-                [
-                    'deceased_id' => $request['deceased_id'] ?? null,
-                    'from_lot_id' => $request['from_lot_id'] ?? null,
-                    'to_lot_id' => $request['to_lot_id'] ?? null,
-                    'lot_updated_on_decedent' => true,
-                ]
-            );
+        if ($completed) {
             $this->notifyRelocationStatusChange($request, 'Completed');
             return ['success' => true, 'message' => 'Relocation completed'];
         }
@@ -468,5 +498,16 @@ class RelocationController {
                 return $lotModel->transitionStatus($lotId, $newStatus, $allowedFromStatuses);
             }
         );
+    }
+
+    private function hasActiveScheduleForLot($lotId) {
+        $stmt = Database::getInstance()->getConnection()->prepare("
+            SELECT COUNT(*) AS count
+            FROM burial_schedules
+            WHERE lot_id = ? AND status IN ('Pending', 'Confirmed')
+        ");
+        $stmt->execute([(int) $lotId]);
+        $row = $stmt->fetch();
+        return ((int) ($row['count'] ?? 0)) > 0;
     }
 }

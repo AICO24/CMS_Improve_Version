@@ -50,7 +50,7 @@ class ReportController {
             $avl = (int) ($sec['available'] ?? 0);
             $exp = (int) ($sec['expired'] ?? 0);
 
-            $utilized = $occ + $res;
+            $utilized = $occ + $res + $exp;
             $utilizationRate = $tot > 0 ? round(($utilized / $tot) * 100, 1) : 0.0;
             $occupiedRate = $tot > 0 ? round(($occ / $tot) * 100, 1) : 0.0;
             $availableRate = $tot > 0 ? round(($avl / $tot) * 100, 1) : 0.0;
@@ -87,10 +87,11 @@ class ReportController {
         $grandOccupied = (int) ($stats['occupied'] ?? 0);
         $grandReserved = (int) ($stats['reserved'] ?? 0);
         $grandAvailable = (int) ($stats['available'] ?? 0);
-        $grandUtilized = $grandOccupied + $grandReserved;
+        $grandExpired = (int) ($stats['expired'] ?? 0);
+        $grandUtilized = $grandOccupied + $grandReserved + $grandExpired;
         $overallUtilizationRate = $grandTotal > 0 ? round(($grandUtilized / $grandTotal) * 100, 1) : 0.0;
 
-        $occupancyNarrative = "As of " . date('F j, Y') . ", the cemetery infrastructure encompasses a total capacity of {$grandTotal} plots across " . count($enrichedSections) . " designated sections. Current space utilization stands at {$overallUtilizationRate}% ({$grandOccupied} occupied and {$grandReserved} reserved), leaving {$grandAvailable} active available lots for future assignment.";
+        $occupancyNarrative = "As of " . date('F j, Y') . ", the cemetery infrastructure encompasses a total capacity of {$grandTotal} plots across " . count($enrichedSections) . " designated sections. Current space utilization stands at {$overallUtilizationRate}% ({$grandOccupied} occupied, {$grandReserved} reserved, and {$grandExpired} expired), leaving {$grandAvailable} active available lots for future assignment.";
         if (!empty($criticalSections)) {
             $occupancyNarrative .= " Critical capacity (0 available plots) has been reached in: " . implode(', ', $criticalSections) . ". Operational attention is required to direct upcoming interments toward sections with remaining capacity.";
         } else {
@@ -109,6 +110,7 @@ class ReportController {
             'occupied_lots' => $grandOccupied,
             'reserved_lots' => $grandReserved,
             'available_lots' => $grandAvailable,
+            'expired_lots' => $grandExpired,
             'utilized_lots' => $grandUtilized,
             'utilization_rate' => $overallUtilizationRate,
             'critical_sections_count' => count($criticalSections),

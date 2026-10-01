@@ -311,6 +311,17 @@ class Decedent {
         return $stmt->execute([$newLotId ? (int) $newLotId : null, (int) $id]);
     }
 
+    public function countActiveByLotId($lotId) {
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) AS count 
+            FROM decedent_records 
+            WHERE lot_id = ? AND deleted_at IS NULL
+        ");
+        $stmt->execute([(int) $lotId]);
+        $row = $stmt->fetch();
+        return (int) ($row['count'] ?? 0);
+    }
+
     public function patchCremationStatus($id, $data) {
         $fields = [];
         $params = [];

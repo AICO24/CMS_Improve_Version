@@ -530,8 +530,13 @@ class CremationController {
             return ['error' => "This cremation record is already {$existing['status']} and cannot be changed.", 'code' => 409];
         }
 
-        if (!empty($data['niche_number']) && $data['niche_number'] != $existing['niche_number']) {
-            if (!$this->cremationModel->isNicheAvailable($data['niche_number'])) {
+        $targetColumbarium = array_key_exists('columbarium', $data) ? $data['columbarium'] : ($existing['columbarium'] ?? null);
+        $targetNiche = array_key_exists('niche_number', $data) ? $data['niche_number'] : ($existing['niche_number'] ?? null);
+        $nicheChanged = (!empty($data['niche_number']) && $data['niche_number'] != $existing['niche_number']);
+        $columbariumChanged = (array_key_exists('columbarium', $data) && $data['columbarium'] != $existing['columbarium']);
+
+        if (($nicheChanged || $columbariumChanged) && !empty($targetNiche)) {
+            if (!$this->cremationModel->isNicheAvailable($targetNiche, $targetColumbarium, (int) $id)) {
                 return ['error' => 'This niche is already occupied', 'code' => 409];
             }
         }
