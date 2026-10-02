@@ -468,39 +468,54 @@
 /* ── Table Container & Styles ──────────────────────────────────────── */
 .table-container {
     width: 100%;
-    overflow-x: auto;
+    overflow-x: hidden;
     border-radius: 12px;
     border: 1px solid rgba(44, 94, 71, 0.14);
     background: #fff;
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
     position: relative;
     z-index: 1;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
+.table-container::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+.table-container .data-table,
 .data-table {
     width: 100%;
+    min-width: 0 !important;
     border-collapse: collapse;
     text-align: left;
-    font-size: 0.88rem;
+    font-size: 0.86rem;
+    table-layout: fixed;
 }
 
 .data-table thead th {
     background: #f8fafc;
     color: #475569;
     font-weight: 700;
-    font-size: 0.76rem;
+    font-size: 0.73rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 14px 16px;
+    letter-spacing: 0.04em;
+    padding: 13px 10px;
     border-bottom: 2px solid rgba(44, 94, 71, 0.16);
-    white-space: nowrap;
+    white-space: normal;
+    word-break: normal;
 }
 
 .data-table tbody td {
-    padding: 14px 16px;
+    padding: 12px 10px;
     border-bottom: 1px solid #f1f5f9;
     color: #334155;
     vertical-align: middle;
+    font-size: 0.84rem;
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 .data-table tbody tr {
@@ -515,9 +530,109 @@
     border-bottom: none;
 }
 
+/* Allocation Badges / Pills */
+.niche-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.25;
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.niche-pill i {
+    color: #059669;
+    font-size: 0.72rem;
+    flex-shrink: 0;
+}
+
+.niche-pill .niche-lvl {
+    background: #10b981;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+}
+
+.takehome-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.25;
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.takehome-pill i {
+    color: #3b82f6;
+    font-size: 0.72rem;
+    flex-shrink: 0;
+}
+
+.pending-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #fffbeb;
+    color: #92400e;
+    border: 1px solid #fde68a;
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.25;
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.pending-pill i {
+    color: #d97706;
+    font-size: 0.72rem;
+    flex-shrink: 0;
+}
+
+.lot-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #1e293b;
+    font-weight: 600;
+    font-size: 0.82rem;
+    line-height: 1.25;
+    word-break: break-all;
+}
+
+.lot-pill i {
+    color: #64748b;
+    font-size: 0.74rem;
+    flex-shrink: 0;
+}
+
 /* Action button */
 .action-buttons {
     display: flex;
+    justify-content: center;
+    align-items: center;
     gap: 8px;
 }
 
@@ -998,6 +1113,29 @@ body[data-theme="dark"] .btn-view:hover,
     background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
     color: #ffffff !important;
     border-color: transparent !important;
+}
+
+body[data-theme="dark"] .niche-pill,
+.dashboard-body[data-theme="dark"] .niche-pill {
+    background: rgba(16, 185, 129, 0.15) !important;
+    border-color: rgba(52, 211, 153, 0.35) !important;
+    color: #34d399 !important;
+}
+body[data-theme="dark"] .takehome-pill,
+.dashboard-body[data-theme="dark"] .takehome-pill {
+    background: rgba(59, 130, 246, 0.15) !important;
+    border-color: rgba(96, 165, 250, 0.35) !important;
+    color: #60a5fa !important;
+}
+body[data-theme="dark"] .pending-pill,
+.dashboard-body[data-theme="dark"] .pending-pill {
+    background: rgba(245, 158, 11, 0.15) !important;
+    border-color: rgba(251, 191, 36, 0.35) !important;
+    color: #fbbf24 !important;
+}
+body[data-theme="dark"] .lot-pill,
+.dashboard-body[data-theme="dark"] .lot-pill {
+    color: #f1f5f9 !important;
 }
 
 body[data-theme="dark"] .records-modal-content,

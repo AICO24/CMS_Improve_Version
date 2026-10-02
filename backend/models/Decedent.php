@@ -104,11 +104,52 @@ class Decedent {
     // the result entirely, which is exactly the bug this migration fixes.
     public function findAll($filters = [], $pagination = []) {
         $sql = "
-            SELECT dr.*, l.lot_number, s.section_name
+            SELECT dr.*, 
+                   l.lot_number, 
+                   s.section_name,
+                   COALESCE(cr.niche_number, cr_req.niche_number) AS niche_number,
+                   COALESCE(cr.columbarium, cr_req.columbarium) AS columbarium,
+                   COALESCE(cr.level, cr_req.level) AS level,
+                   COALESCE(cr.ash_storage_location, cr_req.ash_storage_location) AS ash_storage_location,
+                   COALESCE(cr.cremation_status, cr_req.cremation_status) AS cremation_status
             FROM decedent_records dr
             LEFT JOIN lots l ON dr.lot_id = l.lot_id
             LEFT JOIN blocks b ON l.block_id = b.block_id
             LEFT JOIN sections s ON b.section_id = s.section_id
+            LEFT JOIN (
+                SELECT 
+                    cr_inner.deceased_id,
+                    cr_inner.niche_number,
+                    cr_inner.columbarium,
+                    cr_inner.level,
+                    cr_inner.ash_storage_location,
+                    cr_inner.status AS cremation_status
+                FROM cremation_records cr_inner
+                INNER JOIN (
+                    SELECT MAX(cremation_id) AS max_id
+                    FROM cremation_records
+                    WHERE status != 'Cancelled' AND deceased_id IS NOT NULL
+                    GROUP BY deceased_id
+                ) cr_latest ON cr_inner.cremation_id = cr_latest.max_id
+            ) cr ON cr.deceased_id = dr.decedent_id
+            LEFT JOIN (
+                SELECT 
+                    cr_inner.decedent_request_id,
+                    cr_inner.niche_number,
+                    cr_inner.columbarium,
+                    cr_inner.level,
+                    cr_inner.ash_storage_location,
+                    cr_inner.status AS cremation_status
+                FROM cremation_records cr_inner
+                INNER JOIN (
+                    SELECT MAX(cremation_id) AS max_id
+                    FROM cremation_records
+                    WHERE status != 'Cancelled' AND decedent_request_id IS NOT NULL
+                    GROUP BY decedent_request_id
+                ) cr_latest ON cr_inner.cremation_id = cr_latest.max_id
+            ) cr_req ON cr_req.decedent_request_id = (
+                SELECT MAX(request_id) FROM decedent_requests WHERE decedent_id = dr.decedent_id
+            )
             WHERE dr.deleted_at IS NULL
         ";
         $params = [];
@@ -161,11 +202,52 @@ class Decedent {
 
     public function findById($id) {
         $stmt = $this->db->prepare("
-            SELECT dr.*, l.lot_number, s.section_name
+            SELECT dr.*, 
+                   l.lot_number, 
+                   s.section_name,
+                   COALESCE(cr.niche_number, cr_req.niche_number) AS niche_number,
+                   COALESCE(cr.columbarium, cr_req.columbarium) AS columbarium,
+                   COALESCE(cr.level, cr_req.level) AS level,
+                   COALESCE(cr.ash_storage_location, cr_req.ash_storage_location) AS ash_storage_location,
+                   COALESCE(cr.cremation_status, cr_req.cremation_status) AS cremation_status
             FROM decedent_records dr
             LEFT JOIN lots l ON dr.lot_id = l.lot_id
             LEFT JOIN blocks b ON l.block_id = b.block_id
             LEFT JOIN sections s ON b.section_id = s.section_id
+            LEFT JOIN (
+                SELECT 
+                    cr_inner.deceased_id,
+                    cr_inner.niche_number,
+                    cr_inner.columbarium,
+                    cr_inner.level,
+                    cr_inner.ash_storage_location,
+                    cr_inner.status AS cremation_status
+                FROM cremation_records cr_inner
+                INNER JOIN (
+                    SELECT MAX(cremation_id) AS max_id
+                    FROM cremation_records
+                    WHERE status != 'Cancelled' AND deceased_id IS NOT NULL
+                    GROUP BY deceased_id
+                ) cr_latest ON cr_inner.cremation_id = cr_latest.max_id
+            ) cr ON cr.deceased_id = dr.decedent_id
+            LEFT JOIN (
+                SELECT 
+                    cr_inner.decedent_request_id,
+                    cr_inner.niche_number,
+                    cr_inner.columbarium,
+                    cr_inner.level,
+                    cr_inner.ash_storage_location,
+                    cr_inner.status AS cremation_status
+                FROM cremation_records cr_inner
+                INNER JOIN (
+                    SELECT MAX(cremation_id) AS max_id
+                    FROM cremation_records
+                    WHERE status != 'Cancelled' AND decedent_request_id IS NOT NULL
+                    GROUP BY decedent_request_id
+                ) cr_latest ON cr_inner.cremation_id = cr_latest.max_id
+            ) cr_req ON cr_req.decedent_request_id = (
+                SELECT MAX(request_id) FROM decedent_requests WHERE decedent_id = dr.decedent_id
+            )
             WHERE dr.decedent_id = ? AND dr.deleted_at IS NULL
         ");
         $stmt->execute([(int) $id]);

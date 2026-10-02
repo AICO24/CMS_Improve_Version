@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function renderTable(items) {
         if (!items || items.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="8">No records found.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 24px; color:#64748b;">No records found.</td></tr>';
             return;
         }
 
@@ -77,17 +77,42 @@ document.addEventListener('DOMContentLoaded', async function() {
                 ? `<span class="status-badge" style="background:#fef3c7; color:#b45309; border: 1px solid #fde68a; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;"><i class="fas fa-clock"></i> To Follow</span>`
                 : `<span class="status-badge" style="background:#d1fae5; color:#065f46; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;"><i class="fas fa-check-circle"></i> Verified</span>`;
 
+            // Determine Allocation / Niche and Section / Facility
+            let allocHtml = '—';
+            let sectionHtml = '—';
+
+            const hasNiche = !!item.niche_number;
+            const isCremated = (item.is_cremated === 'yes' || hasNiche || !!item.ash_storage_location);
+
+            if (hasNiche) {
+                const lvlText = item.level ? `<span class="niche-lvl" title="Level ${escapeHtml(item.level)}">L${escapeHtml(item.level)}</span>` : '';
+                allocHtml = `<span class="niche-pill" title="Columbarium Niche: ${escapeHtml(item.niche_number)}${item.level ? ' (Level ' + escapeHtml(item.level) + ')' : ''}"><i class="fas fa-monument"></i> <span>Niche ${escapeHtml(item.niche_number)}</span> ${lvlText}</span>`;
+                sectionHtml = escapeHtml(item.columbarium || item.section_name || 'Everlasting Columbarium & Ossuary');
+            } else if (isCremated) {
+                const ashLoc = (item.ash_storage_location || item.ash_storage || '').toLowerCase();
+                if (ashLoc.includes('take home') || ashLoc.includes('custody') || !item.lot_number) {
+                    allocHtml = `<span class="takehome-pill" title="Take Home / Family Custody"><i class="fas fa-house-user"></i> <span>Take Home</span></span>`;
+                    sectionHtml = `Family Custody`;
+                } else {
+                    allocHtml = `<span class="takehome-pill" title="${escapeHtml(item.ash_storage_location || item.ash_storage)}"><i class="fas fa-fire"></i> <span>${escapeHtml(item.ash_storage_location || item.ash_storage)}</span></span>`;
+                    sectionHtml = escapeHtml(item.columbarium || item.section_name || 'Columbarium');
+                }
+            } else if (item.lot_number) {
+                allocHtml = `<span class="lot-pill" title="Lot ${escapeHtml(item.lot_number)}"><i class="fas fa-layer-group"></i> <span>${escapeHtml(item.lot_number)}</span></span>`;
+                sectionHtml = escapeHtml(item.section_name || '—');
+            }
+
             return `
             <tr data-id="${item.decedent_id}">
-                <td>D-${item.decedent_id}</td>
-                <td>${escapeHtml(`${item.first_name} ${item.last_name}${item.suffix ? ' ' + item.suffix : ''}`)}</td>
+                <td style="font-weight: 600; color: #1e293b;">D-${item.decedent_id}</td>
+                <td style="font-weight: 600;">${escapeHtml(`${item.first_name} ${item.last_name}${item.suffix ? ' ' + item.suffix : ''}`)}</td>
                 <td>${item.dob ? escapeHtml(item.dob) : '<span style="color:#888; font-style: italic;">To follow</span>'}</td>
                 <td>${escapeHtml(item.dod)}</td>
-                <td>${item.lot_number ? escapeHtml(item.lot_number) : '—'}</td>
-                <td>${item.section_name ? escapeHtml(item.section_name) : '—'}</td>
-                <td>${statusBadge}</td>
+                <td>${allocHtml}</td>
+                <td>${sectionHtml}</td>
+                <td style="text-align: center;">${statusBadge}</td>
                 <td class="action-buttons">
-                    <button class="btn-view" title="View"><i class="fas fa-eye"></i></button>
+                    <button class="btn-view" title="View details"><i class="fas fa-eye"></i></button>
                 </td>
             </tr>
         `;
@@ -122,6 +147,35 @@ document.addEventListener('DOMContentLoaded', async function() {
             </div>
         ` : '';
 
+        const hasNiche = !!record.niche_number;
+        const isCremated = (record.is_cremated === 'yes' || hasNiche || !!record.ash_storage_location);
+
+        let serviceRow = '';
+        let allocationRows = '';
+
+        if (hasNiche) {
+            serviceRow = `<div class="detail-row"><span>Service Type</span><strong><span style="color:#059669; font-weight:700;"><i class="fas fa-fire"></i> Cremation & Inurnment</span></strong></div>`;
+            allocationRows = `
+                <div class="detail-row"><span>Columbarium</span><strong>${escapeHtml(record.columbarium || record.section_name || 'Everlasting Columbarium & Ossuary')}</strong></div>
+                <div class="detail-row"><span>Niche Number</span><strong><span class="niche-pill"><i class="fas fa-monument"></i> Niche ${escapeHtml(record.niche_number)}</span></strong></div>
+                <div class="detail-row"><span>Niche Level</span><strong>Level ${escapeHtml(record.level || '1')}</strong></div>
+                <div class="detail-row"><span>Storage Details</span><strong>${escapeHtml(record.ash_storage_location || 'Columbarium Niche')}</strong></div>
+            `;
+        } else if (isCremated) {
+            const ashDisp = record.ash_storage_location || record.ash_storage || 'Take Home / Family Custody';
+            serviceRow = `<div class="detail-row"><span>Service Type</span><strong><span style="color:#2563eb; font-weight:700;"><i class="fas fa-fire"></i> Cremation (Take Home)</span></strong></div>`;
+            allocationRows = `
+                <div class="detail-row"><span>Ash Disposition</span><strong>${escapeHtml(ashDisp)}</strong></div>
+                <div class="detail-row"><span>Placement</span><strong>Family Custody</strong></div>
+            `;
+        } else {
+            serviceRow = `<div class="detail-row"><span>Service Type</span><strong><i class="fas fa-monument"></i> Traditional Ground Burial</strong></div>`;
+            allocationRows = `
+                <div class="detail-row"><span>Lot Number</span><strong>${escapeHtml(record.lot_number || '—')}</strong></div>
+                <div class="detail-row"><span>Section</span><strong>${escapeHtml(record.section_name || '—')}</strong></div>
+            `;
+        }
+
         const details = `
             ${complianceAlert}
             <div class="detail-row"><span>Status</span><strong>${isPending ? '<span style="color: #b45309;">🟡 Pending Requirements (To Follow)</span>' : '<span style="color: #065f46;">🟢 Verified</span>'}</strong></div>
@@ -129,12 +183,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             <div class="detail-row"><span>Date of Birth</span><strong>${record.dob ? escapeHtml(record.dob) : '<span style="color:#888; font-style: italic;">To follow</span>'}</strong></div>
             <div class="detail-row"><span>Date of Death</span><strong>${escapeHtml(record.dod)}</strong></div>
             <div class="detail-row"><span>Cause of Death</span><strong>${escapeHtml(record.cause_of_death || 'To follow')}</strong></div>
-            <div class="detail-row"><span>Lot Number</span><strong>${escapeHtml(record.lot_number || '—')}</strong></div>
-            <div class="detail-row"><span>Section</span><strong>${escapeHtml(record.section_name || '—')}</strong></div>
+            ${serviceRow}
+            ${allocationRows}
             <div class="detail-row"><span>Contact Name</span><strong>${escapeHtml(record.contact_name || '—')}</strong></div>
             <div class="detail-row"><span>Contact Number</span><strong>${escapeHtml(record.contact_number || '—')}</strong></div>
-            <div class="detail-row"><span>Cremated?</span><strong>${record.is_cremated === 'yes' ? 'Yes' : 'No'}</strong></div>
-            ${record.is_cremated === 'yes' ? `<div class="detail-row"><span>Ash Storage</span><strong>${escapeHtml(record.ash_storage || '—')}</strong></div>` : ''}
         `;
         viewDetails.innerHTML = details;
         document.getElementById('viewModal').style.display = 'flex';
