@@ -1012,10 +1012,14 @@ body[data-theme="dark"] .chart-card__badge {
         0 1px 3px rgba(15, 23, 42, 0.04),
         0 6px 20px -2px rgba(15, 23, 42, 0.07),
         0 0 0 1px rgba(203, 213, 225, 0.5);
-    overflow-x: auto;
+    overflow-x: hidden;
     overflow-y: visible;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(44, 94, 71, 0.25) transparent;
+}
+
+.table-container::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 body[data-theme="dark"] .table-container {
@@ -1025,11 +1029,12 @@ body[data-theme="dark"] .table-container {
 }
 
 .table-container .data-table {
-    width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
     border-collapse: separate;
     border-spacing: 0;
     min-width: 0 !important;
-    table-layout: auto;
+    table-layout: fixed !important;
     background: transparent;
     font-family: 'Inter', sans-serif;
 }
@@ -1046,6 +1051,8 @@ body[data-theme="dark"] .table-container {
     white-space: nowrap;
     text-align: left;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 body[data-theme="dark"] .table-container .data-table thead th {
@@ -1096,61 +1103,86 @@ body[data-theme="dark"] .table-container .data-table tbody tr:hover {
     vertical-align: middle;
     line-height: 1.3;
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 body[data-theme="dark"] .table-container .data-table tbody td {
     color: #cbd5e1 !important;
 }
 
-/* Neutralize min-widths from global stylesheets */
+/* Neutralize min-widths from global stylesheets (including theme-dark.css & tables.css) */
 .table-container .data-table td:last-child,
 .table-container .data-table th:last-child,
+.table-container .data-table th.col-actions,
+.table-container .data-table td.col-actions,
 .dashboard-body[data-theme="dark"] .table-container .data-table td:last-child,
-.dashboard-body[data-theme="dark"] .table-container .data-table td.action-buttons {
+.dashboard-body[data-theme="dark"] .table-container .data-table th:last-child,
+.dashboard-body[data-theme="dark"] .table-container .data-table td.action-buttons,
+.dashboard-body[data-theme="dark"] .table-container .data-table th.col-actions,
+.dashboard-body[data-theme="dark"] .table-container .data-table td.col-actions {
     min-width: 0 !important;
+    max-width: none !important;
 }
 
-/* Proportional Column Allocation */
+/* Proportional Column Allocation (100% Fixed Table Layout — Zero Horizontal Scroll) */
 .data-table th.col-time,
 .data-table td.col-time {
-    width: 125px;
+    width: 14% !important;
     white-space: nowrap;
 }
 
 .data-table th.col-user,
 .data-table td.col-user {
-    width: 135px;
+    width: 14% !important;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-weight: 700;
+}
+
+.data-table td.col-user strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .data-table th.col-action,
 .data-table td.col-action {
-    width: 130px;
+    width: 14% !important;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .data-table th.col-target,
 .data-table td.col-target {
-    width: 125px;
+    width: 13% !important;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .data-table th.col-ip,
 .data-table td.col-ip {
-    width: 115px;
+    width: 12% !important;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .data-table th.col-details,
 .data-table td.col-details {
-    min-width: 160px;
+    width: 27% !important;
+    max-width: 0 !important;
+    overflow: hidden !important;
 }
 
 .data-table th.col-actions,
 .data-table td.col-actions {
-    width: 55px;
-    text-align: right;
+    width: 6% !important;
+    text-align: center !important;
     white-space: nowrap;
     padding-right: 8px;
 }
@@ -1292,7 +1324,8 @@ body[data-theme="dark"] .action-badge.action-indigo {
     text-overflow: ellipsis;
     white-space: nowrap;
     display: block;
-    max-width: 380px;
+    width: 100%;
+    max-width: 100%;
     color: #334155;
     font-size: 0.82rem;
 }
@@ -1307,7 +1340,7 @@ body[data-theme="dark"] .details-preview-text {
 .action-buttons {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
     gap: 6px;
 }
 
