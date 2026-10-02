@@ -477,8 +477,8 @@ body.dark .hero-photo {
     z-index: 1;
     /* Soft translucent daylight wash: preserves full visibility of the cemetery chapel and sky without eye-straining glare */
     background: 
-        linear-gradient(180deg, rgba(248, 250, 252, 0.35) 0%, transparent 22%, transparent 78%, rgba(248, 250, 252, 0.65) 100%),
-        linear-gradient(90deg, rgba(248, 250, 252, 0.75) 0%, rgba(248, 250, 252, 0.52) 42%, rgba(248, 250, 252, 0.18) 75%, transparent 100%);
+        linear-gradient(180deg, rgba(248, 250, 252, 0.40) 0%, transparent 22%, transparent 78%, rgba(248, 250, 252, 0.70) 100%),
+        linear-gradient(90deg, rgba(248, 250, 252, 0.88) 0%, rgba(248, 250, 252, 0.72) 42%, rgba(248, 250, 252, 0.25) 75%, transparent 100%);
 }
 
 body[data-theme="dark"] .hero-scrim,
@@ -553,6 +553,7 @@ body.dark .hero-badge {
     text-shadow: 0 1px 3px rgba(255, 255, 255, 0.6);
 }
 
+[data-theme="dark"] .hero-title,
 body[data-theme="dark"] .hero-title,
 body.dark .hero-title {
     color: #f8fafc;
@@ -562,16 +563,24 @@ body.dark .hero-title {
 .hero-title-accent {
     display: block;
     margin-top: 4px;
-    background: linear-gradient(135deg, #0d7665 0%, #059669 100%);
+    color: #047857;
+    background: linear-gradient(135deg, #064e3b 0%, #047857 55%, #059669 100%);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
+    text-shadow: none; /* Prevents parent white text-shadow from washing out transparent text fill */
 }
 
+[data-theme="dark"] .hero-title-accent,
 body[data-theme="dark"] .hero-title-accent,
 body.dark .hero-title-accent {
-    background: linear-gradient(135deg, #34d399 0%, #10b981 60%, #6ee7b7 100%);
+    color: #34d399;
+    background: linear-gradient(135deg, #6ee7b7 0%, #34d399 50%, #10b981 100%);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 2px 8px rgba(16, 185, 129, 0.25));
 }
 
 .hero-desc {
