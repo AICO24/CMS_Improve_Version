@@ -431,36 +431,10 @@ class BookingAgentController {
 
         // Safety fallback: if decedent_name is still null, extract from message
         if (empty($slots['decedent_name']) && empty($extractedFields['decedent_name']) && empty($draftContext['extracted_data']['decedent_name'])) {
-            $cand = null;
-            if (preg_match('/(?:para\s+(?:po\s+)?kay|kay|si|pangalan\s+(?:po\s+)?(?:ay|ni)?|decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s,]{2,50})/i', $message, $nm)) {
-                $cand = trim($nm[1]);
-            } elseif (preg_match('/\b([A-Z][a-z]{1,20}(?:[,\s]+\s*[A-Z][a-z]{1,20}){1,3})\b/', $message, $dm)) {
-                $cand = trim($dm[1]);
-            }
-
+            $cand = $this->extractCandidateDecedentName($message, $draftContext['extracted_data']['decedent_name'] ?? null);
             if ($cand) {
-                $cand = preg_replace('/^(?:nanay|tatay|ina|ama|kapatid|kuya|ate|asawa|lolo|lola)\s+/i', '', $cand);
-                $cand = preg_replace('/\s+(?:nanay|tatay|ina|ama|kapatid|asawa|lolo|lola|po|siya|ko|my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$/i', '', $cand);
-                $cand = preg_replace('/\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$/i', '', $cand);
-                $cand = preg_replace('/\s+(?:po|opo)$/i', '', $cand);
-                $cand = trim($cand, " \t\n\r\0\x0B:.,");
-
-                // Inverted comma format "Last, First" (e.g. "Nicolas, Nicolas") -> "First Last"
-                if (strpos($cand, ',') !== false) {
-                    require_once __DIR__ . '/DecedentRequestController.php';
-                    $parsed = DecedentRequestController::parseFullName($cand);
-                    if (!empty($parsed['first_name']) && !empty($parsed['last_name'])) {
-                        $cand = trim($parsed['first_name'] . ' ' . $parsed['last_name']);
-                    }
-                }
-
-                $domainKeywords = ['burial', 'cremation', 'service', 'schedule', 'date', 'reservation', 'lot', 'plot', 'grave', 'columbarium', 'niche'];
-                $calendarKeywords = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-                $candLower = strtolower($cand);
-                if (strlen($cand) >= 2 && !in_array($candLower, $domainKeywords, true) && !in_array($candLower, $calendarKeywords, true)) {
-                    $slots['decedent_name'] = $cand;
-                    $extractedFields['decedent_name'] = $cand;
-                }
+                $slots['decedent_name'] = $cand;
+                $extractedFields['decedent_name'] = $cand;
             }
         }
 
@@ -1008,6 +982,101 @@ class BookingAgentController {
     }
 
     /**
+     * Extracts a decedent's name candidate from user message.
+     * Prevents service descriptors, booking phrases, and domain keywords from being falsely identified as person names.
+     */
+    private function extractCandidateDecedentName(string $message, ?string $existingName = null): ?string {
+        $cand = null;
+        $hasExplicitMarker = false;
+
+        // 1. Explicit marker check (e.g. "para kay Juan", "pangalan ay Maria", "decedent name: Jose", "name is Pedro")
+        $markerPattern = '/(?:para\s+(?:po\s+)?kay|kay|si|pangalan\s+(?:po\s+)?(?:ay|ni)?|(?:decedent|deceased)(?:\s*(?:\'s)?\s*name)?(?:\s*[:=])?|name\s+(?:is|po\s+ay|ay)|named|for(?:\s+my\s+\w+)?)\s+([A-Za-z\.\s,]{2,50})/i';
+        if (preg_match($markerPattern, $message, $m)) {
+            $cand = trim($m[1]);
+            $hasExplicitMarker = true;
+        } elseif (empty($existingName)) {
+            // Guard: Do not run fallback name matching if the message is expressing service choice / booking initiation
+            // without an explicit name marker.
+            $isServiceOrBookingMessage = (bool) preg_match('/\b(?:arrange|book|reserve|select|choose|start|want\s+a|need\s+a|inquire)\b/i', $message)
+                && (bool) preg_match('/\b(?:burial|cremation|service|columbarium|niche|urn|package|inurnment|interment|slot|lot)\b/i', $message);
+            
+            $isPureServicePhrase = (bool) preg_match('/^(?:full\s+cremation|cremation(?:\s+service)?|burial(?:\s+service)?|columbarium(?:\s+niche)?(?:\s+only)?|niche(?:\s+only)?|standard\s+cremation|direct\s+cremation)$/i', trim($message));
+
+            if (!$isServiceOrBookingMessage && !$isPureServicePhrase) {
+                // Fallback to capitalized proper noun phrases (e.g. "Juan Dela Cruz")
+                if (preg_match('/\b([A-Z][a-z]{1,20}(?:[,\s]+\s*[A-Z][a-z]{1,20}){1,3})\b/', $message, $dm)) {
+                    $cand = trim($dm[1]);
+                }
+            }
+        }
+
+        if (!$cand) {
+            return null;
+        }
+
+        // Clean up common prefixes and suffixes
+        $cand = preg_replace('/^(?:nanay|tatay|ina|ama|kapatid|kuya|ate|asawa|lolo|lola)\s+/i', '', $cand);
+        $cand = preg_replace('/\s+(?:nanay|tatay|ina|ama|kapatid|asawa|lolo|lola|po|siya|ko|my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$/i', '', $cand);
+        $cand = preg_replace('/\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$/i', '', $cand);
+        $cand = preg_replace('/\s+(?:po|opo)$/i', '', $cand);
+        $cand = trim($cand, " \t\n\r\0\x0B:.,");
+
+        if (strlen($cand) < 2) {
+            return null;
+        }
+
+        // Inverted comma format "Last, First" (e.g. "Nicolas, Nicolas") -> "First Last"
+        if (strpos($cand, ',') !== false) {
+            require_once __DIR__ . '/DecedentRequestController.php';
+            $parsed = DecedentRequestController::parseFullName($cand);
+            if (!empty($parsed['first_name']) && !empty($parsed['last_name'])) {
+                $cand = trim($parsed['first_name'] . ' ' . $parsed['last_name']);
+            }
+        }
+
+        // Stop words list covering domain terms, service descriptors, and calendar items
+        $domainKeywords = [
+            'burial', 'cremation', 'service', 'services', 'schedule', 'date', 'reservation', 'booking',
+            'lot', 'plot', 'grave', 'columbarium', 'niche', 'urn', 'full', 'standard', 'package',
+            'direct', 'immediate', 'traditional', 'external', 'inurnment', 'interment', 'vault', 'lawn',
+            'mausoleum', 'nitso', 'libing', 'hukay', 'himlayan', 'puntod', 'patay', 'burol', 'arrangement',
+            'arrangements', 'option', 'options', 'process', 'details', 'info', 'information', 'requirement',
+            'requirements', 'inquiry', 'assistance', 'facility', 'chapel', 'viewing', 'please', 'thank',
+            'thanks', 'salamat', 'hello', 'confirm', 'cancel', 'reschedule', 'update', 'only'
+        ];
+        $calendarKeywords = [
+            'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+            'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august',
+            'september', 'october', 'november', 'december', 'today', 'tomorrow', 'yesterday'
+        ];
+
+        $candLower = strtolower($cand);
+
+        // Direct full-string blacklisting
+        if (in_array($candLower, $domainKeywords, true) || in_array($candLower, $calendarKeywords, true)) {
+            return null;
+        }
+
+        // Word-level validation
+        $words = preg_split('/[\s,]+/', $candLower);
+        $words = array_values(array_filter($words, fn($w) => strlen($w) > 0));
+
+        // If no explicit marker was used, require at least 2 words (e.g. "Juan Dela Cruz")
+        if (!$hasExplicitMarker && count($words) < 2) {
+            return null;
+        }
+
+        // Check if ANY word in the candidate is a domain keyword
+        foreach ($words as $word) {
+            if (in_array($word, $domainKeywords, true) || in_array($word, $calendarKeywords, true)) {
+                return null;
+            }
+        }
+
+        return $cand;
+    }
+
+    /**
      * Local deterministic fallback extraction if Python AI service is unavailable.
      */
     private function fallbackExtract(string $message, array $draftContext, array $userBookings = []): array {
@@ -1139,7 +1208,7 @@ class BookingAgentController {
             $intent = BookingAgentService::INTENT_CONFIRM_BOOKING;
         } elseif (preg_match('/\b(recommend|suggest|which lot|help me choose)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_REQUEST_RECOMMENDATION;
-        } elseif (preg_match('/\b(book|schedule|reserve|i want to book|arrange a burial|arrange a cremation|start booking)\b/i', $msgLower) && empty($draftContext['draft_id'])) {
+        } elseif (preg_match('/\b(book|schedule|reserve|i want to book|arrange\s+(?:a\s+)?(?:full\s+|columbarium\s+)?(?:burial|cremation|niche)|arrange a burial|arrange a cremation|start booking)\b/i', $msgLower) && empty($draftContext['draft_id'])) {
             $intent = BookingAgentService::INTENT_CREATE_BOOKING;
         } elseif (preg_match('/\b(visiting|operating|oras\s+(?:ng\s+)?(?:pag)?bisita|anong\s+oras|kailan\s+(?:po\s+)?(?:ba\s+)?bukas|bukas\s+(?:po\s+)?ba|anong\s+oras\s+(?:po\s+)?pwede|visiting\s+schedule|office\s+hours|oras\s+(?:ng\s+)?opisina|open\s+hours|schedule\s+ng\s+bisita)\b/i', $msgLower)) {
             $intent = BookingAgentService::INTENT_GENERAL_INQUIRY;
@@ -1284,36 +1353,9 @@ class BookingAgentController {
             $isSupplyingDateOrLot = (bool) preg_match('/\b(date|schedule|time|lot|section|columbarium|niche|sunday|monday|tuesday|wednesday|thursday|friday|saturday|tomorrow|week|month)\b/i', $message);
 
             if (!$existingName || !$isSupplyingDateOrLot) {
-                $cand = null;
-                if (preg_match('/(?:para\s+(?:po\s+)?kay|kay|si|pangalan\s+(?:po\s+)?(?:ay|ni)?|decedent(?:\s+name)?|name\s+is|named|for(?:\s+my\s+\w+)?)\s+([A-Z][a-zA-Z\.\s,]{2,50})/i', $message, $m)) {
-                    $cand = trim($m[1]);
-                } elseif (empty($existingName) && preg_match('/\b([A-Z][a-z]{1,20}(?:[,\s]+\s*[A-Z][a-z]{1,20}){1,3})\b/', $message, $dm)) {
-                    $cand = trim($dm[1]);
-                }
-
+                $cand = $this->extractCandidateDecedentName($message, $existingName);
                 if ($cand) {
-                    $cand = preg_replace('/^(?:nanay|tatay|ina|ama|kapatid|kuya|ate|asawa|lolo|lola)\s+/i', '', $cand);
-                    $cand = preg_replace('/\s+(?:nanay|tatay|ina|ama|kapatid|asawa|lolo|lola|po|siya|ko|my\s+)?(?:father|mother|brother|sister|son|daughter|husband|wife).*$/i', '', $cand);
-                    $cand = preg_replace('/\s+(?:on|at|in|prefer|preferably|date|burial|cremation|schedule|service).*$/i', '', $cand);
-                    $cand = preg_replace('/\s+(?:po|opo)$/i', '', $cand);
-                    $cand = trim($cand, " \t\n\r\0\x0B:.,");
-
-                    // Inverted comma format "Last, First" (e.g. "Nicolas, Nicolas") -> "First Last"
-                    if (strpos($cand, ',') !== false) {
-                        require_once __DIR__ . '/DecedentRequestController.php';
-                        $parsed = DecedentRequestController::parseFullName($cand);
-                        if (!empty($parsed['first_name']) && !empty($parsed['last_name'])) {
-                            $cand = trim($parsed['first_name'] . ' ' . $parsed['last_name']);
-                        }
-                    }
-
-                    // Stop words check: candidate name cannot be a cemetery domain keyword or calendar name
-                    $domainKeywords = ['burial', 'cremation', 'service', 'schedule', 'date', 'reservation', 'lot', 'plot', 'grave', 'columbarium', 'niche'];
-                    $calendarKeywords = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-                    $candLower = strtolower($cand);
-                    if (strlen($cand) >= 2 && !in_array($candLower, $domainKeywords, true) && !in_array($candLower, $calendarKeywords, true)) {
-                        $slots['decedent_name'] = $cand;
-                    }
+                    $slots['decedent_name'] = $cand;
                 }
             }
         }

@@ -764,14 +764,19 @@ class BookingAgentService {
             // Normalize decedent_name if formatted with comma ("Last, First" like "Nicolas, Nicolas" or "Dela Cruz, Juan")
             if ($k === 'decedent_name' && is_string($v) && trim($v) !== '') {
                 $cleanName = trim($v);
-                if (strpos($cleanName, ',') !== false) {
-                    require_once __DIR__ . '/../controllers/DecedentRequestController.php';
-                    $parsed = DecedentRequestController::parseFullName($cleanName);
-                    if (!empty($parsed['first_name']) && !empty($parsed['last_name'])) {
-                        $cleanName = trim($parsed['first_name'] . ' ' . (!empty($parsed['middle_name']) ? $parsed['middle_name'] . ' ' : '') . $parsed['last_name'] . (!empty($parsed['suffix']) ? ' ' . $parsed['suffix'] : ''));
+                $disallowedNames = ['full', 'cremation', 'burial', 'service', 'services', 'niche', 'columbarium', 'urn', 'standard', 'package', 'direct'];
+                if (in_array(strtolower($cleanName), $disallowedNames, true)) {
+                    $v = null;
+                } else {
+                    if (strpos($cleanName, ',') !== false) {
+                        require_once __DIR__ . '/../controllers/DecedentRequestController.php';
+                        $parsed = DecedentRequestController::parseFullName($cleanName);
+                        if (!empty($parsed['first_name']) && !empty($parsed['last_name'])) {
+                            $cleanName = trim($parsed['first_name'] . ' ' . (!empty($parsed['middle_name']) ? $parsed['middle_name'] . ' ' : '') . $parsed['last_name'] . (!empty($parsed['suffix']) ? ' ' . $parsed['suffix'] : ''));
+                        }
                     }
+                    $v = $cleanName;
                 }
-                $v = $cleanName;
             }
 
             if ($intent === self::INTENT_UPDATE_FIELD) {
