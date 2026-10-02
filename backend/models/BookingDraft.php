@@ -211,6 +211,20 @@ class BookingDraft {
     }
 
     /**
+     * Find a single draft by primary key with an exclusive pessimistic row lock (FOR UPDATE).
+     * Must be called within an active transaction to prevent concurrent double-finalization (POT-001).
+     * 
+     * @param int $draftId
+     * @return array|null
+     */
+    public function findByIdForUpdate(int $draftId): ?array {
+        $stmt = $this->db->prepare("SELECT * FROM booking_drafts WHERE draft_id = ? FOR UPDATE");
+        $stmt->execute([$draftId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    /**
      * Find the most recent active (non-terminal, non-expired) draft for a user.
      * Deterministically orders by updated_at DESC, draft_id DESC.
      * 

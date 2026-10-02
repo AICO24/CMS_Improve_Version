@@ -1363,6 +1363,7 @@
         lotPickerSpinner.style.display = 'block';
         lotGridContainer.innerHTML = '';
         lotPickerEmpty.style.display = 'none';
+        state.lotPickerDisplayLimit = 48;
         if (lotSearchFilter) lotSearchFilter.focus();
 
         try {
@@ -1402,6 +1403,7 @@
     }
 
     function filterLots() {
+        state.lotPickerDisplayLimit = 48;
         const query = (lotSearchFilter.value || '').toLowerCase().trim();
         const selectedSec = lotSectionFilter.value;
 
@@ -1449,7 +1451,11 @@
         }
         lotPickerEmpty.style.display = 'none';
 
-        lots.forEach(lot => {
+        const LOTS_PER_PAGE = 48;
+        const currentLimit = state.lotPickerDisplayLimit || LOTS_PER_PAGE;
+        const visibleLots = lots.slice(0, currentLimit);
+
+        visibleLots.forEach(lot => {
             const card = document.createElement('div');
             const isSelected = state.extractedData.lot_id === lot.lot_id;
             const isAvailable = String(lot.status || '').toLowerCase() === 'available';
@@ -1483,6 +1489,28 @@
 
             lotGridContainer.appendChild(card);
         });
+
+        if (lots.length > visibleLots.length) {
+            const loadMoreWrapper = document.createElement('div');
+            loadMoreWrapper.style.gridColumn = '1 / -1';
+            loadMoreWrapper.style.textAlign = 'center';
+            loadMoreWrapper.style.padding = '15px 0';
+
+            const loadMoreBtn = document.createElement('button');
+            loadMoreBtn.type = 'button';
+            loadMoreBtn.className = 'btn-secondary';
+            loadMoreBtn.style.padding = '10px 24px';
+            loadMoreBtn.style.borderRadius = '8px';
+            loadMoreBtn.style.fontWeight = '600';
+            loadMoreBtn.style.cursor = 'pointer';
+            loadMoreBtn.innerHTML = `<i class="fas fa-chevron-down"></i> Load More Lots (Showing ${visibleLots.length} of ${lots.length})`;
+            loadMoreBtn.addEventListener('click', () => {
+                state.lotPickerDisplayLimit = currentLimit + LOTS_PER_PAGE;
+                renderLotGrid(lots);
+            });
+            loadMoreWrapper.appendChild(loadMoreBtn);
+            lotGridContainer.appendChild(loadMoreWrapper);
+        }
     }
 
     /**

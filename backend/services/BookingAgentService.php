@@ -1032,6 +1032,13 @@ class BookingAgentService {
             $outcome = Database::getInstance()->transaction(function () use (
                 $draftId, $draft, $userId, $username, $userRole, $extracted, $lotId, $scheduleDateStr, $scheduleTime
             ) {
+                // 0. Pessimistic Locking Read on Draft to eliminate concurrent double-finalization race (POT-001)
+                $lockedDraft = $this->draftModel->findByIdForUpdate($draftId);
+                if (!$lockedDraft || $lockedDraft['status'] === BookingDraft::STATUS_COMMITTED) {
+                    throw new BookingDraftException("Draft #{$draftId} has already been committed.", 'DRAFT_ALREADY_COMMITTED', 409);
+                }
+                $draft = $lockedDraft;
+
                 // 1. If currently in READY_FOR_REVIEW, step into AWAITING_CONFIRM
                 if ($draft['status'] === BookingDraft::STATUS_READY_FOR_REVIEW) {
                     $this->draftModel->transitionStatus($draftId, BookingDraft::STATUS_AWAITING_CONFIRM);
@@ -1318,6 +1325,13 @@ class BookingAgentService {
         $outcome = Database::getInstance()->transaction(function () use (
             $draftId, $draft, $userId, $username, $isAdminOrStaff, $extracted, $cremationDateStr
         ) {
+            // 0. Pessimistic Locking Read on Draft to eliminate concurrent double-finalization race (POT-001)
+            $lockedDraft = $this->draftModel->findByIdForUpdate($draftId);
+            if (!$lockedDraft || $lockedDraft['status'] === BookingDraft::STATUS_COMMITTED) {
+                throw new BookingDraftException("Draft #{$draftId} has already been committed.", 'DRAFT_ALREADY_COMMITTED', 409);
+            }
+            $draft = $lockedDraft;
+
             // 1. If currently in READY_FOR_REVIEW, step into AWAITING_CONFIRM
             if ($draft['status'] === BookingDraft::STATUS_READY_FOR_REVIEW) {
                 $this->draftModel->transitionStatus($draftId, BookingDraft::STATUS_AWAITING_CONFIRM);
