@@ -419,6 +419,7 @@ class Lot {
     private const FROM_STATUSES_UNRESTRICTED = '__unrestricted__';
 
     private const LOT_TRANSITION_RULES = [
+        'schedule.pending::Reserved' => ['Available', 'Reserved'],
         'schedule.confirmed::Reserved' => ['Available', 'Reserved'],
         'schedule.completed::Occupied' => ['Available', 'Reserved'],
         'schedule.cancelled::Available' => ['Available', 'Reserved'],

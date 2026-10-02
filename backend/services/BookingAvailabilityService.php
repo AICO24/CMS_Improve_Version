@@ -123,6 +123,21 @@ class BookingAvailabilityService {
             ];
         }
 
+        if (!$isBurial) {
+            $bookedCremations = $this->cremationModel->countActiveByDate($formattedDate);
+            if ($bookedCremations >= Cremation::MAX_DAILY_RETORT_CAPACITY) {
+                return [
+                    'available'    => false,
+                    'reason_code'  => self::CODE_SLOT_CONFLICT,
+                    'code'         => self::CODE_SLOT_CONFLICT,
+                    'date'         => $formattedDate,
+                    'service_type' => $serviceType,
+                    'advisory'     => true,
+                    'message'      => "Daily cremation capacity limit (" . Cremation::MAX_DAILY_RETORT_CAPACITY . " per day) reached for {$formattedDate}. Please select another date."
+                ];
+            }
+        }
+
         return [
             'available'    => true,
             'reason_code'  => self::CODE_DATE_AVAILABLE,
@@ -361,6 +376,20 @@ class BookingAvailabilityService {
             $stmt->execute([$formattedDate]);
             $bookedCount = (int) ($stmt->fetchColumn() ?: 0);
 
+            if ($bookedCount >= Cremation::MAX_DAILY_RETORT_CAPACITY) {
+                return [
+                    'available'           => false,
+                    'reason_code'         => self::CODE_SLOT_CONFLICT,
+                    'code'                => self::CODE_SLOT_CONFLICT,
+                    'date'                => $formattedDate,
+                    'service_type'        => 'cremation',
+                    'booked_count'        => $bookedCount,
+                    'max_capacity'        => Cremation::MAX_DAILY_RETORT_CAPACITY,
+                    'advisory'            => true,
+                    'message'             => "Daily cremation capacity limit (" . Cremation::MAX_DAILY_RETORT_CAPACITY . " per day) reached for {$formattedDate}. Please select another date."
+                ];
+            }
+
             $nicheSuggestion = $this->cremationModel->findNextAvailableNiche();
 
             return [
@@ -370,6 +399,7 @@ class BookingAvailabilityService {
                 'date'                => $formattedDate,
                 'service_type'        => 'cremation',
                 'booked_count'        => $bookedCount,
+                'max_capacity'        => Cremation::MAX_DAILY_RETORT_CAPACITY,
                 'niche_guidance'      => $nicheSuggestion ? [
                     'available'    => true,
                     'niche_number' => $nicheSuggestion['niche_number'],

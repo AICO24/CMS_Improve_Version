@@ -279,9 +279,9 @@ class ScheduleController {
                     $scheduleId,
                     ['lot_id' => (int) $data['lot_id'], 'schedule_date' => $data['schedule_date'], 'initial_status' => $data['status'] ?? 'Pending']
                 );
-                if (isset($data['status']) && $data['status'] === 'Confirmed') {
-                    $this->transitionLotStatus($data['lot_id'], 'Reserved', $user, 'schedule.confirmed');
-                }
+                $scheduleStatus = $data['status'] ?? 'Pending';
+                $transitionEvent = ($scheduleStatus === 'Confirmed') ? 'schedule.confirmed' : 'schedule.pending';
+                $this->transitionLotStatus($data['lot_id'], 'Reserved', $user, $transitionEvent);
 
                 return ['ok' => true, 'schedule_id' => $scheduleId];
             });

@@ -141,8 +141,24 @@ class BookingDraft {
     }
 
     /**
+     * Cancel all active (uncommitted, non-terminal) drafts for a user (BUG-010).
+     */
+    public function cancelActiveDraftsForUser(int $userId): int {
+        $stmt = $this->db->prepare("
+            UPDATE booking_drafts 
+            SET status = 'CANCELLED', 
+                updated_at = NOW() 
+            WHERE user_id = ? 
+              AND status NOT IN ('COMMITTED', 'CANCELLED', 'EXPIRED')
+        ");
+        $stmt->execute([$userId]);
+        return $stmt->rowCount();
+    }
+
+    /**
      * Create a new booking draft.
      * Starts strictly in DRAFT_STARTED status.
+     * Enforces single active draft policy by auto-cancelling any prior active drafts for this user (BUG-010).
      * 
      * @param int         $userId
      * @param string      $serviceType 'burial' | 'cremation'
@@ -159,6 +175,9 @@ class BookingDraft {
         if (strtotime($expiresAt) <= time()) {
             throw new BookingDraftException("Expiration timestamp must be in the future.", 'INVALID_EXPIRATION', 400);
         }
+
+        // Single active draft per user policy (BUG-010)
+        $this->cancelActiveDraftsForUser($userId);
 
         $stmt = $this->db->prepare("
             INSERT INTO booking_drafts (

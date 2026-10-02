@@ -1131,6 +1131,11 @@ class BookingAgentService {
                     throw new BookingDraftException("Failed to create burial schedule record.", 'SCHEDULE_CREATION_FAILED', 500);
                 }
 
+                // 6.5 Transition lot status to Reserved upon commitment (BUG-001/002)
+                $transitionEvent = ($scheduleStatus === 'Confirmed') ? 'schedule.confirmed' : 'schedule.pending';
+                $allowedStatuses = Lot::allowedFromStatusesFor($transitionEvent, 'Reserved');
+                $this->lotModel->transitionStatus($lotId, 'Reserved', $allowedStatuses);
+
                 // 7. Atomic Draft Commitment
                 $this->draftModel->commit($draftId, $scheduleId, 'burial');
 
@@ -1355,6 +1360,15 @@ class BookingAgentService {
                         $extracted['documents']['death_certificate']['original_filename'] ?? 'Death_Certificate.pdf'
                     );
                 }
+            }
+
+            // 2.5 Daily Retort Capacity Check (BUG-004)
+            if ($this->cremationModel->countActiveByDate($cremationDateStr) >= Cremation::MAX_DAILY_RETORT_CAPACITY) {
+                throw new BookingDraftException(
+                    "Daily cremation capacity limit (" . Cremation::MAX_DAILY_RETORT_CAPACITY . " per day) reached for {$cremationDateStr}. Please select another date.",
+                    'RETORT_CAPACITY_REACHED',
+                    409
+                );
             }
 
             // 3. Status & Columbarium determination

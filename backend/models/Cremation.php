@@ -9,6 +9,18 @@ class Cremation {
     // (capacity denominator) so the two stay consistent.
     const DEFAULT_CAPACITY = 10;
 
+    // Maximum daily cremation capacity for retort/crematorium scheduling (BUG-004)
+    public const MAX_DAILY_RETORT_CAPACITY = 3;
+
+    public function countActiveByDate(string $date): int {
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) FROM cremation_records
+            WHERE cremation_date = ? AND status != 'Cancelled'
+        ");
+        $stmt->execute([$date]);
+        return (int) ($stmt->fetchColumn() ?: 0);
+    }
+
     // Cremation module audit, Batch D: mirrors Schedule::LATEST_PAYMENT_SELECT
     // exactly, for the queue page's payment badge — matched on
     // transaction_type = 'Cremation' + reference_id rather than

@@ -462,18 +462,43 @@ class Schedule {
         return (bool) $stmt->fetchColumn();
     }
 
-    public function checkConflict($lotId, $date, $time = null) {
+    public function checkConflict($lotId, $date = null, $time = null, ?int $excludeScheduleId = null) {
+        // Whole-lot exclusivity (BUG-001 & BUG-002): Any active Pending or Confirmed
+        // schedule reserves the entire lot across all dates until completed or cancelled.
         $sql = "SELECT COUNT(*) as count FROM burial_schedules 
-                WHERE lot_id = ? AND schedule_date = ? AND status != 'Cancelled'";
-        $params = [(int) $lotId, $date];
-        if ($time) {
-            $sql .= " AND schedule_time = ?";
-            $params[] = $time;
+                WHERE lot_id = ? AND status IN ('Pending', 'Confirmed')";
+        $params = [(int) $lotId];
+        if ($excludeScheduleId) {
+            $sql .= " AND schedule_id != ?";
+            $params[] = (int) $excludeScheduleId;
         }
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         $result = $stmt->fetch();
-        return (int) ($result['count'] ?? 0) > 0;
+        if ((int) ($result['count'] ?? 0) > 0) {
+            return true;
+        }
+
+        // Additional date/time check for any non-cancelled schedule
+        if ($date !== null) {
+            $dateSql = "SELECT COUNT(*) as count FROM burial_schedules 
+                        WHERE lot_id = ? AND schedule_date = ? AND status != 'Cancelled'";
+            $dateParams = [(int) $lotId, $date];
+            if ($time) {
+                $dateSql .= " AND schedule_time = ?";
+                $dateParams[] = $time;
+            }
+            if ($excludeScheduleId) {
+                $dateSql .= " AND schedule_id != ?";
+                $dateParams[] = (int) $excludeScheduleId;
+            }
+            $dateStmt = $this->db->prepare($dateSql);
+            $dateStmt->execute($dateParams);
+            $dateResult = $dateStmt->fetch();
+            return (int) ($dateResult['count'] ?? 0) > 0;
+        }
+
+        return false;
     }
 
     // Locking read for the transactional booking flow (Batch L2.3) — takes

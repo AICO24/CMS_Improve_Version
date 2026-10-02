@@ -216,6 +216,16 @@ class CremationController {
             return ['error' => "Invalid status '{$data['status']}'. Must be one of: " . implode(', ', self::ALLOWED_STATUSES), 'code' => 400];
         }
 
+        if (!empty($data['cremation_date'])) {
+            $dailyCount = $this->cremationModel->countActiveByDate($data['cremation_date']);
+            if ($dailyCount >= Cremation::MAX_DAILY_RETORT_CAPACITY) {
+                return [
+                    'error' => 'Daily cremation capacity limit (' . Cremation::MAX_DAILY_RETORT_CAPACITY . ' per day) reached for this date. Please select another date.',
+                    'code' => 409
+                ];
+            }
+        }
+
         if (!empty($data['niche_number']) && !$this->cremationModel->isNicheAvailable($data['niche_number'], $data['columbarium'] ?? null)) {
             return ['error' => 'This niche is already occupied', 'code' => 409];
         }
