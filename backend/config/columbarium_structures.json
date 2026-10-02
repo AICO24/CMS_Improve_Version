@@ -2,21 +2,41 @@
     "St. Jude Thaddeus Sanctuary": {
         "levels": 5,
         "niches_per_level": 10,
-        "prefix": "SJ-L"
+        "prefix": "SJ-L",
+        "pricing": {
+            "prime": 18000,
+            "standard": 12000,
+            "upper": 10000
+        }
     },
     "Our Lady of Peace Gallery": {
         "levels": 5,
         "niches_per_level": 10,
-        "prefix": "OLP-L"
+        "prefix": "OLP-L",
+        "pricing": {
+            "prime": 18000,
+            "standard": 12000,
+            "upper": 10000
+        }
     },
     "San Lorenzo Ruiz Wing": {
         "levels": 4,
         "niches_per_level": 8,
-        "prefix": "SLR-L"
+        "prefix": "SLR-L",
+        "pricing": {
+            "prime": 18000,
+            "standard": 12000,
+            "upper": 10000
+        }
     },
     "Ascension Gallery": {
         "levels": 4,
         "niches_per_level": 8,
-        "prefix": "ASC-L"
+        "prefix": "ASC-L",
+        "pricing": {
+            "prime": 18000,
+            "standard": 12000,
+            "upper": 10000
+        }
     }
 }

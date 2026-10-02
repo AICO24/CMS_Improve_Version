@@ -187,6 +187,20 @@ class BookingAgentService {
             }
         }
 
+        // Conditional validation for cremation columbarium niche selection
+        if ($serviceType === 'cremation') {
+            $disp = strtolower(trim((string) ($extractedData['ash_disposition'] ?? '')));
+            if ($disp === 'columbarium') {
+                $nicheNum = trim((string) ($extractedData['niche_number'] ?? ''));
+                $colName = $extractedData['preferred_columbarium'] ?? null;
+                if ($nicheNum === '') {
+                    $missing[] = 'niche_number';
+                } elseif (!$this->cremationModel->isNicheAvailable($nicheNum, $colName)) {
+                    $missing[] = 'niche_number';
+                }
+            }
+        }
+
         return array_values(array_unique($missing));
     }
 
@@ -681,6 +695,42 @@ class BookingAgentService {
                         throw new BookingDraftException("The selected lot is not available for booking.", 'LOT_NOT_AVAILABLE', 409);
                     }
                     continue; // Skip invalid or unavailable lot assignment
+                }
+            }
+
+            // Guard columbarium niche availability for cremation bookings
+            if ($k === 'niche_number' && !empty($v)) {
+                $targetCol = $incomingFields['preferred_columbarium'] ?? ($extractedData['preferred_columbarium'] ?? null);
+                if (!$this->cremationModel->isNicheAvailable((string)$v, $targetCol)) {
+                    if ($intent === self::INTENT_UPDATE_FIELD) {
+                        throw new BookingDraftException("The selected columbarium niche is already occupied.", 'NICHE_NOT_AVAILABLE', 409);
+                    }
+                    continue; // Skip occupied niche
+                }
+                $sanitizedIncoming['ash_disposition'] = 'columbarium';
+                if (!empty($incomingFields['level'])) {
+                    $sanitizedIncoming['level'] = (int) $incomingFields['level'];
+                }
+                if (!empty($incomingFields['niche_price'])) {
+                    $sanitizedIncoming['niche_price'] = (float) $incomingFields['niche_price'];
+                } else {
+                    $lvl = (int) ($incomingFields['level'] ?? ($extractedData['level'] ?? 1));
+                    $sanitizedIncoming['niche_price'] = $this->cremationModel->getNichePrice($targetCol, (string)$v, $lvl);
+                }
+            }
+
+            // Normalize and handle ash_disposition
+            if ($k === 'ash_disposition') {
+                $dispVal = strtolower(trim((string)$v));
+                if (in_array($dispVal, ['take_home', 'take home', 'home', 'family'], true)) {
+                    $v = 'take_home';
+                    // Clear columbarium details if switching to take-home
+                    $sanitizedIncoming['niche_number'] = null;
+                    $sanitizedIncoming['preferred_columbarium'] = null;
+                    $sanitizedIncoming['level'] = null;
+                    $sanitizedIncoming['niche_price'] = null;
+                } elseif (in_array($dispVal, ['columbarium', 'vault', 'niche'], true)) {
+                    $v = 'columbarium';
                 }
             }
 
@@ -1391,14 +1441,42 @@ class BookingAgentService {
                 $status = $extracted['status'];
             }
 
-            $columbarium = !empty($extracted['preferred_columbarium']) ? $extracted['preferred_columbarium'] : null;
+            $ashDisp = strtolower(trim((string) ($extracted['ash_disposition'] ?? '')));
+            $isTakeHome = in_array($ashDisp, ['take_home', 'take-home', 'take home', 'home', 'family'], true);
+
+            $columbarium = null;
+            $nicheNumber = null;
+            $level = null;
+            $ashStorageLocation = 'Take Home / Family Custody';
+
+            if (!$isTakeHome && !empty($extracted['niche_number'])) {
+                $columbarium = !empty($extracted['preferred_columbarium']) ? $extracted['preferred_columbarium'] : 'St. Jude Thaddeus Sanctuary';
+                $nicheNumber = $extracted['niche_number'];
+                $level = !empty($extracted['level']) ? (int) $extracted['level'] : 1;
+                $ashStorageLocation = 'Columbarium Niche';
+
+                // Check niche availability
+                if (!$this->cremationModel->isNicheAvailable($nicheNumber, $columbarium)) {
+                    throw new BookingDraftException(
+                        "Columbarium niche {$nicheNumber} in {$columbarium} is already occupied. Please select an available slot.",
+                        'NICHE_OCCUPIED',
+                        409
+                    );
+                }
+            } elseif (!$isTakeHome && !empty($extracted['preferred_columbarium'])) {
+                $columbarium = $extracted['preferred_columbarium'];
+                $ashStorageLocation = 'Columbarium Vault';
+            }
 
             $cremationData = [
                 'deceased_id'          => $deceasedId,
                 'decedent_request_id'  => $decedentRequestId,
+                'niche_number'         => $nicheNumber,
                 'columbarium'          => $columbarium,
+                'level'                => $level,
                 'cremation_date'       => $cremationDateStr,
                 'status'               => $status,
+                'ash_storage_location' => $ashStorageLocation,
                 'notes'                => $extracted['notes'] ?? ('AI Booking Assistant Draft #' . $draftId),
                 'created_by'           => $userId,
             ];

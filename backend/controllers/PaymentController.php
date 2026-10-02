@@ -83,7 +83,35 @@ class PaymentController {
         $referenceId = $this->normalizeReferenceId($referenceId);
         $referenceKind = in_array($referenceKind, ['schedule', 'lot'], true) ? $referenceKind : null;
 
-        if ($transactionType !== 'Lot Purchase' || $referenceId === null) {
+        if ($referenceId === null) {
+            return ['expected_amount' => null];
+        }
+
+        if ($transactionType === 'Cremation') {
+            require_once __DIR__ . '/../models/Cremation.php';
+            require_once __DIR__ . '/../services/EnvironmentService.php';
+            $cremationModel = new Cremation();
+            $crem = $cremationModel->findById($referenceId);
+            if (!$crem || ($crem['status'] ?? '') === 'Cancelled') {
+                return ['expected_amount' => null];
+            }
+            $baseFee = (float) EnvironmentService::get('CREMATION_BASE_FEE', 15000.00);
+            if ($baseFee <= 0) $baseFee = 15000.00;
+            $nichePrice = 0.0;
+            if (!empty($crem['columbarium']) && !empty($crem['niche_number'])) {
+                $nichePrice = $cremationModel->getNichePrice($crem['columbarium'], $crem['niche_number'], (int)($crem['level'] ?? 1));
+            }
+            return [
+                'expected_amount' => (float) ($baseFee + $nichePrice),
+                'base_fee' => $baseFee,
+                'niche_fee' => $nichePrice,
+                'niche_number' => $crem['niche_number'] ?? null,
+                'columbarium' => $crem['columbarium'] ?? null,
+                'source' => 'cremation',
+            ];
+        }
+
+        if ($transactionType !== 'Lot Purchase') {
             return ['expected_amount' => null];
         }
 

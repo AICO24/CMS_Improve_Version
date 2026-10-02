@@ -211,19 +211,40 @@ class Cremation {
             }
         }
         return [
-            'St. Jude Thaddeus Sanctuary' => ['levels' => 5, 'niches_per_level' => 10, 'prefix' => 'SJ-L'],
-            'Our Lady of Peace Gallery' => ['levels' => 5, 'niches_per_level' => 10, 'prefix' => 'OLP-L'],
-            'San Lorenzo Ruiz Wing' => ['levels' => 4, 'niches_per_level' => 8, 'prefix' => 'SLR-L'],
-            'Ascension Gallery' => ['levels' => 4, 'niches_per_level' => 8, 'prefix' => 'ASC-L'],
+            'St. Jude Thaddeus Sanctuary' => ['levels' => 5, 'niches_per_level' => 10, 'prefix' => 'SJ-L', 'pricing' => ['prime' => 18000, 'standard' => 12000, 'upper' => 10000]],
+            'Our Lady of Peace Gallery' => ['levels' => 5, 'niches_per_level' => 10, 'prefix' => 'OLP-L', 'pricing' => ['prime' => 18000, 'standard' => 12000, 'upper' => 10000]],
+            'San Lorenzo Ruiz Wing' => ['levels' => 4, 'niches_per_level' => 8, 'prefix' => 'SLR-L', 'pricing' => ['prime' => 18000, 'standard' => 12000, 'upper' => 10000]],
+            'Ascension Gallery' => ['levels' => 4, 'niches_per_level' => 8, 'prefix' => 'ASC-L', 'pricing' => ['prime' => 18000, 'standard' => 12000, 'upper' => 10000]],
         ];
+    }
+
+    public function getNichePrice($columbarium = null, $nicheNumber = null, $level = 1): float {
+        $structures = $this->getColumbariumStructures();
+        $target = $columbarium ?: 'St. Jude Thaddeus Sanctuary';
+        $config = $structures[$target] ?? null;
+
+        $lvl = max(1, (int) $level);
+        $tier = ($lvl === 3 || $lvl === 4) ? 'prime' : (($lvl >= 5) ? 'upper' : 'standard');
+
+        if (!empty($config['pricing'][$tier])) {
+            return (float) $config['pricing'][$tier];
+        }
+
+        return match ($tier) {
+            'prime' => 18000.00,
+            'upper' => 10000.00,
+            default => 12000.00,
+        };
     }
 
     public function saveColumbariumStructure($columbarium, $levels, $nichesPerLevel, $prefix) {
         $structures = $this->getColumbariumStructures();
+        $existingPricing = $structures[$columbarium]['pricing'] ?? ['prime' => 18000, 'standard' => 12000, 'upper' => 10000];
         $structures[$columbarium] = [
             'levels' => max(1, min(10, (int) $levels)),
             'niches_per_level' => max(1, min(25, (int) $nichesPerLevel)),
             'prefix' => trim($prefix) ?: 'N-',
+            'pricing' => $existingPricing,
             'updated_at' => date('Y-m-d H:i:s')
         ];
         $configFile = __DIR__ . '/../config/columbarium_structures.json';
@@ -263,6 +284,14 @@ class Cremation {
             $prefix = $config['prefix'];
 
             for ($lvl = 1; $lvl <= $levels; $lvl++) {
+                $tier = ($lvl === 3 || $lvl === 4) ? 'prime' : (($lvl >= 5) ? 'upper' : 'standard');
+                $tierLabel = match ($tier) {
+                    'prime' => 'Prime Eye-Level',
+                    'upper' => 'Standard Upper',
+                    default => 'Standard Lower',
+                };
+                $price = $this->getNichePrice($targetColumbarium, null, $lvl);
+
                 for ($slot = 1; $slot <= $perLevel; $slot++) {
                     if (str_ends_with($prefix, '-L') || str_ends_with($prefix, 'L')) {
                         $nicheNum = rtrim($prefix, 'L') . "L{$lvl}-" . str_pad($slot, 2, '0', STR_PAD_LEFT);
@@ -281,6 +310,9 @@ class Cremation {
                             'niche_number' => $nicheNum,
                             'columbarium' => $targetColumbarium,
                             'level' => $lvl,
+                            'tier' => $tier,
+                            'tier_label' => $tierLabel,
+                            'price' => $price,
                             'status' => $normalizedStatus,
                             'first_name' => $rec['first_name'] ?? null,
                             'last_name' => $rec['last_name'] ?? null,
@@ -295,6 +327,9 @@ class Cremation {
                             'niche_number' => $nicheNum,
                             'columbarium' => $targetColumbarium,
                             'level' => $lvl,
+                            'tier' => $tier,
+                            'tier_label' => $tierLabel,
+                            'price' => $price,
                             'status' => 'available',
                             'first_name' => null,
                             'last_name' => null,
@@ -310,10 +345,21 @@ class Cremation {
             // Any remaining occupied records not mapped to structured slots get appended
             foreach ($occupiedMap as $nNum => $rec) {
                 $status = (string) ($rec['status'] ?? 'Scheduled');
+                $lvl = !empty($rec['level']) ? (int) $rec['level'] : 1;
+                $tier = ($lvl === 3 || $lvl === 4) ? 'prime' : (($lvl >= 5) ? 'upper' : 'standard');
+                $tierLabel = match ($tier) {
+                    'prime' => 'Prime Eye-Level',
+                    'upper' => 'Standard Upper',
+                    default => 'Standard Lower',
+                };
+                $price = $this->getNichePrice($targetColumbarium, $nNum, $lvl);
                 $rows[] = [
                     'niche_number' => $nNum,
                     'columbarium' => $targetColumbarium,
-                    'level' => !empty($rec['level']) ? (int) $rec['level'] : 1,
+                    'level' => $lvl,
+                    'tier' => $tier,
+                    'tier_label' => $tierLabel,
+                    'price' => $price,
                     'status' => $status === 'Cancelled' ? 'available' : 'occupied',
                     'first_name' => $rec['first_name'] ?? null,
                     'last_name' => $rec['last_name'] ?? null,
@@ -595,6 +641,8 @@ class Cremation {
                         'columbarium' => $niche['columbarium'],
                         'level' => $niche['level'],
                         'tier' => 'prime',
+                        'tier_label' => 'Prime Eye-Level',
+                        'price' => (float) ($niche['price'] ?? $this->getNichePrice($niche['columbarium'], null, $lvl)),
                         'is_prime' => true,
                     ];
                 }
@@ -609,6 +657,8 @@ class Cremation {
                         'columbarium' => $niche['columbarium'],
                         'level' => $niche['level'],
                         'tier' => 'standard',
+                        'tier_label' => $lvl >= 5 ? 'Standard Upper' : 'Standard Lower',
+                        'price' => (float) ($niche['price'] ?? $this->getNichePrice($niche['columbarium'], null, $lvl)),
                         'is_prime' => false,
                     ];
                 }
@@ -624,6 +674,8 @@ class Cremation {
             'columbarium' => $first['columbarium'],
             'level' => $first['level'],
             'tier' => $isPrime ? 'prime' : 'standard',
+            'tier_label' => $isPrime ? 'Prime Eye-Level' : ($lvl >= 5 ? 'Standard Upper' : 'Standard Lower'),
+            'price' => (float) ($first['price'] ?? $this->getNichePrice($first['columbarium'], null, $lvl)),
             'is_prime' => $isPrime,
             'note' => ($tierPreference === 'prime' && !$isPrime) ? 'No vacant eye-level niches; suggesting best available slot.' : null,
         ];

@@ -241,14 +241,36 @@ class PaymentAmountResolver {
             $baseFee = self::DEFAULT_CREMATION_BASE_FEE;
         }
 
-        $columbarium = !empty($cremation['columbarium']) ? $cremation['columbarium'] : 'Standard';
-        $nicheInfo = !empty($cremation['niche_number']) ? ' - Niche ' . $cremation['niche_number'] : '';
+        $columbarium = !empty($cremation['columbarium']) ? $cremation['columbarium'] : null;
+        $nicheNumber = !empty($cremation['niche_number']) ? $cremation['niche_number'] : null;
+        $level = !empty($cremation['level']) ? (int) $cremation['level'] : 1;
+
+        $nichePrice = 0.0;
+        if (!empty($columbarium) && !empty($nicheNumber)) {
+            $nichePrice = $cremationModel->getNichePrice($columbarium, $nicheNumber, $level);
+        }
+
+        $totalPrice = $baseFee + $nichePrice;
+
+        if (!empty($nicheNumber)) {
+            $label = 'Cremation & Columbarium Niche ' . $nicheNumber . ' (' . ($columbarium ?: 'Sanctuary') . ')';
+        } else {
+            $label = 'Cremation Booking #' . $cremation['cremation_id'] . ' (Take Home Urn)';
+        }
 
         return [
-            'price' => $baseFee,
+            'price' => $totalPrice,
             'reference_kind' => null,
-            'source' => 'system.cremation_base_fee',
-            'label' => 'Cremation Booking #' . $cremation['cremation_id'] . ' (' . $columbarium . $nicheInfo . ')',
+            'source' => !empty($nicheNumber) ? 'system.cremation_fee_and_niche' : 'system.cremation_base_fee',
+            'label' => $label,
+            'breakdown' => [
+                'base_fee' => $baseFee,
+                'niche_fee' => $nichePrice,
+                'total' => $totalPrice,
+                'is_take_home' => empty($nicheNumber),
+                'niche_number' => $nicheNumber,
+                'columbarium' => $columbarium,
+            ],
         ];
     }
 
