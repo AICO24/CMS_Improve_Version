@@ -1064,32 +1064,34 @@
                 const nichePrice = Number(state.extractedData.niche_price || 0);
 
                 if (isExternal) {
-                    if (labelBaseFee) labelBaseFee.textContent = 'Cremation Service:';
+                    if (labelBaseFee) labelBaseFee.textContent = 'Cremation Process Fee:';
                     if (valBaseFee) valBaseFee.innerHTML = '<span style="color:#059669;font-weight:600;">₱0 (External / Waived)</span>';
-                    if (labelSlotFee) labelSlotFee.textContent = 'Columbarium Niche:';
+                    const nicheSlotLabel = state.extractedData.niche_number ? `Columbarium Niche (${state.extractedData.niche_number}):` : 'Columbarium Niche:';
+                    if (labelSlotFee) labelSlotFee.textContent = nicheSlotLabel;
 
                     if (state.extractedData.niche_number) {
                         if (valSlotFee) valSlotFee.textContent = `₱${nichePrice.toLocaleString()}`;
-                        if (valTotalFee) valTotalFee.textContent = `₱${nichePrice.toLocaleString()}`;
+                        if (valTotalFee) valTotalFee.textContent = `₱${nichePrice.toLocaleString()} (Niche Only)`;
                     } else {
-                        if (valSlotFee) valSlotFee.innerHTML = '<span class="text-muted">Pending slot selection</span>';
+                        if (valSlotFee) valSlotFee.innerHTML = '<span class="text-muted">Pending slot (₱10k - ₱18k)</span>';
                         if (valTotalFee) valTotalFee.textContent = 'Pending slot selection';
                     }
                 } else {
-                    if (labelBaseFee) labelBaseFee.textContent = 'Cremation Service:';
+                    if (labelBaseFee) labelBaseFee.textContent = 'Cremation Process Fee:';
                     if (valBaseFee) valBaseFee.textContent = '₱15,000';
-                    if (labelSlotFee) labelSlotFee.textContent = 'Columbarium Niche:';
+                    const nicheSlotLabel = state.extractedData.niche_number ? `Columbarium Niche (${state.extractedData.niche_number}):` : 'Columbarium Niche:';
+                    if (labelSlotFee) labelSlotFee.textContent = nicheSlotLabel;
 
                     if (ashDisp === 'take_home') {
                         if (valSlotFee) valSlotFee.innerHTML = '<span style="color:#059669;font-weight:600;">₱0 (Take Home / Waived)</span>';
-                        if (valTotalFee) valTotalFee.textContent = '₱15,000';
+                        if (valTotalFee) valTotalFee.textContent = '₱15,000 (Cremation Only)';
                     } else if (state.extractedData.niche_number) {
                         if (valSlotFee) valSlotFee.textContent = `₱${nichePrice.toLocaleString()}`;
                         const total = 15000 + nichePrice;
                         if (valTotalFee) valTotalFee.textContent = `₱${total.toLocaleString()}`;
                     } else {
-                        if (valSlotFee) valSlotFee.innerHTML = '<span class="text-muted">Pending slot selection</span>';
-                        if (valTotalFee) valTotalFee.textContent = '₱15,000 (Base Fee)';
+                        if (valSlotFee) valSlotFee.innerHTML = '<span class="text-muted">Pending slot (₱10k - ₱18k)</span>';
+                        if (valTotalFee) valTotalFee.textContent = '₱15,000 + Niche Slot';
                     }
                 }
             } else {

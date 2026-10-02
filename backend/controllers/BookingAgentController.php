@@ -423,7 +423,7 @@ class BookingAgentController {
         $extractedFields = is_array($extractedResult['extracted_fields'] ?? null) ? $extractedResult['extracted_fields'] : [];
 
         // Synchronize extractedFields from slots if missing
-        foreach (['service_type', 'decedent_name', 'relationship', 'preferred_date', 'cremation_date', 'preferred_time', 'lot_id', 'preferred_columbarium', 'notes'] as $fKey) {
+        foreach (['service_type', 'decedent_name', 'relationship', 'preferred_date', 'cremation_date', 'preferred_time', 'lot_id', 'preferred_columbarium', 'niche_number', 'level', 'niche_price', 'ash_disposition', 'service_subtype', 'is_external_cremation', 'notes'] as $fKey) {
             if (empty($extractedFields[$fKey]) && !empty($slots[$fKey])) {
                 $extractedFields[$fKey] = $slots[$fKey];
             }
@@ -1237,6 +1237,12 @@ class BookingAgentController {
             'section'               => null,
             'block'                 => null,
             'preferred_columbarium' => null,
+            'niche_number'          => null,
+            'level'                 => null,
+            'niche_price'           => null,
+            'ash_disposition'       => null,
+            'service_subtype'       => null,
+            'is_external_cremation' => null,
             'correction_field'      => null,
             'corrected_value'       => null,
             'notes'                 => null,
@@ -1279,6 +1285,69 @@ class BookingAgentController {
             $slots['section'] = strtoupper($m[1]);
         } elseif (preg_match('/^([A-Za-z])[-_]/', (string) ($slots['lot_identifier'] ?? ''), $sm)) {
             $slots['section'] = strtoupper($sm[1]);
+        }
+
+        // Columbarium building extraction
+        if (preg_match('/\b(?:st\.?\s*jude(?:\s+thaddeus)?(?:\s+sanctuary)?)\b/i', $message)) {
+            $slots['preferred_columbarium'] = 'St. Jude Thaddeus Sanctuary';
+        } elseif (preg_match('/\b(?:our\s+lady(?:\s+of\s+peace)?(?:\s+gallery)?)\b/i', $message)) {
+            $slots['preferred_columbarium'] = 'Our Lady of Peace Gallery';
+        } elseif (preg_match('/\b(?:san\s+lorenzo(?:\s+ruiz)?(?:\s+wing)?)\b/i', $message)) {
+            $slots['preferred_columbarium'] = 'San Lorenzo Ruiz Wing';
+        } elseif (preg_match('/\b(?:ascension(?:\s+gallery)?)\b/i', $message)) {
+            $slots['preferred_columbarium'] = 'Ascension Gallery';
+        }
+
+        // Niche slot code extraction (e.g. SJ-L3-01, OLP-L2-05, SLR-L1-02, ASC-L4-03, or N-12, or niche #12)
+        if (preg_match('/\b((?:SJ|OLP|SLR|ASC)-L(\d+)-\d+)\b/i', $message, $nm)) {
+            $slots['niche_number'] = strtoupper(trim($nm[1]));
+            $slots['level'] = (int) $nm[2];
+            $slots['ash_disposition'] = 'columbarium';
+            if (empty($slots['preferred_columbarium'])) {
+                $prefix = strtoupper(substr($slots['niche_number'], 0, 3));
+                if (str_starts_with($prefix, 'SJ')) {
+                    $slots['preferred_columbarium'] = 'St. Jude Thaddeus Sanctuary';
+                } elseif (str_starts_with($prefix, 'OLP')) {
+                    $slots['preferred_columbarium'] = 'Our Lady of Peace Gallery';
+                } elseif (str_starts_with($prefix, 'SLR')) {
+                    $slots['preferred_columbarium'] = 'San Lorenzo Ruiz Wing';
+                } elseif (str_starts_with($prefix, 'ASC')) {
+                    $slots['preferred_columbarium'] = 'Ascension Gallery';
+                }
+            }
+        } elseif (preg_match('/\bniche\s*(?:id|#|number|no\.?)?\s*:?\s*([A-Za-z0-9\-_]+)\b/i', $message, $nm)) {
+            $slots['niche_number'] = trim($nm[1]);
+            $slots['ash_disposition'] = 'columbarium';
+        }
+
+        if (preg_match('/\blevel\s*(\d+)\b/i', $message, $lm)) {
+            $slots['level'] = (int) $lm[1];
+        }
+
+        // Compute niche price if niche_number or level is present
+        if (!empty($slots['niche_number']) || !empty($slots['level'])) {
+            require_once __DIR__ . '/../models/Cremation.php';
+            $cremModel = new Cremation();
+            $slots['niche_price'] = $cremModel->getNichePrice(
+                $slots['preferred_columbarium'] ?? null,
+                $slots['niche_number'] ?? null,
+                $slots['level'] ?? 1
+            );
+        }
+
+        // Ash disposition & Service subtype extraction
+        if (preg_match('/\b(take\s*home|iuuwi(?:\s+ang\s+abo)?|sa\s+bahay|walang\s+niche|cremation\s+only)\b/i', $message)) {
+            $slots['ash_disposition'] = 'take_home';
+            $slots['service_subtype'] = 'take_home';
+            $slots['is_external_cremation'] = false;
+        } elseif (preg_match('/\b(inurnment(?:\s+only)?|columbarium\s+only|may\s+urn\s+na|niche\s+only)\b/i', $message)) {
+            $slots['ash_disposition'] = 'columbarium';
+            $slots['service_subtype'] = 'inurnment_only';
+            $slots['is_external_cremation'] = true;
+        } elseif (preg_match('/\b(full\s+cremation|cremation\s+(?:with|and)\s+niche|full\s+service|full\s+package)\b/i', $message)) {
+            $slots['ash_disposition'] = 'columbarium';
+            $slots['service_subtype'] = 'full_package';
+            $slots['is_external_cremation'] = false;
         }
 
         if (preg_match('/\bmy\s+(father|mother|brother|sister|son|daughter|husband|wife|friend|relative|grandfather|grandmother|parent|spouse)\b/i', $message, $m)) {
@@ -1369,6 +1438,12 @@ class BookingAgentController {
             'preferred_time'        => $slots['preferred_time'] ?? null,
             'lot_id'                => $slots['lot_id'],
             'preferred_columbarium' => $slots['preferred_columbarium'],
+            'niche_number'          => $slots['niche_number'],
+            'level'                 => $slots['level'],
+            'niche_price'           => $slots['niche_price'],
+            'ash_disposition'       => $slots['ash_disposition'],
+            'service_subtype'       => $slots['service_subtype'],
+            'is_external_cremation' => $slots['is_external_cremation'],
             'notes'                 => $slots['notes']
         ];
         $extractedFields = array_filter($extractedFields, fn($v) => $v !== null && $v !== '');
@@ -1472,6 +1547,60 @@ class BookingAgentController {
                     $reply .= " What date would you prefer for the service?";
                 } else {
                     $reply .= " All required details are now complete in your Live Blueprint on the right! Please review and type **'Confirm'** to finalize.";
+                }
+            }
+        } elseif (!empty($slots['niche_number'])) {
+            $colName = $slots['preferred_columbarium'] ?? 'Columbarium';
+            $nPrice = !empty($slots['niche_price']) ? ' (₱' . number_format((float)$slots['niche_price']) . ')' : '';
+            if ($isTag) {
+                $reply = "Napili na po ang Niche **{$slots['niche_number']}** sa **{$colName}**{$nPrice}.";
+                if (empty($activeDecName)) {
+                    $reply .= " Sino po ang buong pangalan ng yumao (decedent)?";
+                } elseif (empty($activeDate)) {
+                    $reply .= " Kailan po ninyo nais isagawa ang cremation?";
+                } else {
+                    $reply .= " Kumpleto na po ang mga detalye sa inyong Live Blueprint sa kanan! Sabihin lamang ang **'Confirm'** upang maipasa.";
+                }
+            } else {
+                $reply = "I have selected Niche **{$slots['niche_number']}** in **{$colName}**{$nPrice}.";
+                if (empty($activeDecName)) {
+                    $reply .= " Who is this arrangement for (the decedent's full name)?";
+                } elseif (empty($activeDate)) {
+                    $reply .= " What date would you prefer for the cremation service?";
+                } else {
+                    $reply .= " All details are complete in your Live Blueprint! Type **'Confirm'** to finalize.";
+                }
+            }
+        } elseif (!empty($slots['ash_disposition']) && $slots['ash_disposition'] === 'take_home') {
+            if ($isTag) {
+                $reply = "Naitala ko na po na **Take Home** ang cremains (iuuwi ng pamilya ang urn). Base cremation service (₱15,000) lamang po ang kailangang bayaran.";
+                if (empty($activeDecName)) {
+                    $reply .= " Sino po ang buong pangalan ng yumao (decedent)?";
+                } elseif (empty($activeDate)) {
+                    $reply .= " Kailan po ninyo nais isagawa ang cremation?";
+                }
+            } else {
+                $reply = "I have noted that the cremains will be **Take Home** (Family Custody). Only the base cremation service fee (₱15,000) applies.";
+                if (empty($activeDecName)) {
+                    $reply .= " Could you please provide the full name of the deceased (decedent)?";
+                } elseif (empty($activeDate)) {
+                    $reply .= " What date would you prefer for the cremation service?";
+                }
+            }
+        } elseif (!empty($slots['service_subtype']) && $slots['service_subtype'] === 'full_package') {
+            if ($isTag) {
+                $reply = "Nais ninyo po ng **Full Cremation Service**. Kasama po rito ang Cremation Process (₱15,000) at Columbarium Niche slot (₱10,000 hanggang ₱18,000 depende sa Level).";
+                if (empty($activeDecName)) {
+                    $reply .= " Maaari po bang malaman ang buong pangalan ng yumao (decedent)?";
+                } else {
+                    $reply .= " Maaari na po kayong pumili ng inyong Niche Slot sa button sa Live Blueprint sa kanan.";
+                }
+            } else {
+                $reply = "You selected the **Full Cremation Service**. This package includes the Cremation Process (₱15,000) plus a Columbarium Niche slot (₱10,000 to ₱18,000 depending on level).";
+                if (empty($activeDecName)) {
+                    $reply .= " Could you please provide the full name of the deceased (decedent)?";
+                } else {
+                    $reply .= " You can select your preferred Niche Slot using the button on your Live Blueprint on the right.";
                 }
             }
         } else {
