@@ -391,6 +391,17 @@ class BookingConversation {
     }
 
     /**
+     * Permanently delete a conversation and all its messages (via ON DELETE CASCADE).
+     * Enforces ownership check.
+     */
+    public function delete(int $conversationId, int $authenticatedUserId): bool {
+        $this->requireOwnership($conversationId, $authenticatedUserId);
+
+        $stmt = $this->db->prepare("DELETE FROM booking_conversations WHERE id = ? AND user_id = ?");
+        return $stmt->execute([$conversationId, $authenticatedUserId]);
+    }
+
+    /**
      * Internal helper to synchronize session_id into booking_drafts.conversation_id.
      */
     private function syncDraftConversationId(int $draftId, string $sessionId): void {

@@ -122,6 +122,9 @@ class Lot {
         if (!empty($filters['status'])) {
             $sql .= " AND l.status = ?";
             $params[] = $filters['status'];
+            if ($filters['status'] === 'Available') {
+                $sql .= " AND (rsv.schedule_id IS NULL OR rsv.schedule_status NOT IN ('Pending', 'Confirmed'))";
+            }
         }
         if (!empty($filters['block_id'])) {
             $sql .= " AND l.block_id = ?";

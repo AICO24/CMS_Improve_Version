@@ -2603,6 +2603,36 @@ class BookingAgentController {
     }
 
     /**
+     * DELETE /api/booking-agent/conversations/{id}
+     * Permanently delete an existing conversation session and its messages.
+     */
+    public function deleteConversation(int $conversationId, $user): array {
+        [$userId, $username] = $this->resolveUserContext($user);
+        if ($userId <= 0) {
+            return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
+        }
+
+        try {
+            $deleted = $this->conversationModel->delete($conversationId, $userId);
+            if (!$deleted) {
+                return ['success' => false, 'error' => 'Failed to delete conversation.', 'code' => 500];
+            }
+            return [
+                'success' => true,
+                'message' => 'Conversation deleted successfully.',
+                'code'    => 200,
+            ];
+        } catch (BookingConversationException $e) {
+            return [
+                'success'    => false,
+                'error'      => $e->getMessage(),
+                'error_type' => $e->getErrorType(),
+                'code'       => $e->getHttpCode(),
+            ];
+        }
+    }
+
+    /**
      * Getter for conversation model.
      */
     public function getConversationModel(): BookingConversation {

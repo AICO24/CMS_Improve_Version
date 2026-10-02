@@ -41,6 +41,9 @@
     let bookingConfirmModal, btnCloseBookingConfirm, btnCancelBookingConfirm, btnSubmitBookingConfirm;
     let confirmModalService, confirmModalDecedent, confirmModalDate, confirmModalLot, confirmModalAllocationLabel, confirmModalDocsBadge;
     let btnToggleHistory, chatHistoryOverlay, chatHistoryBackdrop, btnCloseChatHistory, btnNewChatFromDrawer, chatHistoryList, historySpinner, historyEmpty, btnStartFirstChat;
+    let convActionConfirmModal, btnCloseConvActionModal, btnCancelConvActionModal, btnConfirmConvActionModal;
+    let convActionModalHeading, convActionModalTitleText, convActionModalHeader, convActionModalDesc, convActionModalBtnText, convActionModalIcon, convActionModalHeroIcon, convActionModalIconWrap;
+    let pendingConvAction = null;
 
     let activeEditField = null;
     let isInitialized = false;
@@ -209,6 +212,19 @@
         historySpinner = document.getElementById('historySpinner');
         historyEmpty = document.getElementById('historyEmpty');
         btnStartFirstChat = document.getElementById('btnStartFirstChat');
+
+        convActionConfirmModal = document.getElementById('convActionConfirmModal');
+        btnCloseConvActionModal = document.getElementById('btnCloseConvActionModal');
+        btnCancelConvActionModal = document.getElementById('btnCancelConvActionModal');
+        btnConfirmConvActionModal = document.getElementById('btnConfirmConvActionModal');
+        convActionModalHeading = document.getElementById('convActionModalHeading');
+        convActionModalTitleText = document.getElementById('convActionModalTitleText');
+        convActionModalHeader = document.getElementById('convActionModalHeader');
+        convActionModalDesc = document.getElementById('convActionModalDesc');
+        convActionModalBtnText = document.getElementById('convActionModalBtnText');
+        convActionModalIcon = document.getElementById('convActionModalIcon');
+        convActionModalHeroIcon = document.getElementById('convActionModalHeroIcon');
+        convActionModalIconWrap = document.getElementById('convActionModalIconWrap');
     }
 
     /**
@@ -330,6 +346,14 @@
                 if (e.target === bookingConfirmModal) closeBookingConfirmModal();
             });
         }
+        if (convActionConfirmModal) {
+            convActionConfirmModal.addEventListener('click', (e) => {
+                if (e.target === convActionConfirmModal) closeConvActionModal();
+            });
+        }
+        if (btnCloseConvActionModal) btnCloseConvActionModal.addEventListener('click', closeConvActionModal);
+        if (btnCancelConvActionModal) btnCancelConvActionModal.addEventListener('click', closeConvActionModal);
+        if (btnConfirmConvActionModal) btnConfirmConvActionModal.addEventListener('click', executeConvAction);
 
         // Chat History Drawer bindings
         if (btnToggleHistory) btnToggleHistory.addEventListener('click', toggleChatHistoryDrawer);
@@ -2018,10 +2042,13 @@
                     <div class="chat-history-item-actions">
                         ${c.draft_id ? `<span style="font-size: 0.72rem; color: #64748b; background: #e2e8f0; padding: 1px 6px; border-radius: 4px;">Draft #${escapeHtml(String(c.draft_id))}</span>` : ''}
                         ${c.status !== 'archived' ? `
-                            <button type="button" class="btn-archive-conv" title="Archive session" data-conv-id="${c.id}">
+                            <button type="button" class="btn-archive-conv" title="Archive session" data-conv-id="${c.id}" style="border:none; background:transparent; color:#64748b; cursor:pointer; padding:3px 6px; border-radius:4px; font-size:0.85rem;" onmouseover="this.style.color='#0ea5e9'" onmouseout="this.style.color='#64748b'">
                                 <i class="fas fa-box-archive"></i>
                             </button>
                         ` : ''}
+                        <button type="button" class="btn-delete-conv" title="Delete session" data-conv-id="${c.id}" style="border:none; background:transparent; color:#ef4444; cursor:pointer; padding:3px 6px; border-radius:4px; font-size:0.85rem;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='transparent'">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
                     </div>
                 </div>
             `;
@@ -2039,7 +2066,16 @@
             if (btnArchive) {
                 btnArchive.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    archiveConversation(c.id);
+                    openConvActionModal('archive', c.id);
+                });
+            }
+
+            // Delete button handler
+            const btnDelete = item.querySelector('.btn-delete-conv');
+            if (btnDelete) {
+                btnDelete.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openConvActionModal('delete', c.id);
                 });
             }
 
@@ -2048,20 +2084,106 @@
     }
 
     /**
-     * Archive conversation
+     * Open confirmation modal for Delete or Archive action
      */
-    async function archiveConversation(convId) {
-        if (!confirm('Are you sure you want to archive this chat session?')) return;
-        try {
-            const res = await api.request(`booking-agent/conversations/${convId}/archive`, { method: 'POST' });
-            if (res && res.success) {
-                if (typeof showToast === 'function') showToast('Chat session archived', 'success');
-                loadConversationHistory();
-            } else {
-                if (typeof showToast === 'function') showToast(sanitizeUserErrorMessage(res?.error, 'Failed to archive session'), 'error');
+    function openConvActionModal(type, convId) {
+        pendingConvAction = { type, convId };
+        if (!convActionConfirmModal) return;
+
+        if (type === 'delete') {
+            if (convActionModalHeading) {
+                convActionModalHeading.innerHTML = '<i class="fas fa-trash-alt text-danger" style="color: #ef4444; margin-right: 6px;"></i><span>Delete Chat Session</span>';
             }
-        } catch (err) {
-            if (typeof showToast === 'function') showToast(sanitizeUserErrorMessage(err, 'Failed to archive session'), 'error');
+            if (convActionModalHeader) convActionModalHeader.textContent = 'Delete this chat session?';
+            if (convActionModalDesc) convActionModalDesc.textContent = 'This will permanently remove the conversation and its message history. This action cannot be undone.';
+            if (convActionModalBtnText) convActionModalBtnText.textContent = 'Delete';
+            if (btnConfirmConvActionModal) {
+                btnConfirmConvActionModal.style.background = '#ef4444';
+                btnConfirmConvActionModal.style.borderColor = '#ef4444';
+                btnConfirmConvActionModal.innerHTML = '<i class="fas fa-trash-alt"></i> Delete';
+            }
+            if (convActionModalHeroIcon) convActionModalHeroIcon.className = 'fas fa-trash-alt';
+            if (convActionModalIconWrap) {
+                convActionModalIconWrap.style.background = 'rgba(239, 68, 68, 0.12)';
+                convActionModalIconWrap.style.color = '#ef4444';
+            }
+        } else {
+            // Archive
+            if (convActionModalHeading) {
+                convActionModalHeading.innerHTML = '<i class="fas fa-box-archive text-primary" style="color: #0ea5e9; margin-right: 6px;"></i><span>Archive Chat Session</span>';
+            }
+            if (convActionModalHeader) convActionModalHeader.textContent = 'Archive this chat session?';
+            if (convActionModalDesc) convActionModalDesc.textContent = 'This chat session will be moved to archived sessions in your history.';
+            if (convActionModalBtnText) convActionModalBtnText.textContent = 'Archive';
+            if (btnConfirmConvActionModal) {
+                btnConfirmConvActionModal.style.background = '#0ea5e9';
+                btnConfirmConvActionModal.style.borderColor = '#0ea5e9';
+                btnConfirmConvActionModal.innerHTML = '<i class="fas fa-box-archive"></i> Archive';
+            }
+            if (convActionModalHeroIcon) convActionModalHeroIcon.className = 'fas fa-box-archive';
+            if (convActionModalIconWrap) {
+                convActionModalIconWrap.style.background = 'rgba(14, 165, 233, 0.12)';
+                convActionModalIconWrap.style.color = '#0ea5e9';
+            }
+        }
+
+        convActionConfirmModal.style.display = 'flex';
+    }
+
+    /**
+     * Close action modal
+     */
+    function closeConvActionModal() {
+        if (convActionConfirmModal) convActionConfirmModal.style.display = 'none';
+        pendingConvAction = null;
+    }
+
+    /**
+     * Execute confirmed conversation action (Delete or Archive)
+     */
+    async function executeConvAction() {
+        if (!pendingConvAction) return;
+        const { type, convId } = pendingConvAction;
+        closeConvActionModal();
+
+        if (type === 'delete') {
+            try {
+                const res = await api.request(`booking-agent/conversations/${convId}`, { method: 'DELETE' });
+                if (res && res.success) {
+                    if (typeof showToast === 'function') showToast('Chat session permanently deleted', 'success');
+                    // If the deleted conversation is the one currently open in the active chat view, start fresh
+                    if (state.conversationId === convId) {
+                        state.draftId = null;
+                        state.conversationId = null;
+                        state.sessionId = null;
+                        state.serviceType = null;
+                        state.status = 'INTAKE';
+                        state.extractedData = {};
+                        state.missingFields = [];
+                        state.isReadyForReview = false;
+                        state.decedentMatch = null;
+                        state.selectedLotDetails = null;
+                        renderIntakeGreeting();
+                    }
+                    loadConversationHistory();
+                } else {
+                    if (typeof showToast === 'function') showToast(sanitizeUserErrorMessage(res?.error, 'Failed to delete session'), 'error');
+                }
+            } catch (err) {
+                if (typeof showToast === 'function') showToast(sanitizeUserErrorMessage(err, 'Failed to delete session'), 'error');
+            }
+        } else if (type === 'archive') {
+            try {
+                const res = await api.request(`booking-agent/conversations/${convId}/archive`, { method: 'POST' });
+                if (res && res.success) {
+                    if (typeof showToast === 'function') showToast('Chat session archived', 'success');
+                    loadConversationHistory();
+                } else {
+                    if (typeof showToast === 'function') showToast(sanitizeUserErrorMessage(res?.error, 'Failed to archive session'), 'error');
+                }
+            } catch (err) {
+                if (typeof showToast === 'function') showToast(sanitizeUserErrorMessage(err, 'Failed to archive session'), 'error');
+            }
         }
     }
 

@@ -1083,7 +1083,7 @@ class BookingAgentService {
                 // 4. Conflict check
                 $hasConflict = $this->scheduleModel->checkConflict($lotId, $scheduleDateStr, $scheduleTime);
                 if ($hasConflict) {
-                    throw new BookingDraftException("This lot is already booked for the selected date/time", 'LOT_ALREADY_BOOKED', 409);
+                    throw new BookingDraftException("This lot is already reserved for an existing burial booking. Please select another lot from the lot picker.", 'LOT_ALREADY_BOOKED', 409);
                 }
 
                 // 5. Provisional or Existing Decedent Handling

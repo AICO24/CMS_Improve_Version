@@ -595,6 +595,36 @@
         </div>
     </div>
 
+    <!-- Chat Session Action Confirmation Modal (Delete / Archive) -->
+    <div class="lot-picker-modal-overlay" id="convActionConfirmModal" style="display: none; z-index: 100000;">
+        <div class="lot-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="convActionModalHeading" style="max-width: 440px;">
+            <div class="lot-picker-header">
+                <div class="lot-picker-title" id="convActionModalHeading">
+                    <i class="fas fa-trash-alt text-danger" id="convActionModalIcon" style="color: #ef4444;"></i>
+                    <span id="convActionModalTitleText">Delete Chat Session</span>
+                </div>
+                <button type="button" class="btn-close-modal" id="btnCloseConvActionModal" aria-label="Close dialog"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body-custom" style="padding: 24px 22px;">
+                <div style="text-align: center; margin-bottom: 22px;">
+                    <div id="convActionModalIconWrap" style="width: 58px; height: 58px; border-radius: 50%; background: rgba(239, 68, 68, 0.12); color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; margin: 0 auto 16px;">
+                        <i class="fas fa-exclamation-triangle" id="convActionModalHeroIcon"></i>
+                    </div>
+                    <h4 id="convActionModalHeader" style="margin: 0 0 10px; font-size: 1.2rem; font-weight: 700; color: #1e293b;">Delete this chat session?</h4>
+                    <p id="convActionModalDesc" style="margin: 0; font-size: 0.9rem; color: #64748b; line-height: 1.5;">
+                        This will permanently remove the conversation and its message history. This action cannot be undone.
+                    </p>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn-secondary" id="btnCancelConvActionModal" style="padding: 9px 18px; border-radius: 6px;">Cancel</button>
+                    <button type="button" class="btn-primary" id="btnConfirmConvActionModal" style="padding: 9px 22px; font-weight: 600; border-radius: 6px; background: #ef4444; border-color: #ef4444; color: #fff;">
+                        <i class="fas fa-trash-alt"></i> <span id="convActionModalBtnText">Delete</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Chat History Slide-Over Drawer -->
     <div id="chatHistoryOverlay" class="chat-history-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="chatHistoryTitle">
         <div class="chat-history-backdrop" id="chatHistoryBackdrop"></div>
