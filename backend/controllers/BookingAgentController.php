@@ -1516,6 +1516,30 @@ class BookingAgentController {
             return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
         }
 
+        if (isset($data['fields']) && is_array($data['fields'])) {
+            try {
+                $payload = [
+                    'intent' => BookingAgentService::INTENT_UPDATE_FIELD,
+                    'extracted_fields' => $data['fields']
+                ];
+                $result = $this->agentService->processStructuredInput($userId, $payload, $draftId, $username);
+                return array_merge(['code' => 200], $result);
+            } catch (BookingDraftException $e) {
+                return [
+                    'success'    => false,
+                    'error'      => $e->getMessage(),
+                    'error_type' => $e->getErrorType(),
+                    'code'       => $this->mapExceptionToHttpCode($e)
+                ];
+            } catch (Throwable $t) {
+                return [
+                    'success' => false,
+                    'error'   => 'Failed to update draft fields',
+                    'code'    => 500
+                ];
+            }
+        }
+
         if (!isset($data['field']) || trim((string) $data['field']) === '') {
             return [
                 'success' => false,

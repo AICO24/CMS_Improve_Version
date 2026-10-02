@@ -27,6 +27,10 @@
         isLoading: false,
         availableLots: [],
         filteredLots: [],
+        availableNiches: [],
+        filteredNiches: [],
+        columbariumList: [],
+        selectedNicheDetails: null,
         pendingAction: null
     };
 
@@ -37,6 +41,7 @@
     let btnEditDecedent, btnEditRelationship, btnEditSchedule, hudMissingAlert, hudMissingList, hudMatchCard, hudMatchText;
     let btnConfirmBooking, blueprintPanel, btnToggleBlueprintMobile;
     let lotPickerModal, btnCloseLotPicker, lotSearchFilter, lotSectionFilter, lotSortPicker, lotPickerSpinner, lotGridContainer, lotPickerEmpty;
+    let nichePickerModal, btnCloseNichePicker, nicheColumbariumSelect, nicheSearchFilter, nicheTierFilter, nicheSortPicker, nichePickerSpinner, nicheGridContainer, nichePickerEmpty, nicheStatsSummary;
     let fieldEditModal, btnCloseFieldEdit, btnCancelFieldEdit, fieldEditForm, fieldEditTitle, fieldEditLabel, fieldEditInput, fieldEditHint;
     let bookingConfirmModal, btnCloseBookingConfirm, btnCancelBookingConfirm, btnSubmitBookingConfirm;
     let confirmModalService, confirmModalDecedent, confirmModalDate, confirmModalLot, confirmModalAllocationLabel, confirmModalDocsBadge;
@@ -183,6 +188,17 @@
         lotGridContainer = document.getElementById('lotGridContainer');
         lotPickerEmpty = document.getElementById('lotPickerEmpty');
 
+        nichePickerModal = document.getElementById('nichePickerModal');
+        btnCloseNichePicker = document.getElementById('btnCloseNichePicker');
+        nicheColumbariumSelect = document.getElementById('nicheColumbariumSelect');
+        nicheSearchFilter = document.getElementById('nicheSearchFilter');
+        nicheTierFilter = document.getElementById('nicheTierFilter');
+        nicheSortPicker = document.getElementById('nicheSortPicker');
+        nichePickerSpinner = document.getElementById('nichePickerSpinner');
+        nicheGridContainer = document.getElementById('nicheGridContainer');
+        nichePickerEmpty = document.getElementById('nichePickerEmpty');
+        nicheStatsSummary = document.getElementById('nicheStatsSummary');
+
         fieldEditModal = document.getElementById('fieldEditModal');
         btnCloseFieldEdit = document.getElementById('btnCloseFieldEdit');
         btnCancelFieldEdit = document.getElementById('btnCancelFieldEdit');
@@ -314,6 +330,13 @@
         if (lotSectionFilter) lotSectionFilter.addEventListener('change', filterLots);
         if (lotSortPicker) lotSortPicker.addEventListener('change', filterLots);
 
+        // Columbarium Niche Picker bindings
+        if (btnCloseNichePicker) btnCloseNichePicker.addEventListener('click', closeNichePicker);
+        if (nicheColumbariumSelect) nicheColumbariumSelect.addEventListener('change', onColumbariumSelectChange);
+        if (nicheSearchFilter) nicheSearchFilter.addEventListener('input', filterNiches);
+        if (nicheTierFilter) nicheTierFilter.addEventListener('change', filterNiches);
+        if (nicheSortPicker) nicheSortPicker.addEventListener('change', filterNiches);
+
         if (btnEditDecedent) btnEditDecedent.addEventListener('click', () => openFieldEditor('decedent_name'));
         if (btnEditRelationship) btnEditRelationship.addEventListener('click', () => openFieldEditor('relationship'));
         if (btnEditSchedule) btnEditSchedule.addEventListener('click', () => openFieldEditor(state.serviceType === 'cremation' ? 'cremation_date' : 'preferred_date'));
@@ -334,6 +357,11 @@
         if (lotPickerModal) {
             lotPickerModal.addEventListener('click', (e) => {
                 if (e.target === lotPickerModal) closeLotPicker();
+            });
+        }
+        if (nichePickerModal) {
+            nichePickerModal.addEventListener('click', (e) => {
+                if (e.target === nichePickerModal) closeNichePicker();
             });
         }
         if (fieldEditModal) {
@@ -1377,6 +1405,40 @@
     }
 
     /**
+     * Batch Field Correction via POST /api/booking-agent/drafts/{id}/update-field
+     */
+    async function updateDraftFieldsBatch(fieldsObj, successMsg = null) {
+        if (!state.draftId) {
+            appendAssistantMessage(`Please start a booking conversation first before updating fields.`);
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const res = await api.request(`booking-agent/drafts/${state.draftId}/update-field`, {
+                method: 'POST',
+                body: { fields: fieldsObj }
+            });
+
+            if (res && res.success) {
+                applyAuthoritativeState(res);
+                if (successMsg) {
+                    appendAssistantMessage(successMsg);
+                }
+                renderPromptChips();
+                if (typeof showToast === 'function') showToast('Updated successfully', 'success');
+            } else {
+                appendAssistantMessage(sanitizeUserErrorMessage(res?.error, 'Failed to update selection.'));
+                if (typeof showToast === 'function') showToast(sanitizeUserErrorMessage(res?.error, 'Failed to update selection'), 'error');
+            }
+        } catch (e) {
+            appendAssistantMessage(`Error updating selection: ${sanitizeUserErrorMessage(e, 'Unable to update at this time.')}`);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    /**
      * Lot Picker Modal Workflow
      */
     async function openLotPicker() {
@@ -1536,6 +1598,216 @@
             lotGridContainer.appendChild(loadMoreWrapper);
         }
     }
+
+    /**
+     * Columbarium Niche Picker Modal Workflow
+     */
+    async function openNichePicker(preferredColumbarium = null) {
+        lastFocusedElementBeforeModal = (document.activeElement && typeof document.activeElement.focus === 'function') ? document.activeElement : null;
+        document.body.style.overflow = 'hidden';
+        if (nichePickerModal) nichePickerModal.style.display = 'flex';
+        if (nicheSearchFilter) nicheSearchFilter.value = '';
+        if (nichePickerSpinner) nichePickerSpinner.style.display = 'block';
+        if (nicheGridContainer) nicheGridContainer.innerHTML = '';
+        if (nichePickerEmpty) nichePickerEmpty.style.display = 'none';
+        if (nicheStatsSummary) nicheStatsSummary.textContent = 'Loading columbarium data...';
+
+        try {
+            // 1. Fetch available columbariums list if not cached
+            if (!state.columbariumList || state.columbariumList.length === 0) {
+                const colsRes = await api.request('cremations/columbariums', { method: 'GET' });
+                state.columbariumList = Array.isArray(colsRes) ? colsRes : (colsRes?.data || []);
+            }
+
+            populateColumbariumSelect(state.columbariumList, preferredColumbarium);
+
+            // 2. Fetch niches for currently chosen sanctuary
+            const targetCol = (nicheColumbariumSelect && nicheColumbariumSelect.value)
+                ? nicheColumbariumSelect.value
+                : (state.columbariumList[0] || 'St. Jude Thaddeus Sanctuary');
+
+            await loadNichesForColumbarium(targetCol);
+            if (nicheSearchFilter) nicheSearchFilter.focus();
+        } catch (e) {
+            if (nichePickerSpinner) nichePickerSpinner.style.display = 'none';
+            if (nichePickerEmpty) {
+                nichePickerEmpty.style.display = 'block';
+                const p = nichePickerEmpty.querySelector('p');
+                if (p) p.textContent = sanitizeUserErrorMessage(e, 'Could not load columbarium niches. Please try again.');
+            }
+        }
+    }
+
+    function closeNichePicker() {
+        if (!nichePickerModal) return;
+        nichePickerModal.style.display = 'none';
+        document.body.style.overflow = '';
+        if (lastFocusedElementBeforeModal && typeof lastFocusedElementBeforeModal.focus === 'function') {
+            lastFocusedElementBeforeModal.focus();
+        } else if (userInputMsg) {
+            userInputMsg.focus();
+        }
+        lastFocusedElementBeforeModal = null;
+    }
+
+    function populateColumbariumSelect(columbariums, preferred = null) {
+        if (!nicheColumbariumSelect) return;
+        nicheColumbariumSelect.innerHTML = '';
+        const curDraftCol = preferred || state.extractedData?.preferred_columbarium || '';
+
+        columbariums.forEach(col => {
+            const opt = document.createElement('option');
+            opt.value = col;
+            opt.textContent = col;
+            if (curDraftCol && curDraftCol.toLowerCase() === col.toLowerCase()) {
+                opt.selected = true;
+            }
+            nicheColumbariumSelect.appendChild(opt);
+        });
+    }
+
+    async function onColumbariumSelectChange() {
+        const targetCol = nicheColumbariumSelect ? nicheColumbariumSelect.value : '';
+        if (!targetCol) return;
+        await loadNichesForColumbarium(targetCol);
+    }
+
+    async function loadNichesForColumbarium(columbariumName) {
+        if (nichePickerSpinner) nichePickerSpinner.style.display = 'block';
+        if (nicheGridContainer) nicheGridContainer.innerHTML = '';
+        if (nichePickerEmpty) nichePickerEmpty.style.display = 'none';
+
+        try {
+            const url = `cremations/niches?columbarium=${encodeURIComponent(columbariumName)}`;
+            const res = await api.request(url, { method: 'GET' });
+            if (nichePickerSpinner) nichePickerSpinner.style.display = 'none';
+
+            const rawNiches = Array.isArray(res) ? res : (res?.data || []);
+            state.availableNiches = rawNiches;
+            filterNiches();
+        } catch (e) {
+            if (nichePickerSpinner) nichePickerSpinner.style.display = 'none';
+            if (nichePickerEmpty) {
+                nichePickerEmpty.style.display = 'block';
+                const p = nichePickerEmpty.querySelector('p');
+                if (p) p.textContent = sanitizeUserErrorMessage(e, 'Error loading niches for this building.');
+            }
+        }
+    }
+
+    function filterNiches() {
+        const query = (nicheSearchFilter ? nicheSearchFilter.value : '').toLowerCase().trim();
+        const selectedTier = nicheTierFilter ? nicheTierFilter.value : '';
+        const sortVal = nicheSortPicker ? nicheSortPicker.value : '';
+
+        const all = state.availableNiches || [];
+        state.filteredNiches = all.filter(niche => {
+            const matchSearch = !query || String(niche.niche_number || '').toLowerCase().includes(query);
+            const matchTier = !selectedTier || (niche.tier === selectedTier);
+            return matchSearch && matchTier;
+        });
+
+        // Sorting
+        if (sortVal === 'price_asc') {
+            state.filteredNiches.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+        } else if (sortVal === 'price_desc') {
+            state.filteredNiches.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+        } else if (sortVal === 'level_asc') {
+            state.filteredNiches.sort((a, b) => Number(a.level || 0) - Number(b.level || 0));
+        } else if (sortVal === 'niche_asc') {
+            state.filteredNiches.sort((a, b) => String(a.niche_number).localeCompare(String(b.niche_number), undefined, { numeric: true }));
+        }
+
+        // Summary stats
+        const total = all.length;
+        const availableCount = all.filter(n => (n.status || '').toLowerCase() === 'available').length;
+        if (nicheStatsSummary) {
+            const bldgName = (nicheColumbariumSelect && nicheColumbariumSelect.value) ? nicheColumbariumSelect.value : 'Columbarium';
+            nicheStatsSummary.innerHTML = `<strong>${availableCount}</strong> vacant of <strong>${total}</strong> slots in ${escapeHtml(bldgName)}`;
+        }
+
+        renderNicheGrid(state.filteredNiches);
+    }
+
+    function renderNicheGrid(niches) {
+        if (!nicheGridContainer) return;
+        nicheGridContainer.innerHTML = '';
+
+        if (!niches || niches.length === 0) {
+            if (nichePickerEmpty) nichePickerEmpty.style.display = 'block';
+            return;
+        }
+        if (nichePickerEmpty) nichePickerEmpty.style.display = 'none';
+
+        const curSelectedNiche = state.extractedData?.niche_number;
+
+        niches.forEach(niche => {
+            const card = document.createElement('div');
+            const isSelected = curSelectedNiche && curSelectedNiche === niche.niche_number;
+            const isAvailable = String(niche.status || '').toLowerCase() === 'available';
+
+            card.className = 'lot-card-item' + (isSelected ? ' selected' : '') + (!isAvailable ? ' disabled' : '');
+
+            // Tier Badge
+            let tierBadgeHtml = '';
+            if (niche.tier === 'prime' || niche.level === 3 || niche.level === 4) {
+                tierBadgeHtml = `<span class="badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:700; font-size:0.75rem; padding:3px 8px; border-radius:6px;"><i class="fas fa-star" style="color:#f59e0b;"></i> Prime Eye-Level</span>`;
+            } else if (niche.level >= 5) {
+                tierBadgeHtml = `<span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-weight:600; font-size:0.75rem; padding:3px 8px; border-radius:6px;">Level ${niche.level} (Upper)</span>`;
+            } else {
+                tierBadgeHtml = `<span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-weight:600; font-size:0.75rem; padding:3px 8px; border-radius:6px;">Level ${niche.level} (Lower)</span>`;
+            }
+
+            card.innerHTML = `
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                        <h4 class="lot-card-num" style="font-size:1.15rem; font-weight:700; color:#0f172a; margin:0;">
+                            ${escapeHtml(niche.niche_number)}
+                        </h4>
+                        ${tierBadgeHtml}
+                    </div>
+                    <div class="lot-card-sub" style="font-size:0.85rem; color:#64748b; margin-bottom:8px;">
+                        <i class="fas fa-building text-muted"></i> ${escapeHtml(niche.columbarium || 'Columbarium')} &bull; Tier: ${escapeHtml(niche.tier_label || ('Level ' + niche.level))}
+                    </div>
+                    <div class="lot-card-price" style="font-size:1.25rem; font-weight:800; color:#059669; margin:6px 0;">
+                        ₱${Number(niche.price || 0).toLocaleString()}
+                        <span style="font-size:0.72rem; font-weight:500; color:#64748b; display:block;">One-time Columbarium Slot Lease</span>
+                    </div>
+                    ${!isAvailable ? `<div style="margin-top:6px;"><span class="badge" style="background:#ef4444;color:#fff;font-size:0.75rem;padding:3px 8px;border-radius:4px;font-weight:600;"><i class="fas fa-ban"></i> Occupied / Unavailable</span></div>` : ''}
+                </div>
+                <button type="button" class="select-lot-btn" style="margin-top:12px;${!isAvailable ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${!isAvailable ? 'disabled' : ''}>
+                    ${isSelected ? '<i class="fas fa-check"></i> Selected Niche' : (isAvailable ? '<i class="fas fa-check-circle"></i> Select This Slot' : '<i class="fas fa-ban"></i> Occupied')}
+                </button>
+            `;
+
+            if (isAvailable) {
+                card.querySelector('button').addEventListener('click', async () => {
+                    await onNicheSelected(niche);
+                });
+            }
+
+            nicheGridContainer.appendChild(card);
+        });
+    }
+
+    async function onNicheSelected(niche) {
+        closeNichePicker();
+        state.selectedNicheDetails = niche;
+
+        const priceFmt = Number(niche.price || 0).toLocaleString();
+        const successMsg = `Napili ninyo ang **Niche ${escapeHtml(niche.niche_number)}** sa **${escapeHtml(niche.columbarium || 'Columbarium')}** (${escapeHtml(niche.tier_label || ('Level ' + niche.level))}) sa halagang **₱${priceFmt}**.\n\nNaitala na ito sa inyong reservation summary.`;
+
+        await updateDraftFieldsBatch({
+            ash_disposition: 'columbarium',
+            preferred_columbarium: niche.columbarium,
+            niche_number: niche.niche_number,
+            level: niche.level,
+            niche_price: niche.price
+        }, successMsg);
+    }
+
+    window.openNichePicker = openNichePicker;
+    window.closeNichePicker = closeNichePicker;
 
     /**
      * Quick Field Editor Modal
