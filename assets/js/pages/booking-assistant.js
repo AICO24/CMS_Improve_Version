@@ -1983,38 +1983,45 @@
             const isSelected = curSelectedNiche && curSelectedNiche === niche.niche_number;
             const isAvailable = String(niche.status || '').toLowerCase() === 'available';
 
-            card.className = 'lot-card-item' + (isSelected ? ' selected' : '') + (!isAvailable ? ' disabled' : '');
+            card.className = 'niche-card-item' + (isSelected ? ' selected' : '') + (!isAvailable ? ' disabled' : '');
 
             // Tier Badge
             let tierBadgeHtml = '';
             if (niche.tier === 'prime' || niche.level === 3 || niche.level === 4) {
-                tierBadgeHtml = `<span class="badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:700; font-size:0.75rem; padding:3px 8px; border-radius:6px;"><i class="fas fa-star" style="color:#f59e0b;"></i> Prime Eye-Level</span>`;
+                tierBadgeHtml = `<span class="niche-tier-badge tier-prime"><i class="fas fa-star" style="color:#f59e0b;"></i> Prime Eye-Level</span>`;
             } else if (niche.level >= 5) {
-                tierBadgeHtml = `<span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-weight:600; font-size:0.75rem; padding:3px 8px; border-radius:6px;">Level ${niche.level} (Upper)</span>`;
+                tierBadgeHtml = `<span class="niche-tier-badge tier-upper">Level ${niche.level} (Upper)</span>`;
             } else {
-                tierBadgeHtml = `<span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-weight:600; font-size:0.75rem; padding:3px 8px; border-radius:6px;">Level ${niche.level} (Lower)</span>`;
+                tierBadgeHtml = `<span class="niche-tier-badge tier-standard">Level ${niche.level} (Lower)</span>`;
             }
 
             card.innerHTML = `
-                <div>
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
-                        <h4 class="lot-card-num" style="font-size:1.15rem; font-weight:700; color:#0f172a; margin:0;">
-                            ${escapeHtml(niche.niche_number)}
-                        </h4>
-                        ${tierBadgeHtml}
+                <div class="niche-card-top">
+                    <div class="niche-code-box">
+                        <i class="fas fa-monument"></i>
+                        <h4 class="niche-code-title">${escapeHtml(niche.niche_number)}</h4>
                     </div>
-                    <div class="lot-card-sub" style="font-size:0.85rem; color:#64748b; margin-bottom:8px;">
-                        <i class="fas fa-building text-muted"></i> ${escapeHtml(niche.columbarium || 'Columbarium')} &bull; Tier: ${escapeHtml(niche.tier_label || ('Level ' + niche.level))}
-                    </div>
-                    <div class="lot-card-price" style="font-size:1.25rem; font-weight:800; color:#059669; margin:6px 0;">
-                        ₱${Number(niche.price || 0).toLocaleString()}
-                        <span style="font-size:0.72rem; font-weight:500; color:#64748b; display:block;">One-time Columbarium Slot Lease</span>
-                    </div>
-                    ${!isAvailable ? `<div style="margin-top:6px;"><span class="badge" style="background:#ef4444;color:#fff;font-size:0.75rem;padding:3px 8px;border-radius:4px;font-weight:600;"><i class="fas fa-ban"></i> Occupied / Unavailable</span></div>` : ''}
+                    ${tierBadgeHtml}
                 </div>
-                <button type="button" class="select-lot-btn" style="margin-top:12px;${!isAvailable ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${!isAvailable ? 'disabled' : ''}>
-                    ${isSelected ? '<i class="fas fa-check"></i> Selected Niche' : (isAvailable ? '<i class="fas fa-check-circle"></i> Select This Slot' : '<i class="fas fa-ban"></i> Occupied')}
-                </button>
+                <div class="niche-card-body">
+                    <div class="niche-sanctuary-text">
+                        <i class="fas fa-church text-muted"></i>
+                        <span>${escapeHtml(niche.columbarium || 'Columbarium')}</span>
+                    </div>
+                    <div class="niche-price-row">
+                        <div>
+                            <span class="niche-price-amount">₱${Number(niche.price || 0).toLocaleString()}</span>
+                            <span class="niche-price-caption"> / slot</span>
+                        </div>
+                        <span style="font-size:0.7rem; font-weight:600; color:#166534;">Vault Lease Grant</span>
+                    </div>
+                    ${!isAvailable ? `<div style="margin-top:2px;"><span class="badge" style="background:#ef4444;color:#fff;font-size:0.72rem;padding:2px 8px;border-radius:4px;font-weight:600;"><i class="fas fa-ban"></i> Occupied / Unavailable</span></div>` : ''}
+                </div>
+                <div style="margin-top: 6px;">
+                    <button type="button" class="niche-action-btn ${isSelected ? 'btn-selected-niche' : (isAvailable ? 'btn-select-niche' : 'btn-occupied-niche')}" ${!isAvailable ? 'disabled' : ''}>
+                        ${isSelected ? '<i class="fas fa-check"></i> Selected Niche' : (isAvailable ? '<i class="fas fa-check-circle"></i> Select This Slot' : '<i class="fas fa-lock"></i> Occupied')}
+                    </button>
+                </div>
             `;
 
             if (isAvailable) {

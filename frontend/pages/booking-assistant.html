@@ -462,66 +462,79 @@
 
     <!-- Columbarium Niche Picker Modal -->
     <div class="lot-picker-modal-overlay" id="nichePickerModal" style="display: none;">
-        <div class="lot-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="nichePickerTitle" style="max-width: 900px;">
-            <div class="lot-picker-header">
+        <div class="lot-picker-dialog niche-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="nichePickerTitle">
+            <div class="lot-picker-header niche-picker-header">
                 <div class="lot-picker-title" id="nichePickerTitle">
-                    <i class="fas fa-monument"></i>
-                    <span>Select an Available Columbarium Niche</span>
+                    <div class="modal-icon-badge"><i class="fas fa-monument"></i></div>
+                    <div>
+                        <div class="modal-title-main">Columbarium Niche Selection</div>
+                        <div class="modal-title-sub">Browse and select available vault compartments by sanctuary and tier</div>
+                    </div>
                 </div>
                 <button type="button" class="btn-close-modal" id="btnCloseNichePicker" aria-label="Close niche picker"><i class="fas fa-times"></i></button>
             </div>
-            <div class="lot-picker-filters" style="gap: 10px; flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 220px;">
-                    <label for="nicheColumbariumSelect" style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; margin: 0; color: #475569;">Building:</label>
-                    <select id="nicheColumbariumSelect" class="form-control" style="flex: 1;" aria-label="Select Columbarium Building">
+            
+            <!-- Sleek Unified Filter Toolbar -->
+            <div class="niche-filter-toolbar">
+                <div class="filter-field-group">
+                    <span class="filter-field-label"><i class="fas fa-church"></i> Sanctuary:</span>
+                    <select id="nicheColumbariumSelect" class="niche-filter-select" aria-label="Select Columbarium Building">
                         <!-- Populated dynamically -->
                     </select>
                 </div>
-                <div class="filter-input-wrap" style="flex: 1; min-width: 170px;">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="nicheSearchFilter" placeholder="Search niche number..." aria-label="Search niche number" />
+                <div class="filter-search-group">
+                    <i class="fas fa-search filter-search-icon"></i>
+                    <input type="text" id="nicheSearchFilter" class="niche-search-input" placeholder="Search niche code (e.g. L3-01)..." aria-label="Search niche number" />
                 </div>
-                <select id="nicheTierFilter" class="form-control" style="max-width: 190px;" aria-label="Filter by tier">
-                    <option value="">All Tiers & Levels</option>
-                    <option value="prime">Prime Eye-Level (Level 3-4)</option>
-                    <option value="standard">Standard Lower (Level 1-2)</option>
-                    <option value="upper">Standard Upper (Level 5+)</option>
-                </select>
-                <select id="nicheSortPicker" class="form-control" style="max-width: 160px;" aria-label="Sort niches">
-                    <option value="">Sort by...</option>
-                    <option value="niche_asc">Niche # (Low to High)</option>
-                    <option value="price_asc">Price (Low to High)</option>
-                    <option value="price_desc">Price (High to Low)</option>
-                    <option value="level_asc">Level (1 to 5+)</option>
-                </select>
-            </div>
-            <!-- Pricing Legend Bar -->
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 10px 24px; background: rgba(44, 94, 71, 0.05); border-bottom: 1px solid rgba(44, 94, 71, 0.1);">
-                <div style="display: flex; align-items: center; gap: 16px; font-size: 0.8rem; font-weight: 600; color: #334155;">
-                    <span style="display: flex; align-items: center; gap: 6px;">
-                        <span style="width: 12px; height: 12px; border-radius: 3px; background: #10b981; display: inline-block;"></span> Available
-                    </span>
-                    <span style="display: flex; align-items: center; gap: 6px;">
-                        <span style="width: 12px; height: 12px; border-radius: 3px; background: #94a3b8; display: inline-block;"></span> Occupied
-                    </span>
-                    <span style="display: flex; align-items: center; gap: 6px;">
-                        <span style="padding: 2px 6px; border-radius: 4px; background: #fef3c7; color: #92400e; font-size: 0.72rem; font-weight: 700;">★ Prime</span> Eye-Level
-                    </span>
+                <div class="filter-field-group">
+                    <span class="filter-field-label"><i class="fas fa-layer-group"></i> Tier:</span>
+                    <select id="nicheTierFilter" class="niche-filter-select" aria-label="Filter by tier">
+                        <option value="">All Tiers &amp; Levels</option>
+                        <option value="prime">★ Prime Eye-Level (Level 3-4)</option>
+                        <option value="standard">Standard Lower (Level 1-2)</option>
+                        <option value="upper">Standard Upper (Level 5+)</option>
+                    </select>
                 </div>
-                <div id="nicheStatsSummary" style="font-size: 0.8rem; color: #64748b; font-weight: 500;">
-                    Loading availability...
+                <div class="filter-field-group">
+                    <span class="filter-field-label"><i class="fas fa-arrow-down-short-wide"></i> Sort:</span>
+                    <select id="nicheSortPicker" class="niche-filter-select" aria-label="Sort niches">
+                        <option value="">Default</option>
+                        <option value="niche_asc">Niche # (Ascending)</option>
+                        <option value="price_asc">Price: Low to High</option>
+                        <option value="price_desc">Price: High to Low</option>
+                        <option value="level_asc">Level: 1 to Top</option>
+                    </select>
                 </div>
             </div>
-            <div class="lot-picker-body">
+
+            <!-- Pricing & Legend Strip -->
+            <div class="niche-legend-strip">
+                <div class="niche-legend-chips">
+                    <span class="niche-legend-chip chip-available">
+                        <span class="legend-dot dot-available"></span> Available
+                    </span>
+                    <span class="niche-legend-chip chip-occupied">
+                        <span class="legend-dot dot-occupied"></span> Occupied
+                    </span>
+                    <span class="niche-legend-chip chip-prime">
+                        <i class="fas fa-star" style="color: #f59e0b;"></i> Prime Eye-Level
+                    </span>
+                </div>
+                <div id="nicheStatsSummary" class="niche-stats-badge">
+                    <i class="fas fa-chart-pie" style="color: #166534;"></i> Loading availability...
+                </div>
+            </div>
+
+            <div class="lot-picker-body niche-picker-body">
                 <div id="nichePickerSpinner" style="text-align: center; padding: 40px; display: none;">
                     <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
-                    <p class="modal-status-text" style="margin-top: 10px; font-size: 0.85rem;">Loading columbarium niches & pricing...</p>
+                    <p class="modal-status-text" style="margin-top: 10px; font-size: 0.85rem;">Loading columbarium niches &amp; pricing...</p>
                 </div>
-                <div class="recommendations-grid" id="nicheGridContainer">
+                <div class="niche-grid-layout" id="nicheGridContainer">
                     <!-- Populated dynamically -->
                 </div>
                 <div id="nichePickerEmpty" style="text-align: center; padding: 40px; display: none;">
-                    <i class="fas fa-inbox fa-2x text-muted"></i>
+                    <i class="fas fa-layer-group fa-2x text-muted"></i>
                     <p class="modal-status-text" style="margin-top: 10px; font-size: 0.88rem;">No niches found matching your filters.</p>
                 </div>
             </div>
