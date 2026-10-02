@@ -694,6 +694,10 @@ class BookingAvailabilityService {
         $nextRecommendedStep = 'CONFIRM_BOOKING';
         if (in_array('decedent_name', $missingFields, true)) {
             $nextRecommendedStep = 'PROVIDE_DECEDENT_NAME';
+        } elseif (in_array('ash_disposition', $missingFields, true)) {
+            $nextRecommendedStep = 'SELECT_ASH_DISPOSITION';
+        } elseif (in_array('niche_number', $missingFields, true)) {
+            $nextRecommendedStep = 'SELECT_COLUMBARIUM_NICHE';
         } elseif (in_array('preferred_date', $missingFields, true) || in_array('cremation_date', $missingFields, true)) {
             $nextRecommendedStep = 'SELECT_DATE';
         } elseif (in_array('lot_id', $missingFields, true)) {
@@ -704,12 +708,15 @@ class BookingAvailabilityService {
 
         // Build citizen-friendly bilingual reply
         $fieldLabels = [
-            'decedent_name'  => 'Pangalan ng Yumao (Decedent Name)',
-            'relationship'    => 'Relasyon sa Yumao (Relationship)',
-            'preferred_date'  => 'Petsa ng Libing (Burial Date)',
-            'cremation_date'  => 'Petsa ng Cremation (Cremation Date)',
-            'lot_id'          => 'Napiling Burial Lot (Lot Selection)',
-            'service_type'    => 'Uri ng Serbisyo (Service Type)'
+            'decedent_name'         => 'Pangalan ng Yumao (Decedent Name)',
+            'relationship'          => 'Relasyon sa Yumao (Relationship)',
+            'preferred_date'        => 'Petsa ng Libing (Burial Date)',
+            'cremation_date'        => 'Petsa ng Cremation (Cremation Date)',
+            'lot_id'                => 'Napiling Burial Lot (Lot Selection)',
+            'service_type'          => 'Uri ng Serbisyo (Service Type)',
+            'ash_disposition'       => 'Imbakan ng Abo (Take Home o Columbarium)',
+            'niche_number'          => 'Napiling Columbarium Niche Slot',
+            'preferred_columbarium' => 'Columbarium Sanctuary'
         ];
 
         $replyLines = [];
@@ -737,6 +744,10 @@ class BookingAvailabilityService {
 
         if ($nextRecommendedStep === 'PROVIDE_DECEDENT_NAME') {
             $replyLines[] = "\nSusunod na hakbang: Pakibigay ang buong pangalan ng yumao.";
+        } elseif ($nextRecommendedStep === 'SELECT_ASH_DISPOSITION') {
+            $replyLines[] = "\nSusunod na hakbang: Nais po ba ninyong iuwi ang abo o ilalagak sa Columbarium Niche?";
+        } elseif ($nextRecommendedStep === 'SELECT_COLUMBARIUM_NICHE') {
+            $replyLines[] = "\nSusunod na hakbang: Maaari na po kayong pumili ng slot sa ating Columbarium Niche Picker.";
         } elseif ($nextRecommendedStep === 'SELECT_DATE') {
             $replyLines[] = "\nSusunod na hakbang: Pakipili ang inyong gustong petsa ng {$serviceType}.";
         } elseif ($nextRecommendedStep === 'SELECT_LOT') {

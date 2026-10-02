@@ -44,7 +44,8 @@
     let nichePickerModal, btnCloseNichePicker, nicheColumbariumSelect, nicheSearchFilter, nicheTierFilter, nicheSortPicker, nichePickerSpinner, nicheGridContainer, nichePickerEmpty, nicheStatsSummary;
     let fieldEditModal, btnCloseFieldEdit, btnCancelFieldEdit, fieldEditForm, fieldEditTitle, fieldEditLabel, fieldEditInput, fieldEditHint;
     let bookingConfirmModal, btnCloseBookingConfirm, btnCancelBookingConfirm, btnSubmitBookingConfirm;
-    let confirmModalService, confirmModalDecedent, confirmModalDate, confirmModalLot, confirmModalAllocationLabel, confirmModalDocsBadge;
+    let confirmModalService, confirmModalDecedent, confirmModalDate, confirmModalLot, confirmModalAllocationLabel, confirmModalDocsBadge, confirmModalAmount;
+    let valBaseFee, labelBaseFee, valSlotFee, labelSlotFee, valTotalFee;
     let btnToggleHistory, chatHistoryOverlay, chatHistoryBackdrop, btnCloseChatHistory, btnNewChatFromDrawer, chatHistoryList, historySpinner, historyEmpty, btnStartFirstChat;
     let convActionConfirmModal, btnCloseConvActionModal, btnCancelConvActionModal, btnConfirmConvActionModal;
     let convActionModalHeading, convActionModalTitleText, convActionModalHeader, convActionModalDesc, convActionModalBtnText, convActionModalIcon, convActionModalHeroIcon, convActionModalIconWrap;
@@ -218,6 +219,13 @@
         confirmModalLot = document.getElementById('confirmModalLot');
         confirmModalAllocationLabel = document.getElementById('confirmModalAllocationLabel');
         confirmModalDocsBadge = document.getElementById('confirmModalDocsBadge');
+        confirmModalAmount = document.getElementById('confirmModalAmount');
+
+        valBaseFee = document.getElementById('valBaseFee');
+        labelBaseFee = document.getElementById('labelBaseFee');
+        valSlotFee = document.getElementById('valSlotFee');
+        labelSlotFee = document.getElementById('labelSlotFee');
+        valTotalFee = document.getElementById('valTotalFee');
 
         btnToggleHistory = document.getElementById('btnToggleHistory');
         chatHistoryOverlay = document.getElementById('chatHistoryOverlay');
@@ -958,11 +966,42 @@
         hudDate.innerHTML = scheduleDisplay;
 
         if (isCremation) {
-            hudAllocationLabel.textContent = 'Columbarium:';
+            hudAllocationLabel.textContent = 'Ash Disposition:';
+            const ashDisp = state.extractedData.ash_disposition;
+            const nicheNum = state.extractedData.niche_number;
             const col = state.extractedData.preferred_columbarium;
-            hudAllocationDetails.innerHTML = col ? `<strong>${escapeHtml(col)}</strong>` : '<span class="text-muted">Assigned upon arrival</span>';
-            hudAllocationVal.textContent = dateVal ? formatDate(dateVal) : 'Pending';
-            hudLotActionBox.style.display = 'none';
+            const nichePrice = Number(state.extractedData.niche_price || 0);
+
+            if (ashDisp === 'take_home') {
+                hudAllocationDetails.innerHTML = `<strong>Take Home Urn</strong> <span class="badge" style="background:#ecfdf5;color:#047857;margin-left:4px;font-size:0.75rem;padding:2px 6px;border-radius:4px;"><i class="fas fa-home"></i> Family Custody</span>`;
+                hudAllocationVal.textContent = 'Take Home';
+            } else if (nicheNum) {
+                hudAllocationDetails.innerHTML = `<strong>Niche ${escapeHtml(nicheNum)}</strong> <small class="text-muted">(${escapeHtml(col || 'Columbarium')})</small> <span class="badge" style="background:#fef3c7;color:#92400e;margin-left:4px;font-weight:700;font-size:0.75rem;padding:2px 6px;border-radius:4px;">₱${nichePrice.toLocaleString()}</span>`;
+                hudAllocationVal.textContent = nicheNum;
+            } else if (ashDisp === 'columbarium') {
+                hudAllocationDetails.innerHTML = `<span style="color:#d97706;font-weight:600;"><i class="fas fa-exclamation-circle"></i> Slot Pending Selection</span>`;
+                hudAllocationVal.textContent = 'Pending Slot';
+            } else {
+                hudAllocationDetails.innerHTML = '<span class="text-muted">Pending Selection (Take Home or Columbarium)</span>';
+                hudAllocationVal.textContent = 'Pending';
+            }
+
+            // Show niche action buttons in Cremation
+            hudLotActionBox.style.display = 'block';
+            hudLotActionBox.innerHTML = `
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+                    <button type="button" class="select-lot-btn" id="btnHudOpenNichePicker" style="flex:1;min-width:130px;font-size:0.8rem;padding:7px 10px;">
+                        <i class="fas fa-monument"></i> ${nicheNum ? 'Palitan ang Slot' : 'Pumili ng Niche Slot'}
+                    </button>
+                    <button type="button" class="btn-secondary" id="btnHudSetTakeHome" style="font-size:0.8rem;padding:7px 10px;border-radius:8px;font-weight:600;" title="Iuwi ang abo / urn">
+                        <i class="fas fa-home"></i> Iuwi ang Abo
+                    </button>
+                </div>
+            `;
+            const btnNiche = document.getElementById('btnHudOpenNichePicker');
+            const btnHome = document.getElementById('btnHudSetTakeHome');
+            if (btnNiche) btnNiche.addEventListener('click', () => openNichePicker(col));
+            if (btnHome) btnHome.addEventListener('click', () => setAshDisposition('take_home'));
         } else {
             hudAllocationLabel.textContent = 'Burial Lot:';
             if (state.selectedLotDetails) {
@@ -979,6 +1018,59 @@
 
             // Show lot picker button if burial and lot selection needed
             hudLotActionBox.style.display = (state.serviceType === 'burial') ? 'block' : 'none';
+            hudLotActionBox.innerHTML = `
+                <button type="button" class="select-lot-btn" id="btnOpenLotPicker" style="padding: 8px 14px; font-size: 0.84rem;">
+                    <i class="fas fa-map-marked-alt"></i> Browse Available Lots
+                </button>
+            `;
+            const btnLot = document.getElementById('btnOpenLotPicker');
+            if (btnLot) btnLot.addEventListener('click', openLotPicker);
+        }
+
+        // Estimated Fee Breakdown Card updates
+        const cardPricing = document.getElementById('hudCardPricing');
+        if (cardPricing) {
+            cardPricing.style.display = state.serviceType ? 'block' : 'none';
+            if (isCremation) {
+                if (labelBaseFee) labelBaseFee.textContent = 'Cremation Service:';
+                if (valBaseFee) valBaseFee.textContent = '₱15,000';
+                if (labelSlotFee) labelSlotFee.textContent = 'Columbarium Niche:';
+
+                const ashDisp = state.extractedData.ash_disposition;
+                const nichePrice = Number(state.extractedData.niche_price || 0);
+
+                if (ashDisp === 'take_home') {
+                    if (valSlotFee) valSlotFee.innerHTML = '<span style="color:#059669;font-weight:600;">₱0 (Take Home / Waived)</span>';
+                    if (valTotalFee) valTotalFee.textContent = '₱15,000';
+                } else if (state.extractedData.niche_number) {
+                    if (valSlotFee) valSlotFee.textContent = `₱${nichePrice.toLocaleString()}`;
+                    const total = 15000 + nichePrice;
+                    if (valTotalFee) valTotalFee.textContent = `₱${total.toLocaleString()}`;
+                } else {
+                    if (valSlotFee) valSlotFee.innerHTML = '<span class="text-muted">Pending slot selection</span>';
+                    if (valTotalFee) valTotalFee.textContent = '₱15,000 (Base Fee)';
+                }
+            } else {
+                // Burial
+                if (labelBaseFee) labelBaseFee.textContent = 'Burial Arrangement:';
+                if (valBaseFee) valBaseFee.textContent = 'Included with lot';
+                if (labelSlotFee) labelSlotFee.textContent = 'Burial Lot Price:';
+
+                let lotPrice = 0;
+                if (state.selectedLotDetails && state.selectedLotDetails.price) {
+                    lotPrice = Number(state.selectedLotDetails.price);
+                } else if (state.extractedData.lot_price) {
+                    lotPrice = Number(state.extractedData.lot_price);
+                }
+
+                if (lotPrice > 0) {
+                    if (valSlotFee) valSlotFee.textContent = `₱${lotPrice.toLocaleString()}`;
+                    if (valTotalFee) valTotalFee.textContent = `₱${lotPrice.toLocaleString()}`;
+                } else {
+                    if (valSlotFee) valSlotFee.innerHTML = '<span class="text-muted">Lot not selected</span>';
+                    if (valTotalFee) valTotalFee.textContent = 'Pending selection';
+                }
+            }
         }
 
         // Missing Fields Alert
@@ -1089,7 +1181,9 @@
         // Step 3: Allocation (Date + Lot/Columbarium)
         const isCremation = state.serviceType === 'cremation';
         const hasDate = Boolean(isCremation ? state.extractedData.cremation_date : state.extractedData.preferred_date);
-        const hasLot = isCremation || Boolean(state.extractedData.lot_id);
+        const hasLot = isCremation 
+            ? (state.extractedData.ash_disposition === 'take_home' || Boolean(state.extractedData.niche_number))
+            : Boolean(state.extractedData.lot_id);
 
         if (hasDate && hasLot) {
             stepAllocation.className = 'blueprint-step completed';
@@ -1141,6 +1235,31 @@
             chips.push({ text: '✏️ Change Decedent Name', action: () => openFieldEditor('decedent_name') });
             if (state.serviceType === 'burial') {
                 chips.push({ text: '🗺️ Change Burial Lot', action: () => openLotPicker() });
+            } else if (state.serviceType === 'cremation') {
+                if (state.extractedData.ash_disposition === 'columbarium') {
+                    chips.push({ text: '🏛️ Change Vault Slot', action: () => openNichePicker() });
+                    chips.push({ text: '🏠 Switch to Take Home', action: () => setAshDisposition('take_home') });
+                } else if (state.extractedData.ash_disposition === 'take_home') {
+                    chips.push({ text: '🏛️ Switch to Columbarium Vault', action: () => setAshDisposition('columbarium') });
+                }
+            }
+        } else if (state.serviceType === 'cremation') {
+            // Cremation flow: Ash disposition and slot selection
+            if (!state.extractedData.ash_disposition) {
+                chips.push({ text: '🏠 Iuuwi ang Abo (Take Home)', action: () => setAshDisposition('take_home') });
+                chips.push({ text: '🏛️ Ilalagak sa Columbarium (Vault Slot)', action: () => setAshDisposition('columbarium') });
+            } else if (state.extractedData.ash_disposition === 'columbarium' && !state.extractedData.niche_number) {
+                chips.push({ text: '🏛️ Pumili ng Niche / Vault Slot', action: () => openNichePicker() });
+                chips.push({ text: '🏠 Iuuwi nalang ang Abo', action: () => setAshDisposition('take_home') });
+            }
+
+            if (state.missingFields.includes('decedent_name')) {
+                chips.push({ text: '👤 For my father', action: () => sendQuickInput('The arrangement is for my father, ') });
+                chips.push({ text: '👤 For my mother', action: () => sendQuickInput('The arrangement is for my mother, ') });
+            }
+            if (state.missingFields.includes('cremation_date')) {
+                chips.push({ text: '📅 In 1 week', action: () => sendQuickDate('+7 days') });
+                chips.push({ text: '📅 In 2 weeks', action: () => sendQuickDate('+14 days') });
             }
         } else if (state.status === 'LOT_SELECTION' || (state.serviceType === 'burial' && !state.extractedData.lot_id)) {
             chips.push({ text: '🗺️ Browse Available Lots', action: () => openLotPicker() });
@@ -1149,7 +1268,7 @@
         } else if (state.missingFields.includes('decedent_name')) {
             chips.push({ text: '👤 For my father', action: () => sendQuickInput('The arrangement is for my father, ') });
             chips.push({ text: '👤 For my mother', action: () => sendQuickInput('The arrangement is for my mother, ') });
-        } else if (state.missingFields.includes('preferred_date') || state.missingFields.includes('cremation_date')) {
+        } else if (state.missingFields.includes('preferred_date')) {
             chips.push({ text: '📅 In 2 weeks', action: () => sendQuickDate('+14 days') });
             chips.push({ text: '📅 In 1 month', action: () => sendQuickDate('+30 days') });
         } else {
@@ -1435,6 +1554,34 @@
             appendAssistantMessage(`Error updating selection: ${sanitizeUserErrorMessage(e, 'Unable to update at this time.')}`);
         } finally {
             setLoading(false);
+        }
+    }
+
+    /**
+     * Set Ash Disposition: 'take_home' vs 'columbarium'
+     */
+    async function setAshDisposition(disposition) {
+        if (!state.draftId) {
+            appendAssistantMessage(`Please start a booking conversation first before updating.`);
+            return;
+        }
+
+        if (disposition === 'take_home') {
+            await updateDraftFieldsBatch({
+                ash_disposition: 'take_home',
+                ash_storage_location: 'Take Home / Family Custody',
+                niche_number: null,
+                level: null,
+                columbarium: null
+            }, `Updated ash disposition: **Iuuwi ang Abo (Take Home Urn)**. Columbarium vault requirement is waived.`);
+        } else {
+            await updateDraftFieldsBatch({
+                ash_disposition: 'columbarium',
+                ash_storage_location: 'Columbarium'
+            }, `Selected disposition: **Ilalagak sa Columbarium**. Please choose a sanctuary and slot to reserve.`);
+            if (!state.extractedData.niche_number) {
+                openNichePicker();
+            }
         }
     }
 
@@ -1897,8 +2044,18 @@
         // Allocation / Lot
         if (confirmModalAllocationLabel && confirmModalLot) {
             if (isCremation) {
-                confirmModalAllocationLabel.textContent = 'Columbarium:';
-                confirmModalLot.textContent = state.extractedData.preferred_columbarium || 'Assigned upon arrival';
+                const isTakeHome = state.extractedData.ash_disposition === 'take_home';
+                if (isTakeHome) {
+                    confirmModalAllocationLabel.textContent = 'Ash Disposition:';
+                    confirmModalLot.textContent = 'Take Home Urn (Family Custody)';
+                } else if (state.extractedData.niche_number) {
+                    confirmModalAllocationLabel.textContent = 'Columbarium Vault:';
+                    const columbarium = state.extractedData.preferred_columbarium || 'Columbarium';
+                    confirmModalLot.textContent = `${columbarium} - Slot #${state.extractedData.niche_number}${state.extractedData.level ? ` (Level ${state.extractedData.level})` : ''}`;
+                } else {
+                    confirmModalAllocationLabel.textContent = 'Columbarium Vault:';
+                    confirmModalLot.textContent = state.extractedData.preferred_columbarium ? `${state.extractedData.preferred_columbarium} (Pending slot selection)` : 'To be selected / assigned';
+                }
             } else {
                 confirmModalAllocationLabel.textContent = 'Burial Lot:';
                 if (state.selectedLotDetails) {
@@ -1908,6 +2065,40 @@
                     confirmModalLot.textContent = `Lot #${state.extractedData.lot_id}`;
                 } else {
                     confirmModalLot.textContent = 'Not Selected';
+                }
+            }
+        }
+
+        // Estimated Total Fee
+        if (confirmModalAmount) {
+            if (isCremation) {
+                const baseFee = 15000;
+                let nicheFee = 0;
+                if (state.extractedData.ash_disposition !== 'take_home') {
+                    if (state.selectedNicheDetails && state.selectedNicheDetails.price) {
+                        nicheFee = Number(state.selectedNicheDetails.price);
+                    } else if (state.extractedData.niche_price) {
+                        nicheFee = Number(state.extractedData.niche_price);
+                    } else if (state.extractedData.level) {
+                        const lvl = Number(state.extractedData.level);
+                        nicheFee = (lvl === 3 || lvl === 4) ? 18000 : (lvl >= 5 ? 10000 : 12000);
+                    } else if (state.extractedData.niche_number) {
+                        nicheFee = 12000;
+                    }
+                }
+                const total = baseFee + nicheFee;
+                confirmModalAmount.textContent = `₱${total.toLocaleString()}` + (nicheFee > 0 ? ` (₱15,000 Service + ₱${nicheFee.toLocaleString()} Niche)` : ' (Base Service Only)');
+            } else {
+                let lotFee = 0;
+                if (state.selectedLotDetails && state.selectedLotDetails.price) {
+                    lotFee = Number(state.selectedLotDetails.price);
+                } else if (state.extractedData.lot_price) {
+                    lotFee = Number(state.extractedData.lot_price);
+                }
+                if (lotFee > 0) {
+                    confirmModalAmount.textContent = `₱${lotFee.toLocaleString()} (Lot Price)`;
+                } else {
+                    confirmModalAmount.textContent = 'Lot Fee Pending Selection';
                 }
             }
         }
