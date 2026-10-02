@@ -710,23 +710,23 @@ class BookingAvailabilityService {
         $isExternal = !empty($extractedData['is_external_cremation']) || (($extractedData['service_subtype'] ?? '') === 'inurnment_only');
 
         $fieldLabels = [
-            'decedent_name'         => 'Pangalan ng Yumao (Decedent Name)',
-            'relationship'          => 'Relasyon sa Yumao (Relationship)',
-            'preferred_date'        => 'Petsa ng Libing (Burial Date)',
-            'cremation_date'        => $isExternal ? 'Petsa ng Paglalagak sa Vault (Inurnment Date)' : 'Petsa ng Cremation (Cremation Date)',
-            'lot_id'                => 'Napiling Burial Lot (Lot Selection)',
-            'service_type'          => 'Uri ng Serbisyo (Service Type)',
-            'ash_disposition'       => 'Imbakan ng Abo (Take Home o Columbarium)',
-            'niche_number'          => 'Napiling Columbarium Niche Slot',
+            'decedent_name'         => 'Decedent Name',
+            'relationship'          => 'Relationship to Decedent',
+            'preferred_date'        => 'Burial Date',
+            'cremation_date'        => $isExternal ? 'Inurnment Date' : 'Cremation Date',
+            'lot_id'                => 'Selected Burial Lot',
+            'service_type'          => 'Service Type',
+            'ash_disposition'       => 'Ash Disposition (Take Home or Columbarium)',
+            'niche_number'          => 'Columbarium Niche Slot',
             'preferred_columbarium' => 'Columbarium Sanctuary'
         ];
 
-        $checklistHeading = $isExternal ? 'columbarium niche / inurnment' : $serviceType;
+        $checklistHeading = $isExternal ? 'Columbarium Niche / Inurnment' : ucfirst($serviceType);
         $replyLines = [];
-        $replyLines[] = "Narito ang status ng inyong {$checklistHeading} booking checklist:";
+        $replyLines[] = "Here is the status of your {$checklistHeading} booking checklist:";
 
         if (!empty($completedFields)) {
-            $replyLines[] = "\nKumpleto na:";
+            $replyLines[] = "\nCompleted:";
             foreach ($completedFields as $cf) {
                 $lbl = $fieldLabels[$cf] ?? ucfirst(str_replace('_', ' ', $cf));
                 $val = $extractedData[$cf] ?? '';
@@ -736,28 +736,28 @@ class BookingAvailabilityService {
         }
 
         if (!empty($missingFields)) {
-            $replyLines[] = "\nKailangan pa nating kumpletuhin:";
+            $replyLines[] = "\nRemaining Information Required:";
             foreach ($missingFields as $mf) {
                 $lbl = $fieldLabels[$mf] ?? ucfirst(str_replace('_', ' ', $mf));
                 $replyLines[] = "  ○ {$lbl}";
             }
         } else {
-            $replyLines[] = "\nKumpleto na ang lahat ng kinakailangang impormasyon! Maaari na nating kumpirmahin ang booking.";
+            $replyLines[] = "\nAll required booking details are complete! We can now proceed to review and confirm.";
         }
 
         if ($nextRecommendedStep === 'PROVIDE_DECEDENT_NAME') {
-            $replyLines[] = "\nSusunod na hakbang: Pakibigay ang buong pangalan ng yumao.";
+            $replyLines[] = "\nNext Step: Please provide the full legal name of the decedent.";
         } elseif ($nextRecommendedStep === 'SELECT_ASH_DISPOSITION') {
-            $replyLines[] = "\nSusunod na hakbang: Nais po ba ninyong iuwi ang abo o ilalagak sa Columbarium Niche?";
+            $replyLines[] = "\nNext Step: Please choose whether to take home the ashes or place them in a Columbarium Niche.";
         } elseif ($nextRecommendedStep === 'SELECT_COLUMBARIUM_NICHE') {
-            $replyLines[] = "\nSusunod na hakbang: Maaari na po kayong pumili ng slot sa ating Columbarium Niche Picker.";
+            $replyLines[] = "\nNext Step: Please select an available slot using the Columbarium Niche Picker.";
         } elseif ($nextRecommendedStep === 'SELECT_DATE') {
-            $dateLabel = $isExternal ? 'paglalagak sa vault (inurnment)' : "{$serviceType}";
-            $replyLines[] = "\nSusunod na hakbang: Pakipili ang inyong gustong petsa ng {$dateLabel}.";
+            $dateLabel = $isExternal ? 'inurnment' : "{$serviceType}";
+            $replyLines[] = "\nNext Step: Please select your preferred {$dateLabel} date.";
         } elseif ($nextRecommendedStep === 'SELECT_LOT') {
-            $replyLines[] = "\nSusunod na hakbang: Maaari na tayong pumili ng available na burial lot.";
+            $replyLines[] = "\nNext Step: Please select an available burial lot.";
         } elseif ($nextRecommendedStep === 'CONFIRM_BOOKING') {
-            $replyLines[] = "\nSusunod na hakbang: Pakireview at kumpirmahin ang detalye ng inyong booking.";
+            $replyLines[] = "\nNext Step: Please review and confirm your booking details.";
         }
 
         return [

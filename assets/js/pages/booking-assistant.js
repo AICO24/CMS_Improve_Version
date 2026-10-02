@@ -657,7 +657,7 @@
             renderPromptChips([
                 { text: '⚰️ Arrange a Burial', action: () => selectService('burial') },
                 { text: '🔥 Arrange a Cremation', action: () => selectService('cremation') },
-                { text: '🏛️ Columbarium Only (May dalang Urn)', action: () => selectInurnmentOnly() }
+                { text: '🏛️ Columbarium Only (With Existing Urn)', action: () => selectInurnmentOnly() }
             ]);
         }
         updateBlueprintHUD();
@@ -1007,11 +1007,11 @@
             hudLotActionBox.innerHTML = `
                 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
                     <button type="button" class="select-lot-btn" id="btnHudOpenNichePicker" style="flex:1;min-width:130px;font-size:0.8rem;padding:7px 10px;">
-                        <i class="fas fa-monument"></i> ${nicheNum ? 'Palitan ang Slot' : 'Pumili ng Niche Slot'}
+                        <i class="fas fa-monument"></i> ${nicheNum ? 'Change Niche Slot' : 'Select Niche Slot'}
                     </button>
                     ${isExternal ? '' : `
-                    <button type="button" class="btn-secondary" id="btnHudSetTakeHome" style="font-size:0.8rem;padding:7px 10px;border-radius:8px;font-weight:600;" title="Iuwi ang abo / urn">
-                        <i class="fas fa-home"></i> Iuwi ang Abo
+                    <button type="button" class="btn-secondary" id="btnHudSetTakeHome" style="font-size:0.8rem;padding:7px 10px;border-radius:8px;font-weight:600;" title="Take home ashes / urn">
+                        <i class="fas fa-home"></i> Take Home Ashes
                     </button>
                     `}
                 </div>
@@ -1291,15 +1291,15 @@
 
             // Cremation flow: Ash disposition and slot selection
             if (!state.extractedData.ash_disposition && !isExternal) {
-                chips.push({ text: '🏠 Iuuwi ang Abo (Take Home)', action: () => setAshDisposition('take_home') });
-                chips.push({ text: '🏛️ Ilalagak sa Columbarium (Vault Slot)', action: () => setAshDisposition('columbarium') });
-                chips.push({ text: '🏛️ May dalang Urn (Columbarium Only)', action: () => setInurnmentOnly() });
+                chips.push({ text: '🏠 Take Home Ashes', action: () => setAshDisposition('take_home') });
+                chips.push({ text: '🏛️ Columbarium Niche Placement', action: () => setAshDisposition('columbarium') });
+                chips.push({ text: '🏛️ Inurnment Only (With Existing Urn)', action: () => setInurnmentOnly() });
             } else if (isExternal || state.extractedData.ash_disposition === 'columbarium') {
                 if (!state.extractedData.niche_number) {
-                    chips.push({ text: '🏛️ Pumili ng Niche / Vault Slot', action: () => openNichePicker() });
+                    chips.push({ text: '🏛️ Select Columbarium Niche', action: () => openNichePicker() });
                 }
                 if (!isExternal) {
-                    chips.push({ text: '🏠 Iuuwi nalang ang Abo', action: () => setAshDisposition('take_home') });
+                    chips.push({ text: '🏠 Change to Take-Home Ashes', action: () => setAshDisposition('take_home') });
                 }
             }
 
@@ -1419,12 +1419,12 @@
         const cardDiv = document.createElement('div');
         cardDiv.className = 'chat-message assistant checklist-card';
         const fieldLabels = {
-            decedent_name: 'Pangalan ng Yumao (Decedent Name)',
-            relationship: 'Relasyon sa Yumao (Relationship)',
-            preferred_date: 'Petsa ng Libing (Burial Date)',
-            cremation_date: 'Petsa ng Cremation (Cremation Date)',
-            lot_id: 'Napiling Burial Lot (Lot Selection)',
-            service_type: 'Uri ng Serbisyo (Service Type)'
+            decedent_name: 'Decedent Name',
+            relationship: 'Relationship to Decedent',
+            preferred_date: 'Burial Date',
+            cremation_date: 'Cremation Date',
+            lot_id: 'Burial Lot Selection',
+            service_type: 'Service Type'
         };
         let compList = (checklist.completed || []).map(f => {
             const lbl = fieldLabels[f] || f.replace(/_/g, ' ');
@@ -1626,14 +1626,14 @@
                 niche_number: null,
                 level: null,
                 columbarium: null
-            }, `Updated ash disposition: **Iuuwi ang Abo (Take Home Urn)**. Columbarium vault requirement is waived.`);
+            }, `Updated ash disposition: **Take Home Ashes (Family Custody)**. Columbarium vault requirement is waived.`);
         } else {
             await updateDraftFieldsBatch({
                 ash_disposition: 'columbarium',
                 service_subtype: 'full_package',
                 is_external_cremation: false,
                 ash_storage_location: 'Columbarium'
-            }, `Selected disposition: **Ilalagak sa Columbarium**. Please choose a sanctuary and slot to reserve.`);
+            }, `Selected disposition: **Columbarium Vault Placement**. Please choose a sanctuary and slot to reserve.`);
             if (!state.extractedData.niche_number) {
                 openNichePicker();
             }
@@ -1641,7 +1641,7 @@
     }
 
     /**
-     * Set Inurnment Only (May dalang urn mula sa ibang crematory)
+     * Set Inurnment Only (Externally cremated urn)
      */
     async function setInurnmentOnly() {
         if (!state.draftId) {
@@ -1653,7 +1653,7 @@
             is_external_cremation: true,
             ash_disposition: 'columbarium',
             ash_storage_location: 'Columbarium'
-        }, `Selected service: **Columbarium Vault Only (May dalang Urn)**. Cremation service base fee is waived (₱0). Mangyaring pumili ng sanctuary at vault slot.`);
+        }, `Selected service: **Columbarium Niche Only (Inurnment)**. Cremation service base fee is waived (₱0). Please choose a sanctuary and vault slot.`);
         if (!state.extractedData.niche_number) {
             openNichePicker();
         }
@@ -1665,8 +1665,8 @@
     async function selectInurnmentOnly() {
         if (state.isLoading) return;
         state.serviceType = 'cremation';
-        appendUserMessage(`Nais kong magpa-reserve ng Columbarium Vault para sa aming dalang urn.`);
-        await sendChatTurn(`Gusto ko pong mag-book ng Columbarium Niche para sa may hawak na kaming urn (external cremation). Pakitulungan akong pumili ng slot.`);
+        appendUserMessage(`I would like to reserve a Columbarium Niche for an existing urn.`);
+        await sendChatTurn(`I want to book a Columbarium Niche for an existing urn (external cremation). Please help me select an available slot.`);
         await updateDraftFieldsBatch({
             service_subtype: 'inurnment_only',
             is_external_cremation: true,
@@ -2032,7 +2032,7 @@
         state.selectedNicheDetails = niche;
 
         const priceFmt = Number(niche.price || 0).toLocaleString();
-        const successMsg = `Napili ninyo ang **Niche ${escapeHtml(niche.niche_number)}** sa **${escapeHtml(niche.columbarium || 'Columbarium')}** (${escapeHtml(niche.tier_label || ('Level ' + niche.level))}) sa halagang **₱${priceFmt}**.\n\nNaitala na ito sa inyong reservation summary.`;
+        const successMsg = `You have selected **Niche ${escapeHtml(niche.niche_number)}** in **${escapeHtml(niche.columbarium || 'Columbarium')}** (${escapeHtml(niche.tier_label || ('Level ' + niche.level))}) for **₱${priceFmt}**.\n\nThis has been updated in your reservation blueprint.`;
 
         await updateDraftFieldsBatch({
             ash_disposition: 'columbarium',
@@ -3051,7 +3051,7 @@
 
     function openDocModal() {
         if (!state.draftId) {
-            appendAssistantMessage("Pakibigay muna po ang pangalan ng yumao o pumili ng serbisyo bago mag-upload ng mga dokumento upang maiugnay ito sa inyong booking.");
+            appendAssistantMessage("Please provide the decedent's name or choose a service type before uploading documents so they can be linked to your booking.");
             if (typeof showToast === 'function') showToast('Please start a booking draft first', 'warning');
             return;
         }
@@ -3212,7 +3212,7 @@
             if (res && res.success) {
                 const label = docType.replace(/_/g, ' ');
                 if (typeof showToast === 'function') showToast(`${label} uploaded successfully!`, 'success');
-                appendAssistantMessage(`📄 Natanggap na po ang inyong ${label} (${res.original_filename || file.name}). Naitala na po ito sa inyong reservation draft.`);
+                appendAssistantMessage(`📄 Received your ${label} (${res.original_filename || file.name}). This has been attached to your reservation draft.`);
                 if (!state.extractedData.documents) state.extractedData.documents = {};
                 state.extractedData.documents[docType] = {
                     file_path: res.file_path,
@@ -3226,7 +3226,7 @@
             } else {
                 const err = sanitizeUserErrorMessage(res?.error, 'Failed to upload document');
                 if (typeof showToast === 'function') showToast(err, 'error');
-                appendAssistantMessage(`⚠️ Hindi na-upload ang dokumento: ${err}`);
+                appendAssistantMessage(`⚠️ Document upload failed: ${err}`);
             }
         } catch (err) {
             const errText = sanitizeUserErrorMessage(err, 'Upload failed');
