@@ -2356,9 +2356,12 @@ class BookingAgentController {
             return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
         }
 
-        $validTypes = ['death_certificate', 'burial_permit', 'valid_id'];
+        $validTypes = ['death_certificate', 'burial_permit', 'valid_id', 'certificate_of_cremation'];
         if (!in_array($docType, $validTypes, true)) {
             return ['success' => false, 'error' => "Invalid document type '{$docType}'. Allowed types: " . implode(', ', $validTypes), 'code' => 400];
+        }
+        if ($docType === 'certificate_of_cremation') {
+            $docType = 'burial_permit';
         }
 
         if (empty($file) || !is_array($file) || empty($file['tmp_name'])) {

@@ -1169,10 +1169,21 @@
         // Documentary Requirements HUD
         const docs = state.extractedData.documents || {};
         const isCrem = state.serviceType === 'cremation';
+        const isExt = Boolean(state.extractedData.is_external_cremation || state.extractedData.service_subtype === 'inurnment_only');
+
         const labelPermitEl = document.getElementById('labelPermit');
-        if (labelPermitEl) labelPermitEl.textContent = isCrem ? 'Cremation Permit' : 'Burial Permit';
+        const permitText = isExt ? 'Certificate of Cremation' : (isCrem ? 'Cremation Permit' : 'Burial Permit');
+        if (labelPermitEl) labelPermitEl.textContent = permitText;
+
         const modalTitlePermitEl = document.getElementById('modalTitlePermit');
-        if (modalTitlePermitEl) modalTitlePermitEl.textContent = isCrem ? 'Cremation Permit' : 'Burial Permit';
+        if (modalTitlePermitEl) modalTitlePermitEl.textContent = permitText;
+
+        const modalSubPermitEl = document.getElementById('modalSubPermit');
+        if (modalSubPermitEl) {
+            modalSubPermitEl.textContent = isExt 
+                ? 'Official Certificate of Cremation from Crematorium / Operator' 
+                : (isCrem ? 'City Health Office / Municipal Cremation Permit' : 'City Health Office or Local Government Unit Permit');
+        }
 
         updateDocItemUI('DeathCert', docs.death_certificate);
         updateDocItemUI('Permit', docs.burial_permit);
@@ -2214,9 +2225,9 @@
                 if (count === 3) {
                     warningTextEl.textContent = 'All 3 documentary requirements are attached online. Cemetery administration will verify document authenticity prior to service execution.';
                 } else if (count > 0) {
-                    warningTextEl.textContent = `You have uploaded ${count} of 3 required documents. Per municipal cemetery policy, you may finalize your booking now and present the remaining original physical certificates (Death Certificate / Permit) at the cemetery office prior to the service.`;
+                    warningTextEl.textContent = `You have uploaded ${count} of 3 required documents. Per municipal cemetery policy, you may finalize your booking now and present the remaining original physical certificates (${isExternal ? 'Death Certificate / Certificate of Cremation' : 'Death Certificate / Permit'}) at the cemetery office prior to the service.`;
                 } else {
-                    warningTextEl.textContent = 'No documents uploaded online yet. You may finalize your reservation now to lock your preferred date and lot; please present physical copies of your PSA/LCR Death Certificate and Permit at the office for verification.';
+                    warningTextEl.textContent = `No documents uploaded online yet. You may finalize your reservation now to lock your preferred date and lot; please present physical copies of your PSA/LCR Death Certificate and ${isExternal ? 'Certificate of Cremation' : 'Permit'} at the office for verification.`;
                 }
             }
         }

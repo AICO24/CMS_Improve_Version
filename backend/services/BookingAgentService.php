@@ -1696,6 +1696,7 @@ class BookingAgentService {
         $docs = $extracted['documents'] ?? [];
 
         $isCremation = ($draft['service_type'] ?? '') === 'cremation';
+        $isExternal = !empty($extracted['is_external_cremation']) || (($extracted['service_subtype'] ?? '') === 'inurnment_only');
 
         $definitions = [
             'death_certificate' => [
@@ -1708,8 +1709,8 @@ class BookingAgentService {
             ],
             'burial_permit' => [
                 'doc_type'    => 'burial_permit',
-                'title'       => $isCremation ? 'Cremation Permit' : 'Burial Permit',
-                'description' => 'City Health Office / Local Government Unit Permit',
+                'title'       => $isExternal ? 'Certificate of Cremation' : ($isCremation ? 'Cremation Permit' : 'Burial Permit'),
+                'description' => $isExternal ? 'Official Certificate from Crematorium / Crematory Operator' : 'City Health Office / Local Government Unit Permit',
                 'required'    => true,
                 'uploaded'    => !empty($docs['burial_permit']),
                 'file'        => $docs['burial_permit'] ?? null,

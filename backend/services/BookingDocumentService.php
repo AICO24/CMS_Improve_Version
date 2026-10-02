@@ -143,6 +143,24 @@ class BookingDocumentService {
             $decDocs = $decStmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
+        $isCremation = ($serviceType === 'cremation');
+        $isExternal = false;
+        if (!empty($draftRow['extracted_data'])) {
+            $extracted = is_array($draftRow['extracted_data']) 
+                ? $draftRow['extracted_data'] 
+                : json_decode($draftRow['extracted_data'], true);
+            if (is_array($extracted)) {
+                if (!empty($extracted['is_external_cremation']) || (($extracted['service_subtype'] ?? '') === 'inurnment_only')) {
+                    $isExternal = true;
+                }
+            }
+        }
+        if (!$isExternal && !empty($booking['notes'])) {
+            if (stripos($booking['notes'], 'Inurnment Only') !== false || stripos($booking['notes'], 'External Cremation') !== false) {
+                $isExternal = true;
+            }
+        }
+
         // Standardized Definitions for the 3 Canonical Requirements
         $definitions = [
             'death_certificate' => [
@@ -161,8 +179,8 @@ class BookingDocumentService {
             ],
             'burial_permit' => [
                 'doc_type'          => 'burial_permit',
-                'title'             => $isCremation ? 'Cremation Permit' : 'Burial Permit',
-                'description'       => 'City Health Office / Local Government Unit Permit',
+                'title'             => $isExternal ? 'Certificate of Cremation' : ($isCremation ? 'Cremation Permit' : 'Burial Permit'),
+                'description'       => $isExternal ? 'Official Certificate from Crematorium / Crematory Operator' : 'City Health Office / Local Government Unit Permit',
                 'required'          => true,
                 'is_uploaded'       => false,
                 'file_path'         => null,
@@ -215,7 +233,7 @@ class BookingDocumentService {
             $definitions['burial_permit']['is_uploaded'] = true;
             $definitions['burial_permit']['file_path'] = $draftDocs['burial_permit']['file_path'];
             $definitions['burial_permit']['file_url'] = self::normalizeFileUrl($draftDocs['burial_permit']['file_path']);
-            $definitions['burial_permit']['original_filename'] = $draftDocs['burial_permit']['original_filename'] ?? ($isCremation ? 'Cremation_Permit.pdf' : 'Burial_Permit.pdf');
+            $definitions['burial_permit']['original_filename'] = $draftDocs['burial_permit']['original_filename'] ?? ($isExternal ? 'Certificate_of_Cremation.pdf' : ($isCremation ? 'Cremation_Permit.pdf' : 'Burial_Permit.pdf'));
             $definitions['burial_permit']['uploaded_at'] = $draftDocs['burial_permit']['uploaded_at'] ?? null;
             $definitions['burial_permit']['source'] = 'booking_draft';
             $definitions['burial_permit']['status'] = 'uploaded';
