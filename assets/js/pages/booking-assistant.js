@@ -643,21 +643,19 @@
             ]);
         } else if (state.serviceType === 'cremation') {
             appendAssistantMessage(
-                `Hello! I am your AI Booking Assistant. I will guide you step-by-step through arranging a **cremation service**.\n\nTo begin, who is this cremation arrangement for (the decedent's full name)?`
+                `Hello! I am your AI Booking Assistant. I will guide you step-by-step through arranging a **cremation arrangement**.\n\nWhich type of cremation service do you need?\n\n• **Full Cremation Service** – The cremation process will take place at our facility.\n• **Columbarium Niche Only** – The deceased has already been cremated, and you only require a columbarium niche for an existing urn.`
             );
             renderPromptChips([
-                { text: '👤 For my father', action: () => sendQuickInput('The cremation arrangement is for my father, ') },
-                { text: '👤 For my mother', action: () => sendQuickInput('The cremation arrangement is for my mother, ') },
-                { text: '❓ Columbarium & Date Info', action: () => sendChatTurn('What are the cremation requirements and columbarium details?') }
+                { text: '🔥 Full Cremation Service', action: () => selectFullCremation() },
+                { text: '🏛️ Columbarium Niche Only (With Existing Urn)', action: () => selectInurnmentOnly() }
             ]);
         } else {
             appendAssistantMessage(
-                `Hello! I am your AI Booking Assistant. I will guide you step-by-step through arranging a **burial**, **cremation**, or **columbarium niche** placement.\n\nTo begin, which type of service would you like to arrange?`
+                `Hello! I am your AI Booking Assistant. I will guide you step-by-step through arranging a **burial** or **cremation** service.\n\nTo begin, which type of service would you like to arrange?`
             );
             renderPromptChips([
                 { text: '⚰️ Arrange a Burial', action: () => selectService('burial') },
-                { text: '🔥 Arrange a Cremation', action: () => selectService('cremation') },
-                { text: '🏛️ Columbarium Only (With Existing Urn)', action: () => selectInurnmentOnly() }
+                { text: '🔥 Arrange a Cremation', action: () => selectService('cremation') }
             ]);
         }
         updateBlueprintHUD();
@@ -670,6 +668,18 @@
         if (state.isLoading) return;
         state.serviceType = serviceType;
         appendUserMessage(`I want to arrange a ${serviceType} service.`);
+
+        if (serviceType === 'cremation') {
+            appendAssistantMessage(
+                `Understood. Which type of cremation arrangement do you need?\n\n• **Full Cremation Service** – The cremation process will take place at our facility.\n• **Columbarium Niche Only** – The deceased has already been cremated, and you only require a columbarium niche for an existing urn.`
+            );
+            renderPromptChips([
+                { text: '🔥 Full Cremation Service', action: () => selectFullCremation() },
+                { text: '🏛️ Columbarium Niche Only (With Existing Urn)', action: () => selectInurnmentOnly() }
+            ]);
+            return;
+        }
+
         await sendChatTurn(`I want to arrange a ${serviceType} service.`);
     }
 
@@ -1289,11 +1299,13 @@
         } else if (state.serviceType === 'cremation') {
             const isExternal = Boolean(state.extractedData.is_external_cremation || state.extractedData.service_subtype === 'inurnment_only');
 
-            // Cremation flow: Ash disposition and slot selection
-            if (!state.extractedData.ash_disposition && !isExternal) {
+            // Cremation flow: subtype & ash disposition
+            if (!state.extractedData.service_subtype && !state.extractedData.ash_disposition && !isExternal) {
+                chips.push({ text: '🔥 Full Cremation Service', action: () => selectFullCremation() });
+                chips.push({ text: '🏛️ Columbarium Niche Only (With Existing Urn)', action: () => selectInurnmentOnly() });
+            } else if (!state.extractedData.ash_disposition && !isExternal) {
                 chips.push({ text: '🏠 Take Home Ashes', action: () => setAshDisposition('take_home') });
                 chips.push({ text: '🏛️ Columbarium Niche Placement', action: () => setAshDisposition('columbarium') });
-                chips.push({ text: '🏛️ Inurnment Only (With Existing Urn)', action: () => setInurnmentOnly() });
             } else if (isExternal || state.extractedData.ash_disposition === 'columbarium') {
                 if (!state.extractedData.niche_number) {
                     chips.push({ text: '🏛️ Select Columbarium Niche', action: () => openNichePicker() });
@@ -1657,6 +1669,20 @@
         if (!state.extractedData.niche_number) {
             openNichePicker();
         }
+    }
+
+    /**
+     * Handle selection of Full Cremation Service
+     */
+    async function selectFullCremation() {
+        if (state.isLoading) return;
+        state.serviceType = 'cremation';
+        appendUserMessage(`I want to arrange a Full Cremation Service.`);
+        await sendChatTurn(`I want to arrange a Full Cremation Service at your facility. Please guide me through the details.`);
+        await updateDraftFieldsBatch({
+            service_subtype: 'full_package',
+            is_external_cremation: false
+        });
     }
 
     /**
