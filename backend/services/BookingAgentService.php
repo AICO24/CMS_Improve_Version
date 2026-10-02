@@ -734,6 +734,33 @@ class BookingAgentService {
                 }
             }
 
+            // Handle service_subtype or is_external_cremation (Inurnment Only)
+            if ($k === 'service_subtype') {
+                $subVal = strtolower(trim((string)$v));
+                if (in_array($subVal, ['inurnment_only', 'inurnment', 'columbarium_only'], true)) {
+                    $sanitizedIncoming['service_subtype'] = 'inurnment_only';
+                    $sanitizedIncoming['is_external_cremation'] = true;
+                    $sanitizedIncoming['ash_disposition'] = 'columbarium';
+                    $sanitizedIncoming['ash_storage_location'] = 'Columbarium';
+                } elseif (in_array($subVal, ['take_home', 'cremation_only'], true)) {
+                    $sanitizedIncoming['service_subtype'] = 'take_home';
+                    $sanitizedIncoming['is_external_cremation'] = false;
+                    $sanitizedIncoming['ash_disposition'] = 'take_home';
+                } else {
+                    $sanitizedIncoming['service_subtype'] = 'full_package';
+                    $sanitizedIncoming['is_external_cremation'] = false;
+                }
+            }
+
+            if ($k === 'is_external_cremation') {
+                $sanitizedIncoming['is_external_cremation'] = (bool)$v;
+                if ($sanitizedIncoming['is_external_cremation']) {
+                    $sanitizedIncoming['service_subtype'] = 'inurnment_only';
+                    $sanitizedIncoming['ash_disposition'] = 'columbarium';
+                    $sanitizedIncoming['ash_storage_location'] = 'Columbarium';
+                }
+            }
+
             // Normalize decedent_name if formatted with comma ("Last, First" like "Nicolas, Nicolas" or "Dela Cruz, Juan")
             if ($k === 'decedent_name' && is_string($v) && trim($v) !== '') {
                 $cleanName = trim($v);
@@ -1427,7 +1454,10 @@ class BookingAgentService {
             }
 
             // 2.5 Daily Retort Capacity Check (BUG-004)
-            if ($this->cremationModel->countActiveByDate($cremationDateStr) >= Cremation::MAX_DAILY_RETORT_CAPACITY) {
+            $isExternalCremation = !empty($extracted['is_external_cremation']) || (($extracted['service_subtype'] ?? '') === 'inurnment_only');
+
+            // Daily retort machine capacity limit applies only to internal crematory operations
+            if (!$isExternalCremation && $this->cremationModel->countActiveByDate($cremationDateStr) >= Cremation::MAX_DAILY_RETORT_CAPACITY) {
                 throw new BookingDraftException(
                     "Daily cremation capacity limit (" . Cremation::MAX_DAILY_RETORT_CAPACITY . " per day) reached for {$cremationDateStr}. Please select another date.",
                     'RETORT_CAPACITY_REACHED',
@@ -1447,7 +1477,7 @@ class BookingAgentService {
             $columbarium = null;
             $nicheNumber = null;
             $level = null;
-            $ashStorageLocation = 'Take Home / Family Custody';
+            $ashStorageLocation = $isTakeHome ? 'Take Home / Family Custody' : 'Columbarium';
 
             if (!$isTakeHome && !empty($extracted['niche_number'])) {
                 $columbarium = !empty($extracted['preferred_columbarium']) ? $extracted['preferred_columbarium'] : 'St. Jude Thaddeus Sanctuary';
@@ -1468,6 +1498,7 @@ class BookingAgentService {
                 $ashStorageLocation = 'Columbarium Vault';
             }
 
+            $notesPrefix = $isExternalCremation ? 'External Cremation - Inurnment Only. ' : '';
             $cremationData = [
                 'deceased_id'          => $deceasedId,
                 'decedent_request_id'  => $decedentRequestId,
@@ -1477,7 +1508,7 @@ class BookingAgentService {
                 'cremation_date'       => $cremationDateStr,
                 'status'               => $status,
                 'ash_storage_location' => $ashStorageLocation,
-                'notes'                => $extracted['notes'] ?? ('AI Booking Assistant Draft #' . $draftId),
+                'notes'                => $notesPrefix . ($extracted['notes'] ?? ('AI Booking Assistant Draft #' . $draftId)),
                 'created_by'           => $userId,
             ];
 

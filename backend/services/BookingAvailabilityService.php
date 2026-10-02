@@ -707,11 +707,13 @@ class BookingAvailabilityService {
         }
 
         // Build citizen-friendly bilingual reply
+        $isExternal = !empty($extractedData['is_external_cremation']) || (($extractedData['service_subtype'] ?? '') === 'inurnment_only');
+
         $fieldLabels = [
             'decedent_name'         => 'Pangalan ng Yumao (Decedent Name)',
             'relationship'          => 'Relasyon sa Yumao (Relationship)',
             'preferred_date'        => 'Petsa ng Libing (Burial Date)',
-            'cremation_date'        => 'Petsa ng Cremation (Cremation Date)',
+            'cremation_date'        => $isExternal ? 'Petsa ng Paglalagak sa Vault (Inurnment Date)' : 'Petsa ng Cremation (Cremation Date)',
             'lot_id'                => 'Napiling Burial Lot (Lot Selection)',
             'service_type'          => 'Uri ng Serbisyo (Service Type)',
             'ash_disposition'       => 'Imbakan ng Abo (Take Home o Columbarium)',
@@ -719,8 +721,9 @@ class BookingAvailabilityService {
             'preferred_columbarium' => 'Columbarium Sanctuary'
         ];
 
+        $checklistHeading = $isExternal ? 'columbarium niche / inurnment' : $serviceType;
         $replyLines = [];
-        $replyLines[] = "Narito ang status ng inyong {$serviceType} booking checklist:";
+        $replyLines[] = "Narito ang status ng inyong {$checklistHeading} booking checklist:";
 
         if (!empty($completedFields)) {
             $replyLines[] = "\nKumpleto na:";
@@ -749,7 +752,8 @@ class BookingAvailabilityService {
         } elseif ($nextRecommendedStep === 'SELECT_COLUMBARIUM_NICHE') {
             $replyLines[] = "\nSusunod na hakbang: Maaari na po kayong pumili ng slot sa ating Columbarium Niche Picker.";
         } elseif ($nextRecommendedStep === 'SELECT_DATE') {
-            $replyLines[] = "\nSusunod na hakbang: Pakipili ang inyong gustong petsa ng {$serviceType}.";
+            $dateLabel = $isExternal ? 'paglalagak sa vault (inurnment)' : "{$serviceType}";
+            $replyLines[] = "\nSusunod na hakbang: Pakipili ang inyong gustong petsa ng {$dateLabel}.";
         } elseif ($nextRecommendedStep === 'SELECT_LOT') {
             $replyLines[] = "\nSusunod na hakbang: Maaari na tayong pumili ng available na burial lot.";
         } elseif ($nextRecommendedStep === 'CONFIRM_BOOKING') {

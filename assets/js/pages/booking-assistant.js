@@ -652,11 +652,12 @@
             ]);
         } else {
             appendAssistantMessage(
-                `Hello! I am your AI Booking Assistant. I will guide you step-by-step through arranging a **burial** or **cremation** service.\n\nTo begin, which type of service would you like to arrange?`
+                `Hello! I am your AI Booking Assistant. I will guide you step-by-step through arranging a **burial**, **cremation**, or **columbarium niche** placement.\n\nTo begin, which type of service would you like to arrange?`
             );
             renderPromptChips([
                 { text: '⚰️ Arrange a Burial', action: () => selectService('burial') },
-                { text: '🔥 Arrange a Cremation', action: () => selectService('cremation') }
+                { text: '🔥 Arrange a Cremation', action: () => selectService('cremation') },
+                { text: '🏛️ Columbarium Only (May dalang Urn)', action: () => selectInurnmentOnly() }
             ]);
         }
         updateBlueprintHUD();
@@ -938,12 +939,27 @@
 
         // Service Card
         const isCremation = state.serviceType === 'cremation';
-        hudServiceBadge.textContent = state.serviceType ? (isCremation ? 'Cremation' : 'Burial') : 'Detecting...';
-        hudServiceBadge.style.background = isCremation ? '#fef3c7' : '#ecfdf5';
-        hudServiceBadge.style.color = isCremation ? '#b45309' : '#047857';
-        hudServiceBadge.style.borderColor = isCremation ? '#fde68a' : '#a7f3d0';
-        hudServiceDesc.textContent = state.serviceType ? (isCremation ? 'Cremation Service' : 'Standard Burial Service') : 'Pending selection';
-        hudServiceVal.textContent = state.serviceType ? (isCremation ? 'Cremation' : 'Burial') : 'Pending';
+        const isExternal = Boolean(state.extractedData.is_external_cremation || state.extractedData.service_subtype === 'inurnment_only');
+
+        if (isCremation) {
+            hudServiceBadge.textContent = isExternal ? 'Columbarium Only' : 'Cremation';
+            hudServiceBadge.style.background = '#fef3c7';
+            hudServiceBadge.style.color = '#b45309';
+            hudServiceBadge.style.borderColor = '#fde68a';
+            hudServiceDesc.textContent = isExternal ? 'Columbarium Niche (Inurnment Only)' : 'Cremation Service';
+            hudServiceVal.textContent = isExternal ? 'Inurnment' : 'Cremation';
+        } else if (state.serviceType === 'burial') {
+            hudServiceBadge.textContent = 'Burial';
+            hudServiceBadge.style.background = '#ecfdf5';
+            hudServiceBadge.style.color = '#047857';
+            hudServiceBadge.style.borderColor = '#a7f3d0';
+            hudServiceDesc.textContent = 'Standard Burial Service';
+            hudServiceVal.textContent = 'Burial';
+        } else {
+            hudServiceBadge.textContent = 'Detecting...';
+            hudServiceDesc.textContent = 'Pending selection';
+            hudServiceVal.textContent = 'Pending';
+        }
 
         // Decedent Card
         const dName = state.extractedData.decedent_name;
@@ -966,7 +982,7 @@
         hudDate.innerHTML = scheduleDisplay;
 
         if (isCremation) {
-            hudAllocationLabel.textContent = 'Ash Disposition:';
+            hudAllocationLabel.textContent = isExternal ? 'Vault Allocation:' : 'Ash Disposition:';
             const ashDisp = state.extractedData.ash_disposition;
             const nicheNum = state.extractedData.niche_number;
             const col = state.extractedData.preferred_columbarium;
@@ -993,9 +1009,11 @@
                     <button type="button" class="select-lot-btn" id="btnHudOpenNichePicker" style="flex:1;min-width:130px;font-size:0.8rem;padding:7px 10px;">
                         <i class="fas fa-monument"></i> ${nicheNum ? 'Palitan ang Slot' : 'Pumili ng Niche Slot'}
                     </button>
+                    ${isExternal ? '' : `
                     <button type="button" class="btn-secondary" id="btnHudSetTakeHome" style="font-size:0.8rem;padding:7px 10px;border-radius:8px;font-weight:600;" title="Iuwi ang abo / urn">
                         <i class="fas fa-home"></i> Iuwi ang Abo
                     </button>
+                    `}
                 </div>
             `;
             const btnNiche = document.getElementById('btnHudOpenNichePicker');
@@ -1032,23 +1050,37 @@
         if (cardPricing) {
             cardPricing.style.display = state.serviceType ? 'block' : 'none';
             if (isCremation) {
-                if (labelBaseFee) labelBaseFee.textContent = 'Cremation Service:';
-                if (valBaseFee) valBaseFee.textContent = '₱15,000';
-                if (labelSlotFee) labelSlotFee.textContent = 'Columbarium Niche:';
-
                 const ashDisp = state.extractedData.ash_disposition;
                 const nichePrice = Number(state.extractedData.niche_price || 0);
 
-                if (ashDisp === 'take_home') {
-                    if (valSlotFee) valSlotFee.innerHTML = '<span style="color:#059669;font-weight:600;">₱0 (Take Home / Waived)</span>';
-                    if (valTotalFee) valTotalFee.textContent = '₱15,000';
-                } else if (state.extractedData.niche_number) {
-                    if (valSlotFee) valSlotFee.textContent = `₱${nichePrice.toLocaleString()}`;
-                    const total = 15000 + nichePrice;
-                    if (valTotalFee) valTotalFee.textContent = `₱${total.toLocaleString()}`;
+                if (isExternal) {
+                    if (labelBaseFee) labelBaseFee.textContent = 'Cremation Service:';
+                    if (valBaseFee) valBaseFee.innerHTML = '<span style="color:#059669;font-weight:600;">₱0 (External / Waived)</span>';
+                    if (labelSlotFee) labelSlotFee.textContent = 'Columbarium Niche:';
+
+                    if (state.extractedData.niche_number) {
+                        if (valSlotFee) valSlotFee.textContent = `₱${nichePrice.toLocaleString()}`;
+                        if (valTotalFee) valTotalFee.textContent = `₱${nichePrice.toLocaleString()}`;
+                    } else {
+                        if (valSlotFee) valSlotFee.innerHTML = '<span class="text-muted">Pending slot selection</span>';
+                        if (valTotalFee) valTotalFee.textContent = 'Pending slot selection';
+                    }
                 } else {
-                    if (valSlotFee) valSlotFee.innerHTML = '<span class="text-muted">Pending slot selection</span>';
-                    if (valTotalFee) valTotalFee.textContent = '₱15,000 (Base Fee)';
+                    if (labelBaseFee) labelBaseFee.textContent = 'Cremation Service:';
+                    if (valBaseFee) valBaseFee.textContent = '₱15,000';
+                    if (labelSlotFee) labelSlotFee.textContent = 'Columbarium Niche:';
+
+                    if (ashDisp === 'take_home') {
+                        if (valSlotFee) valSlotFee.innerHTML = '<span style="color:#059669;font-weight:600;">₱0 (Take Home / Waived)</span>';
+                        if (valTotalFee) valTotalFee.textContent = '₱15,000';
+                    } else if (state.extractedData.niche_number) {
+                        if (valSlotFee) valSlotFee.textContent = `₱${nichePrice.toLocaleString()}`;
+                        const total = 15000 + nichePrice;
+                        if (valTotalFee) valTotalFee.textContent = `₱${total.toLocaleString()}`;
+                    } else {
+                        if (valSlotFee) valSlotFee.innerHTML = '<span class="text-muted">Pending slot selection</span>';
+                        if (valTotalFee) valTotalFee.textContent = '₱15,000 (Base Fee)';
+                    }
                 }
             } else {
                 // Burial
@@ -1244,13 +1276,20 @@
                 }
             }
         } else if (state.serviceType === 'cremation') {
+            const isExternal = Boolean(state.extractedData.is_external_cremation || state.extractedData.service_subtype === 'inurnment_only');
+
             // Cremation flow: Ash disposition and slot selection
-            if (!state.extractedData.ash_disposition) {
+            if (!state.extractedData.ash_disposition && !isExternal) {
                 chips.push({ text: '🏠 Iuuwi ang Abo (Take Home)', action: () => setAshDisposition('take_home') });
                 chips.push({ text: '🏛️ Ilalagak sa Columbarium (Vault Slot)', action: () => setAshDisposition('columbarium') });
-            } else if (state.extractedData.ash_disposition === 'columbarium' && !state.extractedData.niche_number) {
-                chips.push({ text: '🏛️ Pumili ng Niche / Vault Slot', action: () => openNichePicker() });
-                chips.push({ text: '🏠 Iuuwi nalang ang Abo', action: () => setAshDisposition('take_home') });
+                chips.push({ text: '🏛️ May dalang Urn (Columbarium Only)', action: () => setInurnmentOnly() });
+            } else if (isExternal || state.extractedData.ash_disposition === 'columbarium') {
+                if (!state.extractedData.niche_number) {
+                    chips.push({ text: '🏛️ Pumili ng Niche / Vault Slot', action: () => openNichePicker() });
+                }
+                if (!isExternal) {
+                    chips.push({ text: '🏠 Iuuwi nalang ang Abo', action: () => setAshDisposition('take_home') });
+                }
             }
 
             if (state.missingFields.includes('decedent_name')) {
@@ -1258,8 +1297,9 @@
                 chips.push({ text: '👤 For my mother', action: () => sendQuickInput('The arrangement is for my mother, ') });
             }
             if (state.missingFields.includes('cremation_date')) {
-                chips.push({ text: '📅 In 1 week', action: () => sendQuickDate('+7 days') });
-                chips.push({ text: '📅 In 2 weeks', action: () => sendQuickDate('+14 days') });
+                const dateLabel = isExternal ? 'Inurnment' : 'Cremation';
+                chips.push({ text: `📅 In 1 week (${dateLabel})`, action: () => sendQuickDate('+7 days') });
+                chips.push({ text: `📅 In 2 weeks (${dateLabel})`, action: () => sendQuickDate('+14 days') });
             }
         } else if (state.status === 'LOT_SELECTION' || (state.serviceType === 'burial' && !state.extractedData.lot_id)) {
             chips.push({ text: '🗺️ Browse Available Lots', action: () => openLotPicker() });
@@ -1569,6 +1609,8 @@
         if (disposition === 'take_home') {
             await updateDraftFieldsBatch({
                 ash_disposition: 'take_home',
+                service_subtype: 'take_home',
+                is_external_cremation: false,
                 ash_storage_location: 'Take Home / Family Custody',
                 niche_number: null,
                 level: null,
@@ -1577,12 +1619,49 @@
         } else {
             await updateDraftFieldsBatch({
                 ash_disposition: 'columbarium',
+                service_subtype: 'full_package',
+                is_external_cremation: false,
                 ash_storage_location: 'Columbarium'
             }, `Selected disposition: **Ilalagak sa Columbarium**. Please choose a sanctuary and slot to reserve.`);
             if (!state.extractedData.niche_number) {
                 openNichePicker();
             }
         }
+    }
+
+    /**
+     * Set Inurnment Only (May dalang urn mula sa ibang crematory)
+     */
+    async function setInurnmentOnly() {
+        if (!state.draftId) {
+            appendAssistantMessage(`Please start a booking conversation first before updating.`);
+            return;
+        }
+        await updateDraftFieldsBatch({
+            service_subtype: 'inurnment_only',
+            is_external_cremation: true,
+            ash_disposition: 'columbarium',
+            ash_storage_location: 'Columbarium'
+        }, `Selected service: **Columbarium Vault Only (May dalang Urn)**. Cremation service base fee is waived (₱0). Mangyaring pumili ng sanctuary at vault slot.`);
+        if (!state.extractedData.niche_number) {
+            openNichePicker();
+        }
+    }
+
+    /**
+     * Handle quick selection of Columbarium Niche / Inurnment Only
+     */
+    async function selectInurnmentOnly() {
+        if (state.isLoading) return;
+        state.serviceType = 'cremation';
+        appendUserMessage(`Nais kong magpa-reserve ng Columbarium Vault para sa aming dalang urn.`);
+        await sendChatTurn(`Gusto ko pong mag-book ng Columbarium Niche para sa may hawak na kaming urn (external cremation). Pakitulungan akong pumili ng slot.`);
+        await updateDraftFieldsBatch({
+            service_subtype: 'inurnment_only',
+            is_external_cremation: true,
+            ash_disposition: 'columbarium',
+            ash_storage_location: 'Columbarium'
+        });
     }
 
     /**
@@ -2019,8 +2098,9 @@
         const isCremation = state.serviceType === 'cremation';
 
         // Service Type
+        const isExternal = Boolean(state.extractedData.is_external_cremation || state.extractedData.service_subtype === 'inurnment_only');
         if (confirmModalService) {
-            confirmModalService.textContent = isCremation ? 'Cremation Service' : 'Standard Burial Service';
+            confirmModalService.textContent = isCremation ? (isExternal ? 'Columbarium Niche (Inurnment Only)' : 'Cremation Service') : 'Standard Burial Service';
         }
 
         // Decedent Name
@@ -2072,7 +2152,7 @@
         // Estimated Total Fee
         if (confirmModalAmount) {
             if (isCremation) {
-                const baseFee = 15000;
+                const baseFee = isExternal ? 0 : 15000;
                 let nicheFee = 0;
                 if (state.extractedData.ash_disposition !== 'take_home') {
                     if (state.selectedNicheDetails && state.selectedNicheDetails.price) {
@@ -2087,7 +2167,11 @@
                     }
                 }
                 const total = baseFee + nicheFee;
-                confirmModalAmount.textContent = `₱${total.toLocaleString()}` + (nicheFee > 0 ? ` (₱15,000 Service + ₱${nicheFee.toLocaleString()} Niche)` : ' (Base Service Only)');
+                if (isExternal) {
+                    confirmModalAmount.textContent = `₱${total.toLocaleString()} (Columbarium Niche Only)`;
+                } else {
+                    confirmModalAmount.textContent = `₱${total.toLocaleString()}` + (nicheFee > 0 ? ` (₱15,000 Service + ₱${nicheFee.toLocaleString()} Niche)` : ' (Base Service Only)');
+                }
             } else {
                 let lotFee = 0;
                 if (state.selectedLotDetails && state.selectedLotDetails.price) {

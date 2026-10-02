@@ -250,24 +250,35 @@ class PaymentAmountResolver {
             $nichePrice = $cremationModel->getNichePrice($columbarium, $nicheNumber, $level);
         }
 
+        $isExternal = (isset($cremation['notes']) && (stripos($cremation['notes'], 'Inurnment Only') !== false || stripos($cremation['notes'], 'External Cremation') !== false));
+        if ($isExternal) {
+            $baseFee = 0.0;
+        }
+
         $totalPrice = $baseFee + $nichePrice;
 
-        if (!empty($nicheNumber)) {
+        if ($isExternal) {
+            $label = 'Columbarium Niche ' . ($nicheNumber ?: '') . ' (' . ($columbarium ?: 'Sanctuary') . ') [Inurnment Only]';
+            $source = 'system.columbarium_niche_only';
+        } elseif (!empty($nicheNumber)) {
             $label = 'Cremation & Columbarium Niche ' . $nicheNumber . ' (' . ($columbarium ?: 'Sanctuary') . ')';
+            $source = 'system.cremation_fee_and_niche';
         } else {
             $label = 'Cremation Booking #' . $cremation['cremation_id'] . ' (Take Home Urn)';
+            $source = 'system.cremation_base_fee';
         }
 
         return [
             'price' => $totalPrice,
             'reference_kind' => null,
-            'source' => !empty($nicheNumber) ? 'system.cremation_fee_and_niche' : 'system.cremation_base_fee',
+            'source' => $source,
             'label' => $label,
             'breakdown' => [
                 'base_fee' => $baseFee,
                 'niche_fee' => $nichePrice,
                 'total' => $totalPrice,
-                'is_take_home' => empty($nicheNumber),
+                'is_take_home' => empty($nicheNumber) && !$isExternal,
+                'is_inurnment_only' => $isExternal,
                 'niche_number' => $nicheNumber,
                 'columbarium' => $columbarium,
             ],
