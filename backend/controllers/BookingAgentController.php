@@ -17,23 +17,27 @@ require_once __DIR__ . '/../services/BookingDateResolver.php';
 require_once __DIR__ . '/../services/AIService.php';
 require_once __DIR__ . '/../models/BookingDraft.php';
 require_once __DIR__ . '/../models/UnifiedBooking.php';
+require_once __DIR__ . '/../models/BookingConversation.php';
 
 class BookingAgentController {
     private BookingAgentService $agentService;
     private BookingDraft $draftModel;
     private AIService $aiService;
     private UnifiedBooking $unifiedModel;
+    private BookingConversation $conversationModel;
 
     public function __construct(
         ?BookingAgentService $agentService = null,
         ?BookingDraft $draftModel = null,
         ?AIService $aiService = null,
-        ?UnifiedBooking $unifiedModel = null
+        ?UnifiedBooking $unifiedModel = null,
+        ?BookingConversation $conversationModel = null
     ) {
         $this->agentService = $agentService ?? new BookingAgentService();
         $this->draftModel = $draftModel ?? new BookingDraft();
         $this->aiService = $aiService ?? new AIService();
         $this->unifiedModel = $unifiedModel ?? new UnifiedBooking();
+        $this->conversationModel = $conversationModel ?? new BookingConversation();
     }
 
     /**
@@ -139,6 +143,70 @@ class BookingAgentController {
             return ['success' => false, 'error' => 'Message cannot be empty', 'code' => 400];
         }
 
+        // 1. Resolve or initialize persistent conversation session
+        $convIdInput = !empty($data['conversation_id']) ? (int) $data['conversation_id'] : null;
+        $sessionIdInput = !empty($data['session_id']) ? trim((string) $data['session_id']) : null;
+        $draftIdInput = !empty($data['draft_id']) ? (int) $data['draft_id'] : null;
+
+        $conversation = null;
+        if ($convIdInput !== null && $convIdInput > 0) {
+            try {
+                $conversation = $this->conversationModel->requireOwnership($convIdInput, $userId);
+            } catch (Throwable $t) {
+                $conversation = null;
+            }
+        } elseif ($sessionIdInput !== null && $sessionIdInput !== '') {
+            $found = $this->conversationModel->findBySessionId($sessionIdInput);
+            if ($found && (int) $found['user_id'] === $userId) {
+                $conversation = $found;
+            }
+        }
+
+        if (!$conversation && $draftIdInput) {
+            $conversation = $this->conversationModel->findByDraftId($draftIdInput);
+            if ($conversation && (int) $conversation['user_id'] !== $userId) {
+                $conversation = null;
+            }
+        }
+
+        if (!$conversation) {
+            $conversation = $this->conversationModel->findActiveByUser($userId);
+        }
+
+        if (!$conversation) {
+            $conversation = $this->conversationModel->create(
+                $userId,
+                $draftIdInput,
+                'New Booking Arrangement',
+                $sessionIdInput
+            );
+        }
+
+        $activeConvId = (int) $conversation['id'];
+        $activeSessionId = $conversation['session_id'];
+
+        // Persist incoming user message to conversation stream
+        try {
+            $this->conversationModel->appendMessage($activeConvId, BookingConversation::SENDER_USER, $message, 'text');
+        } catch (Throwable $t) {}
+
+        // Execute turn logic and record result
+        $result = $this->dispatchChatTurn($data, $user, $userId, $username, $message, $activeConvId, $conversation);
+        return $this->recordTurnResult($result, $activeConvId, $activeSessionId);
+    }
+
+    /**
+     * Dispatch conversational chat turn against action registry, Python AI, and BookingAgentService.
+     */
+    private function dispatchChatTurn(
+        array $data,
+        $user,
+        int $userId,
+        ?string $username,
+        string $message,
+        int $activeConvId,
+        array $conversation
+    ): array {
         $msgLower = strtolower($message);
         $isAffirmative = (bool) preg_match('/^(yes|proceed|confirm|opo|sure|go ahead|yes please|yes proceed|confirm change|confirm reschedule|confirm cancellation)$/i', $msgLower);
         $isNegative = (bool) preg_match('/^(no|cancel that|keep booking|huwag|stop|never mind|nevermind|keep it|don\'t proceed|do not proceed|keep my booking)$/i', $msgLower);
@@ -207,6 +275,17 @@ class BookingAgentController {
         $draftId = !empty($data['draft_id']) ? (int) $data['draft_id'] : null;
         $serviceTypeInput = !empty($data['service_type']) ? (string) $data['service_type'] : null;
         $conversationContext = is_array($data['conversation_context'] ?? null) ? $data['conversation_context'] : [];
+        if (empty($conversationContext) && $activeConvId > 0) {
+            try {
+                $recentMsgs = $this->conversationModel->getMessages($activeConvId, 6);
+                foreach ($recentMsgs as $rm) {
+                    $conversationContext[] = [
+                        'sender' => $rm['sender_type'],
+                        'text'   => $rm['message'],
+                    ];
+                }
+            } catch (Throwable $t) {}
+        }
 
         // 1. Fetch current active draft context to provide to AI
         $currentDraft = null;
@@ -878,6 +957,57 @@ class BookingAgentController {
     }
 
     /**
+     * Record assistant reply, auto-update conversation title and link drafts/bookings.
+     */
+    private function recordTurnResult(array $result, int $convId, string $sessionId): array {
+        $result['conversation_id'] = $convId;
+        $result['session_id'] = $sessionId;
+
+        // If turn produced a text reply, record it to messages
+        if (!empty($result['reply']) && is_string($result['reply'])) {
+            $meta = [
+                'intent'            => $result['intent'] ?? null,
+                'intent_confidence' => $result['intent_confidence'] ?? null,
+                'action'            => $result['action'] ?? null,
+                'slots'             => $result['slots'] ?? null,
+            ];
+            try {
+                $this->conversationModel->appendMessage($convId, BookingConversation::SENDER_ASSISTANT, $result['reply'], 'text', $meta);
+            } catch (Throwable $t) {}
+        }
+
+        // Cross-link draft if present
+        $targetDraftId = !empty($result['draft_id']) ? (int) $result['draft_id'] : null;
+        if ($targetDraftId) {
+            try {
+                $this->conversationModel->bindDraft($convId, $targetDraftId);
+            } catch (Throwable $t) {}
+        }
+
+        // Auto-update title if decedent name is available and title is default
+        $decName = $result['extracted_data']['decedent_name'] ?? ($result['slots']['decedent_name'] ?? null);
+        if (!empty($decName) && is_string($decName) && trim($decName) !== '') {
+            try {
+                $conv = $this->conversationModel->findById($convId);
+                if ($conv && ($conv['title'] === 'New Booking Arrangement' || $conv['title'] === 'Booking Assistant Conversation')) {
+                    $st = ucfirst($result['service_type'] ?? ($conv['booking_type'] ?? 'Booking'));
+                    $this->conversationModel->updateTitle($convId, "{$st} — " . trim($decName));
+                }
+            } catch (Throwable $t) {}
+        }
+
+        // If action was executed and created/committed a booking, link it
+        if (!empty($result['action']['target_id']) && ($result['action']['status'] ?? '') === 'EXECUTED') {
+            $bType = $result['service_type'] ?? 'burial';
+            try {
+                $this->conversationModel->bindBooking($convId, (int) $result['action']['target_id'], $bType);
+            } catch (Throwable $t) {}
+        }
+
+        return $result;
+    }
+
+    /**
      * Local deterministic fallback extraction if Python AI service is unavailable.
      */
     private function fallbackExtract(string $message, array $draftContext, array $userBookings = []): array {
@@ -1453,9 +1583,11 @@ class BookingAgentController {
             if (!empty($input['finalize']) || $draft['status'] === BookingDraft::STATUS_AWAITING_CONFIRM) {
                 if ($draft['service_type'] === 'burial') {
                     $result = $this->agentService->finalizeBurialDraft($draftId, $userId, $username, $user, $input);
+                    $this->syncFinalizedConversation($draftId, $result, 'burial');
                     return array_merge(['code' => 200], $result);
                 } elseif ($draft['service_type'] === 'cremation') {
                     $result = $this->agentService->finalizeCremationDraft($draftId, $userId, $username, $user, $input);
+                    $this->syncFinalizedConversation($draftId, $result, 'cremation');
                     return array_merge(['code' => 200], $result);
                 }
             }
@@ -1513,9 +1645,11 @@ class BookingAgentController {
 
             if ($draft['service_type'] === 'burial') {
                 $result = $this->agentService->finalizeBurialDraft($draftId, $userId, $username, $user, $input);
+                $this->syncFinalizedConversation($draftId, $result, 'burial');
                 return array_merge(['code' => 200], $result);
             } elseif ($draft['service_type'] === 'cremation') {
                 $result = $this->agentService->finalizeCremationDraft($draftId, $userId, $username, $user, $input);
+                $this->syncFinalizedConversation($draftId, $result, 'cremation');
                 return array_merge(['code' => 200], $result);
             }
 
@@ -2315,5 +2449,163 @@ class BookingAgentController {
                 'code'    => 500
             ];
         }
+    }
+
+    /**
+     * Bind finalized booking ID and type to conversation if draft was attached.
+     */
+    private function syncFinalizedConversation(int $draftId, array $result, string $serviceType): void {
+        try {
+            $conv = $this->conversationModel->findByDraftId($draftId);
+            $bookingId = (int) ($result['committed_record_id'] ?? ($result['schedule_id'] ?? ($result['cremation_id'] ?? 0)));
+            if ($conv && $bookingId > 0) {
+                $this->conversationModel->bindBooking((int) $conv['id'], $bookingId, $serviceType);
+            }
+        } catch (Throwable $t) {
+            // Non-blocking sync
+        }
+    }
+
+    /**
+     * GET /api/booking-agent/conversations
+     * List chat conversations for authenticated user.
+     */
+    public function listConversations($user, array $query = []): array {
+        [$userId, $username] = $this->resolveUserContext($user);
+        if ($userId <= 0) {
+            return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
+        }
+
+        $limit = !empty($query['limit']) ? max(1, min(100, (int) $query['limit'])) : 20;
+        $page = !empty($query['page']) ? max(1, (int) $query['page']) : 1;
+        $offset = ($page - 1) * $limit;
+
+        $conversations = $this->conversationModel->listByUser($userId, $limit, $offset);
+        $total = $this->conversationModel->countByUser($userId);
+
+        return [
+            'success'       => true,
+            'conversations' => $conversations,
+            'total'         => $total,
+            'page'          => $page,
+            'limit'         => $limit,
+            'code'          => 200,
+        ];
+    }
+
+    /**
+     * GET /api/booking-agent/conversations/{id}/messages
+     * Retrieve chronological messages for a conversation with ownership validation.
+     */
+    public function getConversationMessages(int $conversationId, $user, array $query = []): array {
+        [$userId, $username] = $this->resolveUserContext($user);
+        if ($userId <= 0) {
+            return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
+        }
+
+        try {
+            $conversation = $this->conversationModel->requireOwnership($conversationId, $userId);
+        } catch (BookingConversationException $e) {
+            return [
+                'success'    => false,
+                'error'      => $e->getMessage(),
+                'error_type' => $e->getErrorType(),
+                'code'       => $e->getHttpCode(),
+            ];
+        }
+
+        $limit = !empty($query['limit']) ? max(1, min(200, (int) $query['limit'])) : 100;
+        $offset = !empty($query['offset']) ? max(0, (int) $query['offset']) : 0;
+
+        $messages = $this->conversationModel->getMessages($conversationId, $limit, $offset);
+
+        // Fetch attached draft details if draft is bound
+        $draft = null;
+        if (!empty($conversation['booking_draft_id'])) {
+            $draftRow = $this->draftModel->findById((int) $conversation['booking_draft_id']);
+            if ($draftRow) {
+                $draft = [
+                    'draft_id'       => (int) $draftRow['draft_id'],
+                    'service_type'   => $draftRow['service_type'],
+                    'status'         => $draftRow['status'],
+                    'extracted_data' => !empty($draftRow['extracted_data']) ? (is_string($draftRow['extracted_data']) ? json_decode($draftRow['extracted_data'], true) : $draftRow['extracted_data']) : [],
+                    'missing_fields' => !empty($draftRow['missing_fields']) ? (is_string($draftRow['missing_fields']) ? json_decode($draftRow['missing_fields'], true) : $draftRow['missing_fields']) : [],
+                ];
+            }
+        }
+
+        return [
+            'success'      => true,
+            'conversation' => $conversation,
+            'draft'        => $draft,
+            'messages'     => $messages,
+            'code'         => 200,
+        ];
+    }
+
+    /**
+     * POST /api/booking-agent/conversations
+     * Start a new conversation session explicitly.
+     */
+    public function createConversation(array $data, $user): array {
+        [$userId, $username] = $this->resolveUserContext($user);
+        if ($userId <= 0) {
+            return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
+        }
+
+        $draftId = !empty($data['draft_id']) ? (int) $data['draft_id'] : null;
+        $title = !empty($data['title']) ? trim((string) $data['title']) : null;
+        $sessionId = !empty($data['session_id']) ? trim((string) $data['session_id']) : null;
+
+        try {
+            $conv = $this->conversationModel->create($userId, $draftId, $title, $sessionId);
+            return [
+                'success'      => true,
+                'conversation' => $conv,
+                'code'         => 201,
+            ];
+        } catch (BookingConversationException $e) {
+            return [
+                'success'    => false,
+                'error'      => $e->getMessage(),
+                'error_type' => $e->getErrorType(),
+                'code'       => $e->getHttpCode(),
+            ];
+        }
+    }
+
+    /**
+     * POST /api/booking-agent/conversations/{id}/archive
+     * Archive an existing conversation session.
+     */
+    public function archiveConversation(int $conversationId, $user): array {
+        [$userId, $username] = $this->resolveUserContext($user);
+        if ($userId <= 0) {
+            return ['success' => false, 'error' => 'Authentication required', 'code' => 401];
+        }
+
+        try {
+            $this->conversationModel->requireOwnership($conversationId, $userId);
+            $this->conversationModel->updateStatus($conversationId, BookingConversation::STATUS_ARCHIVED);
+            return [
+                'success' => true,
+                'message' => 'Conversation archived successfully.',
+                'code'    => 200,
+            ];
+        } catch (BookingConversationException $e) {
+            return [
+                'success'    => false,
+                'error'      => $e->getMessage(),
+                'error_type' => $e->getErrorType(),
+                'code'       => $e->getHttpCode(),
+            ];
+        }
+    }
+
+    /**
+     * Getter for conversation model.
+     */
+    public function getConversationModel(): BookingConversation {
+        return $this->conversationModel;
     }
 }

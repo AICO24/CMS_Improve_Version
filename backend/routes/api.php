@@ -2340,6 +2340,47 @@ if ($path === 'booking-agent/drafts' && $requestMethod === 'GET') {
     exit;
 }
 
+// =========================================================================
+// BOOKING CHAT HISTORY & CONVERSATION ROUTES
+// =========================================================================
+
+if ($path === 'booking-agent/conversations' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $bookingAgentController->listConversations($user, $query ?? []);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if ($path === 'booking-agent/conversations' && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $input = readRequestBody();
+    $result = $bookingAgentController->createConversation($input, $user);
+    http_response_code($result['code'] ?? 201);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^booking-agent\/conversations\/(\d+)\/messages$/', $path, $matches) && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $bookingAgentController->getConversationMessages((int) $matches[1], $user, $query ?? []);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^booking-agent\/conversations\/(\d+)\/archive$/', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
+    $result = $bookingAgentController->archiveConversation((int) $matches[1], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 // BMS-9: Authoritative single draft lookup for draft resumption
 if (preg_match('/^booking-agent\/drafts?\/(\d+)$/', $path, $matches) && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
