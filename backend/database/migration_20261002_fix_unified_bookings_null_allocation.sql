@@ -1,10 +1,11 @@
--- Migration: creates v_unified_bookings view (BMS-9: Draft Resumption + Unified Booking History).
+-- Migration: updates v_unified_bookings view (BUG-008: Fix literal "null" allocation values).
 --
--- Provides a centralized database-level single source of truth for unified bookings,
--- aggregating official burial schedules, official cremation records, and active booking drafts.
+-- Wraps JSON_UNQUOTE(JSON_EXTRACT(...)) with NULLIF(..., 'null') in the allocation column
+-- for burial lot_id and cremation preferred_columbarium. This ensures drafts with explicit
+-- JSON null properties fall through cleanly to 'Pending Selection' instead of evaluating
+-- to 'Selected Lot #null' or 'null (Preferred)'.
 --
 -- Idempotent: uses CREATE OR REPLACE VIEW and registers in schema_migrations.
--- Explicit COLLATE utf8mb4_general_ci prevents MySQL 1271 "Illegal mix of collations" during UNION.
 
 CREATE OR REPLACE VIEW v_unified_bookings AS
 SELECT 
@@ -93,7 +94,7 @@ WHERE bd.status NOT IN ('COMMITTED', 'CANCELLED', 'EXPIRED')
   AND bd.expires_at > NOW();
 
 INSERT INTO schema_migrations (migration) VALUES
-    ('migration_20260907_add_unified_bookings_view.sql')
+    ('migration_20261002_fix_unified_bookings_null_allocation.sql')
 ON DUPLICATE KEY UPDATE migration = migration;
 
 SELECT 'migration_completed' AS status;

@@ -21,6 +21,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/Schedule.php';
 require_once __DIR__ . '/../models/Lot.php';
 require_once __DIR__ . '/../models/Cremation.php';
+require_once __DIR__ . '/../models/Payment.php';
 require_once __DIR__ . '/BookingAgentService.php';
 
 class BookingAvailabilityService {
@@ -44,6 +45,7 @@ class BookingAvailabilityService {
     public const CODE_LOT_AVAILABLE          = 'LOT_AVAILABLE';
     public const CODE_LOT_UNAVAILABLE        = 'LOT_UNAVAILABLE';
     public const CODE_LOT_NOT_FOUND          = 'LOT_NOT_FOUND';
+    public const CODE_LOT_HELD_CHECKOUT      = 'LOT_HELD_CHECKOUT';
     public const CODE_NICHE_AVAILABLE        = 'NICHE_AVAILABLE';
     public const CODE_NICHE_UNAVAILABLE      = 'NICHE_UNAVAILABLE';
     public const CODE_NO_NICHE_AVAILABLE     = 'NO_NICHE_AVAILABLE';
@@ -187,6 +189,25 @@ class BookingAvailabilityService {
                 'service_type' => $serviceType,
                 'advisory'     => true,
                 'message'      => "Lot {$lotRecord['lot_number']} is currently {$lotRecord['status']} and cannot be booked."
+            ];
+        }
+
+        // Active Lot Checkout Lease Check (Batch 10B / BUG-005)
+        $paymentModel = new Payment();
+        $activeLease = $paymentModel->findActiveLotCheckoutLease($lotId);
+        if ($activeLease) {
+            return [
+                'available'    => false,
+                'reason_code'  => self::CODE_LOT_HELD_CHECKOUT,
+                'code'         => self::CODE_LOT_HELD_CHECKOUT,
+                'lot_id'       => $lotId,
+                'lot_number'   => $lotRecord['lot_number'],
+                'section_name' => $lotRecord['section_name'],
+                'date'         => $formattedDate,
+                'time'         => $time,
+                'service_type' => $serviceType,
+                'advisory'     => true,
+                'message'      => "Lot {$lotRecord['lot_number']} is currently held by an active checkout session in progress. Please try again later."
             ];
         }
 

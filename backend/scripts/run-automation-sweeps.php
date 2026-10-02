@@ -41,6 +41,7 @@ require_once __DIR__ . '/../controllers/ExpirationController.php';
 require_once __DIR__ . '/../controllers/ScheduleController.php';
 require_once __DIR__ . '/../controllers/CremationController.php';
 require_once __DIR__ . '/../models/Lot.php';
+require_once __DIR__ . '/../models/BookingDraft.php';
 
 function sweep_log_line($message) {
     $line = '[' . date('Y-m-d H:i:s') . '] ' . $message;
@@ -72,6 +73,7 @@ $expirationController = new ExpirationController();
 $scheduleController = new ScheduleController();
 $cremationController = new CremationController();
 $lotModel = new Lot();
+$draftModel = new BookingDraft();
 
 run_sweep_stage('expiration-records/generate-notifications', function () use ($expirationController) {
     return $expirationController->generateNotifications();
@@ -118,6 +120,12 @@ run_sweep_stage('cremations/auto-cancel-stale-pending', function () use ($cremat
 run_sweep_stage('lots.expired-sync', function () use ($lotModel) {
     $lotModel->getStats();
     return ['message' => 'lot expiration sync triggered'];
+});
+
+// Booking Drafts audit (BUG-007): sweep expired drafts past 48-hour window
+run_sweep_stage('booking-drafts/expire-stale', function () use ($draftModel) {
+    $count = $draftModel->expireStaleActiveDrafts();
+    return ['message' => "{$count} stale active draft(s) expired"];
 });
 
 sweep_log_line('=== automation sweep run finished ===');

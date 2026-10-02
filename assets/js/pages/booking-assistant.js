@@ -973,12 +973,12 @@
                 disclaimerEl.textContent = 'This booking has been finalized and submitted to cemetery administration.';
             }
         } else if (state.status === 'AWAITING_CONFIRM') {
-            btnConfirmBooking.disabled = true;
-            btnConfirmBooking.innerHTML = '<i class="fas fa-check-double"></i> Reservation Confirmed';
-            btnConfirmBooking.style.background = '#047857';
-            btnConfirmBooking.style.cursor = 'default';
+            btnConfirmBooking.disabled = state.isLoading;
+            btnConfirmBooking.innerHTML = '<i class="fas fa-check-circle"></i> Finalize Booking & Pay';
+            btnConfirmBooking.style.background = '';
+            btnConfirmBooking.style.cursor = '';
             if (disclaimerEl) {
-                disclaimerEl.textContent = 'Reservation is confirmed and awaiting final commitment.';
+                disclaimerEl.textContent = 'Reservation is confirmed. Finalize to complete booking and proceed to payment.';
             }
         } else {
             btnConfirmBooking.disabled = !isEligibleToConfirm || state.isLoading;
@@ -1080,8 +1080,8 @@
             chips.push({ text: '📄 View Booking Voucher', action: () => showVoucherInChat() });
             chips.push({ text: '🔄 Book Another Service', action: () => onRestartDraft() });
         } else if (state.status === 'AWAITING_CONFIRM') {
+            chips.push({ text: '✅ Finalize Booking & Pay', action: () => onConfirmBooking() });
             chips.push({ text: '📋 View in My Bookings', action: () => { window.location.href = 'my-bookings.html'; } });
-            chips.push({ text: '📄 View Booking Voucher', action: () => showVoucherInChat() });
             chips.push({ text: '🔄 Book Another Service', action: () => onRestartDraft() });
         } else if (state.status === 'READY_FOR_REVIEW' || (state.isReadyForReview && state.missingFields.length === 0)) {
             chips.push({ text: '✅ Confirm Reservation', action: () => onConfirmBooking() });

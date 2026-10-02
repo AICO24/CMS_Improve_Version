@@ -2308,7 +2308,7 @@ if (preg_match('/^booking-agent\/drafts?\/(\d+)\/update-field$/', $path, $matche
 }
 
 if (preg_match('/^booking-agent\/drafts?\/(\d+)\/confirm$/', $path, $matches) && $requestMethod === 'POST') {
-    $user = AuthMiddleware::requireVerifiedContact($user);
+    $user = AuthMiddleware::requireVerifiedContact();
     if (!RateLimiter::allow('booking_agent_confirm_' . $user['user_id'], 20, 60)) {
         http_response_code(429);
         echo json_encode(['error' => 'Too many requests — please wait a moment before trying again.']);
@@ -2323,7 +2323,7 @@ if (preg_match('/^booking-agent\/drafts?\/(\d+)\/confirm$/', $path, $matches) &&
 }
 
 if (preg_match('/^booking-agent\/drafts?\/(\d+)\/finalize$/', $path, $matches) && $requestMethod === 'POST') {
-    $user = AuthMiddleware::requireVerifiedContact($user);
+    $user = AuthMiddleware::requireVerifiedContact();
     if (!RateLimiter::allow('booking_agent_finalize_' . $user['user_id'], 20, 60)) {
         http_response_code(429);
         echo json_encode(['error' => 'Too many requests — please wait a moment before trying again.']);
