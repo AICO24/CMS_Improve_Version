@@ -15,6 +15,8 @@
     // Authoritative State Mirror
     const state = {
         draftId: null,
+        conversationId: null,
+        sessionId: null,
         serviceType: null,
         status: 'INTAKE',
         extractedData: {},
@@ -38,6 +40,7 @@
     let fieldEditModal, btnCloseFieldEdit, btnCancelFieldEdit, fieldEditForm, fieldEditTitle, fieldEditLabel, fieldEditInput, fieldEditHint;
     let bookingConfirmModal, btnCloseBookingConfirm, btnCancelBookingConfirm, btnSubmitBookingConfirm;
     let confirmModalService, confirmModalDecedent, confirmModalDate, confirmModalLot, confirmModalAllocationLabel, confirmModalDocsBadge;
+    let btnToggleHistory, chatHistoryOverlay, chatHistoryBackdrop, btnCloseChatHistory, btnNewChatFromDrawer, chatHistoryList, historySpinner, historyEmpty, btnStartFirstChat;
 
     let activeEditField = null;
     let isInitialized = false;
@@ -196,6 +199,16 @@
         confirmModalLot = document.getElementById('confirmModalLot');
         confirmModalAllocationLabel = document.getElementById('confirmModalAllocationLabel');
         confirmModalDocsBadge = document.getElementById('confirmModalDocsBadge');
+
+        btnToggleHistory = document.getElementById('btnToggleHistory');
+        chatHistoryOverlay = document.getElementById('chatHistoryOverlay');
+        chatHistoryBackdrop = document.getElementById('chatHistoryBackdrop');
+        btnCloseChatHistory = document.getElementById('btnCloseChatHistory');
+        btnNewChatFromDrawer = document.getElementById('btnNewChatFromDrawer');
+        chatHistoryList = document.getElementById('chatHistoryList');
+        historySpinner = document.getElementById('historySpinner');
+        historyEmpty = document.getElementById('historyEmpty');
+        btnStartFirstChat = document.getElementById('btnStartFirstChat');
     }
 
     /**
@@ -318,11 +331,26 @@
             });
         }
 
+        // Chat History Drawer bindings
+        if (btnToggleHistory) btnToggleHistory.addEventListener('click', toggleChatHistoryDrawer);
+        if (btnCloseChatHistory) btnCloseChatHistory.addEventListener('click', closeChatHistoryDrawer);
+        if (chatHistoryBackdrop) chatHistoryBackdrop.addEventListener('click', closeChatHistoryDrawer);
+        if (btnNewChatFromDrawer) btnNewChatFromDrawer.addEventListener('click', () => {
+            closeChatHistoryDrawer();
+            startNewSession();
+        });
+        if (btnStartFirstChat) btnStartFirstChat.addEventListener('click', () => {
+            closeChatHistoryDrawer();
+            startNewSession();
+        });
+
         // Accessibility: Dismiss modals with Escape key
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' || e.key === 'Esc') {
                 const docModal = document.getElementById('docUploadModal');
-                if (docModal && docModal.style.display === 'flex') {
+                if (chatHistoryOverlay && chatHistoryOverlay.classList.contains('active')) {
+                    closeChatHistoryDrawer();
+                } else if (docModal && docModal.style.display === 'flex') {
                     closeDocModal();
                 } else if (bookingConfirmModal && bookingConfirmModal.style.display === 'flex') {
                     closeBookingConfirmModal();
@@ -482,6 +510,7 @@
      */
     async function initializeSession() {
         const urlParams = new URLSearchParams(window.location.search);
+        const paramConvId = urlParams.get('conversation_id') || urlParams.get('conv_id');
         const paramDraftId = urlParams.get('draft_id');
         const paramService = urlParams.get('service');
         if (paramService && ['burial', 'cremation'].includes(paramService.toLowerCase())) {
@@ -491,12 +520,21 @@
         try {
             setLoading(true);
 
+            // 0. If explicit conversation_id is passed in URL, hydrate that conversation directly
+            if (paramConvId && /^\d+$/.test(paramConvId)) {
+                await loadConversation(paramConvId);
+                return;
+            }
+
             // 1. If explicit draft_id is passed in URL, fetch that specific draft
             if (paramDraftId && /^\d+$/.test(paramDraftId)) {
                 try {
                     const draftRes = await api.request(`booking-agent/drafts/${paramDraftId}`, { method: 'GET' });
                     if (draftRes && draftRes.success && draftRes.draft) {
                         applyAuthoritativeState(draftRes.draft);
+                        if (draftRes.draft.conversation_id) {
+                            state.conversationId = draftRes.draft.conversation_id;
+                        }
                         appendAssistantMessage(`Welcome back! Resumed your **${state.serviceType || 'cemetery'} arrangement** (Draft #${state.draftId}). You can review your details on the right or make adjustments conversationally.`);
                         renderPromptChips();
                         return;
@@ -515,6 +553,8 @@
 
             if (res && res.success && res.draft) {
                 applyAuthoritativeState(res.draft);
+                if (res.conversation_id) state.conversationId = res.conversation_id;
+                if (res.session_id) state.sessionId = res.session_id;
                 appendAssistantMessage(`Welcome back! We are continuing your **${state.serviceType || 'cemetery'} arrangement** (Draft #${state.draftId}). Review your details in the blueprint on the right, or tell me what you'd like to update.`);
                 renderPromptChips();
             } else {
@@ -630,7 +670,9 @@
             const payload = {
                 message: text,
                 draft_id: state.draftId,
-                service_type: state.serviceType
+                service_type: state.serviceType,
+                conversation_id: state.conversationId,
+                session_id: state.sessionId
             };
 
             const res = await api.request('booking-agent/chat', {
@@ -641,6 +683,9 @@
             removeTypingIndicator(typingEl);
 
             if (res && res.success) {
+                if (res.conversation_id) state.conversationId = res.conversation_id;
+                if (res.session_id) state.sessionId = res.session_id;
+
                 applyAuthoritativeState(res);
 
                 if (res.pending_action) {
@@ -1826,6 +1871,8 @@
 
         // Reset local state
         state.draftId = null;
+        state.conversationId = null;
+        state.sessionId = null;
         state.serviceType = null;
         state.status = 'INTAKE';
         state.extractedData = {};
@@ -1834,7 +1881,260 @@
         state.decedentMatch = null;
         state.selectedLotDetails = null;
 
+        try {
+            window.history.replaceState({}, '', window.location.pathname);
+        } catch (_) {}
+
         renderIntakeGreeting();
+    }
+
+    /**
+     * Open Chat History Drawer
+     */
+    function openChatHistoryDrawer() {
+        if (!chatHistoryOverlay) return;
+        chatHistoryOverlay.style.display = 'flex';
+        void chatHistoryOverlay.offsetWidth;
+        chatHistoryOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        loadConversationHistory();
+    }
+
+    /**
+     * Close Chat History Drawer
+     */
+    function closeChatHistoryDrawer() {
+        if (!chatHistoryOverlay) return;
+        chatHistoryOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+        setTimeout(() => {
+            if (!chatHistoryOverlay.classList.contains('active')) {
+                chatHistoryOverlay.style.display = 'none';
+            }
+        }, 280);
+    }
+
+    /**
+     * Toggle Chat History Drawer
+     */
+    function toggleChatHistoryDrawer() {
+        if (chatHistoryOverlay && chatHistoryOverlay.classList.contains('active')) {
+            closeChatHistoryDrawer();
+        } else {
+            openChatHistoryDrawer();
+        }
+    }
+
+    /**
+     * Fetch user's conversation sessions and render list
+     */
+    async function loadConversationHistory() {
+        if (!chatHistoryList || !historySpinner) return;
+        historySpinner.style.display = 'flex';
+        if (historyEmpty) historyEmpty.style.display = 'none';
+        chatHistoryList.innerHTML = '';
+
+        try {
+            const res = await api.request('booking-agent/conversations', { method: 'GET' });
+            historySpinner.style.display = 'none';
+
+            if (res && res.success && Array.isArray(res.conversations) && res.conversations.length > 0) {
+                renderConversationList(res.conversations);
+            } else {
+                if (historyEmpty) historyEmpty.style.display = 'flex';
+            }
+        } catch (err) {
+            historySpinner.style.display = 'none';
+            console.error('Failed to load chat history:', err);
+            chatHistoryList.innerHTML = `
+                <div style="padding: 16px; text-align: center; color: #ef4444; font-size: 0.85rem;">
+                    <i class="fas fa-exclamation-triangle"></i> Could not load past sessions.
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * Render session cards in drawer
+     */
+    function renderConversationList(conversations) {
+        if (!chatHistoryList) return;
+        chatHistoryList.innerHTML = '';
+
+        conversations.forEach(c => {
+            const item = document.createElement('div');
+            item.className = 'chat-history-item' + (state.conversationId === c.id ? ' active' : '');
+            item.setAttribute('data-conv-id', c.id);
+
+            const isBurial = c.service_type === 'burial';
+            const isCremation = c.service_type === 'cremation';
+            const iconClass = isBurial ? 'fa-monument text-success' : (isCremation ? 'fa-fire text-warning' : 'fa-comments text-primary');
+            const statusClass = c.status === 'completed' ? 'badge-completed' : (c.status === 'archived' ? 'badge-archived' : 'badge-active');
+            const statusLabel = c.status || 'Active';
+
+            const rawDate = c.updated_at || c.created_at || '';
+            const dateStr = rawDate ? formatDate(rawDate.split(' ')[0]) : '';
+
+            item.innerHTML = `
+                <div class="chat-history-item-top">
+                    <div class="chat-history-item-title" title="${escapeHtml(c.title || 'Untitled Session')}">
+                        <i class="fas ${iconClass}"></i>
+                        <span>${escapeHtml(c.title || 'Untitled Session')}</span>
+                    </div>
+                    <span class="chat-history-item-badge ${statusClass}">${escapeHtml(statusLabel)}</span>
+                </div>
+                <div class="chat-history-item-meta">
+                    <span class="chat-history-item-date">
+                        <i class="far fa-clock"></i> ${escapeHtml(dateStr)}
+                    </span>
+                    <div class="chat-history-item-actions">
+                        ${c.draft_id ? `<span style="font-size: 0.72rem; color: #64748b; background: #e2e8f0; padding: 1px 6px; border-radius: 4px;">Draft #${escapeHtml(String(c.draft_id))}</span>` : ''}
+                        ${c.status !== 'archived' ? `
+                            <button type="button" class="btn-archive-conv" title="Archive session" data-conv-id="${c.id}">
+                                <i class="fas fa-box-archive"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            // Card click loads conversation
+            item.addEventListener('click', () => {
+                closeChatHistoryDrawer();
+                if (state.conversationId !== c.id) {
+                    loadConversation(c.id);
+                }
+            });
+
+            // Archive button handler
+            const btnArchive = item.querySelector('.btn-archive-conv');
+            if (btnArchive) {
+                btnArchive.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    archiveConversation(c.id);
+                });
+            }
+
+            chatHistoryList.appendChild(item);
+        });
+    }
+
+    /**
+     * Archive conversation
+     */
+    async function archiveConversation(convId) {
+        if (!confirm('Are you sure you want to archive this chat session?')) return;
+        try {
+            const res = await api.request(`booking-agent/conversations/${convId}/archive`, { method: 'POST' });
+            if (res && res.success) {
+                if (typeof showToast === 'function') showToast('Chat session archived', 'success');
+                loadConversationHistory();
+            } else {
+                if (typeof showToast === 'function') showToast(sanitizeUserErrorMessage(res?.error, 'Failed to archive session'), 'error');
+            }
+        } catch (err) {
+            if (typeof showToast === 'function') showToast(sanitizeUserErrorMessage(err, 'Failed to archive session'), 'error');
+        }
+    }
+
+    /**
+     * Start a fresh new session
+     */
+    function startNewSession() {
+        if (state.draftId && state.status !== 'COMMITTED') {
+            if (!confirm('Start a fresh session? Your current draft will remain saved in your history.')) {
+                return;
+            }
+        }
+        state.draftId = null;
+        state.conversationId = null;
+        state.sessionId = null;
+        state.serviceType = null;
+        state.status = 'INTAKE';
+        state.extractedData = {};
+        state.missingFields = [];
+        state.isReadyForReview = false;
+        state.decedentMatch = null;
+        state.selectedLotDetails = null;
+
+        try {
+            window.history.replaceState({}, '', window.location.pathname);
+        } catch (_) {}
+
+        renderIntakeGreeting();
+    }
+
+    /**
+     * Hydrate chat thread from an existing conversation ID
+     */
+    async function loadConversation(convId) {
+        if (!convId) return;
+        setLoading(true);
+
+        try {
+            const res = await api.request(`booking-agent/conversations/${convId}/messages`, { method: 'GET' });
+            if (!res || !res.success || !res.conversation) {
+                if (typeof showToast === 'function') showToast('Could not load chat session', 'error');
+                return;
+            }
+
+            const conv = res.conversation;
+            state.conversationId = conv.id;
+            state.sessionId = conv.session_id;
+            state.serviceType = conv.service_type || state.serviceType;
+
+            // Sync URL query params
+            try {
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('conversation_id', conv.id);
+                if (conv.draft_id) {
+                    newUrl.searchParams.set('draft_id', conv.draft_id);
+                } else {
+                    newUrl.searchParams.delete('draft_id');
+                }
+                window.history.replaceState({}, '', newUrl);
+            } catch (_) {}
+
+            // If conversation is linked to a draft, load the draft to hydrate Blueprint HUD
+            if (conv.draft_id) {
+                try {
+                    const draftRes = await api.request(`booking-agent/drafts/${conv.draft_id}`, { method: 'GET' });
+                    if (draftRes && draftRes.success && draftRes.draft) {
+                        applyAuthoritativeState(draftRes.draft);
+                    }
+                } catch (draftErr) {
+                    console.warn(`Could not load draft #${conv.draft_id}:`, draftErr);
+                }
+            } else {
+                state.draftId = null;
+                state.extractedData = {};
+                state.status = conv.status === 'completed' ? 'COMMITTED' : 'INTAKE';
+                updateBlueprintHUD();
+            }
+
+            // Hydrate chat messages into #chatThread
+            chatThread.innerHTML = '';
+            if (Array.isArray(res.messages) && res.messages.length > 0) {
+                res.messages.forEach(m => {
+                    if (m.sender === 'user') {
+                        appendUserMessage(m.message);
+                    } else {
+                        appendAssistantMessage(m.message);
+                    }
+                });
+            } else {
+                renderIntakeGreeting();
+            }
+
+            renderPromptChips();
+            scrollChatToBottom();
+            if (typeof showToast === 'function') showToast(`Loaded session: ${conv.title || 'Chat'}`, 'info');
+        } catch (err) {
+            console.error('Error hydrating conversation:', err);
+            if (typeof showToast === 'function') showToast(sanitizeUserErrorMessage(err, 'Failed to load conversation messages'), 'error');
+        } finally {
+            setLoading(false);
+        }
     }
 
     /**

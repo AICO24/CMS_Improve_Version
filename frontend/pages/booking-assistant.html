@@ -144,6 +144,9 @@
                                 </div>
                             </div>
                             <div class="ai-header-actions">
+                                <button type="button" class="btn btn-secondary" id="btnToggleHistory" style="height:36px;padding:0 12px;font-size:0.85rem;" title="View past chat sessions">
+                                    <i class="fas fa-clock-rotate-left"></i> <span>History</span>
+                                </button>
                                 <button type="button" class="btn btn-secondary mobile-blueprint-toggle" id="btnToggleBlueprintMobile" style="height:36px;padding:0 12px;font-size:0.85rem;" title="View Reservation Summary">
                                     <i class="fas fa-clipboard-list"></i> <span id="blueprintToggleText">Summary</span>
                                 </button>
@@ -587,6 +590,42 @@
                     <button type="button" class="btn-primary" id="btnSubmitBookingConfirm" style="padding: 9px 20px; font-weight: 600;">
                         <i class="fas fa-check"></i> Yes, Finalize Booking
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat History Slide-Over Drawer -->
+    <div id="chatHistoryOverlay" class="chat-history-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="chatHistoryTitle">
+        <div class="chat-history-backdrop" id="chatHistoryBackdrop"></div>
+        <div class="chat-history-drawer">
+            <div class="chat-history-header">
+                <div class="chat-history-header-title">
+                    <i class="fas fa-clock-rotate-left" style="color: #10b981; font-size: 1.1rem;"></i>
+                    <h3 id="chatHistoryTitle" style="margin: 0; font-size: 1.05rem; font-weight: 600;">Chat Sessions</h3>
+                </div>
+                <div class="chat-history-header-actions">
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnNewChatFromDrawer" title="Start a fresh chat session" style="font-size: 0.8rem; padding: 5px 10px; display: inline-flex; align-items: center; gap: 5px;">
+                        <i class="fas fa-plus"></i> New Chat
+                    </button>
+                    <button type="button" class="btn-close-modal" id="btnCloseChatHistory" aria-label="Close chat history"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="chat-history-body">
+                <div id="historySpinner" class="history-spinner" style="display: none;">
+                    <i class="fas fa-circle-notch fa-spin"></i>
+                    <span>Loading your chat sessions...</span>
+                </div>
+                <div id="historyEmpty" class="history-empty" style="display: none;">
+                    <div class="history-empty-icon"><i class="fas fa-comments"></i></div>
+                    <h4>No Chat Sessions Yet</h4>
+                    <p>Your previous booking conversations and AI drafts will appear here.</p>
+                    <button type="button" class="btn btn-primary" id="btnStartFirstChat" style="margin-top: 10px; font-size: 0.85rem;">
+                        <i class="fas fa-plus"></i> Start New Booking
+                    </button>
+                </div>
+                <div id="chatHistoryList" class="chat-history-list">
+                    <!-- Populated dynamically -->
                 </div>
             </div>
         </div>

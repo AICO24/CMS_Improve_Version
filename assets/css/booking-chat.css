@@ -4093,4 +4093,287 @@ body[data-theme="dark"] .field-edit-dialog {
     color: #cbd5e1 !important;
 }
 
+/* ==========================================================================
+   CHAT HISTORY DRAWER & SESSION SELECTOR (BATCH 3)
+   ========================================================================== */
+
+.chat-history-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    display: flex;
+    justify-content: flex-end;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chat-history-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.chat-history-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+.chat-history-drawer {
+    position: relative;
+    width: 380px;
+    max-width: 90vw;
+    height: 100%;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -6px 0 24px rgba(0, 0, 0, 0.15);
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 1;
+}
+
+.chat-history-overlay.active .chat-history-drawer {
+    transform: translateX(0);
+}
+
+.chat-history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+.chat-history-header-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #0f172a;
+}
+
+.chat-history-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chat-history-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.history-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px;
+    gap: 12px;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.history-spinner i {
+    font-size: 1.6rem;
+    color: #10b981;
+}
+
+.history-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 50px 20px;
+    color: #64748b;
+}
+
+.history-empty-icon {
+    font-size: 2.4rem;
+    color: #cbd5e1;
+    margin-bottom: 14px;
+}
+
+.history-empty h4 {
+    margin: 0 0 6px 0;
+    font-size: 1.05rem;
+    color: #334155;
+    font-weight: 600;
+}
+
+.history-empty p {
+    font-size: 0.85rem;
+    margin: 0 0 14px 0;
+    line-height: 1.4;
+    color: #64748b;
+}
+
+.chat-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chat-history-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+}
+
+.chat-history-item:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.chat-history-item.active {
+    background: #ecfdf5;
+    border-color: #10b981;
+    box-shadow: 0 0 0 1px #10b981;
+}
+
+.chat-history-item-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.chat-history-item-title {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.chat-history-item-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 999px;
+    text-transform: capitalize;
+    white-space: nowrap;
+}
+
+.chat-history-item-badge.badge-active {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.chat-history-item-badge.badge-completed {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+
+.chat-history-item-badge.badge-archived {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+.chat-history-item-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.chat-history-item-date {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.chat-history-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.chat-history-item-actions button {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.78rem;
+    padding: 2px 5px;
+    border-radius: 4px;
+    transition: color 0.15s ease;
+}
+
+.chat-history-item-actions button:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+}
+
+/* Dark Mode Harmonization */
+.dashboard-body[data-theme="dark"] .chat-history-drawer {
+    background: #111a14 !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-body[data-theme="dark"] .chat-history-header {
+    background: #111a14 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-body[data-theme="dark"] .chat-history-header-title {
+    color: #f1f5f9 !important;
+}
+
+.dashboard-body[data-theme="dark"] .chat-history-item {
+    background: #18241d !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-body[data-theme="dark"] .chat-history-item:hover {
+    background: #1f3027 !important;
+    border-color: rgba(52, 211, 153, 0.3) !important;
+}
+
+.dashboard-body[data-theme="dark"] .chat-history-item.active {
+    background: rgba(16, 185, 129, 0.15) !important;
+    border-color: #10b981 !important;
+}
+
+.dashboard-body[data-theme="dark"] .chat-history-item-title {
+    color: #f8fafc !important;
+}
+
+.dashboard-body[data-theme="dark"] .chat-history-item-meta {
+    color: #94a3b8 !important;
+}
+
+.dashboard-body[data-theme="dark"] .history-empty h4 {
+    color: #f1f5f9 !important;
+}
+
+.dashboard-body[data-theme="dark"] .history-empty p {
+    color: #94a3b8 !important;
+}
+
+
 
