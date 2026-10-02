@@ -771,85 +771,103 @@
 
     <!-- Verify Requirements Modal (Zero-Scroll 2-Column Split Architecture) -->
     <div id="verifyRequirementsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="verifyModalTitle" style="display: none;">
-        <div class="modal-content modal-content--wide decrec-modal-executive" style="max-width: 820px !important;">
-            <div class="modal-header-custom">
-                <div class="modal-title-group">
-                    <span class="modal-subtitle-chip"><i class="fas fa-file-circle-check"></i> Compliance Clearance</span>
-                    <h3 id="verifyModalTitle" class="modal-heading-main">Verify Decedent Requirements</h3>
+        <div class="modal-content modal-content--wide decrec-modal-executive">
+            <div class="modal-header-custom verify-modal-header">
+                <div class="verify-header-left">
+                    <div class="verify-header-icon">
+                        <i class="fas fa-file-circle-check"></i>
+                    </div>
+                    <div class="modal-title-group">
+                        <span class="modal-subtitle-chip"><i class="fas fa-shield-halved"></i> Compliance Clearance</span>
+                        <h3 id="verifyModalTitle" class="modal-heading-main">Verify Decedent Requirements</h3>
+                    </div>
                 </div>
-                <button type="button" class="close close-view" id="closeVerifyModalBtn" aria-label="Close">&times;</button>
+                <button type="button" class="close-view verify-close-btn" id="closeVerifyModalBtn" aria-label="Close modal"><i class="fas fa-xmark"></i></button>
             </div>
             <form id="verifyRequirementsForm">
                 <input type="hidden" id="verifyDecedentId">
-                <div class="modal-body" style="padding: 10px 4px 6px;">
+                <div class="modal-body verify-modal-body">
                     <div class="verify-compliance-strip">
-                        <i class="fas fa-circle-info"></i>
-                        <div>
+                        <div class="verify-strip-icon"><i class="fas fa-circle-info"></i></div>
+                        <div class="verify-strip-text">
                             <strong>Compliance Verification:</strong> Record auto-created upon payment. Complete the verified civil registry fields below to advance status to <strong>Verified</strong>.
                         </div>
                     </div>
 
                     <div class="decrec-no-scroll-grid">
-                        <!-- Column 1: Civil Registry Details -->
-                        <div class="decrec-form-col">
+                        <!-- Column 1: Civil Registry Details Card -->
+                        <div class="decrec-form-col verify-card">
                             <div class="form-section-header">
                                 <i class="fas fa-user-check"></i> Civil Registry Parameters
                             </div>
 
                             <div class="form-group">
-                                <label for="verifyDecedentName">Decedent Name</label>
-                                <input type="text" id="verifyDecedentName" class="form-input" readonly style="background: var(--color-surface-soft, #f8fafc); font-weight: 600;">
+                                <label for="verifyDecedentName"><i class="fas fa-user"></i> Decedent Name</label>
+                                <div class="verify-input-wrap">
+                                    <input type="text" id="verifyDecedentName" class="form-input verify-input-readonly" readonly>
+                                    <span class="verify-lock-badge" title="Identity locked from reservation"><i class="fas fa-lock"></i></span>
+                                </div>
                             </div>
 
                             <div class="form-group">
-                                <label for="verifyDob">Verified Date of Birth (DOB) <span class="required" style="color: #ef4444;">*</span></label>
-                                <input type="date" id="verifyDob" class="form-input" required>
-                                <small style="color: var(--color-text-muted, #64748b); font-size: 0.72rem;">Official birthdate stated on Death Certificate</small>
+                                <label for="verifyDob"><i class="fas fa-calendar-day"></i> Verified Date of Birth (DOB) <span class="required-star">*</span></label>
+                                <input type="date" id="verifyDob" class="form-input verify-input" required>
+                                <span class="verify-hint">Official birthdate stated on Death Certificate</span>
                             </div>
 
                             <div class="form-group">
-                                <label for="verifyCause">Verified Cause of Death</label>
-                                <input type="text" id="verifyCause" class="form-input" placeholder="e.g. Cardiopulmonary Arrest">
+                                <label for="verifyCause"><i class="fas fa-heart-pulse"></i> Verified Cause of Death</label>
+                                <input type="text" id="verifyCause" class="form-input verify-input" placeholder="e.g. Cardiopulmonary Arrest">
                             </div>
                         </div>
 
-                        <!-- Column 2: Contact & Official Documentation -->
-                        <div class="decrec-form-col">
+                        <!-- Column 2: Family & Document Intake Card -->
+                        <div class="decrec-form-col verify-card">
                             <div class="form-section-header">
                                 <i class="fas fa-file-shield"></i> Family &amp; Document Intake
                             </div>
 
                             <div class="field-row-2">
                                 <div class="form-group">
-                                    <label for="verifyContactName">Contact / Next-of-Kin</label>
-                                    <input type="text" id="verifyContactName" class="form-input" placeholder="Primary relative">
+                                    <label for="verifyContactName"><i class="fas fa-user-tag"></i> Next-of-Kin</label>
+                                    <input type="text" id="verifyContactName" class="form-input verify-input" placeholder="Primary relative">
                                 </div>
                                 <div class="form-group">
-                                    <label for="verifyContactNumber">Contact Number</label>
-                                    <input type="text" id="verifyContactNumber" class="form-input" placeholder="09XX-XXX-XXXX">
+                                    <label for="verifyContactNumber"><i class="fas fa-phone"></i> Contact No.</label>
+                                    <input type="text" id="verifyContactNumber" class="form-input verify-input" placeholder="09XX-XXX-XXXX">
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label for="verifyDocFile">Attach Death Certificate / Burial Permit (Optional)</label>
-                                <input type="file" id="verifyDocFile" class="form-input" accept=".pdf,image/*" style="padding: 4px 8px; font-size: 0.78rem;">
-                                <small style="color: var(--color-text-muted, #64748b); font-size: 0.72rem;">Scanned or photographed document to archive with record.</small>
+                                <label for="verifyDocFile"><i class="fas fa-paperclip"></i> Death Certificate / Burial Permit <span class="verify-opt-tag">Optional</span></label>
+                                <div class="verify-file-dropzone" id="verifyDocFileZone">
+                                    <input type="file" id="verifyDocFile" class="verify-file-input" accept=".pdf,image/*">
+                                    <label for="verifyDocFile" class="verify-file-label" id="verifyDocFileLabel">
+                                        <i class="fas fa-cloud-arrow-up"></i>
+                                        <span id="verifyDocFileText">Choose file (.pdf, .jpg, .png)</span>
+                                    </label>
+                                </div>
+                                <span class="verify-hint">Scanned or photographed document to archive with record.</span>
                             </div>
 
-                            <div class="form-group" style="margin-top: 6px;">
+                            <div class="verify-confirm-card">
                                 <label class="verify-checkbox-label">
-                                    <input type="checkbox" id="verifyConfirmCheckbox" required style="width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0; cursor: pointer;">
-                                    <span>I confirm that the official Death Certificate / Burial Permit has been reviewed.</span>
+                                    <input type="checkbox" id="verifyConfirmCheckbox" required class="verify-checkbox">
+                                    <span class="verify-checkbox-text">I confirm that the official Death Certificate / Burial Permit has been reviewed.</span>
                                 </label>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="modal-footer-custom">
-                    <button type="button" class="btn-secondary" id="cancelVerifyBtn">Cancel</button>
-                    <button type="submit" class="btn-primary" id="submitVerifyBtn" style="background: var(--color-primary-600, #2c5e47); color: white; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; height: 36px; padding: 0 18px; border-radius: var(--radius-md, 8px);">
-                        <i class="fas fa-check-circle"></i> Save &amp; Mark Verified
+                <div class="modal-footer-custom verify-modal-footer">
+                    <button type="button" class="btn-cancel-modal" id="cancelVerifyBtn">
+                        <i class="fas fa-xmark"></i>
+                        <span>Cancel</span>
+                    </button>
+                    <button type="submit" class="btn-action-verify" id="submitVerifyBtn">
+                        <i class="fas fa-circle-check"></i>
+                        <span>Save &amp; Mark Verified</span>
                     </button>
                 </div>
             </form>

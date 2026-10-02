@@ -2385,9 +2385,20 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (verifyContactName) verifyContactName.value = record.contact_name || '';
         if (verifyContactNumber) verifyContactNumber.value = record.contact_number || '';
         if (verifyDocFile) verifyDocFile.value = '';
+        const docFileText = document.getElementById('verifyDocFileText');
+        if (docFileText) docFileText.textContent = 'Choose file (.pdf, .jpg, .png)';
         if (verifyConfirmCheckbox) verifyConfirmCheckbox.checked = false;
 
         if (verifyModal) verifyModal.style.display = 'flex';
+    }
+
+    if (verifyDocFile) {
+        verifyDocFile.addEventListener('change', () => {
+            const docFileText = document.getElementById('verifyDocFileText');
+            if (docFileText) {
+                docFileText.textContent = (verifyDocFile.files && verifyDocFile.files[0]) ? verifyDocFile.files[0].name : 'Choose file (.pdf, .jpg, .png)';
+            }
+        });
     }
 
     if (closeVerifyModalBtn) {
