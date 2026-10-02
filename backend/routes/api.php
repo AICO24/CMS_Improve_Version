@@ -2247,8 +2247,15 @@ if ($path === 'booking-agent/chat' && $requestMethod === 'POST') {
     }
     $input = readRequestBody();
     $result = $bookingAgentController->chat($input, $user);
-    http_response_code($result['code'] ?? 200);
-    unset($result['code']);
+    $httpCode = 200;
+    if (isset($result['http_code']) && is_numeric($result['http_code'])) {
+        $httpCode = (int) $result['http_code'];
+        unset($result['http_code']);
+    } elseif (isset($result['code']) && is_numeric($result['code'])) {
+        $httpCode = (int) $result['code'];
+        unset($result['code']);
+    }
+    http_response_code($httpCode);
     echo json_encode($result);
     exit;
 }
@@ -2262,8 +2269,15 @@ if ($path === 'booking-agent/process' && $requestMethod === 'POST') {
     }
     $input = readRequestBody();
     $result = $bookingAgentController->process($input, $user);
-    http_response_code($result['code'] ?? 200);
-    unset($result['code']);
+    $httpCode = 200;
+    if (isset($result['http_code']) && is_numeric($result['http_code'])) {
+        $httpCode = (int) $result['http_code'];
+        unset($result['http_code']);
+    } elseif (isset($result['code']) && is_numeric($result['code'])) {
+        $httpCode = (int) $result['code'];
+        unset($result['code']);
+    }
+    http_response_code($httpCode);
     echo json_encode($result);
     exit;
 }
