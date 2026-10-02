@@ -28,8 +28,12 @@ class Payment {
             $params[] = (int) $filters['user_id'];
         }
         if (!empty($filters['transaction_type'])) {
-            $sql .= " AND p.transaction_type = ?";
-            $params[] = $filters['transaction_type'];
+            if ($filters['transaction_type'] === 'Columbarium') {
+                $sql .= " AND (p.transaction_type = 'Columbarium' OR (p.transaction_type = 'Cremation' AND (p.notes LIKE '%Inurnment%' OR p.notes LIKE '%Columbarium%' OR ref_cremation.service_subtype = 'inurnment_only' OR ref_cremation.columbarium IS NOT NULL)))";
+            } else {
+                $sql .= " AND p.transaction_type = ?";
+                $params[] = $filters['transaction_type'];
+            }
         }
         if (!empty($filters['date_from'])) {
             $sql .= " AND p.payment_date >= ?";
@@ -89,7 +93,7 @@ class Payment {
             LEFT JOIN burial_schedules ref_schedule
                    ON (p.reference_kind = 'schedule' OR p.reference_kind IS NULL OR p.reference_kind = '') AND p.reference_id = ref_schedule.schedule_id
             LEFT JOIN cremation_records ref_cremation
-                   ON (p.transaction_type = 'Cremation' OR p.reference_kind = 'cremation') AND p.reference_id = ref_cremation.cremation_id
+                   ON (p.transaction_type = 'Cremation' OR p.transaction_type = 'Columbarium' OR p.reference_kind = 'cremation') AND p.reference_id = ref_cremation.cremation_id
             LEFT JOIN lots lot_price
                    ON ((p.reference_kind = 'schedule' OR p.reference_kind IS NULL OR p.reference_kind = '') AND lot_price.lot_id = ref_schedule.lot_id)
                    OR (p.reference_kind = 'lot' AND lot_price.lot_id = p.reference_id)
@@ -129,7 +133,7 @@ class Payment {
             LEFT JOIN burial_schedules ref_schedule
                    ON (p.reference_kind = 'schedule' OR p.reference_kind IS NULL OR p.reference_kind = '') AND p.reference_id = ref_schedule.schedule_id
             LEFT JOIN cremation_records ref_cremation
-                   ON (p.transaction_type = 'Cremation' OR p.reference_kind = 'cremation') AND p.reference_id = ref_cremation.cremation_id
+                   ON (p.transaction_type = 'Cremation' OR p.transaction_type = 'Columbarium' OR p.reference_kind = 'cremation') AND p.reference_id = ref_cremation.cremation_id
             WHERE 1=1";
         $params = [];
         $this->applyFilters($sql, $params, $filters);

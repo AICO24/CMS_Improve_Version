@@ -538,7 +538,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!payment || !payment.reference_id) return null;
         const tType = (payment.transaction_type || '').toLowerCase();
         try {
-            if (tType.includes('cremat')) {
+            if (tType.includes('cremat') || tType.includes('columb') || (payment.notes && (payment.notes.includes('Inurnment') || payment.notes.includes('Columbarium')))) {
                 const cremation = await api.request(`cremations/${payment.reference_id}`, { method: 'GET' });
                 return cremation && !cremation.error ? cremation : null;
             }
@@ -571,6 +571,19 @@ document.addEventListener('DOMContentLoaded', async function() {
             const isVerified = (payment.verification_status || 'Pending') === 'Verified';
             const isRejected = (payment.verification_status || 'Pending') === 'Rejected';
             const statusLabel = payment.verification_status || 'Pending';
+
+            let feeBreakdown = null;
+            const isCremationOrColumbarium = (payment.transaction_type || '').toLowerCase().includes('cremat') ||
+                                             (payment.transaction_type || '').toLowerCase().includes('columb') ||
+                                             !!(schedule && (schedule.cremation_id !== undefined || schedule.columbarium !== undefined));
+            if (isCremationOrColumbarium && payment.reference_id) {
+                try {
+                    const expectedRes = await api.request(`payments/expected-amount?transaction_type=Cremation&reference_id=${payment.reference_id}`, { method: 'GET' });
+                    if (expectedRes && expectedRes.expected_amount !== null && expectedRes.expected_amount !== undefined) {
+                        feeBreakdown = expectedRes;
+                    }
+                } catch (e) { /* non-blocking */ }
+            }
 
             const headerBadge = document.getElementById('viewHeaderStatusBadge');
             if (headerBadge) {
@@ -647,10 +660,42 @@ document.addEventListener('DOMContentLoaded', async function() {
                             <div class="linked-section-title"><i class="fas fa-calendar-check"></i> Linked Service Particulars</div>
                             <div class="linked-details-grid">
                                 <div><span>${schedule.niche_number ? 'Niche #:' : 'Lot #:'}</span> <strong>${escapeHtml(schedule.niche_number || schedule.lot_number || 'N/A')}</strong></div>
-                                <div><span>Section:</span> <strong>${escapeHtml(schedule.section_name || 'N/A')}</strong></div>
-                                <div><span>Decedent:</span> <strong>${escapeHtml((schedule.first_name ? schedule.first_name + ' ' + (schedule.last_name || '') : (schedule.deceased_name || 'N/A')).trim())}</strong></div>
-                                <div><span>Date:</span> <strong>${escapeHtml(schedule.schedule_date || schedule.cremation_date || 'N/A')}</strong></div>
+                                <div><span>Section:</span> <strong>${escapeHtml(schedule.columbarium || schedule.section_name || 'N/A')}</strong></div>
+                                <div><span>Decedent:</span> <strong>${escapeHtml((schedule.first_name ? schedule.first_name + ' ' + (schedule.last_name || '') : (schedule.provisional_name || schedule.deceased_name || 'N/A')).trim())}</strong></div>
+                                <div><span>${(schedule.service_subtype === 'inurnment_only' || schedule.is_external_cremation) ? 'Inurnment Date:' : 'Date:'}</span> <strong>${escapeHtml(schedule.schedule_date || schedule.cremation_date || 'N/A')}</strong></div>
                             </div>
+                        </div>
+                        ` : ''}
+
+                        ${feeBreakdown ? `
+                        <!-- Itemized Fund Classification / Service Ledger -->
+                        <div class="receipt-ledger-section" style="margin: 12px 0 6px 0; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #ffffff;">
+                            <div style="background: #f1f5f9; padding: 7px 12px; font-size: 0.72rem; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: space-between;">
+                                <span><i class="fas fa-list-check" style="margin-right: 6px; color: #166534;"></i> Itemized Fund Classification</span>
+                                <span style="font-size: 0.68rem; color: #64748b; font-weight: 600;">COA AUDITED LEDGER</span>
+                            </div>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                                <tbody>
+                                    <tr style="border-bottom: 1px dashed #e2e8f0;">
+                                        <td style="padding: 7px 12px;">
+                                            <div style="font-weight: 600; color: #0f172a;">1. Operations Fee (Crematory Service Fund)</div>
+                                            <div style="font-size: 0.72rem; color: #64748b;">${feeBreakdown.is_external ? 'Waived (External Cremation / Inurnment Only)' : 'Retort machine operation, fuel, processing, & urn transfer'}</div>
+                                        </td>
+                                        <td style="padding: 7px 12px; text-align: right; font-weight: 700; color: ${feeBreakdown.base_fee > 0 ? '#0f172a' : '#15803d'}; white-space: nowrap;">
+                                            ${feeBreakdown.base_fee > 0 ? formatCurrency(feeBreakdown.base_fee) : '₱0.00 (Waived)'}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 7px 12px;">
+                                            <div style="font-weight: 600; color: #0f172a;">2. Property / Asset Fee (Columbarium Trust Fund)</div>
+                                            <div style="font-size: 0.72rem; color: #64748b;">${feeBreakdown.niche_fee > 0 ? ('Niche vault grant (' + escapeHtml(feeBreakdown.columbarium || 'Columbarium') + ' · ' + escapeHtml(feeBreakdown.niche_number || 'Niche') + ')') : 'Take-Home Urn / External Ash Disposition'}</div>
+                                        </td>
+                                        <td style="padding: 7px 12px; text-align: right; font-weight: 700; color: ${feeBreakdown.niche_fee > 0 ? '#0f172a' : '#64748b'}; white-space: nowrap;">
+                                            ${feeBreakdown.niche_fee > 0 ? formatCurrency(feeBreakdown.niche_fee) : '₱0.00 (None)'}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                         ` : ''}
 
@@ -717,6 +762,18 @@ document.addEventListener('DOMContentLoaded', async function() {
                                     <span class="field-title">Verification Info</span>
                                     <span class="field-data">${payment.verified_by_name ? escapeHtml(payment.verified_by_name) + ' (' + escapeHtml(payment.verified_at || '') + ')' : 'Awaiting admin review'}</span>
                                 </div>
+                                ${feeBreakdown ? `
+                                <div style="margin-top: 6px; padding-top: 8px; border-top: 1px dashed #cbd5e1; display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem;">
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span style="color: #64748b;">Crematory Operations Fund:</span>
+                                        <strong>${feeBreakdown.base_fee > 0 ? formatCurrency(feeBreakdown.base_fee) : '<span style="color:#15803d;">₱0.00 (Waived)</span>'}</strong>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span style="color: #64748b;">Columbarium Trust Fund:</span>
+                                        <strong>${feeBreakdown.niche_fee > 0 ? formatCurrency(feeBreakdown.niche_fee) : '<span style="color:#64748b;">₱0.00 (None)</span>'}</strong>
+                                    </div>
+                                </div>
+                                ` : ''}
                             </div>
                         </div>
                     </details>
@@ -730,9 +787,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <div class="view-section-content">
                             <div class="linked-details-grid">
                                 <div><span>${schedule.niche_number ? 'Niche #:' : 'Lot #:'}</span> <strong>${escapeHtml(schedule.niche_number || schedule.lot_number || 'N/A')}</strong></div>
-                                <div><span>Section:</span> <strong>${escapeHtml(schedule.section_name || 'N/A')}</strong></div>
-                                <div><span>Decedent:</span> <strong>${escapeHtml((schedule.first_name ? schedule.first_name + ' ' + (schedule.last_name || '') : (schedule.deceased_name || 'N/A')).trim())}</strong></div>
-                                <div><span>Date:</span> <strong>${escapeHtml(schedule.schedule_date || schedule.cremation_date || 'N/A')}</strong></div>
+                                <div><span>Section:</span> <strong>${escapeHtml(schedule.columbarium || schedule.section_name || 'N/A')}</strong></div>
+                                <div><span>Decedent:</span> <strong>${escapeHtml((schedule.first_name ? schedule.first_name + ' ' + (schedule.last_name || '') : (schedule.provisional_name || schedule.deceased_name || 'N/A')).trim())}</strong></div>
+                                <div><span>${(schedule.service_subtype === 'inurnment_only' || schedule.is_external_cremation) ? 'Inurnment Date:' : 'Date:'}</span> <strong>${escapeHtml(schedule.schedule_date || schedule.cremation_date || 'N/A')}</strong></div>
                             </div>
                         </div>
                     </details>
@@ -938,7 +995,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             placeholder: 'Search by decedent name or niche number...',
             mapResult: (c) => ({
                 id: c.cremation_id,
-                label: `Niche ${c.niche_number || '—'} — ${c.columbarium || 'N/A'} — ${[c.first_name, c.last_name].filter(Boolean).join(' ') || 'Unknown'}`,
+                label: `Niche ${c.niche_number || '—'} — ${c.columbarium || 'N/A'} — ${[c.first_name, c.last_name].filter(Boolean).join(' ') || c.provisional_name || 'Unknown'}`,
+                customerName: c.contact_name || c.requested_by_name || [c.first_name, c.last_name].filter(Boolean).join(' ') || 'User',
+                contactNumber: c.contact_number || c.requested_by_contact_number || '',
+            }),
+        },
+        'Columbarium': {
+            endpoint: 'cremations',
+            placeholder: 'Search by decedent name, niche or columbarium...',
+            mapResult: (c) => ({
+                id: c.cremation_id,
+                label: `Columbarium ${c.columbarium || 'N/A'} — Niche ${c.niche_number || '—'} — ${[c.first_name, c.last_name].filter(Boolean).join(' ') || c.provisional_name || 'Unknown'}`,
                 customerName: c.contact_name || c.requested_by_name || [c.first_name, c.last_name].filter(Boolean).join(' ') || 'User',
                 contactNumber: c.contact_number || c.requested_by_contact_number || '',
             }),

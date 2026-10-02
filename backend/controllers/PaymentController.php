@@ -87,7 +87,7 @@ class PaymentController {
             return ['expected_amount' => null];
         }
 
-        if ($transactionType === 'Cremation') {
+        if ($transactionType === 'Cremation' || $transactionType === 'Columbarium') {
             require_once __DIR__ . '/../models/Cremation.php';
             require_once __DIR__ . '/../services/EnvironmentService.php';
             $cremationModel = new Cremation();
@@ -95,8 +95,9 @@ class PaymentController {
             if (!$crem || ($crem['status'] ?? '') === 'Cancelled') {
                 return ['expected_amount' => null];
             }
-            $baseFee = (float) EnvironmentService::get('CREMATION_BASE_FEE', 15000.00);
-            if ($baseFee <= 0) $baseFee = 15000.00;
+            $isExternal = !empty($crem['is_external_cremation']) || (($crem['service_subtype'] ?? '') === 'inurnment_only');
+            $baseFee = $isExternal ? 0.0 : (float) EnvironmentService::get('CREMATION_BASE_FEE', 15000.00);
+            if (!$isExternal && $baseFee <= 0) $baseFee = 15000.00;
             $nichePrice = 0.0;
             if (!empty($crem['columbarium']) && !empty($crem['niche_number'])) {
                 $nichePrice = $cremationModel->getNichePrice($crem['columbarium'], $crem['niche_number'], (int)($crem['level'] ?? 1));
@@ -107,7 +108,8 @@ class PaymentController {
                 'niche_fee' => $nichePrice,
                 'niche_number' => $crem['niche_number'] ?? null,
                 'columbarium' => $crem['columbarium'] ?? null,
-                'source' => 'cremation',
+                'is_external' => $isExternal,
+                'source' => $transactionType === 'Columbarium' ? 'columbarium' : 'cremation',
             ];
         }
 
@@ -171,6 +173,7 @@ class PaymentController {
         $map = [
             'lot purchase' => 'Lot Purchase',
             'cremation' => 'Cremation',
+            'columbarium' => 'Columbarium',
             'relocation' => 'Relocation',
             'renewal' => 'Renewal',
             'other' => 'Other',
@@ -364,30 +367,31 @@ class PaymentController {
                 ];
 
             case 'Cremation':
+            case 'Columbarium':
                 if ($referenceId === null) {
-                    return ['error' => 'Cremation payments require a valid cremation reference', 'code' => 400];
+                    return ['error' => ($transactionType === 'Columbarium' ? 'Columbarium' : 'Cremation') . ' payments require a valid reference', 'code' => 400];
                 }
 
                 $cremationModel = new Cremation();
                 $cremation = $cremationModel->findById($referenceId);
                 if (!$cremation) {
-                    return ['error' => 'Cremation reference not found', 'code' => 404];
+                    return ['error' => ($transactionType === 'Columbarium' ? 'Columbarium / Cremation' : 'Cremation') . ' reference not found', 'code' => 404];
                 }
                 if ($roleName === 'user' && (int) ($cremation['created_by'] ?? 0) !== (int) $userId) {
-                    return ['error' => 'You may only pay for your own cremation booking', 'code' => 403];
+                    return ['error' => 'You may only pay for your own booking', 'code' => 403];
                 }
                 if (($cremation['status'] ?? '') === 'Cancelled') {
-                    return ['error' => 'Cancelled cremation records cannot be paid', 'code' => 409];
+                    return ['error' => 'Cancelled records cannot be paid', 'code' => 409];
                 }
                 if ($isNewPayment && in_array(($cremation['status'] ?? ''), ['Confirmed', 'Completed'], true)) {
-                    return ['error' => 'This cremation booking has already been confirmed or completed', 'code' => 409];
+                    return ['error' => 'This booking has already been confirmed or completed', 'code' => 409];
                 }
 
                 $columbarium = !empty($cremation['columbarium']) ? ' (' . $cremation['columbarium'] . ')' : '';
                 return [
                     'reference_id' => $referenceId,
                     'reference_kind' => null,
-                    'reference_label' => 'Cremation #' . $cremation['cremation_id'] . $columbarium,
+                    'reference_label' => ($transactionType === 'Columbarium' ? 'Columbarium #' : 'Cremation #') . $cremation['cremation_id'] . $columbarium,
                 ];
 
             case 'Relocation':
@@ -521,7 +525,16 @@ class PaymentController {
             $data['receipt_url'] = $receiptUrl;
         }
 
-        $data['transaction_type'] = $transactionType;
+        if ($transactionType === 'Columbarium') {
+            $data['transaction_type'] = 'Cremation';
+            if (empty($data['notes'])) {
+                $data['notes'] = '[Columbarium / Inurnment]';
+            } elseif (!str_contains($data['notes'], 'Columbarium') && !str_contains($data['notes'], 'Inurnment')) {
+                $data['notes'] = '[Columbarium / Inurnment] ' . $data['notes'];
+            }
+        } else {
+            $data['transaction_type'] = $transactionType;
+        }
         $data['reference_id'] = $referenceCheck['reference_id'];
         // Persists whatever validatePaymentReference() actually resolved
         // (explicit caller intent when given, otherwise its own
@@ -841,7 +854,7 @@ class PaymentController {
                 $this->syncLotStatusForVerifiedPurchase($payment, $adminId);
                 $this->autoConfirmScheduleForVerifiedPurchase($payment, $adminId);
                 $this->autoFormalizeDecedentOnPayment($payment, $adminId);
-            } elseif ($status === 'Verified' && $payment['transaction_type'] === 'Cremation') {
+            } elseif ($status === 'Verified' && ($payment['transaction_type'] === 'Cremation' || $payment['transaction_type'] === 'Columbarium')) {
                 // Cremation Phase B: the citizen-intake counterpart to
                 // autoUpdateCremationForVerifiedPayment() below — that method
                 // only ever acts on an ALREADY-niche-assigned record (the
