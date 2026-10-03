@@ -225,7 +225,115 @@ class AiController {
 
         $result = $this->aiService->getCertificateExtraction($payload);
         $data = (!empty($result['error']) || !is_array($result)) ? null : ($result['result'] ?? null);
+
+        // Resilient defense-readiness fallback: If the Python Flask service is rate-limited,
+        // unavailable, or returned null, use local deterministic parsing & direct CLI fallback.
+        if (empty($data) || (empty($data['first_name']) && empty($data['last_name']))) {
+            $fallback = $this->fallbackCertificateExtraction($payload);
+            if (!empty($fallback) && (!empty($fallback['first_name']) || !empty($fallback['last_name']))) {
+                $data = $fallback;
+            }
+        }
+
         return ['result' => is_array($data) ? $data : null];
+    }
+
+    /**
+     * Defense-readiness fallback extraction.
+     * Parses PDF text deterministically without external API calls, or invokes local Python CLI
+     * with gemini-2.5-flash-lite / offline fallback when Flask microservice is blocked or quota-limited.
+     */
+    private function fallbackCertificateExtraction($payload) {
+        $imageBase64 = $payload['image_base64'] ?? null;
+        $mimeType = $payload['mime_type'] ?? '';
+        if (empty($imageBase64)) {
+            return null;
+        }
+
+        $raw = base64_decode($imageBase64);
+        if (!$raw) {
+            return null;
+        }
+
+        // 1. Instant regex extraction for PDFs (100% offline, 0ms, zero quota)
+        if (strpos($raw, '%PDF') === 0 || $mimeType === 'application/pdf') {
+            $extracted = [
+                'first_name' => null,
+                'last_name' => null,
+                'middle_name' => null,
+                'suffix' => null,
+                'dob' => null,
+                'dod' => null,
+                'cause_of_death' => null,
+            ];
+
+            if (preg_match('/(?:NAME OF DECEASED|Deceased Name|Deceased)[:\s]+([A-Za-z0-9\s\.\,\-]+?)(?:\)|\\r?\\n|$)/i', $raw, $m)) {
+                $rawName = isset($m[1]) ? trim((string)$m[1]) : '';
+                $fullName = trim(preg_replace('#[()\\\\/]#', '', $rawName));
+                $parts = array_values(array_filter(explode(' ', $fullName)));
+                if (count($parts) === 1) {
+                    $extracted['first_name'] = $parts[0];
+                } elseif (count($parts) === 2) {
+                    $extracted['first_name'] = $parts[0];
+                    $extracted['last_name'] = $parts[1];
+                } elseif (count($parts) >= 3) {
+                    $extracted['first_name'] = $parts[0];
+                    $lastPart = end($parts);
+                    if (in_array(strtolower(rtrim($lastPart, '.')), ['jr', 'sr', 'ii', 'iii', 'iv'])) {
+                        $extracted['suffix'] = $lastPart;
+                        $extracted['last_name'] = $parts[count($parts) - 2];
+                        $extracted['middle_name'] = implode(' ', array_slice($parts, 1, count($parts) - 3));
+                    } else {
+                        // Support multi-part surnames like "Dela Cruz", "Del Rosario", "San Jose"
+                        $secondToLast = strtolower($parts[count($parts) - 2]);
+                        if (in_array($secondToLast, ['dela', 'del', 'de', 'san', 'santa', 'los', 'las'])) {
+                            $extracted['last_name'] = $parts[count($parts) - 2] . ' ' . $lastPart;
+                            $extracted['middle_name'] = implode(' ', array_slice($parts, 1, count($parts) - 3));
+                        } else {
+                            $extracted['last_name'] = $lastPart;
+                            $extracted['middle_name'] = implode(' ', array_slice($parts, 1, count($parts) - 2));
+                        }
+                    }
+                }
+            }
+
+            if (preg_match('/(?:DATE OF DEATH|DOD)[:\s]+([0-9]{4}-[0-9]{2}-[0-9]{2}|[A-Za-z]+\s+[0-9]{1,2},\s+[0-9]{4})/i', $raw, $m)) {
+                $d = trim($m[1]);
+                $extracted['dod'] = strpos($d, '-') !== false ? $d : date('Y-m-d', strtotime($d));
+            }
+
+            if (preg_match('/(?:DATE OF BIRTH|DOB)[:\s]+([0-9]{4}-[0-9]{2}-[0-9]{2}|[A-Za-z]+\s+[0-9]{1,2},\s+[0-9]{4})/i', $raw, $m)) {
+                $b = trim($m[1]);
+                $extracted['dob'] = strpos($b, '-') !== false ? $b : date('Y-m-d', strtotime($b));
+            }
+
+            if (preg_match('/(?:CAUSE OF DEATH)[:\s]+([A-Za-z0-9\s\.\,\-]+?)(?:\)|\\r?\\n|$)/i', $raw, $m)) {
+                $rawCause = isset($m[1]) ? trim((string)$m[1]) : '';
+                $extracted['cause_of_death'] = trim(preg_replace('#[()\\\\/]#', '', $rawCause));
+            }
+
+            if (!empty($extracted['first_name']) || !empty($extracted['last_name'])) {
+                return $extracted;
+            }
+        }
+
+        // 2. Direct Python CLI execution using python-ai/app.py (_extract_certificate with flash-lite)
+        $tmpFile = tempnam(sys_get_temp_dir(), 'cms_doc_');
+        if ($tmpFile) {
+            file_put_contents($tmpFile, $raw);
+            $pyCmd = 'python -c "import sys; sys.path.append(\'python-ai\'); from app import _extract_certificate; import json; d = open(\'' . addslashes($tmpFile) . '\', \'rb\').read(); res = _extract_certificate(d, \'' . addslashes($mimeType) . '\'); print(json.dumps(res))" 2>nul';
+            $output = @shell_exec($pyCmd);
+            @unlink($tmpFile);
+
+            if ($output) {
+                $parsed = json_decode(trim($output), true);
+                if (is_array($parsed) && (!empty($parsed['first_name']) || !empty($parsed['last_name']))) {
+                    return $parsed;
+                }
+            }
+        }
+
+        return null;
     }
 
     // General Q&A layer (see docs/plans burial-scheduling AI Q&A): answers
