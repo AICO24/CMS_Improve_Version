@@ -2423,145 +2423,327 @@ document.addEventListener('DOMContentLoaded', async function() {
         return btn ? btn.textContent.trim() : 'Report';
     }
 
+    function safeEscape(str) {
+        return String(str || '').replace(/[&<>"']/g, m => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[m]);
+    }
+
     async function generatePdfExport() {
         const activeStats = getActiveStatsContainer();
         const activeTab = getActiveReportTab();
-        const element = document.createElement('div');
-        element.style.display = 'flex';
-        element.style.flexDirection = 'column';
-        element.style.gap = '18px';
-        element.style.position = 'fixed';
-        // Keep the cloned element inside the viewport so html2canvas can
-        // reliably measure and render it. Use a high z-index and make it
-        // non-interactive so users don't notice it while exporting.
-        element.style.left = '50px';
-        element.style.top = '0';
-        element.style.zIndex = '99999';
-        element.style.pointerEvents = 'none';
-        // Constrain width to avoid charts expanding beyond the viewport.
-        element.style.width = '800px';
-        element.style.maxWidth = 'calc(100vw - 100px)';
-        element.style.boxSizing = 'border-box';
-        // Turn off transitions/animations while generating the export so
-        // nothing keeps animating or expanding unexpectedly.
-        element.style.transition = 'none';
-        element.style.animation = 'none';
-        element.style.overflow = 'hidden';
-        element.style.background = '#ffffff';
-        element.style.padding = '18px';
-        if (activeStats) element.appendChild(activeStats.cloneNode(true));
-        element.appendChild(activeTab.cloneNode(true));
+        const activeTabLabel = getActiveTabLabel();
+        const dateStr = new Date().toISOString().split('T')[0];
+        const filename = `Cemetery_Management_${activeTabLabel.replace(/[^a-zA-Z0-9_-]/g, '_')}_Report_${dateStr}.pdf`;
 
-        // Reduce the min-height of compact chart cards inside the cloned
-        // content to avoid very tall placeholders that cause expansion.
-        element.querySelectorAll('.chart-card--compact').forEach(card => {
-            card.style.minHeight = '260px';
-            card.style.overflow = 'hidden';
-        });
+        // Comprehensive chart mapping covering all modules & tabs
+        const chartInstances = {
+            occupancyChart: typeof occupancyChartInstance !== 'undefined' ? occupancyChartInstance : null,
+            occupancyByBlockChart: typeof occupancyByBlockChartInstance !== 'undefined' ? occupancyByBlockChartInstance : null,
+            occupancyByTypeChart: typeof occupancyByTypeChartInstance !== 'undefined' ? occupancyByTypeChartInstance : null,
+            revenueChart: typeof revenueChartInstance !== 'undefined' ? revenueChartInstance : null,
+            revenueYearChart: typeof revenueYearChartInstance !== 'undefined' ? revenueYearChartInstance : null,
+            revenueBreakdownChart: typeof revenueBreakdownChartInstance !== 'undefined' ? revenueBreakdownChartInstance : null,
+            verificationBreakdownChart: typeof verificationBreakdownChartInstance !== 'undefined' ? verificationBreakdownChartInstance : null,
+            revenueByMethodChart: typeof revenueByMethodChartInstance !== 'undefined' ? revenueByMethodChartInstance : null,
+            reservationStatusChart: typeof reservationStatusChartInstance !== 'undefined' ? reservationStatusChartInstance : null,
+            reservationsChart: typeof reservationsChartInstance !== 'undefined' ? reservationsChartInstance : null,
+            demographicsChart: typeof demographicsChartInstance !== 'undefined' ? demographicsChartInstance : null,
+            ageDistributionChart: typeof ageDistributionChartInstance !== 'undefined' ? ageDistributionChartInstance : null,
+            expirationStatusChart: typeof expirationStatusChartInstance !== 'undefined' ? expirationStatusChartInstance : null,
+            expirationTrendChart: typeof expirationTrendChartInstance !== 'undefined' ? expirationTrendChartInstance : null,
+        };
 
-        // Replace canvases in the cloned node with raster images. Prefer
-        // Chart.js' `toBase64Image()` from stored instances when available,
-        // fallback to the original canvas `toDataURL()`.
-        element.querySelectorAll('canvas').forEach((canvas) => {
+        // Extract high-resolution base64 PNGs directly from live canvas/Chart.js before constructing clone
+        const chartImages = {};
+        document.querySelectorAll('canvas').forEach(canvas => {
             try {
                 const id = canvas.id;
                 let dataUrl = null;
-                // Map known occupancy chart ids to instances
-                if (id === 'occupancyChart' && occupancyChartInstance) dataUrl = occupancyChartInstance.toBase64Image();
-                else if (id === 'occupancyByBlockChart' && occupancyByBlockChartInstance) dataUrl = occupancyByBlockChartInstance.toBase64Image();
-                else if (id === 'occupancyByTypeChart' && occupancyByTypeChartInstance) dataUrl = occupancyByTypeChartInstance.toBase64Image();
-                else if (id === 'reservationsChart' && reservationsChartInstance) dataUrl = reservationsChartInstance.toBase64Image();
-                else {
-                    const source = document.getElementById(id);
-                    if (source && typeof source.toDataURL === 'function') dataUrl = source.toDataURL('image/png');
+                const inst = chartInstances[id] || (typeof Chart !== 'undefined' ? Chart.getChart(id) : null);
+                if (inst && typeof inst.toBase64Image === 'function') {
+                    dataUrl = inst.toBase64Image('image/png', 1.0);
+                } else if (typeof canvas.toDataURL === 'function') {
+                    dataUrl = canvas.toDataURL('image/png');
                 }
-                if (!dataUrl) return;
-                const image = document.createElement('img');
-                image.src = dataUrl;
-                image.style.display = 'block';
-                image.style.width = '100%';
-                image.style.maxWidth = '100%';
-                image.style.height = 'auto';
-                image.style.maxHeight = '300px';
-                image.style.objectFit = 'contain';
-                canvas.replaceWith(image);
-            } catch (e) {
-                // best-effort replacement — if it fails, leave canvas as-is
+                if (dataUrl) {
+                    chartImages[id] = dataUrl;
+                }
+            } catch (err) {
+                console.warn('Could not extract chart image for ' + canvas.id, err);
             }
         });
-        document.body.appendChild(element);
-        const filename = `Cemetery_Management_${getActiveTabLabel()}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-        if (typeof html2pdf === 'undefined') {
-            element.remove();
-            window.print();
-            return null;
+
+        // Build dedicated print container
+        const printRoot = document.createElement('div');
+        printRoot.id = 'reportsPrintRoot';
+        printRoot.style.position = 'absolute';
+        printRoot.style.left = '0';
+        printRoot.style.top = '0';
+        printRoot.style.width = '820px';
+        printRoot.style.maxWidth = '820px';
+        printRoot.style.backgroundColor = '#ffffff';
+        printRoot.style.color = '#0f172a';
+        printRoot.style.padding = '24px 28px';
+        printRoot.style.fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        printRoot.style.zIndex = '99999999';
+        printRoot.style.boxSizing = 'border-box';
+        printRoot.style.pointerEvents = 'none';
+
+        // Official Formal Header Banner
+        const header = document.createElement('div');
+        header.style.borderBottom = '3px solid #059669';
+        header.style.paddingBottom = '12px';
+        header.style.marginBottom = '20px';
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'flex-end';
+        header.innerHTML = `
+            <div>
+                <div style="font-size: 20px; font-weight: 800; color: #064e3b; letter-spacing: -0.02em; line-height: 1.2;">Cemetery Management System</div>
+                <div style="margin-top: 4px; font-size: 13px; color: #334155;">Official Intelligence & Analytics Report — <strong style="color: #047857;">${safeEscape(activeTabLabel)}</strong></div>
+            </div>
+            <div style="text-align: right; font-size: 11px; color: #64748b; line-height: 1.4;">
+                <div>Generated: <strong>${new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}</strong></div>
+                <div>City of Malabon Public Cemetery</div>
+            </div>
+        `;
+        printRoot.appendChild(header);
+
+        // Active Stat Cards
+        if (activeStats) {
+            const statsClone = activeStats.cloneNode(true);
+            statsClone.style.display = 'grid';
+            statsClone.style.gridTemplateColumns = 'repeat(4, minmax(0, 1fr))';
+            statsClone.style.gap = '12px';
+            statsClone.style.marginBottom = '20px';
+            statsClone.querySelectorAll('.stat-card').forEach(sc => {
+                sc.style.display = 'flex';
+                sc.style.flexDirection = 'column';
+                sc.style.backgroundColor = '#f8fafc';
+                sc.style.border = '1px solid #cbd5e1';
+                sc.style.borderRadius = '8px';
+                sc.style.padding = '12px 14px';
+                sc.style.boxShadow = 'none';
+            });
+            statsClone.querySelectorAll('.stat-title').forEach(st => {
+                st.style.fontSize = '11px';
+                st.style.fontWeight = '600';
+                st.style.color = '#475569';
+                st.style.display = 'flex';
+                st.style.justifyContent = 'space-between';
+            });
+            statsClone.querySelectorAll('.stat-value').forEach(sv => {
+                sv.style.fontSize = '20px';
+                sv.style.fontWeight = '800';
+                sv.style.color = '#064e3b';
+                sv.style.margin = '4px 0 2px 0';
+            });
+            statsClone.querySelectorAll('.stat-sub').forEach(ss => {
+                ss.style.fontSize = '11px';
+                ss.style.color = '#64748b';
+            });
+            printRoot.appendChild(statsClone);
         }
-        const opt = {
-            margin:       0.5,
-            filename,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2 },
-            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
-        try {
-            // Ensure any remaining canvases are replaced by images (fallback).
-            element.querySelectorAll('canvas').forEach((canvas) => {
-                try {
-                    const id = canvas.id;
-                    const source = document.getElementById(id);
-                    if (source && typeof source.toDataURL === 'function') {
-                        const image = document.createElement('img');
-                        image.src = source.toDataURL('image/png');
-                        image.style.display = 'block';
-                        image.style.width = '100%';
-                        image.style.maxWidth = '100%';
-                        image.style.height = 'auto';
-                        canvas.replaceWith(image);
-                    }
-                } catch (e) {}
+
+        // Active Tab Content
+        if (activeTab) {
+            const tabClone = activeTab.cloneNode(true);
+            tabClone.style.display = 'flex';
+            tabClone.style.flexDirection = 'column';
+            tabClone.style.gap = '18px';
+
+            // Remove non-printable interactive elements
+            tabClone.querySelectorAll('button, .chart-legend-buttons, .tab-scroll, .report-tabs-actions, .filter-controls, .pagination, [role="group"]').forEach(el => {
+                el.remove();
             });
 
-            // Ensure cloned element's images and tables are constrained to container
-            element.querySelectorAll('img').forEach(img => {
-                img.style.display = 'block';
-                img.style.width = '100%';
-                img.style.maxWidth = '100%';
-                img.style.height = 'auto';
-                img.style.maxHeight = '300px';
-                img.style.objectFit = 'contain';
+            // Replace canvases with pre-captured images
+            tabClone.querySelectorAll('canvas').forEach(canvas => {
+                const id = canvas.id;
+                const dataUrl = chartImages[id];
+                if (dataUrl) {
+                    const img = document.createElement('img');
+                    img.src = dataUrl;
+                    img.style.display = 'block';
+                    img.style.width = '100%';
+                    img.style.height = 'auto';
+                    img.style.maxHeight = '300px';
+                    img.style.objectFit = 'contain';
+                    img.style.backgroundColor = '#ffffff';
+                    img.style.borderRadius = '6px';
+                    canvas.replaceWith(img);
+                } else {
+                    canvas.remove();
+                }
             });
-            element.querySelectorAll('table').forEach(tbl => {
+
+            // Adjust chart frames
+            tabClone.querySelectorAll('.chart-frame').forEach(cf => {
+                cf.style.height = 'auto';
+                cf.style.minHeight = '0';
+                cf.style.overflow = 'visible';
+                cf.style.padding = '10px';
+                cf.style.backgroundColor = '#ffffff';
+                cf.style.border = '1px solid #e2e8f0';
+                cf.style.borderRadius = '6px';
+                cf.style.boxShadow = 'none';
+            });
+
+            // Adjust cards
+            tabClone.querySelectorAll('.chart-card, .table-card, .card').forEach(cc => {
+                cc.style.backgroundColor = '#ffffff';
+                cc.style.color = '#0f172a';
+                cc.style.border = '1px solid #cbd5e1';
+                cc.style.borderRadius = '8px';
+                cc.style.boxShadow = 'none';
+                cc.style.padding = '14px 16px';
+            });
+
+            tabClone.querySelectorAll('.chart-card__title').forEach(ct => {
+                ct.style.color = '#0f172a';
+                ct.style.fontWeight = '700';
+                ct.style.fontSize = '14px';
+            });
+            tabClone.querySelectorAll('.chart-card__badge').forEach(cb => {
+                cb.style.fontSize = '10px';
+                cb.style.padding = '2px 8px';
+                cb.style.borderRadius = '12px';
+                cb.style.backgroundColor = '#f1f5f9';
+                cb.style.color = '#475569';
+                cb.style.border = '1px solid #cbd5e1';
+            });
+
+            // Adjust tables
+            tabClone.querySelectorAll('table').forEach(tbl => {
                 tbl.style.width = '100%';
-                tbl.style.tableLayout = 'fixed';
+                tbl.style.borderCollapse = 'collapse';
+                tbl.style.backgroundColor = '#ffffff';
+                tbl.style.fontSize = '11px';
+                tbl.style.marginTop = '8px';
+            });
+            tabClone.querySelectorAll('th').forEach(th => {
+                th.style.backgroundColor = '#f8fafc';
+                th.style.color = '#0f172a';
+                th.style.border = '1px solid #cbd5e1';
+                th.style.padding = '6px 8px';
+                th.style.fontWeight = '700';
+                th.style.textAlign = 'left';
+            });
+            tabClone.querySelectorAll('td').forEach(td => {
+                td.style.border = '1px solid #e2e8f0';
+                td.style.padding = '6px 8px';
+                td.style.color = '#334155';
             });
 
-            // Wait for all images inside the cloned element to finish loading
-            // before passing to html2pdf so the generated PDF captures them.
-            const images = Array.from(element.querySelectorAll('img'));
+            // Section labels
+            tabClone.querySelectorAll('.section-label').forEach(sl => {
+                sl.style.color = '#064e3b';
+                sl.style.fontWeight = '700';
+                sl.style.fontSize = '13px';
+                sl.style.margin = '12px 0 6px 0';
+                sl.style.display = 'block';
+            });
+
+            // Insight lists
+            tabClone.querySelectorAll('.insight-list').forEach(il => {
+                il.style.marginTop = '8px';
+                il.style.fontSize = '11px';
+                il.style.color = '#475569';
+            });
+
+            printRoot.appendChild(tabClone);
+        }
+
+        // Mount to body and normalize scroll
+        const prevScrollX = window.scrollX || window.pageXOffset || 0;
+        const prevScrollY = window.scrollY || window.pageYOffset || 0;
+        document.body.appendChild(printRoot);
+        window.scrollTo(0, 0);
+
+        try {
+            // Wait for all images in printRoot to be ready
+            const images = Array.from(printRoot.querySelectorAll('img'));
             await Promise.all(images.map(img => new Promise(resolve => {
                 if (img.complete && img.naturalWidth !== 0) return resolve();
                 img.onload = () => resolve();
                 img.onerror = () => resolve();
+                setTimeout(resolve, 600);
             })));
 
-            // Optional debug: if caller appended ?debug_reports=1 to the URL,
-            // download the assembled HTML so you can inspect what html2pdf
-            // receives (helps when PDFs are blank on some environments).
-            try {
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('debug_reports') === '1') {
-                    const dbgBlob = new Blob([element.outerHTML], { type: 'text/html' });
-                    const dbgUrl = URL.createObjectURL(dbgBlob);
-                    triggerFileDownload(dbgUrl, `report_debug_${getActiveTabLabel()}.html`);
-                }
-            } catch (e) {}
+            const html2canvasLib = window.html2canvas || (typeof html2canvas !== 'undefined' ? html2canvas : null);
+            const jsPdfConstructor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF || (typeof jsPDF !== 'undefined' ? jsPDF : null);
 
-            const blob = await html2pdf().set(opt).from(element).outputPdf('blob');
-            const url = URL.createObjectURL(blob);
-            triggerFileDownload(url, filename);
-            return { url, filename };
-        } finally {
-            element.remove();
+            if (html2canvasLib && jsPdfConstructor) {
+                const canvas = await html2canvasLib(printRoot, {
+                    scale: 1.5,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    width: printRoot.offsetWidth || 820,
+                    height: printRoot.offsetHeight,
+                    scrollX: 0,
+                    scrollY: 0
+                });
+
+                printRoot.remove();
+                window.scrollTo(prevScrollX, prevScrollY);
+
+                const pdf = new jsPdfConstructor('p', 'mm', 'a4');
+                const pageWidth = 210;
+                const pageHeight = 297;
+                const margin = 10;
+                const contentWidth = pageWidth - (margin * 2); // 190mm
+                const contentHeight = pageHeight - (margin * 2); // 277mm
+
+                const imgWidth = contentWidth;
+                const imgHeight = (canvas.height * contentWidth) / canvas.width;
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+                let heightLeft = imgHeight;
+                let position = margin;
+                let pageIndex = 0;
+
+                while (heightLeft > 0) {
+                    if (pageIndex > 0) {
+                        pdf.addPage();
+                    }
+                    pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
+                    heightLeft -= contentHeight;
+                    position -= contentHeight;
+                    pageIndex++;
+                }
+
+                const blob = pdf.output('blob');
+                const url = URL.createObjectURL(blob);
+                triggerFileDownload(url, filename);
+                return { url, filename };
+            } else if (typeof html2pdf !== 'undefined') {
+                const opt = {
+                    margin:       [0.4, 0.4, 0.4, 0.4],
+                    filename:     filename,
+                    image:        { type: 'jpeg', quality: 0.95 },
+                    html2canvas:  { scale: 1.5, useCORS: true, backgroundColor: '#ffffff', scrollY: 0, scrollX: 0 },
+                    jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' },
+                    pagebreak:    { mode: ['css', 'legacy'] }
+                };
+                const blob = await html2pdf().set(opt).from(printRoot).outputPdf('blob');
+                printRoot.remove();
+                window.scrollTo(prevScrollX, prevScrollY);
+                const url = URL.createObjectURL(blob);
+                triggerFileDownload(url, filename);
+                return { url, filename };
+            } else {
+                printRoot.remove();
+                window.scrollTo(prevScrollX, prevScrollY);
+                window.print();
+                return null;
+            }
+        } catch (error) {
+            console.error('PDF export failed:', error);
+            if (printRoot.parentNode) printRoot.remove();
+            window.scrollTo(prevScrollX, prevScrollY);
+            throw error;
         }
     }
 
