@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../controllers/AuthController.php';
 require_once __DIR__ . '/../controllers/LotController.php';
 require_once __DIR__ . '/../controllers/DecedentController.php';
@@ -31,10 +32,9 @@ $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
 $basePath = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
 $path = trim(str_replace($basePath, '', str_replace('\\', '/', $parsedUri)), '/');
 
-if (!empty($_GET['route'])) {
-    $path = trim((string) $_GET['route'], '/');
-} elseif (!empty($query['route'])) {
-    $path = trim((string) $query['route'], '/');
+$explicitRoute = $_GET['route'] ?? ($_GET['path'] ?? ($query['route'] ?? ($query['path'] ?? null)));
+if (!empty($explicitRoute)) {
+    $path = trim((string) $explicitRoute, '/');
 } elseif (preg_match('#^index\.php/(.+)$#', $path, $matches)) {
     $path = $matches[1];
 }

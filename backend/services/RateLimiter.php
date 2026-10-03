@@ -17,9 +17,9 @@
 class RateLimiter {
     // Returns true if this call is allowed (and records it against the
     // count), false if $key has already made $limit or more calls within
-    // the current $windowSeconds window.
     public static function allow($key, $limit, $windowSeconds) {
-        $dir = STORAGE_ROOT . '/rate_limits';
+        $storageRoot = defined('STORAGE_ROOT') ? STORAGE_ROOT : (dirname(__DIR__) . '/storage');
+        $dir = $storageRoot . '/rate_limits';
         if (!is_dir($dir)) {
             @mkdir($dir, 0777, true);
         }
