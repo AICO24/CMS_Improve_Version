@@ -231,24 +231,45 @@ def _generate_with_gemini(
         else:
             contents = user_content
 
-        try:
-            response = _gemini_client.models.generate_content(
-                model=model,
-                contents=contents,
-                config=genai_types.GenerateContentConfig(**config_kwargs),
-            )
-        except Exception as exc:
-            # Models that do not support thinking levels (e.g. gemini-2.5-flash) throw 400 INVALID_ARGUMENT.
-            # Retry without thinking_config so both thinking-capable and standard models work seamlessly.
-            if 'thinking' in str(exc).lower() and 'thinking_config' in config_kwargs:
-                del config_kwargs['thinking_config']
-                response = _gemini_client.models.generate_content(
-                    model=model,
-                    contents=contents,
-                    config=genai_types.GenerateContentConfig(**config_kwargs),
-                )
-            else:
+        models_to_try = [model]
+        for candidate_model in ('gemini-2.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.1-flash-lite'):
+            if candidate_model not in models_to_try:
+                models_to_try.append(candidate_model)
+
+        response = None
+        last_exc = None
+        for current_model in models_to_try:
+            try:
+                try:
+                    response = _gemini_client.models.generate_content(
+                        model=current_model,
+                        contents=contents,
+                        config=genai_types.GenerateContentConfig(**config_kwargs),
+                    )
+                except Exception as exc:
+                    # Models that do not support thinking levels throw 400 INVALID_ARGUMENT.
+                    # Retry without thinking_config so both thinking-capable and standard models work seamlessly.
+                    if 'thinking' in str(exc).lower() and 'thinking_config' in config_kwargs:
+                        cfg_no_thinking = dict(config_kwargs)
+                        del cfg_no_thinking['thinking_config']
+                        response = _gemini_client.models.generate_content(
+                            model=current_model,
+                            contents=contents,
+                            config=genai_types.GenerateContentConfig(**cfg_no_thinking),
+                        )
+                    else:
+                        raise
+                if response:
+                    break
+            except Exception as exc:
+                last_exc = exc
+                cat = _classify_gemini_exception(exc)
+                if cat in ('rate_limit', 'temporary', 'invalid_model'):
+                    continue
                 raise
+
+        if not response and last_exc:
+            raise last_exc
 
         text = (response.text or '').strip()
         if not text:

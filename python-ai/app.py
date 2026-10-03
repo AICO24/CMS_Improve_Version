@@ -806,6 +806,74 @@ CERTIFICATE_EXTRACTION_SYSTEM_PROMPT = (
 )
 
 
+def _extract_certificate_fallback(image_bytes: bytes, mime_type: str) -> Optional[Dict[str, Any]]:
+    if not image_bytes:
+        return None
+    raw = image_bytes.decode('latin1', errors='ignore')
+    
+    name_match = re.search(r'(?:NAME OF DECEASED|Deceased Name|Deceased)[:\s]+([A-Za-z0-9\s\.\,\-]+?)(?:\)|\\n|\r|\n|$)', raw, re.IGNORECASE)
+    first_name, last_name, middle_name, suffix = None, None, None, None
+    if name_match:
+        full_name = name_match.group(1).strip()
+        full_name = re.sub(r'[\(\)\\\/]', '', full_name).strip()
+        parts = [p for p in full_name.split() if p]
+        if len(parts) == 1:
+            first_name = parts[0]
+        elif len(parts) == 2:
+            first_name = parts[0]
+            last_name = parts[1]
+        elif len(parts) >= 3:
+            first_name = parts[0]
+            if len(parts[-1]) <= 3 and parts[-1].lower().rstrip('.') in ('jr', 'sr', 'ii', 'iii', 'iv'):
+                suffix = parts[-1]
+                last_name = parts[-2]
+                middle_name = ' '.join(parts[1:-2]) if len(parts) > 3 else None
+            else:
+                last_name = parts[-1]
+                middle_name = ' '.join(parts[1:-1])
+
+    dod = None
+    dod_match = re.search(r'(?:DATE OF DEATH|DOD)[:\s]+([0-9]{4}-[0-9]{2}-[0-9]{2}|[A-Za-z]+\s+[0-9]{1,2},\s+[0-9]{4})', raw, re.IGNORECASE)
+    if dod_match:
+        d_str = dod_match.group(1).strip()
+        try:
+            if '-' in d_str:
+                dod = d_str
+            else:
+                dod = datetime.strptime(d_str, '%B %d, %Y').strftime('%Y-%m-%d')
+        except Exception:
+            pass
+
+    dob = None
+    dob_match = re.search(r'(?:DATE OF BIRTH|DOB)[:\s]+([0-9]{4}-[0-9]{2}-[0-9]{2}|[A-Za-z]+\s+[0-9]{1,2},\s+[0-9]{4})', raw, re.IGNORECASE)
+    if dob_match:
+        b_str = dob_match.group(1).strip()
+        try:
+            if '-' in b_str:
+                dob = b_str
+            else:
+                dob = datetime.strptime(b_str, '%B %d, %Y').strftime('%Y-%m-%d')
+        except Exception:
+            pass
+
+    cause = None
+    cause_match = re.search(r'(?:CAUSE OF DEATH)[:\s]+([A-Za-z0-9\s\.\,\-]+?)(?:\)|\\n|\r|\n|$)', raw, re.IGNORECASE)
+    if cause_match:
+        cause = re.sub(r'[\(\)\\\/]', '', cause_match.group(1)).strip()
+
+    if first_name or last_name:
+        return {
+            'first_name': first_name,
+            'last_name': last_name,
+            'middle_name': middle_name,
+            'suffix': suffix,
+            'dob': dob,
+            'dod': dod,
+            'cause_of_death': cause
+        }
+    return None
+
+
 def _extract_certificate(image_bytes: bytes, mime_type: str) -> Optional[Dict[str, Any]]:
     text = llm_provider.generate(
         system_prompt=CERTIFICATE_EXTRACTION_SYSTEM_PROMPT,
@@ -818,13 +886,16 @@ def _extract_certificate(image_bytes: bytes, mime_type: str) -> Optional[Dict[st
         image_mime_type=mime_type,
     )
     if text is None:
-        return None
+        return _extract_certificate_fallback(image_bytes, mime_type)
 
     try:
         parsed = json.loads(_strip_json_fences(text))
-        return parsed if isinstance(parsed, dict) else None
+        if isinstance(parsed, dict) and (parsed.get('first_name') or parsed.get('last_name')):
+            return parsed
+        fallback = _extract_certificate_fallback(image_bytes, mime_type)
+        return fallback or (parsed if isinstance(parsed, dict) else None)
     except Exception:
-        return None
+        return _extract_certificate_fallback(image_bytes, mime_type)
 
 
 @app.post('/api/extract-certificate')
