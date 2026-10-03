@@ -34,11 +34,13 @@ class Schedule {
         $sql = "
             SELECT s.*,
                    l.lot_number,
+                   l.price as lot_price,
                    t.type_name as lot_type_name,
                    sec.section_name,
                    d.first_name, d.last_name,
                    dr.full_name AS provisional_name, dr.status AS provisional_status,
                    u.full_name as created_by_name,
+                   u.contact_number as created_by_contact,
                    " . self::LATEST_PAYMENT_SELECT . "
             FROM burial_schedules s
             JOIN lots l ON s.lot_id = l.lot_id
@@ -196,10 +198,12 @@ class Schedule {
         $stmt = $this->db->prepare("
             SELECT s.*,
                    l.lot_number,
+                   l.price as lot_price,
                    sec.section_name,
                    d.first_name, d.last_name,
                    dr.full_name AS provisional_name, dr.status AS provisional_status,
                    u.full_name as created_by_name,
+                   u.contact_number as created_by_contact,
                    " . self::LATEST_PAYMENT_SELECT . "
             FROM burial_schedules s
             JOIN lots l ON s.lot_id = l.lot_id

@@ -51,7 +51,8 @@ class Relocation {
                    to_lot.lot_number as to_lot_number,
                    to_section.section_name as to_section,
                    requester.full_name as requested_by_name,
-                   approver.full_name as approved_by_name
+                   approver.full_name as approved_by_name,
+                   (SELECT p.verification_status FROM payments p WHERE p.transaction_type = 'Relocation' AND p.reference_id = r.request_id ORDER BY p.created_at DESC LIMIT 1) AS payment_status
             FROM relocation_requests r
             JOIN decedent_records d ON r.deceased_id = d.decedent_id
             JOIN lots from_lot ON r.from_lot_id = from_lot.lot_id

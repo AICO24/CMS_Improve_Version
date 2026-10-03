@@ -101,7 +101,8 @@ class ExpirationRecord {
                          WHEN e.end_date < CURDATE() THEN 'Expired'
                          WHEN e.renewed = 'no' AND e.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'Expiring'
                          ELSE 'Active'
-                       END AS status
+                       END AS status,
+                       (SELECT p.verification_status FROM payments p WHERE p.transaction_type = 'Renewal' AND p.reference_id = e.expiration_id ORDER BY p.created_at DESC LIMIT 1) AS payment_status
                 FROM expiration_records e
                 JOIN lots l ON e.lot_id = l.lot_id
                 JOIN blocks b ON l.block_id = b.block_id
