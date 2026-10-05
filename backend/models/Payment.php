@@ -81,6 +81,19 @@ class Payment {
     public function findAll($filters = [], $pagination = []) {
         $sql = "
             SELECT p.*, u.full_name AS received_by_name, v.full_name AS verified_by_name,
+                   COALESCE(
+                       NULLIF(TRIM(d_sched.contact_name), ''),
+                       NULLIF(TRIM(d_crem.contact_name), ''),
+                       NULLIF(TRIM(CONCAT(COALESCE(d_sched.first_name, ''), ' ', COALESCE(d_sched.last_name, ''))), ''),
+                       NULLIF(TRIM(CONCAT(COALESCE(d_crem.first_name, ''), ' ', COALESCE(d_crem.last_name, ''))), ''),
+                       NULLIF(TRIM(p.notes), ''),
+                       NULLIF(TRIM(u.full_name), '')
+                   ) AS payer_name,
+                   COALESCE(
+                       NULLIF(TRIM(d_sched.contact_number), ''),
+                       NULLIF(TRIM(d_crem.contact_number), ''),
+                       NULLIF(TRIM(u.contact_number), '')
+                   ) AS payer_contact,
                    (
                        p.transaction_type = 'Lot Purchase'
                        AND p.receipt_url IS NOT NULL AND p.receipt_url <> ''
@@ -94,6 +107,8 @@ class Payment {
                    ON (p.reference_kind = 'schedule' OR p.reference_kind IS NULL OR p.reference_kind = '') AND p.reference_id = ref_schedule.schedule_id
             LEFT JOIN cremation_records ref_cremation
                    ON (p.transaction_type = 'Cremation' OR p.transaction_type = 'Columbarium' OR p.reference_kind = 'cremation') AND p.reference_id = ref_cremation.cremation_id
+            LEFT JOIN decedent_records d_sched ON ref_schedule.deceased_id = d_sched.decedent_id
+            LEFT JOIN decedent_records d_crem ON ref_cremation.deceased_id = d_crem.decedent_id
             LEFT JOIN lots lot_price
                    ON ((p.reference_kind = 'schedule' OR p.reference_kind IS NULL OR p.reference_kind = '') AND lot_price.lot_id = ref_schedule.lot_id)
                    OR (p.reference_kind = 'lot' AND lot_price.lot_id = p.reference_id)

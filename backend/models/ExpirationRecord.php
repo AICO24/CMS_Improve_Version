@@ -218,7 +218,23 @@ class ExpirationRecord {
     // $pagination optional, same {page, per_page} shape as findAll(); omitted
     // (the report page's current behavior) returns every matching row.
     public function findExpiringSoon($days = 30, $pagination = [], $filters = []) {
-        $sql = "SELECT e.*, l.lot_number, b.block_name, s.section_name FROM expiration_records e JOIN lots l ON e.lot_id = l.lot_id JOIN blocks b ON l.block_id = b.block_id JOIN sections s ON b.section_id = s.section_id WHERE e.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)";
+        $sql = "SELECT e.*, l.lot_number, b.block_name, s.section_name,
+                       d.decedent_name, d.contact_name, d.contact_number, d.dod
+                FROM expiration_records e
+                JOIN lots l ON e.lot_id = l.lot_id
+                JOIN blocks b ON l.block_id = b.block_id
+                JOIN sections s ON b.section_id = s.section_id
+                LEFT JOIN (
+                    SELECT lot_id,
+                           GROUP_CONCAT(TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))) SEPARATOR ', ') AS decedent_name,
+                           MAX(contact_name) AS contact_name,
+                           MAX(contact_number) AS contact_number,
+                           MAX(dod) AS dod
+                    FROM decedent_records
+                    WHERE deleted_at IS NULL
+                    GROUP BY lot_id
+                ) d ON l.lot_id = d.lot_id
+                WHERE e.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)";
         $params = [$days];
 
         if (!empty($filters['date_from'])) {
@@ -287,7 +303,23 @@ class ExpirationRecord {
     }
 
     public function findExpired($pagination = [], $filters = []) {
-        $sql = "SELECT e.*, l.lot_number, b.block_name, s.section_name FROM expiration_records e JOIN lots l ON e.lot_id = l.lot_id JOIN blocks b ON l.block_id = b.block_id JOIN sections s ON b.section_id = s.section_id WHERE e.end_date < CURDATE()";
+        $sql = "SELECT e.*, l.lot_number, b.block_name, s.section_name,
+                       d.decedent_name, d.contact_name, d.contact_number, d.dod
+                FROM expiration_records e
+                JOIN lots l ON e.lot_id = l.lot_id
+                JOIN blocks b ON l.block_id = b.block_id
+                JOIN sections s ON b.section_id = s.section_id
+                LEFT JOIN (
+                    SELECT lot_id,
+                           GROUP_CONCAT(TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))) SEPARATOR ', ') AS decedent_name,
+                           MAX(contact_name) AS contact_name,
+                           MAX(contact_number) AS contact_number,
+                           MAX(dod) AS dod
+                    FROM decedent_records
+                    WHERE deleted_at IS NULL
+                    GROUP BY lot_id
+                ) d ON l.lot_id = d.lot_id
+                WHERE e.end_date < CURDATE()";
         $params = [];
 
         if (!empty($filters['date_from'])) {
@@ -338,7 +370,23 @@ class ExpirationRecord {
     }
 
     public function findRenewalDue($days = 30, $pagination = [], $filters = []) {
-        $sql = "SELECT e.*, l.lot_number, b.block_name, s.section_name FROM expiration_records e JOIN lots l ON e.lot_id = l.lot_id JOIN blocks b ON l.block_id = b.block_id JOIN sections s ON b.section_id = s.section_id WHERE e.renewed = 'no' AND e.end_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)";
+        $sql = "SELECT e.*, l.lot_number, b.block_name, s.section_name,
+                       d.decedent_name, d.contact_name, d.contact_number, d.dod
+                FROM expiration_records e
+                JOIN lots l ON e.lot_id = l.lot_id
+                JOIN blocks b ON l.block_id = b.block_id
+                JOIN sections s ON b.section_id = s.section_id
+                LEFT JOIN (
+                    SELECT lot_id,
+                           GROUP_CONCAT(TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))) SEPARATOR ', ') AS decedent_name,
+                           MAX(contact_name) AS contact_name,
+                           MAX(contact_number) AS contact_number,
+                           MAX(dod) AS dod
+                    FROM decedent_records
+                    WHERE deleted_at IS NULL
+                    GROUP BY lot_id
+                ) d ON l.lot_id = d.lot_id
+                WHERE e.renewed = 'no' AND e.end_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)";
         $params = [$days];
 
         if (!empty($filters['date_from'])) {
@@ -389,7 +437,23 @@ class ExpirationRecord {
     }
 
     public function findPendingReview($pagination = [], $filters = []) {
-        $sql = "SELECT e.*, l.lot_number, b.block_name, s.section_name FROM expiration_records e JOIN lots l ON e.lot_id = l.lot_id JOIN blocks b ON l.block_id = b.block_id JOIN sections s ON b.section_id = s.section_id WHERE e.exhumation_status = 'Pending'";
+        $sql = "SELECT e.*, l.lot_number, b.block_name, s.section_name,
+                       d.decedent_name, d.contact_name, d.contact_number, d.dod
+                FROM expiration_records e
+                JOIN lots l ON e.lot_id = l.lot_id
+                JOIN blocks b ON l.block_id = b.block_id
+                JOIN sections s ON b.section_id = s.section_id
+                LEFT JOIN (
+                    SELECT lot_id,
+                           GROUP_CONCAT(TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))) SEPARATOR ', ') AS decedent_name,
+                           MAX(contact_name) AS contact_name,
+                           MAX(contact_number) AS contact_number,
+                           MAX(dod) AS dod
+                    FROM decedent_records
+                    WHERE deleted_at IS NULL
+                    GROUP BY lot_id
+                ) d ON l.lot_id = d.lot_id
+                WHERE e.exhumation_status = 'Pending'";
         $params = [];
 
         if (!empty($filters['date_from'])) {

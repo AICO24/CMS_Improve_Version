@@ -106,7 +106,9 @@ class Decedent {
         $sql = "
             SELECT dr.*, 
                    l.lot_number, 
+                   b.block_name,
                    s.section_name,
+                   COALESCE(bs.schedule_date, cr.cremation_date) AS interment_date,
                    COALESCE(cr.niche_number, cr_req.niche_number) AS niche_number,
                    COALESCE(cr.columbarium, cr_req.columbarium) AS columbarium,
                    COALESCE(cr.level, cr_req.level) AS level,
@@ -117,11 +119,18 @@ class Decedent {
             LEFT JOIN blocks b ON l.block_id = b.block_id
             LEFT JOIN sections s ON b.section_id = s.section_id
             LEFT JOIN (
+                SELECT deceased_id, MIN(schedule_date) AS schedule_date
+                FROM burial_schedules
+                WHERE status IN ('Confirmed', 'Completed') OR status IS NULL
+                GROUP BY deceased_id
+            ) bs ON bs.deceased_id = dr.decedent_id
+            LEFT JOIN (
                 SELECT 
                     cr_inner.deceased_id,
                     cr_inner.niche_number,
                     cr_inner.columbarium,
                     cr_inner.level,
+                    cr_inner.cremation_date,
                     cr_inner.ash_storage_location,
                     cr_inner.status AS cremation_status
                 FROM cremation_records cr_inner

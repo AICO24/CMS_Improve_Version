@@ -36,8 +36,11 @@ class Schedule {
                    l.lot_number,
                    l.price as lot_price,
                    t.type_name as lot_type_name,
+                   b.block_name,
                    sec.section_name,
                    d.first_name, d.last_name,
+                   d.contact_name AS decedent_contact_name,
+                   d.contact_number AS decedent_contact_number,
                    dr.full_name AS provisional_name, dr.status AS provisional_status,
                    u.full_name as created_by_name,
                    u.contact_number as created_by_contact,
@@ -199,14 +202,19 @@ class Schedule {
             SELECT s.*,
                    l.lot_number,
                    l.price as lot_price,
+                   t.type_name as lot_type_name,
+                   b.block_name,
                    sec.section_name,
                    d.first_name, d.last_name,
+                   d.contact_name AS decedent_contact_name,
+                   d.contact_number AS decedent_contact_number,
                    dr.full_name AS provisional_name, dr.status AS provisional_status,
                    u.full_name as created_by_name,
                    u.contact_number as created_by_contact,
                    " . self::LATEST_PAYMENT_SELECT . "
             FROM burial_schedules s
             JOIN lots l ON s.lot_id = l.lot_id
+            JOIN lot_types t ON l.lot_type_id = t.type_id
             JOIN blocks b ON l.block_id = b.block_id
             JOIN sections sec ON b.section_id = sec.section_id
             LEFT JOIN decedent_records d ON s.deceased_id = d.decedent_id

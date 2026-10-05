@@ -456,6 +456,53 @@
     color: #0f766e;
 }
 
+.report-export-button--detailed-pdf {
+    border-color: rgba(37, 99, 235, 0.28);
+}
+
+.report-export-button--detailed-pdf:hover {
+    background: rgba(239, 246, 255, 0.96);
+    border-color: rgba(37, 99, 235, 0.45);
+    color: #1d4ed8;
+}
+
+.report-export-button--detailed-pdf i {
+    color: #2563eb;
+}
+
+.report-export-button .btn-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: #dbeafe;
+    color: #1e40af;
+    margin-left: 2px;
+    line-height: 1.2;
+}
+
+.report-export-button.is-working {
+    cursor: wait;
+    opacity: 0.9;
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+
+.report-export-button.is-ready {
+    background: #ecfdf5 !important;
+    border-color: #059669 !important;
+    color: #065f46 !important;
+}
+
+.report-export-button.is-ready i {
+    color: #059669 !important;
+}
+
 .tab-btn {
     display: inline-flex;
     align-items: center;
@@ -2889,6 +2936,27 @@
     background: rgba(52, 211, 153, 0.2) !important;
     border-color: #34d399 !important;
     color: #ffffff !important;
+}
+
+.dashboard-body[data-theme="dark"] .report-export-button--detailed-pdf {
+    border-color: rgba(96, 165, 250, 0.3) !important;
+}
+
+.dashboard-body[data-theme="dark"] .report-export-button--detailed-pdf:hover {
+    background: rgba(30, 58, 138, 0.35) !important;
+    border-color: rgba(96, 165, 250, 0.55) !important;
+    color: #93c5fd !important;
+}
+
+.dashboard-body[data-theme="dark"] .report-export-button.is-ready {
+    background: rgba(6, 78, 59, 0.45) !important;
+    border-color: #34d399 !important;
+    color: #6ee7b7 !important;
+}
+
+.dashboard-body[data-theme="dark"] .report-export-button .btn-badge-pill {
+    background: rgba(30, 58, 138, 0.6);
+    color: #93c5fd;
 }
 
 /* Section label & rules (exact match with Admin Dashboard) */
