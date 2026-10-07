@@ -24,14 +24,13 @@ Schema changes after the baseline live in `backend/database/migration_YYYYMMDD_<
 
 Once a migration has been running in a real environment for a while, fold it into `schema.sql` (re-dump) and note it as folded-in there, the way `migration_20260729_add_payment_receipt_verification.sql` and `migration_20260730_add_user_contact_and_role.sql` were folded in on 2026-08-07 — that keeps the migrations folder from growing without bound while still leaving a record of what changed and when.
 
-## Live tables (as of 2026-08-08)
-## Live tables (as of 2026-09-05)
+## Live tables (as of 2026-10-07)
 
 | Table | Purpose |
 |---|---|
-| `roles`, `users` | Auth & RBAC |
 | `roles`, `users` | Auth & RBAC (incl. `session_version` token invalidation) |
-| `sections`, `blocks`, `lots`, `lot_types` | Cemetery layout & lot inventory |
+| `cemeteries` | Top-level cemetery facilities/master sites (multi-cemetery foundation & map canvas layout settings) |
+| `sections`, `blocks`, `lots`, `lot_types` | Cemetery layout & lot inventory (`sections` linked to `cemeteries`, with minimal JSON `map_config`) |
 | `decedent_records` | Burial/cremation subjects |
 | `burial_schedules` | Burial reservations/scheduling |
 | `cremation_records` | Cremation requests/bookings and columbarium niche assignments — provisional (pre-decedent-record) bookings via `decedent_requests`, mirrors `burial_schedules`'s identical pattern; payments reference it by `transaction_type = 'Cremation'` + `reference_id` (see `payments` below) |
