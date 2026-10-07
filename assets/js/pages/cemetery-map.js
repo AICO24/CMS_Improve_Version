@@ -1,8 +1,8 @@
 /**
- * Interactive Cemetery Map & Lot Locator Controller (Batch 3)
+ * Interactive Cemetery Map & Lot Locator Controller (Batch 3 & 4A)
  * 
  * Native SVG vector engine with deterministic procedural layout,
- * progressive drill-down, live status rendering, and booking deep-linking.
+ * progressive drill-down, live status rendering, search, filters, and booking deep-linking.
  */
 (function () {
     'use strict';
@@ -20,6 +20,17 @@
         viewLevel: 'cemetery', // 'cemetery' | 'block'
         isLoading: false,
 
+        // Block Lots In-Memory Cache (scoped to current cemetery, cleared on switch)
+        blockLotsCache: {},
+
+        // Filter State (Batch 4A)
+        filters: {
+            search: '',
+            status: 'all',
+            minPrice: null,
+            maxPrice: null,
+        },
+
         // SVG Viewport & Navigation Matrix
         baseViewBox: { x: 0, y: 0, width: 1600, height: 1000 },
         currentViewBox: { x: 0, y: 0, width: 1600, height: 1000 },
@@ -32,7 +43,7 @@
     let cemeterySelector;
     let mapBreadcrumbs, bcCemetery, bcCemeteryName, bcSection, bcSectionName, bcBlock, bcBlockName;
     let statSections, statBlocks, statLots;
-    let viewLevelBadge, viewLevelText, btnBackToOverview;
+    let viewLevelBadge, viewLevelText, btnBackToOverview, filterMatchesBadge;
     let btnZoomIn, btnZoomOut, btnResetZoom;
     let svgStageContainer, cemeteryMapSvg, mapTransformLayer;
     let mapLoadingOverlay, loadingText, mapEmptyOverlay, emptyIcon, emptyTitle, emptyDesc, btnRetryMap;
@@ -40,6 +51,11 @@
     let lotDetailsDrawer, btnCloseDrawer, drawerLotNumber, drawerStatusDot, drawerStatusText;
     let drawerFacilityName, drawerSectionName, drawerBlockName, drawerLotType, drawerDimensions, drawerPrice;
     let drawerNotesRow, drawerLocationNotes, btnBookThisLot, btnLotUnavailable;
+
+    // Search & Filter DOM Elements (Batch 4A)
+    let mapSearchInput, btnClearSearch, btnMapSearch, searchResultsDropdown;
+    let statusFilter, minPriceInput, maxPriceInput, btnClearFilters;
+    let activeFiltersSummary, activeFilterCount, activeFilterChips;
 
     /**
      * Entry Point on DOM Content Loaded
@@ -81,6 +97,7 @@
         viewLevelBadge = document.getElementById('viewLevelBadge');
         viewLevelText = document.getElementById('viewLevelText');
         btnBackToOverview = document.getElementById('btnBackToOverview');
+        filterMatchesBadge = document.getElementById('filterMatchesBadge');
 
         btnZoomIn = document.getElementById('btnZoomIn');
         btnZoomOut = document.getElementById('btnZoomOut');
@@ -115,6 +132,19 @@
         drawerLocationNotes = document.getElementById('drawerLocationNotes');
         btnBookThisLot = document.getElementById('btnBookThisLot');
         btnLotUnavailable = document.getElementById('btnLotUnavailable');
+
+        // Search & Filter Controls
+        mapSearchInput = document.getElementById('mapSearchInput');
+        btnClearSearch = document.getElementById('btnClearSearch');
+        btnMapSearch = document.getElementById('btnMapSearch');
+        searchResultsDropdown = document.getElementById('searchResultsDropdown');
+        statusFilter = document.getElementById('statusFilter');
+        minPriceInput = document.getElementById('minPriceInput');
+        maxPriceInput = document.getElementById('maxPriceInput');
+        btnClearFilters = document.getElementById('btnClearFilters');
+        activeFiltersSummary = document.getElementById('activeFiltersSummary');
+        activeFilterCount = document.getElementById('activeFilterCount');
+        activeFilterChips = document.getElementById('activeFilterChips');
     }
 
     /**
@@ -159,6 +189,53 @@
                 await loadCemeteryLayout(state.currentCemeteryId);
             } else {
                 await loadCemeteries();
+            }
+        });
+
+        // Search & Filter Listeners (Batch 4A)
+        btnMapSearch.addEventListener('click', () => executeSearch());
+
+        mapSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                executeSearch();
+            } else if (e.key === 'Escape') {
+                hideSearchResultsDropdown();
+            }
+        });
+
+        mapSearchInput.addEventListener('input', () => {
+            const val = mapSearchInput.value.trim();
+            btnClearSearch.style.display = val !== '' ? 'flex' : 'none';
+            if (val === '') {
+                state.filters.search = '';
+                hideSearchResultsDropdown();
+                applyFilters();
+            }
+        });
+
+        btnClearSearch.addEventListener('click', () => {
+            mapSearchInput.value = '';
+            btnClearSearch.style.display = 'none';
+            state.filters.search = '';
+            hideSearchResultsDropdown();
+            applyFilters();
+        });
+
+        statusFilter.addEventListener('change', () => {
+            state.filters.status = statusFilter.value;
+            applyFilters();
+        });
+
+        minPriceInput.addEventListener('input', () => handlePriceFilterChange());
+        maxPriceInput.addEventListener('input', () => handlePriceFilterChange());
+
+        btnClearFilters.addEventListener('click', () => resetAllFilters());
+
+        // Dismiss search dropdown on click outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-group')) {
+                hideSearchResultsDropdown();
             }
         });
     }
@@ -264,14 +341,19 @@
 
     /**
      * Switch Selected Cemetery
+     * Enforces complete cemetery isolation (clears state, filters, cache).
      */
     async function switchCemetery(cemeteryId) {
         state.currentCemeteryId = cemeteryId;
         state.currentCemetery = state.cemeteries.find(c => c.cemetery_id === cemeteryId);
         cemeterySelector.value = cemeteryId;
 
-        // Reset state
+        // Reset state & isolated in-memory cache
         closeLotDrawer();
+        state.blockLotsCache = {}; // Strict facility isolation
+        resetAllFilters(false);    // Clear search & filters without re-filtering previous data
+        hideSearchResultsDropdown();
+
         state.currentSection = null;
         state.currentBlock = null;
         state.currentLots = [];
@@ -522,6 +604,7 @@
 
     /**
      * 3. Progressive Drill-Down to Block Lots
+     * Uses in-memory cache to eliminate redundant queries.
      * Endpoint: GET /api/map/blocks/{id}/lots
      */
     async function drillDownToBlock(block, section) {
@@ -530,6 +613,18 @@
         state.viewLevel = 'block';
 
         updateBreadcrumbs();
+
+        // 1. Check in-memory cache first
+        if (state.blockLotsCache[block.block_id]) {
+            state.currentLots = state.blockLotsCache[block.block_id];
+            viewLevelText.textContent = `${section.section_name} › ${block.block_name}`;
+            btnBackToOverview.style.display = 'inline-flex';
+            renderBlockLotsView(block, state.currentLots);
+            applyFilters();
+            return;
+        }
+
+        // 2. Progressive fetch from API
         setLoading(true, `Loading lots for ${block.block_name}...`);
 
         try {
@@ -538,10 +633,14 @@
                 state.currentBlock = res.data.block;
                 state.currentLots = res.data.lots || [];
 
+                // Store in memory cache
+                state.blockLotsCache[block.block_id] = state.currentLots;
+
                 viewLevelText.textContent = `${section.section_name} › ${block.block_name}`;
                 btnBackToOverview.style.display = 'inline-flex';
 
                 renderBlockLotsView(res.data.block, state.currentLots);
+                applyFilters();
             } else {
                 toast(res.error || 'Failed to load block lots.', 'error');
             }
@@ -596,6 +695,7 @@
         subtitleText.setAttribute('x', margin + 24);
         subtitleText.setAttribute('y', margin + 60);
         subtitleText.setAttribute('class', 'svg-section-meta');
+        subtitleText.setAttribute('id', 'blockLotsSummarySubtitle');
         subtitleText.textContent = `Total Plots: ${lots.length}  |  🟢 Available: ${counts.Available}  |  🟡 Reserved: ${counts.Reserved}  |  🔴 Occupied: ${counts.Occupied}`;
         headerGroup.appendChild(subtitleText);
 
@@ -719,6 +819,10 @@
         document.querySelectorAll('.svg-lot-tile.is-selected').forEach(el => {
             el.classList.remove('is-selected');
         });
+
+        if (!lotElement && lot && lot.lot_id) {
+            lotElement = document.querySelector(`.svg-lot-tile[data-lot-id="${lot.lot_id}"]`);
+        }
         if (lotElement) {
             lotElement.classList.add('is-selected');
         }
@@ -793,6 +897,7 @@
         if (state.currentLayout) {
             renderCemeteryOverview(state.currentLayout);
         }
+        applyFilters();
     }
 
     /**
@@ -818,6 +923,449 @@
         }
     }
 
+    // =========================================================================
+    // SEARCH & FILTER ENGINE (Batch 4A)
+    // =========================================================================
+
+    /**
+     * Execute Search across Lots, Sections, and Blocks
+     */
+    async function executeSearch() {
+        const query = (mapSearchInput.value || '').trim();
+        if (!query) {
+            state.filters.search = '';
+            hideSearchResultsDropdown();
+            applyFilters();
+            return;
+        }
+
+        state.filters.search = query;
+        btnClearSearch.style.display = 'flex';
+
+        const normQuery = query.toLowerCase();
+
+        // 1. Check if query matches a Section directly
+        const sections = state.currentLayout?.sections || [];
+        const matchedSection = sections.find(s => s.section_name.toLowerCase().includes(normQuery));
+
+        // 2. Check if query matches a Block directly
+        let matchedBlockObj = null;
+        sections.forEach(s => {
+            (s.blocks || []).forEach(b => {
+                if (b.block_name.toLowerCase().includes(normQuery)) {
+                    matchedBlockObj = { block: b, section: s };
+                }
+            });
+        });
+
+        // If the query is an exact or strong block match (e.g. "Block A1" or "A1"), drill down into that block
+        if (matchedBlockObj && !normQuery.includes('-')) {
+            hideSearchResultsDropdown();
+            await drillDownToBlock(matchedBlockObj.block, matchedBlockObj.section);
+            applyFilters();
+            return;
+        }
+
+        // 3. Search for Lots
+        const matchingLots = await searchLotsAcrossCemetery(normQuery);
+
+        if (matchingLots.length === 0) {
+            hideSearchResultsDropdown();
+            // If section matched, stay at overview and highlight section
+            if (matchedSection && state.viewLevel === 'cemetery') {
+                document.querySelectorAll('.svg-section-card').forEach(card => {
+                    const secId = parseInt(card.getAttribute('data-section-id'), 10);
+                    if (secId === matchedSection.section_id) {
+                        card.classList.add('is-matched');
+                    } else {
+                        card.classList.remove('is-matched');
+                    }
+                });
+                toast(`Found ${matchedSection.section_name}`, 'info');
+            } else {
+                toast(`No lots found matching "${query}".`, 'warning');
+            }
+            applyFilters();
+            return;
+        }
+
+        if (matchingLots.length === 1) {
+            // Exactly ONE match -> drill down, highlight, open drawer
+            hideSearchResultsDropdown();
+            const single = matchingLots[0];
+            await navigateAndSelectLot(single.lot, single.block, single.section);
+            applyFilters();
+        } else {
+            // Multiple matches -> render dropdown list
+            renderSearchResultsDropdown(matchingLots);
+            applyFilters();
+        }
+    }
+
+    /**
+     * Search Lots across current block, cached blocks, and candidate blocks
+     */
+    async function searchLotsAcrossCemetery(normQuery) {
+        const results = [];
+        const sections = state.currentLayout?.sections || [];
+
+        // A. Search currently active block first
+        if (state.viewLevel === 'block' && state.currentBlock && state.currentSection) {
+            state.currentLots.forEach(lot => {
+                if (lot.lot_number.toLowerCase().includes(normQuery)) {
+                    results.push({
+                        lot,
+                        block: state.currentBlock,
+                        section: state.currentSection
+                    });
+                }
+            });
+            if (results.length > 0) return results;
+        }
+
+        // B. Search already-cached blocks
+        for (const [blockIdStr, lots] of Object.entries(state.blockLotsCache)) {
+            const blockId = parseInt(blockIdStr, 10);
+            let bObj = null;
+            let sObj = null;
+            sections.forEach(s => {
+                (s.blocks || []).forEach(b => {
+                    if (b.block_id === blockId) {
+                        bObj = b; sObj = s;
+                    }
+                });
+            });
+
+            lots.forEach(lot => {
+                if (lot.lot_number.toLowerCase().includes(normQuery)) {
+                    results.push({ lot, block: bObj, section: sObj });
+                }
+            });
+        }
+        if (results.length > 0) return results;
+
+        // C. Candidate block resolution based on lot prefix
+        // e.g., query "A1-05" -> Block "Block A1" or Section "Garden of Everlasting Peace"
+        const candidateBlocks = [];
+        sections.forEach(s => {
+            (s.blocks || []).forEach(b => {
+                const bNorm = b.block_name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const qClean = normQuery.replace(/[^a-z0-9]/g, '');
+                if (qClean.includes(bNorm) || bNorm.includes(qClean) || normQuery.startsWith(b.block_name.toLowerCase())) {
+                    if (!state.blockLotsCache[b.block_id]) {
+                        candidateBlocks.push({ block: b, section: s });
+                    }
+                }
+            });
+        });
+
+        // Fetch candidate blocks progressively on demand
+        for (const cand of candidateBlocks) {
+            try {
+                const res = await api.request(`map/blocks/${cand.block.block_id}/lots`, { method: 'GET' });
+                if (res && res.success && res.data && Array.isArray(res.data.lots)) {
+                    state.blockLotsCache[cand.block.block_id] = res.data.lots;
+                    res.data.lots.forEach(lot => {
+                        if (lot.lot_number.toLowerCase().includes(normQuery)) {
+                            results.push({ lot, block: cand.block, section: cand.section });
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn(`Could not fetch candidate block #${cand.block.block_id}:`, e);
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * Navigate to specific Lot, drill down into its block, and open drawer
+     */
+    async function navigateAndSelectLot(lot, block, section) {
+        // If not already in that block, drill down first
+        if (!state.currentBlock || state.currentBlock.block_id !== block.block_id) {
+            await drillDownToBlock(block, section);
+        }
+
+        // Highlight lot in SVG & open details drawer
+        const lotElement = document.querySelector(`.svg-lot-tile[data-lot-id="${lot.lot_id}"]`);
+        selectLot(lot, block, section, lotElement);
+
+        // Center on lot if element exists
+        if (lotElement) {
+            const rectEl = lotElement.querySelector('rect');
+            if (rectEl) {
+                const x = parseFloat(rectEl.getAttribute('x'));
+                const y = parseFloat(rectEl.getAttribute('y'));
+                if (!isNaN(x) && !isNaN(y)) {
+                    centerViewOnPoint(x + 50, y + 40);
+                }
+            }
+        }
+    }
+
+    /**
+     * Render Multiple Search Results Dropdown
+     */
+    function renderSearchResultsDropdown(results) {
+        searchResultsDropdown.innerHTML = '';
+        const maxShown = Math.min(results.length, 10);
+
+        const header = document.createElement('div');
+        header.style.cssText = 'padding: 8px 14px; font-size: 0.75rem; font-weight: 700; color: var(--map-text-muted); border-bottom: 1px solid var(--map-border); text-transform: uppercase;';
+        header.textContent = `${results.length} matching plots found`;
+        searchResultsDropdown.appendChild(header);
+
+        results.slice(0, maxShown).forEach(item => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'search-result-item';
+
+            const statusClass = (item.lot.status || 'available').toLowerCase().replace(/\s+/g, '-');
+
+            btn.innerHTML = `
+                <div class="result-item-main">
+                    <span class="result-lot-number">Lot ${escapeHtml(item.lot.lot_number)}</span>
+                    <span class="result-lot-meta">${escapeHtml(item.section?.section_name || '')} › ${escapeHtml(item.block?.block_name || '')} • ${formatCurrency(item.lot.price)}</span>
+                </div>
+                <span class="result-status-pill status-pill--${statusClass}">${escapeHtml(item.lot.status)}</span>
+            `;
+
+            btn.addEventListener('click', async () => {
+                hideSearchResultsDropdown();
+                await navigateAndSelectLot(item.lot, item.block, item.section);
+                applyFilters();
+            });
+
+            searchResultsDropdown.appendChild(btn);
+        });
+
+        searchResultsDropdown.style.display = 'block';
+    }
+
+    function hideSearchResultsDropdown() {
+        searchResultsDropdown.style.display = 'none';
+    }
+
+    /**
+     * Handle Price Range Input Changes
+     */
+    function handlePriceFilterChange() {
+        const minVal = minPriceInput.value.trim();
+        const maxVal = maxPriceInput.value.trim();
+
+        state.filters.minPrice = minVal !== '' ? parseFloat(minVal) : null;
+        state.filters.maxPrice = maxVal !== '' ? parseFloat(maxVal) : null;
+
+        // Graceful validation if min > max
+        if (state.filters.minPrice !== null && state.filters.maxPrice !== null) {
+            if (state.filters.minPrice > state.filters.maxPrice) {
+                minPriceInput.style.borderColor = 'var(--color-danger, #dc2626)';
+                maxPriceInput.style.borderColor = 'var(--color-danger, #dc2626)';
+            } else {
+                minPriceInput.style.borderColor = '';
+                maxPriceInput.style.borderColor = '';
+            }
+        } else {
+            minPriceInput.style.borderColor = '';
+            maxPriceInput.style.borderColor = '';
+        }
+
+        applyFilters();
+    }
+
+    /**
+     * Check if a lot matches all active filters (Search AND Status AND Price)
+     */
+    function lotMatchesFilters(lot) {
+        // 1. Search Query
+        if (state.filters.search) {
+            const q = state.filters.search.toLowerCase().trim();
+            if (!lot.lot_number.toLowerCase().includes(q)) {
+                return false;
+            }
+        }
+
+        // 2. Status Filter
+        if (state.filters.status && state.filters.status !== 'all') {
+            const lotStatus = String(lot.status || '').trim().toLowerCase();
+            const targetStatus = String(state.filters.status).trim().toLowerCase();
+            if (lotStatus !== targetStatus) {
+                return false;
+            }
+        }
+
+        // 3. Price Range Filter
+        const price = parseFloat(lot.price) || 0;
+        if (state.filters.minPrice !== null && !isNaN(state.filters.minPrice)) {
+            if (price < state.filters.minPrice) {
+                return false;
+            }
+        }
+        if (state.filters.maxPrice !== null && !isNaN(state.filters.maxPrice)) {
+            if (price > state.filters.maxPrice) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Apply active filters to current view & SVG elements
+     */
+    function applyFilters() {
+        updateActiveFilterChips();
+
+        const hasActiveFilter = (
+            state.filters.search !== '' ||
+            state.filters.status !== 'all' ||
+            state.filters.minPrice !== null ||
+            state.filters.maxPrice !== null
+        );
+
+        // Update Block view lots if in block level
+        if (state.viewLevel === 'block' && state.currentLots.length > 0) {
+            let matchedCount = 0;
+
+            state.currentLots.forEach(lot => {
+                const isMatch = lotMatchesFilters(lot);
+                const tileEl = document.querySelector(`.svg-lot-tile[data-lot-id="${lot.lot_id}"]`);
+
+                if (tileEl) {
+                    if (isMatch) {
+                        tileEl.classList.remove('is-filtered-out');
+                        if (hasActiveFilter) {
+                            tileEl.classList.add('is-matched');
+                        } else {
+                            tileEl.classList.remove('is-matched');
+                        }
+                        matchedCount++;
+                    } else {
+                        tileEl.classList.add('is-filtered-out');
+                        tileEl.classList.remove('is-matched');
+                    }
+                }
+            });
+
+            // Update badge & header feedback
+            if (hasActiveFilter) {
+                filterMatchesBadge.style.display = 'inline-flex';
+                filterMatchesBadge.innerHTML = `<i class="fas fa-filter"></i> ${matchedCount} of ${state.currentLots.length} match`;
+
+                const subtitle = document.getElementById('blockLotsSummarySubtitle');
+                if (subtitle) {
+                    subtitle.textContent = matchedCount === 0
+                        ? `No plots in this block match the current filter criteria.`
+                        : `Filtered: ${matchedCount} of ${state.currentLots.length} plots match filter criteria.`;
+                }
+            } else {
+                filterMatchesBadge.style.display = 'none';
+            }
+        } else {
+            filterMatchesBadge.style.display = 'none';
+        }
+    }
+
+    /**
+     * Render Active Filter Chips
+     */
+    function updateActiveFilterChips() {
+        activeFilterChips.innerHTML = '';
+        const chips = [];
+
+        if (state.filters.search) {
+            chips.push({
+                label: `Search: "${state.filters.search}"`,
+                remove: () => {
+                    mapSearchInput.value = '';
+                    btnClearSearch.style.display = 'none';
+                    state.filters.search = '';
+                    hideSearchResultsDropdown();
+                    applyFilters();
+                }
+            });
+        }
+
+        if (state.filters.status && state.filters.status !== 'all') {
+            chips.push({
+                label: `Status: ${state.filters.status}`,
+                remove: () => {
+                    statusFilter.value = 'all';
+                    state.filters.status = 'all';
+                    applyFilters();
+                }
+            });
+        }
+
+        if (state.filters.minPrice !== null || state.filters.maxPrice !== null) {
+            const minStr = state.filters.minPrice !== null ? `₱${state.filters.minPrice}` : '0';
+            const maxStr = state.filters.maxPrice !== null ? `₱${state.filters.maxPrice}` : '∞';
+            chips.push({
+                label: `Price: ${minStr} – ${maxStr}`,
+                remove: () => {
+                    minPriceInput.value = '';
+                    maxPriceInput.value = '';
+                    state.filters.minPrice = null;
+                    state.filters.maxPrice = null;
+                    minPriceInput.style.borderColor = '';
+                    maxPriceInput.style.borderColor = '';
+                    applyFilters();
+                }
+            });
+        }
+
+        if (chips.length > 0) {
+            activeFiltersSummary.style.display = 'flex';
+            chips.forEach(c => {
+                const chip = document.createElement('span');
+                chip.className = 'filter-chip';
+                chip.innerHTML = `${escapeHtml(c.label)} <i class="fas fa-xmark filter-chip-remove" title="Remove filter"></i>`;
+                chip.querySelector('.filter-chip-remove').addEventListener('click', c.remove);
+                activeFilterChips.appendChild(chip);
+            });
+        } else {
+            activeFiltersSummary.style.display = 'none';
+        }
+    }
+
+    /**
+     * Reset / Clear All Filters
+     */
+    function resetAllFilters(reapply = true) {
+        mapSearchInput.value = '';
+        btnClearSearch.style.display = 'none';
+        statusFilter.value = 'all';
+        minPriceInput.value = '';
+        maxPriceInput.value = '';
+        minPriceInput.style.borderColor = '';
+        maxPriceInput.style.borderColor = '';
+
+        state.filters = {
+            search: '',
+            status: 'all',
+            minPrice: null,
+            maxPrice: null,
+        };
+
+        hideSearchResultsDropdown();
+
+        // Remove SVG filter classes
+        document.querySelectorAll('.svg-lot-tile.is-filtered-out').forEach(el => el.classList.remove('is-filtered-out'));
+        document.querySelectorAll('.svg-lot-tile.is-matched').forEach(el => el.classList.remove('is-matched'));
+        document.querySelectorAll('.svg-section-card.is-matched').forEach(el => el.classList.remove('is-matched'));
+        document.querySelectorAll('.svg-block-card.is-matched').forEach(el => el.classList.remove('is-matched'));
+
+        if (reapply) {
+            applyFilters();
+        }
+    }
+
+    // =========================================================================
+    // SVG VIEWPORT TRANSFORMS & ZOOM / PAN CONTROLS
+    // =========================================================================
+
     /**
      * SVG Zoom Controls
      */
@@ -837,6 +1385,16 @@
         vb.width = newW;
         vb.height = newH;
 
+        applyViewBox();
+    }
+
+    /**
+     * Center View on (X, Y) Coordinates
+     */
+    function centerViewOnPoint(x, y) {
+        const vb = state.currentViewBox;
+        vb.x = Math.max(0, x - (vb.width / 2));
+        vb.y = Math.max(0, y - (vb.height / 2));
         applyViewBox();
     }
 

@@ -133,6 +133,61 @@
                             <span class="summary-pill"><i class="fas fa-border-all"></i> <span id="statLots">0</span> Total Lots</span>
                         </div>
                     </div>
+
+                    <!-- SEARCH & FILTER TOOLBAR (Batch 4A) -->
+                    <div class="map-filter-toolbar" id="mapFilterToolbar">
+                        <!-- SEARCH GROUP -->
+                        <div class="filter-group search-group">
+                            <label for="mapSearchInput" class="filter-label"><i class="fas fa-magnifying-glass"></i> Search Map</label>
+                            <div class="search-input-wrapper">
+                                <input type="text" id="mapSearchInput" class="map-search-input" placeholder="Search lot (e.g. A1-01), block, or section..." autocomplete="off">
+                                <button type="button" id="btnClearSearch" class="search-clear-btn" title="Clear search" style="display: none;">
+                                    <i class="fas fa-xmark"></i>
+                                </button>
+                                <button type="button" id="btnMapSearch" class="btn btn-primary btn-search-action" title="Execute search">
+                                    <i class="fas fa-magnifying-glass"></i>
+                                </button>
+                            </div>
+                            <!-- MULTIPLE RESULTS DROPDOWN -->
+                            <div class="search-results-dropdown" id="searchResultsDropdown" style="display: none;"></div>
+                        </div>
+
+                        <!-- STATUS FILTER -->
+                        <div class="filter-group status-group">
+                            <label for="statusFilter" class="filter-label"><i class="fas fa-tags"></i> Status Filter</label>
+                            <select id="statusFilter" class="filter-select" aria-label="Filter by lot status">
+                                <option value="all">All Statuses</option>
+                                <option value="Available">Available</option>
+                                <option value="Reserved">Reserved</option>
+                                <option value="Occupied">Occupied</option>
+                                <option value="Unavailable">Unavailable</option>
+                                <option value="Under Maintenance">Under Maintenance</option>
+                            </select>
+                        </div>
+
+                        <!-- PRICE RANGE FILTER -->
+                        <div class="filter-group price-group">
+                            <label class="filter-label"><i class="fas fa-peso-sign"></i> Price Range</label>
+                            <div class="price-inputs-wrapper">
+                                <input type="number" id="minPriceInput" class="filter-input price-input" placeholder="Min ₱" min="0" step="500" aria-label="Minimum price in pesos">
+                                <span class="price-separator">–</span>
+                                <input type="number" id="maxPriceInput" class="filter-input price-input" placeholder="Max ₱" min="0" step="500" aria-label="Maximum price in pesos">
+                            </div>
+                        </div>
+
+                        <!-- FILTER ACTIONS -->
+                        <div class="filter-actions-group">
+                            <button type="button" id="btnClearFilters" class="btn btn-secondary btn-clear-filters" title="Reset all filters">
+                                <i class="fas fa-rotate-left"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ACTIVE FILTER STATUS BAR -->
+                    <div class="active-filters-summary" id="activeFiltersSummary" style="display: none;">
+                        <span class="active-filter-count" id="activeFilterCount"><i class="fas fa-filter"></i> Filters active</span>
+                        <div class="active-filter-chips" id="activeFilterChips"></div>
+                    </div>
                 </div>
 
                 <!-- MAIN MAP VIEWPORT CONTAINER -->
@@ -147,6 +202,7 @@
                                 <button type="button" class="btn btn-secondary btn-sm" id="btnBackToOverview" style="display: none;">
                                     <i class="fas fa-arrow-left"></i> Back to Overview
                                 </button>
+                                <span class="filter-matches-badge" id="filterMatchesBadge" style="display: none;"></span>
                             </div>
                             <div class="toolbar-right">
                                 <div class="map-zoom-controls">
