@@ -50,4 +50,15 @@ class Section {
         ");
         return $stmt->execute([$sectionId]);
     }
+
+    /**
+     * Update map configuration JSON for a section.
+     */
+    public function updateMapConfig(int $sectionId, ?array $config): bool {
+        $stmt = $this->db->prepare("UPDATE sections SET map_config = ? WHERE section_id = ?");
+        return $stmt->execute([
+            $config !== null ? json_encode($config) : null,
+            (int) $sectionId
+        ]);
+    }
 }

@@ -50,4 +50,16 @@ class Cemetery {
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
     }
+
+    /**
+     * Update map configuration JSON for a cemetery facility.
+     */
+    public function updateMapConfig(int $cemeteryId, ?array $config): bool {
+        $stmt = $this->db->prepare("UPDATE cemeteries SET map_config = ? WHERE cemetery_id = ?");
+        return $stmt->execute([
+            $config !== null ? json_encode($config) : null,
+            (int) $cemeteryId
+        ]);
+    }
 }
+

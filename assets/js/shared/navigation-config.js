@@ -184,6 +184,15 @@
             navigationOrder: 20.5,
         },
         {
+            route: 'map-management.html',
+            allowedRoles: ['admin', 'staff'],
+            showInSidebar: true,
+            sidebarGroup: 'Cemetery Management',
+            label: 'Map Calibration',
+            icon: 'fa-map-location-dot',
+            navigationOrder: 20.6,
+        },
+        {
             route: 'cremation-management.html',
             allowedRoles: ['admin', 'staff'],
             showInSidebar: true,

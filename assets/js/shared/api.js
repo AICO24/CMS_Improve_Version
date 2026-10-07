@@ -649,7 +649,7 @@ function filterSidebarByRole(role) {
 // filtering it. Every other page (single-role pages, and admin/staff
 // pages that already carry their own full nav list, e.g. ai.html) keeps
 // the existing filterSidebarByRole behavior untouched.
-const PAGES_NEEDING_SIDEBAR_REBUILD = ['payments.html', 'notifications.html', 'profile.html'];
+const PAGES_NEEDING_SIDEBAR_REBUILD = ['payments.html', 'notifications.html', 'profile.html', 'map-management.html', 'cemetery-map.html'];
 
 // Canonical sidebar structure, one per role — matches the grouped
 // architecture established in Batches 1-4 (Dashboard as a bare top-level
@@ -665,11 +665,15 @@ const ROLE_SIDEBAR_LINKS = {
             ['book-a-service.html', 'fa-handshake', 'Book a Service'],
             ['booking-assistant.html', 'fa-robot', 'Booking Assistant'],
             ['manage-bookings.html', 'fa-calendar-check', 'Manage Bookings'],
+        ] },
+        { group: 'Cemetery Management', items: [
             ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
+            ['cemetery-map.html', 'fa-map', 'Cemetery Map'],
+            ['map-management.html', 'fa-map-location-dot', 'Map Calibration'],
+            ['cremation-management.html', 'fa-fire', 'Columbarium Management'],
         ] },
         { group: 'Records', items: [
             ['decedent-records.html', 'fa-folder-open', 'Decedent Records'],
-            ['cremation-management.html', 'fa-fire', 'Cremation Management'],
             ['relocation-management.html', 'fa-truck-moving', 'Relocation Management'],
             ['expiration-monitoring.html', 'fa-hourglass-half', 'Expiration Monitoring'],
         ] },
@@ -699,6 +703,8 @@ const ROLE_SIDEBAR_LINKS = {
         ] },
         { group: 'Cemetery Management', items: [
             ['lot-management.html', 'fa-map-location-dot', 'Lot Management'],
+            ['cemetery-map.html', 'fa-map', 'Cemetery Map'],
+            ['map-management.html', 'fa-map-location-dot', 'Map Calibration'],
             ['cremation-management.html', 'fa-fire', 'Columbarium Management'],
         ] },
         { group: 'Records', items: [

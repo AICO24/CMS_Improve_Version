@@ -615,8 +615,19 @@
         sections.forEach((section, index) => {
             const col = index % cols;
             const row = Math.floor(index / cols);
-            const secX = margin + (col * (sectionW + gap));
-            const secY = margin + (row * (sectionH + gap));
+            let secX = margin + (col * (sectionW + gap));
+            let secY = margin + (row * (sectionH + gap));
+            let curSecW = sectionW;
+            let curSecH = sectionH;
+
+            // Use configured geometry if available, otherwise procedural fallback
+            if (section.map_config && !isNaN(Number(section.map_config.x)) && !isNaN(Number(section.map_config.y)) &&
+                Number(section.map_config.width) > 0 && Number(section.map_config.height) > 0) {
+                secX = Number(section.map_config.x);
+                secY = Number(section.map_config.y);
+                curSecW = Number(section.map_config.width);
+                curSecH = Number(section.map_config.height);
+            }
 
             const secGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             secGroup.setAttribute('class', 'svg-section-card');
@@ -626,8 +637,8 @@
             const secBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             secBg.setAttribute('x', secX);
             secBg.setAttribute('y', secY);
-            secBg.setAttribute('width', sectionW);
-            secBg.setAttribute('height', sectionH);
+            secBg.setAttribute('width', curSecW);
+            secBg.setAttribute('height', curSecH);
             secBg.setAttribute('class', 'svg-section-bg');
             secBg.setAttribute('filter', 'url(#tileShadow)');
             secGroup.appendChild(secBg);
@@ -637,7 +648,7 @@
             const secHeader = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             secHeader.setAttribute('x', secX);
             secHeader.setAttribute('y', secY);
-            secHeader.setAttribute('width', sectionW);
+            secHeader.setAttribute('width', curSecW);
             secHeader.setAttribute('height', headerH);
             secHeader.setAttribute('rx', '14');
             secHeader.setAttribute('class', 'svg-section-header');
@@ -654,7 +665,7 @@
             // Section Meta (Blocks & Lots)
             const blocks = section.blocks || [];
             const secMeta = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            secMeta.setAttribute('x', secX + sectionW - 16);
+            secMeta.setAttribute('x', secX + curSecW - 16);
             secMeta.setAttribute('y', secY + 28);
             secMeta.setAttribute('text-anchor', 'end');
             secMeta.setAttribute('class', 'svg-section-meta');
@@ -665,8 +676,8 @@
             const bodyMargin = 16;
             const bodyX = secX + bodyMargin;
             const bodyY = secY + headerH + bodyMargin;
-            const bodyW = sectionW - (bodyMargin * 2);
-            const bodyH = sectionH - headerH - (bodyMargin * 2);
+            const bodyW = curSecW - (bodyMargin * 2);
+            const bodyH = curSecH - headerH - (bodyMargin * 2);
 
             const blockCount = blocks.length;
             if (blockCount > 0) {
@@ -682,8 +693,21 @@
                 blocks.forEach((block, bIdx) => {
                     const bCol = bIdx % bCols;
                     const bRow = Math.floor(bIdx / bCols);
-                    const blkX = bodyX + (bCol * (blockW + bGap));
-                    const blkY = bodyY + (bRow * (blockH + bGap));
+                    let blkX = bodyX + (bCol * (blockW + bGap));
+                    let blkY = bodyY + (bRow * (blockH + bGap));
+                    let curBlkW = blockW;
+                    let curBlkH = blockH;
+
+                    // Use configured block geometry if present, otherwise procedural fallback
+                    if (block.map_config && !isNaN(Number(block.map_config.x)) && !isNaN(Number(block.map_config.y)) &&
+                        Number(block.map_config.width) > 0 && Number(block.map_config.height) > 0) {
+                        const rawX = Number(block.map_config.x);
+                        const rawY = Number(block.map_config.y);
+                        blkX = rawX < curSecW ? (secX + rawX) : rawX;
+                        blkY = rawY < curSecH ? (secY + rawY) : rawY;
+                        curBlkW = Number(block.map_config.width);
+                        curBlkH = Number(block.map_config.height);
+                    }
 
                     const blkGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                     blkGroup.setAttribute('class', 'svg-block-card');
@@ -696,15 +720,15 @@
                     const blkRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                     blkRect.setAttribute('x', blkX);
                     blkRect.setAttribute('y', blkY);
-                    blkRect.setAttribute('width', blockW);
-                    blkRect.setAttribute('height', blockH);
+                    blkRect.setAttribute('width', curBlkW);
+                    blkRect.setAttribute('height', curBlkH);
                     blkRect.setAttribute('class', 'svg-block-bg');
                     blkGroup.appendChild(blkRect);
 
                     // Block Name
                     const blkText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                     blkText.setAttribute('x', blkX + 14);
-                    blkText.setAttribute('y', blkY + (blockH / 2) + 5);
+                    blkText.setAttribute('y', blkY + (curBlkH / 2) + 5);
                     blkText.setAttribute('class', 'svg-block-title');
                     blkText.textContent = block.block_name;
                     blkGroup.appendChild(blkText);
@@ -713,8 +737,8 @@
                     const badgeTextContent = `${block.total_lots || 0} Plots`;
                     const badgeW = 70;
                     const badgeH = 24;
-                    const badgeX = blkX + blockW - badgeW - 12;
-                    const badgeY = blkY + (blockH / 2) - (badgeH / 2);
+                    const badgeX = blkX + curBlkW - badgeW - 12;
+                    const badgeY = blkY + (curBlkH / 2) - (badgeH / 2);
 
                     const badgeRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                     badgeRect.setAttribute('x', badgeX);
@@ -877,8 +901,19 @@
 
         const lotCount = lots.length;
         let cols = 5;
-        if (block.map_config && block.map_config.grid && block.map_config.grid.columns) {
-            cols = parseInt(block.map_config.grid.columns, 10);
+        let gapX = 14;
+        let gapY = 14;
+
+        if (block.map_config && block.map_config.grid) {
+            if (block.map_config.grid.columns && !isNaN(Number(block.map_config.grid.columns))) {
+                cols = parseInt(block.map_config.grid.columns, 10);
+            }
+            if (block.map_config.grid.gap_x !== undefined && !isNaN(Number(block.map_config.grid.gap_x))) {
+                gapX = parseFloat(block.map_config.grid.gap_x);
+            }
+            if (block.map_config.grid.gap_y !== undefined && !isNaN(Number(block.map_config.grid.gap_y))) {
+                gapY = parseFloat(block.map_config.grid.gap_y);
+            }
         } else {
             if (lotCount <= 10) cols = 5;
             else if (lotCount <= 20) cols = 5;
@@ -887,17 +922,27 @@
         }
 
         const rows = Math.ceil(lotCount / cols);
-        const gapX = 14;
-        const gapY = 14;
-
         const tileW = (gridW - ((cols - 1) * gapX)) / cols;
         const tileH = (gridH - ((rows - 1) * gapY)) / rows;
 
         lots.forEach((lot, i) => {
             const col = i % cols;
             const row = Math.floor(i / cols);
-            const lotX = gridX + (col * (tileW + gapX));
-            const lotY = gridY + (row * (tileH + gapY));
+            let lotX = gridX + (col * (tileW + gapX));
+            let lotY = gridY + (row * (tileH + gapY));
+            let curTileW = tileW;
+            let curTileH = tileH;
+
+            // Optional custom lot position override
+            if (lot.map_config && !isNaN(Number(lot.map_config.x)) && !isNaN(Number(lot.map_config.y)) &&
+                Number(lot.map_config.width) > 0 && Number(lot.map_config.height) > 0) {
+                const rawLx = Number(lot.map_config.x);
+                const rawLy = Number(lot.map_config.y);
+                lotX = rawLx < gridW ? (gridX + rawLx) : rawLx;
+                lotY = rawLy < gridH ? (gridY + rawLy) : rawLy;
+                curTileW = Number(lot.map_config.width);
+                curTileH = Number(lot.map_config.height);
+            }
 
             const lotStatusClass = (lot.status || 'Available').toLowerCase().replace(/\s+/g, '-');
             const isSelected = state.selectedLot && state.selectedLot.lot_id === lot.lot_id;
@@ -913,16 +958,16 @@
             const lotRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             lotRect.setAttribute('x', lotX);
             lotRect.setAttribute('y', lotY);
-            lotRect.setAttribute('width', tileW);
-            lotRect.setAttribute('height', tileH);
+            lotRect.setAttribute('width', curTileW);
+            lotRect.setAttribute('height', curTileH);
             lotRect.setAttribute('class', 'svg-lot-rect');
             lotRect.setAttribute('filter', 'url(#tileShadow)');
             lotGroup.appendChild(lotRect);
 
             // Lot Number Label
             const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            labelText.setAttribute('x', lotX + (tileW / 2));
-            labelText.setAttribute('y', lotY + (tileH / 2) - 2);
+            labelText.setAttribute('x', lotX + (curTileW / 2));
+            labelText.setAttribute('y', lotY + (curTileH / 2) - 2);
             labelText.setAttribute('text-anchor', 'middle');
             labelText.setAttribute('class', 'svg-lot-label');
             labelText.textContent = lot.lot_number;
@@ -930,8 +975,8 @@
 
             // Lot Status Subtitle
             const statusText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            statusText.setAttribute('x', lotX + (tileW / 2));
-            statusText.setAttribute('y', lotY + (tileH / 2) + 16);
+            statusText.setAttribute('x', lotX + (curTileW / 2));
+            statusText.setAttribute('y', lotY + (curTileH / 2) + 16);
             statusText.setAttribute('text-anchor', 'middle');
             statusText.setAttribute('class', 'svg-lot-status-text');
             statusText.textContent = lot.status;

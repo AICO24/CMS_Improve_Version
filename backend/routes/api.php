@@ -365,6 +365,92 @@ if ($path === 'auth/change-password' && $requestMethod === 'POST') {
     exit;
 }
 
+// ============================================================================
+// MAP GEOMETRY CALIBRATION & MANAGEMENT (Batch 5 - Admin/Staff Only)
+// ============================================================================
+if (preg_match('#^map/cemeteries/(\d+)/config$#', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $mapController = new MapController();
+    $result = $mapController->updateCemeteryConfig($matches[1], $input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('#^map/cemeteries/(\d+)/reset$#', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $mapController = new MapController();
+    $result = $mapController->resetCemeteryConfig($matches[1], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('#^map/sections/(\d+)/config$#', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $mapController = new MapController();
+    $result = $mapController->updateSectionConfig($matches[1], $input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('#^map/sections/(\d+)/reset$#', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $mapController = new MapController();
+    $result = $mapController->resetSectionConfig($matches[1], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('#^map/blocks/(\d+)/config$#', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $mapController = new MapController();
+    $result = $mapController->updateBlockConfig($matches[1], $input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('#^map/blocks/(\d+)/reset$#', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $mapController = new MapController();
+    $result = $mapController->resetBlockConfig($matches[1], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('#^map/lots/(\d+)/config$#', $path, $matches) && $requestMethod === 'PUT') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $input = readRequestBody();
+    $mapController = new MapController();
+    $result = $mapController->updateLotConfig($matches[1], $input, $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('#^map/lots/(\d+)/reset$#', $path, $matches) && $requestMethod === 'POST') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $mapController = new MapController();
+    $result = $mapController->resetLotConfig($matches[1], $user);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
 
 $lotController = new LotController();
 $decedentController = new DecedentController();

@@ -69,4 +69,15 @@ class Block {
         ");
         return $stmt->execute([$blockId, $blockId]);
     }
+
+    /**
+     * Update map configuration JSON for a block.
+     */
+    public function updateMapConfig(int $blockId, ?array $config): bool {
+        $stmt = $this->db->prepare("UPDATE blocks SET map_config = ? WHERE block_id = ?");
+        return $stmt->execute([
+            $config !== null ? json_encode($config) : null,
+            (int) $blockId
+        ]);
+    }
 }

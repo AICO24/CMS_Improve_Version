@@ -682,4 +682,16 @@ class Lot {
         $stmt = $this->db->query("SELECT * FROM lot_types ORDER BY type_name");
         return $stmt->fetchAll();
     }
+
+    /**
+     * Update map configuration JSON for a burial lot.
+     * Strictly touches ONLY map_config; status, price, reservations, and ownership remain intact.
+     */
+    public function updateMapConfig(int $lotId, ?array $config): bool {
+        $stmt = $this->db->prepare("UPDATE lots SET map_config = ? WHERE lot_id = ?");
+        return $stmt->execute([
+            $config !== null ? json_encode($config) : null,
+            (int) $lotId
+        ]);
+    }
 }

@@ -1,0 +1,671 @@
+/**
+ * Cemetery Map Geometry Calibration & Management Styles (Batch 5 - Studio Edition)
+ * Modern 3-pane studio layout with structure navigator, geometry inspector,
+ * high-fidelity SVG live preview, and dark theme support.
+ */
+
+.management-page-content {
+    padding: var(--space-4, 1.25rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* 1. COMPACT DISCLAIMER BANNER */
+.calibration-disclaimer-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 1rem;
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.22);
+    border-radius: var(--radius-md, 8px);
+    color: #1e40af;
+    font-size: 0.8125rem;
+    line-height: 1.35;
+}
+
+.calibration-disclaimer-banner .disclaimer-icon {
+    font-size: 1.1rem;
+    color: #2563eb;
+    flex-shrink: 0;
+}
+
+/* 2. FACILITY CONTROLS BAR */
+.facility-controls-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.875rem;
+    background: var(--surface-card, #ffffff);
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
+    border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.facility-select-group {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-width: 260px;
+}
+
+.facility-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary, #4b5563);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.facility-select-group select {
+    font-weight: 600;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid var(--border-color, #d1d5db);
+    padding: 0.45rem 0.75rem;
+    font-size: 0.875rem;
+    background-color: var(--surface-input, #fff);
+    color: var(--text-primary, #111827);
+    cursor: pointer;
+}
+
+.facility-meta-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.facility-meta-badges .badge {
+    padding: 0.3rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--surface-neutral-subtle, #f3f4f6);
+    color: var(--text-secondary, #4b5563);
+    border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.facility-meta-badges .badge-canvas-size {
+    background: rgba(16, 185, 129, 0.1);
+    color: #065f46;
+    border-color: rgba(16, 185, 129, 0.25);
+}
+
+.facility-view-mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: var(--surface-neutral-subtle, #f3f4f6);
+    padding: 0.2rem;
+    border-radius: var(--radius-md, 8px);
+}
+
+.btn-mode {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary, #6b7280);
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-mode.is-active {
+    background: var(--surface-card, #ffffff);
+    color: var(--primary, #059669);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* 3. 3-PANE STUDIO WORKSPACE LAYOUT */
+.workspace-studio-layout {
+    display: grid;
+    grid-template-columns: 270px 330px 1fr;
+    gap: 1rem;
+    align-items: stretch;
+    min-height: calc(100vh - 240px);
+}
+
+@media (max-width: 1400px) {
+    .workspace-studio-layout {
+        grid-template-columns: 250px 310px 1fr;
+    }
+}
+
+@media (max-width: 1100px) {
+    .workspace-studio-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.studio-pane {
+    display: flex;
+    flex-direction: column;
+}
+
+.hierarchy-card,
+.geometry-card,
+.preview-card {
+    background: var(--surface-card, #ffffff);
+    border-radius: var(--radius-lg, 12px);
+    border: 1px solid var(--border-color, #e5e7eb);
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.hierarchy-header,
+.geometry-header,
+.preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: var(--surface-header, #f9fafb);
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.card-title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.card-title-group i {
+    color: var(--primary, #059669);
+    font-size: 0.95rem;
+}
+
+.card-title-group h3 {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--text-primary, #111827);
+}
+
+.hierarchy-hint {
+    font-size: 0.7rem;
+    color: var(--text-tertiary, #9ca3af);
+    font-weight: 500;
+}
+
+/* 4. PANE 1: HIERARCHY TREE SEARCH & LIST */
+.hierarchy-search-box {
+    position: relative;
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    background: var(--surface-card, #ffffff);
+}
+
+.hierarchy-search-box .search-icon {
+    position: absolute;
+    left: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    color: var(--text-tertiary, #9ca3af);
+}
+
+.hierarchy-search-box input {
+    padding-left: 2rem;
+    font-size: 0.8125rem;
+    border-radius: var(--radius-md, 6px);
+}
+
+.hierarchy-body {
+    padding: 0.5rem;
+    flex: 1;
+    overflow-y: auto;
+    max-height: calc(100vh - 350px);
+}
+
+.hierarchy-tree {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.tree-item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.45rem 0.55rem;
+    border-radius: var(--radius-sm, 6px);
+    cursor: pointer;
+    font-size: 0.8125rem;
+    color: var(--text-primary, #374151);
+    transition: background-color 0.12s ease;
+    user-select: none;
+    margin-bottom: 2px;
+}
+
+.tree-item-row:hover {
+    background-color: var(--surface-hover, #f3f4f6);
+}
+
+.tree-item-row.is-selected {
+    background-color: rgba(5, 150, 105, 0.12);
+    color: var(--primary-dark, #065f46);
+    font-weight: 600;
+}
+
+.tree-label-group {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tree-icon {
+    font-size: 0.8125rem;
+    color: var(--text-secondary, #6b7280);
+    width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.tree-item-row.is-selected .tree-icon {
+    color: var(--primary, #059669);
+}
+
+.tree-badge-customized {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #3b82f6;
+    margin-left: 3px;
+    flex-shrink: 0;
+}
+
+.tree-sub-list {
+    list-style: none;
+    margin: 0.1rem 0 0.2rem 0.875rem;
+    padding: 0;
+    border-left: 1px dashed var(--border-color, #e5e7eb);
+}
+
+/* 5. PANE 2: GEOMETRY INSPECTOR FORM */
+.geometry-body {
+    padding: 1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    max-height: calc(100vh - 350px);
+}
+
+.badge-entity-type {
+    text-transform: uppercase;
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.45rem;
+    border-radius: 4px;
+    font-weight: 700;
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.form-section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary, #6b7280);
+    margin: 0.25rem 0 0.625rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.form-grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.625rem;
+    margin-bottom: 0.75rem;
+}
+
+.form-grid-2col .form-group {
+    margin-bottom: 0;
+}
+
+.form-label {
+    font-size: 0.78125rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--text-primary, #374151);
+}
+
+.form-control-sm,
+.form-grid-2col .form-control {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8125rem;
+    border-radius: var(--radius-md, 6px);
+}
+
+.coordinate-hint {
+    font-size: 0.7rem;
+    color: var(--text-tertiary, #9ca3af);
+    font-weight: normal;
+}
+
+.field-hint {
+    display: block;
+    font-size: 0.68rem;
+    color: var(--text-tertiary, #9ca3af);
+    margin-top: 0.15rem;
+}
+
+/* Validation status panel */
+.validation-panel {
+    background: var(--surface-neutral-subtle, #f9fafb);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: var(--radius-md, 8px);
+    padding: 0.625rem;
+    margin: 0.5rem 0;
+}
+
+.validation-status {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78125rem;
+    font-weight: 600;
+}
+
+.validation-status.status--valid {
+    color: #059669;
+}
+
+.validation-status.status--warning {
+    color: #d97706;
+}
+
+.validation-status.status--error {
+    color: #dc2626;
+}
+
+.validation-warnings-list {
+    margin: 0.35rem 0 0 1rem;
+    padding: 0;
+    font-size: 0.72rem;
+    color: #b45309;
+}
+
+/* Action Buttons */
+.editor-actions-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding-top: 0.875rem;
+    border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.btn-save-action {
+    width: 100%;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-revert-action,
+.btn-reset-action {
+    width: 100%;
+    font-size: 0.8125rem;
+    padding: 0.4rem 0.75rem;
+}
+
+.btn-danger-soft {
+    background: rgba(239, 68, 68, 0.08);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.btn-danger-soft:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #b91c1c;
+}
+
+/* 6. PANE 3: LIVE PREVIEW CANVAS */
+.preview-title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.live-tag {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.12);
+    padding: 0.15rem 0.45rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.live-tag i {
+    font-size: 0.45rem;
+    animation: pulse 1.5s infinite;
+}
+
+.preview-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.preview-body {
+    position: relative;
+    flex: 1;
+    min-height: 520px;
+    background: #0f172a;
+    background-image: 
+        radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+        radial-gradient(rgba(255, 255, 255, 0.05) 1px, #0f172a 1px);
+    background-size: 24px 24px;
+    background-position: 0 0, 12px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    user-select: none;
+}
+
+#previewMapSvg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* SVG Rendering Elements inside Preview */
+.svg-section-card {
+    cursor: pointer;
+    transition: filter 0.15s ease;
+}
+
+.svg-section-card:hover {
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+}
+
+.svg-section-bg {
+    fill: #ffffff;
+    stroke: #cbd5e1;
+    stroke-width: 2px;
+    rx: 14px;
+}
+
+.svg-section-header {
+    fill: #f1f5f9;
+    stroke: #cbd5e1;
+    stroke-width: 1px;
+}
+
+.svg-section-title {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 16px;
+    font-weight: 700;
+    fill: #0f172a;
+}
+
+.svg-section-meta {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 13px;
+    font-weight: 600;
+    fill: #64748b;
+}
+
+.svg-block-card {
+    cursor: pointer;
+    transition: transform 0.12s ease;
+}
+
+.svg-block-bg {
+    fill: #f8fafc;
+    stroke: #cbd5e1;
+    stroke-width: 1.5px;
+    rx: 10px;
+    transition: all 0.15s ease;
+}
+
+.svg-block-card:hover .svg-block-bg {
+    fill: #ecfdf5;
+    stroke: #10b981;
+    stroke-width: 2px;
+}
+
+.svg-block-title {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 14px;
+    font-weight: 700;
+    fill: #1e293b;
+}
+
+.svg-block-badge-bg {
+    fill: #e2e8f0;
+    rx: 6px;
+}
+
+.svg-block-badge-text {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 12px;
+    font-weight: 600;
+    fill: #334155;
+}
+
+/* Highlighting Selected Entity in Preview */
+.svg-selected-highlight-rect {
+    fill: none;
+    stroke: #3b82f6;
+    stroke-width: 3.5px;
+    stroke-dasharray: 8 4;
+    animation: dashLoop 1.2s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes dashLoop {
+    to {
+        stroke-dashoffset: -12;
+    }
+}
+
+.preview-footer-notes {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    color: var(--text-tertiary, #9ca3af);
+    background: var(--surface-header, #f9fafb);
+    border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.unsaved-indicator {
+    color: #d97706;
+    font-weight: 600;
+}
+
+/* 7. DARK THEME OVERRIDES */
+body[data-theme='dark'] .calibration-disclaimer-banner {
+    background: rgba(37, 99, 235, 0.15);
+    border-color: rgba(37, 99, 235, 0.35);
+    color: #93c5fd;
+}
+
+body[data-theme='dark'] .calibration-disclaimer-banner .disclaimer-icon {
+    color: #60a5fa;
+}
+
+body[data-theme='dark'] .facility-controls-card,
+body[data-theme='dark'] .hierarchy-card,
+body[data-theme='dark'] .geometry-card,
+body[data-theme='dark'] .preview-card,
+body[data-theme='dark'] .hierarchy-search-box {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+body[data-theme='dark'] .hierarchy-header,
+body[data-theme='dark'] .geometry-header,
+body[data-theme='dark'] .preview-header,
+body[data-theme='dark'] .preview-footer-notes {
+    background: #111827;
+    border-color: #334155;
+}
+
+body[data-theme='dark'] .card-title-group h3,
+body[data-theme='dark'] .tree-item-row {
+    color: #f1f5f9;
+}
+
+body[data-theme='dark'] .tree-item-row:hover {
+    background-color: #334155;
+}
+
+body[data-theme='dark'] .tree-item-row.is-selected {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+}
+
+body[data-theme='dark'] .facility-select-group select,
+body[data-theme='dark'] .hierarchy-search-box input {
+    background-color: #0f172a;
+    border-color: #475569;
+    color: #f1f5f9;
+}
+
+body[data-theme='dark'] .facility-meta-badges .badge {
+    background: #0f172a;
+    border-color: #334155;
+    color: #94a3b8;
+}
+
+body[data-theme='dark'] .facility-view-mode-toggle {
+    background: #0f172a;
+}
+
+body[data-theme='dark'] .btn-mode.is-active {
+    background: #334155;
+    color: #34d399;
+}
+
+body[data-theme='dark'] .validation-panel {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+body[data-theme='dark'] .editor-actions-row {
+    border-color: #334155;
+}

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Map Calibration | Cemetery System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/tokens.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/spacing.css">
+    <link rel="stylesheet" href="../../assets/css/shadows.css">
+    <link rel="stylesheet" href="../../assets/css/animations.css">
+    <link rel="stylesheet" href="../../assets/css/base.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/components/buttons.css">
+    <link rel="stylesheet" href="../../assets/css/components/cards.css">
+    <link rel="stylesheet" href="../../assets/css/components/forms.css">
+    <link rel="stylesheet" href="../../assets/css/components/modals.css">
+    <link rel="stylesheet" href="../../assets/css/components/toast.css">
+    <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/cemetery-map.css?v=1">
+    <link rel="stylesheet" href="../../assets/css/map-management.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=4">
+</head>
+
+<body class="dashboard-body">
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('cms-theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.body.setAttribute('data-theme', t);
+            } catch (e) { }
+        })();
+    </script>
+    <div class="dashboard-container">
+        <!-- STATIC SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
+                <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
+            </div>
+            <div class="sidebar-nav">
+                <!-- Dynamically populated by sidebar-nav.js / navigation-config.js -->
+            </div>
+            <div class="sidebar-footer">
+                <div class="user-chip">
+                    <i class="fas fa-user-shield"></i>
+                    <div>
+                        <span id="sidebarUserName">Admin User</span>
+                        <small id="sidebarUserRole">Administrator</small>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- TOP BAR -->
+            <div class="top-bar">
+                <div class="top-left">
+                    <label class="hamburger">
+                        <input type="checkbox" id="toggleSidebar">
+                        <svg viewBox="0 0 32 32">
+                            <path class="line line-top-bottom" d="M27 10 13 10C10.8 10 9 8.2 9 6 9 3.5 10.8 2 13 2 15.2 2 17 3.8 17 6L17 26C17 28.2 18.8 30 21 30 23.2 30 25 28.2 25 26 25 23.8 23.2 22 21 22L7 22"></path>
+                            <path class="line" d="M7 16 27 16"></path>
+                        </svg>
+                    </label>
+                    <div class="page-title-group">
+                        <h1 class="page-title">Map Geometry Calibration</h1>
+                        <span class="page-subtitle">Configure visual layout coordinates, dimensions, and lot grids</span>
+                    </div>
+                </div>
+                <div class="top-right">
+                    <a href="cemetery-map.html" class="btn btn-secondary btn-sm" title="View Public Map" id="btnViewPublicMap">
+                        <i class="fas fa-map"></i> View Public Map
+                    </a>
+                    <button type="button" id="themeToggleBtn" class="theme-toggle" aria-label="Toggle theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- CONTENT BODY -->
+            <div class="management-page-content">
+                <!-- DISCLAIMER BANNER -->
+                <div class="calibration-disclaimer-banner" role="note">
+                    <div class="disclaimer-icon"><i class="fas fa-circle-info"></i></div>
+                    <div class="disclaimer-text">
+                        <strong>Visual SVG Coordinates Notice:</strong> These settings control the visual cemetery map layout and do not represent GPS, GIS, or official land-survey coordinates.
+                    </div>
+                </div>
+
+                <!-- FACILITY CONTROLS BAR -->
+                <div class="facility-controls-card">
+                    <div class="facility-select-group">
+                        <label for="cemeterySelect" class="facility-label">
+                            <i class="fas fa-monument"></i> Cemetery Facility
+                        </label>
+                        <select id="cemeterySelect" class="form-select form-control">
+                            <option value="" disabled selected>Loading cemeteries...</option>
+                        </select>
+                    </div>
+
+                    <div class="facility-meta-badges">
+                        <span class="badge badge-facility-code" id="badgeFacilityCode">Code: —</span>
+                        <span class="badge badge-canvas-size" id="badgeCanvasSize">Canvas: 1600 × 1000</span>
+                        <span class="badge badge-structure-summary" id="badgeStructureSummary">0 Sections • 0 Blocks</span>
+                    </div>
+
+                    <div class="facility-view-mode-toggle">
+                        <button type="button" class="btn btn-sm btn-mode is-active" id="btnModeOverview" title="Preview facility overview (Sections & Blocks)">
+                            <i class="fas fa-border-all"></i> Overview
+                        </button>
+                        <button type="button" class="btn btn-sm btn-mode" id="btnModeBlockLots" title="Preview selected block lot grid">
+                            <i class="fas fa-table-cells"></i> Block Lots
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3-PANE STUDIO WORKSPACE GRID -->
+                <div class="workspace-studio-layout">
+                    <!-- PANE 1: HIERARCHY TREE NAVIGATOR -->
+                    <div class="studio-pane pane-hierarchy">
+                        <div class="card hierarchy-card">
+                            <div class="card-header hierarchy-header">
+                                <div class="card-title-group">
+                                    <i class="fas fa-sitemap"></i>
+                                    <h3>Structure</h3>
+                                </div>
+                                <span class="hierarchy-hint">Hierarchy</span>
+                            </div>
+                            <div class="hierarchy-search-box">
+                                <i class="fas fa-magnifying-glass search-icon"></i>
+                                <input type="text" id="hierarchySearchInput" class="form-control form-control-sm" placeholder="Filter sections & blocks..." autocomplete="off">
+                            </div>
+                            <div class="card-body hierarchy-body" id="hierarchyTreeContainer">
+                                <div class="hierarchy-loading"><i class="fas fa-spinner fa-spin"></i> Loading hierarchy...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANE 2: GEOMETRY & GRID INSPECTOR FORM -->
+                    <div class="studio-pane pane-inspector">
+                        <div class="card geometry-card" id="geometryEditorCard">
+                            <div class="card-header geometry-header">
+                                <div class="card-title-group">
+                                    <i class="fas fa-sliders" id="editorHeaderIcon"></i>
+                                    <h3 id="editorEntityTitle">Selected Entity</h3>
+                                </div>
+                                <span class="badge badge-entity-type" id="editorEntityTypeBadge">FACILITY</span>
+                            </div>
+
+                            <div class="card-body geometry-body">
+                                <form id="geometryForm" autocomplete="off" onsubmit="return false;">
+                                    <!-- COORDINATES GROUP -->
+                                    <div class="form-section-title">
+                                        <i class="fas fa-vector-square"></i> SVG Position & Dimensions
+                                    </div>
+                                    <div class="form-grid-2col">
+                                        <div class="form-group" id="groupX">
+                                            <label for="inputX" class="form-label">
+                                                SVG X <span class="coordinate-hint" id="hintX">(Canvas X)</span>
+                                            </label>
+                                            <input type="number" step="any" min="0" class="form-control" id="inputX" placeholder="0">
+                                        </div>
+                                        <div class="form-group" id="groupY">
+                                            <label for="inputY" class="form-label">
+                                                SVG Y <span class="coordinate-hint" id="hintY">(Canvas Y)</span>
+                                            </label>
+                                            <input type="number" step="any" min="0" class="form-control" id="inputY" placeholder="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="inputWidth" class="form-label">Width</label>
+                                            <input type="number" step="any" min="1" class="form-control" id="inputWidth" placeholder="600" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="inputHeight" class="form-label">Height</label>
+                                            <input type="number" step="any" min="1" class="form-control" id="inputHeight" placeholder="300" required>
+                                        </div>
+                                    </div>
+
+                                    <!-- GRID CONFIGURATION GROUP (BLOCKS ONLY) -->
+                                    <div class="block-grid-section" id="blockGridSection" style="display: none;">
+                                        <div class="form-section-title">
+                                            <i class="fas fa-grid-2"></i> Lot Grid Parameters
+                                        </div>
+                                        <div class="form-grid-2col">
+                                            <div class="form-group">
+                                                <label for="inputGridColumns" class="form-label">Grid Columns</label>
+                                                <input type="number" min="1" max="50" class="form-control" id="inputGridColumns" placeholder="5">
+                                                <small class="field-hint">Lots per row (1 - 50)</small>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="inputGridRows" class="form-label">Estimated Rows</label>
+                                                <input type="number" min="1" max="50" class="form-control" id="inputGridRows" placeholder="Auto" readonly>
+                                                <small class="field-hint">Derived from total plot count</small>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="inputGridGapX" class="form-label">Horizontal Gap</label>
+                                                <input type="number" step="any" min="0" class="form-control" id="inputGridGapX" placeholder="14">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="inputGridGapY" class="form-label">Vertical Gap</label>
+                                                <input type="number" step="any" min="0" class="form-control" id="inputGridGapY" placeholder="14">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- VALIDATION & WARNINGS PANEL -->
+                                    <div class="validation-panel" id="validationPanel">
+                                        <div class="validation-status status--valid" id="validationStatus">
+                                            <i class="fas fa-check-circle"></i>
+                                            <span>Geometry is valid and ready.</span>
+                                        </div>
+                                        <ul class="validation-warnings-list" id="validationWarningsList" style="display: none;">
+                                            <!-- Dynamically populated warnings -->
+                                        </ul>
+                                    </div>
+
+                                    <!-- FORM ACTION BUTTONS -->
+                                    <div class="editor-actions-row">
+                                        <button type="button" class="btn btn-primary btn-save-action" id="btnSaveGeometry">
+                                            <i class="fas fa-floppy-disk"></i> Save Changes
+                                        </button>
+                                        <button type="button" class="btn btn-secondary btn-revert-action" id="btnRevertGeometry" title="Revert to last saved values">
+                                            <i class="fas fa-arrow-rotate-left"></i> Revert
+                                        </button>
+                                        <button type="button" class="btn btn-danger-soft btn-reset-action" id="btnResetGeometry" title="Clear custom map configuration and restore procedural layout">
+                                            <i class="fas fa-trash-can"></i> Reset to Default
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANE 3: LIVE SVG PREVIEW CANVAS -->
+                    <div class="studio-pane pane-preview">
+                        <div class="card preview-card">
+                            <div class="card-header preview-header">
+                                <div class="preview-title-group">
+                                    <i class="fas fa-eye"></i>
+                                    <h3>Live SVG Preview</h3>
+                                    <span class="live-tag"><i class="fas fa-circle-dot"></i> Real-time</span>
+                                </div>
+
+                                <div class="preview-toolbar">
+                                    <button type="button" class="btn-icon" id="btnZoomIn" title="Zoom In" aria-label="Zoom In">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                    <button type="button" class="btn-icon" id="btnZoomOut" title="Zoom Out" aria-label="Zoom Out">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <button type="button" class="btn-icon" id="btnResetZoom" title="Reset Zoom / Fit View" aria-label="Reset Zoom">
+                                        <i class="fas fa-expand"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="card-body preview-body" id="previewStageContainer">
+                                <!-- OVERLAYS -->
+                                <div class="map-overlay" id="previewLoadingOverlay" style="display: none;">
+                                    <div class="spinner"></div>
+                                    <span id="previewLoadingText">Rendering layout preview...</span>
+                                </div>
+
+                                <div class="map-overlay map-overlay-empty" id="previewEmptyOverlay" style="display: none;">
+                                    <div class="empty-icon"><i class="fas fa-draw-polygon"></i></div>
+                                    <h4 id="previewEmptyTitle">No Geometry Preview</h4>
+                                    <p id="previewEmptyDesc">Select an entity to inspect or configure its visual representation.</p>
+                                </div>
+
+                                <!-- SVG STAGE -->
+                                <svg id="previewMapSvg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Cemetery map geometry calibration preview">
+                                    <defs>
+                                        <!-- Tile Drop Shadow -->
+                                        <filter id="previewShadow" x="-10%" y="-10%" width="125%" height="125%">
+                                            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.12" />
+                                        </filter>
+                                        <!-- Selection Glow -->
+                                        <filter id="selectedGlow" x="-20%" y="-20%" width="140%" height="140%">
+                                            <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#3b82f6" flood-opacity="0.8" />
+                                        </filter>
+                                    </defs>
+                                    <g id="previewTransformLayer"></g>
+                                    <!-- Highlighting overlay ring for currently selected entity -->
+                                    <rect id="selectedEntityHighlightRect" class="svg-selected-highlight-rect" x="0" y="0" width="0" height="0" style="display: none;"></rect>
+                                </svg>
+                            </div>
+
+                            <div class="preview-footer-notes">
+                                <span><i class="fas fa-hand-pointer"></i> Click elements on canvas or in the structure tree to select and calibrate.</span>
+                                <span class="unsaved-indicator" id="unsavedIndicator" style="display: none;">
+                                    <i class="fas fa-pen-ruler"></i> Unsaved edits on canvas
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- RESET CONFIRMATION MODAL -->
+    <div class="modal-backdrop" id="resetConfirmModal" style="display: none;">
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <i class="fas fa-triangle-exclamation text-danger"></i>
+                    <h3 id="modalTitle">Confirm Layout Reset</h3>
+                </div>
+                <button type="button" class="btn-close" id="btnCloseResetModal" aria-label="Close dialog">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to reset the visual layout for <strong id="resetTargetName">this item</strong>?</p>
+                <div class="alert-box alert-warning">
+                    <i class="fas fa-info-circle"></i>
+                    <div>
+                        This will remove its custom map geometry and return it to the deterministic procedural layout.
+                        <strong>Lot availability, bookings, decedent records, and pricing will remain untouched.</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnCancelReset">Cancel</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmReset">
+                    <i class="fas fa-rotate-left"></i> Confirm Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="../../assets/js/shared/navigation-config.js"></script>
+    <script src="../../assets/js/shared/api.js"></script>
+    <script src="../../assets/js/shared/toast.js"></script>
+    <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
+    <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
+    <script src="../../assets/js/pages/map-management.js?v=1"></script>
+    <script>
+        // Sidebar collapse handler for mobile hamburger toggle
+        const toggleBtn = document.getElementById("toggleSidebar");
+        const sidebar = document.querySelector(".sidebar");
+        if (toggleBtn && sidebar) {
+            toggleBtn.addEventListener("change", () => {
+                sidebar.classList.toggle("collapsed");
+            });
+        }
+    </script>
+</body>
+
+</html>
