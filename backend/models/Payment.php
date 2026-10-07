@@ -81,6 +81,7 @@ class Payment {
     public function findAll($filters = [], $pagination = []) {
         $sql = "
             SELECT p.*, u.full_name AS received_by_name, v.full_name AS verified_by_name,
+                   (SELECT r.status FROM refunds r WHERE r.payment_id = p.payment_id ORDER BY r.created_at DESC LIMIT 1) AS refund_status,
                    (
                        p.transaction_type = 'Lot Purchase'
                        AND p.receipt_url IS NOT NULL AND p.receipt_url <> ''
@@ -431,7 +432,7 @@ class Payment {
             $startDate = $now->format('Y-01-01');
             $endDate = $currentDate;
         } else { // monthly
-            $startDate = $now->format('Y-01-01');
+            $startDate = $now->format('Y-m-01');
             $endDate = $currentDate;
         }
 
@@ -556,11 +557,11 @@ class Payment {
         $sql = "SELECT verification_status, SUM(amount) AS total, COUNT(*) AS count FROM payments WHERE 1=1";
         $params = [];
         if (!empty($filters['date_from'])) {
-            $sql .= " AND payment_date >= ?";
+            $sql .= " AND COALESCE(payment_date, DATE(created_at)) >= ?";
             $params[] = $filters['date_from'];
         }
         if (!empty($filters['date_to'])) {
-            $sql .= " AND payment_date <= ?";
+            $sql .= " AND COALESCE(payment_date, DATE(created_at)) <= ?";
             $params[] = $filters['date_to'];
         }
         $sql .= " GROUP BY verification_status ORDER BY verification_status";

@@ -280,7 +280,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             const statusLower = status.toLowerCase();
 
             let paymentBadgeHtml = '';
-            if (statusLower === 'verified') {
+            if (p.refund_status === 'Succeeded') {
+                paymentBadgeHtml = `<span class="payment-badge payment-badge--refunded" style="background:#fee2e2;color:#991b1b;border:1px solid #f87171;"><i class="fas fa-rotate-left"></i> Refunded</span>`;
+            } else if (p.refund_status === 'Pending' || p.refund_status === 'Processing') {
+                paymentBadgeHtml = `<span class="payment-badge payment-badge--refund-pending" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;"><i class="fas fa-hourglass-half"></i> Refund Pending</span>`;
+            } else if (statusLower === 'verified') {
                 paymentBadgeHtml = `<span class="payment-badge payment-badge--verified"><i class="fas fa-circle-check"></i> Verified</span>`;
             } else if (statusLower === 'pending') {
                 paymentBadgeHtml = `<span class="payment-badge payment-badge--pending"><i class="fas fa-clock"></i> Pending</span>`;
@@ -622,6 +626,18 @@ document.addEventListener('DOMContentLoaded', async function() {
                             </div>
                         </div>
 
+                        ${payment.refund_status === 'Succeeded' ? `
+                        <div class="receipt-status-banner" style="background:#fee2e2;color:#991b1b;border:1px solid #f87171;margin-bottom:12px;">
+                            <div class="receipt-status-left">
+                                <i class="fas fa-rotate-left"></i>
+                                <span>REFUND: <strong>SUCCEEDED (₱${parseFloat(payment.refund_amount || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})})</strong></span>
+                            </div>
+                            <div class="receipt-status-right">
+                                <span>PayMongo Refund Completed</span>
+                            </div>
+                        </div>
+                        ` : ''}
+
                         <!-- Key Details Grid -->
                         <div class="receipt-grid">
                             <div class="receipt-grid-col">
@@ -837,10 +853,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 
                 footerActions.innerHTML = verificationHtml;
             }
-
-            document.getElementById('printReceiptBtn')?.addEventListener('click', () => {
-                window.print();
-            });
 
             document.getElementById('viewModal').style.display = 'flex';
 
@@ -1352,6 +1364,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         btn.addEventListener('click', () => {
             document.getElementById('viewModal').style.display = 'none';
         });
+    });
+    document.getElementById('printReceiptBtn')?.addEventListener('click', () => {
+        window.print();
     });
 
     const cancelPaymentBtn = document.getElementById('cancelPaymentBtn');

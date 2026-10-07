@@ -182,6 +182,16 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         tbody.innerHTML = payments.map(p => {
             const date = p.payment_date || p.created_at || '—';
+            let badgeStatus = p.verification_status || 'Pending';
+            let badgeClass = statusBadgeClass(badgeStatus);
+            if (p.refund_status === 'Succeeded') {
+                badgeStatus = 'Refunded';
+                badgeClass = 'status-danger';
+            } else if (p.refund_status === 'Pending' || p.refund_status === 'Processing') {
+                badgeStatus = 'Refund Pending';
+                badgeClass = 'status-warning';
+            }
+
             return `
                 <tr data-id="${p.payment_id}" data-status="${p.verification_status || 'Pending'}">
                     <td><strong>${p.receipt_number || '—'}</strong></td>
@@ -189,7 +199,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <td>${formatCurrency(p.amount)}</td>
                     <td>${date}</td>
                     <td>${p.payment_method || '—'}</td>
-                    <td><span class="status-badge ${statusBadgeClass(p.verification_status || 'Pending')}">${p.verification_status || 'Pending'}</span></td>
+                    <td><span class="status-badge ${badgeClass}">${badgeStatus}</span></td>
                     <td>${p.received_by_name || 'N/A'}</td>
                     <td class="action-buttons">
                         <button class="btn-view" title="View"><i class="fas fa-eye"></i></button>
@@ -341,7 +351,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             const isRejected = status.toLowerCase() === 'rejected';
 
             let statusBadgeHtml = '';
-            if (isVerified) {
+            if (payment.refund_status === 'Succeeded') {
+                statusBadgeHtml = `<span class="payhist-status-pill payhist-status-pill--rejected" style="background:#fee2e2;color:#991b1b;border:1px solid #f87171;"><i class="fas fa-rotate-left"></i> Refunded</span>`;
+            } else if (payment.refund_status === 'Pending' || payment.refund_status === 'Processing') {
+                statusBadgeHtml = `<span class="payhist-status-pill payhist-status-pill--pending" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;"><i class="fas fa-hourglass-half"></i> Refund Pending</span>`;
+            } else if (isVerified) {
                 statusBadgeHtml = `<span class="payhist-status-pill payhist-status-pill--verified"><i class="fas fa-circle-check"></i> Verified</span>`;
             } else if (isRejected) {
                 statusBadgeHtml = `<span class="payhist-status-pill payhist-status-pill--rejected"><i class="fas fa-circle-xmark"></i> Rejected</span>`;

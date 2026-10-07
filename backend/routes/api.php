@@ -1460,6 +1460,7 @@ if (preg_match('/^users\/(\d+)$/', $path, $matches) && $requestMethod === 'DELET
 }
 
 if ($path === 'reports/occupancy' && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
     echo json_encode($reportController->occupancy());
     exit;
 }
@@ -1472,6 +1473,7 @@ if ($path === 'reports/occupancy-trend' && $requestMethod === 'GET') {
 }
 
 if ($path === 'reports/revenue' && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
     $filters = [];
     if (isset($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
     if (isset($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
@@ -1489,6 +1491,7 @@ if ($path === 'reports/recent-payments' && $requestMethod === 'GET') {
 }
 
 if ($path === 'reports/expiration' && $requestMethod === 'GET') {
+    AuthMiddleware::requireRole(['admin', 'staff']);
     $pagination = [];
     $filters = [];
     if (isset($_GET['page'])) $pagination['page'] = $_GET['page'];

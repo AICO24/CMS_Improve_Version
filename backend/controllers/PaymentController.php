@@ -451,10 +451,42 @@ class PaymentController {
             return ['error' => 'Payment not found', 'code' => 404];
         }
 
-        $userId = is_array($user) ? ($user['user_id'] ?? null) : $user;
+        $userId = (int) (is_array($user) ? ($user['user_id'] ?? null) : $user);
         $userRole = strtolower(is_array($user) ? ($user['role'] ?? '') : '');
-        if (!in_array($userRole, ['admin'], true) && (int) $payment['received_by'] !== (int) $userId) {
-            return ['error' => 'You may only view your own payments', 'code' => 403];
+        $isAdminOrStaff = in_array($userRole, ['admin', 'staff'], true);
+
+        if (!$isAdminOrStaff) {
+            $isOwner = ((int) ($payment['received_by'] ?? 0) === $userId);
+            if (!$isOwner && !empty($payment['reference_id'])) {
+                $refKind = $payment['reference_kind'] ?? null;
+                $transType = $payment['transaction_type'] ?? '';
+                if ($refKind === 'schedule' || $transType === 'Lot Purchase') {
+                    $scheduleModel = new Schedule();
+                    $sched = $scheduleModel->findById($payment['reference_id']);
+                    if ($sched && (int) ($sched['created_by'] ?? 0) === $userId) {
+                        $isOwner = true;
+                    }
+                }
+                if (!$isOwner && ($transType === 'Cremation' || $transType === 'Columbarium' || $refKind === 'cremation')) {
+                    $cremationModel = new Cremation();
+                    $crem = $cremationModel->findById($payment['reference_id']);
+                    if ($crem && (int) ($crem['created_by'] ?? 0) === $userId) {
+                        $isOwner = true;
+                    }
+                }
+            }
+            if (!$isOwner) {
+                return ['error' => 'You may only view your own payments', 'code' => 403];
+            }
+        }
+
+        require_once __DIR__ . '/../models/Refund.php';
+        $refundModel = new Refund();
+        $refunds = $refundModel->findByPaymentId((int) $id);
+        $payment['refunds'] = $refunds ?: [];
+        if (!empty($refunds)) {
+            $payment['refund_status'] = $refunds[0]['status'] ?? null;
+            $payment['refund_amount'] = $refunds[0]['amount'] ?? null;
         }
 
         return $payment;
