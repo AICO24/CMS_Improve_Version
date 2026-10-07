@@ -442,7 +442,7 @@ def _fetch_available_lots() -> List[Dict[str, Any]]:
     # to eliminate lot-availability join logic duplication across PHP and Python.
     cursor.execute(
         """
-        SELECT lot_id, lot_number, price, status,
+        SELECT lot_id, block_id, lot_number, price, status,
                lot_type_name,
                section_name
         FROM v_available_lots

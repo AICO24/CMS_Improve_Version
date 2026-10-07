@@ -790,6 +790,7 @@
 
                 const altDates = res.alternative_dates || res.alternatives || res.recovery?.alternative_dates || [];
                 const altLots = res.alternative_lots || res.recovery?.alternative_lots || [];
+                const recLots = Array.isArray(res.recommendations) ? res.recommendations : [];
 
                 if (state.status === 'COMMITTED') {
                     renderPromptChips();
@@ -801,13 +802,22 @@
                         action: () => sendChatTurn(`Available ba sa ${d}?`)
                     }));
                     renderPromptChips(dateChips);
+                } else if (recLots.length > 0) {
+                    renderRecommendationCards(recLots);
+                    const lotChips = recLots.map(l => ({
+                        text: `📍 Lot #${l.lot_number} (${l.section_name})`,
+                        action: () => sendChatTurn(`Available ba ang Lot #${l.lot_number}?`)
+                    }));
+                    renderPromptChips(lotChips);
                 } else if (altLots.length > 0) {
+                    renderRecommendationCards(altLots);
                     const lotChips = altLots.map(l => ({
                         text: `📍 Lot #${l.lot_number} (${l.section_name})`,
                         action: () => sendChatTurn(`Available ba ang Lot #${l.lot_number}?`)
                     }));
                     renderPromptChips(lotChips);
                 } else if (Array.isArray(res.available_lots) && res.available_lots.length > 0) {
+                    renderRecommendationCards(res.available_lots);
                     const lotChips = res.available_lots.map(l => ({
                         text: `📍 Lot #${l.lot_number} (${l.section_name})`,
                         action: () => sendChatTurn(`Reassign to Lot #${l.lot_number}`)
@@ -1465,6 +1475,94 @@
         scrollChatToBottom();
     }
 
+    /**
+     * Render AI Lot Recommendations in Chat Thread (Batch 4B)
+     * Provides "View on Map" bridge and preserves existing booking selection.
+     */
+    function renderRecommendationCards(lots) {
+        if (!Array.isArray(lots) || lots.length === 0) return;
+
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'chat-message assistant lot-recommendations-wrapper';
+
+        const lotCardsHtml = lots.map(lot => {
+            const cemeteryId = lot.cemetery_id || 1;
+            const blockId = lot.block_id || '';
+            const lotId = lot.lot_id;
+            const lotNum = encodeURIComponent(lot.lot_number || '');
+            const viewOnMapUrl = `cemetery-map.html?cemetery_id=${encodeURIComponent(cemeteryId)}&block_id=${encodeURIComponent(blockId)}&lot_id=${encodeURIComponent(lotId)}&lot_number=${lotNum}`;
+
+            const isAvailable = String(lot.status || 'Available').toLowerCase() === 'available';
+            const hasScore = lot.score !== undefined && lot.score !== null;
+            const scoreHtml = hasScore
+                ? `<span class="score-badge"><i class="fas fa-wand-magic-sparkles"></i> ${escapeHtml(String(lot.score))}% Match</span>`
+                : '';
+
+            const reasons = Array.isArray(lot.reasons) ? lot.reasons : [];
+            const reasonsHtml = reasons.length
+                ? `
+                    <div class="recommendation-reasons-box" style="margin-top: 8px;">
+                        <div class="recommendation-reasons-label"><i class="fas fa-wand-magic-sparkles"></i> Recommendation:</div>
+                        <ul class="recommendation-reasons">
+                            ${reasons.map(r => `<li>${escapeHtml(r)}</li>`).join('')}
+                        </ul>
+                    </div>
+                `
+                : '';
+
+            return `
+                <div class="recommendation-card" data-lot-id="${escapeHtml(String(lot.lot_id))}">
+                    <div>
+                        <div class="card-header-badge-row">
+                            <div class="lot-num-title"><i class="fas fa-monument"></i> Lot ${escapeHtml(String(lot.lot_number))}</div>
+                            ${scoreHtml}
+                        </div>
+                        <div class="card-meta-pills">
+                            <span class="meta-pill section"><i class="fas fa-map-pin"></i> ${escapeHtml(lot.section_name || 'Section')}</span>
+                            ${lot.block_name ? `<span class="meta-pill"><i class="fas fa-th-large"></i> ${escapeHtml(lot.block_name)}</span>` : ''}
+                            <span class="meta-pill"><i class="fas fa-layer-group"></i> ${escapeHtml(lot.lot_type_name || 'Lawn Lot')}</span>
+                            <span class="meta-pill price">₱${Number(lot.price || 0).toLocaleString()}</span>
+                        </div>
+                        ${reasonsHtml}
+                    </div>
+                    <div class="card-actions-row">
+                        <a href="${viewOnMapUrl}" target="_blank" class="btn-view-on-map" title="View recommended lot on map" aria-label="View recommended lot on map">
+                            <i class="fas fa-map-marker-alt"></i> View on Map
+                        </a>
+                        <button type="button" class="select-lot-btn select-recommended-lot-btn" data-lot-id="${escapeHtml(String(lot.lot_id))}" data-lot-number="${escapeHtml(String(lot.lot_number))}" ${!isAvailable ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
+                            <i class="fas fa-check-circle"></i> Continue / Book
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        cardDiv.innerHTML = `
+            <div class="ai-intel-card" style="width: 100%;">
+                <div class="ai-intel-header">
+                    <span class="ai-intel-title"><i class="fas fa-wand-magic-sparkles"></i> Recommended Lots</span>
+                </div>
+                <div class="recommendations-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:12px;margin-top:10px;">
+                    ${lotCardsHtml}
+                </div>
+            </div>
+        `;
+
+        cardDiv.querySelectorAll('.select-recommended-lot-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const targetLotId = parseInt(btn.getAttribute('data-lot-id'), 10);
+                const targetLotNum = btn.getAttribute('data-lot-number');
+                if (targetLotId) {
+                    await updateDraftField('lot_id', targetLotId);
+                    appendAssistantMessage(`Selected Lot #${targetLotNum}. You can review the details on your Live Blueprint or type 'Confirm' when ready.`);
+                }
+            });
+        });
+
+        chatThread.appendChild(cardDiv);
+        scrollChatToBottom();
+    }
+
     async function confirmPendingAction(pendingAction) {
         if (!pendingAction || state.isLoading) return;
         setLoading(true);
@@ -1812,6 +1910,12 @@
             const isAvailable = String(lot.status || '').toLowerCase() === 'available';
             card.className = 'lot-card-item' + (isSelected ? ' selected' : '') + (!isAvailable ? ' disabled' : '');
 
+            const cemeteryId = lot.cemetery_id || 1;
+            const blockId = lot.block_id || '';
+            const lotId = lot.lot_id;
+            const lotNum = encodeURIComponent(lot.lot_number || '');
+            const viewOnMapUrl = `cemetery-map.html?cemetery_id=${encodeURIComponent(cemeteryId)}&block_id=${encodeURIComponent(blockId)}&lot_id=${encodeURIComponent(lotId)}&lot_number=${lotNum}`;
+
             card.innerHTML = `
                 <div>
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -1826,13 +1930,18 @@
                     </div>
                     ${!isAvailable ? `<div style="margin-top:6px;"><span class="badge" style="background:#ef4444;color:#fff;font-size:0.75rem;padding:2px 6px;border-radius:4px;font-weight:600;"><i class="fas fa-ban"></i> Fully Occupied / Unavailable</span></div>` : ''}
                 </div>
-                <button type="button" class="select-lot-btn" style="margin-top:10px;${!isAvailable ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${!isAvailable ? 'disabled' : ''}>
-                    ${isSelected ? '<i class="fas fa-check"></i> Selected' : (isAvailable ? '<i class="fas fa-check-circle"></i> Select This Lot' : '<i class="fas fa-ban"></i> Unavailable')}
-                </button>
+                <div class="card-actions-row">
+                    <a href="${viewOnMapUrl}" target="_blank" class="btn-view-on-map" title="View recommended lot on map" aria-label="View recommended lot on map">
+                        <i class="fas fa-map-marker-alt"></i> View on Map
+                    </a>
+                    <button type="button" class="select-lot-btn" style="${!isAvailable ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${!isAvailable ? 'disabled' : ''}>
+                        ${isSelected ? '<i class="fas fa-check"></i> Selected' : (isAvailable ? '<i class="fas fa-check-circle"></i> Select This Lot' : '<i class="fas fa-ban"></i> Unavailable')}
+                    </button>
+                </div>
             `;
 
             if (isAvailable) {
-                card.querySelector('button').addEventListener('click', async () => {
+                card.querySelector('button.select-lot-btn').addEventListener('click', async () => {
                     closeLotPicker();
                     await updateDraftField('lot_id', lot.lot_id);
                 });

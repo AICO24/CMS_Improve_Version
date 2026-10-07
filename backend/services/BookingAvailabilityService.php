@@ -563,7 +563,7 @@ class BookingAvailabilityService {
 
         // Query available lots strictly from v_available_lots
         $stmt = $this->db->query("
-            SELECT lot_id, lot_number, lot_type_id, price, dimensions,
+            SELECT lot_id, block_id, lot_number, lot_type_id, price, dimensions,
                    block_name, section_id, section_name, lot_type_name
             FROM v_available_lots
         ");

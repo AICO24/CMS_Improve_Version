@@ -291,6 +291,167 @@
     }
 
     /**
+     * Safely parse a positive numeric integer from query parameters.
+     * Returns:
+     *   - null if value is not provided
+     *   - positive integer if valid
+     *   - -1 if provided but invalid
+     */
+    function parsePositiveInt(val) {
+        if (val === null || val === undefined || val === '') return null;
+        const num = Number(val);
+        if (Number.isInteger(num) && num > 0) {
+            return num;
+        }
+        return -1;
+    }
+
+    /**
+     * Safe Toast Notification Helper
+     */
+    function toast(message, type = 'info') {
+        if (typeof showToast === 'function') {
+            showToast(message, { type });
+        } else {
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+    }
+
+    /**
+     * URL Parameter Initialization & Exact Lot Navigation Bridge (Batch 4B)
+     * Handles:
+     *  - cemetery_id only
+     *  - cemetery_id + block_id
+     *  - cemetery_id + block_id + lot_id
+     *  - Hierarchy validation & safe error fallbacks
+     */
+    async function initFromUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const rawCemId = urlParams.get('cemetery_id');
+        const rawBlkId = urlParams.get('block_id');
+        const rawLotId = urlParams.get('lot_id');
+
+        // Case 1: No URL parameters provided -> default to normal cemetery overview
+        if (rawCemId === null && rawBlkId === null && rawLotId === null) {
+            if (state.cemeteries.length > 0) {
+                await switchCemetery(state.cemeteries[0].cemetery_id);
+            }
+            return;
+        }
+
+        // Case 2: Missing cemetery_id but block_id or lot_id is present
+        if (rawCemId === null && (rawBlkId !== null || rawLotId !== null)) {
+            toast('Cemetery ID is required to locate the block or lot.', 'warning');
+            if (state.cemeteries.length > 0) {
+                await switchCemetery(state.cemeteries[0].cemetery_id);
+            }
+            return;
+        }
+
+        // Case 3: cemetery_id provided -> validate format
+        const targetCemId = parsePositiveInt(rawCemId);
+        if (targetCemId === -1) {
+            toast('Cemetery not found.', 'error');
+            showEmptyOverlay(
+                'Cemetery Not Found',
+                'The requested cemetery facility identifier is invalid.',
+                true
+            );
+            return;
+        }
+
+        // Case 4: Verify cemetery exists in active facilities
+        const targetCem = state.cemeteries.find(c => c.cemetery_id === targetCemId);
+        if (!targetCem) {
+            toast('Cemetery not found.', 'error');
+            showEmptyOverlay(
+                'Cemetery Not Found',
+                'The requested cemetery facility could not be found.',
+                true
+            );
+            return;
+        }
+
+        // Switch to the validated cemetery (loads layout & resets filters)
+        await switchCemetery(targetCem.cemetery_id);
+
+        // Case 5: If block_id is not provided, stop at cemetery overview
+        if (rawBlkId === null) {
+            return;
+        }
+
+        // Case 6: block_id provided -> validate format
+        const targetBlkId = parsePositiveInt(rawBlkId);
+        if (targetBlkId === -1) {
+            toast('The requested block could not be found on this cemetery.', 'error');
+            return;
+        }
+
+        // Case 7: Validate block exists and belongs to the selected cemetery
+        let targetBlockObj = null;
+        const sections = state.currentLayout?.sections || [];
+        for (const sec of sections) {
+            const foundBlk = (sec.blocks || []).find(b => b.block_id === targetBlkId);
+            if (foundBlk) {
+                targetBlockObj = { block: foundBlk, section: sec };
+                break;
+            }
+        }
+
+        if (!targetBlockObj) {
+            toast('The requested block could not be found on this cemetery.', 'error');
+            return;
+        }
+
+        // Clear active filters before opening block
+        resetAllFilters(false);
+
+        // Direct block loading
+        await drillDownToBlock(targetBlockObj.block, targetBlockObj.section);
+
+        // Case 8: If lot_id is not provided, stop at block view
+        if (rawLotId === null) {
+            return;
+        }
+
+        // Case 9: lot_id provided -> validate format
+        const targetLotId = parsePositiveInt(rawLotId);
+        if (targetLotId === -1) {
+            toast('The requested lot could not be found in this block.', 'error');
+            return;
+        }
+
+        // Case 10: Validate lot belongs to this block
+        const targetLot = state.currentLots.find(l => l.lot_id === targetLotId);
+        if (!targetLot) {
+            toast('The requested lot could not be found in this block.', 'error');
+            return;
+        }
+
+        // Exact lot found: clear filters, highlight, center, and open details drawer
+        resetAllFilters(false);
+
+        const lotElement = document.querySelector(`.svg-lot-tile[data-lot-id="${targetLot.lot_id}"]`);
+        selectLot(targetLot, targetBlockObj.block, targetBlockObj.section, lotElement);
+
+        if (lotElement) {
+            lotElement.classList.add('is-selected');
+            lotElement.classList.add('is-matched');
+
+            const rectEl = lotElement.querySelector('rect');
+            if (rectEl) {
+                const x = parseFloat(rectEl.getAttribute('x'));
+                const y = parseFloat(rectEl.getAttribute('y'));
+                const w = parseFloat(rectEl.getAttribute('width')) || 100;
+                const h = parseFloat(rectEl.getAttribute('height')) || 70;
+                if (!isNaN(x) && !isNaN(y)) {
+                    centerViewOnPoint(x + (w / 2), y + (h / 2));
+                }
+            }
+        }
+    }
+
+    /**
      * 1. Load Active Cemetery Facilities
      * Endpoint: GET /api/cemeteries
      */
@@ -302,12 +463,8 @@
                 state.cemeteries = res.data;
                 populateCemeteryDropdown(res.data);
 
-                // Auto-select first active cemetery or ID from URL parameter
-                const urlParams = new URLSearchParams(window.location.search);
-                const queryCemId = parseInt(urlParams.get('cemetery_id'), 10);
-                const initialCem = state.cemeteries.find(c => c.cemetery_id === queryCemId) || state.cemeteries[0];
-
-                await switchCemetery(initialCem.cemetery_id);
+                // Initialize map from URL parameters (Batch 4B) or default to first facility
+                await initFromUrlParams();
             } else {
                 showEmptyOverlay(
                     'No Cemetery Facilities',
