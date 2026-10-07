@@ -24,6 +24,18 @@ class Block {
         return $stmt->fetchAll();
     }
 
+    public function findByCemetery($cemeteryId) {
+        $stmt = $this->db->prepare("
+            SELECT b.*, s.section_name
+            FROM blocks b
+            JOIN sections s ON b.section_id = s.section_id
+            WHERE s.cemetery_id = ?
+            ORDER BY s.section_name, b.block_name
+        ");
+        $stmt->execute([(int) $cemeteryId]);
+        return $stmt->fetchAll();
+    }
+
     public function findById($id) {
         $stmt = $this->db->prepare("SELECT * FROM blocks WHERE block_id = ?");
         $stmt->execute([$id]);

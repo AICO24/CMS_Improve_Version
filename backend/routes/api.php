@@ -19,6 +19,7 @@ require_once __DIR__ . '/../controllers/UserController.php';
 require_once __DIR__ . '/../controllers/SystemExceptionController.php';
 require_once __DIR__ . '/../controllers/BookingAgentController.php';
 require_once __DIR__ . '/../controllers/BookingController.php';
+require_once __DIR__ . '/../controllers/MapController.php';
 require_once __DIR__ . '/../middleware/Auth.php';
 require_once __DIR__ . '/../services/RateLimiter.php';
 require_once __DIR__ . '/../services/ReconciliationService.php';
@@ -289,6 +290,37 @@ if ($path === 'payments/refund-webhook' && $requestMethod === 'POST') {
     }
     $paymentController = new PaymentController();
     $result = $paymentController->handleRefundWebhook($rawBody, $signatureHeader);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+// ============================================================================
+// CEMETERY MAPPING READ-ONLY API (Batch 2)
+// User-facing endpoints for map exploration, section/block layouts, and lot locator
+// ============================================================================
+if ($path === 'cemeteries' && $requestMethod === 'GET') {
+    $mapController = new MapController();
+    $result = $mapController->getCemeteries();
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if ($path === 'map/layout' && $requestMethod === 'GET') {
+    $mapController = new MapController();
+    $result = $mapController->getLayout($_GET['cemetery_id'] ?? null);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
+if (preg_match('/^map\/blocks\/(\d+)\/lots$/', $path, $matches) && $requestMethod === 'GET') {
+    $mapController = new MapController();
+    $result = $mapController->getBlockLots($matches[1]);
     http_response_code($result['code'] ?? 200);
     unset($result['code']);
     echo json_encode($result);

@@ -19,6 +19,12 @@ class Section {
         return $stmt->fetch();
     }
 
+    public function findByCemetery($cemeteryId) {
+        $stmt = $this->db->prepare("SELECT * FROM sections WHERE cemetery_id = ? ORDER BY section_name");
+        $stmt->execute([(int) $cemeteryId]);
+        return $stmt->fetchAll();
+    }
+
     public function create($data) {
         $stmt = $this->db->prepare("INSERT INTO sections (section_name, description) VALUES (?, ?)");
         $success = $stmt->execute([$data['section_name'], $data['description'] ?? '']);

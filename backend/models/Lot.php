@@ -341,6 +341,24 @@ class Lot {
         return $stmt->fetch();
     }
 
+    /**
+     * Retrieve privacy-safe, lightweight lots for a specific block on the interactive map.
+     * Excludes all decedent PII, claimant records, and payment history.
+     */
+    public function findMapLotsByBlock($blockId) {
+        $this->syncExpiredLots();
+        $stmt = $this->db->prepare("
+            SELECT l.lot_id, l.block_id, l.lot_number, l.status, l.price, l.dimensions,
+                   l.location_notes, l.map_config, t.type_name AS lot_type_name
+            FROM lots l
+            JOIN lot_types t ON l.lot_type_id = t.type_id
+            WHERE l.block_id = ? AND l.is_active = 1
+            ORDER BY CAST(l.lot_number AS UNSIGNED) ASC, l.lot_number ASC
+        ");
+        $stmt->execute([(int) $blockId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
     public function create($data) {
         $lotNumber = trim((string) ($data['lot_number'] ?? ''));
         if ($lotNumber === '') {
