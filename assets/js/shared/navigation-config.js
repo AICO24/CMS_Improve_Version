@@ -175,6 +175,15 @@
             navigationOrder: 20,
         },
         {
+            route: 'cemetery-map.html',
+            allowedRoles: ['admin', 'staff', 'user'],
+            showInSidebar: true,
+            sidebarGroup: { admin: 'Cemetery Management', staff: 'Cemetery Management', user: 'Services' },
+            label: 'Cemetery Map',
+            icon: 'fa-map',
+            navigationOrder: 20.5,
+        },
+        {
             route: 'cremation-management.html',
             allowedRoles: ['admin', 'staff'],
             showInSidebar: true,

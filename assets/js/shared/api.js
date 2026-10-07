@@ -544,6 +544,7 @@ const PAGE_ROLE_ACCESS = (typeof window !== 'undefined' && window.CMS_NAVIGATION
         'dashboard_user.html': ['user'],
         'book-a-service.html': ['admin', 'staff', 'user'],
         'booking-assistant.html': ['admin', 'staff', 'user'],
+        'cemetery-map.html': ['admin', 'staff', 'user'],
         'my-bookings.html': ['admin', 'staff', 'user'],
         'lot-management.html': ['admin', 'staff'],
         'burial-scheduling.html': ['admin', 'staff'],

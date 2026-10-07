@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Cemetery Map | Cemetery System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/tokens.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/spacing.css">
+    <link rel="stylesheet" href="../../assets/css/shadows.css">
+    <link rel="stylesheet" href="../../assets/css/animations.css">
+    <link rel="stylesheet" href="../../assets/css/base.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/components/buttons.css">
+    <link rel="stylesheet" href="../../assets/css/components/cards.css">
+    <link rel="stylesheet" href="../../assets/css/components/forms.css">
+    <link rel="stylesheet" href="../../assets/css/components/modals.css">
+    <link rel="stylesheet" href="../../assets/css/components/toast.css">
+    <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/cemetery-map.css?v=1">
+    <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
+    <link rel="stylesheet" href="../../assets/css/theme-dark.css?v=4">
+</head>
+
+<body class="dashboard-body">
+    <script>(function () { try { var t = localStorage.getItem('cms-theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); document.body.setAttribute('data-theme', t); } catch (e) { } })();</script>
+    <div class="dashboard-container">
+        <!-- STATIC SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand"><i class="fas fa-tree"></i> <span>Cemetery Management System</span></div>
+                <button type="button" id="railToggleBtn" title="Collapse to icons"><i class="fas fa-angles-left"></i></button>
+            </div>
+            <div class="sidebar-nav">
+                <!-- Dynamically populated by sidebar-nav.js / navigation-config.js -->
+            </div>
+            <div class="sidebar-footer">
+                <div class="user-chip">
+                    <i class="fas fa-user"></i>
+                    <div>
+                        <span id="sidebarUserName">User</span>
+                        <small id="sidebarUserRole">Citizen</small>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- TOP BAR -->
+            <div class="top-bar">
+                <div class="top-left">
+                    <label class="hamburger">
+                        <input type="checkbox" id="toggleSidebar">
+                        <svg viewBox="0 0 32 32">
+                            <path class="line line-top-bottom" d="M27 10H13c-2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4 2.209 0 4 1.791 4 4v20 c0 2.209-1.791 4-4 4 -2.209 0-4-1.791-4-4 0-2.209 1.791-4 4-4h14"></path>
+                            <path class="line" d="M7 16H27"></path>
+                        </svg>
+                    </label>
+                    <h3 id="pageTitle">Cemetery Map</h3>
+                </div>
+                <div class="user-info">
+                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false"><i class="fas fa-moon"></i></button>
+                    <div class="notification-icon" id="notificationIcon">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="notificationBadge">0</span>
+                    </div>
+                    <div class="profile">
+                        <div class="profile-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
+                        <div class="profile-text">
+                            <div class="user-name" id="userName">User</div>
+                            <div class="user-role" id="userRole">Citizen</div>
+                        </div>
+                    </div>
+                    <button class="Btn logout-btn" id="logoutBtn" title="Log Out">
+                        <div class="sign"><i class="fas fa-arrow-right-from-bracket"></i></div>
+                        <div class="text">Logout</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- MAP CONTENT WRAPPER -->
+            <div class="map-page-container">
+                <!-- PAGE HEADER & DISCLAIMER -->
+                <div class="map-header-card">
+                    <div class="map-header-content">
+                        <div class="map-header-titles">
+                            <h1 class="map-title"><i class="fas fa-map-location-dot"></i> Interactive Cemetery Map &amp; Lot Locator</h1>
+                            <p class="map-subtitle">Visually explore cemetery facilities, navigate sections and blocks, inspect real-time plot availability, and book available lots.</p>
+                        </div>
+                        <div class="map-disclaimer-pill" title="Configurable visual arrangement">
+                            <i class="fas fa-circle-info"></i>
+                            <span>Map layout is a configurable visual representation.</span>
+                        </div>
+                    </div>
+
+                    <!-- CEMETERY SELECTOR & DRILL-DOWN BAR -->
+                    <div class="map-selection-bar">
+                        <div class="cemetery-select-group">
+                            <label for="cemeterySelector" class="control-label"><i class="fas fa-monument"></i> Facility:</label>
+                            <select id="cemeterySelector" class="cemetery-dropdown" aria-label="Select Cemetery Facility">
+                                <option value="" disabled selected>Loading facilities...</option>
+                            </select>
+                        </div>
+
+                        <!-- BREADCRUMBS -->
+                        <nav class="map-breadcrumbs" id="mapBreadcrumbs" aria-label="Map navigation breadcrumbs">
+                            <ol class="breadcrumb-list">
+                                <li class="breadcrumb-item active" id="bcCemetery">
+                                    <i class="fas fa-city"></i>
+                                    <span id="bcCemeteryName">Cemetery Overview</span>
+                                </li>
+                                <li class="breadcrumb-item" id="bcSection" style="display: none;">
+                                    <i class="fas fa-chevron-right separator"></i>
+                                    <span id="bcSectionName">Section</span>
+                                </li>
+                                <li class="breadcrumb-item" id="bcBlock" style="display: none;">
+                                    <i class="fas fa-chevron-right separator"></i>
+                                    <span id="bcBlockName">Block</span>
+                                </li>
+                            </ol>
+                        </nav>
+
+                        <!-- SUMMARY STATS BADGES -->
+                        <div class="map-summary-pills" id="mapSummaryPills">
+                            <span class="summary-pill"><i class="fas fa-layer-group"></i> <span id="statSections">0</span> Sections</span>
+                            <span class="summary-pill"><i class="fas fa-cubes"></i> <span id="statBlocks">0</span> Blocks</span>
+                            <span class="summary-pill"><i class="fas fa-border-all"></i> <span id="statLots">0</span> Total Lots</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MAIN MAP VIEWPORT CONTAINER -->
+                <div class="map-viewport-wrapper">
+                    <div class="map-viewport-card">
+                        <!-- VIEWPORT TOOLBAR -->
+                        <div class="map-viewport-toolbar">
+                            <div class="toolbar-left">
+                                <span class="view-level-badge" id="viewLevelBadge">
+                                    <i class="fas fa-map"></i> <span id="viewLevelText">Cemetery Overview</span>
+                                </span>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btnBackToOverview" style="display: none;">
+                                    <i class="fas fa-arrow-left"></i> Back to Overview
+                                </button>
+                            </div>
+                            <div class="toolbar-right">
+                                <div class="map-zoom-controls">
+                                    <button type="button" class="zoom-btn" id="btnZoomIn" title="Zoom In" aria-label="Zoom in on map">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                    <button type="button" class="zoom-btn" id="btnZoomOut" title="Zoom Out" aria-label="Zoom out on map">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <button type="button" class="zoom-btn" id="btnResetZoom" title="Reset View" aria-label="Reset map view">
+                                        <i class="fas fa-arrows-rotate"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SVG CANVAS VIEWPORT -->
+                        <div class="svg-stage-container" id="svgStageContainer">
+                            <!-- LOADING SPINNER -->
+                            <div class="map-loading-overlay" id="mapLoadingOverlay">
+                                <div class="spinner-ring"></div>
+                                <span class="loading-text" id="loadingText">Loading cemetery layout...</span>
+                            </div>
+
+                            <!-- EMPTY / ERROR STATE OVERLAY -->
+                            <div class="map-empty-overlay" id="mapEmptyOverlay" style="display: none;">
+                                <div class="empty-icon-wrap" id="emptyIcon"><i class="fas fa-map-pin"></i></div>
+                                <h3 class="empty-title" id="emptyTitle">No Data Available</h3>
+                                <p class="empty-desc" id="emptyDesc">Select a cemetery facility to display its interactive map layout.</p>
+                                <button type="button" class="btn btn-primary btn-sm" id="btnRetryMap" style="display: none;">
+                                    <i class="fas fa-arrow-rotate-right"></i> Try Again
+                                </button>
+                            </div>
+
+                            <!-- FLOATING TOOLTIP -->
+                            <div class="svg-floating-tooltip" id="svgFloatingTooltip" role="tooltip" style="display: none;"></div>
+
+                            <!-- NATIVE SVG MAP CANVAS -->
+                            <svg id="cemeteryMapSvg" class="cemetery-map-svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Interactive Cemetery Map">
+                                <defs>
+                                    <!-- Subtle Drop Shadow for Interactive Tiles -->
+                                    <filter id="tileShadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+                                        <feDropShadow dx="0" dy="3" stdDeviation="3" flood-opacity="0.12" flood-color="#0f172a" />
+                                    </filter>
+                                    <filter id="tileHoverShadow" x="-8%" y="-8%" width="116%" height="120%" filterUnits="userSpaceOnUse">
+                                        <feDropShadow dx="0" dy="5" stdDeviation="5" flood-opacity="0.22" flood-color="#0f172a" />
+                                    </filter>
+                                </defs>
+                                <g id="mapTransformLayer">
+                                    <!-- Dynamic content rendered here -->
+                                </g>
+                            </svg>
+                        </div>
+
+                        <!-- MAP FOOTER & LEGEND -->
+                        <div class="map-footer-legend">
+                            <div class="legend-title"><i class="fas fa-circle-question"></i> Lot Legend:</div>
+                            <div class="legend-items">
+                                <div class="legend-item">
+                                    <span class="legend-swatch swatch-available"></span>
+                                    <span class="legend-label">Available</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-swatch swatch-reserved"></span>
+                                    <span class="legend-label">Reserved</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-swatch swatch-occupied"></span>
+                                    <span class="legend-label">Occupied</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-swatch swatch-unavailable"></span>
+                                    <span class="legend-label">Unavailable</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-swatch swatch-selected"></span>
+                                    <span class="legend-label">Selected</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LOT DETAILS DRAWER / SIDE PANEL -->
+                    <div class="lot-details-drawer" id="lotDetailsDrawer" aria-hidden="true">
+                        <div class="drawer-header">
+                            <div class="drawer-title-group">
+                                <span class="drawer-badge" id="drawerLotBadge">Burial Lot</span>
+                                <h2 class="drawer-lot-number" id="drawerLotNumber">A1-001</h2>
+                            </div>
+                            <button type="button" class="drawer-close-btn" id="btnCloseDrawer" title="Close details panel" aria-label="Close details panel">
+                                <i class="fas fa-xmark"></i>
+                            </button>
+                        </div>
+
+                        <div class="drawer-body">
+                            <!-- STATUS BANNER -->
+                            <div class="lot-status-card" id="lotStatusCard">
+                                <div class="status-indicator-dot" id="drawerStatusDot"></div>
+                                <div class="status-meta">
+                                    <span class="status-label">Current Status</span>
+                                    <strong class="status-value" id="drawerStatusText">Available</strong>
+                                </div>
+                            </div>
+
+                            <!-- HIERARCHY LOCATION CARD -->
+                            <div class="drawer-section-card">
+                                <h3 class="section-card-title"><i class="fas fa-location-dot"></i> Location Placement</h3>
+                                <div class="meta-row">
+                                    <span class="meta-label">Facility</span>
+                                    <span class="meta-value" id="drawerFacilityName">—</span>
+                                </div>
+                                <div class="meta-row">
+                                    <span class="meta-label">Section</span>
+                                    <span class="meta-value" id="drawerSectionName">—</span>
+                                </div>
+                                <div class="meta-row">
+                                    <span class="meta-label">Block</span>
+                                    <span class="meta-value" id="drawerBlockName">—</span>
+                                </div>
+                            </div>
+
+                            <!-- LOT SPECIFICATIONS CARD -->
+                            <div class="drawer-section-card">
+                                <h3 class="section-card-title"><i class="fas fa-ruler-combined"></i> Plot Specifications</h3>
+                                <div class="meta-row">
+                                    <span class="meta-label">Lot Classification</span>
+                                    <span class="meta-value" id="drawerLotType">Standard Lawn</span>
+                                </div>
+                                <div class="meta-row">
+                                    <span class="meta-label">Dimensions</span>
+                                    <span class="meta-value" id="drawerDimensions">1.0m × 2.4m</span>
+                                </div>
+                                <div class="meta-row">
+                                    <span class="meta-label">Public Price</span>
+                                    <span class="meta-value price-highlight" id="drawerPrice">₱45,000.00</span>
+                                </div>
+                                <div class="meta-row" id="drawerNotesRow" style="display: none;">
+                                    <span class="meta-label">Notes</span>
+                                    <span class="meta-value" id="drawerLocationNotes">—</span>
+                                </div>
+                            </div>
+
+                            <!-- PRIVACY-SAFE NOTICE -->
+                            <div class="drawer-privacy-note">
+                                <i class="fas fa-shield-halved"></i>
+                                <span>Public lot locator. Personal decedent and reservation records are kept confidential.</span>
+                            </div>
+                        </div>
+
+                        <!-- DRAWER ACTION FOOTER -->
+                        <div class="drawer-footer">
+                            <a href="#" class="btn btn-primary btn-block btn-book-lot" id="btnBookThisLot">
+                                <i class="fas fa-calendar-plus"></i> Book This Lot
+                            </a>
+                            <button type="button" class="btn btn-secondary btn-block btn-lot-unavailable" id="btnLotUnavailable" disabled style="display: none;">
+                                <i class="fas fa-lock"></i> Not Available for Booking
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- SHARED LIBRARIES & PAGE CONTROLLER -->
+    <script src="../../assets/js/shared/navigation-config.js"></script>
+    <script src="../../assets/js/shared/api.js"></script>
+    <script src="../../assets/js/shared/toast.js"></script>
+    <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
+    <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>
+    <script src="../../assets/js/pages/cemetery-map.js?v=1"></script>
+    <script>
+        // Sidebar collapse handler for mobile hamburger toggle
+        const toggleBtn = document.getElementById("toggleSidebar");
+        const sidebar = document.querySelector(".sidebar");
+        if (toggleBtn && sidebar) {
+            toggleBtn.addEventListener("change", () => {
+                sidebar.classList.toggle("collapsed");
+            });
+        }
+    </script>
+</body>
+
+</html>
