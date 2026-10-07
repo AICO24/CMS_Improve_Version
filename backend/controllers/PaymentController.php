@@ -83,7 +83,7 @@ class PaymentController {
         $referenceId = $this->normalizeReferenceId($referenceId);
         $referenceKind = in_array($referenceKind, ['schedule', 'lot'], true) ? $referenceKind : null;
 
-        if ($referenceId === null) {
+        if ($referenceId === null || $transactionType === null) {
             return ['expected_amount' => null];
         }
 
@@ -120,49 +120,77 @@ class PaymentController {
         $scheduleModel = new Schedule();
         $lotModel = new Lot();
 
-        if ($referenceKind === 'lot') {
-            $lot = $lotModel->findById($referenceId);
-            return ($lot && isset($lot['price']))
-                ? ['expected_amount' => (float) $lot['price'], 'lot_number' => $lot['lot_number'] ?? null, 'source' => 'lot']
-                : ['expected_amount' => null];
-        }
-
-        if ($referenceKind === 'schedule') {
-            $schedule = $scheduleModel->findById($referenceId);
-            if (!$schedule || empty($schedule['lot_id'])) {
-                return ['expected_amount' => null];
+        if ($transactionType === 'Lot Purchase') {
+            if ($referenceKind === 'lot') {
+                $lot = $lotModel->findById($referenceId);
+                return ($lot && isset($lot['price']))
+                    ? ['expected_amount' => (float) $lot['price'], 'lot_number' => $lot['lot_number'] ?? null, 'source' => 'lot']
+                    : ['expected_amount' => null];
             }
-            $lot = $lotModel->findById($schedule['lot_id']);
-            return ($lot && isset($lot['price']))
-                ? ['expected_amount' => (float) $lot['price'], 'lot_number' => $lot['lot_number'] ?? null, 'source' => 'schedule']
-                : ['expected_amount' => null];
-        }
 
-        // No explicit kind — original guess-by-existence fallback, unchanged
-        // from before this batch. reference_id for 'Lot Purchase' is, in
-        // practice, either a schedule_id (the normal "reserve then pay" flow)
-        // or a raw lot_id (the Lot Management "Pay Now" shortcut used before
-        // any schedule exists) — try schedule first since that's the more
-        // common path, then fall back.
-        $schedule = $scheduleModel->findById($referenceId);
-        if ($schedule && !empty($schedule['lot_id'])) {
-            $lot = $lotModel->findById($schedule['lot_id']);
+            if ($referenceKind === 'schedule') {
+                $schedule = $scheduleModel->findById($referenceId);
+                if (!$schedule || empty($schedule['lot_id'])) {
+                    return ['expected_amount' => null];
+                }
+                $lot = $lotModel->findById($schedule['lot_id']);
+                return ($lot && isset($lot['price']))
+                    ? ['expected_amount' => (float) $lot['price'], 'lot_number' => $lot['lot_number'] ?? null, 'source' => 'schedule']
+                    : ['expected_amount' => null];
+            }
+
+            // No explicit kind — fallback
+            $schedule = $scheduleModel->findById($referenceId);
+            if ($schedule && !empty($schedule['lot_id'])) {
+                $lot = $lotModel->findById($schedule['lot_id']);
+                if ($lot && isset($lot['price'])) {
+                    return [
+                        'expected_amount' => (float) $lot['price'],
+                        'lot_number' => $lot['lot_number'] ?? null,
+                        'source' => 'schedule',
+                    ];
+                }
+            }
+
+            $lot = $lotModel->findById($referenceId);
             if ($lot && isset($lot['price'])) {
                 return [
                     'expected_amount' => (float) $lot['price'],
                     'lot_number' => $lot['lot_number'] ?? null,
-                    'source' => 'schedule',
+                    'source' => 'lot',
                 ];
             }
-        }
-
-        $lot = $lotModel->findById($referenceId);
-        if ($lot && isset($lot['price'])) {
+        } elseif ($transactionType === 'Cremation') {
             return [
-                'expected_amount' => (float) $lot['price'],
-                'lot_number' => $lot['lot_number'] ?? null,
-                'source' => 'lot',
+                'expected_amount' => 15000.00,
+                'source' => 'system.cremation_base_fee',
             ];
+        } elseif ($transactionType === 'Renewal') {
+            $expirationModel = new ExpirationRecord();
+            $exp = $expirationModel->findById($referenceId);
+            if ($exp && !empty($exp['lot_id'])) {
+                $lot = $lotModel->findById($exp['lot_id']);
+                if ($lot && isset($lot['price'])) {
+                    return [
+                        'expected_amount' => (float) $lot['price'],
+                        'lot_number' => $lot['lot_number'] ?? null,
+                        'source' => 'expiration_lot',
+                    ];
+                }
+            }
+        } elseif ($transactionType === 'Relocation') {
+            $relocationModel = new Relocation();
+            $rel = $relocationModel->findById($referenceId);
+            if ($rel && !empty($rel['to_lot_id'])) {
+                $lot = $lotModel->findById($rel['to_lot_id']);
+                if ($lot && isset($lot['price'])) {
+                    return [
+                        'expected_amount' => (float) $lot['price'],
+                        'lot_number' => $lot['lot_number'] ?? null,
+                        'source' => 'relocation_destination_lot',
+                    ];
+                }
+            }
         }
 
         return ['expected_amount' => null];
@@ -292,9 +320,6 @@ class PaymentController {
                     if (($schedule['status'] ?? '') === 'Cancelled') {
                         return ['error' => 'Cancelled reservations cannot be paid', 'code' => 409];
                     }
-                    if ($isNewPayment && in_array(($schedule['status'] ?? ''), ['Confirmed', 'Completed'], true)) {
-                        return ['error' => 'This reservation has already been confirmed or completed', 'code' => 409];
-                    }
                     $lot = $lotModel->findById($schedule['lot_id']);
                     if (!$lot) {
                         return ['error' => 'Reservation lot not found', 'code' => 404];
@@ -315,9 +340,6 @@ class PaymentController {
                     }
                     if (($schedule['status'] ?? '') === 'Cancelled') {
                         return ['error' => 'Cancelled reservations cannot be paid', 'code' => 409];
-                    }
-                    if ($isNewPayment && in_array(($schedule['status'] ?? ''), ['Confirmed', 'Completed'], true)) {
-                        return ['error' => 'This reservation has already been confirmed or completed', 'code' => 409];
                     }
 
                     $lot = $lotModel->findById($schedule['lot_id']);
@@ -382,9 +404,6 @@ class PaymentController {
                 }
                 if (($cremation['status'] ?? '') === 'Cancelled') {
                     return ['error' => 'Cancelled records cannot be paid', 'code' => 409];
-                }
-                if ($isNewPayment && in_array(($cremation['status'] ?? ''), ['Confirmed', 'Completed'], true)) {
-                    return ['error' => 'This booking has already been confirmed or completed', 'code' => 409];
                 }
 
                 $columbarium = !empty($cremation['columbarium']) ? ' (' . $cremation['columbarium'] . ')' : '';
@@ -1618,22 +1637,22 @@ class PaymentController {
             ];
         }
 
-        // Batch 2: Ensure reservation or cremation booking is not already confirmed or completed
+        // Batch 2: Ensure reservation or cremation booking is not cancelled
         if ($referenceKind === 'schedule') {
             $scheduleModel = new Schedule();
             $sched = $scheduleModel->findById($referenceId);
-            if ($sched && in_array($sched['status'] ?? '', ['Confirmed', 'Completed'], true)) {
+            if ($sched && ($sched['status'] ?? '') === 'Cancelled') {
                 return [
-                    'error' => 'This reservation has already been confirmed or completed',
+                    'error' => 'Cancelled reservations cannot be paid',
                     'code' => 409,
                 ];
             }
         } elseif ($transactionType === 'Cremation') {
             $cremationModel = new Cremation();
             $crem = $cremationModel->findById($referenceId);
-            if ($crem && in_array($crem['status'] ?? '', ['Confirmed', 'Completed'], true)) {
+            if ($crem && ($crem['status'] ?? '') === 'Cancelled') {
                 return [
-                    'error' => 'This cremation booking has already been confirmed or completed',
+                    'error' => 'Cancelled cremation records cannot be paid',
                     'code' => 409,
                 ];
             }

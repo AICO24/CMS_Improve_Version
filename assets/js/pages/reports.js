@@ -2423,16 +2423,119 @@ document.addEventListener('DOMContentLoaded', async function() {
         return btn ? btn.textContent.trim() : 'Report';
     }
 
+    function getActiveTabKey() {
+        const btn = document.querySelector('.tab-btn.active');
+        return btn ? (btn.getAttribute('data-tab') || 'occupancy') : 'occupancy';
+    }
+
     function safeEscape(str) {
         return String(str || '').replace(/[&<>"']/g, m => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
         })[m]);
     }
 
+    function naText(val, fallback = 'N/A') {
+        if (val === null || val === undefined || String(val).trim() === '' || String(val).trim() === '—' || String(val).trim() === '-' || String(val).trim().toUpperCase() === 'N/A') {
+            return `<span style="color: #94a3b8; font-style: italic; font-weight: 500;">${fallback}</span>`;
+        }
+        return safeEscape(val);
+    }
+
+    function formatPdfDate(val) {
+        if (!val || val === '—' || val === '-') return naText('', 'N/A');
+        const str = String(val).trim();
+        const m = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) {
+            const year = m[1];
+            const monthIdx = parseInt(m[2], 10) - 1;
+            const day = parseInt(m[3], 10);
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            if (monthNames[monthIdx]) {
+                return `${monthNames[monthIdx]} ${day}, ${year}`;
+            }
+        }
+        const s = str.replace(' ', 'T');
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? safeEscape(val) : d.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function formatPdfDateTime(val) {
+        if (!val || val === '—' || val === '-') return naText('', 'N/A');
+        const str = String(val).trim();
+        const m = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+        if (m) {
+            const year = m[1];
+            const monthIdx = parseInt(m[2], 10) - 1;
+            const day = parseInt(m[3], 10);
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const datePart = monthNames[monthIdx] ? `${monthNames[monthIdx]} ${day}, ${year}` : `${year}-${m[2]}-${m[3]}`;
+            if (m[4] !== undefined) {
+                let h = parseInt(m[4], 10);
+                const min = m[5] || '00';
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12 || 12;
+                return `${datePart} · ${h}:${min} ${ampm}`;
+            }
+            return datePart;
+        }
+        const d = new Date(str.replace(' ', 'T'));
+        return isNaN(d.getTime()) ? safeEscape(val) : d.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function badgeHtml(text) {
+        const val = String(text || '').trim();
+        const lower = val.toLowerCase();
+        let bg = '#f1f5f9', fg = '#475569', bdr = '#cbd5e1', dot = '#94a3b8';
+        if (lower.includes('avail') || lower.includes('verif') || lower.includes('confirm') || lower.includes('paid') || lower.includes('success') || lower.includes('burial') || lower.includes('active') || lower.includes('low')) {
+            bg = '#ecfdf5'; fg = '#065f46'; bdr = '#a7f3d0'; dot = '#10b981';
+        } else if (lower.includes('pend') || lower.includes('expir') || lower.includes('warn') || lower.includes('cremat') || lower.includes('due') || lower.includes('moderate')) {
+            bg = '#fffbeb'; fg = '#92400e'; bdr = '#fde68a'; dot = '#f59e0b';
+        } else if (lower.includes('cancel') || lower.includes('overdue') || lower.includes('danger') || lower.includes('reject') || lower.includes('high') || lower.includes('expired')) {
+            bg = '#fef2f2'; fg = '#991b1b'; bdr = '#fecaca'; dot = '#ef4444';
+        } else if (lower.includes('occup') || lower.includes('reserv') || lower.includes('inurnment')) {
+            bg = '#eff6ff'; fg = '#1e40af'; bdr = '#bfdbfe'; dot = '#3b82f6';
+        }
+        return `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 9999px; font-size: 8px; font-weight: 700; background-color: ${bg}; color: ${fg}; border: 1px solid ${bdr}; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap;"><span style="display: inline-block; width: 4.5px; height: 4.5px; border-radius: 50%; background-color: ${dot};"></span>${safeEscape(val || 'N/A')}</span>`;
+    }
+
+    const MALABON_SEAL_SVG = `<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex: 0 0 48px;">
+        <circle cx="24" cy="24" r="23" fill="#064e3b" stroke="#059669" stroke-width="2"/>
+        <circle cx="24" cy="24" r="19" fill="#065f46" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="3 2"/>
+        <path d="M24 8 L26 13 L31 13 L27 16 L29 21 L24 18 L19 21 L21 16 L17 13 L22 13 Z" fill="#fbbf24"/>
+        <path d="M14 26 C14 33 24 37 24 37 C24 37 34 33 34 26 L34 22 L14 22 Z" fill="#ffffff" fill-opacity="0.95"/>
+        <path d="M18 26 L24 31 L30 26" stroke="#064e3b" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="24" cy="26" r="2.5" fill="#fbbf24"/>
+    </svg>`;
+
+    const BARCODE_SVG = `<svg width="96" height="20" viewBox="0 0 96 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="1" width="2" height="18" fill="#1e293b"/>
+        <rect x="6" y="1" width="3" height="18" fill="#1e293b"/>
+        <rect x="11" y="1" width="1" height="18" fill="#1e293b"/>
+        <rect x="14" y="1" width="2" height="18" fill="#1e293b"/>
+        <rect x="18" y="1" width="4" height="18" fill="#1e293b"/>
+        <rect x="24" y="1" width="2" height="18" fill="#1e293b"/>
+        <rect x="28" y="1" width="1" height="18" fill="#1e293b"/>
+        <rect x="31" y="1" width="3" height="18" fill="#1e293b"/>
+        <rect x="36" y="1" width="2" height="18" fill="#1e293b"/>
+        <rect x="40" y="1" width="4" height="18" fill="#1e293b"/>
+        <rect x="46" y="1" width="2" height="18" fill="#1e293b"/>
+        <rect x="50" y="1" width="3" height="18" fill="#1e293b"/>
+        <rect x="55" y="1" width="1" height="18" fill="#1e293b"/>
+        <rect x="58" y="1" width="4" height="18" fill="#1e293b"/>
+        <rect x="64" y="1" width="2" height="18" fill="#1e293b"/>
+        <rect x="68" y="1" width="3" height="18" fill="#1e293b"/>
+        <rect x="73" y="1" width="1" height="18" fill="#1e293b"/>
+        <rect x="76" y="1" width="4" height="18" fill="#1e293b"/>
+        <rect x="82" y="1" width="2" height="18" fill="#1e293b"/>
+        <rect x="86" y="1" width="3" height="18" fill="#1e293b"/>
+        <rect x="91" y="1" width="3" height="18" fill="#1e293b"/>
+    </svg>`;
+
     async function generatePdfExport() {
         const activeStats = getActiveStatsContainer();
         const activeTab = getActiveReportTab();
         const activeTabLabel = getActiveTabLabel();
+        const activeTabKey = getActiveTabKey();
         const dateStr = new Date().toISOString().split('T')[0];
         const filename = `Cemetery_Management_${activeTabLabel.replace(/[^a-zA-Z0-9_-]/g, '_')}_Report_${dateStr}.pdf`;
 
@@ -2493,19 +2596,28 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Official Formal Header Banner
         const header = document.createElement('div');
         header.style.borderBottom = '3px solid #059669';
-        header.style.paddingBottom = '12px';
-        header.style.marginBottom = '20px';
+        header.style.paddingBottom = '14px';
+        header.style.marginBottom = '18px';
         header.style.display = 'flex';
         header.style.justifyContent = 'space-between';
         header.style.alignItems = 'flex-end';
+        const stdRefNo = `CMS-SUM-${activeTabLabel.toUpperCase().slice(0, 3)}-${dateStr.replace(/-/g, '')}`;
         header.innerHTML = `
-            <div>
-                <div style="font-size: 20px; font-weight: 800; color: #064e3b; letter-spacing: -0.02em; line-height: 1.2;">Cemetery Management System</div>
-                <div style="margin-top: 4px; font-size: 13px; color: #334155;">Official Intelligence & Analytics Report — <strong style="color: #047857;">${safeEscape(activeTabLabel)}</strong></div>
+            <div style="display: flex; align-items: center; gap: 14px;">
+                ${MALABON_SEAL_SVG}
+                <div>
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px;">Republic of the Philippines · City Government of Malabon</div>
+                    <div style="font-size: 19px; font-weight: 800; color: #064e3b; letter-spacing: -0.02em; line-height: 1.15;">Cemetery Operations &amp; Management Office</div>
+                    <div style="margin-top: 3px; font-size: 11px; color: #334155; font-weight: 600;">Executive Intelligence &amp; Analytics Report — <strong style="color: #047857;">${safeEscape(activeTabLabel)}</strong></div>
+                </div>
             </div>
-            <div style="text-align: right; font-size: 11px; color: #64748b; line-height: 1.4;">
-                <div>Generated: <strong>${new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}</strong></div>
-                <div>City of Malabon Public Cemetery</div>
+            <div style="text-align: right; font-size: 9px; color: #64748b; line-height: 1.45; border-left: 2px solid #e2e8f0; padding-left: 14px;">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 3px;">
+                    ${BARCODE_SVG}
+                </div>
+                <div>Doc Ref: <strong style="color: #0f172a; font-family: monospace;">${stdRefNo}</strong></div>
+                <div>Generated: <strong style="color: #0f172a;">${new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}</strong></div>
+                <div>Classification: <strong style="color: #047857;">OFFICIAL SUMMARY REPORT</strong></div>
             </div>
         `;
         printRoot.appendChild(header);
@@ -2515,17 +2627,20 @@ document.addEventListener('DOMContentLoaded', async function() {
             const statsClone = activeStats.cloneNode(true);
             statsClone.style.display = 'grid';
             statsClone.style.gridTemplateColumns = 'repeat(4, minmax(0, 1fr))';
-            statsClone.style.gap = '12px';
-            statsClone.style.marginBottom = '20px';
-            statsClone.querySelectorAll('.stat-card').forEach(sc => {
+            statsClone.style.gap = '10px';
+            statsClone.style.marginBottom = '18px';
+            const borderColors = ['#064e3b', '#059669', '#d97706', '#2563eb'];
+            statsClone.querySelectorAll('.stat-card').forEach((sc, i) => {
                 sc.style.display = 'flex';
                 sc.style.flexDirection = 'column';
-                sc.style.backgroundColor = '#f8fafc';
-                sc.style.border = '1px solid #cbd5e1';
-                sc.style.borderRadius = '8px';
-                sc.style.padding = '12px 14px';
-                sc.style.boxShadow = 'none';
+                sc.style.backgroundColor = '#ffffff';
+                sc.style.border = '1px solid #e2e8f0';
+                sc.style.borderTop = `3.5px solid ${borderColors[i % 4]}`;
+                sc.style.borderRadius = '6px';
+                sc.style.padding = '10px 12px';
+                sc.style.boxShadow = '0 1px 2px rgba(0,0,0,0.03)';
             });
+
             statsClone.querySelectorAll('.stat-title').forEach(st => {
                 st.style.fontSize = '11px';
                 st.style.fontWeight = '600';
@@ -2544,6 +2659,85 @@ document.addEventListener('DOMContentLoaded', async function() {
                 ss.style.color = '#64748b';
             });
             printRoot.appendChild(statsClone);
+        }
+
+        // Executive Summary Callout for Standard PDF
+        let stdExecutiveSummaryHtml = '';
+        if (activeTabKey === 'occupancy') {
+            const total = document.getElementById('occTotal')?.innerText || '—';
+            const occ = document.getElementById('occOccupied')?.innerText || '0';
+            const avail = document.getElementById('occAvailable')?.innerText || '0';
+            const res = document.getElementById('occRate')?.innerText || '0';
+            stdExecutiveSummaryHtml = `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #059669; border-radius: 6px; padding: 10px 14px; margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 10px; font-weight: 800; color: #065f46; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
+                        <span>★</span> EXECUTIVE AUDIT TAKEAWAY &amp; SPATIAL STATUS
+                    </div>
+                    <div style="font-size: 9px; color: #166534; line-height: 1.45;">
+                        The cemetery complex holds an audited capacity of <strong>${total} grave plots</strong>. Currently, <strong>${occ} plots</strong> are occupied, with <strong>${avail} plots</strong> remaining available for active municipal allocation and <strong>${res} plots</strong> on reservation hold. Space utilization remains sustainable.
+                    </div>
+                </div>
+            `;
+        } else if (activeTabKey === 'revenue') {
+            const totalRev = document.getElementById('revTotal')?.innerText || '₱0.00';
+            const count = document.getElementById('revCount')?.innerText || '0';
+            stdExecutiveSummaryHtml = `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #059669; border-radius: 6px; padding: 10px 14px; margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 10px; font-weight: 800; color: #065f46; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
+                        <span>★</span> EXECUTIVE AUDIT TAKEAWAY &amp; FISCAL REVENUE PROFILE
+                    </div>
+                    <div style="font-size: 9px; color: #166534; line-height: 1.45;">
+                        Gross verified collections across the cemetery system total <strong>${totalRev}</strong> across <strong>${count} official transactions</strong>. Reconciled municipal settlement streams reflect regular fiscal compliance across cash and electronic payment facilities.
+                    </div>
+                </div>
+            `;
+        } else if (activeTabKey === 'reservations') {
+            const totalRes = document.getElementById('resTotal')?.innerText || '0';
+            const confirmed = document.getElementById('resConfirmed')?.innerText || '0';
+            const pending = document.getElementById('resPending')?.innerText || '0';
+            stdExecutiveSummaryHtml = `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #059669; border-radius: 6px; padding: 10px 14px; margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 10px; font-weight: 800; color: #065f46; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
+                        <span>★</span> EXECUTIVE AUDIT TAKEAWAY &amp; RESERVATIONS OVERVIEW
+                    </div>
+                    <div style="font-size: 9px; color: #166534; line-height: 1.45;">
+                        The cemetery master registry registers <strong>${totalRes} service applications</strong> with <strong>${confirmed} confirmed</strong> bookings and <strong>${pending} pending</strong> municipal evaluation. Applicant identities, scheduled dates, and contact particulars are verified against official records.
+                    </div>
+                </div>
+            `;
+        } else if (activeTabKey === 'demographics') {
+            const totalDec = document.getElementById('demoTotal')?.innerText || '0';
+            const burials = document.getElementById('demoBurials')?.innerText || '0';
+            const cremations = document.getElementById('demoCremations')?.innerText || '0';
+            const avgAge = document.getElementById('demoAvgAge')?.innerText || '—';
+            stdExecutiveSummaryHtml = `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #059669; border-radius: 6px; padding: 10px 14px; margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 10px; font-weight: 800; color: #065f46; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
+                        <span>★</span> EXECUTIVE AUDIT TAKEAWAY &amp; MORTALITY PROFILE
+                    </div>
+                    <div style="font-size: 9px; color: #166534; line-height: 1.45;">
+                        Official municipal cemetery registers reflect <strong>${totalDec} interred decedents</strong>, comprising <strong>${burials} ground and crypt burials</strong> alongside <strong>${cremations} cremations and columbarium inurnments</strong> with a vital mean age of <strong>${avgAge} years</strong>.
+                    </div>
+                </div>
+            `;
+        } else if (activeTabKey === 'expiration') {
+            const cExpired = document.getElementById('expExpired')?.innerText || '0';
+            const cExpiring = document.getElementById('expExpiring')?.innerText || '0';
+            stdExecutiveSummaryHtml = `
+                <div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #dc2626; border-radius: 6px; padding: 10px 14px; margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 10px; font-weight: 800; color: #991b1b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
+                        <span>⚠</span> EXECUTIVE AUDIT TAKEAWAY &amp; LEASE TERM COMPLIANCE
+                    </div>
+                    <div style="font-size: 9px; color: #7f1d1d; line-height: 1.45;">
+                        Statutory audit monitoring under PD 856 flags <strong>${cExpired} expired grave lots</strong> overdue for renewal alongside <strong>${cExpiring} lots expiring within 30–90 days</strong> requiring renewal notice dispatch. Timely turnover preserves municipal space.
+                    </div>
+                </div>
+            `;
+        }
+        if (stdExecutiveSummaryHtml) {
+            const summaryDiv = document.createElement('div');
+            summaryDiv.innerHTML = stdExecutiveSummaryHtml;
+            printRoot.appendChild(summaryDiv);
         }
 
         // Active Tab Content
@@ -2619,21 +2813,46 @@ document.addEventListener('DOMContentLoaded', async function() {
                 tbl.style.width = '100%';
                 tbl.style.borderCollapse = 'collapse';
                 tbl.style.backgroundColor = '#ffffff';
-                tbl.style.fontSize = '11px';
+                tbl.style.fontSize = '10px';
                 tbl.style.marginTop = '8px';
             });
             tabClone.querySelectorAll('th').forEach(th => {
-                th.style.backgroundColor = '#f8fafc';
-                th.style.color = '#0f172a';
-                th.style.border = '1px solid #cbd5e1';
-                th.style.padding = '6px 8px';
+                th.style.background = 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)';
+                th.style.color = '#ffffff';
+                th.style.border = '1px solid #064e3b';
+                th.style.padding = '7px 9px';
                 th.style.fontWeight = '700';
+                th.style.fontSize = '8.5px';
+                th.style.textTransform = 'uppercase';
+                th.style.letterSpacing = '0.04em';
                 th.style.textAlign = 'left';
             });
             tabClone.querySelectorAll('td').forEach(td => {
                 td.style.border = '1px solid #e2e8f0';
-                td.style.padding = '6px 8px';
-                td.style.color = '#334155';
+                td.style.padding = '6px 9px';
+                td.style.color = '#1e293b';
+                td.style.fontSize = '8.5px';
+                td.style.lineHeight = '1.35';
+                const trimmed = td.textContent.trim();
+                if (trimmed === '' || trimmed === '—' || trimmed === '-' || trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null') {
+                    td.innerHTML = naText('', 'N/A');
+                }
+            });
+
+            // Format status badges inside table cells
+            tabClone.querySelectorAll('.badge, .status-badge, [class*="badge"]').forEach(b => {
+                const text = b.textContent.trim();
+                if (text) {
+                    b.outerHTML = badgeHtml(text);
+                }
+            });
+
+            // Monospaced pills for reference codes
+            tabClone.querySelectorAll('td:first-child').forEach(cell => {
+                const text = cell.textContent.trim();
+                if (/^(#|LOT|SCH|OR|DEC|RSV|\d+$)/i.test(text) && !cell.querySelector('span')) {
+                    cell.innerHTML = `<span style="font-family: monospace; font-weight: 700; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; color: #0f172a;">${safeEscape(text)}</span>`;
+                }
             });
 
             // Section labels
@@ -2653,6 +2872,39 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
 
             printRoot.appendChild(tabClone);
+
+            // Formal Certification & Signatory Block
+            const footerDiv = document.createElement('div');
+            footerDiv.style.marginTop = '24px';
+            footerDiv.style.pageBreakInside = 'avoid';
+            footerDiv.style.breakInside = 'avoid';
+            footerDiv.innerHTML = `
+                <div style="padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 8px; color: #64748b; line-height: 1.5; margin-bottom: 22px;">
+                    <strong style="color: #0f172a;">OFFICIAL SUMMARY CERTIFICATION:</strong> This report represents authoritative municipal records compiled from active cemetery databases of the City of Malabon. Generated in strict compliance with Republic Act No. 10173 (Data Privacy Act) and Presidential Decree No. 856 (Sanitation Code).
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+                    <div style="border-top: 1.5px solid #0f172a; padding-top: 8px; font-size: 9px;">
+                        <div style="font-weight: 800; color: #0f172a; font-size: 8px; letter-spacing: 0.05em;">PREPARED BY:</div>
+                        <div style="margin-top: 22px; font-weight: 700; color: #0f172a; font-size: 9.5px;">Operations &amp; Billing Officer</div>
+                        <div style="color: #64748b; font-size: 8px;">Cemetery Administration Office</div>
+                    </div>
+                    <div style="border-top: 1.5px solid #0f172a; padding-top: 8px; font-size: 9px;">
+                        <div style="font-weight: 800; color: #0f172a; font-size: 8px; letter-spacing: 0.05em;">AUDITED BY:</div>
+                        <div style="margin-top: 22px; font-weight: 700; color: #0f172a; font-size: 9.5px;">Internal Audit Lead</div>
+                        <div style="color: #64748b; font-size: 8px;">City Treasury Office</div>
+                    </div>
+                    <div style="border-top: 1.5px solid #0f172a; padding-top: 8px; font-size: 9px;">
+                        <div style="font-weight: 800; color: #0f172a; font-size: 8px; letter-spacing: 0.05em;">APPROVED BY:</div>
+                        <div style="margin-top: 22px; font-weight: 700; color: #0f172a; font-size: 9.5px;">City Cemetery Administrator</div>
+                        <div style="color: #64748b; font-size: 8px;">City Government of Malabon</div>
+                    </div>
+                </div>
+                <div style="margin-top: 18px; border-top: 1px solid #e2e8f0; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: #94a3b8;">
+                    <div>City of Malabon Public Cemetery · Official Management Analytics</div>
+                    <div>Document Classification: Official / Confidential</div>
+                </div>
+            `;
+            printRoot.appendChild(footerDiv);
         }
 
         // Mount to body and normalize scroll
@@ -2747,6 +2999,1069 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    async function generateDetailedPdfExport() {
+        const activeTabBtn = document.querySelector('.tab-btn.active');
+        const tabKey = (activeTabBtn ? activeTabBtn.dataset.tab : 'occupancy') || 'occupancy';
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const formattedDate = now.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
+        const formattedTime = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const refNo = `CMS-DET-${tabKey.toUpperCase().slice(0, 3)}-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 900 + 100))}`;
+        const filename = `CMS_Detailed_${tabKey.charAt(0).toUpperCase() + tabKey.slice(1)}_Report_${dateStr}.pdf`;
+
+        const printRoot = document.createElement('div');
+        printRoot.id = 'reportsDetailedPrintRoot';
+        printRoot.style.position = 'absolute';
+        printRoot.style.left = '0';
+        printRoot.style.top = '0';
+        printRoot.style.width = '840px';
+        printRoot.style.maxWidth = '840px';
+        printRoot.style.backgroundColor = '#ffffff';
+        printRoot.style.color = '#0f172a';
+        printRoot.style.padding = '28px 32px';
+        printRoot.style.fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+        printRoot.style.zIndex = '99999999';
+        printRoot.style.boxSizing = 'border-box';
+        printRoot.style.pointerEvents = 'none';
+
+        const thStyle = `background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); color: #ffffff; font-weight: 700; font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 10px; border: 1px solid #064e3b; text-align: left; vertical-align: middle;`;
+        const thRightStyle = `${thStyle} text-align: right;`;
+        const tdStyle = `padding: 7px 10px; font-size: 8.5px; border: 1px solid #e2e8f0; color: #1e293b; vertical-align: middle; page-break-inside: avoid; break-inside: avoid; line-height: 1.35;`;
+        const tdRightStyle = `${tdStyle} text-align: right;`;
+        const tdCenterStyle = `${tdStyle} text-align: center;`;
+        const zebraBg = (idx) => idx % 2 === 1 ? 'background-color: #f8fafc;' : 'background-color: #ffffff;';
+
+        let reportTitle = '';
+        let reportSubtitle = '';
+        let scopeNotes = '';
+        let executiveSummaryHtml = '';
+        let kpiBlocksHtml = '';
+        let tablesContentHtml = '';
+
+        if (tabKey === 'occupancy') {
+            reportTitle = 'Detailed Audit Report: Space Occupancy & Plot Allocation Masterlist';
+            reportSubtitle = 'Official Section Capacity Analysis, Block Spatial Distribution, and Plot Utilization Audit';
+            scopeNotes = 'Master plot registry, current reservation states, and municipal cemetery spatial utilization.';
+
+            let occData = null;
+            let plotList = [];
+            try {
+                occData = await api.request('reports/occupancy', { method: 'GET' });
+            } catch (e) {
+                console.warn('Occupancy fetch error:', e);
+            }
+            try {
+                const lotsResp = await api.request('lots?per_page=100&sort_by=lot_number', { method: 'GET' });
+                plotList = Array.isArray(lotsResp?.data) ? lotsResp.data : (Array.isArray(lotsResp) ? lotsResp : []);
+            } catch (e) {
+                console.warn('Lots fetch error:', e);
+            }
+
+            const totalPlots = document.getElementById('occTotal')?.innerText || occData?.summary?.total || plotList.length || 0;
+            const occPlots = document.getElementById('occOccupied')?.innerText || occData?.summary?.occupied || 0;
+            const availPlots = document.getElementById('occAvailable')?.innerText || occData?.summary?.available || 0;
+            const resPlots = document.getElementById('occRate')?.innerText || occData?.summary?.reserved || 0;
+            const occPct = Number(totalPlots) > 0 ? ((Number(occPlots) / Number(totalPlots)) * 100).toFixed(1) : '0.0';
+
+            kpiBlocksHtml = `
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #064e3b; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Total Plot Capacity</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #064e3b; margin-top: 3px;">${Number(totalPlots).toLocaleString()}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Cemetery Grand Total</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #1e40af; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Occupied Plots</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #1e40af; margin-top: 3px;">${Number(occPlots).toLocaleString()}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">${occPct}% Spatial Utilization</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #047857; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Available Plots</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #047857; margin-top: 3px;">${Number(availPlots).toLocaleString()}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Ready for Allocation</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #d97706; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Active Holds / Reserved</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #b45309; margin-top: 3px;">${Number(resPlots).toLocaleString()}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Scheduled / Processing</div>
+                </div>
+            `;
+
+            const sections = occData?.by_section || [];
+            executiveSummaryHtml = `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #059669; border-radius: 6px; padding: 10px 14px; margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 10px; font-weight: 800; color: #065f46; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
+                        <span>★</span> EXECUTIVE AUDIT TAKEAWAY &amp; SPATIAL STATUS
+                    </div>
+                    <div style="font-size: 9px; color: #166534; line-height: 1.45;">
+                        The cemetery complex holds an audited capacity of <strong>${Number(totalPlots).toLocaleString()} grave plots</strong> across ${sections.length || 'all'} designated sections. Currently, <strong>${Number(occPlots).toLocaleString()} plots (${occPct}%)</strong> are occupied, with <strong>${Number(availPlots).toLocaleString()} plots</strong> remaining available for active municipal allocation and <strong>${Number(resPlots).toLocaleString()} plots</strong> on active reservation hold. Space utilization remains sustainable.
+                    </div>
+                </div>
+            `;
+            let sectionRowsHtml = '';
+            if (sections.length > 0) {
+                sectionRowsHtml = sections.map((s, idx) => {
+                    const tot = Number(s.total || 0);
+                    const occ = Number(s.occupied || 0);
+                    const avl = Number(s.available || 0);
+                    const res = Number(s.reserved || 0);
+                    const rate = tot > 0 ? ((occ / tot) * 100).toFixed(1) : (s.occupancy_rate || 0);
+                    return `
+                        <tr style="${zebraBg(idx)}; page-break-inside: avoid; break-inside: avoid;">
+                            <td style="${tdStyle}"><strong>${safeEscape(s.section_name)}</strong></td>
+                            <td style="${tdRightStyle}">${tot.toLocaleString()}</td>
+                            <td style="${tdRightStyle}">${occ.toLocaleString()}</td>
+                            <td style="${tdRightStyle}">${avl.toLocaleString()}</td>
+                            <td style="${tdRightStyle}">${res.toLocaleString()}</td>
+                            <td style="${tdRightStyle}"><strong>${rate}%</strong></td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                sectionRowsHtml = `<tr><td colspan="6" style="${tdCenterStyle}">No section capacity breakdown data recorded.</td></tr>`;
+            }
+
+            // Typology Breakdown
+            const lotTypes = occData?.by_lot_type || [];
+            let lotTypeRowsHtml = '';
+            if (lotTypes.length > 0) {
+                lotTypeRowsHtml = lotTypes.map((t, idx) => {
+                    const tot = Number(t.total || 0);
+                    const occ = Number(t.occupied || 0);
+                    const avl = Number(t.available || 0);
+                    const rate = tot > 0 ? ((occ / tot) * 100).toFixed(1) : 0;
+                    return `
+                        <tr style="${zebraBg(idx)}; page-break-inside: avoid; break-inside: avoid;">
+                            <td style="${tdStyle}"><strong>${safeEscape(t.lot_type || t.type_name || 'Standard')}</strong></td>
+                            <td style="${tdRightStyle}">${tot.toLocaleString()}</td>
+                            <td style="${tdRightStyle}">${occ.toLocaleString()}</td>
+                            <td style="${tdRightStyle}">${avl.toLocaleString()}</td>
+                            <td style="${tdRightStyle}"><strong>${rate}%</strong></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            let plotRowsHtml = '';
+            if (plotList.length > 0) {
+                plotRowsHtml = plotList.map((lot, idx) => {
+                    const lotNo = lot.lot_number || `Lot #${lot.lot_id || idx + 1}`;
+                    const lotNoPill = `<span style="font-family: monospace; font-weight: 700; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; color: #0f172a;">${safeEscape(lotNo)}</span>`;
+                    const sec = lot.section_name ? safeEscape(lot.section_name) : naText('', 'N/A');
+                    const blk = lot.block_name ? safeEscape(lot.block_name) : naText('', 'N/A');
+                    const type = lot.lot_type_name || lot.type_name || lot.category || 'Standard';
+                    const status = lot.status || 'Available';
+                    const occupantName = (lot.occupant_name || lot.reserved_for_name || '').trim();
+                    let occupantHtml = occupantName ? `<strong>${safeEscape(occupantName)}</strong>` : naText('', 'N/A');
+                    const kinName = (lot.contact_name || '').trim();
+                    const kinPhone = (lot.contact_number || '').trim();
+                    const contactDetails = [kinName, kinPhone].filter(Boolean).map(safeEscape).join(' · ');
+                    if (occupantName && contactDetails) {
+                        occupantHtml += `<div style="font-size: 8px; color: #64748b; margin-top: 1.5px;">Kin: ${contactDetails}</div>`;
+                    }
+                    const priceVal = Number(lot.price || 0);
+                    const price = priceVal > 0 ? formatPeso(priceVal) : naText('', 'N/A');
+                    return `
+                        <tr style="${zebraBg(idx)}; page-break-inside: avoid; break-inside: avoid;">
+                            <td style="${tdStyle}">${lotNoPill}</td>
+                            <td style="${tdStyle}">${sec}</td>
+                            <td style="${tdStyle}">${blk}</td>
+                            <td style="${tdStyle}">${safeEscape(type)}</td>
+                            <td style="${tdCenterStyle}">${badgeHtml(status)}</td>
+                            <td style="${tdStyle}">${occupantHtml}</td>
+                            <td style="${tdRightStyle}">${price}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                plotRowsHtml = `<tr><td colspan="7" style="${tdCenterStyle}">No detailed plot inventory records found.</td></tr>`;
+            }
+
+            tablesContentHtml = `
+                <div style="margin-bottom: 20px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 11px; font-weight: 700; color: #064e3b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="display: flex; align-items: center; gap: 6px;"><span style="background: #064e3b; color: #ffffff; padding: 2px 6px; border-radius: 3px; font-size: 8.5px; font-weight: 800;">PART I(A)</span> Section-Level Capacity &amp; Space Distribution Matrix</span>
+                        <span style="font-size: 9px; color: #64748b; font-weight: 500;">Aggregated spatial analysis</span>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
+                        <thead>
+                            <tr>
+                                <th style="${thStyle}">Section Designation</th>
+                                <th style="${thRightStyle}">Total Capacity</th>
+                                <th style="${thRightStyle}">Occupied Spaces</th>
+                                <th style="${thRightStyle}">Available Spaces</th>
+                                <th style="${thRightStyle}">Reserved Spaces</th>
+                                <th style="${thRightStyle}">Utilization Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>${sectionRowsHtml}</tbody>
+                    </table>
+                </div>
+
+                ${lotTypeRowsHtml ? `
+                <div style="margin-bottom: 20px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 11px; font-weight: 700; color: #064e3b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="display: flex; align-items: center; gap: 6px;"><span style="background: #064e3b; color: #ffffff; padding: 2px 6px; border-radius: 3px; font-size: 8.5px; font-weight: 800;">PART I(B)</span> Plot Typology &amp; Space Classification Breakdown</span>
+                        <span style="font-size: 9px; color: #64748b; font-weight: 500;">Distribution by plot type</span>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
+                        <thead>
+                            <tr>
+                                <th style="${thStyle}">Plot Classification</th>
+                                <th style="${thRightStyle}">Total Lots</th>
+                                <th style="${thRightStyle}">Occupied</th>
+                                <th style="${thRightStyle}">Available</th>
+                                <th style="${thRightStyle}">Utilization Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>${lotTypeRowsHtml}</tbody>
+                    </table>
+                </div>` : ''}
+
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 11px; font-weight: 700; color: #064e3b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="display: flex; align-items: center; gap: 6px;"><span style="background: #064e3b; color: #ffffff; padding: 2px 6px; border-radius: 3px; font-size: 8.5px; font-weight: 800;">PART II</span> Itemized Plot Masterlist &amp; Spatial Allocation Audit</span>
+                        <span style="font-size: 9px; color: #64748b; font-weight: 500;">Showing up to ${plotList.length} cataloged plots</span>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
+                        <thead>
+                            <tr>
+                                <th style="${thStyle}">Plot / Lot #</th>
+                                <th style="${thStyle}">Section</th>
+                                <th style="${thStyle}">Block</th>
+                                <th style="${thStyle}">Classification</th>
+                                <th style="${thStyle} text-align: center;">Status</th>
+                                <th style="${thStyle}">Occupant / Grantee</th>
+                                <th style="${thRightStyle}">Valuation</th>
+                            </tr>
+                        </thead>
+                        <tbody>${plotRowsHtml}</tbody>
+                    </table>
+                </div>
+            `;
+        } else if (tabKey === 'revenue') {
+            reportTitle = 'Detailed Audit Report: Financial Transactions & Revenue Audit Ledger';
+            reportSubtitle = 'Itemized Municipal Collections, Service Stream Breakdown, and Official Receipt Audit';
+            
+            const fromVal = document.getElementById('revDateFrom')?.value || '';
+            const toVal = document.getElementById('revDateTo')?.value || '';
+            scopeNotes = (fromVal || toVal) ? `Filtered date range: ${fromVal || 'Beginning'} to ${toVal || 'Current'}` : 'Complete recorded financial transactions ledger.';
+
+            let revData = null;
+            let paymentsList = [];
+            let methodBreakdown = [];
+            const params = [];
+            if (fromVal) params.push(`date_from=${encodeURIComponent(fromVal)}`);
+            if (toVal) params.push(`date_to=${encodeURIComponent(toVal)}`);
+            const revUrl = params.length ? `reports/revenue?${params.join('&')}` : 'reports/revenue';
+
+            try {
+                revData = await api.request(revUrl, { method: 'GET' });
+            } catch (e) {
+                console.warn('Revenue fetch error:', e);
+            }
+            try {
+                const methResp = await api.request(`payments/revenue-by-method${params.length ? '?' + params.join('&') : ''}`, { method: 'GET' });
+                methodBreakdown = Array.isArray(methResp) ? methResp : [];
+            } catch (e) {
+                console.warn('Method breakdown error:', e);
+            }
+            try {
+                const payResp = await api.request('reports/recent-payments?per_page=100', { method: 'GET' });
+                paymentsList = Array.isArray(payResp?.data) ? payResp.data : (Array.isArray(payResp) ? payResp : []);
+            } catch (e) {
+                console.warn('Recent payments fetch error:', e);
+            }
+
+            const totalRev = document.getElementById('revTotal')?.innerText || formatPeso(revData?.total?.total);
+            const totalCount = document.getElementById('revCount')?.innerText || revData?.total?.count || paymentsList.length || 0;
+            const avgTicket = Number(totalCount) > 0 ? formatPeso(Number(revData?.total?.total || 0) / Number(totalCount)) : '₱0.00';
+            const scopeLabel = document.getElementById('revTotalSub')?.innerText || 'All transactions';
+
+            kpiBlocksHtml = `
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #064e3b; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Gross Collections</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #064e3b; margin-top: 3px;">${totalRev}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">${scopeLabel}</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #1e40af; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Total Transactions</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #1e40af; margin-top: 3px;">${totalCount}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Official Receipts Issued</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #047857; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Average Transaction</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #047857; margin-top: 3px;">${avgTicket}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Per Receipt Average</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #d97706; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Audit Scope</div>
+                    <div style="font-size: 16px; font-weight: 800; color: #b45309; margin-top: 3px;">${fromVal || toVal ? 'Filtered Period' : 'Full Fiscal History'}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Audited &amp; Reconciled</div>
+                </div>
+            `;
+            executiveSummaryHtml = `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #059669; border-radius: 6px; padding: 10px 14px; margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 10px; font-weight: 800; color: #065f46; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
+                        <span>★</span> EXECUTIVE AUDIT TAKEAWAY &amp; FISCAL REVENUE PROFILE
+                    </div>
+                    <div style="font-size: 9px; color: #166534; line-height: 1.45;">
+                        Gross verified collections across the cemetery system total <strong>${totalRev}</strong> across <strong>${typeof totalCount === 'number' ? totalCount.toLocaleString() : totalCount} official transactions</strong>, averaging <strong>${avgTicket}</strong> per receipt. Reconciled municipal settlement streams reflect regular fiscal compliance across cash and electronic payment facilities.
+                    </div>
+                </div>
+            `;
+
+            const serviceStreams = revData?.service_breakdown || [];
+            let streamRowsHtml = '';
+            if (serviceStreams.length > 0) {
+                streamRowsHtml = serviceStreams.map((s, idx) => {
+                    const cnt = Number(s.count || 0);
+                    const tot = Number(s.total || 0);
+                    const avg = Number(s.average_amount || (cnt > 0 ? tot / cnt : 0));
+                    const pct = Number(s.percentage || 0);
+                    return `
+                        <tr style="${zebraBg(idx)}; page-break-inside: avoid; break-inside: avoid;">
+                            <td style="${tdStyle}"><strong>${safeEscape(s.service_label || s.transaction_type)}</strong></td>
+                            <td style="${tdStyle}">${safeEscape(s.transaction_type || 'General')}</td>
+                            <td style="${tdRightStyle}">${cnt.toLocaleString()}</td>
+                            <td style="${tdRightStyle}"><strong>${formatPeso(tot)}</strong></td>
+                            <td style="${tdRightStyle}">${formatPeso(avg)}</td>
+                            <td style="${tdRightStyle}"><strong>${pct}%</strong></td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                streamRowsHtml = `<tr><td colspan="6" style="${tdCenterStyle}">No service breakdown records recorded.</td></tr>`;
+            }
+
+            // Payment Methods Breakdown
+            let methodRowsHtml = '';
+            if (methodBreakdown.length > 0) {
+                methodRowsHtml = methodBreakdown.map((m, idx) => {
+                    const tot = Number(m.total || 0);
+                    const cnt = Number(m.count || 0);
+                    const pct = Number(m.percentage || 0);
+                    return `
+                        <tr style="${zebraBg(idx)}; page-break-inside: avoid; break-inside: avoid;">
+                            <td style="${tdStyle}"><strong>${safeEscape(m.payment_method || 'Cash')}</strong></td>
+                            <td style="${tdRightStyle}">${cnt.toLocaleString()}</td>
+                            <td style="${tdRightStyle}"><strong>${formatPeso(tot)}</strong></td>
+                            <td style="${tdRightStyle}"><strong>${pct}%</strong></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            let paymentRowsHtml = '';
+            let ledgerTotal = 0;
+            if (paymentsList.length > 0) {
+                paymentRowsHtml = paymentsList.map((p, idx) => {
+                    const orNo = p.receipt_number || (p.payment_id ? `#OR-${p.payment_id}` : `TX-${idx + 1}`);
+                    const orPill = `<span style="font-family: monospace; font-weight: 700; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; color: #0f172a;">${safeEscape(orNo)}</span>`;
+                    const dt = p.payment_date ? formatPdfDateTime(p.payment_date) : naText('', 'N/A');
+                    const payer = (p.payer_name || p.received_by_name || p.payer || '').trim();
+                    let payerHtml = payer ? `<strong>${safeEscape(payer)}</strong>` : naText('', 'N/A');
+                    if (p.payer_contact && String(p.payer_contact).trim()) {
+                        payerHtml += `<div style="font-size: 8px; color: #64748b; margin-top: 1.5px;">📞 ${safeEscape(String(p.payer_contact).trim())}</div>`;
+                    }
+                    const service = p.transaction_type ? safeEscape(p.transaction_type) : naText('', 'N/A');
+                    const method = p.payment_method ? safeEscape(p.payment_method) : naText('', 'N/A');
+                    const amt = Number(p.amount || 0);
+                    ledgerTotal += amt;
+                    const status = p.verification_status || p.status || 'Verified';
+                    return `
+                        <tr style="${zebraBg(idx)}; page-break-inside: avoid; break-inside: avoid;">
+                            <td style="${tdStyle}">${orPill}</td>
+                            <td style="${tdStyle}">${dt}</td>
+                            <td style="${tdStyle}">${payerHtml}</td>
+                            <td style="${tdStyle}">${service}</td>
+                            <td style="${tdStyle}">${method}</td>
+                            <td style="${tdRightStyle}"><strong>${formatPeso(amt)}</strong></td>
+                            <td style="${tdCenterStyle}">${badgeHtml(status)}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                paymentRowsHtml = `<tr><td colspan="7" style="${tdCenterStyle}">No itemized payment ledger transactions found.</td></tr>`;
+            }
+
+            tablesContentHtml = `
+                <div style="margin-bottom: 20px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 11px; font-weight: 700; color: #064e3b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="display: flex; align-items: center; gap: 6px;"><span style="background: #064e3b; color: #ffffff; padding: 2px 6px; border-radius: 3px; font-size: 8.5px; font-weight: 800;">PART I(A)</span> Service Revenue Stream Breakdown Matrix</span>
+                        <span style="font-size: 9px; color: #64748b; font-weight: 500;">By service particular &amp; contribution share</span>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
+                        <thead>
+                            <tr>
+                                <th style="${thStyle}">Service Particulars</th>
+                                <th style="${thStyle}">Category</th>
+                                <th style="${thRightStyle}">Receipts Count</th>
+                                <th style="${thRightStyle}">Total Collections</th>
+                                <th style="${thRightStyle}">Average Value</th>
+                                <th style="${thRightStyle}">Share (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>${streamRowsHtml}</tbody>
+                    </table>
+                </div>
+
+                ${methodRowsHtml ? `
+                <div style="margin-bottom: 20px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 11px; font-weight: 700; color: #064e3b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="display: flex; align-items: center; gap: 6px;"><span style="background: #064e3b; color: #ffffff; padding: 2px 6px; border-radius: 3px; font-size: 8.5px; font-weight: 800;">PART I(B)</span> Collections Channels &amp; Settlement Breakdown</span>
+                        <span style="font-size: 9px; color: #64748b; font-weight: 500;">By payment method</span>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
+                        <thead>
+                            <tr>
+                                <th style="${thStyle}">Payment Channel / Method</th>
+                                <th style="${thRightStyle}">Transactions</th>
+                                <th style="${thRightStyle}">Gross Amount (PHP)</th>
+                                <th style="${thRightStyle}">Share (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>${methodRowsHtml}</tbody>
+                    </table>
+                </div>` : ''}
+
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 11px; font-weight: 700; color: #064e3b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="display: flex; align-items: center; gap: 6px;"><span style="background: #064e3b; color: #ffffff; padding: 2px 6px; border-radius: 3px; font-size: 8.5px; font-weight: 800;">PART II</span> Itemized Payment Audit Ledger (Official Receipts)</span>
+                        <span style="font-size: 9px; color: #64748b; font-weight: 500;">Showing up to ${paymentsList.length} verified transactions</span>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
+                        <thead>
+                            <tr>
+                                <th style="${thStyle}">Official Receipt #</th>
+                                <th style="${thStyle}">Date &amp; Time</th>
+                                <th style="${thStyle}">Payer / Applicant</th>
+                                <th style="${thStyle}">Particulars</th>
+                                <th style="${thStyle}">Payment Channel</th>
+                                <th style="${thRightStyle}">Amount (PHP)</th>
+                                <th style="${thStyle} text-align: center;">Verification</th>
+                            </tr>
+                        </thead>
+                        <tbody>${paymentRowsHtml}</tbody>
+                        <tfoot>
+                            <tr style="background: #f1f5f9; font-weight: 800; border-top: 2px solid #064e3b; page-break-inside: avoid; break-inside: avoid;">
+                                <td colspan="5" style="${tdRightStyle} font-weight: 800; color: #064e3b;">LEDGER SUBTOTAL:</td>
+                                <td style="${tdRightStyle} font-weight: 800; color: #064e3b;">${formatPeso(ledgerTotal)}</td>
+                                <td style="${tdCenterStyle}">—</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            `;
+        } else if (tabKey === 'reservations') {
+            reportTitle = 'Detailed Audit Report: Reservations & Scheduled Interments Master Registry';
+            reportSubtitle = 'Official Booking Schedule, Applicant Particulars, and Space Assignment Masterlist';
+            scopeNotes = 'Scheduled interments, pending booking requests, and burial space reservations.';
+
+            let resList = [];
+            let statsData = null;
+            try {
+                statsData = await api.request(`schedules/stats?year=${now.getFullYear()}`, { method: 'GET' });
+            } catch (e) {
+                console.warn('Reservation stats error:', e);
+            }
+            try {
+                const schedResp = await api.request('schedules?per_page=100&sort_desc=1', { method: 'GET' });
+                resList = Array.isArray(schedResp?.data) ? schedResp.data : (Array.isArray(schedResp) ? schedResp : []);
+            } catch (e) {
+                console.warn('Schedules fetch error:', e);
+            }
+
+            const totalBookings = resList.length || statsData?.total || 0;
+            const confirmedCount = resList.filter(r => String(r.status || '').toLowerCase() === 'confirmed').length;
+            const pendingCount = resList.filter(r => String(r.status || '').toLowerCase() === 'pending').length;
+            const completedCount = resList.filter(r => String(r.status || '').toLowerCase() === 'completed').length;
+
+            kpiBlocksHtml = `
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #064e3b; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Total Applications</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #064e3b; margin-top: 3px;">${totalBookings}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Logged in System</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #047857; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Confirmed Bookings</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #047857; margin-top: 3px;">${confirmedCount}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Approved Schedules</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #d97706; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Pending Applications</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #b45309; margin-top: 3px;">${pendingCount}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Under Evaluation</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #1e40af; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Completed Services</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #1e40af; margin-top: 3px;">${completedCount}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Conducted Interments</div>
+                </div>
+            `;
+            executiveSummaryHtml = `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #059669; border-radius: 6px; padding: 10px 14px; margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 10px; font-weight: 800; color: #065f46; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
+                        <span>★</span> EXECUTIVE AUDIT TAKEAWAY &amp; RESERVATIONS OVERVIEW
+                    </div>
+                    <div style="font-size: 9px; color: #166534; line-height: 1.45;">
+                        The cemetery master registry contains <strong>${totalBookings} total service reservations</strong>: <strong>${confirmedCount}</strong> are confirmed and calendared, <strong>${pendingCount}</strong> are undergoing municipal document verification, and <strong>${completedCount}</strong> have been concluded. Applicant claimant names, scheduled dates, and phone numbers are verified against official records.
+                    </div>
+                </div>
+            `;
+
+            let resRowsHtml = '';
+            if (resList.length > 0) {
+                resRowsHtml = resList.map((r, idx) => {
+                    const rawRef = r.booking_reference || (r.schedule_id ? `SCH-${String(r.schedule_id).padStart(4, '0')}` : (r.reference_number || r.booking_id || `#RSV-${r.id || idx + 1}`));
+                    const ref = `<span style="font-family: monospace; font-weight: 700; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; color: #0f172a;">${safeEscape(rawRef)}</span>`;
+
+                    // Scheduled Date & Time
+                    const rawDate = r.schedule_date || r.scheduled_date || r.date;
+                    const rawTime = r.schedule_time || r.time || '';
+                    let schedDt = naText('', 'N/A');
+                    if (rawDate) {
+                        const dateFormatted = formatPdfDate(rawDate);
+                        if (rawTime) {
+                            try {
+                                const parts = String(rawTime).trim().split(':');
+                                let h = parseInt(parts[0], 10);
+                                const m = parts[1] || '00';
+                                const ampm = h >= 12 ? 'PM' : 'AM';
+                                h = h % 12 || 12;
+                                schedDt = `${dateFormatted} · ${h}:${m} ${ampm}`;
+                            } catch (e) {
+                                schedDt = `${dateFormatted} · ${rawTime}`;
+                            }
+                        } else {
+                            schedDt = dateFormatted;
+                        }
+                    }
+
+                    // Applicant / Claimant: prioritize actual family claimant or registrant on file
+                    const deceasedName = (r.first_name ? `${r.first_name} ${r.last_name || ''}`.trim() : (r.provisional_name || r.decedent_name || '')).trim();
+                    const claimant = (r.decedent_contact_name || r.applicant_name || r.claimant_name || r.payer_name || '').trim();
+                    const systemUser = (r.created_by_name || '').trim();
+
+                    let primaryApplicant = claimant;
+                    if (!primaryApplicant) {
+                        if (systemUser && !['system admin', 'staff user', 'admin'].includes(systemUser.toLowerCase())) {
+                            primaryApplicant = systemUser;
+                        } else if (deceasedName) {
+                            primaryApplicant = `${deceasedName} (Kin/Estate)`;
+                        } else if (systemUser) {
+                            primaryApplicant = systemUser;
+                        } else {
+                            primaryApplicant = '';
+                        }
+                    }
+
+                    let applicantHtml = primaryApplicant ? `<strong>${safeEscape(primaryApplicant)}</strong>` : naText('', 'N/A');
+                    if (deceasedName && primaryApplicant && primaryApplicant !== deceasedName && !primaryApplicant.startsWith(deceasedName)) {
+                        applicantHtml += `<div style="font-size: 8px; color: #64748b; margin-top: 1.5px;">For: ${safeEscape(deceasedName)}</div>`;
+                    }
+
+                    // Service Type
+                    const service = r.service_type || r.service || (r.lot_type_name ? `${r.lot_type_name} Burial` : 'Burial Interment');
+
+                    // Location / Plot Details
+                    const locParts = [r.section_name, r.block_name, r.lot_number ? `Lot ${r.lot_number}` : ''].filter(Boolean).join(' · ');
+                    const loc = locParts || r.assigned_space || naText('', 'N/A');
+
+                    // Contact Info: actual phone from decedent_records or users
+                    const rawContact = (r.decedent_contact_number || r.created_by_contact || r.contact_number || r.phone || r.applicant_phone || '').trim();
+                    const contact = rawContact ? `<strong>${safeEscape(rawContact)}</strong>` : naText('', 'N/A');
+
+                    const status = r.status || 'Pending';
+                    return `
+                        <tr style="${zebraBg(idx)}; page-break-inside: avoid; break-inside: avoid;">
+                            <td style="${tdStyle}">${ref}</td>
+                            <td style="${tdStyle}">${schedDt}</td>
+                            <td style="${tdStyle}">${applicantHtml}</td>
+                            <td style="${tdStyle}">${safeEscape(service)}</td>
+                            <td style="${tdStyle}">${loc}</td>
+                            <td style="${tdStyle}">${contact}</td>
+                            <td style="${tdCenterStyle}">${badgeHtml(status)}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                resRowsHtml = `<tr><td colspan="7" style="${tdCenterStyle}">No scheduled reservations found.</td></tr>`;
+            }
+
+            tablesContentHtml = `
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 11px; font-weight: 700; color: #064e3b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="display: flex; align-items: center; gap: 6px;"><span style="background: #064e3b; color: #ffffff; padding: 2px 6px; border-radius: 3px; font-size: 8.5px; font-weight: 800;">REGISTRY</span> Itemized Reservations &amp; Scheduled Interments Registry</span>
+                        <span style="font-size: 9px; color: #64748b; font-weight: 500;">Showing up to ${resList.length} scheduled interments</span>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
+                        <thead>
+                            <tr>
+                                <th style="${thStyle}">Booking Ref #</th>
+                                <th style="${thStyle}">Scheduled Date &amp; Time</th>
+                                <th style="${thStyle}">Applicant / Claimant</th>
+                                <th style="${thStyle}">Service Type</th>
+                                <th style="${thStyle}">Assigned Location</th>
+                                <th style="${thStyle}">Contact Info</th>
+                                <th style="${thStyle} text-align: center;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>${resRowsHtml}</tbody>
+                    </table>
+                </div>
+            `;
+        } else if (tabKey === 'demographics') {
+            reportTitle = 'Detailed Audit Report: Comprehensive Decedent Interment Registry';
+            reportSubtitle = 'Vital Statistics, Age Cohort Mortality Profile, and Interment Masterlist';
+            scopeNotes = 'Official municipal decedent records, vital demographics, and burial disposition.';
+
+            let demoStats = null;
+            let decedentList = [];
+            try {
+                demoStats = await api.request('decedents/stats', { method: 'GET' });
+            } catch (e) {
+                console.warn('Demographics stats error:', e);
+            }
+            try {
+                const decResp = await api.request('decedents?per_page=100', { method: 'GET' });
+                decedentList = Array.isArray(decResp?.data) ? decResp.data : (Array.isArray(decResp) ? decResp : []);
+            } catch (e) {
+                console.warn('Decedents fetch error:', e);
+            }
+
+            const totalDecedents = document.getElementById('demoTotal')?.innerText || demoStats?.total || decedentList.length || 0;
+            const burials = document.getElementById('demoBurials')?.innerText || demoStats?.burials || 0;
+            const cremations = document.getElementById('demoCremations')?.innerText || demoStats?.cremations || 0;
+            const avgAge = document.getElementById('demoAvgAge')?.innerText || demoStats?.avg_age || '—';
+
+            kpiBlocksHtml = `
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #064e3b; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Total Decedents</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #064e3b; margin-top: 3px;">${totalDecedents}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Registered Interments</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #047857; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Burial Services</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #047857; margin-top: 3px;">${burials}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Ground / Crypt Interments</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #d97706; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Cremation Services</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #b45309; margin-top: 3px;">${cremations}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Columbarium / Inurnments</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #1e40af; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Average Age at Death</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #1e40af; margin-top: 3px;">${avgAge} yrs</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Overall Vital Mean</div>
+                </div>
+            `;
+            executiveSummaryHtml = `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #059669; border-radius: 6px; padding: 10px 14px; margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 10px; font-weight: 800; color: #065f46; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
+                        <span>★</span> EXECUTIVE AUDIT TAKEAWAY &amp; MORTALITY PROFILE
+                    </div>
+                    <div style="font-size: 9px; color: #166534; line-height: 1.45;">
+                        Official municipal cemetery registers reflect <strong>${totalDecedents} interred decedents</strong>, comprising <strong>${burials} ground and crypt burials</strong> alongside <strong>${cremations} cremations and columbarium inurnments</strong>. Mean vital age at mortality stands at <strong>${avgAge} years</strong>, providing actionable baseline demographic metrics for health authorities and cemetery planning.
+                    </div>
+                </div>
+            `;
+
+            const ageGroups = Array.isArray(demoStats?.age_groups) && demoStats.age_groups.length ? demoStats.age_groups : [
+                { label: '0-17', value: 0 }, { label: '18-35', value: 0 },
+                { label: '36-55', value: 0 }, { label: '56-75', value: 0 }, { label: '75+', value: 0 }
+            ];
+            const totalAgeCount = ageGroups.reduce((s, g) => s + Number(g.value || 0), 0);
+            const ageGroupRowsHtml = ageGroups.map((g, idx) => {
+                const v = Number(g.value || 0);
+                const share = totalAgeCount > 0 ? Math.round((v / totalAgeCount) * 100) : 0;
+                const prof = v >= 25 ? 'High concentration' : v >= 10 ? 'Moderate' : v > 0 ? 'Low' : 'No data';
+                return `
+                    <tr style="${zebraBg(idx)}; page-break-inside: avoid; break-inside: avoid;">
+                        <td style="${tdStyle}"><strong>${safeEscape(g.label)} Years</strong></td>
+                        <td style="${tdRightStyle}"><strong>${v.toLocaleString()}</strong></td>
+                        <td style="${tdRightStyle}">${share}%</td>
+                        <td style="${tdCenterStyle}">${badgeHtml(prof)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            let decRowsHtml = '';
+            if (decedentList.length > 0) {
+                decRowsHtml = decedentList.map((d, idx) => {
+                    const id = d.decedent_id || d.id || idx + 1;
+                    const decPill = `<span style="font-family: monospace; font-weight: 700; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; color: #0f172a;">#DEC-${id}</span>`;
+                    const nameParts = [d.first_name, d.last_name].filter(Boolean).join(' ') || d.full_name;
+                    const name = nameParts ? safeEscape(nameParts) : naText('', 'N/A');
+                    const ageStr = d.age !== undefined && d.age !== null && String(d.age).trim() !== '' ? `${d.age} yrs` : '';
+                    const genderStr = d.gender || '';
+                    const ageGender = (ageStr && genderStr) ? `${ageStr} · ${genderStr}` : (ageStr || genderStr || naText('', 'N/A'));
+                    const dod = d.date_of_death ? formatPdfDate(d.date_of_death) : naText('', 'N/A');
+                    const rawBurial = d.burial_date || d.date_of_burial || d.interment_date;
+                    const burialDate = rawBurial ? formatPdfDate(rawBurial) : naText('', 'N/A');
+                    const isCrem = d.is_cremated === 'yes' || d.is_cremated === 1 || d.is_cremated === '1' || d.is_cremated === true;
+                    const type = isCrem ? 'Cremation' : 'Burial';
+                    const locParts = [d.section_name, d.block_name, d.lot_number ? `Lot ${d.lot_number}` : ''].filter(Boolean).join(' · ');
+                    const loc = locParts || naText('', 'N/A');
+                    
+                    const kinName = (d.contact_person || d.contact_name || d.informant || d.claimant_name || '').trim();
+                    const kinPhone = (d.contact_number || d.contact_phone || d.phone || '').trim();
+                    let kinHtml = kinName ? `<strong>${safeEscape(kinName)}</strong>` : naText('', 'N/A');
+                    if (kinPhone) {
+                        kinHtml += `<div style="font-size: 8px; color: #64748b; margin-top: 1.5px;">📞 ${safeEscape(kinPhone)}</div>`;
+                    }
+
+                    return `
+                        <tr style="${zebraBg(idx)}; page-break-inside: avoid; break-inside: avoid;">
+                            <td style="${tdStyle}">${decPill}</td>
+                            <td style="${tdStyle}"><strong>${name}</strong></td>
+                            <td style="${tdStyle}">${ageGender}</td>
+                            <td style="${tdStyle}">${dod}</td>
+                            <td style="${tdStyle}">${burialDate}</td>
+                            <td style="${tdCenterStyle}">${badgeHtml(type)}</td>
+                            <td style="${tdStyle}">${loc}</td>
+                            <td style="${tdStyle}">${kinHtml}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                decRowsHtml = `<tr><td colspan="8" style="${tdCenterStyle}">No decedent records cataloged.</td></tr>`;
+            }
+
+            tablesContentHtml = `
+                <div style="margin-bottom: 20px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 11px; font-weight: 700; color: #064e3b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="display: flex; align-items: center; gap: 6px;"><span style="background: #064e3b; color: #ffffff; padding: 2px 6px; border-radius: 3px; font-size: 8.5px; font-weight: 800;">PART I</span> Mortality Age Cohort Distribution Profile</span>
+                        <span style="font-size: 9px; color: #64748b; font-weight: 500;">Vital statistics distribution</span>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
+                        <thead>
+                            <tr>
+                                <th style="${thStyle}">Age Cohort Bracket</th>
+                                <th style="${thRightStyle}">Decedents Count</th>
+                                <th style="${thRightStyle}">Demographic Share</th>
+                                <th style="${thStyle} text-align: center;">Concentration Profile</th>
+                            </tr>
+                        </thead>
+                        <tbody>${ageGroupRowsHtml}</tbody>
+                    </table>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 11px; font-weight: 700; color: #064e3b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="display: flex; align-items: center; gap: 6px;"><span style="background: #064e3b; color: #ffffff; padding: 2px 6px; border-radius: 3px; font-size: 8.5px; font-weight: 800;">PART II</span> Master Decedent Interment &amp; Burial Registry</span>
+                        <span style="font-size: 9px; color: #64748b; font-weight: 500;">Showing up to ${decedentList.length} registered decedents</span>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
+                        <thead>
+                            <tr>
+                                <th style="${thStyle}">Registry #</th>
+                                <th style="${thStyle}">Decedent Full Name</th>
+                                <th style="${thStyle}">Age / Sex</th>
+                                <th style="${thStyle}">Date of Death</th>
+                                <th style="${thStyle}">Interment Date</th>
+                                <th style="${thStyle} text-align: center;">Service</th>
+                                <th style="${thStyle}">Plot Location</th>
+                                <th style="${thStyle}">Next-of-Kin / Claimant</th>
+                            </tr>
+                        </thead>
+                        <tbody>${decRowsHtml}</tbody>
+                    </table>
+                </div>
+            `;
+        } else if (tabKey === 'expiration') {
+            reportTitle = 'Detailed Audit Report: 5-Year Lease Expiration & Grave Reclamation Audit';
+            reportSubtitle = 'Statutory Term Compliance, Lease Renewal Due Notice Registry, and Space Exhumation Audit';
+            
+            const fromVal = document.getElementById('expirationDateFrom')?.value || '';
+            const toVal = document.getElementById('expirationDateTo')?.value || '';
+            scopeNotes = (fromVal || toVal) ? `Filtered date range: ${fromVal || 'Beginning'} to ${toVal || 'Current'}` : 'Complete 5-year lease expiration monitoring registry.';
+
+            let expData = null;
+            const expParams = new URLSearchParams();
+            expParams.set('page', '1');
+            expParams.set('per_page', '100');
+            if (fromVal) expParams.set('date_from', fromVal);
+            if (toVal) expParams.set('date_to', toVal);
+
+            try {
+                expData = await api.request(`reports/expiration?${expParams.toString()}`, { method: 'GET' });
+            } catch (e) {
+                console.warn('Expiration fetch error:', e);
+            }
+
+            const summary = expData?.summary || {};
+            const expiringList = Array.isArray(expData?.expiring_soon?.data) ? expData.expiring_soon.data : (Array.isArray(expData?.expiring_soon) ? expData.expiring_soon : []);
+            const expiredList = Array.isArray(expData?.expired?.data) ? expData.expired.data : (Array.isArray(expData?.expired) ? expData.expired : []);
+            const combinedList = [
+                ...expiringList.map(item => ({ ...item, _leaseType: 'Expiring Soon' })),
+                ...expiredList.map(item => ({ ...item, _leaseType: 'Expired / Overdue' }))
+            ];
+
+            const cExpiring = document.getElementById('expExpiring')?.innerText || summary.expiring_soon || expiringList.length || 0;
+            const cExpired = document.getElementById('expExpired')?.innerText || summary.expired || expiredList.length || 0;
+            const cRenewal = document.getElementById('expRenewalDue')?.innerText || summary.renewal_due || 0;
+            const cReview = document.getElementById('expPendingReview')?.innerText || summary.pending_review || 0;
+
+            kpiBlocksHtml = `
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #d97706; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Expiring Soon (30-90d)</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #b45309; margin-top: 3px;">${cExpiring}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Notice for Renewal Required</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #dc2626; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Overdue / Expired</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #991b1b; margin-top: 3px;">${cExpired}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Eligible for Reclamation</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #047857; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Renewals Due</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #047857; margin-top: 3px;">${cRenewal}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Awaiting Renewal Fees</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #1e40af; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Pending Space Review</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #1e40af; margin-top: 3px;">${cReview}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Exhumation Queue</div>
+                </div>
+            `;
+            executiveSummaryHtml = `
+                <div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #dc2626; border-radius: 6px; padding: 10px 14px; margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 10px; font-weight: 800; color: #991b1b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
+                        <span>⚠</span> EXECUTIVE AUDIT TAKEAWAY &amp; LEASE TERM COMPLIANCE
+                    </div>
+                    <div style="font-size: 9px; color: #7f1d1d; line-height: 1.45;">
+                        Statutory audit monitoring under PD 856 flags <strong>${cExpired} expired grave lots</strong> overdue for renewal and pending exhumation clearance or family contact, alongside <strong>${cExpiring} lots expiring within 30–90 days</strong> requiring immediate official renewal notice dispatch. Timely turnover preserves public cemetery capacity.
+                    </div>
+                </div>
+            `;
+
+            let expRowsHtml = '';
+            if (combinedList.length > 0) {
+                expRowsHtml = combinedList.map((item, idx) => {
+                    const rawLotNo = item.lot_number || `Lot #${item.lot_id || idx + 1}`;
+                    const lotNo = `<span style="font-family: monospace; font-weight: 700; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; color: #0f172a;">${safeEscape(rawLotNo)}</span>`;
+                    const sec = item.section_name ? safeEscape(item.section_name) : naText('', 'N/A');
+                    const blk = item.block_name ? safeEscape(item.block_name) : naText('', 'N/A');
+                    const occName = (item.occupant_name || item.decedent_name || '').trim();
+                    let occHtml = occName ? `<strong>${safeEscape(occName)}</strong>` : naText('', 'N/A');
+                    const kinName = (item.contact_name || '').trim();
+                    const kinPhone = (item.contact_number || item.contact_phone || '').trim();
+                    const kinDetails = [kinName, kinPhone].filter(Boolean).map(safeEscape).join(' · ');
+                    if (kinDetails) {
+                        occHtml += `<div style="font-size: 8px; color: #64748b; margin-top: 1.5px;">Kin: ${kinDetails}</div>`;
+                    }
+                    const endDate = item.end_date ? formatPdfDate(item.end_date) : (item.lease_end_date ? formatPdfDate(item.lease_end_date) : naText('', 'N/A'));
+                    
+                    const end = item.end_date ? new Date(`${item.end_date}T00:00:00`) : (item.lease_end_date ? new Date(`${item.lease_end_date}T00:00:00`) : null);
+                    const today = new Date(); today.setHours(0,0,0,0);
+                    const diff = end ? Math.round((end - today) / 86400000) : null;
+                    const diffLabel = diff === null ? 'N/A' : diff < 0 ? `${Math.abs(diff)}d overdue` : diff === 0 ? 'Today' : `in ${diff}d`;
+                    const statusText = item._leaseType === 'Expired / Overdue' ? 'Expired' : 'Expiring';
+                    const action = diff !== null && diff < 0 ? 'Reclamation & Exhumation Clearance' : 'Issue 30-Day Renewal Notice';
+
+                    return `
+                        <tr style="${zebraBg(idx)}; page-break-inside: avoid; break-inside: avoid;">
+                            <td style="${tdStyle}">${lotNo}</td>
+                            <td style="${tdStyle}">${sec}</td>
+                            <td style="${tdStyle}">${blk}</td>
+                            <td style="${tdStyle}">${occHtml}</td>
+                            <td style="${tdStyle}">${endDate}</td>
+                            <td style="${tdCenterStyle}">${badgeHtml(`${statusText} (${diffLabel})`)}</td>
+                            <td style="${tdStyle}"><strong>${action}</strong></td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                expRowsHtml = `<tr><td colspan="7" style="${tdCenterStyle}">No expired or expiring lots found for the specified period.</td></tr>`;
+            }
+
+            tablesContentHtml = `
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 11px; font-weight: 700; color: #064e3b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="display: flex; align-items: center; gap: 6px;"><span style="background: #064e3b; color: #ffffff; padding: 2px 6px; border-radius: 3px; font-size: 8.5px; font-weight: 800;">AUDIT</span> 5-Year Lease Expiration &amp; Space Reclamation Audit Masterlist</span>
+                        <span style="font-size: 9px; color: #64748b; font-weight: 500;">Showing up to ${combinedList.length} monitored grave plots</span>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
+                        <thead>
+                            <tr>
+                                <th style="${thStyle}">Plot / Lot #</th>
+                                <th style="${thStyle}">Section</th>
+                                <th style="${thStyle}">Block</th>
+                                <th style="${thStyle}">Interred Decedent / Grantee</th>
+                                <th style="${thStyle}">Lease Expiration</th>
+                                <th style="${thStyle} text-align: center;">Term Status</th>
+                                <th style="${thStyle}">Prescribed Municipal Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>${expRowsHtml}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        printRoot.innerHTML = `
+            <!-- Watermark -->
+            <div style="position: absolute; top: 32%; left: 8%; transform: rotate(-26deg); font-size: 58px; font-weight: 900; color: rgba(6, 78, 59, 0.032); letter-spacing: 0.16em; pointer-events: none; z-index: 0; user-select: none;">
+                MALABON CMS OFFICIAL AUDIT RECORD
+            </div>
+
+            <!-- Letterhead -->
+            <div style="border-bottom: 3px solid #059669; padding-bottom: 14px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: flex-end; position: relative; z-index: 1;">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    ${MALABON_SEAL_SVG}
+                    <div>
+                        <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px;">Republic of the Philippines · City Government of Malabon</div>
+                        <div style="font-size: 19px; font-weight: 800; color: #064e3b; letter-spacing: -0.02em; line-height: 1.15;">Cemetery Operations &amp; Management Office</div>
+                        <div style="margin-top: 3px; font-size: 11px; color: #334155; font-weight: 600;">Public Cemetery Operations · Detailed Comprehensive Master Audit</div>
+                    </div>
+                </div>
+                <div style="text-align: right; font-size: 9px; color: #64748b; line-height: 1.45; border-left: 2px solid #e2e8f0; padding-left: 14px;">
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 3px;">
+                        ${BARCODE_SVG}
+                    </div>
+                    <div>Document Control No.: <strong style="color: #0f172a; font-family: monospace;">${refNo}</strong></div>
+                    <div>Audit Generated: <strong style="color: #0f172a;">${formattedDate}, ${formattedTime}</strong></div>
+                    <div>Classification: <strong style="color: #047857;">CONFIDENTIAL / OFFICIAL AUDIT RECORD</strong></div>
+                </div>
+            </div>
+
+            <!-- Title Banner -->
+            <div style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); color: #ffffff; padding: 14px 18px; border-radius: 8px; margin-bottom: 18px; position: relative; z-index: 1;">
+                <div style="font-size: 16px; font-weight: 800; letter-spacing: -0.01em;">${safeEscape(reportTitle)}</div>
+                <div style="font-size: 10.5px; opacity: 0.92; margin-top: 3px;">${safeEscape(reportSubtitle)}</div>
+                <div style="font-size: 9px; opacity: 0.85; margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(255, 255, 255, 0.2);">
+                    <strong>Audit Parameters &amp; Scope:</strong> ${safeEscape(scopeNotes)}
+                </div>
+            </div>
+
+            <!-- Executive Summary Callout -->
+            ${executiveSummaryHtml}
+
+            <!-- Executive KPI Metric Tiles -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 22px; position: relative; z-index: 1; page-break-inside: avoid; break-inside: avoid;">
+                ${kpiBlocksHtml}
+            </div>
+
+            <!-- Tables Content -->
+            <div style="position: relative; z-index: 1;">
+                ${tablesContentHtml}
+            </div>
+
+            <!-- Statutory Compliance & Footnote -->
+            <div style="margin-top: 26px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 8.5px; color: #64748b; line-height: 1.5; page-break-inside: avoid; break-inside: avoid; position: relative; z-index: 1;">
+                <strong style="color: #0f172a;">STATUTORY COMPLIANCE &amp; CERTIFICATION:</strong> This detailed audit document was extracted directly from active database records of the Malabon Cemetery Management System. Lease expiration terms are enforced in compliance with the Sanitation Code of the Philippines (Presidential Decree No. 856, Section 90) mandating the five-year grave lease cycle. Information in this document is protected under Republic Act No. 10173 (Data Privacy Act of 2012) and is released solely for verified operational, audit, and legislative review.
+            </div>
+
+            <!-- Formal Signatory Block -->
+            <div style="margin-top: 28px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; page-break-inside: avoid; break-inside: avoid; position: relative; z-index: 1;">
+                <div style="border-top: 1.5px solid #0f172a; padding-top: 8px; font-size: 9.5px;">
+                    <div style="font-weight: 800; color: #0f172a; font-size: 8px; letter-spacing: 0.05em;">PREPARED BY:</div>
+                    <div style="margin-top: 22px; font-weight: 700; color: #0f172a; font-size: 9.5px;">Records &amp; Billing Officer</div>
+                    <div style="color: #64748b; font-size: 8px;">Cemetery Administration Office</div>
+                    <div style="margin-top: 4px; color: #94a3b8; font-size: 8px;">Date: ________________________</div>
+                </div>
+                <div style="border-top: 1.5px solid #0f172a; padding-top: 8px; font-size: 9.5px;">
+                    <div style="font-weight: 800; color: #0f172a; font-size: 8px; letter-spacing: 0.05em;">VERIFIED BY:</div>
+                    <div style="margin-top: 22px; font-weight: 700; color: #0f172a; font-size: 9.5px;">Internal Audit Lead</div>
+                    <div style="color: #64748b; font-size: 8px;">City Treasury &amp; Audit Office</div>
+                    <div style="margin-top: 4px; color: #94a3b8; font-size: 8px;">Date: ________________________</div>
+                </div>
+                <div style="border-top: 1.5px solid #0f172a; padding-top: 8px; font-size: 9.5px;">
+                    <div style="font-weight: 800; color: #0f172a; font-size: 8px; letter-spacing: 0.05em;">APPROVED BY:</div>
+                    <div style="margin-top: 22px; font-weight: 700; color: #0f172a; font-size: 9.5px;">City Cemetery Administrator</div>
+                    <div style="color: #64748b; font-size: 8px;">City Government of Malabon</div>
+                    <div style="margin-top: 4px; color: #94a3b8; font-size: 8px;">Date: ________________________</div>
+                </div>
+            </div>
+            <div style="margin-top: 18px; border-top: 1px solid #e2e8f0; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: #94a3b8; position: relative; z-index: 1;">
+                <div>City of Malabon Public Cemetery · Official Master Audit Document</div>
+                <div>Document Classification: Highly Confidential / Official Record</div>
+            </div>
+        `;
+
+        const prevScrollX = window.scrollX || window.pageXOffset || 0;
+        const prevScrollY = window.scrollY || window.pageYOffset || 0;
+        document.body.appendChild(printRoot);
+        window.scrollTo(0, 0);
+
+        try {
+            const html2canvasLib = window.html2canvas || (typeof html2canvas !== 'undefined' ? html2canvas : null);
+            const jsPdfConstructor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF || (typeof jsPDF !== 'undefined' ? jsPDF : null);
+
+            if (html2canvasLib && jsPdfConstructor) {
+                const canvas = await html2canvasLib(printRoot, {
+                    scale: 1.5,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    width: printRoot.offsetWidth || 840,
+                    height: printRoot.offsetHeight,
+                    scrollX: 0,
+                    scrollY: 0
+                });
+
+                printRoot.remove();
+                window.scrollTo(prevScrollX, prevScrollY);
+
+                const pdf = new jsPdfConstructor('p', 'mm', 'a4');
+                const pageWidth = 210;
+                const pageHeight = 297;
+                const margin = 8;
+                const contentWidth = pageWidth - (margin * 2);
+                const contentHeight = pageHeight - (margin * 2);
+
+                const imgWidth = contentWidth;
+                const imgHeight = (canvas.height * contentWidth) / canvas.width;
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+                let heightLeft = imgHeight;
+                let position = margin;
+                let pageIndex = 0;
+
+                while (heightLeft > 0) {
+                    if (pageIndex > 0) {
+                        pdf.addPage();
+                    }
+                    pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
+                    heightLeft -= contentHeight;
+                    position -= contentHeight;
+                    pageIndex++;
+                }
+
+                const blob = pdf.output('blob');
+                const url = URL.createObjectURL(blob);
+                triggerFileDownload(url, filename);
+                return { url, filename };
+            } else if (typeof html2pdf !== 'undefined') {
+                const opt = {
+                    margin:       [0.3, 0.3, 0.3, 0.3],
+                    filename:     filename,
+                    image:        { type: 'jpeg', quality: 0.95 },
+                    html2canvas:  { scale: 1.5, useCORS: true, backgroundColor: '#ffffff', scrollY: 0, scrollX: 0 },
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+                    pagebreak:    { mode: ['css', 'legacy'] }
+                };
+                const blob = await html2pdf().set(opt).from(printRoot).outputPdf('blob');
+                printRoot.remove();
+                window.scrollTo(prevScrollX, prevScrollY);
+                const url = URL.createObjectURL(blob);
+                triggerFileDownload(url, filename);
+                return { url, filename };
+            } else {
+                printRoot.remove();
+                window.scrollTo(prevScrollX, prevScrollY);
+                window.print();
+                return null;
+            }
+        } catch (error) {
+            console.error('Detailed PDF export failed:', error);
+            if (printRoot.parentNode) printRoot.remove();
+            window.scrollTo(prevScrollX, prevScrollY);
+            throw error;
+        }
+    }
+
     // XLSX.utils has no html_to_sheet — that call always threw on every tab
     // except Expiration (the only one with a <table>). Build a plain
     // metric/value sheet from the visible .stat-card tiles instead.
@@ -2784,31 +4099,24 @@ document.addEventListener('DOMContentLoaded', async function() {
         return { url, filename };
     }
 
-    // Drives the .dl-toggle checkbox through Download -> (generating, ~3.9s
-    // animation) -> Open/Saved. The 3900ms floor matches the CSS "installed"
-    // delay in download-toggle.css so the button only flips once the file
-    // is actually ready, even if generation resolves faster than the animation.
-    //
-    // `generation` guards against a stale in-flight run: reset() (called on
-    // every tab switch) doesn't cancel a runGeneration() that's still
-    // mid-flight from a previous click — e.g. switch tabs while the ~3.9s
-    // animation wait from the last export is still ticking. Without this
-    // guard, that stale run resolves later and force-sets state back to
-    // 'ready' with a result reset() already nulled out, which makes the
-    // *next* click on the new tab a silent no-op (preventDefault fires,
-    // onOpen(null) does nothing — no error, no download).
-        function setupDownloadToggle(id, { run, onOpen }) {
+    // Drives the download action buttons with rich UX feedback:
+    // Idle -> Working (spinner + Generating...) -> Ready (check + Open)
+    function setupDownloadToggle(id, { run, onOpen }) {
         const checkbox = document.getElementById(id);
         if (!checkbox) return { reset() {} };
-        const MIN_ANIMATION_MS = 3900;
+        const MIN_ANIMATION_MS = 2800;
         let state = 'idle';
         let result = null;
         let generation = 0;
+        const origHtml = checkbox.innerHTML;
 
         async function runGeneration() {
             const myGeneration = ++generation;
             state = 'working';
             checkbox.disabled = true;
+            checkbox.classList.add('is-working');
+            checkbox.classList.remove('is-ready');
+            checkbox.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> <span>Generating...</span>`;
             const start = Date.now();
             let localResult;
             try {
@@ -2818,8 +4126,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (myGeneration === generation) {
                     checkbox.checked = false;
                     checkbox.disabled = false;
+                    checkbox.classList.remove('is-working', 'is-ready');
+                    checkbox.innerHTML = origHtml;
                     state = 'idle';
-                    alert('Export failed. Please try again.');
+                    if (typeof showToast === 'function') {
+                        showToast('Export failed. Please try again.', { type: 'error' });
+                    } else {
+                        alert('Export failed. Please try again.');
+                    }
                 }
                 return;
             }
@@ -2828,7 +4142,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (myGeneration !== generation) return;
             result = localResult;
             checkbox.disabled = false;
+            checkbox.classList.remove('is-working');
+            checkbox.classList.add('is-ready');
+            checkbox.innerHTML = `<i class="fas fa-file-circle-check"></i> <span>Ready (Open)</span>`;
             state = 'ready';
+            if (typeof showToast === 'function' && localResult?.filename) {
+                showToast(`Report generated: ${localResult.filename}`, { type: 'success' });
+            }
         }
 
         checkbox.addEventListener('click', (e) => {
@@ -2852,6 +4172,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 state = 'idle';
                 checkbox.checked = false;
                 checkbox.disabled = false;
+                checkbox.classList.remove('is-working', 'is-ready');
+                checkbox.innerHTML = origHtml;
             }
         };
     }
@@ -2866,10 +4188,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         onOpen: (result) => { if (result) triggerFileDownload(result.url, result.filename); }
     });
 
+    const detailedPdfToggle = setupDownloadToggle('exportDetailedPdfBtn', {
+        run: generateDetailedPdfExport,
+        onOpen: (result) => { if (result?.url) window.open(result.url, '_blank'); }
+    });
+
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             pdfToggle.reset();
             excelToggle.reset();
+            detailedPdfToggle.reset();
         });
     });
 

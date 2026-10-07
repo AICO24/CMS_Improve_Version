@@ -23,6 +23,7 @@
     <link rel="stylesheet" href="../../assets/css/components/sidebar-nav-groups.css?v=2">
     <link rel="stylesheet" href="../../assets/css/reports.css">
     <link rel="stylesheet" href="../../assets/css/components/download-toggle.css">
+    <link rel="stylesheet" href="../../assets/css/components/toast.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <link rel="stylesheet" href="../../assets/css/reskin.css?v=2">
@@ -369,6 +370,11 @@
                                 <button type="button" class="btn-secondary btn-action-pill report-export-button report-export-button--excel" id="exportExcelBtn" title="Generate Excel report">
                                     <i class="fas fa-file-excel"></i>
                                     <span>Generate Excel</span>
+                                </button>
+                                <button type="button" class="btn-secondary btn-action-pill report-export-button report-export-button--detailed-pdf" id="exportDetailedPdfBtn" title="Generate Comprehensive Detailed Audit PDF report">
+                                    <i class="fas fa-file-lines"></i>
+                                    <span>Detailed Report.Pdf</span>
+                                    <span class="btn-badge-pill">Audit</span>
                                 </button>
                             </div>
                         </div>
@@ -946,6 +952,7 @@
     <script src="../../assets/js/shared/api.js"></script>
     <script src="../../assets/js/shared/button-loading.js"></script>
     <script src="../../assets/js/shared/pagination.js"></script>
+    <script src="../../assets/js/shared/toast.js"></script>
     <script src="../../assets/js/pages/reports.js"></script>
     <script src="../../assets/js/shared/theme-toggle.js?v=2"></script>
     <script src="../../assets/js/shared/sidebar-nav.js?v=2"></script>

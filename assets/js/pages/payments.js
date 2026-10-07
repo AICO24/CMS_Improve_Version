@@ -923,6 +923,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     const amountInput = document.getElementById('amount');
     let expectedAmountForCurrentReference = null;
 
+    let userHasManuallyEditedAmount = false;
+
     function updateMismatchWarning() {
         const entered = parseFloat(amountInput.value);
         if (expectedAmountForCurrentReference === null || isNaN(entered)) {
@@ -958,11 +960,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 expectedAmountForCurrentReference = parseFloat(result.expected_amount);
                 expectedAmountHint.textContent = `Expected Amount: ${formatCurrency(expectedAmountForCurrentReference)}`;
                 expectedAmountHint.style.display = 'block';
-                // Batch M9: pre-fill rather than leave the user to retype a
-                // number the system already knows — only when the field is
-                // still empty, so this never clobbers an amount the user
-                // already typed (e.g. a deliberate partial payment).
-                if (!amountInput.value.trim()) {
+                // Only pre-fill if user has not manually entered an amount and input is empty
+                if (!userHasManuallyEditedAmount && !amountInput.value.trim()) {
                     amountInput.value = expectedAmountForCurrentReference.toFixed(2);
                 }
                 updateMismatchWarning();
@@ -975,7 +974,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     transactionTypeSelect.addEventListener('change', refreshExpectedAmount);
     referenceIdInput.addEventListener('input', refreshExpectedAmount);
-    amountInput.addEventListener('input', updateMismatchWarning);
+    amountInput.addEventListener('input', () => {
+        userHasManuallyEditedAmount = true;
+        updateMismatchWarning();
+    });
 
     // Batch N5 (adviser feedback 2026-08-18): "lot id/sched id diff — it
     // should be set automatically" — replaces the bare numeric Reference ID
@@ -994,61 +996,153 @@ document.addEventListener('DOMContentLoaded', async function() {
     const REFERENCE_SEARCH_CONFIG = {
         'Lot Purchase': {
             endpoint: 'schedules',
-            placeholder: 'Search by decedent name or lot number...',
-            mapResult: (s) => ({
-                id: s.schedule_id,
-                label: `Lot ${s.lot_number || '—'} — ${s.section_name || 'N/A'} — ${[s.first_name, s.last_name].filter(Boolean).join(' ') || 'Unknown'} — ${s.schedule_date || 'No date'}`,
-                customerName: s.contact_name || s.requested_by_name || s.created_by_name || [s.first_name, s.last_name].filter(Boolean).join(' ') || 'User',
-                contactNumber: s.contact_number || s.requested_by_contact_number || '',
-            }),
+placeholder: 'Search reservation by decedent, lot number, or client...',
+            mapResult: (s) => {
+                const decedent = [s.first_name, s.last_name].filter(Boolean).join(' ') || s.provisional_name || 'No decedent specified';
+                const client = s.created_by_name || s.contact_name || s.requested_by_name || 'Client';
+                const status = s.status || 'Pending';
+                const price = s.lot_price ? parseFloat(s.lot_price) : (s.price ? parseFloat(s.price) : null);
+                return {
+                    id: s.schedule_id,
+                    kind: 'schedule',
+                    lotNumber: s.lot_number || '—',
+                    sectionName: s.section_name || 'N/A',
+                    decedentName: decedent,
+                    customerName: client,
+                    contactNumber: s.created_by_contact || s.contact_number || s.requested_by_contact_number || '',
+                    price: price,
+                    status: status,
+                    payment_status: s.payment_status || null,
+                    label: `Reservation #${s.schedule_id} — Lot ${s.lot_number || '—'} (${s.section_name || 'N/A'}) — Decedent: ${decedent} [${status}]`,
+                };
+            },
         },
         'Cremation': {
             endpoint: 'cremations',
-            placeholder: 'Search by decedent name or niche number...',
-            mapResult: (c) => ({
-                id: c.cremation_id,
-                label: `Niche ${c.niche_number || '—'} — ${c.columbarium || 'N/A'} — ${[c.first_name, c.last_name].filter(Boolean).join(' ') || c.provisional_name || 'Unknown'}`,
-                customerName: c.contact_name || c.requested_by_name || [c.first_name, c.last_name].filter(Boolean).join(' ') || 'User',
-                contactNumber: c.contact_number || c.requested_by_contact_number || '',
-            }),
+            placeholder: 'Search cremation by decedent name or niche number...',
+            mapResult: (c) => {
+                const decedent = [c.first_name, c.last_name].filter(Boolean).join(' ') || c.provisional_name || 'No decedent specified';
+                const client = c.created_by_name || c.contact_name || c.requested_by_name || 'Client';
+                const status = c.status || 'Pending';
+                return {
+                    id: c.cremation_id,
+                    kind: null,
+                    nicheNumber: c.niche_number || '—',
+                    columbarium: c.columbarium || 'N/A',
+                    decedentName: decedent,
+                    customerName: client,
+                    contactNumber: c.created_by_contact || c.contact_number || c.requested_by_contact_number || '',
+                    price: 15000.00,
+                    status: status,
+                    payment_status: c.payment_status || null,
+                    label: `Cremation #${c.cremation_id} — Niche ${c.niche_number || '—'} (${c.columbarium || 'N/A'}) — Decedent: ${decedent} [${status}]`,
+                };
+            },
         },
         'Columbarium': {
             endpoint: 'cremations',
-            placeholder: 'Search by decedent name, niche or columbarium...',
-            mapResult: (c) => ({
-                id: c.cremation_id,
-                label: `Columbarium ${c.columbarium || 'N/A'} — Niche ${c.niche_number || '—'} — ${[c.first_name, c.last_name].filter(Boolean).join(' ') || c.provisional_name || 'Unknown'}`,
-                customerName: c.contact_name || c.requested_by_name || [c.first_name, c.last_name].filter(Boolean).join(' ') || 'User',
-                contactNumber: c.contact_number || c.requested_by_contact_number || '',
-            }),
+            placeholder: 'Search cremation or columbarium by decedent name, niche or building...',
+            mapResult: (c) => {
+                const decedent = [c.first_name, c.last_name].filter(Boolean).join(' ') || c.provisional_name || 'No decedent specified';
+                const client = c.created_by_name || c.contact_name || c.requested_by_name || 'Client';
+                const status = c.status || 'Pending';
+                return {
+                    id: c.cremation_id,
+                    kind: null,
+                    nicheNumber: c.niche_number || '—',
+                    columbarium: c.columbarium || 'N/A',
+                    decedentName: decedent,
+                    customerName: client,
+                    contactNumber: c.created_by_contact || c.contact_number || c.requested_by_contact_number || '',
+                    price: null,
+                    status: status,
+                    payment_status: c.payment_status || null,
+                    label: `Columbarium #${c.cremation_id} — Niche ${c.niche_number || '—'} (${c.columbarium || 'N/A'}) — Decedent: ${decedent} [${status}]`,
+                };
+            },
         },
         'Relocation': {
             endpoint: 'relocations',
-            placeholder: 'Search by decedent name or lot number...',
-            mapResult: (r) => ({
-                id: r.request_id,
-                label: `${[r.first_name, r.last_name].filter(Boolean).join(' ') || 'Unknown'} — ${r.from_lot_number || '—'} → ${r.to_lot_number || '—'} (${r.status || 'Pending'})`,
-                customerName: r.contact_name || [r.first_name, r.last_name].filter(Boolean).join(' ') || 'User',
-                contactNumber: r.contact_number || '',
-            }),
+            placeholder: 'Search relocation by decedent name or lot number...',
+            mapResult: (r) => {
+                const decedent = [r.first_name, r.last_name].filter(Boolean).join(' ') || 'Remains';
+                const status = r.status || 'Pending';
+                return {
+                    id: r.request_id,
+                    kind: null,
+                    decedentName: decedent,
+                    customerName: r.contact_name || 'Client',
+                    contactNumber: r.contact_number || '',
+                    status: status,
+                    payment_status: r.payment_status || null,
+                    label: `Relocation #${r.request_id} — ${decedent} — Lot ${r.from_lot_number || '—'} → Lot ${r.to_lot_number || '—'} [${status}]`,
+                };
+            },
+        },
+        'Renewal': {
+            endpoint: 'expiration-records',
+            placeholder: 'Search expiring records by decedent name or lot number...',
+            mapResult: (exp) => {
+                const decedent = [exp.first_name, exp.last_name].filter(Boolean).join(' ') || 'Deceased';
+                const status = exp.renewed === 'yes' ? 'Renewed' : 'Due for Renewal';
+                const price = exp.price ? parseFloat(exp.price) : (exp.lot_price ? parseFloat(exp.lot_price) : null);
+                return {
+                    id: exp.expiration_id,
+                    kind: null,
+                    lotNumber: exp.lot_number || '—',
+                    sectionName: exp.section_name || 'N/A',
+                    decedentName: decedent,
+                    customerName: exp.contact_name || 'Client',
+                    contactNumber: exp.contact_number || '',
+                    price: price,
+                    status: status,
+                    payment_status: exp.payment_status || null,
+                    label: `Expiration #${exp.expiration_id} — Lot ${exp.lot_number || '—'} (${exp.section_name || 'N/A'}) — ${decedent} [${status}]`,
+                };
+            },
+        }
         },
     };
 
-    // currentReferenceKind ('schedule'|'lot'|null): burial audit finding E.2 —
-    // for 'Lot Purchase', reference_id alone is ambiguous between a
-    // schedule_id and a raw lot_id (see PaymentController::
-    // validatePaymentReference()'s comment). Tracked here so the actual
-    // submission states its intent explicitly instead of letting the backend
-    // guess by existence-check order. Stays null for Cremation/Relocation/
-    // Renewal/Other, which have no such ambiguity, and for the manual
-    // reference-entry fallback (staff typing a raw id themselves) — both
-    // fall back to the backend's original guess, unchanged.
+    // currentReferenceKind ('schedule'|'lot'|null)
     let currentReferenceKind = null;
 
     function setReferenceValue(id, label, kind = null, extra = null) {
+        currentReferenceKind = kind;
         referenceIdInput.value = id;
         referenceIdInput.dispatchEvent(new Event('input', { bubbles: true }));
-        currentReferenceKind = kind;
+
+        // 1. Auto-fill Amount immediately from extra price only if user hasn't typed an amount yet
+        if (!userHasManuallyEditedAmount && extra && extra.price !== undefined && extra.price !== null && Number(extra.price) > 0) {
+            amountInput.value = Number(extra.price).toFixed(2);
+            amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+            userHasManuallyEditedAmount = false;
+        }
+
+        // 2. Synchronize expected amount resolution
+        refreshExpectedAmount();
+
+        // 3. Auto-fill Payment Date if empty
+        const paymentDateInput = document.getElementById('paymentDate');
+        if (paymentDateInput && !paymentDateInput.value) {
+            paymentDateInput.value = new Date().toISOString().split('T')[0];
+        }
+
+        // 4. Auto-fill Notes & Remarks with hooked details
+        const paymentNotesInput = document.getElementById('paymentNotes');
+        if (paymentNotesInput && extra) {
+            const currentNotes = paymentNotesInput.value.trim();
+            const payer = extra.customerName || 'Client';
+            const phone = extra.contactNumber ? `Phone: ${extra.contactNumber}` : '';
+            const decedent = extra.decedentName && extra.decedentName !== 'No decedent specified' ? `Decedent: ${extra.decedentName}` : '';
+            const refDetail = label || `Ref #${id}`;
+            const autoNote = [ `Payer: ${payer}`, phone, decedent, `Ref: ${refDetail}` ].filter(Boolean).join(' | ');
+
+            if (!currentNotes || currentNotes.startsWith('Payer:')) {
+                paymentNotesInput.value = autoNote;
+            }
+        }
+
         if (label) {
             const selectedTextEl = document.getElementById('referenceSelectedText');
             if (selectedTextEl) {
@@ -1058,15 +1152,27 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             referenceSelectedLabel.style.display = 'flex';
 
-            // Automated Customer Info Hooking (Adviser Item #1)
+            // Automated Customer Info Hooking
             const customerHookCard = document.getElementById('customerHookCard');
             const customerHookDetails = document.getElementById('customerHookDetails');
             if (customerHookCard && customerHookDetails) {
-                if (extra && (extra.customerName || extra.contactNumber)) {
+                if (extra && (extra.customerName || extra.contactNumber || extra.decedentName || extra.price)) {
+                    const isPending = extra.status === 'Pending' || extra.status === 'Due for Renewal';
+                    const statusColor = isPending ? '#16a34a' : '#d97706';
+                    const statusBg = isPending ? '#dcfce7' : '#fef3c7';
+                    const badge = extra.status ? `<span style="font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:999px; background:${statusBg}; color:${statusColor}; margin-left:8px;">${escapeHtml(extra.status)}</span>` : '';
+
                     customerHookDetails.innerHTML = `
-                        <strong>Payer / Account:</strong> ${escapeHtml(extra.customerName || 'User')}<br>
-                        <strong>Contact Number:</strong> ${escapeHtml(extra.contactNumber || 'Available on account')}<br>
-                        <span style="font-size: 0.78rem; color: #16a34a;"><i class="fas fa-link"></i> User details automatically hooked</span>
+<div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span><strong>Payer / Account:</strong> ${escapeHtml(extra.customerName || 'Client')}</span>
+                            ${badge}
+                        </div>
+                        <div><strong>Contact Number:</strong> ${escapeHtml(extra.contactNumber || 'Available on account')}</div>
+                        ${extra.decedentName ? `<div><strong>Decedent:</strong> ${escapeHtml(extra.decedentName)}</div>` : ''}
+                        ${extra.price ? `<div><strong>Standard Price:</strong> ₱${Number(extra.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>` : ''}
+                        <div style="font-size: 0.78rem; color: #16a34a; margin-top: 4px;">
+                            <i class="fas fa-check-circle"></i> Service reference hooked and fields auto-filled
+                        </div>
                     `;
                     customerHookCard.style.display = 'block';
                 } else {
@@ -1104,22 +1210,41 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function renderReferenceResults(items) {
-        if (!items.length) {
-            referenceSearchResults.innerHTML = '<div class="reference-search-result is-empty">No matches found.</div>';
+        // Enforce that verified, cancelled, or renewed references are NEVER displayed in the picker
+        const activeItems = (items || []).filter(item => {
+            const payStatus = String(item.payment_status || '').toLowerCase();
+            const status = String(item.status || '').toLowerCase();
+            return payStatus !== 'verified' && status !== 'verified' && status !== 'cancelled' && status !== 'renewed';
+        });
+
+        if (!activeItems.length) {
+            referenceSearchResults.innerHTML = '<div class="reference-search-result is-empty">No unverified matches found.</div>';
             referenceSearchResults.hidden = false;
             return;
         }
-        referenceSearchResults.innerHTML = items.map((item, idx) => `
-            <div class="reference-search-result" data-idx="${idx}" tabindex="0" role="button">${item.label}</div>
-        `).join('');
+        referenceSearchResults.innerHTML = activeItems.map((item, idx) => {
+            const isPending = item.status === 'Pending' || item.status === 'Due for Renewal';
+            const statusColor = isPending ? '#16a34a' : '#b45309';
+            const statusBg = isPending ? '#dcfce7' : '#fef3c7';
+            const priceTag = item.price ? `<span style="color:#0f766e; font-weight:600; margin-left:6px;">₱${Number(item.price).toLocaleString('en-US')}</span>` : '';
+            return `
+                <div class="reference-search-result" data-idx="${idx}" tabindex="0" role="button" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; gap:8px;">
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        <i class="fas fa-link" style="color:var(--color-primary-600); margin-right:6px;"></i>
+                        <span>${escapeHtml(item.label)}</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                        ${priceTag}
+                        <span style="font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px; background:${statusBg}; color:${statusColor};">${escapeHtml(item.status || 'Active')}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
         referenceSearchResults.hidden = false;
         referenceSearchResults.querySelectorAll('.reference-search-result[data-idx]').forEach((el) => {
-            const item = items[Number(el.dataset.idx)];
+            const item = activeItems[Number(el.dataset.idx)];
             const select = () => {
-                // REFERENCE_SEARCH_CONFIG['Lot Purchase'].endpoint is always
-                // 'schedules' — a result picked here is always a schedule_id,
-                // never a raw lot_id, so this can state that with certainty.
-                const kind = transactionTypeSelect.value === 'Lot Purchase' ? 'schedule' : null;
+                const kind = item.kind !== undefined ? item.kind : (transactionTypeSelect.value === 'Lot Purchase' ? 'schedule' : null);
                 setReferenceValue(item.id, item.label, kind, item);
                 referenceSearchInput.value = item.label;
                 referenceSearchResults.hidden = true;
@@ -1141,13 +1266,56 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
         try {
-            const params = new URLSearchParams({ q: query, per_page: 8, page: 1 });
+            const params = new URLSearchParams({ q: query, per_page: 12, page: 1 });
+            
+            if (transactionTypeSelect.value === 'Lot Purchase') {
+                const [schedRes, lotsRes] = await Promise.all([
+                    api.request(`${config.endpoint}?${params.toString()}`, { method: 'GET' }).catch(() => null),
+                    api.request(`lots?status=Available&lot_number=${encodeURIComponent(query)}&per_page=5`, { method: 'GET' }).catch(() => null)
+                ]);
+                const schedRows = Array.isArray(schedRes) ? schedRes : (Array.isArray(schedRes?.data) ? schedRes.data : []);
+                const lotRows = Array.isArray(lotsRes) ? lotsRes : (Array.isArray(lotsRes?.data) ? lotsRes.data : []);
+
+                // Filter out any schedules that ALREADY have a Verified payment or are Cancelled
+                const unverifiedScheds = schedRows.filter(s => {
+                    const payStatus = String(s.payment_status || '').toLowerCase();
+                    const status = String(s.status || '').toLowerCase();
+                    return payStatus !== 'verified' && status !== 'cancelled';
+                });
+
+                const mappedScheds = unverifiedScheds.map(config.mapResult);
+                const mappedLots = lotRows.map(l => ({
+                    id: l.lot_id,
+                    kind: 'lot',
+                    lotNumber: l.lot_number,
+                    sectionName: l.section_name || 'N/A',
+                    decedentName: '',
+                    customerName: 'Direct Lot Purchase',
+                    contactNumber: '',
+                    price: parseFloat(l.price || 0),
+                    status: 'Available',
+                    payment_status: null,
+                    label: `[Direct Lot Purchase] Lot ${l.lot_number} (${l.section_name || 'N/A'}) — ₱${Number(l.price || 0).toLocaleString('en-US')} [Available]`,
+                }));
+                renderReferenceResults([...mappedScheds, ...mappedLots]);
+                return;
+            }
+
             const result = await api.request(`${config.endpoint}?${params.toString()}`, { method: 'GET' });
-            const rows = result && Array.isArray(result.data) ? result.data : [];
-            renderReferenceResults(rows.map(config.mapResult));
+            const rows = Array.isArray(result) ? result : (Array.isArray(result?.data) ? result.data : []);
+            
+            // Filter out items that are already Verified, Cancelled, or Renewed
+            const unverifiedRows = rows.filter(r => {
+                const payStatus = String(r.payment_status || '').toLowerCase();
+                const status = String(r.status || '').toLowerCase();
+                const renewed = String(r.renewed || '').toLowerCase();
+                if (payStatus === 'verified') return false;
+                if (status === 'cancelled') return false;
+                if (renewed === 'yes') return false;
+                return true;
+            });
+            renderReferenceResults(unverifiedRows.map(config.mapResult));
         } catch (error) {
-            // Search is a convenience layer only — the manual fallback below
-            // always still works, so a failed lookup must never block the form.
             referenceSearchResults.hidden = true;
             referenceSearchResults.innerHTML = '';
         }
@@ -1269,6 +1437,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('paymentForm').reset();
         document.getElementById('paymentId').value = '';
         document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
+        userHasManuallyEditedAmount = false;
         expectedAmountForCurrentReference = null;
         expectedAmountHint.style.display = 'none';
         amountMismatchWarning.style.display = 'none';
@@ -1319,6 +1488,19 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }
 
+        const tType = document.getElementById('transactionType').value;
+        const referenceIdVal = (document.getElementById('referenceId').value || '').trim();
+        if (['Lot Purchase', 'Cremation', 'Relocation', 'Renewal'].includes(tType) && !referenceIdVal) {
+            alert(`Please select or hook a valid service reference for ${tType}.`);
+            if (referenceSearchInput && referenceSearchWrap.style.display !== 'none') {
+                referenceSearchInput.focus();
+            } else if (referenceManualToggle) {
+                referenceManualToggle.open = true;
+                document.getElementById('referenceId').focus();
+            }
+            return;
+        }
+
         const saveBtn = e.target.querySelector('button[type="submit"]');
         document.body.classList.add('btn-submitting');
         try {
@@ -1348,6 +1530,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     function closePaymentModal() {
         const form = document.getElementById('paymentForm');
         if (form) form.reset();
+        userHasManuallyEditedAmount = false;
         clearReferenceSelection();
         expectedAmountForCurrentReference = null;
         if (expectedAmountHint) expectedAmountHint.style.display = 'none';

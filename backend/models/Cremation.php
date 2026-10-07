@@ -100,6 +100,7 @@ class Cremation {
                    d.first_name, d.last_name,
                    dr.full_name AS provisional_name, dr.status AS provisional_status,
                    u.full_name as created_by_name,
+                   u.contact_number as created_by_contact,
                    " . self::LATEST_PAYMENT_SELECT . "
             FROM cremation_records c
             LEFT JOIN decedent_records d ON c.deceased_id = d.decedent_id
@@ -155,6 +156,7 @@ class Cremation {
                    d.first_name, d.last_name,
                    dr.full_name AS provisional_name, dr.status AS provisional_status,
                    u.full_name as created_by_name,
+                   u.contact_number as created_by_contact,
                    " . self::LATEST_PAYMENT_SELECT . "
             FROM cremation_records c
             LEFT JOIN decedent_records d ON c.deceased_id = d.decedent_id
