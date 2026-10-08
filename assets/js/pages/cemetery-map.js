@@ -322,6 +322,7 @@
 
         statusFilter.addEventListener('change', () => {
             state.filters.status = statusFilter.value;
+            syncLegendButtons();
             applyFilters();
         });
 
@@ -335,6 +336,27 @@
             if (!e.target.closest('.search-group')) {
                 hideSearchResultsDropdown();
             }
+        });
+
+        // Logout Button Handler (Standard CMS parity)
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (typeof api !== 'undefined' && typeof api.logout === 'function') {
+                    api.logout();
+                }
+            });
+        }
+
+        // Interactive Map Legend Buttons (Reports module parity)
+        const legendBtns = document.querySelectorAll('#mapLegendBtns .legend-btn');
+        legendBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetStatus = btn.getAttribute('data-status');
+                if (!targetStatus || btn.classList.contains('is-indicator')) return;
+                handleLegendStatusClick(targetStatus);
+            });
         });
     }
 
@@ -646,6 +668,7 @@
                 if (statFacilityActive) {
                     statFacilityActive.textContent = state.currentCemetery?.cemetery_name || 'Active Facility';
                 }
+                updateLegendCounts([]);
 
                 if (sections.length === 0) {
                     showEmptyOverlay(
@@ -972,6 +995,7 @@
             if (counts[l.status] !== undefined) counts[l.status]++;
             else counts.Unavailable++;
         });
+        updateLegendCounts(lots);
 
         const subtitleText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         subtitleText.setAttribute('x', margin + 24);
@@ -1475,6 +1499,7 @@
         if (state.currentLayout) {
             renderCemeteryOverview(state.currentLayout);
         }
+        updateLegendCounts([]);
         applyFilters();
     }
 
@@ -1798,6 +1823,7 @@
      */
     function applyFilters() {
         updateActiveFilterChips();
+        syncLegendButtons();
 
         const hasActiveFilter = (
             state.filters.search !== '' ||
@@ -1938,9 +1964,92 @@
         document.querySelectorAll('.svg-section-card.is-matched').forEach(el => el.classList.remove('is-matched'));
         document.querySelectorAll('.svg-block-card.is-matched').forEach(el => el.classList.remove('is-matched'));
 
+        syncLegendButtons();
+
         if (reapply) {
             applyFilters();
         }
+    }
+
+    /**
+     * Handle Legend Button Click (Toggle Status Filter)
+     */
+    function handleLegendStatusClick(status) {
+        if (state.filters.status === status) {
+            state.filters.status = 'all';
+            if (statusFilter) statusFilter.value = 'all';
+        } else {
+            state.filters.status = status;
+            if (statusFilter) statusFilter.value = status;
+        }
+        syncLegendButtons();
+        applyFilters();
+    }
+
+    /**
+     * Synchronize Legend Buttons Active / Muted states with active status filter
+     */
+    function syncLegendButtons() {
+        const curStatus = state.filters.status;
+        const legendBtns = document.querySelectorAll('#mapLegendBtns .legend-btn[data-status]:not(.is-indicator)');
+        legendBtns.forEach(btn => {
+            const btnStatus = btn.getAttribute('data-status');
+            if (curStatus === 'all') {
+                btn.classList.add('active');
+                btn.classList.remove('muted');
+            } else if (btnStatus === curStatus) {
+                btn.classList.add('active');
+                btn.classList.remove('muted');
+            } else {
+                btn.classList.remove('active');
+                btn.classList.add('muted');
+            }
+        });
+    }
+
+    /**
+     * Dynamically update lot counts on the interactive legend buttons
+     */
+    function updateLegendCounts(lots) {
+        const counts = {
+            Available: 0,
+            Reserved: 0,
+            Occupied: 0,
+            Unavailable: 0,
+            'Under Maintenance': 0
+        };
+
+        if (Array.isArray(lots) && lots.length > 0) {
+            lots.forEach(l => {
+                const st = l.status || 'Available';
+                if (counts[st] !== undefined) {
+                    counts[st]++;
+                } else if (st.toLowerCase().includes('maint')) {
+                    counts['Under Maintenance']++;
+                } else {
+                    counts.Unavailable++;
+                }
+            });
+        } else if (state.currentLayout && Array.isArray(state.currentLayout.sections)) {
+            state.currentLayout.sections.forEach(s => {
+                if (s.available_lots !== undefined) counts.Available += Number(s.available_lots) || 0;
+                if (s.reserved_lots !== undefined) counts.Reserved += Number(s.reserved_lots) || 0;
+                if (s.occupied_lots !== undefined) counts.Occupied += Number(s.occupied_lots) || 0;
+                if (s.unavailable_lots !== undefined) counts.Unavailable += Number(s.unavailable_lots) || 0;
+            });
+        }
+
+        const elAvail = document.getElementById('legendCountAvailable');
+        const elRes = document.getElementById('legendCountReserved');
+        const elOcc = document.getElementById('legendCountOccupied');
+        const elUnavail = document.getElementById('legendCountUnavailable');
+        const elMaint = document.getElementById('legendCountMaintenance');
+
+        if (elAvail) elAvail.textContent = counts.Available;
+        if (elRes) elRes.textContent = counts.Reserved;
+        if (elOcc) elOcc.textContent = counts.Occupied;
+        if (elUnavail) elUnavail.textContent = counts.Unavailable;
+        if (elMaint) elMaint.textContent = counts['Under Maintenance'];
     }
 
     // =========================================================================

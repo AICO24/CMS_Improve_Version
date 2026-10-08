@@ -254,6 +254,17 @@
         previewStageContainer.addEventListener('mousedown', handleMouseDown);
         window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('mouseup', handleMouseUp);
+
+        // Logout Button Handler
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (typeof api !== 'undefined' && typeof api.logout === 'function') {
+                    api.logout();
+                }
+            });
+        }
     }
 
     /**
