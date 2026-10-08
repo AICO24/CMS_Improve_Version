@@ -55,6 +55,9 @@
     let drawerYouAreHereBadge, drawerTrailFacility, drawerTrailSection, drawerTrailBlock, drawerTrailLot, btnCenterOnMapDrawer;
     let btnOpenWayfindingSlip;
 
+    // Batch 8A: Visual Archetype Showcase DOM Elements
+    let drawerVisualShowcase, drawerImageFrame, drawerArchetypeGraphic, drawerArchetypeBadgeText, drawerCapacityText, drawerDimensionSpec;
+
     // Wayfinding & Location Slip Modal DOM Elements (Batch 7)
     let wayfindingSlipModal, btnCloseWayfindingSlip, btnPrintSlip;
     let slipFacilityName, slipFacilityAddress, slipRefCode, slipTimestamp;
@@ -162,6 +165,14 @@
         drawerTrailLot = document.getElementById('drawerTrailLot');
         btnCenterOnMapDrawer = document.getElementById('btnCenterOnMapDrawer');
         btnOpenWayfindingSlip = document.getElementById('btnOpenWayfindingSlip');
+
+        // Batch 8A: Visual Archetype Showcase DOM Elements
+        drawerVisualShowcase = document.getElementById('drawerVisualShowcase');
+        drawerImageFrame = document.getElementById('drawerImageFrame');
+        drawerArchetypeGraphic = document.getElementById('drawerArchetypeGraphic');
+        drawerArchetypeBadgeText = document.getElementById('drawerArchetypeBadgeText');
+        drawerCapacityText = document.getElementById('drawerCapacityText');
+        drawerDimensionSpec = document.getElementById('drawerDimensionSpec');
 
         // Batch 7: Wayfinding Slip Modal Elements
         wayfindingSlipModal = document.getElementById('wayfindingSlipModal');
@@ -1210,6 +1221,9 @@
         if (drawerTrailLot) drawerTrailLot.textContent = `Lot ${lot.lot_number}`;
         if (drawerYouAreHereBadge) drawerYouAreHereBadge.style.display = 'inline-flex';
 
+        // Batch 8A: Populate Visual Archetype Showcase & Specifications
+        renderLotArchetypeShowcase(lot);
+
         updateBreadcrumbs();
 
         // Open Drawer
@@ -1259,6 +1273,251 @@
         document.querySelectorAll('.svg-lot-tile.is-selected').forEach(el => {
             el.classList.remove('is-selected');
         });
+    }
+
+    /**
+     * =========================================================================
+     * BATCH 8A: PHILIPPINE MEMORIAL PARK LOT ARCHETYPES & VISUAL SHOWCASE
+     * =========================================================================
+     */
+    const LOT_ARCHETYPES = {
+        lawn: {
+            id: 'lawn',
+            name: 'Standard Lawn Lot',
+            badge: 'Lawn Lot Archetype',
+            capacity: '2 Caskets (Double-Depth) + 4 Urns',
+            dimensions: '1.0m × 2.44m (Single Plot)',
+            priceTier: '₱45,000 – ₱180,000',
+            monumentRule: 'Ground-level flush bronze or granite marker. No above-ground structures allowed.',
+            svg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+    <defs>
+        <linearGradient id="lawnSky" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#bae6fd"/>
+            <stop offset="65%" stop-color="#e0f2fe"/>
+            <stop offset="100%" stop-color="#f0fdf4"/>
+        </linearGradient>
+        <linearGradient id="lawnGrass" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#22c55e"/>
+            <stop offset="40%" stop-color="#16a34a"/>
+            <stop offset="100%" stop-color="#15803d"/>
+        </linearGradient>
+        <linearGradient id="lawnEarth" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#78350f"/>
+            <stop offset="100%" stop-color="#451a03"/>
+        </linearGradient>
+        <linearGradient id="graniteMarker" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#334155"/>
+            <stop offset="50%" stop-color="#1e293b"/>
+            <stop offset="100%" stop-color="#0f172a"/>
+        </linearGradient>
+        <linearGradient id="bronzePlate" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#fef08a"/>
+            <stop offset="50%" stop-color="#ca8a04"/>
+            <stop offset="100%" stop-color="#854d0e"/>
+        </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="340" height="90" fill="url(#lawnSky)"/>
+    <path d="M-10,90 Q30,70 70,90 Q120,68 170,90 Q230,72 290,90 Q320,78 350,90 L350,90 L-10,90 Z" fill="#86efac" opacity="0.6"/>
+    <rect x="0" y="86" width="340" height="18" fill="url(#lawnGrass)"/>
+    <rect x="0" y="104" width="340" height="56" fill="url(#lawnEarth)"/>
+    <line x1="0" y1="128" x2="340" y2="128" stroke="#92400e" stroke-width="1" stroke-dasharray="6 4" opacity="0.4"/>
+    <rect x="85" y="108" width="170" height="22" rx="3" fill="#cbd5e1" stroke="#475569" stroke-width="1.5"/>
+    <text x="170" y="123" fill="#1e293b" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">UPPER VAULT (Depth 1.2m)</text>
+    <rect x="85" y="133" width="170" height="22" rx="3" fill="#94a3b8" stroke="#475569" stroke-width="1.5"/>
+    <text x="170" y="148" fill="#0f172a" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">LOWER VAULT (Depth 2.0m)</text>
+    <rect x="105" y="82" width="130" height="9" rx="2" fill="url(#graniteMarker)" stroke="#0f172a" stroke-width="1"/>
+    <rect x="115" y="84" width="110" height="5" rx="1" fill="url(#bronzePlate)"/>
+    <circle cx="85" cy="82" r="5" fill="#f43f5e"/>
+    <circle cx="80" cy="84" r="4" fill="#fbbf24"/>
+    <circle cx="89" cy="85" r="4" fill="#fb7185"/>
+    <path d="M85,86 L85,90" stroke="#15803d" stroke-width="2"/>
+    <circle cx="310" cy="22" r="14" fill="#fef08a" opacity="0.9"/>
+    <rect x="10" y="10" width="105" height="22" rx="5" fill="rgba(15, 23, 42, 0.75)"/>
+    <text x="62" y="24" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">FLUSH HEADSTONE</text>
+</svg>`
+        },
+        garden: {
+            id: 'garden',
+            name: 'Garden Memorial Lot',
+            badge: 'Garden Lot Archetype',
+            capacity: '4–8 Caskets + 8–16 Urns (Cluster)',
+            dimensions: '2.0m × 2.5m (2–4 Lots Cluster)',
+            priceTier: '₱200,000 – ₱650,000',
+            monumentRule: 'Raised marble curb (18–24 inches) with landscape shrubs & low upright monument.',
+            svg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+    <defs>
+        <linearGradient id="gardSky" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#bae6fd"/>
+            <stop offset="70%" stop-color="#f0fdf4"/>
+        </linearGradient>
+        <linearGradient id="gardHedge" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#15803d"/>
+            <stop offset="100%" stop-color="#166534"/>
+        </linearGradient>
+        <linearGradient id="marbleCurb" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="50%" stop-color="#e2e8f0"/>
+            <stop offset="100%" stop-color="#94a3b8"/>
+        </linearGradient>
+        <linearGradient id="granitePillar" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#475569"/>
+            <stop offset="40%" stop-color="#334155"/>
+            <stop offset="100%" stop-color="#1e293b"/>
+        </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="340" height="110" fill="url(#gardSky)"/>
+    <rect x="0" y="110" width="340" height="50" fill="#15803d"/>
+    <circle cx="45" cy="98" r="24" fill="url(#gardHedge)"/>
+    <circle cx="70" cy="102" r="18" fill="#16a34a"/>
+    <circle cx="295" cy="98" r="24" fill="url(#gardHedge)"/>
+    <circle cx="270" cy="102" r="18" fill="#16a34a"/>
+    <polygon points="75,135 265,135 285,152 55,152" fill="url(#marbleCurb)" stroke="#64748b" stroke-width="1"/>
+    <rect x="75" y="125" width="190" height="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="1"/>
+    <rect x="85" y="127" width="170" height="6" fill="#f43f5e" opacity="0.85"/>
+    <path d="M135,42 L205,42 L210,125 L130,125 Z" fill="url(#granitePillar)" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M170,55 L170,82 M160,63 L180,63" stroke="#fef08a" stroke-width="2.5" stroke-linecap="round"/>
+    <rect x="142" y="90" width="56" height="22" rx="2" fill="#ca8a04" opacity="0.9"/>
+    <text x="170" y="103" fill="#ffffff" font-size="7" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">IN MEMORIAM</text>
+    <path d="M30,30 Q36,26 42,30 Q48,26 54,30" stroke="#0369a1" stroke-width="1.5" fill="none"/>
+    <rect x="10" y="10" width="125" height="22" rx="5" fill="rgba(15, 23, 42, 0.75)"/>
+    <text x="72" y="24" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">RAISED MARBLE CURB</text>
+</svg>`
+        },
+        mausoleum: {
+            id: 'mausoleum',
+            name: 'Family Estate / Mausoleum',
+            badge: 'Family Estate Archetype',
+            capacity: '12–24+ Vaults & Urns (Multi-Gen)',
+            dimensions: '4.0m × 5.0m+ (8–16+ Lots)',
+            priceTier: '₱1,000,000 – ₱10,000,000+',
+            monumentRule: 'Private neoclassical covered pavilion/chapel with columns, gated entry & granite steps.',
+            svg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+    <defs>
+        <linearGradient id="mauSky" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#0284c7"/>
+            <stop offset="60%" stop-color="#bae6fd"/>
+            <stop offset="100%" stop-color="#f8fafc"/>
+        </linearGradient>
+        <linearGradient id="mauRoof" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#e2e8f0"/>
+            <stop offset="50%" stop-color="#cbd5e1"/>
+            <stop offset="100%" stop-color="#94a3b8"/>
+        </linearGradient>
+        <linearGradient id="mauCol" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#f8fafc"/>
+            <stop offset="50%" stop-color="#e2e8f0"/>
+            <stop offset="100%" stop-color="#cbd5e1"/>
+        </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="340" height="120" fill="url(#mauSky)"/>
+    <rect x="0" y="120" width="340" height="40" fill="#15803d"/>
+    <polygon points="50,132 290,132 320,158 20,158" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+    <rect x="75" y="124" width="190" height="8" rx="1" fill="#cbd5e1" stroke="#64748b" stroke-width="1"/>
+    <rect x="85" y="118" width="170" height="6" rx="1" fill="#e2e8f0" stroke="#64748b" stroke-width="1"/>
+    <rect x="95" y="55" width="150" height="63" fill="#1e293b"/>
+    <rect x="145" y="65" width="50" height="53" rx="2" fill="#0f172a" stroke="#ca8a04" stroke-width="1.5"/>
+    <line x1="157" y1="65" x2="157" y2="118" stroke="#ca8a04" stroke-width="1"/>
+    <line x1="170" y1="65" x2="170" y2="118" stroke="#ca8a04" stroke-width="1"/>
+    <line x1="183" y1="65" x2="183" y2="118" stroke="#ca8a04" stroke-width="1"/>
+    <rect x="92" y="55" width="16" height="63" rx="1" fill="url(#mauCol)" stroke="#64748b" stroke-width="1"/>
+    <rect x="124" y="55" width="16" height="63" rx="1" fill="url(#mauCol)" stroke="#64748b" stroke-width="1"/>
+    <rect x="200" y="55" width="16" height="63" rx="1" fill="url(#mauCol)" stroke="#64748b" stroke-width="1"/>
+    <rect x="232" y="55" width="16" height="63" rx="1" fill="url(#mauCol)" stroke="#64748b" stroke-width="1"/>
+    <rect x="80" y="47" width="180" height="8" fill="url(#mauRoof)" stroke="#64748b" stroke-width="1"/>
+    <polygon points="170,20 270,47 70,47" fill="url(#mauRoof)" stroke="#64748b" stroke-width="1.5"/>
+    <text x="170" y="42" fill="#334155" font-size="8" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">FAMILY ESTATE</text>
+    <path d="M35,130 C35,65 48,45 48,45 C48,45 61,65 61,130 Z" fill="#14532d"/>
+    <path d="M279,130 C279,65 292,45 292,45 C292,45 305,65 305,130 Z" fill="#14532d"/>
+    <rect x="10" y="10" width="130" height="22" rx="5" fill="rgba(15, 23, 42, 0.75)"/>
+    <text x="75" y="24" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">PRIVATE PAVILION</text>
+</svg>`
+        },
+        columbarium: {
+            id: 'columbarium',
+            name: 'Columbarium Wall Niche',
+            badge: 'Columbarium Archetype',
+            capacity: '2–4 Cremains Urns per Niche',
+            dimensions: '0.4m × 0.4m × 0.6m (Single Niche)',
+            priceTier: '₱25,000 – ₱150,000',
+            monumentRule: 'Indoor/covered sanctuary wall niche with polished brass nameplate & commemorative fixture.',
+            svg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+    <defs>
+        <linearGradient id="colBg" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#1e293b"/>
+            <stop offset="100%" stop-color="#0f172a"/>
+        </linearGradient>
+        <linearGradient id="nicheGold" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fef08a"/>
+            <stop offset="50%" stop-color="#eab308"/>
+            <stop offset="100%" stop-color="#a16207"/>
+        </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="340" height="160" fill="url(#colBg)"/>
+    <polygon points="170,0 210,160 130,160" fill="#38bdf8" opacity="0.08"/>
+    <rect x="30" y="18" width="280" height="124" rx="4" fill="#334155" stroke="#475569" stroke-width="2"/>
+    <rect x="42" y="28" width="56" height="32" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+    <rect x="106" y="28" width="56" height="32" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+    <rect x="178" y="28" width="56" height="32" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+    <rect x="242" y="28" width="56" height="32" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+    <rect x="42" y="66" width="56" height="32" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+    <rect x="106" y="66" width="56" height="32" rx="3" fill="#047857" stroke="#34d399" stroke-width="2"/>
+    <rect x="114" y="74" width="40" height="16" rx="2" fill="url(#nicheGold)"/>
+    <text x="134" y="85" fill="#0f172a" font-size="7" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">NICHE #204</text>
+    <rect x="178" y="66" width="56" height="32" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+    <rect x="242" y="66" width="56" height="32" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+    <rect x="42" y="104" width="56" height="30" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+    <rect x="106" y="104" width="56" height="30" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+    <rect x="178" y="104" width="56" height="30" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+    <rect x="242" y="104" width="56" height="30" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+    <circle cx="156" cy="94" r="3" fill="#f59e0b"/>
+    <circle cx="156" cy="93" r="1.5" fill="#fef08a"/>
+    <rect x="10" y="10" width="135" height="22" rx="5" fill="rgba(15, 23, 42, 0.75)"/>
+    <text x="77" y="24" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">INDOOR NICHE VAULT</text>
+</svg>`
+        }
+    };
+
+    /**
+     * Detect matching Philippine Memorial Park lot archetype
+     */
+    function getLotArchetype(lot) {
+        if (!lot) return LOT_ARCHETYPES.lawn;
+        const typeStr = String(lot.lot_type || '').toLowerCase();
+        const numStr = String(lot.lot_number || '').toLowerCase();
+        const notesStr = String(lot.location_notes || '').toLowerCase();
+        const combined = `${typeStr} ${numStr} ${notesStr}`;
+
+        if (combined.includes('columb') || combined.includes('niche') || combined.includes('ossuary') || combined.includes('cremat')) {
+            return LOT_ARCHETYPES.columbarium;
+        }
+        if (combined.includes('mausoleum') || combined.includes('estate') || combined.includes('family') || combined.includes('pavilion')) {
+            return LOT_ARCHETYPES.mausoleum;
+        }
+        if (combined.includes('garden') || combined.includes('monument') || combined.includes('curb') || combined.includes('terrace')) {
+            return LOT_ARCHETYPES.garden;
+        }
+        return LOT_ARCHETYPES.lawn;
+    }
+
+    /**
+     * Render Visual Archetype Showcase in Details Drawer (Batch 8A)
+     */
+    function renderLotArchetypeShowcase(lot) {
+        if (!drawerVisualShowcase) return;
+        const archetype = getLotArchetype(lot);
+
+        if (drawerArchetypeGraphic) {
+            drawerArchetypeGraphic.innerHTML = archetype.svg;
+        }
+        if (drawerArchetypeBadgeText) {
+            drawerArchetypeBadgeText.textContent = archetype.badge;
+        }
+        if (drawerCapacityText) {
+            drawerCapacityText.textContent = archetype.capacity;
+        }
+        if (drawerDimensionSpec) {
+            drawerDimensionSpec.textContent = lot.dimensions || archetype.dimensions;
+        }
     }
 
     /**
