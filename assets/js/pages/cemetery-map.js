@@ -777,7 +777,7 @@
         cemeteries.forEach(c => {
             const opt = document.createElement('option');
             opt.value = c.cemetery_id;
-            opt.textContent = `${c.cemetery_name} (${c.cemetery_code})`;
+            opt.textContent = c.cemetery_name;
             cemeterySelector.appendChild(opt);
         });
     }
