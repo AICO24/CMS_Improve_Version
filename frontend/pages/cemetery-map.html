@@ -239,6 +239,16 @@
                         <!-- VIEWPORT TOOLBAR -->
                         <div class="map-viewport-toolbar">
                             <div class="toolbar-left">
+                                <!-- BATCH 9A: DUAL-VIEW SWITCHER -->
+                                <div class="map-view-switcher" id="mapViewSwitcher" role="tablist" aria-label="Map Mode Selector">
+                                    <button type="button" class="view-switch-btn active" id="btnSwitchPlotView" data-view="plot" role="tab" aria-selected="true" title="Switch to internal lot plot map">
+                                        <i class="fas fa-layer-group"></i> <span>Plot Vector Map</span>
+                                    </button>
+                                    <button type="button" class="view-switch-btn" id="btnSwitchGeoView" data-view="geo" role="tab" aria-selected="false" title="Switch to real-world facility Google Maps view">
+                                        <i class="fas fa-map-location-dot"></i> <span>Facility &amp; Directions</span>
+                                    </button>
+                                </div>
+
                                 <span class="view-level-badge" id="viewLevelBadge">
                                     <i class="fas fa-map"></i> <span id="viewLevelText">Cemetery Overview</span>
                                 </span>
@@ -316,6 +326,61 @@
                                     <!-- Dynamic content rendered here -->
                                 </g>
                             </svg>
+                        </div>
+
+                        <!-- BATCH 9A: REAL-WORLD GOOGLE MAPS GEOGRAPHIC VIEWPORT -->
+                        <div class="geo-stage-container" id="geoStageContainer" style="display: none;">
+                            <!-- RESPONSIVE MAP CANVAS / IFRAME EMBED -->
+                            <div class="geo-map-frame" id="geoMapFrame">
+                                <iframe id="geoMapIframe" class="geo-map-iframe" loading="lazy" allowfullscreen="" referrerpolicy="no-referrer-when-downgrade" title="Cemetery Real-World Geographic Location"></iframe>
+                            </div>
+
+                            <!-- LOT TYPE ZONE SELECTOR BAR (Overlaid on Real-World Map) -->
+                            <div class="geo-zone-selector-bar" id="geoZoneSelectorBar">
+                                <div class="geo-zone-bar-header">
+                                    <i class="fas fa-shapes"></i>
+                                    <span>Explore Plot Zones in this Facility:</span>
+                                </div>
+                                <div class="geo-zone-chips" id="geoZoneChips">
+                                    <button type="button" class="zone-chip-btn chip-lawn" data-zone="lawn" title="Switch to Lawn Lots Area in Vector Map">
+                                        <i class="fas fa-seedling"></i> <span>Lawn Lots Zone</span>
+                                    </button>
+                                    <button type="button" class="zone-chip-btn chip-garden" data-zone="garden" title="Switch to Garden Lots Area in Vector Map">
+                                        <i class="fas fa-spa"></i> <span>Garden Memorial Zone</span>
+                                    </button>
+                                    <button type="button" class="zone-chip-btn chip-mausoleum" data-zone="mausoleum" title="Switch to Family Estate Mausoleum Avenue in Vector Map">
+                                        <i class="fas fa-landmark"></i> <span>Mausoleum Avenue</span>
+                                    </button>
+                                    <button type="button" class="zone-chip-btn chip-columbarium" data-zone="columbarium" title="Switch to Columbarium Sanctuary in Vector Map">
+                                        <i class="fas fa-archway"></i> <span>Columbarium Sanctuary</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- FACILITY REAL-WORLD HUD CARD -->
+                            <div class="geo-facility-hud" id="geoFacilityHud">
+                                <div class="geo-hud-header">
+                                    <div class="geo-hud-emblem"><i class="fas fa-monument"></i></div>
+                                    <div class="geo-hud-title-wrap">
+                                        <span class="geo-hud-badge"><i class="fas fa-location-dot"></i> Official Municipal Grounds</span>
+                                        <h3 class="geo-hud-name" id="geoHudFacilityName">Cemetery Facility</h3>
+                                    </div>
+                                </div>
+                                <div class="geo-hud-address" id="geoHudAddress">
+                                    <i class="fas fa-map-pin"></i> <span>Official Cemetery Address</span>
+                                </div>
+                                <div class="geo-hud-access-cue" id="geoHudAccessCue">
+                                    <i class="fas fa-road"></i> <span>Main Visitor Entrance &amp; Parking Gate</span>
+                                </div>
+                                <div class="geo-hud-actions">
+                                    <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm btn-geo-directions" id="btnGetDirectionsGeo">
+                                        <i class="fas fa-diamond-turn-right"></i> Open Turn-by-Turn Directions
+                                    </a>
+                                    <button type="button" class="btn btn-secondary btn-sm btn-geo-return-plots" id="btnReturnPlotsGeo">
+                                        <i class="fas fa-layer-group"></i> Return to Plot Map
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- MAP FOOTER & LEGEND (Interactive Filter Buttons matching Reports module) -->

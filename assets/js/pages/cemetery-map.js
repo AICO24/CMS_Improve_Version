@@ -18,6 +18,7 @@
         currentLots: [],
         selectedLot: null,
         viewLevel: 'cemetery', // 'cemetery' | 'block'
+        activeMapView: 'plot', // 'plot' | 'geo' (Batch 9A)
         isLoading: false,
 
         // Block Lots In-Memory Cache (scoped to current cemetery, cleared on switch)
@@ -54,6 +55,12 @@
     let mapLocationSummaryCard, locSummarySection, locSummaryBlock, locSummaryLot, btnCenterOnMapHud;
     let drawerYouAreHereBadge, drawerTrailFacility, drawerTrailSection, drawerTrailBlock, drawerTrailLot, btnCenterOnMapDrawer;
     let btnOpenWayfindingSlip;
+
+    // Batch 9A: Dual-View & Geographic Location Viewport DOM Elements
+    let mapViewSwitcher, btnSwitchPlotView, btnSwitchGeoView;
+    let geoStageContainer, geoMapFrame, geoMapIframe;
+    let geoZoneSelectorBar, geoZoneChips;
+    let geoFacilityHud, geoHudFacilityName, geoHudAddress, geoHudAccessCue, btnGetDirectionsGeo, btnReturnPlotsGeo;
 
     // Batch 8A: Visual Archetype Showcase DOM Elements
     let drawerVisualShowcase, drawerImageFrame, drawerArchetypeGraphic, drawerArchetypeBadgeText, drawerCapacityText, drawerDimensionSpec;
@@ -240,6 +247,22 @@
         slipTableDimensions = document.getElementById('slipTableDimensions');
         slipRowNotes = document.getElementById('slipRowNotes');
         slipTableNotes = document.getElementById('slipTableNotes');
+
+        // Batch 9A: Dual-View Switcher & Geographic Viewport
+        mapViewSwitcher = document.getElementById('mapViewSwitcher');
+        btnSwitchPlotView = document.getElementById('btnSwitchPlotView');
+        btnSwitchGeoView = document.getElementById('btnSwitchGeoView');
+        geoStageContainer = document.getElementById('geoStageContainer');
+        geoMapFrame = document.getElementById('geoMapFrame');
+        geoMapIframe = document.getElementById('geoMapIframe');
+        geoZoneSelectorBar = document.getElementById('geoZoneSelectorBar');
+        geoZoneChips = document.getElementById('geoZoneChips');
+        geoFacilityHud = document.getElementById('geoFacilityHud');
+        geoHudFacilityName = document.getElementById('geoHudFacilityName');
+        geoHudAddress = document.getElementById('geoHudAddress');
+        geoHudAccessCue = document.getElementById('geoHudAccessCue');
+        btnGetDirectionsGeo = document.getElementById('btnGetDirectionsGeo');
+        btnReturnPlotsGeo = document.getElementById('btnReturnPlotsGeo');
 
         // Search & Filter Controls
         mapSearchInput = document.getElementById('mapSearchInput');
@@ -434,6 +457,28 @@
                 handleLegendStatusClick(targetStatus);
             });
         });
+
+        // Batch 9A: Dual-View Switcher Listeners
+        if (btnSwitchPlotView) {
+            btnSwitchPlotView.addEventListener('click', () => switchMapView('plot'));
+        }
+        if (btnSwitchGeoView) {
+            btnSwitchGeoView.addEventListener('click', () => switchMapView('geo'));
+        }
+        if (btnReturnPlotsGeo) {
+            btnReturnPlotsGeo.addEventListener('click', () => switchMapView('plot'));
+        }
+
+        // Batch 9A: Zone Chip Selectors
+        if (geoZoneChips) {
+            const zoneBtns = geoZoneChips.querySelectorAll('.zone-chip-btn');
+            zoneBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const zoneKey = btn.getAttribute('data-zone');
+                    handleGeoZoneSelect(zoneKey);
+                });
+            });
+        }
     }
 
     /**
@@ -728,6 +773,11 @@
             if (res && res.success && res.data) {
                 state.currentLayout = res.data;
                 state.currentCemetery = res.data.cemetery;
+
+                // Batch 9A: Sync Geographic Viewport if active
+                if (state.activeMapView === 'geo') {
+                    loadGeoFacilityMap(state.currentCemetery);
+                }
 
                 // Update summary counts
                 const sections = res.data.sections || [];
@@ -2647,6 +2697,132 @@
 
     function hideFloatingTooltip() {
         svgFloatingTooltip.style.display = 'none';
+    }
+
+    // =========================================================================
+    // BATCH 9A: REAL-WORLD GOOGLE MAPS NAVIGATION & DUAL-VIEW CONTROLLERS
+    // =========================================================================
+
+    /**
+     * Switch Map View Mode ('plot' | 'geo')
+     * Toggles between native procedural vector plot locator and Google Maps real-world overview
+     */
+    function switchMapView(mode) {
+        state.activeMapView = mode;
+
+        if (mode === 'geo') {
+            if (btnSwitchPlotView) {
+                btnSwitchPlotView.classList.remove('active');
+                btnSwitchPlotView.setAttribute('aria-selected', 'false');
+            }
+            if (btnSwitchGeoView) {
+                btnSwitchGeoView.classList.add('active');
+                btnSwitchGeoView.setAttribute('aria-selected', 'true');
+            }
+
+            if (svgStageContainer) svgStageContainer.style.display = 'none';
+            if (mapLocationSummaryCard) mapLocationSummaryCard.style.display = 'none';
+            if (geoStageContainer) geoStageContainer.style.display = 'block';
+
+            if (viewLevelBadge && viewLevelText) {
+                viewLevelText.textContent = 'Facility Geographic Location';
+            }
+
+            loadGeoFacilityMap(state.currentCemetery);
+        } else {
+            if (btnSwitchGeoView) {
+                btnSwitchGeoView.classList.remove('active');
+                btnSwitchGeoView.setAttribute('aria-selected', 'false');
+            }
+            if (btnSwitchPlotView) {
+                btnSwitchPlotView.classList.add('active');
+                btnSwitchPlotView.setAttribute('aria-selected', 'true');
+            }
+
+            if (geoStageContainer) geoStageContainer.style.display = 'none';
+            if (svgStageContainer) svgStageContainer.style.display = 'block';
+
+            if (viewLevelBadge && viewLevelText) {
+                viewLevelText.textContent = state.viewLevel === 'block'
+                    ? (state.currentBlock?.block_name || 'Block View')
+                    : 'Cemetery Overview';
+            }
+
+            if (state.selectedLot && mapLocationSummaryCard) {
+                mapLocationSummaryCard.style.display = 'block';
+            }
+        }
+    }
+
+    /**
+     * Load Cemetery Real-World Facility onto Google Maps iframe & HUD
+     */
+    function loadGeoFacilityMap(cemetery) {
+        if (!cemetery) return;
+
+        const cemName = cemetery.cemetery_name || 'Cemetery Facility';
+        const address = cemetery.address || 'Municipal Cemetery Grounds';
+        const geo = (cemetery.map_config && cemetery.map_config.geo) ? cemetery.map_config.geo : null;
+        const lat = geo ? geo.latitude : null;
+        const lng = geo ? geo.longitude : null;
+        const accessCue = (geo && geo.access_cue) || 'Main Visitor Entrance & Parking Gate';
+
+        if (geoHudFacilityName) {
+            geoHudFacilityName.textContent = cemName;
+        }
+        if (geoHudAddress) {
+            const addrSpan = geoHudAddress.querySelector('span');
+            if (addrSpan) addrSpan.textContent = address;
+        }
+        if (geoHudAccessCue) {
+            const cueSpan = geoHudAccessCue.querySelector('span');
+            if (cueSpan) cueSpan.textContent = accessCue;
+        }
+
+        let embedUrl = '';
+        let directionsUrl = '';
+
+        if (lat && lng) {
+            embedUrl = `https://maps.google.com/maps?q=${lat},${lng}&t=m&z=17&output=embed`;
+            directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+        } else {
+            const query = `${cemName} ${address}`.trim();
+            embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=m&z=16&output=embed`;
+            directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
+        }
+
+        if (geoMapIframe && (!geoMapIframe.src || !geoMapIframe.src.includes(encodeURIComponent(cemName)))) {
+            geoMapIframe.src = embedUrl;
+        }
+
+        if (btnGetDirectionsGeo) {
+            btnGetDirectionsGeo.href = directionsUrl;
+        }
+    }
+
+    /**
+     * Handle Lot Type Zone Quick Selector Click
+     * Seamlessly bridges user from Real-World Google Maps view to Vector Plot Map
+     */
+    function handleGeoZoneSelect(zoneKey) {
+        const zoneLabels = {
+            lawn: 'Lawn Lots Zone',
+            garden: 'Garden Memorial Zone',
+            mausoleum: 'Mausoleum Avenue',
+            columbarium: 'Columbarium Sanctuary'
+        };
+        const zoneLabel = zoneLabels[zoneKey] || 'Selected Zone';
+
+        // 1. Switch back to Plot Vector Map view
+        switchMapView('plot');
+
+        // 2. Set search term to locate lots or blocks matching this zone
+        if (mapSearchInput) {
+            mapSearchInput.value = zoneKey;
+            handleSearchInput();
+        }
+
+        toast(`Viewing ${zoneLabel} in plot map`, 'info');
     }
 
 })();
