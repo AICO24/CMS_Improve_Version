@@ -379,7 +379,7 @@
 
                             <!-- VISUAL ARCHETYPE SHOWCASE (Batch 8A) -->
                             <div class="drawer-visual-showcase" id="drawerVisualShowcase">
-                                <div class="archetype-image-frame" id="drawerImageFrame">
+                                <div class="archetype-image-frame" id="drawerImageFrame" title="Click to inspect full architectural blueprint">
                                     <div class="archetype-graphic" id="drawerArchetypeGraphic">
                                         <!-- Dynamic rich vector preview rendered here -->
                                     </div>
@@ -387,6 +387,9 @@
                                         <i class="fas fa-camera"></i>
                                         <span id="drawerArchetypeBadgeText">Visual Archetype Preview</span>
                                     </div>
+                                    <button type="button" class="btn-expand-archetype" id="btnExpandArchetype" title="Expand architectural blueprint" aria-label="Expand blueprint">
+                                        <i class="fas fa-maximize"></i>
+                                    </button>
                                 </div>
                                 <div class="archetype-quick-specs">
                                     <div class="spec-pill spec-capacity" id="drawerCapacityPill" title="Standard interment capacity">
@@ -535,6 +538,61 @@
         </main>
     </div>
 
+    <!-- FULLSCREEN VISUAL ARCHETYPE LIGHTBOX MODAL (Batch 8C) -->
+    <div class="archetype-lightbox-backdrop" id="archetypeLightboxModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="lightboxTitle">
+        <div class="archetype-lightbox-dialog">
+            <div class="archetype-lightbox-header">
+                <div class="lightbox-title-wrap">
+                    <i class="fas fa-compass-drafting"></i>
+                    <h2 class="lightbox-title" id="lightboxTitle">Architectural Plot Blueprint &amp; Specifications</h2>
+                </div>
+                <button type="button" class="btn-lightbox-close" id="btnCloseLightbox" title="Close visual preview" aria-label="Close visual preview">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="archetype-lightbox-body">
+                <div class="lightbox-graphic-stage" id="lightboxGraphicStage">
+                    <!-- High-detail scalable blueprint illustration rendered here -->
+                </div>
+                <div class="lightbox-details-panel">
+                    <div class="lightbox-badge-row">
+                        <span class="lightbox-archetype-badge" id="lightboxArchetypeBadge">Standard Lawn Lot</span>
+                        <span class="lightbox-tier-badge" id="lightboxTierBadge">Standard Interior</span>
+                    </div>
+                    <h3 class="lightbox-lot-heading" id="lightboxLotHeading">Lot Plot Overview</h3>
+                    <p class="lightbox-lot-desc" id="lightboxLotDesc">Standard manicured cemetery memorial lot conforming to Philippine Memorial Park standards.</p>
+                    
+                    <div class="lightbox-specs-grid">
+                        <div class="lightbox-spec-item">
+                            <span class="lightbox-spec-lbl"><i class="fas fa-users-rectangle"></i> Interment Capacity</span>
+                            <strong class="lightbox-spec-val" id="lightboxCapacityVal">—</strong>
+                        </div>
+                        <div class="lightbox-spec-item">
+                            <span class="lightbox-spec-lbl"><i class="fas fa-vector-square"></i> Dimensions</span>
+                            <strong class="lightbox-spec-val" id="lightboxDimensionsVal">—</strong>
+                        </div>
+                        <div class="lightbox-spec-item">
+                            <span class="lightbox-spec-lbl"><i class="fas fa-pen-ruler"></i> Monument Structure</span>
+                            <strong class="lightbox-spec-val" id="lightboxMonumentVal">—</strong>
+                        </div>
+                        <div class="lightbox-spec-item">
+                            <span class="lightbox-spec-lbl"><i class="fas fa-hand-holding-heart"></i> Perpetual Care</span>
+                            <strong class="lightbox-spec-val" id="lightboxCareVal">—</strong>
+                        </div>
+                        <div class="lightbox-spec-item">
+                            <span class="lightbox-spec-lbl"><i class="fas fa-layer-group"></i> Interment Privilege</span>
+                            <strong class="lightbox-spec-val" id="lightboxIntermentVal">—</strong>
+                        </div>
+                        <div class="lightbox-spec-item">
+                            <span class="lightbox-spec-lbl"><i class="fas fa-peso-sign"></i> Valuation Tier</span>
+                            <strong class="lightbox-spec-val lightbox-price" id="lightboxPriceVal">—</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- WAYFINDING & PRINTABLE LOT LOCATION SLIP MODAL (Batch 7) -->
     <div class="wayfinding-slip-modal-backdrop" id="wayfindingSlipModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="slipModalTitle">
         <div class="wayfinding-slip-dialog">
@@ -653,6 +711,33 @@
                             <div class="slip-legend-item"><span class="slip-swatch swatch-target"></span> Target Plot</div>
                             <div class="slip-legend-item"><span class="slip-swatch swatch-other"></span> Surrounding Lots</div>
                             <div class="slip-legend-item"><span class="slip-swatch swatch-boundary"></span> Block Perimeter</div>
+                        </div>
+
+                        <!-- PLOT ARCHETYPE & MONUMENT REGULATIONS (Batch 8C Slip Parity) -->
+                        <div class="slip-archetype-box" id="slipArchetypeBox">
+                            <div class="slip-card-heading">
+                                <i class="fas fa-shapes"></i>
+                                <span>PLOT ARCHETYPE &amp; MONUMENT REGULATIONS</span>
+                            </div>
+                            <div class="slip-archetype-content">
+                                <div class="slip-archetype-preview" id="slipArchetypePreview">
+                                    <!-- Dynamic miniature plot archetype rendered here -->
+                                </div>
+                                <div class="slip-archetype-details">
+                                    <div class="slip-rule-row">
+                                        <span class="slip-rule-lbl">Allowed Monument:</span>
+                                        <strong class="slip-rule-val" id="slipMonumentRule">Flush Ground Marker</strong>
+                                    </div>
+                                    <div class="slip-rule-row">
+                                        <span class="slip-rule-lbl">Interment Capacity:</span>
+                                        <span class="slip-rule-val" id="slipCapacityRule">2 Caskets + 4 Urns</span>
+                                    </div>
+                                    <div class="slip-rule-row">
+                                        <span class="slip-rule-lbl">Location Tier:</span>
+                                        <span class="slip-rule-val" id="slipLocationTierRule">Standard Interior Lot</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

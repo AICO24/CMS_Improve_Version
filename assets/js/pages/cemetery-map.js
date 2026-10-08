@@ -62,6 +62,12 @@
     let drawerLocationTierCard, drawerLocationTierBadge, drawerLocationTierDesc;
     let drawerMonumentCard, drawerMonumentRule, drawerPerpetualCare, drawerIntermentPrivilege;
 
+    // Batch 8C: Fullscreen Visual Lightbox & Slip Parity DOM Elements
+    let btnExpandArchetype, archetypeLightboxModal, btnCloseLightbox;
+    let lightboxGraphicStage, lightboxArchetypeBadge, lightboxTierBadge, lightboxLotHeading, lightboxLotDesc;
+    let lightboxCapacityVal, lightboxDimensionsVal, lightboxMonumentVal, lightboxCareVal, lightboxIntermentVal, lightboxPriceVal;
+    let slipArchetypeBox, slipArchetypePreview, slipMonumentRule, slipCapacityRule, slipLocationTierRule;
+
     // Wayfinding & Location Slip Modal DOM Elements (Batch 7)
     let wayfindingSlipModal, btnCloseWayfindingSlip, btnPrintSlip;
     let slipFacilityName, slipFacilityAddress, slipRefCode, slipTimestamp;
@@ -187,6 +193,27 @@
         drawerPerpetualCare = document.getElementById('drawerPerpetualCare');
         drawerIntermentPrivilege = document.getElementById('drawerIntermentPrivilege');
 
+        // Batch 8C: Fullscreen Visual Lightbox & Slip Parity Elements
+        btnExpandArchetype = document.getElementById('btnExpandArchetype');
+        archetypeLightboxModal = document.getElementById('archetypeLightboxModal');
+        btnCloseLightbox = document.getElementById('btnCloseLightbox');
+        lightboxGraphicStage = document.getElementById('lightboxGraphicStage');
+        lightboxArchetypeBadge = document.getElementById('lightboxArchetypeBadge');
+        lightboxTierBadge = document.getElementById('lightboxTierBadge');
+        lightboxLotHeading = document.getElementById('lightboxLotHeading');
+        lightboxLotDesc = document.getElementById('lightboxLotDesc');
+        lightboxCapacityVal = document.getElementById('lightboxCapacityVal');
+        lightboxDimensionsVal = document.getElementById('lightboxDimensionsVal');
+        lightboxMonumentVal = document.getElementById('lightboxMonumentVal');
+        lightboxCareVal = document.getElementById('lightboxCareVal');
+        lightboxIntermentVal = document.getElementById('lightboxIntermentVal');
+        lightboxPriceVal = document.getElementById('lightboxPriceVal');
+        slipArchetypeBox = document.getElementById('slipArchetypeBox');
+        slipArchetypePreview = document.getElementById('slipArchetypePreview');
+        slipMonumentRule = document.getElementById('slipMonumentRule');
+        slipCapacityRule = document.getElementById('slipCapacityRule');
+        slipLocationTierRule = document.getElementById('slipLocationTierRule');
+
         // Batch 7: Wayfinding Slip Modal Elements
         wayfindingSlipModal = document.getElementById('wayfindingSlipModal');
         btnCloseWayfindingSlip = document.getElementById('btnCloseWayfindingSlip');
@@ -282,10 +309,35 @@
             });
         }
 
-        // Close slip on ESC key
+        // Batch 8C: Visual Archetype Lightbox Listeners
+        if (btnExpandArchetype) {
+            btnExpandArchetype.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openArchetypeLightbox();
+            });
+        }
+        if (drawerImageFrame) {
+            drawerImageFrame.addEventListener('click', openArchetypeLightbox);
+        }
+        if (btnCloseLightbox) {
+            btnCloseLightbox.addEventListener('click', closeArchetypeLightbox);
+        }
+        if (archetypeLightboxModal) {
+            archetypeLightboxModal.addEventListener('click', (e) => {
+                if (e.target === archetypeLightboxModal) {
+                    closeArchetypeLightbox();
+                }
+            });
+        }
+
+        // Close slip and lightbox on ESC key
         window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && wayfindingSlipModal && wayfindingSlipModal.style.display !== 'none') {
-                closeWayfindingSlip();
+            if (e.key === 'Escape') {
+                if (archetypeLightboxModal && archetypeLightboxModal.style.display !== 'none') {
+                    closeArchetypeLightbox();
+                } else if (wayfindingSlipModal && wayfindingSlipModal.style.display !== 'none') {
+                    closeWayfindingSlip();
+                }
             }
         });
 
@@ -1687,6 +1739,22 @@
             if (slipRowNotes) slipRowNotes.style.display = 'none';
         }
 
+        // Batch 8C: Populate Slip Archetype & Monument Regulations
+        const archetype = getLotArchetype(lot);
+        const tierInfo = getLotLocationTier(lot);
+        if (slipArchetypePreview) {
+            slipArchetypePreview.innerHTML = archetype.svg;
+        }
+        if (slipMonumentRule) {
+            slipMonumentRule.textContent = archetype.monumentRule || 'Flush Ground Marker';
+        }
+        if (slipCapacityRule) {
+            slipCapacityRule.textContent = archetype.capacity || '2 Caskets (Double-Depth) + 4 Urns';
+        }
+        if (slipLocationTierRule) {
+            slipLocationTierRule.textContent = tierInfo.tier || 'Standard Interior Lot';
+        }
+
         // Render Schematic Mini-Map SVG
         renderSlipMiniMap(lot, block);
 
@@ -1706,6 +1774,76 @@
             wayfindingSlipModal.style.display = 'none';
             wayfindingSlipModal.setAttribute('aria-hidden', 'true');
             document.body.style.overflow = '';
+        }
+    }
+
+    /**
+     * Open Fullscreen Visual Archetype Lightbox Modal (Batch 8C)
+     */
+    function openArchetypeLightbox() {
+        if (!state.selectedLot) {
+            if (typeof showToast === 'function') {
+                showToast('Please select a cemetery plot first.', 'warning');
+            }
+            return;
+        }
+
+        const lot = state.selectedLot;
+        const archetype = getLotArchetype(lot);
+        const tierInfo = getLotLocationTier(lot);
+
+        if (lightboxGraphicStage) {
+            lightboxGraphicStage.innerHTML = archetype.svg;
+        }
+        if (lightboxArchetypeBadge) {
+            lightboxArchetypeBadge.textContent = archetype.name;
+        }
+        if (lightboxTierBadge) {
+            lightboxTierBadge.innerHTML = `<i class="fas ${tierInfo.icon}"></i> ${escapeHtml(tierInfo.tier)}`;
+            lightboxTierBadge.className = `lightbox-tier-badge ${tierInfo.badgeClass}`;
+        }
+        if (lightboxLotHeading) {
+            lightboxLotHeading.textContent = `Lot ${lot.lot_number} — ${archetype.name}`;
+        }
+        if (lightboxLotDesc) {
+            lightboxLotDesc.textContent = tierInfo.desc;
+        }
+        if (lightboxCapacityVal) {
+            lightboxCapacityVal.textContent = archetype.capacity;
+        }
+        if (lightboxDimensionsVal) {
+            lightboxDimensionsVal.textContent = lot.dimensions || archetype.dimensions;
+        }
+        if (lightboxMonumentVal) {
+            lightboxMonumentVal.textContent = archetype.monumentRule;
+        }
+        if (lightboxCareVal) {
+            lightboxCareVal.textContent = archetype.perpetualCare;
+        }
+        if (lightboxIntermentVal) {
+            lightboxIntermentVal.textContent = archetype.intermentPrivilege;
+        }
+        if (lightboxPriceVal) {
+            lightboxPriceVal.textContent = formatCurrency(lot.price);
+        }
+
+        if (archetypeLightboxModal) {
+            archetypeLightboxModal.style.display = 'flex';
+            archetypeLightboxModal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    /**
+     * Close Fullscreen Visual Archetype Lightbox Modal (Batch 8C)
+     */
+    function closeArchetypeLightbox() {
+        if (archetypeLightboxModal) {
+            archetypeLightboxModal.style.display = 'none';
+            archetypeLightboxModal.setAttribute('aria-hidden', 'true');
+            if (!wayfindingSlipModal || wayfindingSlipModal.style.display === 'none') {
+                document.body.style.overflow = '';
+            }
         }
     }
 
