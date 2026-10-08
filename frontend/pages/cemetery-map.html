@@ -412,6 +412,9 @@
                             <button type="button" class="btn btn-secondary btn-block btn-center-drawer" id="btnCenterOnMapDrawer">
                                 <i class="fas fa-crosshairs"></i> Center on Map
                             </button>
+                            <button type="button" class="btn btn-secondary btn-block btn-wayfinding-slip" id="btnOpenWayfindingSlip">
+                                <i class="fas fa-print"></i> Wayfinding & Location Slip
+                            </button>
                             <a href="#" class="btn btn-primary btn-block btn-book-lot" id="btnBookThisLot">
                                 <i class="fas fa-calendar-plus"></i> Book This Lot
                             </a>
@@ -423,6 +426,193 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- WAYFINDING & PRINTABLE LOT LOCATION SLIP MODAL (Batch 7) -->
+    <div class="wayfinding-slip-modal-backdrop" id="wayfindingSlipModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="slipModalTitle">
+        <div class="wayfinding-slip-dialog">
+            <!-- MODAL HEADER (Web Screen only, hidden in print) -->
+            <div class="slip-modal-screen-bar no-print">
+                <div class="slip-modal-screen-title">
+                    <i class="fas fa-map-location-dot"></i>
+                    <span id="slipModalTitle">Visitor Wayfinding & Lot Location Slip</span>
+                </div>
+                <div class="slip-modal-screen-actions">
+                    <button type="button" class="btn btn-primary btn-sm btn-print-trigger" id="btnPrintSlip">
+                        <i class="fas fa-print"></i> Print Slip
+                    </button>
+                    <button type="button" class="btn-slip-close" id="btnCloseWayfindingSlip" aria-label="Close wayfinding slip">
+                        <i class="fas fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- OFFICIAL PRINTABLE SLIP CONTAINER -->
+            <div class="printable-slip-card" id="printableWayfindingSlip">
+                <!-- SLIP HERO HEADER -->
+                <div class="slip-header">
+                    <div class="slip-header-brand">
+                        <div class="slip-emblem">
+                            <i class="fas fa-monument"></i>
+                        </div>
+                        <div class="slip-brand-text">
+                            <span class="slip-org-subtitle">MUNICIPAL CEMETERY SYSTEM &bull; VISITOR WAYFINDING</span>
+                            <h2 class="slip-facility-title" id="slipFacilityName">Cemetery Facility</h2>
+                            <p class="slip-facility-subtext" id="slipFacilityAddress">Official Cemetery Grounds & Burial Registry</p>
+                        </div>
+                    </div>
+                    <div class="slip-badge-column">
+                        <div class="slip-doc-type-badge">LOT LOCATION SLIP</div>
+                        <div class="slip-reference-code">REF: <span id="slipRefCode">CEM-0000</span></div>
+                        <div class="slip-timestamp">Issued: <span id="slipTimestamp">—</span></div>
+                    </div>
+                </div>
+
+                <div class="slip-divider"></div>
+
+                <!-- KEY LOT IDENTIFIER BANNER -->
+                <div class="slip-lot-callout">
+                    <div class="slip-lot-callout-main">
+                        <span class="slip-callout-label">DESIGNATED BURIAL LOT</span>
+                        <h1 class="slip-callout-number" id="slipLotNumber">LOT —</h1>
+                        <span class="slip-callout-type" id="slipLotType">Standard Lawn</span>
+                    </div>
+                    <div class="slip-lot-callout-meta">
+                        <div class="slip-status-pill" id="slipStatusPill">
+                            <span class="slip-status-dot" id="slipStatusDot"></span>
+                            <strong id="slipStatusText">Available</strong>
+                        </div>
+                        <div class="slip-dims-pill">
+                            <i class="fas fa-ruler-combined"></i> <span id="slipDimensions">1.0m × 2.4m</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4-STEP WAYFINDING PATHWAY -->
+                <div class="slip-wayfinding-section">
+                    <div class="slip-section-title">
+                        <i class="fas fa-route"></i> VISITOR WAYFINDING PATHWAY (FROM MAIN ENTRANCE)
+                    </div>
+                    <div class="slip-steps-grid">
+                        <div class="slip-step-card">
+                            <div class="slip-step-num">1</div>
+                            <div class="slip-step-body">
+                                <span class="slip-step-subtitle">FACILITY ENTRANCE</span>
+                                <strong class="slip-step-title" id="slipStepFacility">Main Gate</strong>
+                                <span class="slip-step-detail">Enter through the main visitor entrance and follow main boulevard signage.</span>
+                            </div>
+                        </div>
+                        <div class="slip-step-card">
+                            <div class="slip-step-num">2</div>
+                            <div class="slip-step-body">
+                                <span class="slip-step-subtitle">CEMETERY SECTION</span>
+                                <strong class="slip-step-title" id="slipStepSection">—</strong>
+                                <span class="slip-step-detail">Proceed along primary pathways to the designated cemetery section quadrant.</span>
+                            </div>
+                        </div>
+                        <div class="slip-step-card">
+                            <div class="slip-step-num">3</div>
+                            <div class="slip-step-body">
+                                <span class="slip-step-subtitle">BURIAL BLOCK</span>
+                                <strong class="slip-step-title" id="slipStepBlock">—</strong>
+                                <span class="slip-step-detail">Locate the block perimeter markers and pathway boundary.</span>
+                            </div>
+                        </div>
+                        <div class="slip-step-card slip-step-current">
+                            <div class="slip-step-num">4</div>
+                            <div class="slip-step-body">
+                                <span class="slip-step-subtitle">EXACT PLOT</span>
+                                <strong class="slip-step-title" id="slipStepLot">—</strong>
+                                <span class="slip-step-detail">Visual marker is highlighted on the schematic layout below.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TWO-COLUMN BODY: SCHEMATIC DIAGRAM + LOCATION SPECIFICATIONS -->
+                <div class="slip-content-columns">
+                    <!-- LEFT: SCHEMATIC PLOT LOCATOR MINI-SVG -->
+                    <div class="slip-col-left">
+                        <div class="slip-card-heading">
+                            <i class="fas fa-diagram-project"></i>
+                            <span>SCHEMATIC BLOCK GRID &amp; PLOT LOCATOR</span>
+                        </div>
+                        <div class="slip-minimap-frame">
+                            <svg id="slipMiniMapSvg" class="slip-minimap-svg" viewBox="0 0 600 360" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Schematic Lot Location Diagram">
+                                <!-- Dynamic miniature plot grid rendered here -->
+                            </svg>
+                        </div>
+                        <div class="slip-minimap-legend">
+                            <div class="slip-legend-item"><span class="slip-swatch swatch-target"></span> Target Plot</div>
+                            <div class="slip-legend-item"><span class="slip-swatch swatch-other"></span> Surrounding Lots</div>
+                            <div class="slip-legend-item"><span class="slip-swatch swatch-boundary"></span> Block Perimeter</div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT: LOCATION METRICS & PUBLIC ATTRIBUTES -->
+                    <div class="slip-col-right">
+                        <div class="slip-card-heading">
+                            <i class="fas fa-list-check"></i>
+                            <span>PLOT LOCATION METRICS</span>
+                        </div>
+                        <div class="slip-metrics-table">
+                            <div class="slip-metric-row">
+                                <span class="slip-metric-lbl">Facility:</span>
+                                <strong class="slip-metric-val" id="slipTableFacility">—</strong>
+                            </div>
+                            <div class="slip-metric-row">
+                                <span class="slip-metric-lbl">Section:</span>
+                                <strong class="slip-metric-val" id="slipTableSection">—</strong>
+                            </div>
+                            <div class="slip-metric-row">
+                                <span class="slip-metric-lbl">Block:</span>
+                                <strong class="slip-metric-val" id="slipTableBlock">—</strong>
+                            </div>
+                            <div class="slip-metric-row">
+                                <span class="slip-metric-lbl">Lot Number:</span>
+                                <strong class="slip-metric-val slip-metric-highlight" id="slipTableLot">—</strong>
+                            </div>
+                            <div class="slip-metric-row">
+                                <span class="slip-metric-lbl">Classification:</span>
+                                <span class="slip-metric-val" id="slipTableType">Standard Lawn</span>
+                            </div>
+                            <div class="slip-metric-row">
+                                <span class="slip-metric-lbl">Dimensions:</span>
+                                <span class="slip-metric-val" id="slipTableDimensions">1.0m × 2.4m</span>
+                            </div>
+                            <div class="slip-metric-row" id="slipRowNotes" style="display: none;">
+                                <span class="slip-metric-lbl">Plot Notes:</span>
+                                <span class="slip-metric-val" id="slipTableNotes">—</span>
+                            </div>
+                        </div>
+
+                        <!-- VISITOR ETIQUETTE & ASSISTANCE -->
+                        <div class="slip-etiquette-box">
+                            <div class="slip-etiquette-title"><i class="fas fa-circle-info"></i> VISITOR GUIDELINES</div>
+                            <ul class="slip-etiquette-list">
+                                <li>Visiting Hours: Monday – Sunday, 6:00 AM – 6:00 PM</li>
+                                <li>Please keep pathways clear and respect ongoing memorial services.</li>
+                                <li>For groundskeeping assistance or physical escorts, present this slip at the Administration Office.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SLIP FOOTER & PRIVACY NOTICE (Zero PII Compliance) -->
+                <div class="slip-footer">
+                    <div class="slip-privacy-shield">
+                        <i class="fas fa-shield-halved"></i>
+                        <div class="slip-privacy-text">
+                            <strong>CONFIDENTIALITY &amp; PUBLIC WAYFINDING NOTICE:</strong>
+                            <span>This document is an automated physical wayfinding reference generated by the Cemetery Management System. Deceased records, claimant details, and financial transactions are kept strictly confidential under municipal privacy regulations.</span>
+                        </div>
+                    </div>
+                    <div class="slip-footer-meta">
+                        <span>CodeRebels CMS &bull; Cemetery Mapping &amp; Wayfinding Module &bull; Official Visitor Slip</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- SHARED LIBRARIES & PAGE CONTROLLER -->

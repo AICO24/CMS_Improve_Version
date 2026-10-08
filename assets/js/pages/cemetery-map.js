@@ -53,6 +53,15 @@
     let drawerNotesRow, drawerLocationNotes, btnBookThisLot, btnLotUnavailable;
     let mapLocationSummaryCard, locSummarySection, locSummaryBlock, locSummaryLot, btnCenterOnMapHud;
     let drawerYouAreHereBadge, drawerTrailFacility, drawerTrailSection, drawerTrailBlock, drawerTrailLot, btnCenterOnMapDrawer;
+    let btnOpenWayfindingSlip;
+
+    // Wayfinding & Location Slip Modal DOM Elements (Batch 7)
+    let wayfindingSlipModal, btnCloseWayfindingSlip, btnPrintSlip;
+    let slipFacilityName, slipFacilityAddress, slipRefCode, slipTimestamp;
+    let slipLotNumber, slipLotType, slipStatusDot, slipStatusText, slipDimensions;
+    let slipStepFacility, slipStepSection, slipStepBlock, slipStepLot;
+    let slipMiniMapSvg, slipTableFacility, slipTableSection, slipTableBlock, slipTableLot, slipTableType, slipTableDimensions;
+    let slipRowNotes, slipTableNotes;
 
     // Search & Filter DOM Elements (Batch 4A)
     let mapSearchInput, btnClearSearch, btnMapSearch, searchResultsDropdown;
@@ -151,6 +160,34 @@
         drawerTrailBlock = document.getElementById('drawerTrailBlock');
         drawerTrailLot = document.getElementById('drawerTrailLot');
         btnCenterOnMapDrawer = document.getElementById('btnCenterOnMapDrawer');
+        btnOpenWayfindingSlip = document.getElementById('btnOpenWayfindingSlip');
+
+        // Batch 7: Wayfinding Slip Modal Elements
+        wayfindingSlipModal = document.getElementById('wayfindingSlipModal');
+        btnCloseWayfindingSlip = document.getElementById('btnCloseWayfindingSlip');
+        btnPrintSlip = document.getElementById('btnPrintSlip');
+        slipFacilityName = document.getElementById('slipFacilityName');
+        slipFacilityAddress = document.getElementById('slipFacilityAddress');
+        slipRefCode = document.getElementById('slipRefCode');
+        slipTimestamp = document.getElementById('slipTimestamp');
+        slipLotNumber = document.getElementById('slipLotNumber');
+        slipLotType = document.getElementById('slipLotType');
+        slipStatusDot = document.getElementById('slipStatusDot');
+        slipStatusText = document.getElementById('slipStatusText');
+        slipDimensions = document.getElementById('slipDimensions');
+        slipStepFacility = document.getElementById('slipStepFacility');
+        slipStepSection = document.getElementById('slipStepSection');
+        slipStepBlock = document.getElementById('slipStepBlock');
+        slipStepLot = document.getElementById('slipStepLot');
+        slipMiniMapSvg = document.getElementById('slipMiniMapSvg');
+        slipTableFacility = document.getElementById('slipTableFacility');
+        slipTableSection = document.getElementById('slipTableSection');
+        slipTableBlock = document.getElementById('slipTableBlock');
+        slipTableLot = document.getElementById('slipTableLot');
+        slipTableType = document.getElementById('slipTableType');
+        slipTableDimensions = document.getElementById('slipTableDimensions');
+        slipRowNotes = document.getElementById('slipRowNotes');
+        slipTableNotes = document.getElementById('slipTableNotes');
 
         // Search & Filter Controls
         mapSearchInput = document.getElementById('mapSearchInput');
@@ -201,6 +238,31 @@
         if (btnCenterOnMapDrawer) {
             btnCenterOnMapDrawer.addEventListener('click', centerOnSelectedLot);
         }
+
+        // Batch 7: Wayfinding Slip Modal Listeners
+        if (btnOpenWayfindingSlip) {
+            btnOpenWayfindingSlip.addEventListener('click', openWayfindingSlip);
+        }
+        if (btnCloseWayfindingSlip) {
+            btnCloseWayfindingSlip.addEventListener('click', closeWayfindingSlip);
+        }
+        if (btnPrintSlip) {
+            btnPrintSlip.addEventListener('click', printWayfindingSlip);
+        }
+        if (wayfindingSlipModal) {
+            wayfindingSlipModal.addEventListener('click', (e) => {
+                if (e.target === wayfindingSlipModal) {
+                    closeWayfindingSlip();
+                }
+            });
+        }
+
+        // Close slip on ESC key
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && wayfindingSlipModal && wayfindingSlipModal.style.display !== 'none') {
+                closeWayfindingSlip();
+            }
+        });
 
         if (bcBlock) {
             bcBlock.addEventListener('click', () => {
@@ -1168,6 +1230,232 @@
         updateBreadcrumbs();
         document.querySelectorAll('.svg-lot-tile.is-selected').forEach(el => {
             el.classList.remove('is-selected');
+        });
+    }
+
+    /**
+     * Open Wayfinding & Lot Location Slip Modal (Batch 7)
+     */
+    function openWayfindingSlip() {
+        if (!state.selectedLot) {
+            if (typeof showToast === 'function') {
+                showToast('Please select a cemetery plot first.', 'warning');
+            }
+            return;
+        }
+
+        const lot = state.selectedLot;
+        const block = state.currentBlock;
+        const section = state.currentSection;
+        const cemetery = state.currentCemetery;
+
+        // Facility & Header Information
+        if (slipFacilityName) slipFacilityName.textContent = cemetery?.cemetery_name || 'Cemetery Facility';
+        if (slipFacilityAddress) slipFacilityAddress.textContent = cemetery?.address || cemetery?.location || 'Official Cemetery Grounds & Burial Registry';
+        if (slipRefCode) {
+            const paddedLotId = String(lot.lot_id).padStart(4, '0');
+            slipRefCode.textContent = `CEM-LOT-${paddedLotId}`;
+        }
+        if (slipTimestamp) {
+            const now = new Date();
+            slipTimestamp.textContent = now.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Key Lot Callout
+        if (slipLotNumber) slipLotNumber.textContent = `LOT ${lot.lot_number}`;
+        if (slipLotType) slipLotType.textContent = lot.lot_type || 'Standard Lawn';
+        if (slipStatusText) slipStatusText.textContent = lot.status || 'Available';
+        if (slipDimensions) slipDimensions.textContent = lot.dimensions || '1.0m × 2.4m';
+
+        // Status dot color
+        const statusColors = {
+            'Available': '#10b981',
+            'Reserved': '#f59e0b',
+            'Occupied': '#64748b',
+            'Unavailable': '#ef4444',
+            'Under Maintenance': '#ef4444',
+        };
+        if (slipStatusDot) {
+            slipStatusDot.style.background = statusColors[lot.status] || '#10b981';
+        }
+
+        // 4-Step Pathway
+        if (slipStepFacility) slipStepFacility.textContent = cemetery?.cemetery_name || 'Main Gate';
+        if (slipStepSection) slipStepSection.textContent = section?.section_name || 'Section Quadrant';
+        if (slipStepBlock) slipStepBlock.textContent = block?.block_name || 'Block Perimeter';
+        if (slipStepLot) slipStepLot.textContent = `Plot #${lot.lot_number}`;
+
+        // Location Metrics Table
+        if (slipTableFacility) slipTableFacility.textContent = cemetery?.cemetery_name || '—';
+        if (slipTableSection) slipTableSection.textContent = section?.section_name || '—';
+        if (slipTableBlock) slipTableBlock.textContent = block?.block_name || '—';
+        if (slipTableLot) slipTableLot.textContent = lot.lot_number || '—';
+        if (slipTableType) slipTableType.textContent = lot.lot_type || 'Standard Lawn';
+        if (slipTableDimensions) slipTableDimensions.textContent = lot.dimensions || '1.0m × 2.4m';
+
+        if (lot.location_notes) {
+            if (slipTableNotes) slipTableNotes.textContent = lot.location_notes;
+            if (slipRowNotes) slipRowNotes.style.display = 'flex';
+        } else {
+            if (slipRowNotes) slipRowNotes.style.display = 'none';
+        }
+
+        // Render Schematic Mini-Map SVG
+        renderSlipMiniMap(lot, block);
+
+        // Display Modal
+        if (wayfindingSlipModal) {
+            wayfindingSlipModal.style.display = 'flex';
+            wayfindingSlipModal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    /**
+     * Close Wayfinding & Lot Location Slip Modal (Batch 7)
+     */
+    function closeWayfindingSlip() {
+        if (wayfindingSlipModal) {
+            wayfindingSlipModal.style.display = 'none';
+            wayfindingSlipModal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+    }
+
+    /**
+     * Trigger Clean Browser Print Workflow (Batch 7)
+     */
+    function printWayfindingSlip() {
+        window.print();
+    }
+
+    /**
+     * Render Miniature Schematic Plot Grid (SVG) for Wayfinding Slip
+     */
+    function renderSlipMiniMap(targetLot, block) {
+        if (!slipMiniMapSvg) return;
+        slipMiniMapSvg.innerHTML = '';
+
+        const lots = state.currentLots && state.currentLots.length > 0 ? state.currentLots : [targetLot];
+        const canvasW = 600;
+        const canvasH = 360;
+        const margin = 28;
+        const headerH = 34;
+
+        // Background boundary for the block
+        const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        bgRect.setAttribute('x', '4');
+        bgRect.setAttribute('y', '4');
+        bgRect.setAttribute('width', String(canvasW - 8));
+        bgRect.setAttribute('height', String(canvasH - 8));
+        bgRect.setAttribute('rx', '8');
+        bgRect.setAttribute('fill', '#f8fafc');
+        bgRect.setAttribute('stroke', '#cbd5e1');
+        bgRect.setAttribute('stroke-width', '1.5');
+        slipMiniMapSvg.appendChild(bgRect);
+
+        // Block Title / Perimeter Label in SVG
+        const blockLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        blockLabel.setAttribute('x', String(margin));
+        blockLabel.setAttribute('y', '24');
+        blockLabel.setAttribute('fill', '#334155');
+        blockLabel.setAttribute('font-size', '13');
+        blockLabel.setAttribute('font-weight', '700');
+        blockLabel.textContent = `${block?.block_name || 'Block Grid'} — Layout Scheme`;
+        slipMiniMapSvg.appendChild(blockLabel);
+
+        // North Orientation Indicator
+        const northText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        northText.setAttribute('x', String(canvasW - margin - 20));
+        northText.setAttribute('y', '24');
+        northText.setAttribute('fill', '#64748b');
+        northText.setAttribute('font-size', '11');
+        northText.setAttribute('font-weight', '600');
+        northText.textContent = '▲ NORTH';
+        slipMiniMapSvg.appendChild(northText);
+
+        // Plot Grid Bounds
+        const gridX = margin;
+        const gridY = margin + headerH;
+        const gridW = canvasW - (margin * 2);
+        const gridH = canvasH - gridY - margin;
+
+        const lotCount = lots.length;
+        let cols = 5;
+        let gapX = 10;
+        let gapY = 10;
+
+        if (block?.map_config?.grid?.columns && !isNaN(Number(block.map_config.grid.columns))) {
+            cols = parseInt(block.map_config.grid.columns, 10);
+        } else {
+            if (lotCount <= 10) cols = 5;
+            else if (lotCount <= 20) cols = 5;
+            else if (lotCount <= 40) cols = 8;
+            else cols = 10;
+        }
+
+        const rows = Math.ceil(lotCount / cols) || 1;
+        const tileW = (gridW - ((cols - 1) * gapX)) / cols;
+        const tileH = (gridH - ((rows - 1) * gapY)) / rows;
+
+        lots.forEach((lot, i) => {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            const lx = gridX + (col * (tileW + gapX));
+            const ly = gridY + (row * (tileH + gapY));
+
+            const isTarget = String(lot.lot_id) === String(targetLot.lot_id);
+
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+            const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            r.setAttribute('x', String(lx));
+            r.setAttribute('y', String(ly));
+            r.setAttribute('width', String(tileW));
+            r.setAttribute('height', String(tileH));
+            r.setAttribute('rx', '4');
+
+            if (isTarget) {
+                r.setAttribute('fill', '#059669');
+                r.setAttribute('stroke', '#064e3b');
+                r.setAttribute('stroke-width', '2.5');
+            } else {
+                r.setAttribute('fill', '#e2e8f0');
+                r.setAttribute('stroke', '#cbd5e1');
+                r.setAttribute('stroke-width', '1');
+            }
+            g.appendChild(r);
+
+            // Lot label inside tile
+            const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            txt.setAttribute('x', String(lx + (tileW / 2)));
+            txt.setAttribute('y', String(ly + (tileH / 2) + 4));
+            txt.setAttribute('text-anchor', 'middle');
+            txt.setAttribute('font-size', isTarget ? '12' : '10');
+            txt.setAttribute('font-weight', isTarget ? '800' : '600');
+            txt.setAttribute('fill', isTarget ? '#ffffff' : '#475569');
+            txt.textContent = lot.lot_number;
+            g.appendChild(txt);
+
+            // Target Pin Icon / Marker
+            if (isTarget) {
+                const pin = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                pin.setAttribute('cx', String(lx + tileW - 8));
+                pin.setAttribute('cy', String(ly + 8));
+                pin.setAttribute('r', '4');
+                pin.setAttribute('fill', '#fbbf24');
+                pin.setAttribute('stroke', '#ffffff');
+                pin.setAttribute('stroke-width', '1.5');
+                g.appendChild(pin);
+            }
+
+            slipMiniMapSvg.appendChild(g);
         });
     }
 
