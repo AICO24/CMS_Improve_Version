@@ -51,6 +51,7 @@
     let svgFloatingTooltip;
     let lotDetailsDrawer, btnCloseDrawer, drawerLotNumber, drawerStatusDot, drawerStatusText;
     let drawerFacilityName, drawerSectionName, drawerBlockName, drawerLotType, drawerDimensions, drawerPrice;
+    let drawerElevationRow, drawerElevationPlacement;
     let drawerNotesRow, drawerLocationNotes, btnBookThisLot, btnLotUnavailable;
     let mapLocationSummaryCard, locSummarySection, locSummaryBlock, locSummaryLot, btnCenterOnMapHud;
     let drawerYouAreHereBadge, drawerTrailFacility, drawerTrailSection, drawerTrailBlock, drawerTrailLot, btnCenterOnMapDrawer;
@@ -167,6 +168,8 @@
         drawerLotType = document.getElementById('drawerLotType');
         drawerDimensions = document.getElementById('drawerDimensions');
         drawerPrice = document.getElementById('drawerPrice');
+        drawerElevationRow = document.getElementById('drawerElevationRow');
+        drawerElevationPlacement = document.getElementById('drawerElevationPlacement');
         drawerNotesRow = document.getElementById('drawerNotesRow');
         drawerLocationNotes = document.getElementById('drawerLocationNotes');
         btnBookThisLot = document.getElementById('btnBookThisLot');
@@ -1168,12 +1171,30 @@
         });
         updateLegendCounts(lots);
 
+        // Detect if this section/block is a Columbarium or Ossuary
+        const isColumbarium = (function () {
+            const cName = (state.currentCemetery?.cemetery_name || '').toLowerCase();
+            const sName = (block.section_name || state.currentSection?.section_name || '').toLowerCase();
+            const bName = (block.block_name || '').toLowerCase();
+            const lType = (lots[0]?.lot_type || '').toLowerCase();
+            return cName.includes('columbarium') || cName.includes('ossuary') ||
+                   sName.includes('columbarium') || sName.includes('ossuary') ||
+                   bName.includes('columbarium') || bName.includes('ossuary') ||
+                   lType.includes('columbarium') || lType.includes('ossuary') || lType.includes('niche');
+        })();
+
+        if (isColumbarium) {
+            titleText.textContent = `${block.section_name || state.currentSection.section_name} › ${block.block_name} • Columbarium Niche Wall Elevation`;
+        }
+
         const subtitleText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         subtitleText.setAttribute('x', margin + 24);
         subtitleText.setAttribute('y', margin + 60);
         subtitleText.setAttribute('class', 'svg-section-meta');
         subtitleText.setAttribute('id', 'blockLotsSummarySubtitle');
-        subtitleText.textContent = `Total Plots: ${lots.length}  |  🟢 Available: ${counts.Available}  |  🟡 Reserved: ${counts.Reserved}  |  🔴 Occupied: ${counts.Occupied}`;
+        subtitleText.textContent = isColumbarium
+            ? `Total Vaults: ${lots.length}  |  🟢 Available: ${counts.Available}  |  🟡 Reserved: ${counts.Reserved}  |  🔴 Occupied: ${counts.Occupied}`
+            : `Total Plots: ${lots.length}  |  🟢 Available: ${counts.Available}  |  🟡 Reserved: ${counts.Reserved}  |  🔴 Occupied: ${counts.Occupied}`;
         headerGroup.appendChild(subtitleText);
 
         mapTransformLayer.appendChild(headerGroup);
@@ -1189,16 +1210,17 @@
             return;
         }
 
-        // Deterministic Grid Layout for Lots
-        const gridX = margin;
+        // Deterministic Grid Layout for Lots with Left Elevation Ruler for Columbarium
+        const rulerW = isColumbarium ? 165 : 0;
+        const gridX = margin + rulerW;
         const gridY = margin + topHeaderH;
-        const gridW = canvasW - (margin * 2);
+        const gridW = canvasW - (margin * 2) - rulerW;
         const gridH = canvasH - gridY - margin;
 
         const lotCount = lots.length;
         let cols = 5;
-        let gapX = 14;
-        let gapY = 14;
+        let gapX = isColumbarium ? 12 : 14;
+        let gapY = isColumbarium ? 12 : 14;
 
         if (block.map_config && block.map_config.grid) {
             if (block.map_config.grid.columns && !isNaN(Number(block.map_config.grid.columns))) {
@@ -1210,6 +1232,12 @@
             if (block.map_config.grid.gap_y !== undefined && !isNaN(Number(block.map_config.grid.gap_y))) {
                 gapY = parseFloat(block.map_config.grid.gap_y);
             }
+        } else if (isColumbarium) {
+            // Niche wall proportions (4-6 rows to mirror real vertical columbarium elevations)
+            if (lotCount <= 12) cols = 4;
+            else if (lotCount <= 25) cols = 5;
+            else if (lotCount <= 40) cols = 7;
+            else cols = 8;
         } else {
             if (lotCount <= 10) cols = 5;
             else if (lotCount <= 20) cols = 5;
@@ -1220,6 +1248,74 @@
         const rows = Math.ceil(lotCount / cols);
         const tileW = (gridW - ((cols - 1) * gapX)) / cols;
         const tileH = (gridH - ((rows - 1) * gapY)) / rows;
+
+        // BATCH 10A: Vertical Elevation Ruler for Columbarium Wall
+        if (isColumbarium && rows > 0) {
+            const rulerGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            rulerGroup.setAttribute('class', 'svg-tier-ruler-group');
+
+            // Ruler Title Header
+            const rulerHeader = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            rulerHeader.setAttribute('x', margin + 6);
+            rulerHeader.setAttribute('y', gridY - 14);
+            rulerHeader.setAttribute('class', 'svg-tier-ruler-header');
+            rulerHeader.textContent = 'VERTICAL ELEVATION';
+            rulerGroup.appendChild(rulerHeader);
+
+            for (let r = 0; r < rows; r++) {
+                const tierLevel = rows - r; // Row 0 is highest level
+                const rowY = gridY + (r * (tileH + gapY));
+                const pillH = Math.min(tileH, 52);
+                const pillY = rowY + (tileH - pillH) / 2;
+
+                const isEyeLevel = (rows >= 4 && tierLevel === 3) || (rows === 3 && tierLevel === 2) || (rows < 3 && tierLevel === 1);
+                const isTopTier = (tierLevel === rows);
+                const isBaseTier = (tierLevel === 1);
+                const approxH = (0.4 + (tierLevel - 1) * 0.45).toFixed(1) + 'm';
+
+                const tierCard = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                tierCard.setAttribute('class', `svg-tier-card ${isEyeLevel ? 'is-eye-level' : ''}`);
+
+                // Background pill
+                const pillRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                pillRect.setAttribute('x', margin);
+                pillRect.setAttribute('y', pillY);
+                pillRect.setAttribute('width', rulerW - 22);
+                pillRect.setAttribute('height', pillH);
+                pillRect.setAttribute('rx', '8');
+                pillRect.setAttribute('class', `svg-tier-pill ${isEyeLevel ? 'tier-pill--eye-level' : ''}`);
+                tierCard.appendChild(pillRect);
+
+                // Tier Title text
+                const tierTitleText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                tierTitleText.setAttribute('x', margin + 12);
+                tierTitleText.setAttribute('y', pillY + (pillH / 2) - 3);
+                tierTitleText.setAttribute('class', `svg-tier-name ${isEyeLevel ? 'tier-name--eye-level' : ''}`);
+                tierTitleText.textContent = isEyeLevel ? `⭐ Level ${tierLevel}` : `Level ${tierLevel}`;
+                tierCard.appendChild(tierTitleText);
+
+                // Subtitle: Height & description
+                const tierSubText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                tierSubText.setAttribute('x', margin + 12);
+                tierSubText.setAttribute('y', pillY + (pillH / 2) + 13);
+                tierSubText.setAttribute('class', 'svg-tier-subtext');
+                const tierDesc = isEyeLevel ? `${approxH} • Eye-Level` : (isTopTier ? `${approxH} • Top Vault` : (isBaseTier ? `${approxH} • Base Vault` : `${approxH} • Mid Tier`));
+                tierSubText.textContent = tierDesc;
+                tierCard.appendChild(tierSubText);
+
+                // Connecting guideline to niche grid
+                const guideLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                guideLine.setAttribute('x1', margin + rulerW - 18);
+                guideLine.setAttribute('y1', rowY + (tileH / 2));
+                guideLine.setAttribute('x2', gridX - 6);
+                guideLine.setAttribute('y2', rowY + (tileH / 2));
+                guideLine.setAttribute('class', `svg-tier-guideline ${isEyeLevel ? 'guideline--eye-level' : ''}`);
+                tierCard.appendChild(guideLine);
+
+                rulerGroup.appendChild(tierCard);
+            }
+            mapTransformLayer.appendChild(rulerGroup);
+        }
 
         lots.forEach((lot, i) => {
             const col = i % cols;
@@ -1240,25 +1336,76 @@
                 curTileH = Number(lot.map_config.height);
             }
 
+            const tierLevel = isColumbarium ? (rows - row) : 1;
+            const isEyeLevel = isColumbarium && ((rows >= 4 && tierLevel === 3) || (rows === 3 && tierLevel === 2) || (rows < 3 && tierLevel === 1));
+            const approxH = isColumbarium ? ((0.4 + (tierLevel - 1) * 0.45).toFixed(1) + 'm') : 'Ground Level';
+
+            // Clean Human-Readable Display Label (Sanitize long system GUID hashes)
+            let displayLabel = lot.lot_number;
+            let isSanitizedHash = false;
+            if (lot.lot_number && lot.lot_number.length > 12) {
+                isSanitizedHash = true;
+                displayLabel = isColumbarium ? `Vault #${i + 1}` : `Plot #${i + 1}`;
+            }
+
+            // Bind spatial elevation metadata on lot object
+            lot._tierLevel = tierLevel;
+            lot._isEyeLevel = isEyeLevel;
+            lot._approxHeight = approxH;
+            lot._displayLabel = displayLabel;
+            lot._elevationDesc = isColumbarium
+                ? `Level ${tierLevel} (${approxH}) — ${isEyeLevel ? 'Eye-Level (Optimal viewing height)' : (tierLevel === rows ? 'Top Tier Vault' : (tierLevel === 1 ? 'Base Tier (Wheelchair Accessible)' : 'Mid-Tier Vault'))}`
+                : 'Elevated Lawn Terrace (Certified Flood-Free, +1.2m)';
+
             const lotStatusClass = (lot.status || 'Available').toLowerCase().replace(/\s+/g, '-');
             const isSelected = state.selectedLot && state.selectedLot.lot_id === lot.lot_id;
 
             const lotGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            lotGroup.setAttribute('class', `svg-lot-tile lot--${lotStatusClass}${isSelected ? ' is-selected' : ''}`);
+            lotGroup.setAttribute('class', `svg-lot-tile lot--${lotStatusClass}${isColumbarium ? ' is-niche-vault' : ''}${isSelected ? ' is-selected' : ''}`);
             lotGroup.setAttribute('data-lot-id', lot.lot_id);
+            lotGroup.setAttribute('data-tier-level', tierLevel);
             lotGroup.setAttribute('role', 'button');
             lotGroup.setAttribute('tabindex', '0');
-            lotGroup.setAttribute('aria-label', `Lot ${lot.lot_number}, Section ${block.section_name || state.currentSection?.section_name || ''}, Block ${block.block_name}, Status: ${lot.status}, Category: ${lot.lot_type || 'Standard Lawn'}, Price: ${formatCurrency(lot.price)}`);
+            lotGroup.setAttribute('aria-label', `${displayLabel}, Section ${block.section_name || state.currentSection?.section_name || ''}, Block ${block.block_name}, Level: ${tierLevel}, Status: ${lot.status}, Category: ${lot.lot_type || 'Standard Lawn'}, Price: ${formatCurrency(lot.price)}`);
 
-            // Lot Tile Rectangle
+            // Lot Tile Rectangle (Outer Frame)
             const lotRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             lotRect.setAttribute('x', lotX);
             lotRect.setAttribute('y', lotY);
             lotRect.setAttribute('width', curTileW);
             lotRect.setAttribute('height', curTileH);
-            lotRect.setAttribute('class', 'svg-lot-rect');
+            lotRect.setAttribute('class', `svg-lot-rect ${isColumbarium ? 'niche-vault-rect' : ''}`);
             lotRect.setAttribute('filter', 'url(#tileShadow)');
             lotGroup.appendChild(lotRect);
+
+            // BATCH 10A: Columbarium Niche Inner Plate & Corner Screws
+            if (isColumbarium) {
+                const innerPlate = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                innerPlate.setAttribute('x', lotX + 4);
+                innerPlate.setAttribute('y', lotY + 4);
+                innerPlate.setAttribute('width', Math.max(0, curTileW - 8));
+                innerPlate.setAttribute('height', Math.max(0, curTileH - 8));
+                innerPlate.setAttribute('rx', '4');
+                innerPlate.setAttribute('class', 'niche-inner-plate');
+                lotGroup.appendChild(innerPlate);
+
+                // 4 Brass Corner Rosettes / Screws
+                const screwInset = 7;
+                const screwCoords = [
+                    [lotX + screwInset, lotY + screwInset],
+                    [lotX + curTileW - screwInset, lotY + screwInset],
+                    [lotX + screwInset, lotY + curTileH - screwInset],
+                    [lotX + curTileW - screwInset, lotY + curTileH - screwInset]
+                ];
+                screwCoords.forEach(([sx, sy]) => {
+                    const screw = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    screw.setAttribute('cx', sx);
+                    screw.setAttribute('cy', sy);
+                    screw.setAttribute('r', '2.5');
+                    screw.setAttribute('class', 'niche-screw');
+                    lotGroup.appendChild(screw);
+                });
+            }
 
             // Lot Number Label
             const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -1266,21 +1413,21 @@
             labelText.setAttribute('y', lotY + (curTileH / 2) - 2);
             labelText.setAttribute('text-anchor', 'middle');
             labelText.setAttribute('class', 'svg-lot-label');
-            labelText.textContent = lot.lot_number;
+            labelText.textContent = displayLabel;
             lotGroup.appendChild(labelText);
 
-            // Lot Status Subtitle
+            // Lot Status / Level Subtitle
             const statusText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             statusText.setAttribute('x', lotX + (curTileW / 2));
             statusText.setAttribute('y', lotY + (curTileH / 2) + 16);
             statusText.setAttribute('text-anchor', 'middle');
             statusText.setAttribute('class', 'svg-lot-status-text');
-            statusText.textContent = lot.status;
+            statusText.textContent = isColumbarium ? `L${tierLevel} • ${lot.status}` : lot.status;
             lotGroup.appendChild(statusText);
 
             // Native Title for Tooltip Accessibility
             const titleEl = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-            titleEl.textContent = `Lot ${lot.lot_number} • ${lot.status} • ${formatCurrency(lot.price)}`;
+            titleEl.textContent = `${displayLabel} • Level ${tierLevel} (${approxH}) • ${lot.status} • ${formatCurrency(lot.price)}`;
             lotGroup.appendChild(titleEl);
 
             // Click Handler: Lot Selection & Details Drawer
@@ -1298,7 +1445,11 @@
 
             // Hover Tooltip
             lotGroup.addEventListener('mouseenter', (e) => {
-                showFloatingTooltip(e, `<strong>Lot ${escapeHtml(lot.lot_number)}</strong><br>Status: ${escapeHtml(lot.status)}<br>Type: ${escapeHtml(lot.lot_type)}<br>Price: ${formatCurrency(lot.price)}`);
+                const elevHtml = isColumbarium 
+                    ? `<br>Vertical Placement: <strong>Level ${tierLevel} (${approxH})</strong>${isEyeLevel ? ' <span style="color:#f59e0b;">⭐ Eye-Level</span>' : ''}`
+                    : `<br>Vertical Placement: <strong>Ground Level (Terraced Lawn)</strong>`;
+                const idExtra = isSanitizedHash ? `<br><small style="opacity:0.75;">System Ref: ${escapeHtml(lot.lot_number)}</small>` : '';
+                showFloatingTooltip(e, `<strong>${escapeHtml(displayLabel)}</strong>${elevHtml}<br>Status: ${escapeHtml(lot.status)}<br>Category: ${escapeHtml(lot.lot_type || 'Burial Plot')}<br>Price: ${formatCurrency(lot.price)}${idExtra}`);
             });
             lotGroup.addEventListener('mousemove', moveFloatingTooltip);
             lotGroup.addEventListener('mouseleave', hideFloatingTooltip);
@@ -1345,6 +1496,16 @@
         drawerLotType.textContent = lot.lot_type || 'Standard Lawn';
         drawerDimensions.textContent = lot.dimensions || '1.0m × 2.4m';
         drawerPrice.textContent = formatCurrency(lot.price);
+
+        // Batch 10A: Populate Vertical Elevation / Tier Level Placement
+        if (drawerElevationPlacement) {
+            drawerElevationPlacement.innerHTML = lot._elevationDesc 
+                ? escapeHtml(lot._elevationDesc) 
+                : 'Ground Level (Terraced Lawn)';
+        }
+        if (drawerElevationRow) {
+            drawerElevationRow.style.display = 'flex';
+        }
 
         if (lot.location_notes) {
             drawerLocationNotes.textContent = lot.location_notes;
