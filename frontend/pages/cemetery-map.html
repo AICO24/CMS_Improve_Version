@@ -471,8 +471,19 @@
                                 <span>You are viewing the location of this cemetery lot.</span>
                             </div>
 
-                            <!-- VISUAL ARCHETYPE SHOWCASE (Batch 8A) -->
+                            <!-- VISUAL ARCHETYPE SHOWCASE (Batch 8A & 10B) -->
                             <div class="drawer-visual-showcase" id="drawerVisualShowcase">
+                                <div class="archetype-view-mode-bar" id="drawerArchetypeViewModes" role="tablist">
+                                    <button type="button" class="btn-archetype-mode active" data-mode="perspective" id="btnModePerspective" title="3D Realistic Perspective View">
+                                        <i class="fas fa-eye"></i> <span>3D Perspective</span>
+                                    </button>
+                                    <button type="button" class="btn-archetype-mode" data-mode="blueprint" id="btnModeBlueprint" title="Structural Cross-Section Blueprint">
+                                        <i class="fas fa-layer-group"></i> <span>Blueprint</span>
+                                    </button>
+                                    <button type="button" class="btn-archetype-mode" data-mode="materials" id="btnModeMaterials" title="Material Finishes &amp; Specs">
+                                        <i class="fas fa-gem"></i> <span>Materials</span>
+                                    </button>
+                                </div>
                                 <div class="archetype-image-frame" id="drawerImageFrame" title="Click to inspect full architectural blueprint">
                                     <div class="archetype-graphic" id="drawerArchetypeGraphic">
                                         <!-- Dynamic rich vector preview rendered here -->
@@ -493,6 +504,25 @@
                                     <div class="spec-pill spec-dimensions" id="drawerDimensionPill" title="Physical lot dimensions">
                                         <i class="fas fa-vector-square"></i>
                                         <span id="drawerDimensionSpec">1.0m × 2.44m</span>
+                                    </div>
+                                </div>
+                                <div class="archetype-materials-card" id="drawerMaterialsCard" style="display: none;">
+                                    <div class="materials-header">
+                                        <i class="fas fa-shield-halved"></i> <span>Material &amp; Construction Specs</span>
+                                    </div>
+                                    <div class="materials-grid">
+                                        <div class="mat-cell">
+                                            <span class="mat-label"><i class="fas fa-layer-group"></i> Finish:</span>
+                                            <strong class="mat-val" id="drawerMatSurface">Polished Black Granite</strong>
+                                        </div>
+                                        <div class="mat-cell">
+                                            <span class="mat-label"><i class="fas fa-cube"></i> Sub-Vault:</span>
+                                            <strong class="mat-val" id="drawerMatStructure">Class-A Reinforced Concrete</strong>
+                                        </div>
+                                        <div class="mat-cell">
+                                            <span class="mat-label"><i class="fas fa-droplet-slash"></i> Drainage:</span>
+                                            <strong class="mat-val" id="drawerMatDrainage">Perpetual Dry-Well Drainage</strong>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -681,6 +711,17 @@
                 </button>
             </div>
             <div class="archetype-lightbox-body">
+                <div class="archetype-view-mode-bar lightbox-mode-bar" id="lightboxArchetypeViewModes" role="tablist">
+                    <button type="button" class="btn-archetype-mode active" data-mode="perspective" id="btnLightboxPerspective">
+                        <i class="fas fa-eye"></i> <span>3D Perspective</span>
+                    </button>
+                    <button type="button" class="btn-archetype-mode" data-mode="blueprint" id="btnLightboxBlueprint">
+                        <i class="fas fa-layer-group"></i> <span>Structural Blueprint</span>
+                    </button>
+                    <button type="button" class="btn-archetype-mode" data-mode="materials" id="btnLightboxMaterials">
+                        <i class="fas fa-gem"></i> <span>Material Specs</span>
+                    </button>
+                </div>
                 <div class="lightbox-graphic-stage" id="lightboxGraphicStage">
                     <!-- High-detail scalable blueprint illustration rendered here -->
                 </div>
@@ -712,6 +753,10 @@
                         <div class="lightbox-spec-item">
                             <span class="lightbox-spec-lbl"><i class="fas fa-layer-group"></i> Interment Privilege</span>
                             <strong class="lightbox-spec-val" id="lightboxIntermentVal">—</strong>
+                        </div>
+                        <div class="lightbox-spec-item" id="lightboxMatItem">
+                            <span class="lightbox-spec-lbl"><i class="fas fa-gem"></i> Material &amp; Construction</span>
+                            <strong class="lightbox-spec-val" id="lightboxMaterialVal">—</strong>
                         </div>
                         <div class="lightbox-spec-item">
                             <span class="lightbox-spec-lbl"><i class="fas fa-peso-sign"></i> Valuation Tier</span>

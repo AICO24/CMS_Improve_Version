@@ -2132,6 +2132,158 @@ body[data-theme="dark"] .search-field .search-field__input:focus ~ .search-field
 }
 
 /* =========================================================================
+   BATCH 10B: ACTUAL LOT APPEARANCE & PERSPECTIVE RENDERING SHOWCASE
+   ========================================================================= */
+
+.archetype-view-mode-bar {
+    display: flex;
+    align-items: center;
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 8px;
+    gap: 4px;
+    border: 1px solid var(--map-border);
+}
+
+[data-theme="dark"] .archetype-view-mode-bar {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.btn-archetype-mode {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--map-text-muted, #64748b);
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-archetype-mode:hover {
+    color: var(--map-text-main, #0f172a);
+    background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .btn-archetype-mode:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-archetype-mode.active {
+    background: var(--map-primary, #16382b);
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    font-weight: 700;
+}
+
+[data-theme="dark"] .btn-archetype-mode.active {
+    background: #10b981;
+    color: #022c22;
+}
+
+.lightbox-mode-bar {
+    grid-column: 1 / -1;
+    margin: 12px 20px 4px 20px;
+    max-width: 480px;
+    align-self: center;
+}
+
+/* Material & Construction Specs Card */
+.archetype-materials-card {
+    border-radius: 10px;
+    border: 1.5px solid var(--map-border);
+    background: #f8fafc;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: fadeInMode 0.25s ease-in-out;
+}
+
+[data-theme="dark"] .archetype-materials-card {
+    background: #0f172a;
+    border-color: rgba(52, 211, 153, 0.25);
+}
+
+.materials-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: var(--map-primary, #16382b);
+}
+
+[data-theme="dark"] .materials-header {
+    color: #34d399;
+}
+
+.materials-header i {
+    font-size: 0.8rem;
+}
+
+.materials-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mat-cell {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.72rem;
+    line-height: 1.35;
+    padding-bottom: 4px;
+    border-bottom: 1px dashed rgba(100, 116, 139, 0.2);
+}
+
+.mat-cell:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.mat-label {
+    color: var(--map-text-muted, #64748b);
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.mat-val {
+    color: var(--map-text-main, #0f172a);
+    font-weight: 600;
+    text-align: right;
+}
+
+[data-theme="dark"] .mat-val {
+    color: #e2e8f0;
+}
+
+@keyframes fadeInMode {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =========================================================================
    BATCH 8B: LOCATION VALUE TIER & MONUMENT GUIDELINES
    ========================================================================= */
 

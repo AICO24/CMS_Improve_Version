@@ -71,6 +71,12 @@
     // Batch 8A: Visual Archetype Showcase DOM Elements
     let drawerVisualShowcase, drawerImageFrame, drawerArchetypeGraphic, drawerArchetypeBadgeText, drawerCapacityText, drawerDimensionSpec;
 
+    // Batch 10B: Actual Lot Appearance & Perspective Rendering Showcase Elements
+    let drawerArchetypeViewModes, btnModePerspective, btnModeBlueprint, btnModeMaterials;
+    let drawerMaterialsCard, drawerMatSurface, drawerMatStructure, drawerMatDrainage;
+    let lightboxArchetypeViewModes, lightboxMaterialVal;
+    let activeArchetypeViewMode = 'perspective';
+
     // Batch 8B: Location Value Tier & Monument Guidelines DOM Elements
     let drawerLocationTierCard, drawerLocationTierBadge, drawerLocationTierDesc;
     let drawerMonumentCard, drawerMonumentRule, drawerPerpetualCare, drawerIntermentPrivilege;
@@ -198,6 +204,18 @@
         drawerArchetypeBadgeText = document.getElementById('drawerArchetypeBadgeText');
         drawerCapacityText = document.getElementById('drawerCapacityText');
         drawerDimensionSpec = document.getElementById('drawerDimensionSpec');
+
+        // Batch 10B: Actual Lot Appearance & Perspective View Elements
+        drawerArchetypeViewModes = document.getElementById('drawerArchetypeViewModes');
+        btnModePerspective = document.getElementById('btnModePerspective');
+        btnModeBlueprint = document.getElementById('btnModeBlueprint');
+        btnModeMaterials = document.getElementById('btnModeMaterials');
+        drawerMaterialsCard = document.getElementById('drawerMaterialsCard');
+        drawerMatSurface = document.getElementById('drawerMatSurface');
+        drawerMatStructure = document.getElementById('drawerMatStructure');
+        drawerMatDrainage = document.getElementById('drawerMatDrainage');
+        lightboxArchetypeViewModes = document.getElementById('lightboxArchetypeViewModes');
+        lightboxMaterialVal = document.getElementById('lightboxMaterialVal');
 
         // Batch 8B: Location Value Tier & Monument Guidelines Elements
         drawerLocationTierCard = document.getElementById('drawerLocationTierCard');
@@ -375,6 +393,26 @@
                 }
             });
         }
+
+        // Batch 10B: Archetype View Mode Switcher Listeners
+        [btnModePerspective, btnModeBlueprint, btnModeMaterials].forEach(btn => {
+            if (btn) {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const mode = btn.getAttribute('data-mode') || 'perspective';
+                    setArchetypeViewMode(mode);
+                });
+            }
+        });
+
+        const lightboxModeBtns = document.querySelectorAll('#lightboxArchetypeViewModes .btn-archetype-mode');
+        lightboxModeBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const mode = btn.getAttribute('data-mode') || 'perspective';
+                setArchetypeViewMode(mode);
+            });
+        });
 
         // Close slip, lightbox, or return from geo view on ESC key (Batch 9C)
         window.addEventListener('keydown', (e) => {
@@ -1629,184 +1667,379 @@
         lawn: {
             id: 'lawn',
             name: 'Standard Lawn Lot',
-            badge: 'Lawn Lot Archetype',
+            badge: '3D Lawn Lot Perspective',
             capacity: '2 Caskets (Double-Depth) + 4 Urns',
             dimensions: '1.0m × 2.44m (Single Plot)',
             priceTier: '₱45,000 – ₱180,000',
+            materials: {
+                surface: 'Flush Imperial Black Granite & Cast Bronze Inlay',
+                structure: 'Class-A Reinforced Double-Depth Concrete Vault',
+                drainage: 'Subterranean Dry-Well Gravel Drainage (Flood-Proof)'
+            },
             monumentRule: 'Flush ground marker only (Bronze or granite slab, level with turf)',
             perpetualCare: 'Covered (Lawn mowing, ground leveling & perimeter security)',
             intermentPrivilege: 'Double-depth vault (2 Caskets) + 4 cremains urns',
             svg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
     <defs>
-        <linearGradient id="lawnSky" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="#bae6fd"/>
-            <stop offset="65%" stop-color="#e0f2fe"/>
-            <stop offset="100%" stop-color="#f0fdf4"/>
+        <linearGradient id="lawn3dSky" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#7dd3fc"/>
+            <stop offset="60%" stop-color="#bae6fd"/>
+            <stop offset="100%" stop-color="#ecfdf5"/>
         </linearGradient>
-        <linearGradient id="lawnGrass" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="#22c55e"/>
-            <stop offset="40%" stop-color="#16a34a"/>
-            <stop offset="100%" stop-color="#15803d"/>
+        <linearGradient id="lawn3dTurf" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#4ade80"/>
+            <stop offset="25%" stop-color="#22c55e"/>
+            <stop offset="70%" stop-color="#16a34a"/>
+            <stop offset="100%" stop-color="#14532d"/>
         </linearGradient>
-        <linearGradient id="lawnEarth" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="#78350f"/>
-            <stop offset="100%" stop-color="#451a03"/>
-        </linearGradient>
-        <linearGradient id="graniteMarker" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#334155"/>
+        <linearGradient id="graniteBevel" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#475569"/>
             <stop offset="50%" stop-color="#1e293b"/>
-            <stop offset="100%" stop-color="#0f172a"/>
+            <stop offset="100%" stop-color="#090d16"/>
         </linearGradient>
-        <linearGradient id="bronzePlate" x1="0%" y1="0%" x2="100%" y2="0%">
+        <linearGradient id="bronzeShine" x1="0%" y1="0%" x2="100%" y2="40%">
             <stop offset="0%" stop-color="#fef08a"/>
-            <stop offset="50%" stop-color="#ca8a04"/>
-            <stop offset="100%" stop-color="#854d0e"/>
+            <stop offset="35%" stop-color="#eab308"/>
+            <stop offset="75%" stop-color="#a16207"/>
+            <stop offset="100%" stop-color="#713f12"/>
         </linearGradient>
+        <filter id="markerShad" x="-10%" y="-10%" width="125%" height="135%">
+            <feDropShadow dx="3" dy="6" stdDeviation="4" flood-opacity="0.35"/>
+        </filter>
     </defs>
-    <rect x="0" y="0" width="340" height="90" fill="url(#lawnSky)"/>
-    <path d="M-10,90 Q30,70 70,90 Q120,68 170,90 Q230,72 290,90 Q320,78 350,90 L350,90 L-10,90 Z" fill="#86efac" opacity="0.6"/>
-    <rect x="0" y="86" width="340" height="18" fill="url(#lawnGrass)"/>
-    <rect x="0" y="104" width="340" height="56" fill="url(#lawnEarth)"/>
-    <line x1="0" y1="128" x2="340" y2="128" stroke="#92400e" stroke-width="1" stroke-dasharray="6 4" opacity="0.4"/>
-    <rect x="85" y="108" width="170" height="22" rx="3" fill="#cbd5e1" stroke="#475569" stroke-width="1.5"/>
-    <text x="170" y="123" fill="#1e293b" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">UPPER VAULT (Depth 1.2m)</text>
-    <rect x="85" y="133" width="170" height="22" rx="3" fill="#94a3b8" stroke="#475569" stroke-width="1.5"/>
-    <text x="170" y="148" fill="#0f172a" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">LOWER VAULT (Depth 2.0m)</text>
-    <rect x="105" y="82" width="130" height="9" rx="2" fill="url(#graniteMarker)" stroke="#0f172a" stroke-width="1"/>
-    <rect x="115" y="84" width="110" height="5" rx="1" fill="url(#bronzePlate)"/>
-    <circle cx="85" cy="82" r="5" fill="#f43f5e"/>
-    <circle cx="80" cy="84" r="4" fill="#fbbf24"/>
-    <circle cx="89" cy="85" r="4" fill="#fb7185"/>
-    <path d="M85,86 L85,90" stroke="#15803d" stroke-width="2"/>
-    <circle cx="310" cy="22" r="14" fill="#fef08a" opacity="0.9"/>
-    <rect x="10" y="10" width="105" height="22" rx="5" fill="rgba(15, 23, 42, 0.75)"/>
-    <text x="62" y="24" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">FLUSH HEADSTONE</text>
+    <!-- Sky & Background Trees -->
+    <rect x="0" y="0" width="340" height="75" fill="url(#lawn3dSky)"/>
+    <circle cx="305" cy="24" r="16" fill="#fef08a" opacity="0.85"/>
+    <path d="M0,75 Q40,62 90,75 Q150,60 210,75 Q280,64 340,75 L340,75 L0,75 Z" fill="#86efac" opacity="0.45"/>
+    <circle cx="35" cy="65" r="14" fill="#166534" opacity="0.7"/>
+    <circle cx="55" cy="67" r="12" fill="#15803d" opacity="0.8"/>
+    <circle cx="310" cy="66" r="15" fill="#166534" opacity="0.7"/>
+    <!-- 3D Angled Lawn Plane -->
+    <polygon points="0,75 340,75 340,160 0,160" fill="url(#lawn3dTurf)"/>
+    <!-- Stone Path Borders (Subtle 3D Perspective Lines) -->
+    <line x1="20" y1="75" x2="0" y2="160" stroke="#86efac" stroke-width="0.75" opacity="0.4"/>
+    <line x1="320" y1="75" x2="340" y2="160" stroke="#86efac" stroke-width="0.75" opacity="0.4"/>
+    <!-- 3D Sunken Granite Marker Foundation Frame -->
+    <polygon points="65,92 275,92 295,142 45,142" fill="rgba(15, 23, 42, 0.45)" filter="url(#markerShad)"/>
+    <!-- Beveled Granite Base -->
+    <polygon points="68,90 272,90 290,138 50,138" fill="url(#graniteBevel)" stroke="#0f172a" stroke-width="1.5"/>
+    <!-- Top Polished Face Inlay -->
+    <polygon points="76,94 264,94 280,133 60,133" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    <!-- Cast Bronze Commemorative Plate -->
+    <polygon points="88,99 252,99 265,128 75,128" fill="url(#bronzeShine)" stroke="#854d0e" stroke-width="1.2"/>
+    <!-- Bronze Marker Etched Inscription -->
+    <text x="170" y="112" fill="#451a03" font-size="7.5" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif" letter-spacing="1.5">IN LOVING MEMORY</text>
+    <line x1="110" y1="116" x2="230" y2="116" stroke="#713f12" stroke-width="0.75"/>
+    <text x="170" y="124" fill="#713f12" font-size="6.5" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">1.0m × 2.44m DOUBLE-DEPTH VAULT</text>
+    <!-- Ceremonial Flower Tribute (Left Side) -->
+    <circle cx="68" cy="116" r="6" fill="#e11d48"/>
+    <circle cx="62" cy="119" r="5" fill="#fbbf24"/>
+    <circle cx="72" cy="122" r="5" fill="#f43f5e"/>
+    <circle cx="67" cy="125" r="4.5" fill="#ffffff"/>
+    <path d="M68,126 L65,134" stroke="#15803d" stroke-width="2"/>
+    <!-- Perspective Badge -->
+    <rect x="12" y="12" width="150" height="22" rx="5" fill="rgba(15, 23, 42, 0.8)"/>
+    <text x="87" y="26" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">3D LAWN TURF VIEW</text>
+</svg>`,
+            blueprintSvg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+    <rect x="0" y="0" width="340" height="75" fill="#e0f2fe"/>
+    <rect x="0" y="75" width="340" height="20" fill="#16a34a"/>
+    <rect x="0" y="95" width="340" height="65" fill="#451a03"/>
+    <rect x="75" y="100" width="190" height="24" rx="3" fill="#cbd5e1" stroke="#334155" stroke-width="1.5"/>
+    <text x="170" y="116" fill="#0f172a" font-size="9" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">UPPER VAULT (Depth: 1.2m)</text>
+    <rect x="75" y="129" width="190" height="24" rx="3" fill="#94a3b8" stroke="#334155" stroke-width="1.5"/>
+    <text x="170" y="145" fill="#0f172a" font-size="9" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">LOWER VAULT (Depth: 2.0m)</text>
+    <rect x="95" y="70" width="150" height="9" rx="2" fill="#1e293b"/>
+    <rect x="105" y="72" width="130" height="5" fill="#ca8a04"/>
+    <rect x="10" y="10" width="125" height="22" rx="5" fill="rgba(15, 23, 42, 0.8)"/>
+    <text x="72" y="24" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">VAULT CROSS-SECTION</text>
+</svg>`,
+            materialsSvg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+    <rect x="0" y="0" width="340" height="160" fill="#0f172a"/>
+    <rect x="18" y="16" width="304" height="128" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+    <rect x="32" y="28" width="80" height="50" rx="4" fill="#15803d" stroke="#22c55e" stroke-width="1"/>
+    <text x="72" y="58" fill="#ffffff" font-size="8.5" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">TIFWAY TURF</text>
+    <rect x="122" y="28" width="96" height="50" rx="4" fill="#090d16" stroke="#475569" stroke-width="1"/>
+    <text x="170" y="54" fill="#ffffff" font-size="8" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">BLACK GRANITE</text>
+    <text x="170" y="66" fill="#94a3b8" font-size="7" text-anchor="middle" font-family="Inter, sans-serif">Diamond Polished</text>
+    <rect x="228" y="28" width="80" height="50" rx="4" fill="#ca8a04" stroke="#fef08a" stroke-width="1"/>
+    <text x="268" y="58" fill="#451a03" font-size="8.5" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">CAST BRONZE</text>
+    <line x1="32" y1="90" x2="308" y2="90" stroke="#334155" stroke-width="1"/>
+    <text x="40" y="110" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Sub-Vault: High-Density Reinforced Concrete (Class-A)</text>
+    <text x="40" y="126" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Drainage: Sub-base Coarse Gravel Bed (Zero Water Retention)</text>
 </svg>`
         },
         garden: {
             id: 'garden',
             name: 'Garden Memorial Lot',
-            badge: 'Garden Lot Archetype',
+            badge: '3D Garden Terrace Perspective',
             capacity: '4–8 Caskets + 8–16 Urns (Cluster)',
             dimensions: '2.0m × 2.5m (2–4 Lots Cluster)',
             priceTier: '₱200,000 – ₱650,000',
+            materials: {
+                surface: 'Raised White Marble Curb (24") with Granite Meditation Bench',
+                structure: 'Multi-Vault Reinforced Concrete Cluster',
+                drainage: 'Integrated Garden French Drain with Natural Runoff'
+            },
             monumentRule: 'Raised marble/granite curb (up to 24") with landscape flower bed',
             perpetualCare: 'Covered (Hedge pruning, curb washing & perpetual security)',
             intermentPrivilege: 'Family cluster (4–8 Caskets) + 8–16 cremains urns',
             svg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
     <defs>
-        <linearGradient id="gardSky" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="#bae6fd"/>
-            <stop offset="70%" stop-color="#f0fdf4"/>
+        <linearGradient id="gard3dSky" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#38bdf8"/>
+            <stop offset="60%" stop-color="#bae6fd"/>
+            <stop offset="100%" stop-color="#f0fdf4"/>
         </linearGradient>
-        <linearGradient id="gardHedge" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="#15803d"/>
-            <stop offset="100%" stop-color="#166534"/>
-        </linearGradient>
-        <linearGradient id="marbleCurb" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id="marbleBench" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stop-color="#ffffff"/>
-            <stop offset="50%" stop-color="#e2e8f0"/>
-            <stop offset="100%" stop-color="#94a3b8"/>
+            <stop offset="50%" stop-color="#f1f5f9"/>
+            <stop offset="100%" stop-color="#cbd5e1"/>
         </linearGradient>
-        <linearGradient id="granitePillar" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#475569"/>
-            <stop offset="40%" stop-color="#334155"/>
-            <stop offset="100%" stop-color="#1e293b"/>
+        <linearGradient id="graniteMon" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#334155"/>
+            <stop offset="50%" stop-color="#1e293b"/>
+            <stop offset="100%" stop-color="#0f172a"/>
         </linearGradient>
     </defs>
-    <rect x="0" y="0" width="340" height="110" fill="url(#gardSky)"/>
+    <rect x="0" y="0" width="340" height="85" fill="url(#gard3dSky)"/>
+    <circle cx="45" cy="28" r="16" fill="#fef08a" opacity="0.9"/>
+    <!-- Landscaped Background Lawn & Hedges -->
+    <rect x="0" y="85" width="340" height="75" fill="#15803d"/>
+    <circle cx="50" cy="80" r="22" fill="#166534"/>
+    <circle cx="85" cy="82" r="18" fill="#15803d"/>
+    <circle cx="285" cy="80" r="22" fill="#166534"/>
+    <circle cx="255" cy="82" r="18" fill="#15803d"/>
+    <!-- Raised 3D Marble Terrace Curb -->
+    <polygon points="60,98 280,98 310,148 30,148" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+    <polygon points="70,102 270,102 295,142 45,142" fill="#16a34a"/>
+    <!-- Upright Granite Monument -->
+    <path d="M140,48 L200,48 L204,115 L136,115 Z" fill="url(#graniteMon)" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M170,58 L170,80 M162,65 L178,65" stroke="#fef08a" stroke-width="2" stroke-linecap="round"/>
+    <rect x="146" y="86" width="48" height="18" rx="2" fill="#ca8a04"/>
+    <text x="170" y="98" fill="#ffffff" font-size="7" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">MEMORIA</text>
+    <!-- Curved Marble Meditation Bench (Foreground Left) -->
+    <ellipse cx="95" cy="125" rx="30" ry="10" fill="url(#marbleBench)" stroke="#64748b" stroke-width="1.2"/>
+    <rect x="75" y="128" width="6" height="12" fill="#64748b"/>
+    <rect x="109" y="128" width="6" height="12" fill="#64748b"/>
+    <text x="95" y="127" fill="#475569" font-size="6" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">BENCH</text>
+    <!-- Flowering Garden Bed (Foreground Right) -->
+    <circle cx="235" cy="122" r="6" fill="#f43f5e"/>
+    <circle cx="245" cy="120" r="5" fill="#ec4899"/>
+    <circle cx="255" cy="124" r="6" fill="#fbbf24"/>
+    <circle cx="245" cy="128" r="5" fill="#a855f7"/>
+    <!-- Perspective Badge -->
+    <rect x="12" y="10" width="165" height="22" rx="5" fill="rgba(15, 23, 42, 0.8)"/>
+    <text x="94" y="24" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">3D GARDEN LOT VIEW</text>
+</svg>`,
+            blueprintSvg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+    <rect x="0" y="0" width="340" height="110" fill="#bae6fd"/>
     <rect x="0" y="110" width="340" height="50" fill="#15803d"/>
-    <circle cx="45" cy="98" r="24" fill="url(#gardHedge)"/>
-    <circle cx="70" cy="102" r="18" fill="#16a34a"/>
-    <circle cx="295" cy="98" r="24" fill="url(#gardHedge)"/>
-    <circle cx="270" cy="102" r="18" fill="#16a34a"/>
-    <polygon points="75,135 265,135 285,152 55,152" fill="url(#marbleCurb)" stroke="#64748b" stroke-width="1"/>
+    <polygon points="75,135 265,135 285,152 55,152" fill="#e2e8f0" stroke="#64748b" stroke-width="1"/>
     <rect x="75" y="125" width="190" height="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="1"/>
-    <rect x="85" y="127" width="170" height="6" fill="#f43f5e" opacity="0.85"/>
-    <path d="M135,42 L205,42 L210,125 L130,125 Z" fill="url(#granitePillar)" stroke="#0f172a" stroke-width="1.5"/>
-    <path d="M170,55 L170,82 M160,63 L180,63" stroke="#fef08a" stroke-width="2.5" stroke-linecap="round"/>
-    <rect x="142" y="90" width="56" height="22" rx="2" fill="#ca8a04" opacity="0.9"/>
-    <text x="170" y="103" fill="#ffffff" font-size="7" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">IN MEMORIAM</text>
-    <path d="M30,30 Q36,26 42,30 Q48,26 54,30" stroke="#0369a1" stroke-width="1.5" fill="none"/>
+    <path d="M135,42 L205,42 L210,125 L130,125 Z" fill="#334155" stroke="#0f172a" stroke-width="1.5"/>
     <rect x="10" y="10" width="125" height="22" rx="5" fill="rgba(15, 23, 42, 0.75)"/>
     <text x="72" y="24" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">RAISED MARBLE CURB</text>
+</svg>`,
+            materialsSvg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+    <rect x="0" y="0" width="340" height="160" fill="#0f172a"/>
+    <rect x="18" y="16" width="304" height="128" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+    <rect x="32" y="28" width="86" height="50" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+    <text x="75" y="52" fill="#0f172a" font-size="8" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">WHITE MARBLE</text>
+    <text x="75" y="64" fill="#64748b" font-size="7" text-anchor="middle" font-family="Inter, sans-serif">24" Raised Curb</text>
+    <rect x="128" y="28" width="90" height="50" rx="4" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+    <text x="173" y="52" fill="#ffffff" font-size="8" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">GREY GRANITE</text>
+    <text x="173" y="64" fill="#94a3b8" font-size="7" text-anchor="middle" font-family="Inter, sans-serif">Meditation Bench</text>
+    <rect x="228" y="28" width="80" height="50" rx="4" fill="#15803d" stroke="#22c55e" stroke-width="1"/>
+    <text x="268" y="52" fill="#ffffff" font-size="8" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">FLORAL HEDGE</text>
+    <text x="268" y="64" fill="#a7f3d0" font-size="7" text-anchor="middle" font-family="Inter, sans-serif">Perpetual Care</text>
+    <line x1="32" y1="90" x2="308" y2="90" stroke="#334155" stroke-width="1"/>
+    <text x="40" y="110" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Cluster Structure: 4–8 Caskets Double-Depth Concrete Pods</text>
+    <text x="40" y="126" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Drainage: Integrated French Drain with Crushed Rock Filtration</text>
 </svg>`
         },
         mausoleum: {
             id: 'mausoleum',
             name: 'Family Estate / Mausoleum',
-            badge: 'Family Estate Archetype',
+            badge: '3D Family Estate Perspective',
             capacity: '12–24+ Vaults & Urns (Multi-Gen)',
             dimensions: '4.0m × 5.0m+ (8–16+ Lots)',
             priceTier: '₱1,000,000 – ₱10,000,000+',
+            materials: {
+                surface: 'Neoclassical Polished Granite & Marble Pavilion',
+                structure: 'Engineered Reinforced Concrete Superstructure (4.5m Ceiling)',
+                drainage: 'Internal Gravity Roof Runoff & Sealed Crypt Chambers'
+            },
             monumentRule: 'Neoclassical covered pavilion / chapel (Up to 4–5m, private gate)',
             perpetualCare: 'Covered (Avenue access, grounds upkeep & 24/7 security)',
             intermentPrivilege: 'Generational estate (12–24+ Vaults & Urns in private crypt)',
             svg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
     <defs>
-        <linearGradient id="mauSky" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id="mau3dSky" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stop-color="#0284c7"/>
-            <stop offset="60%" stop-color="#bae6fd"/>
+            <stop offset="50%" stop-color="#7dd3fc"/>
             <stop offset="100%" stop-color="#f8fafc"/>
         </linearGradient>
-        <linearGradient id="mauRoof" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="#e2e8f0"/>
-            <stop offset="50%" stop-color="#cbd5e1"/>
-            <stop offset="100%" stop-color="#94a3b8"/>
-        </linearGradient>
-        <linearGradient id="mauCol" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#f8fafc"/>
-            <stop offset="50%" stop-color="#e2e8f0"/>
+        <linearGradient id="mauMarbleCol" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="45%" stop-color="#f1f5f9"/>
             <stop offset="100%" stop-color="#cbd5e1"/>
         </linearGradient>
+        <linearGradient id="mauRoofSlate" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#475569"/>
+            <stop offset="50%" stop-color="#334155"/>
+            <stop offset="100%" stop-color="#1e293b"/>
+        </linearGradient>
+        <linearGradient id="bronzeGateGleam" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#fef08a"/>
+            <stop offset="50%" stop-color="#d97706"/>
+            <stop offset="100%" stop-color="#78350f"/>
+        </linearGradient>
     </defs>
-    <rect x="0" y="0" width="340" height="120" fill="url(#mauSky)"/>
+    <rect x="0" y="0" width="340" height="95" fill="url(#mau3dSky)"/>
+    <!-- Italian Cypress Trees in Background -->
+    <path d="M30,105 C30,45 42,28 42,28 C42,28 54,45 54,105 Z" fill="#14532d"/>
+    <path d="M286,105 C286,45 298,28 298,28 C298,28 310,45 310,105 Z" fill="#14532d"/>
+    <!-- Ground / Paved Courtyard -->
+    <polygon points="0,95 340,95 340,160 0,160" fill="#15803d"/>
+    <polygon points="40,110 300,110 330,158 10,158" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
+    <!-- 3D Foundation Podium -->
+    <rect x="65" y="105" width="210" height="10" rx="1" fill="#cbd5e1" stroke="#64748b" stroke-width="1.2"/>
+    <!-- Pavilion Interior Crypt Room -->
+    <rect x="80" y="48" width="180" height="58" fill="#0f172a"/>
+    <!-- Wrought-Iron Bronze Double Gates -->
+    <rect x="135" y="55" width="70" height="51" rx="2" fill="#090d16" stroke="url(#bronzeGateGleam)" stroke-width="1.5"/>
+    <line x1="170" y1="55" x2="170" y2="106" stroke="#ca8a04" stroke-width="1.5"/>
+    <line x1="147" y1="55" x2="147" y2="106" stroke="#ca8a04" stroke-width="0.75"/>
+    <line x1="158" y1="55" x2="158" y2="106" stroke="#ca8a04" stroke-width="0.75"/>
+    <line x1="182" y1="55" x2="182" y2="106" stroke="#ca8a04" stroke-width="0.75"/>
+    <line x1="193" y1="55" x2="193" y2="106" stroke="#ca8a04" stroke-width="0.75"/>
+    <path d="M170,68 L170,82 M163,73 L177,73" stroke="#fef08a" stroke-width="2"/>
+    <!-- Fluted Neoclassical Marble Columns -->
+    <rect x="76" y="48" width="16" height="58" rx="1" fill="url(#mauMarbleCol)" stroke="#64748b" stroke-width="1"/>
+    <rect x="108" y="48" width="16" height="58" rx="1" fill="url(#mauMarbleCol)" stroke="#64748b" stroke-width="1"/>
+    <rect x="216" y="48" width="16" height="58" rx="1" fill="url(#mauMarbleCol)" stroke="#64748b" stroke-width="1"/>
+    <rect x="248" y="48" width="16" height="58" rx="1" fill="url(#mauMarbleCol)" stroke="#64748b" stroke-width="1"/>
+    <!-- Entablature & Pediment Gable Roof -->
+    <rect x="68" y="40" width="204" height="9" fill="#f8fafc" stroke="#64748b" stroke-width="1.2"/>
+    <polygon points="170,12 276,40 64,40" fill="url(#mauRoofSlate)" stroke="#475569" stroke-width="1.5"/>
+    <text x="170" y="34" fill="#ffffff" font-size="8" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif" letter-spacing="1">FAMILY ESTATE</text>
+    <!-- Perspective Badge -->
+    <rect x="12" y="10" width="165" height="22" rx="5" fill="rgba(15, 23, 42, 0.85)"/>
+    <text x="94" y="24" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">3D MAUSOLEUM VIEW</text>
+</svg>`,
+            blueprintSvg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+    <rect x="0" y="0" width="340" height="120" fill="#bae6fd"/>
     <rect x="0" y="120" width="340" height="40" fill="#15803d"/>
-    <polygon points="50,132 290,132 320,158 20,158" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
-    <rect x="75" y="124" width="190" height="8" rx="1" fill="#cbd5e1" stroke="#64748b" stroke-width="1"/>
-    <rect x="85" y="118" width="170" height="6" rx="1" fill="#e2e8f0" stroke="#64748b" stroke-width="1"/>
     <rect x="95" y="55" width="150" height="63" fill="#1e293b"/>
     <rect x="145" y="65" width="50" height="53" rx="2" fill="#0f172a" stroke="#ca8a04" stroke-width="1.5"/>
-    <line x1="157" y1="65" x2="157" y2="118" stroke="#ca8a04" stroke-width="1"/>
-    <line x1="170" y1="65" x2="170" y2="118" stroke="#ca8a04" stroke-width="1"/>
-    <line x1="183" y1="65" x2="183" y2="118" stroke="#ca8a04" stroke-width="1"/>
-    <rect x="92" y="55" width="16" height="63" rx="1" fill="url(#mauCol)" stroke="#64748b" stroke-width="1"/>
-    <rect x="124" y="55" width="16" height="63" rx="1" fill="url(#mauCol)" stroke="#64748b" stroke-width="1"/>
-    <rect x="200" y="55" width="16" height="63" rx="1" fill="url(#mauCol)" stroke="#64748b" stroke-width="1"/>
-    <rect x="232" y="55" width="16" height="63" rx="1" fill="url(#mauCol)" stroke="#64748b" stroke-width="1"/>
-    <rect x="80" y="47" width="180" height="8" fill="url(#mauRoof)" stroke="#64748b" stroke-width="1"/>
-    <polygon points="170,20 270,47 70,47" fill="url(#mauRoof)" stroke="#64748b" stroke-width="1.5"/>
-    <text x="170" y="42" fill="#334155" font-size="8" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">FAMILY ESTATE</text>
-    <path d="M35,130 C35,65 48,45 48,45 C48,45 61,65 61,130 Z" fill="#14532d"/>
-    <path d="M279,130 C279,65 292,45 292,45 C292,45 305,65 305,130 Z" fill="#14532d"/>
+    <rect x="80" y="47" width="180" height="8" fill="#e2e8f0" stroke="#64748b" stroke-width="1"/>
+    <polygon points="170,20 270,47 70,47" fill="#cbd5e1" stroke="#64748b" stroke-width="1.5"/>
     <rect x="10" y="10" width="130" height="22" rx="5" fill="rgba(15, 23, 42, 0.75)"/>
     <text x="75" y="24" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">PRIVATE PAVILION</text>
+</svg>`,
+            materialsSvg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+    <rect x="0" y="0" width="340" height="160" fill="#0f172a"/>
+    <rect x="18" y="16" width="304" height="128" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+    <rect x="32" y="28" width="86" height="50" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+    <text x="75" y="52" fill="#0f172a" font-size="8" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">MARBLE COLUMNS</text>
+    <text x="75" y="64" fill="#64748b" font-size="7" text-anchor="middle" font-family="Inter, sans-serif">Greek Fluted</text>
+    <rect x="128" y="28" width="90" height="50" rx="4" fill="#334155" stroke="#64748b" stroke-width="1"/>
+    <text x="173" y="52" fill="#ffffff" font-size="8" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">SLATE ROOFING</text>
+    <text x="173" y="64" fill="#94a3b8" font-size="7" text-anchor="middle" font-family="Inter, sans-serif">Pitched Gable</text>
+    <rect x="228" y="28" width="80" height="50" rx="4" fill="#ca8a04" stroke="#fef08a" stroke-width="1"/>
+    <text x="268" y="52" fill="#451a03" font-size="8" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">BRONZE GATES</text>
+    <text x="268" y="64" fill="#713f12" font-size="7" text-anchor="middle" font-family="Inter, sans-serif">Double Security</text>
+    <line x1="32" y1="90" x2="308" y2="90" stroke="#334155" stroke-width="1"/>
+    <text x="40" y="110" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Structure: Engineered Reinforced Concrete Superstructure (4.5m Ceiling)</text>
+    <text x="40" y="126" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Crypts: Sealed Multi-Crypt Chambers with Internal Gravity Runoff</text>
 </svg>`
         },
         columbarium: {
             id: 'columbarium',
             name: 'Columbarium Wall Niche',
-            badge: 'Columbarium Archetype',
+            badge: '3D Columbarium Niche View',
             capacity: '2–4 Cremains Urns per Niche',
             dimensions: '0.4m × 0.4m × 0.6m (Single Niche)',
             priceTier: '₱25,000 – ₱150,000',
+            materials: {
+                surface: 'Italian Carrara White Marble with Engraved Bronze Plaque',
+                structure: 'Modular High-Strength Reinforced Vault Wall',
+                drainage: 'Indoor Climate-Controlled Sanctuary (Dust & Moisture Sealed)'
+            },
             monumentRule: 'Polished engraved brass plate with tempered glass/marble face',
             perpetualCare: 'Covered (Sanctuary hall upkeep, lighting & commemorative care)',
             intermentPrivilege: 'Niche compartment (2–4 Cremains urns or ossuary transfers)',
             svg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
     <defs>
-        <linearGradient id="colBg" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="#1e293b"/>
-            <stop offset="100%" stop-color="#0f172a"/>
+        <linearGradient id="sanctuaryHall" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#0f172a"/>
+            <stop offset="40%" stop-color="#1e293b"/>
+            <stop offset="100%" stop-color="#020617"/>
         </linearGradient>
-        <linearGradient id="nicheGold" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="carraraMarble" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="35%" stop-color="#f8fafc"/>
+            <stop offset="65%" stop-color="#e2e8f0"/>
+            <stop offset="100%" stop-color="#cbd5e1"/>
+        </linearGradient>
+        <linearGradient id="goldenUrn" x1="0%" y1="0%" x2="100%" y2="50%">
             <stop offset="0%" stop-color="#fef08a"/>
-            <stop offset="50%" stop-color="#eab308"/>
-            <stop offset="100%" stop-color="#a16207"/>
+            <stop offset="30%" stop-color="#f59e0b"/>
+            <stop offset="70%" stop-color="#d97706"/>
+            <stop offset="100%" stop-color="#78350f"/>
+        </linearGradient>
+        <linearGradient id="spotLight" x1="50%" y1="0%" x2="50%" y2="100%">
+            <stop offset="0%" stop-color="#fef08a" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="#fef08a" stop-opacity="0.0"/>
         </linearGradient>
     </defs>
-    <rect x="0" y="0" width="340" height="160" fill="url(#colBg)"/>
-    <polygon points="170,0 210,160 130,160" fill="#38bdf8" opacity="0.08"/>
+    <!-- Hall Interior & Ambient Light -->
+    <rect x="0" y="0" width="340" height="160" fill="url(#sanctuaryHall)"/>
+    <polygon points="170,0 230,160 110,160" fill="url(#spotLight)"/>
+    <!-- Outer Marble Wall Grid Structure -->
+    <rect x="25" y="16" width="290" height="128" rx="6" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+    <!-- Surrounding Niches -->
+    <rect x="35" y="24" width="56" height="34" rx="3" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <rect x="99" y="24" width="56" height="34" rx="3" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <rect x="185" y="24" width="56" height="34" rx="3" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <rect x="249" y="24" width="56" height="34" rx="3" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <rect x="35" y="64" width="56" height="34" rx="3" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <rect x="249" y="64" width="56" height="34" rx="3" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <rect x="35" y="104" width="56" height="32" rx="3" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <rect x="99" y="104" width="56" height="32" rx="3" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <rect x="185" y="104" width="56" height="32" rx="3" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <rect x="249" y="104" width="56" height="32" rx="3" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <!-- FEATURED SELECTED NICHE: OPEN 3D CUTAWAY VIEW -->
+    <rect x="97" y="62" width="146" height="38" rx="4" fill="#047857" stroke="#10b981" stroke-width="2"/>
+    <!-- Left Half: Polished Carrara Marble Door -->
+    <rect x="100" y="65" width="70" height="32" rx="3" fill="url(#carraraMarble)" stroke="#94a3b8" stroke-width="1"/>
+    <!-- Marble veining detail -->
+    <path d="M110,67 Q125,75 120,85 Q115,92 130,95" stroke="#94a3b8" stroke-width="0.75" fill="none" opacity="0.6"/>
+    <!-- Bronze Nameplate on Door -->
+    <rect x="106" y="72" width="58" height="18" rx="2" fill="#ca8a04" stroke="#fef08a" stroke-width="0.75"/>
+    <text x="135" y="84" fill="#0f172a" font-size="7" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">NICHE VAULT</text>
+    <!-- Brass Rosettes on Door -->
+    <circle cx="104" cy="68" r="1.5" fill="#f59e0b"/>
+    <circle cx="166" cy="68" r="1.5" fill="#f59e0b"/>
+    <circle cx="104" cy="94" r="1.5" fill="#f59e0b"/>
+    <circle cx="166" cy="94" r="1.5" fill="#f59e0b"/>
+    <!-- Right Half: Open Interior Chamber (Velvet Pedestal & Ceremonial Urns) -->
+    <rect x="173" y="65" width="67" height="32" rx="2" fill="#064e3b" stroke="#059669" stroke-width="1"/>
+    <rect x="177" y="88" width="59" height="7" rx="1" fill="#047857"/>
+    <!-- Ceremonial Cremation Urn 1 -->
+    <path d="M188,75 Q193,73 198,75 L196,87 L190,87 Z" fill="url(#goldenUrn)" stroke="#78350f" stroke-width="0.5"/>
+    <circle cx="193" cy="73" r="2.5" fill="#fef08a"/>
+    <!-- Ceremonial Cremation Urn 2 -->
+    <path d="M210,75 Q215,73 220,75 L218,87 L212,87 Z" fill="url(#goldenUrn)" stroke="#78350f" stroke-width="0.5"/>
+    <circle cx="215" cy="73" r="2.5" fill="#fef08a"/>
+    <text x="207" y="94" fill="#a7f3d0" font-size="5" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">DUAL URN CAPACITY</text>
+    <!-- Perspective Badge -->
+    <rect x="12" y="10" width="165" height="22" rx="5" fill="rgba(15, 23, 42, 0.85)"/>
+    <text x="94" y="24" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">3D NICHE VAULT VIEW</text>
+</svg>`,
+            blueprintSvg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+    <rect x="0" y="0" width="340" height="160" fill="#0f172a"/>
     <rect x="30" y="18" width="280" height="124" rx="4" fill="#334155" stroke="#475569" stroke-width="2"/>
     <rect x="42" y="28" width="56" height="32" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
     <rect x="106" y="28" width="56" height="32" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
@@ -1814,18 +2047,28 @@
     <rect x="242" y="28" width="56" height="32" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
     <rect x="42" y="66" width="56" height="32" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
     <rect x="106" y="66" width="56" height="32" rx="3" fill="#047857" stroke="#34d399" stroke-width="2"/>
-    <rect x="114" y="74" width="40" height="16" rx="2" fill="url(#nicheGold)"/>
+    <rect x="114" y="74" width="40" height="16" rx="2" fill="#ca8a04"/>
     <text x="134" y="85" fill="#0f172a" font-size="7" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">NICHE #204</text>
     <rect x="178" y="66" width="56" height="32" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
     <rect x="242" y="66" width="56" height="32" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
-    <rect x="42" y="104" width="56" height="30" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
-    <rect x="106" y="104" width="56" height="30" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
-    <rect x="178" y="104" width="56" height="30" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
-    <rect x="242" y="104" width="56" height="30" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
-    <circle cx="156" cy="94" r="3" fill="#f59e0b"/>
-    <circle cx="156" cy="93" r="1.5" fill="#fef08a"/>
     <rect x="10" y="10" width="135" height="22" rx="5" fill="rgba(15, 23, 42, 0.75)"/>
-    <text x="77" y="24" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">INDOOR NICHE VAULT</text>
+    <text x="77" y="24" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">NICHE WALL ELEVATION</text>
+</svg>`,
+            materialsSvg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+    <rect x="0" y="0" width="340" height="160" fill="#0f172a"/>
+    <rect x="18" y="16" width="304" height="128" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+    <rect x="32" y="28" width="90" height="50" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+    <text x="77" y="52" fill="#0f172a" font-size="8" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">CARRARA MARBLE</text>
+    <text x="77" y="64" fill="#64748b" font-size="7" text-anchor="middle" font-family="Inter, sans-serif">Honed 20mm Face</text>
+    <rect x="132" y="28" width="86" height="50" rx="4" fill="#ca8a04" stroke="#fef08a" stroke-width="1"/>
+    <text x="175" y="52" fill="#451a03" font-size="8" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">BRONZE PLAQUE</text>
+    <text x="175" y="64" fill="#713f12" font-size="7" text-anchor="middle" font-family="Inter, sans-serif">Anti-Tarnish Seal</text>
+    <rect x="228" y="28" width="80" height="50" rx="4" fill="#047857" stroke="#34d399" stroke-width="1"/>
+    <text x="268" y="52" fill="#ffffff" font-size="8" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">VELVET LINER</text>
+    <text x="268" y="64" fill="#a7f3d0" font-size="7" text-anchor="middle" font-family="Inter, sans-serif">Cushioned Base</text>
+    <line x1="32" y1="90" x2="308" y2="90" stroke="#334155" stroke-width="1"/>
+    <text x="40" y="110" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Modular Vault Cell: Fire-Rated Engineered Polymer / Concrete</text>
+    <text x="40" y="126" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Environment: Climate-Controlled Indoor Sanctuary (24/7 Security)</text>
 </svg>`
         }
     };
@@ -1905,14 +2148,74 @@
     }
 
     /**
-     * Render Visual Archetype Showcase in Details Drawer (Batch 8A & 8B Enhanced)
+     * Switch Archetype Visual Mode (Batch 10B: 3D Perspective | Blueprint | Materials)
+     */
+    function setArchetypeViewMode(mode) {
+        if (!['perspective', 'blueprint', 'materials'].includes(mode)) {
+            mode = 'perspective';
+        }
+        activeArchetypeViewMode = mode;
+
+        // Update Drawer Mode Buttons
+        const drawerModeBtns = document.querySelectorAll('#drawerArchetypeViewModes .btn-archetype-mode');
+        drawerModeBtns.forEach(b => {
+            const btnMode = b.getAttribute('data-mode');
+            b.classList.toggle('active', btnMode === mode);
+            b.setAttribute('aria-selected', btnMode === mode ? 'true' : 'false');
+        });
+
+        // Update Lightbox Mode Buttons
+        const lightboxModeBtns = document.querySelectorAll('#lightboxArchetypeViewModes .btn-archetype-mode');
+        lightboxModeBtns.forEach(b => {
+            const btnMode = b.getAttribute('data-mode');
+            b.classList.toggle('active', btnMode === mode);
+            b.setAttribute('aria-selected', btnMode === mode ? 'true' : 'false');
+        });
+
+        // Re-render showcase for selected lot
+        if (state.selectedLot) {
+            const lot = state.selectedLot;
+            const archetype = getLotArchetype(lot);
+            let activeSvg = archetype.svg;
+            if (mode === 'blueprint' && archetype.blueprintSvg) {
+                activeSvg = archetype.blueprintSvg;
+            } else if (mode === 'materials' && archetype.materialsSvg) {
+                activeSvg = archetype.materialsSvg;
+            }
+
+            if (drawerArchetypeGraphic) {
+                drawerArchetypeGraphic.innerHTML = activeSvg;
+            }
+
+            if (drawerMaterialsCard) {
+                drawerMaterialsCard.style.display = (mode === 'materials') ? 'block' : 'none';
+            }
+
+            // Sync lightbox if open
+            if (archetypeLightboxModal && archetypeLightboxModal.style.display !== 'none') {
+                if (lightboxGraphicStage) {
+                    lightboxGraphicStage.innerHTML = activeSvg;
+                }
+            }
+        }
+    }
+
+    /**
+     * Render Visual Archetype Showcase in Details Drawer (Batch 8A & 10B Enhanced)
      */
     function renderLotArchetypeShowcase(lot) {
         if (!drawerVisualShowcase) return;
         const archetype = getLotArchetype(lot);
 
+        let activeSvg = archetype.svg;
+        if (activeArchetypeViewMode === 'blueprint' && archetype.blueprintSvg) {
+            activeSvg = archetype.blueprintSvg;
+        } else if (activeArchetypeViewMode === 'materials' && archetype.materialsSvg) {
+            activeSvg = archetype.materialsSvg;
+        }
+
         if (drawerArchetypeGraphic) {
-            drawerArchetypeGraphic.innerHTML = archetype.svg;
+            drawerArchetypeGraphic.innerHTML = activeSvg;
         }
         if (drawerArchetypeBadgeText) {
             drawerArchetypeBadgeText.textContent = archetype.badge;
@@ -1923,6 +2226,21 @@
         if (drawerDimensionSpec) {
             drawerDimensionSpec.textContent = lot.dimensions || archetype.dimensions;
         }
+
+        // Batch 10B: Populate and toggle Materials Specs Card
+        if (drawerMaterialsCard && archetype.materials) {
+            if (drawerMatSurface) drawerMatSurface.textContent = archetype.materials.surface || 'Standard Memorial Finish';
+            if (drawerMatStructure) drawerMatStructure.textContent = archetype.materials.structure || 'Reinforced Concrete Sub-Vault';
+            if (drawerMatDrainage) drawerMatDrainage.textContent = archetype.materials.drainage || 'Perpetual Gravity Runoff';
+            drawerMaterialsCard.style.display = (activeArchetypeViewMode === 'materials') ? 'block' : 'none';
+        }
+
+        // Batch 10B: Sync drawer view mode buttons active state
+        const drawerModeBtns = document.querySelectorAll('#drawerArchetypeViewModes .btn-archetype-mode');
+        drawerModeBtns.forEach(b => {
+            const btnMode = b.getAttribute('data-mode');
+            b.classList.toggle('active', btnMode === activeArchetypeViewMode);
+        });
 
         // Batch 8B: Populate Location Value Tier
         const tierInfo = getLotLocationTier(lot);
@@ -2060,7 +2378,7 @@
     }
 
     /**
-     * Open Fullscreen Visual Archetype Lightbox Modal (Batch 8C)
+     * Open Fullscreen Visual Archetype Lightbox Modal (Batch 8C & 10B Enhanced)
      */
     function openArchetypeLightbox() {
         if (!state.selectedLot) {
@@ -2074,8 +2392,15 @@
         const archetype = getLotArchetype(lot);
         const tierInfo = getLotLocationTier(lot);
 
+        let activeSvg = archetype.svg;
+        if (activeArchetypeViewMode === 'blueprint' && archetype.blueprintSvg) {
+            activeSvg = archetype.blueprintSvg;
+        } else if (activeArchetypeViewMode === 'materials' && archetype.materialsSvg) {
+            activeSvg = archetype.materialsSvg;
+        }
+
         if (lightboxGraphicStage) {
-            lightboxGraphicStage.innerHTML = archetype.svg;
+            lightboxGraphicStage.innerHTML = activeSvg;
         }
         if (lightboxArchetypeBadge) {
             lightboxArchetypeBadge.textContent = archetype.name;
@@ -2105,9 +2430,19 @@
         if (lightboxIntermentVal) {
             lightboxIntermentVal.textContent = archetype.intermentPrivilege;
         }
+        if (lightboxMaterialVal && archetype.materials) {
+            lightboxMaterialVal.textContent = `${archetype.materials.surface} • ${archetype.materials.structure}`;
+        }
         if (lightboxPriceVal) {
             lightboxPriceVal.textContent = formatCurrency(lot.price);
         }
+
+        // Batch 10B: Sync lightbox view mode buttons active state
+        const lightboxModeBtns = document.querySelectorAll('#lightboxArchetypeViewModes .btn-archetype-mode');
+        lightboxModeBtns.forEach(b => {
+            const btnMode = b.getAttribute('data-mode');
+            b.classList.toggle('active', btnMode === activeArchetypeViewMode);
+        });
 
         if (archetypeLightboxModal) {
             archetypeLightboxModal.style.display = 'flex';
