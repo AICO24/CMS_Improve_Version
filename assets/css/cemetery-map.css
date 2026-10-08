@@ -1,6 +1,6 @@
 /*
-  Interactive Cemetery Map & Lot Locator Stylesheet (Batch 3)
-  Fully aligned with CMS design system, tokens, and dark theme.
+  Interactive Cemetery Map & Lot Locator Stylesheet (Batch 3 & Unified CMS Design System)
+  Fully aligned with CMS design system, tokens, forest theme, and dark mode.
 */
 
 :root {
@@ -44,27 +44,32 @@
     --lot-selected-glow: rgba(59, 130, 246, 0.45);
 }
 
-/* Page Layout */
+/* Page Layout & Content Area */
+.map-content-area,
 .map-page-container {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    padding: 24px;
+    gap: 16px;
+    padding: 20px 24px;
     max-width: 1720px;
     margin: 0 auto;
     width: 100%;
 }
 
-/* Header & Control Card */
+/* Page Hero Banner */
+.map-page-hero,
 .map-header-card {
-    background: var(--map-surface);
-    border: 1px solid var(--map-border);
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
     display: flex;
-    flex-direction: column;
-    gap: 20px;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(240, 248, 243, 0.90) 100%);
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-left: 5px solid var(--color-primary-600, #163d2c);
+    border-radius: var(--radius-lg, 14px);
+    padding: 16px 20px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
 }
 
 .map-header-content {
@@ -73,27 +78,35 @@
     align-items: flex-start;
     flex-wrap: wrap;
     gap: 16px;
+    width: 100%;
+}
+
+.map-header-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .map-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--map-text);
-    margin: 0 0 6px 0;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+    letter-spacing: -0.02em;
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
 .map-title i {
-    color: var(--color-primary-500, #2c5e47);
+    color: var(--color-primary-600, #163d2c);
 }
 
 .map-subtitle {
     margin: 0;
-    color: var(--map-text-muted);
-    font-size: 0.95rem;
-    line-height: 1.45;
+    color: #526477;
+    font-size: 0.88rem;
+    line-height: 1.4;
 }
 
 .map-disclaimer-pill {
@@ -102,16 +115,173 @@
     gap: 8px;
     padding: 6px 14px;
     border-radius: 9999px;
-    background: var(--color-neutral-100, #eef3f7);
-    color: var(--color-neutral-600, #475569);
-    font-size: 0.8rem;
-    font-weight: 500;
-    border: 1px solid var(--map-border);
+    background: rgba(44, 94, 71, 0.08);
+    color: #1b4533;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border: 1px solid rgba(44, 94, 71, 0.18);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="dark"] .map-page-hero,
+[data-theme="dark"] .map-header-card {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.92));
+    border-color: rgba(52, 211, 153, 0.25);
+    border-left-color: #34d399;
+}
+
+[data-theme="dark"] .map-title {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .map-title i {
+    color: #34d399;
+}
+
+[data-theme="dark"] .map-subtitle {
+    color: #94a3b8;
 }
 
 [data-theme="dark"] .map-disclaimer-pill {
-    background: #1e293b;
-    color: #94a3b8;
+    background: rgba(52, 211, 153, 0.12);
+    color: #a7f3d0;
+    border-color: rgba(52, 211, 153, 0.28);
+}
+
+/* ========================================================
+   EXECUTIVE 3D EMBOSSED STAT CARDS (Matches Lot Management)
+   ======================================================== */
+.map-stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 8px;
+    align-items: stretch;
+}
+
+.map-stat-card {
+    position: relative;
+    min-height: 110px;
+    height: 100%;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    border-radius: var(--radius-lg, 14px);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+    contain: layout;
+    color: #ffffff !important;
+    transition: transform 220ms cubic-bezier(0.2, 0, 0.2, 1), box-shadow 220ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.map-stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
+}
+
+.map-stat-card::before {
+    content: "";
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    right: -40px;
+    top: -30px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 70%);
+    pointer-events: none;
+}
+
+.map-stat-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 52%);
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+.map-stat-card .stat-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.82) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.map-stat-card .card-icon {
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+.map-stat-card .stat-value {
+    font-size: 1.85rem;
+    font-weight: 800;
+    color: #ffffff !important;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.map-stat-card .stat-value.stat-facility-name {
+    font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.map-stat-card .stat-sub {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.72) !important;
+    margin-top: 4px;
+}
+
+/* Stat card gradients (Forest Palette) */
+.stat-sections-card {
+    border-left: 3px solid #06170f;
+    background: linear-gradient(135deg, #133327 0%, #214c38 100%);
+}
+
+.stat-blocks-card {
+    border-left: 3px solid #081d13;
+    background: linear-gradient(135deg, #173d2d 0%, #265640 100%);
+}
+
+.stat-lots-card {
+    border-left: 3px solid #06170f;
+    background: linear-gradient(135deg, #133327 0%, #234f3b 100%);
+}
+
+.stat-facility-card {
+    border-left: 3px solid #081d13;
+    background: linear-gradient(135deg, #163a2b 0%, #25543d 100%);
+}
+
+/* ========================================================
+   UNIFIED MASTER CONTROL PANEL (Single Consolidated Box)
+   ======================================================== */
+.map-control-panel {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(240, 248, 243, 0.92)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.08), rgba(37, 99, 235, 0.04));
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-left: 5px solid var(--color-primary-500, #10b981);
+    border-radius: var(--radius-lg, 14px);
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+[data-theme="dark"] .map-control-panel {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.92));
+    border-color: rgba(52, 211, 153, 0.22);
+    border-left-color: #10b981;
 }
 
 /* Facility Selector & Breadcrumbs Bar */
@@ -120,9 +290,13 @@
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 16px;
-    padding-top: 16px;
-    border-top: 1px solid var(--map-border);
+    gap: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(44, 94, 71, 0.12);
+}
+
+[data-theme="dark"] .map-selection-bar {
+    border-bottom-color: rgba(51, 65, 85, 0.6);
 }
 
 .cemetery-select-group {
@@ -131,28 +305,35 @@
     gap: 10px;
 }
 
-.control-label {
-    font-weight: 600;
-    font-size: 0.875rem;
-    color: var(--map-text);
-    display: flex;
+.cemetery-select-shell {
+    position: relative;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
+}
+
+.cemetery-select-shell i {
+    position: absolute;
+    right: 12px;
+    pointer-events: none;
+    font-size: 0.75rem;
+    color: var(--map-text-muted);
 }
 
 .cemetery-dropdown {
-    height: 40px;
-    padding: 0 36px 0 14px;
+    height: 38px;
+    padding: 0 34px 0 12px;
     border-radius: 8px;
     border: 1px solid var(--map-border);
     background: var(--map-surface);
     color: var(--map-text);
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 0.88rem;
+    font-weight: 600;
     cursor: pointer;
     outline: none;
+    appearance: none;
+    -webkit-appearance: none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    min-width: 260px;
+    min-width: 280px;
 }
 
 .cemetery-dropdown:focus {
@@ -171,15 +352,23 @@
     align-items: center;
     list-style: none;
     margin: 0;
-    padding: 0;
+    padding: 4px 10px;
     gap: 8px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(44, 94, 71, 0.14);
+    border-radius: 8px;
+}
+
+[data-theme="dark"] .breadcrumb-list {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: #334155;
 }
 
 .breadcrumb-item {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.875rem;
+    font-size: 0.825rem;
     font-weight: 500;
     color: var(--map-text-muted);
     cursor: pointer;
@@ -187,9 +376,13 @@
 }
 
 .breadcrumb-item.active {
-    font-weight: 600;
-    color: var(--color-primary-500, #2c5e47);
+    font-weight: 700;
+    color: var(--color-primary-600, #163d2c);
     cursor: default;
+}
+
+[data-theme="dark"] .breadcrumb-item.active {
+    color: #34d399;
 }
 
 .breadcrumb-item:not(.active):hover {
@@ -198,17 +391,14 @@
 }
 
 .breadcrumb-item .separator {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     color: var(--map-text-muted);
     opacity: 0.6;
 }
 
-/* Summary Stats Pills */
+/* Summary Stats Pills (Legacy fallback support) */
 .map-summary-pills {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    display: none;
 }
 
 .summary-pill {
@@ -234,31 +424,29 @@
     display: flex;
     align-items: flex-end;
     flex-wrap: wrap;
-    gap: 16px;
-    padding-top: 18px;
-    border-top: 1px dashed var(--map-border);
+    gap: 12px;
 }
 
 .filter-group {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     position: relative;
 }
 
 .filter-group.search-group {
     flex: 2;
-    min-width: 260px;
+    min-width: 250px;
 }
 
 .filter-group.status-group {
     flex: 1;
-    min-width: 170px;
+    min-width: 160px;
 }
 
 .filter-group.price-group {
     flex: 1.4;
-    min-width: 210px;
+    min-width: 200px;
 }
 
 .filter-label {

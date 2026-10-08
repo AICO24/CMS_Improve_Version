@@ -42,7 +42,7 @@
     // DOM Elements
     let cemeterySelector;
     let mapBreadcrumbs, bcCemetery, bcCemeteryName, bcSection, bcSectionName, bcBlock, bcBlockName, bcLot, bcLotName;
-    let statSections, statBlocks, statLots;
+    let statSections, statBlocks, statLots, statFacilityActive;
     let viewLevelBadge, viewLevelText, btnBackToOverview, filterMatchesBadge;
     let btnZoomIn, btnZoomOut, btnResetZoom;
     let svgStageContainer, cemeteryMapSvg, mapTransformLayer;
@@ -106,6 +106,7 @@
         statSections = document.getElementById('statSections');
         statBlocks = document.getElementById('statBlocks');
         statLots = document.getElementById('statLots');
+        statFacilityActive = document.getElementById('statFacilityActive');
 
         viewLevelBadge = document.getElementById('viewLevelBadge');
         viewLevelText = document.getElementById('viewLevelText');
@@ -642,6 +643,9 @@
                 statSections.textContent = sections.length;
                 statBlocks.textContent = totalBlocks;
                 statLots.textContent = totalLots;
+                if (statFacilityActive) {
+                    statFacilityActive.textContent = state.currentCemetery?.cemetery_name || 'Active Facility';
+                }
 
                 if (sections.length === 0) {
                     showEmptyOverlay(

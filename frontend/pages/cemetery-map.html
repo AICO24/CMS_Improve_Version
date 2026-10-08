@@ -84,28 +84,70 @@
                 </div>
             </div>
 
-            <!-- MAP CONTENT WRAPPER -->
-            <div class="map-page-container">
+            <!-- CONTENT AREA (Standard CMS Module Layout) -->
+            <div class="content-area map-content-area">
                 <!-- PAGE HEADER & DISCLAIMER -->
-                <div class="map-header-card">
-                    <div class="map-header-content">
-                        <div class="map-header-titles">
-                            <h1 class="map-title"><i class="fas fa-map-location-dot"></i> Interactive Cemetery Map &amp; Lot Locator</h1>
-                            <p class="map-subtitle">Visually explore cemetery facilities, navigate sections and blocks, inspect real-time plot availability, and book available lots.</p>
-                        </div>
-                        <div class="map-disclaimer-pill" title="Configurable visual arrangement">
-                            <i class="fas fa-circle-info"></i>
-                            <span>Map layout is a configurable visual representation.</span>
-                        </div>
+                <div class="map-page-hero">
+                    <div class="map-header-titles">
+                        <h1 class="map-title" id="mapTitle"><i class="fas fa-map-location-dot"></i> Interactive Cemetery Map &amp; Lot Locator</h1>
+                        <p class="map-subtitle">Visually explore cemetery facilities, navigate sections and blocks, inspect real-time plot availability, and book available lots.</p>
                     </div>
+                    <div class="map-disclaimer-pill" title="Configurable visual arrangement">
+                        <i class="fas fa-circle-info"></i>
+                        <span>Map layout is a configurable visual representation.</span>
+                    </div>
+                </div>
 
-                    <!-- CEMETERY SELECTOR & DRILL-DOWN BAR -->
+                <!-- EXECUTIVE SUMMARY STATISTICS CARDS (Standard CMS Forest Palette) -->
+                <p class="section-label"><i class="fas fa-chart-pie"></i> Cemetery Inventory Overview</p>
+                <div class="stats-row map-stats-row">
+                    <div class="stat-card map-stat-card stat-sections-card">
+                        <div class="stat-title">
+                            <span>Sections</span>
+                            <span class="card-icon"><i class="fas fa-layer-group"></i></span>
+                        </div>
+                        <div class="stat-value" id="statSections">0</div>
+                        <div class="stat-sub">Configured quadrants</div>
+                    </div>
+                    <div class="stat-card map-stat-card stat-blocks-card">
+                        <div class="stat-title">
+                            <span>Blocks</span>
+                            <span class="card-icon"><i class="fas fa-cubes"></i></span>
+                        </div>
+                        <div class="stat-value" id="statBlocks">0</div>
+                        <div class="stat-sub">Burial clusters</div>
+                    </div>
+                    <div class="stat-card map-stat-card stat-lots-card">
+                        <div class="stat-title">
+                            <span>Total Plots</span>
+                            <span class="card-icon"><i class="fas fa-border-all"></i></span>
+                        </div>
+                        <div class="stat-value" id="statLots">0</div>
+                        <div class="stat-sub">Inventory capacity</div>
+                    </div>
+                    <div class="stat-card map-stat-card stat-facility-card">
+                        <div class="stat-title">
+                            <span>Selected Facility</span>
+                            <span class="card-icon"><i class="fas fa-monument"></i></span>
+                        </div>
+                        <div class="stat-value stat-facility-name" id="statFacilityActive">—</div>
+                        <div class="stat-sub">Municipal grounds</div>
+                    </div>
+                </div>
+
+                <!-- UNIFIED MASTER CONTROL PANEL (Single Consolidated Box matching Lot Management) -->
+                <p class="section-label"><i class="fas fa-sliders"></i> Navigation &amp; Filter Controls</p>
+                <div class="map-control-panel">
+                    <!-- Top Tier: Facility Selection & Breadcrumb Trail -->
                     <div class="map-selection-bar">
                         <div class="cemetery-select-group">
                             <label for="cemeterySelector" class="control-label"><i class="fas fa-monument"></i> Facility:</label>
-                            <select id="cemeterySelector" class="cemetery-dropdown" aria-label="Select Cemetery Facility">
-                                <option value="" disabled selected>Loading facilities...</option>
-                            </select>
+                            <div class="select-filter-shell cemetery-select-shell">
+                                <select id="cemeterySelector" class="cemetery-dropdown" aria-label="Select Cemetery Facility">
+                                    <option value="" disabled selected>Loading facilities...</option>
+                                </select>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
                         </div>
 
                         <!-- BREADCRUMBS -->
@@ -129,13 +171,6 @@
                                 </li>
                             </ol>
                         </nav>
-
-                        <!-- SUMMARY STATS BADGES -->
-                        <div class="map-summary-pills" id="mapSummaryPills">
-                            <span class="summary-pill"><i class="fas fa-layer-group"></i> <span id="statSections">0</span> Sections</span>
-                            <span class="summary-pill"><i class="fas fa-cubes"></i> <span id="statBlocks">0</span> Blocks</span>
-                            <span class="summary-pill"><i class="fas fa-border-all"></i> <span id="statLots">0</span> Total Lots</span>
-                        </div>
                     </div>
 
                     <!-- SEARCH & FILTER TOOLBAR (Batch 4A) -->
@@ -195,6 +230,7 @@
                 </div>
 
                 <!-- MAIN MAP VIEWPORT CONTAINER -->
+                <p class="section-label"><i class="fas fa-map"></i> Interactive Vector Map Canvas</p>
                 <div class="map-viewport-wrapper">
                     <div class="map-viewport-card">
                         <!-- VIEWPORT TOOLBAR -->

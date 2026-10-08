@@ -5,72 +5,133 @@
  */
 
 .management-page-content {
-    padding: var(--space-4, 1.25rem);
+    padding: 20px 24px;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 16px;
+    max-width: 1720px;
+    margin: 0 auto;
+    width: 100%;
 }
 
-/* 1. COMPACT DISCLAIMER BANNER */
+/* 1. HERO PAGE BANNER & COMPACT DISCLAIMER */
+.map-page-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(240, 248, 243, 0.90) 100%);
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-left: 5px solid var(--color-primary-600, #163d2c);
+    border-radius: var(--radius-lg, 14px);
+    padding: 16px 20px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.map-header-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.map-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.map-title i {
+    color: var(--color-primary-600, #163d2c);
+}
+
+.map-subtitle {
+    margin: 0;
+    color: #526477;
+    font-size: 0.88rem;
+    line-height: 1.4;
+}
+
 .calibration-disclaimer-banner {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.65rem 1rem;
-    background: rgba(59, 130, 246, 0.08);
-    border: 1px solid rgba(59, 130, 246, 0.22);
-    border-radius: var(--radius-md, 8px);
-    color: #1e40af;
-    font-size: 0.8125rem;
+    padding: 6px 14px;
+    background: rgba(44, 94, 71, 0.08);
+    border: 1px solid rgba(44, 94, 71, 0.2);
+    border-radius: 9999px;
+    color: #1b4533;
+    font-size: 0.78rem;
+    font-weight: 600;
     line-height: 1.35;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
 .calibration-disclaimer-banner .disclaimer-icon {
-    font-size: 1.1rem;
-    color: #2563eb;
+    font-size: 0.95rem;
+    color: var(--color-primary-600, #163d2c);
     flex-shrink: 0;
 }
 
-/* 2. FACILITY CONTROLS BAR */
+/* 2. FACILITY CONTROLS BAR (Matches Unified Control Panel) */
 .facility-controls-card {
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 0.875rem;
-    background: var(--surface-card, #ffffff);
-    padding: 0.75rem 1.25rem;
-    border-radius: var(--radius-lg, 12px);
-    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
-    border: 1px solid var(--border-color, #e5e7eb);
+    gap: 12px;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(240, 248, 243, 0.92)),
+        linear-gradient(90deg, rgba(44, 94, 71, 0.08), rgba(37, 99, 235, 0.04));
+    padding: 12px 18px;
+    border-radius: var(--radius-lg, 14px);
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-left: 5px solid var(--color-primary-500, #10b981);
 }
 
 .facility-select-group {
     display: flex;
     align-items: center;
-    gap: 0.625rem;
-    min-width: 260px;
+    gap: 10px;
+    min-width: 280px;
 }
 
 .facility-label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-secondary, #4b5563);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1e293b;
     white-space: nowrap;
     display: flex;
     align-items: center;
     gap: 0.4rem;
 }
 
+.facility-label i {
+    color: var(--color-primary-600, #163d2c);
+}
+
 .facility-select-group select {
     font-weight: 600;
-    border-radius: var(--radius-md, 8px);
-    border: 1px solid var(--border-color, #d1d5db);
-    padding: 0.45rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    padding: 0.45rem 0.85rem;
     font-size: 0.875rem;
-    background-color: var(--surface-input, #fff);
-    color: var(--text-primary, #111827);
+    background-color: #ffffff;
+    color: #0f172a;
     cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.facility-select-group select:focus {
+    border-color: var(--color-primary-500, #2c5e47);
+    box-shadow: 0 0 0 3px rgba(44, 94, 71, 0.15);
 }
 
 .facility-meta-badges {
@@ -81,46 +142,47 @@
 }
 
 .facility-meta-badges .badge {
-    padding: 0.3rem 0.65rem;
+    padding: 4px 10px;
     font-size: 0.75rem;
-    font-weight: 600;
-    border-radius: var(--radius-full, 9999px);
-    background: var(--surface-neutral-subtle, #f3f4f6);
-    color: var(--text-secondary, #4b5563);
-    border: 1px solid var(--border-color, #e5e7eb);
+    font-weight: 700;
+    border-radius: 9999px;
+    background: rgba(44, 94, 71, 0.08);
+    color: #1b4533;
+    border: 1px solid rgba(44, 94, 71, 0.16);
 }
 
 .facility-meta-badges .badge-canvas-size {
-    background: rgba(16, 185, 129, 0.1);
+    background: rgba(16, 185, 129, 0.12);
     color: #065f46;
-    border-color: rgba(16, 185, 129, 0.25);
+    border-color: rgba(16, 185, 129, 0.28);
 }
 
 .facility-view-mode-toggle {
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    background: var(--surface-neutral-subtle, #f3f4f6);
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(44, 94, 71, 0.16);
     padding: 0.2rem;
-    border-radius: var(--radius-md, 8px);
+    border-radius: 8px;
 }
 
 .btn-mode {
     border: none;
     background: transparent;
-    color: var(--text-secondary, #6b7280);
-    padding: 0.35rem 0.75rem;
+    color: #64748b;
+    padding: 0.35rem 0.85rem;
     font-size: 0.8125rem;
-    font-weight: 600;
+    font-weight: 700;
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s ease;
 }
 
 .btn-mode.is-active {
-    background: var(--surface-card, #ffffff);
-    color: var(--primary, #059669);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    background: var(--color-primary-600, #163d2c);
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(22, 61, 44, 0.25);
 }
 
 /* 3. 3-PANE STUDIO WORKSPACE LAYOUT */

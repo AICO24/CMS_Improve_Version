@@ -70,32 +70,41 @@
                             <path class="line" d="M7 16 27 16"></path>
                         </svg>
                     </label>
-                    <div class="page-title-group">
-                        <h1 class="page-title">Map Geometry Calibration</h1>
-                        <span class="page-subtitle">Configure visual layout coordinates, dimensions, and lot grids</span>
-                    </div>
+                    <h3 id="pageTitle">Map Calibration</h3>
                 </div>
-                <div class="top-right">
+                <div class="user-info">
                     <a href="cemetery-map.html" class="btn btn-secondary btn-sm" title="View Public Map" id="btnViewPublicMap">
                         <i class="fas fa-map"></i> View Public Map
                     </a>
-                    <button type="button" id="themeToggleBtn" class="theme-toggle" aria-label="Toggle theme">
-                        <i class="fas fa-moon"></i>
-                    </button>
+                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch to dark mode" aria-pressed="false" aria-label="Toggle dark/light theme"><i class="fas fa-moon"></i></button>
+                    <div class="profile" id="userProfile">
+                        <div class="profile-avatar" id="userAvatar"><i class="fas fa-user-shield"></i></div>
+                        <div class="profile-text">
+                            <div class="user-name" id="userName">Admin User</div>
+                            <div class="user-role" id="userRole">Administrator</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- CONTENT BODY -->
-            <div class="management-page-content">
-                <!-- DISCLAIMER BANNER -->
-                <div class="calibration-disclaimer-banner" role="note">
-                    <div class="disclaimer-icon"><i class="fas fa-circle-info"></i></div>
-                    <div class="disclaimer-text">
-                        <strong>Visual SVG Coordinates Notice:</strong> These settings control the visual cemetery map layout and do not represent GPS, GIS, or official land-survey coordinates.
+            <!-- CONTENT BODY (Standard CMS Module Layout) -->
+            <div class="content-area management-page-content">
+                <!-- HERO PAGE HEADER -->
+                <div class="map-page-hero">
+                    <div class="map-header-titles">
+                        <h1 class="map-title"><i class="fas fa-compass-drafting"></i> Map Geometry Calibration Studio</h1>
+                        <p class="map-subtitle">Configure visual layout coordinates, dimensions, and lot grids across municipal cemetery facilities.</p>
+                    </div>
+                    <div class="calibration-disclaimer-banner" role="note">
+                        <div class="disclaimer-icon"><i class="fas fa-circle-info"></i></div>
+                        <div class="disclaimer-text">
+                            <strong>Visual SVG Coordinates Notice:</strong> These settings control visual cemetery map layout and do not represent GPS, GIS, or official land-survey coordinates.
+                        </div>
                     </div>
                 </div>
 
                 <!-- FACILITY CONTROLS BAR -->
+                <p class="section-label"><i class="fas fa-monument"></i> Facility &amp; Studio Mode Selection</p>
                 <div class="facility-controls-card">
                     <div class="facility-select-group">
                         <label for="cemeterySelect" class="facility-label">
@@ -123,6 +132,7 @@
                 </div>
 
                 <!-- 3-PANE STUDIO WORKSPACE GRID -->
+                <p class="section-label"><i class="fas fa-layer-group"></i> Interactive Layout Studio</p>
                 <div class="workspace-studio-layout">
                     <!-- PANE 1: HIERARCHY TREE NAVIGATOR -->
                     <div class="studio-pane pane-hierarchy">
