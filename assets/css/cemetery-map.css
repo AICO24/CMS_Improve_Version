@@ -3645,6 +3645,218 @@ body.dark-mode .btn-wayfinding-slip:hover {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   BATCH 9B: FACILITY LANDMARKS & REAL-WORLD WAYFINDING CUES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 1. Facility Landmarks Tray in Geographic HUD */
+.geo-landmarks-tray {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 9px 12px;
+    background: rgba(44, 94, 71, 0.05);
+    border-radius: 9px;
+    border: 1px dashed var(--map-border);
+}
+
+[data-theme="dark"] .geo-landmarks-tray {
+    background: rgba(52, 211, 153, 0.08);
+    border-color: rgba(52, 211, 153, 0.25);
+}
+
+.geo-landmarks-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--map-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.geo-landmarks-title i {
+    color: var(--color-primary-600, #163d2c);
+}
+
+[data-theme="dark"] .geo-landmarks-title i {
+    color: #34d399;
+}
+
+.geo-landmarks-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.geo-landmark-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.735rem;
+    font-weight: 600;
+    color: var(--map-text);
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: var(--map-surface);
+    border: 1px solid var(--map-border);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.geo-landmark-item i {
+    color: var(--color-primary-600, #163d2c);
+    font-size: 0.78rem;
+    flex-shrink: 0;
+}
+
+[data-theme="dark"] .geo-landmark-item i {
+    color: #34d399;
+}
+
+/* 2. Facility Access & GPS Navigation Card in Details Drawer */
+.facility-access-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: var(--color-neutral-50, #f8fafc);
+    border: 1px solid var(--map-border);
+}
+
+[data-theme="dark"] .facility-access-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.facility-access-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.badge-access-gate {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    background: rgba(22, 61, 44, 0.1);
+    color: var(--color-primary-600, #163d2c);
+    border: 1px solid rgba(22, 61, 44, 0.2);
+}
+
+[data-theme="dark"] .badge-access-gate {
+    background: rgba(52, 211, 153, 0.15);
+    color: #34d399;
+    border-color: rgba(52, 211, 153, 0.3);
+}
+
+.facility-access-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.access-route-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.access-icon {
+    color: var(--color-primary-600, #163d2c);
+    font-size: 0.825rem;
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+[data-theme="dark"] .access-icon {
+    color: #34d399;
+}
+
+.access-text-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.access-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--map-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.access-value {
+    font-size: 0.825rem;
+    font-weight: 700;
+    color: var(--map-text);
+}
+
+.facility-access-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.btn-drawer-directions,
+.btn-drawer-geo-view {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--map-border);
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.btn-drawer-directions {
+    background: var(--color-primary-600, #163d2c) !important;
+    color: #ffffff !important;
+    border-color: var(--color-primary-600, #163d2c) !important;
+}
+
+.btn-drawer-directions:hover {
+    background: var(--color-primary-700, #113123) !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(22, 61, 44, 0.3);
+}
+
+.btn-drawer-geo-view {
+    background: var(--color-neutral-100, #f1f5f9);
+    color: var(--map-text);
+    cursor: pointer;
+}
+
+.btn-drawer-geo-view:hover {
+    background: var(--color-neutral-200, #e2e8f0);
+    transform: translateY(-1px);
+}
+
+[data-theme="dark"] .btn-drawer-geo-view {
+    background: #334155;
+    border-color: #475569;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .btn-drawer-geo-view:hover {
+    background: #475569;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    PRINT STYLES FOR OFFICIAL 1-PAGE WAYFINDING SLIP
    ═══════════════════════════════════════════════════════════════════════════ */
 @media print {

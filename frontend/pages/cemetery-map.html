@@ -372,6 +372,26 @@
                                 <div class="geo-hud-access-cue" id="geoHudAccessCue">
                                     <i class="fas fa-road"></i> <span>Main Visitor Entrance &amp; Parking Gate</span>
                                 </div>
+
+                                <!-- BATCH 9B: FACILITY GATES & KEY LANDMARKS TRAY -->
+                                <div class="geo-landmarks-tray" id="geoLandmarksTray">
+                                    <div class="geo-landmarks-title"><i class="fas fa-signs-post"></i> Grounds Access &amp; Landmark Wayfinding:</div>
+                                    <div class="geo-landmarks-list">
+                                        <div class="geo-landmark-item" id="geoLandmarkGate" title="Primary entrance gate from access road">
+                                            <i class="fas fa-door-open"></i> <span>Gate 1: Main Access</span>
+                                        </div>
+                                        <div class="geo-landmark-item" id="geoLandmarkOffice" title="Cemetery Administration & Information Desk">
+                                            <i class="fas fa-building-columns"></i> <span>Admin Office</span>
+                                        </div>
+                                        <div class="geo-landmark-item" id="geoLandmarkParking" title="Designated visitor vehicle parking">
+                                            <i class="fas fa-square-parking"></i> <span>Visitor Parking (P1)</span>
+                                        </div>
+                                        <div class="geo-landmark-item" id="geoLandmarkChapel" title="Ceremonial Pavilion & Memorial Chapel">
+                                            <i class="fas fa-place-of-worship"></i> <span>Memorial Pavilion</span>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="geo-hud-actions">
                                     <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm btn-geo-directions" id="btnGetDirectionsGeo">
                                         <i class="fas fa-diamond-turn-right"></i> Open Turn-by-Turn Directions
@@ -569,6 +589,38 @@
                                             <span class="guideline-value" id="drawerIntermentPrivilege">Double-Depth Vaults + Urn Allocation</span>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- BATCH 9B: FACILITY ACCESS & GOOGLE MAPS NAVIGATION CARD -->
+                            <div class="drawer-section-card facility-access-card" id="drawerFacilityAccessCard">
+                                <div class="facility-access-header">
+                                    <h3 class="section-card-title"><i class="fas fa-map-location-dot"></i> Facility Access &amp; Navigation</h3>
+                                    <span class="badge-access-gate" id="drawerAccessGateBadge"><i class="fas fa-door-open"></i> Gate 1 Access</span>
+                                </div>
+                                <div class="facility-access-body">
+                                    <div class="access-route-row">
+                                        <i class="fas fa-diamond-turn-right access-icon"></i>
+                                        <div class="access-text-wrap">
+                                            <span class="access-label">Arrival Point</span>
+                                            <span class="access-value" id="drawerAccessGateText">Main Visitor Entrance &amp; Parking</span>
+                                        </div>
+                                    </div>
+                                    <div class="access-route-row">
+                                        <i class="fas fa-compass access-icon"></i>
+                                        <div class="access-text-wrap">
+                                            <span class="access-label">Facility Highway/Road</span>
+                                            <span class="access-value" id="drawerAccessAddressText">Official Cemetery Grounds</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="facility-access-actions">
+                                    <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm btn-drawer-directions" id="btnDrawerDirections">
+                                        <i class="fas fa-diamond-turn-right"></i> GPS Turn-by-Turn
+                                    </a>
+                                    <button type="button" class="btn btn-secondary btn-sm btn-drawer-geo-view" id="btnDrawerViewGeoMap">
+                                        <i class="fas fa-map-location-dot"></i> View on Google Maps
+                                    </button>
                                 </div>
                             </div>
 

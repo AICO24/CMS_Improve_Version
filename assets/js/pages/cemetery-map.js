@@ -62,6 +62,10 @@
     let geoZoneSelectorBar, geoZoneChips;
     let geoFacilityHud, geoHudFacilityName, geoHudAddress, geoHudAccessCue, btnGetDirectionsGeo, btnReturnPlotsGeo;
 
+    // Batch 9B: Facility Landmarks & Drawer Access DOM Elements
+    let geoLandmarksTray, geoLandmarkGate, geoLandmarkOffice, geoLandmarkParking, geoLandmarkChapel;
+    let drawerFacilityAccessCard, drawerAccessGateBadge, drawerAccessGateText, drawerAccessAddressText, btnDrawerDirections, btnDrawerViewGeoMap;
+
     // Batch 8A: Visual Archetype Showcase DOM Elements
     let drawerVisualShowcase, drawerImageFrame, drawerArchetypeGraphic, drawerArchetypeBadgeText, drawerCapacityText, drawerDimensionSpec;
 
@@ -263,6 +267,20 @@
         geoHudAccessCue = document.getElementById('geoHudAccessCue');
         btnGetDirectionsGeo = document.getElementById('btnGetDirectionsGeo');
         btnReturnPlotsGeo = document.getElementById('btnReturnPlotsGeo');
+
+        // Batch 9B: Facility Landmarks & Drawer Access Elements
+        geoLandmarksTray = document.getElementById('geoLandmarksTray');
+        geoLandmarkGate = document.getElementById('geoLandmarkGate');
+        geoLandmarkOffice = document.getElementById('geoLandmarkOffice');
+        geoLandmarkParking = document.getElementById('geoLandmarkParking');
+        geoLandmarkChapel = document.getElementById('geoLandmarkChapel');
+
+        drawerFacilityAccessCard = document.getElementById('drawerFacilityAccessCard');
+        drawerAccessGateBadge = document.getElementById('drawerAccessGateBadge');
+        drawerAccessGateText = document.getElementById('drawerAccessGateText');
+        drawerAccessAddressText = document.getElementById('drawerAccessAddressText');
+        btnDrawerDirections = document.getElementById('btnDrawerDirections');
+        btnDrawerViewGeoMap = document.getElementById('btnDrawerViewGeoMap');
 
         // Search & Filter Controls
         mapSearchInput = document.getElementById('mapSearchInput');
@@ -477,6 +495,13 @@
                     const zoneKey = btn.getAttribute('data-zone');
                     handleGeoZoneSelect(zoneKey);
                 });
+            });
+        }
+
+        // Batch 9B: View Facility on Google Maps from Details Drawer
+        if (btnDrawerViewGeoMap) {
+            btnDrawerViewGeoMap.addEventListener('click', () => {
+                switchMapView('geo');
             });
         }
     }
@@ -1339,6 +1364,30 @@
         // Batch 8A: Populate Visual Archetype Showcase & Specifications
         renderLotArchetypeShowcase(lot);
 
+        // Batch 9B: Populate Facility Access & Navigation Card in Details Drawer
+        if (drawerFacilityAccessCard) {
+            const cemetery = state.currentCemetery;
+            const geo = (cemetery && cemetery.map_config && cemetery.map_config.geo) ? cemetery.map_config.geo : null;
+            const gateName = (geo && geo.gate_name) || 'Gate 1: Main Visitor Access';
+            const accessAddress = cemetery?.address || (geo && geo.address) || 'Official Cemetery Grounds';
+
+            if (drawerAccessGateBadge) drawerAccessGateBadge.innerHTML = `<i class="fas fa-door-open"></i> ${escapeHtml(gateName)}`;
+            if (drawerAccessGateText) drawerAccessGateText.textContent = `${gateName} & Parking`;
+            if (drawerAccessAddressText) drawerAccessAddressText.textContent = accessAddress;
+
+            if (btnDrawerDirections) {
+                const cemName = cemetery?.cemetery_name || 'Cemetery Facility';
+                const lat = geo ? geo.latitude : null;
+                const lng = geo ? geo.longitude : null;
+                if (lat && lng) {
+                    btnDrawerDirections.href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+                } else {
+                    const query = `${cemName} ${accessAddress}`.trim();
+                    btnDrawerDirections.href = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
+                }
+            }
+        }
+
         updateBreadcrumbs();
 
         // Open Drawer
@@ -1769,7 +1818,9 @@
         }
 
         // 4-Step Pathway
-        if (slipStepFacility) slipStepFacility.textContent = cemetery?.cemetery_name || 'Main Gate';
+        const geo = (cemetery && cemetery.map_config && cemetery.map_config.geo) ? cemetery.map_config.geo : null;
+        const gateName = (geo && geo.gate_name) || 'Gate 1 (Visitor Entrance)';
+        if (slipStepFacility) slipStepFacility.textContent = `${cemetery?.cemetery_name || 'Main Gate'} — ${gateName}`;
         if (slipStepSection) slipStepSection.textContent = section?.section_name || 'Section Quadrant';
         if (slipStepBlock) slipStepBlock.textContent = block?.block_name || 'Block Perimeter';
         if (slipStepLot) slipStepLot.textContent = `Plot #${lot.lot_number}`;
