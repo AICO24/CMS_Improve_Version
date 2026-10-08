@@ -635,6 +635,44 @@
                                 </div>
                             </div>
 
+                            <!-- BATCH 10C: SPATIAL PROXIMITY, TERRAIN ELEVATION & ACCESSIBILITY CARD -->
+                            <div class="drawer-section-card accessibility-metrics-card" id="drawerAccessibilityCard">
+                                <div class="accessibility-card-header">
+                                    <h3 class="section-card-title"><i class="fas fa-person-walking"></i> Proximity &amp; Accessibility</h3>
+                                    <span class="badge-pwd-status is-pwd-friendly" id="drawerPwdBadge"><i class="fas fa-wheelchair"></i> PWD Friendly</span>
+                                </div>
+                                <div class="accessibility-metrics-grid">
+                                    <div class="access-metric-item">
+                                        <div class="metric-icon-wrap"><i class="fas fa-route"></i></div>
+                                        <div class="metric-content">
+                                            <span class="metric-label">Walking from Gate 1</span>
+                                            <strong class="metric-value" id="drawerWalkingDist">~85m (1.5 min walk)</strong>
+                                        </div>
+                                    </div>
+                                    <div class="access-metric-item">
+                                        <div class="metric-icon-wrap"><i class="fas fa-mountain"></i></div>
+                                        <div class="metric-content">
+                                            <span class="metric-label">Terrain Elevation</span>
+                                            <strong class="metric-value" id="drawerTerrainElev">+1.8m (Flood-Free Terrace)</strong>
+                                        </div>
+                                    </div>
+                                    <div class="access-metric-item">
+                                        <div class="metric-icon-wrap"><i class="fas fa-square-parking"></i></div>
+                                        <div class="metric-content">
+                                            <span class="metric-label">Drop-off &amp; Parking</span>
+                                            <strong class="metric-value" id="drawerParkingDist">Avenue Curb (~25m away)</strong>
+                                        </div>
+                                    </div>
+                                    <div class="access-metric-item">
+                                        <div class="metric-icon-wrap"><i class="fas fa-universal-access"></i></div>
+                                        <div class="metric-content">
+                                            <span class="metric-label">Pathway Condition</span>
+                                            <strong class="metric-value" id="drawerPathwayCond">Paved Smooth Footway</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- BATCH 9B: FACILITY ACCESS & GOOGLE MAPS NAVIGATION CARD -->
                             <div class="drawer-section-card facility-access-card" id="drawerFacilityAccessCard">
                                 <div class="facility-access-header">
@@ -946,6 +984,14 @@
                             <div class="slip-metric-row">
                                 <span class="slip-metric-lbl">Dimensions:</span>
                                 <span class="slip-metric-val" id="slipTableDimensions">1.0m × 2.4m</span>
+                            </div>
+                            <div class="slip-metric-row">
+                                <span class="slip-metric-lbl">Walking Distance:</span>
+                                <strong class="slip-metric-val" id="slipTableWalking">—</strong>
+                            </div>
+                            <div class="slip-metric-row">
+                                <span class="slip-metric-lbl">Elevation &amp; Access:</span>
+                                <span class="slip-metric-val" id="slipTableElevation">—</span>
                             </div>
                             <div class="slip-metric-row" id="slipRowNotes" style="display: none;">
                                 <span class="slip-metric-lbl">Plot Notes:</span>

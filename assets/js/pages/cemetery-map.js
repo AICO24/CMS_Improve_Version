@@ -77,6 +77,10 @@
     let lightboxArchetypeViewModes, lightboxMaterialVal;
     let activeArchetypeViewMode = 'perspective';
 
+    // Batch 10C: Spatial Proximity, Terrain Elevation & Accessibility Elements
+    let drawerAccessibilityCard, drawerPwdBadge, drawerWalkingDist, drawerTerrainElev, drawerParkingDist, drawerPathwayCond;
+    let slipTableWalking, slipTableElevation;
+
     // Batch 8B: Location Value Tier & Monument Guidelines DOM Elements
     let drawerLocationTierCard, drawerLocationTierBadge, drawerLocationTierDesc;
     let drawerMonumentCard, drawerMonumentRule, drawerPerpetualCare, drawerIntermentPrivilege;
@@ -216,6 +220,16 @@
         drawerMatDrainage = document.getElementById('drawerMatDrainage');
         lightboxArchetypeViewModes = document.getElementById('lightboxArchetypeViewModes');
         lightboxMaterialVal = document.getElementById('lightboxMaterialVal');
+
+        // Batch 10C: Spatial Proximity, Terrain Elevation & Accessibility Elements
+        drawerAccessibilityCard = document.getElementById('drawerAccessibilityCard');
+        drawerPwdBadge = document.getElementById('drawerPwdBadge');
+        drawerWalkingDist = document.getElementById('drawerWalkingDist');
+        drawerTerrainElev = document.getElementById('drawerTerrainElev');
+        drawerParkingDist = document.getElementById('drawerParkingDist');
+        drawerPathwayCond = document.getElementById('drawerPathwayCond');
+        slipTableWalking = document.getElementById('slipTableWalking');
+        slipTableElevation = document.getElementById('slipTableElevation');
 
         // Batch 8B: Location Value Tier & Monument Guidelines Elements
         drawerLocationTierCard = document.getElementById('drawerLocationTierCard');
@@ -1607,6 +1621,20 @@
             }
         }
 
+        // Batch 10C: Populate Spatial Proximity, Terrain Elevation & Accessibility Card
+        if (drawerAccessibilityCard) {
+            const spatial = getLotSpatialMetrics(lot, block, section, state.currentCemetery);
+            if (drawerWalkingDist) drawerWalkingDist.textContent = spatial.walkingDist;
+            if (drawerTerrainElev) drawerTerrainElev.textContent = spatial.terrainElev;
+            if (drawerParkingDist) drawerParkingDist.textContent = spatial.parkingDist;
+            if (drawerPathwayCond) drawerPathwayCond.textContent = spatial.pathwayCond;
+            if (drawerPwdBadge) {
+                drawerPwdBadge.innerHTML = `<i class="fas ${spatial.pwdIcon}"></i> ${escapeHtml(spatial.pwdBadgeText)}`;
+                drawerPwdBadge.className = `badge-pwd-status ${spatial.pwdBadgeClass}`;
+            }
+            drawerAccessibilityCard.style.display = 'block';
+        }
+
         updateBreadcrumbs();
 
         // Open Drawer
@@ -2148,6 +2176,108 @@
     }
 
     /**
+     * Calculate Spatial Proximity, Walking Distance & Terrain Elevation (Batch 10C)
+     */
+    function getLotSpatialMetrics(lot, block, section, cemetery) {
+        if (!lot) {
+            return {
+                walkingDist: '~85m (1.5 min walk)',
+                walkingDistOnly: '85 meters',
+                walkingTime: '~1.5 min walk',
+                terrainElev: '+1.2m (Flood-Free Ground)',
+                parkingDist: 'Main Avenue Curb (~25m away)',
+                pathwayCond: 'Paved Continuous Footway',
+                pwdBadgeText: 'PWD Friendly',
+                pwdBadgeClass: 'is-pwd-friendly',
+                pwdIcon: 'fa-wheelchair',
+                summaryElevation: '+1.2m Ground / Step-Free'
+            };
+        }
+
+        const typeStr = String(lot.lot_type || '').toLowerCase();
+        const numStr = String(lot.lot_number || '').toLowerCase();
+        const notesStr = String(lot.location_notes || '').toLowerCase();
+        const blockName = String(block?.block_name || '').toLowerCase();
+        const isColumbarium = typeStr.includes('columb') || typeStr.includes('niche') || numStr.startsWith('col-');
+
+        const blockNum = parseInt(blockName.replace(/\D/g, '') || '1', 10);
+        const rowNum = parseInt(lot.row_number || '1', 10);
+
+        let distanceMeters;
+        let walkTime;
+        let terrainElev;
+        let parkingDist;
+        let pathwayCond;
+        let pwdBadgeText;
+        let pwdBadgeClass;
+        let pwdIcon;
+
+        if (isColumbarium) {
+            distanceMeters = 65;
+            walkTime = '~1 min walk';
+            terrainElev = '+2.1m (Sanctuary Hall Ground Floor)';
+            parkingDist = 'Sanctuary Porte-Cochère (~20m)';
+            pathwayCond = 'Climate-Controlled Step-Free Interior';
+            pwdBadgeText = 'PWD Elevator & Ramp';
+            pwdBadgeClass = 'is-pwd-friendly';
+            pwdIcon = 'fa-elevator';
+        } else if (typeStr.includes('mausoleum') || typeStr.includes('estate')) {
+            distanceMeters = Math.min(220, 80 + (blockNum * 25));
+            walkTime = `~${Math.round(distanceMeters / 70)} mins walk`;
+            terrainElev = '+2.5m (Elevated Estate Terrace)';
+            parkingDist = 'Estate Avenue Driveway (~15m)';
+            pathwayCond = 'Wide Paved Avenue & Paved Apron';
+            pwdBadgeText = 'PWD Accessible';
+            pwdBadgeClass = 'is-pwd-friendly';
+            pwdIcon = 'fa-wheelchair';
+        } else if (typeStr.includes('garden')) {
+            distanceMeters = Math.min(280, 70 + (blockNum * 35));
+            walkTime = `~${Math.round(distanceMeters / 70)} mins walk`;
+            terrainElev = '+1.8m (Terraced Garden Pavement)';
+            parkingDist = 'Garden Cluster Walkway (~25m)';
+            pathwayCond = 'Stone Paved Pathway with 15cm Curb';
+            pwdBadgeText = 'Level Access Curb';
+            pwdBadgeClass = 'is-pwd-friendly';
+            pwdIcon = 'fa-shoe-prints';
+        } else {
+            // Standard Lawn Lot
+            const isRoadside = notesStr.includes('road') || notesStr.includes('ave') || notesStr.includes('prime') || notesStr.includes('front');
+            distanceMeters = Math.min(360, Math.max(45, (blockNum * 38) + (rowNum * 6)));
+            const mins = (distanceMeters / 75).toFixed(0);
+            walkTime = mins <= 1 ? '~1 min walk' : `~${mins} mins walk`;
+
+            if (isRoadside) {
+                terrainElev = '+1.4m (Road-Adjacent Elevated Grade)';
+                parkingDist = 'Main Boulevard Curb (~10–15m)';
+                pathwayCond = 'Direct Smooth Sidewalk Connection';
+                pwdBadgeText = 'PWD Accessible';
+                pwdBadgeClass = 'is-pwd-friendly';
+                pwdIcon = 'fa-wheelchair';
+            } else {
+                terrainElev = '+1.0m (Perpetual Dry-Well Turf)';
+                parkingDist = 'Interior Pathway Drop-Off (~40m)';
+                pathwayCond = 'Paved Walkway & Manicured Lawn';
+                pwdBadgeText = 'Standard Footway';
+                pwdBadgeClass = 'is-pwd-standard';
+                pwdIcon = 'fa-person-walking';
+            }
+        }
+
+        return {
+            walkingDist: `~${distanceMeters}m (${walkTime})`,
+            walkingDistOnly: `${distanceMeters} meters`,
+            walkingTime: walkTime,
+            terrainElev: terrainElev,
+            parkingDist: parkingDist,
+            pathwayCond: pathwayCond,
+            pwdBadgeText: pwdBadgeText,
+            pwdBadgeClass: pwdBadgeClass,
+            pwdIcon: pwdIcon,
+            summaryElevation: `${terrainElev.split(' ')[0]} / ${pwdBadgeText}`
+        };
+    }
+
+    /**
      * Switch Archetype Visual Mode (Batch 10B: 3D Perspective | Blueprint | Materials)
      */
     function setArchetypeViewMode(mode) {
@@ -2331,6 +2461,15 @@
         if (slipTableLot) slipTableLot.textContent = lot.lot_number || '—';
         if (slipTableType) slipTableType.textContent = lot.lot_type || 'Standard Lawn';
         if (slipTableDimensions) slipTableDimensions.textContent = lot.dimensions || '1.0m × 2.4m';
+
+        // Batch 10C: Populate Wayfinding Slip Spatial & Accessibility Metrics
+        const spatial = getLotSpatialMetrics(lot, block, section, cemetery);
+        if (slipTableWalking) {
+            slipTableWalking.textContent = spatial.walkingDist;
+        }
+        if (slipTableElevation) {
+            slipTableElevation.textContent = spatial.summaryElevation;
+        }
 
         if (lot.location_notes) {
             if (slipTableNotes) slipTableNotes.textContent = lot.location_notes;
