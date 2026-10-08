@@ -2617,8 +2617,9 @@ body.dark-mode .btn-wayfinding-slip:hover {
 
 .slip-steps-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
+    width: 100%;
 }
 
 .slip-step-card {
@@ -2630,6 +2631,9 @@ body.dark-mode .btn-wayfinding-slip:hover {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 .slip-step-card.slip-step-current {
@@ -2650,11 +2654,20 @@ body.dark-mode .btn-wayfinding-slip:hover {
     align-items: center;
     justify-content: center;
     margin-bottom: 4px;
+    flex-shrink: 0;
 }
 
 .slip-step-current .slip-step-num {
     background: #059669;
     color: #ffffff;
+}
+
+.slip-step-body {
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .slip-step-subtitle {
@@ -2664,16 +2677,19 @@ body.dark-mode .btn-wayfinding-slip:hover {
     letter-spacing: 0.06em;
     color: #64748b;
     text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .slip-step-title {
     display: block;
-    font-size: 0.92rem;
+    font-size: 0.875rem;
     font-weight: 800;
     color: #0f172a;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.25;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .slip-step-detail {
@@ -2681,6 +2697,8 @@ body.dark-mode .btn-wayfinding-slip:hover {
     font-size: 0.72rem;
     color: #64748b;
     line-height: 1.35;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 /* ── Content Columns: Schematic SVG + Metrics Table ─────────────────────── */
@@ -3472,7 +3490,7 @@ body.dark-mode .btn-wayfinding-slip:hover {
     left: 18px;
     z-index: 8;
     width: calc(100% - 36px);
-    max-width: 440px;
+    max-width: 480px;
     padding: 16px 20px;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(14px);
@@ -3542,9 +3560,9 @@ body.dark-mode .btn-wayfinding-slip:hover {
     font-size: 1.05rem;
     font-weight: 800;
     color: var(--map-text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.28;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .geo-hud-address {
@@ -3589,25 +3607,33 @@ body.dark-mode .btn-wayfinding-slip:hover {
 
 .geo-hud-actions {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 8px;
-    margin-top: 2px;
+    margin-top: 4px;
+    width: 100%;
+}
+
+.geo-actions-nav-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
 }
 
 .btn-geo-directions {
-    flex: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 7px;
     font-weight: 700;
-    font-size: 0.8rem;
-    padding: 7px 12px;
+    font-size: 0.8125rem;
+    padding: 9px 12px;
     background: var(--color-primary-600, #163d2c) !important;
     border-color: var(--color-primary-600, #163d2c) !important;
     color: #ffffff !important;
     text-decoration: none;
     border-radius: 8px;
+    white-space: nowrap;
     transition: all 0.18s ease;
 }
 
@@ -3621,15 +3647,16 @@ body.dark-mode .btn-wayfinding-slip:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 7px;
     font-weight: 700;
-    font-size: 0.8rem;
-    padding: 7px 12px;
+    font-size: 0.8125rem;
+    padding: 9px 12px;
     border-radius: 8px;
     border: 1px solid rgba(2, 132, 199, 0.3);
     background: rgba(2, 132, 199, 0.08);
     color: #0284c7 !important;
     text-decoration: none;
+    white-space: nowrap;
     transition: all 0.18s ease;
 }
 
@@ -3652,18 +3679,20 @@ body.dark-mode .btn-wayfinding-slip:hover {
 }
 
 .btn-geo-return-plots {
+    width: 100%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
     font-weight: 600;
-    font-size: 0.8rem;
-    padding: 7px 12px;
+    font-size: 0.8125rem;
+    padding: 8px 14px;
     border-radius: 8px;
     border: 1px solid var(--map-border);
     background: var(--color-neutral-50, #f8fafc);
     color: var(--map-text);
     cursor: pointer;
+    white-space: nowrap;
     transition: all 0.18s ease;
 }
 
@@ -3700,6 +3729,10 @@ body.dark-mode .btn-wayfinding-slip:hover {
     .geo-hud-actions {
         flex-direction: column;
         width: 100%;
+    }
+
+    .geo-actions-nav-row {
+        grid-template-columns: 1fr;
     }
 
     .btn-geo-directions,
@@ -3740,6 +3773,16 @@ body.dark-mode .btn-wayfinding-slip:hover {
         justify-content: center;
         padding: 5px 6px;
         font-size: 0.72rem;
+    }
+
+    .slip-steps-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .slip-steps-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 

@@ -1840,7 +1840,7 @@
         // 4-Step Pathway
         const geo = (cemetery && cemetery.map_config && cemetery.map_config.geo) ? cemetery.map_config.geo : null;
         const gateName = (geo && geo.gate_name) || 'Gate 1 (Visitor Entrance)';
-        if (slipStepFacility) slipStepFacility.textContent = `${cemetery?.cemetery_name || 'Main Gate'} — ${gateName}`;
+        if (slipStepFacility) slipStepFacility.textContent = gateName;
         if (slipStepSection) slipStepSection.textContent = section?.section_name || 'Section Quadrant';
         if (slipStepBlock) slipStepBlock.textContent = block?.block_name || 'Block Perimeter';
         if (slipStepLot) slipStepLot.textContent = `Plot #${lot.lot_number}`;
