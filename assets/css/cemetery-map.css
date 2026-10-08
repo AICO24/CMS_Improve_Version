@@ -810,9 +810,13 @@
 .swatch-reserved  { background: var(--lot-reserved); }
 .swatch-occupied  { background: var(--lot-occupied); }
 .swatch-unavailable { background: var(--lot-unavailable); }
+.swatch-maintenance {
+    background: #94a3b8;
+    outline: 1px dashed #64748b;
+}
 .swatch-selected {
-    background: var(--lot-available);
-    outline: 2px solid var(--lot-selected);
+    background: #ffffff;
+    outline: 2.5px solid var(--lot-selected);
     outline-offset: 1px;
 }
 
@@ -957,11 +961,32 @@
     filter: drop-shadow(0 4px 6px rgba(148, 163, 184, 0.4));
 }
 
-/* Selected State */
+.lot--under-maintenance .svg-lot-rect {
+    fill: var(--lot-unavailable);
+    stroke: #64748b;
+    stroke-dasharray: 4 2;
+}
+.lot--under-maintenance:hover .svg-lot-rect {
+    fill: var(--lot-unavailable-hover);
+    filter: drop-shadow(0 4px 6px rgba(148, 163, 184, 0.4));
+}
+
+/* Selected State (Batch 6: High visibility, contrast, pulse glow, status fill preserved) */
 .svg-lot-tile.is-selected .svg-lot-rect {
-    stroke: var(--lot-selected);
-    stroke-width: 4px;
-    filter: drop-shadow(0 0 10px var(--lot-selected-glow));
+    stroke: #2563eb !important;
+    stroke-width: 4.5px !important;
+    stroke-dasharray: none !important;
+    filter: drop-shadow(0 0 10px rgba(37, 99, 235, 0.8)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35)) !important;
+    animation: lotSelectedGlowPulse 2.2s infinite ease-in-out;
+}
+
+@keyframes lotSelectedGlowPulse {
+    0%, 100% {
+        filter: drop-shadow(0 0 8px rgba(37, 99, 235, 0.7)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    }
+    50% {
+        filter: drop-shadow(0 0 16px rgba(37, 99, 235, 1)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
+    }
 }
 
 /* Filtered Out State (dimmed) */
@@ -1245,6 +1270,271 @@
 [data-theme="dark"] .btn-lot-unavailable {
     background: #334155;
     color: #94a3b8;
+}
+
+/* =========================================================================
+   BATCH 6: USER-FACING LOT LOCATOR STYLES
+   ========================================================================= */
+
+/* 1. On-Map Location Summary HUD Card */
+.map-location-summary-card {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 6;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--map-border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    min-width: 220px;
+    max-width: 280px;
+    animation: fadeInDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .map-location-summary-card {
+    background: rgba(30, 41, 59, 0.95);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+}
+
+.loc-summary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--map-border);
+}
+
+.loc-summary-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--map-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.loc-summary-title i {
+    color: var(--lot-selected, #2563eb);
+}
+
+.loc-summary-you-are-here {
+    font-size: 0.65rem;
+    font-weight: 700;
+    background: rgba(37, 99, 235, 0.12);
+    color: var(--lot-selected, #2563eb);
+    padding: 2px 7px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    animation: pulseBadge 2s infinite ease-in-out;
+}
+
+@keyframes pulseBadge {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.65; }
+}
+
+.loc-summary-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.loc-summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8125rem;
+}
+
+.loc-label {
+    color: var(--map-text-muted);
+    font-weight: 500;
+}
+
+.loc-summary-row strong {
+    color: var(--map-text);
+    font-weight: 600;
+}
+
+.loc-summary-row strong.loc-highlight-lot {
+    color: var(--lot-selected, #2563eb);
+    font-weight: 800;
+}
+
+.loc-summary-footer {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--map-border);
+}
+
+.btn-center-on-map {
+    width: 100%;
+    background: var(--lot-selected, #2563eb);
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.btn-center-on-map:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.btn-center-on-map:active {
+    transform: translateY(0);
+}
+
+/* 2. Drawer Location Header Badges & Notices */
+.drawer-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.drawer-badge-you-are-here {
+    font-size: 0.68rem;
+    font-weight: 700;
+    background: rgba(37, 99, 235, 0.15);
+    color: var(--lot-selected, #2563eb);
+    padding: 2px 8px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+[data-theme="dark"] .drawer-badge-you-are-here {
+    background: rgba(59, 130, 246, 0.25);
+    color: #60a5fa;
+}
+
+.drawer-location-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(44, 94, 71, 0.08);
+    border: 1px solid rgba(44, 94, 71, 0.18);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-primary-500, #2c5e47);
+}
+
+[data-theme="dark"] .drawer-location-notice {
+    background: rgba(52, 211, 153, 0.12);
+    border-color: rgba(52, 211, 153, 0.25);
+    color: #34d399;
+}
+
+/* 3. Location Hierarchy Trail Card */
+.location-path-card {
+    padding: 12px 14px;
+}
+
+.location-path-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.badge-hierarchy-pin {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-primary-500, #2c5e47);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+[data-theme="dark"] .badge-hierarchy-pin {
+    color: #34d399;
+}
+
+.hierarchy-breadcrumb-trail {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 0.8125rem;
+}
+
+.trail-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--map-text-muted);
+    font-weight: 500;
+}
+
+.trail-arrow {
+    font-size: 0.65rem;
+    color: var(--map-text-muted);
+    opacity: 0.6;
+}
+
+.trail-current {
+    color: var(--lot-selected, #2563eb);
+    font-weight: 700;
+    background: rgba(37, 99, 235, 0.08);
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+[data-theme="dark"] .trail-current {
+    background: rgba(59, 130, 246, 0.18);
+    color: #60a5fa;
+}
+
+/* 4. Center on Map Button in Drawer */
+.btn-center-drawer {
+    width: 100%;
+    margin-bottom: 10px;
+    background: var(--map-surface);
+    border: 1px solid var(--map-border);
+    color: var(--map-text);
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.15s ease;
+}
+
+.btn-center-drawer:hover {
+    background: var(--color-neutral-100, #eef3f7);
+    border-color: var(--lot-selected, #2563eb);
+    color: var(--lot-selected, #2563eb);
+}
+
+[data-theme="dark"] .btn-center-drawer:hover {
+    background: #334155;
+    border-color: #60a5fa;
+    color: #60a5fa;
 }
 
 /* Responsive Breakpoints */

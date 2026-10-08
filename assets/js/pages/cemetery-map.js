@@ -41,7 +41,7 @@
 
     // DOM Elements
     let cemeterySelector;
-    let mapBreadcrumbs, bcCemetery, bcCemeteryName, bcSection, bcSectionName, bcBlock, bcBlockName;
+    let mapBreadcrumbs, bcCemetery, bcCemeteryName, bcSection, bcSectionName, bcBlock, bcBlockName, bcLot, bcLotName;
     let statSections, statBlocks, statLots;
     let viewLevelBadge, viewLevelText, btnBackToOverview, filterMatchesBadge;
     let btnZoomIn, btnZoomOut, btnResetZoom;
@@ -51,6 +51,8 @@
     let lotDetailsDrawer, btnCloseDrawer, drawerLotNumber, drawerStatusDot, drawerStatusText;
     let drawerFacilityName, drawerSectionName, drawerBlockName, drawerLotType, drawerDimensions, drawerPrice;
     let drawerNotesRow, drawerLocationNotes, btnBookThisLot, btnLotUnavailable;
+    let mapLocationSummaryCard, locSummarySection, locSummaryBlock, locSummaryLot, btnCenterOnMapHud;
+    let drawerYouAreHereBadge, drawerTrailFacility, drawerTrailSection, drawerTrailBlock, drawerTrailLot, btnCenterOnMapDrawer;
 
     // Search & Filter DOM Elements (Batch 4A)
     let mapSearchInput, btnClearSearch, btnMapSearch, searchResultsDropdown;
@@ -89,6 +91,8 @@
         bcSectionName = document.getElementById('bcSectionName');
         bcBlock = document.getElementById('bcBlock');
         bcBlockName = document.getElementById('bcBlockName');
+        bcLot = document.getElementById('bcLot');
+        bcLotName = document.getElementById('bcLotName');
 
         statSections = document.getElementById('statSections');
         statBlocks = document.getElementById('statBlocks');
@@ -133,6 +137,21 @@
         btnBookThisLot = document.getElementById('btnBookThisLot');
         btnLotUnavailable = document.getElementById('btnLotUnavailable');
 
+        // Batch 6: On-Map Location Summary HUD Elements
+        mapLocationSummaryCard = document.getElementById('mapLocationSummaryCard');
+        locSummarySection = document.getElementById('locSummarySection');
+        locSummaryBlock = document.getElementById('locSummaryBlock');
+        locSummaryLot = document.getElementById('locSummaryLot');
+        btnCenterOnMapHud = document.getElementById('btnCenterOnMapHud');
+
+        // Batch 6: Drawer Location Hierarchy Elements
+        drawerYouAreHereBadge = document.getElementById('drawerYouAreHereBadge');
+        drawerTrailFacility = document.getElementById('drawerTrailFacility');
+        drawerTrailSection = document.getElementById('drawerTrailSection');
+        drawerTrailBlock = document.getElementById('drawerTrailBlock');
+        drawerTrailLot = document.getElementById('drawerTrailLot');
+        btnCenterOnMapDrawer = document.getElementById('btnCenterOnMapDrawer');
+
         // Search & Filter Controls
         mapSearchInput = document.getElementById('mapSearchInput');
         btnClearSearch = document.getElementById('btnClearSearch');
@@ -174,6 +193,22 @@
         btnZoomIn.addEventListener('click', () => zoomView(0.8));
         btnZoomOut.addEventListener('click', () => zoomView(1.25));
         btnResetZoom.addEventListener('click', () => resetView());
+
+        // Batch 6: Center on Map Button Handlers
+        if (btnCenterOnMapHud) {
+            btnCenterOnMapHud.addEventListener('click', centerOnSelectedLot);
+        }
+        if (btnCenterOnMapDrawer) {
+            btnCenterOnMapDrawer.addEventListener('click', centerOnSelectedLot);
+        }
+
+        if (bcBlock) {
+            bcBlock.addEventListener('click', () => {
+                if (state.selectedLot) {
+                    closeLotDrawer();
+                }
+            });
+        }
 
         // Mouse pan on SVG
         cemeteryMapSvg.addEventListener('mousedown', handleMouseDown);
@@ -952,7 +987,7 @@
             lotGroup.setAttribute('data-lot-id', lot.lot_id);
             lotGroup.setAttribute('role', 'button');
             lotGroup.setAttribute('tabindex', '0');
-            lotGroup.setAttribute('aria-label', `Lot ${lot.lot_number}, Status: ${lot.status}, Price: ${formatCurrency(lot.price)}`);
+            lotGroup.setAttribute('aria-label', `Lot ${lot.lot_number}, Section ${block.section_name || state.currentSection?.section_name || ''}, Block ${block.block_name}, Status: ${lot.status}, Category: ${lot.lot_type || 'Standard Lawn'}, Price: ${formatCurrency(lot.price)}`);
 
             // Lot Tile Rectangle
             const lotRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -1012,7 +1047,7 @@
     }
 
     /**
-     * 4. Select Lot & Open Details Drawer
+     * 4. Select Lot & Open Details Drawer (Batch 6 Enhanced)
      */
     function selectLot(lot, block, section, lotElement) {
         state.selectedLot = lot;
@@ -1070,9 +1105,51 @@
             btnLotUnavailable.innerHTML = `<i class="fas fa-lock"></i> Lot is ${escapeHtml(lot.status)}`;
         }
 
+        // Batch 6: Populate On-Map Location Summary HUD
+        if (mapLocationSummaryCard) {
+            if (locSummarySection) locSummarySection.textContent = section?.section_name || '—';
+            if (locSummaryBlock) locSummaryBlock.textContent = block?.block_name || '—';
+            if (locSummaryLot) locSummaryLot.textContent = `Lot ${lot.lot_number}`;
+            mapLocationSummaryCard.style.display = 'block';
+        }
+
+        // Batch 6: Populate Location Hierarchy Breadcrumb Trail
+        if (drawerTrailFacility) drawerTrailFacility.textContent = state.currentCemetery?.cemetery_name || '—';
+        if (drawerTrailSection) drawerTrailSection.textContent = section?.section_name || '—';
+        if (drawerTrailBlock) drawerTrailBlock.textContent = block?.block_name || '—';
+        if (drawerTrailLot) drawerTrailLot.textContent = `Lot ${lot.lot_number}`;
+        if (drawerYouAreHereBadge) drawerYouAreHereBadge.style.display = 'inline-flex';
+
+        updateBreadcrumbs();
+
         // Open Drawer
         lotDetailsDrawer.classList.add('is-open');
         lotDetailsDrawer.setAttribute('aria-hidden', 'false');
+    }
+
+    /**
+     * Center SVG viewport on the currently selected lot (Batch 6)
+     */
+    function centerOnSelectedLot() {
+        if (!state.selectedLot) return;
+        const lotId = state.selectedLot.lot_id;
+        let lotElement = document.querySelector(`.svg-lot-tile[data-lot-id="${lotId}"]`);
+        if (!lotElement) return;
+
+        // Ensure selection visual highlight is active
+        document.querySelectorAll('.svg-lot-tile.is-selected').forEach(el => el.classList.remove('is-selected'));
+        lotElement.classList.add('is-selected');
+
+        const rectEl = lotElement.querySelector('rect');
+        if (rectEl) {
+            const x = parseFloat(rectEl.getAttribute('x'));
+            const y = parseFloat(rectEl.getAttribute('y'));
+            const w = parseFloat(rectEl.getAttribute('width')) || 100;
+            const h = parseFloat(rectEl.getAttribute('height')) || 70;
+            if (!isNaN(x) && !isNaN(y)) {
+                centerViewOnPoint(x + (w / 2), y + (h / 2), 0.55);
+            }
+        }
     }
 
     /**
@@ -1082,6 +1159,13 @@
         state.selectedLot = null;
         lotDetailsDrawer.classList.remove('is-open');
         lotDetailsDrawer.setAttribute('aria-hidden', 'true');
+        if (mapLocationSummaryCard) {
+            mapLocationSummaryCard.style.display = 'none';
+        }
+        if (drawerYouAreHereBadge) {
+            drawerYouAreHereBadge.style.display = 'none';
+        }
+        updateBreadcrumbs();
         document.querySelectorAll('.svg-lot-tile.is-selected').forEach(el => {
             el.classList.remove('is-selected');
         });
@@ -1103,7 +1187,7 @@
     }
 
     /**
-     * Update Breadcrumbs Bar
+     * Update Breadcrumbs Bar (Batch 6: Includes exact lot level)
      */
     function updateBreadcrumbs() {
         bcCemeteryName.textContent = state.currentCemetery?.cemetery_name || 'Cemetery Overview';
@@ -1115,12 +1199,24 @@
             bcBlock.style.display = 'inline-flex';
             bcBlockName.textContent = state.currentBlock.block_name;
 
-            bcCemetery.classList.remove('active');
-            bcSection.classList.remove('active');
-            bcBlock.classList.add('active');
+            if (state.selectedLot && bcLot && bcLotName) {
+                bcLot.style.display = 'inline-flex';
+                bcLotName.textContent = `Lot ${state.selectedLot.lot_number}`;
+
+                bcCemetery.classList.remove('active');
+                bcSection.classList.remove('active');
+                bcBlock.classList.remove('active');
+                bcLot.classList.add('active');
+            } else {
+                if (bcLot) bcLot.style.display = 'none';
+                bcCemetery.classList.remove('active');
+                bcSection.classList.remove('active');
+                bcBlock.classList.add('active');
+            }
         } else {
             bcSection.style.display = 'none';
             bcBlock.style.display = 'none';
+            if (bcLot) bcLot.style.display = 'none';
             bcCemetery.classList.add('active');
         }
     }
@@ -1294,17 +1390,8 @@
         const lotElement = document.querySelector(`.svg-lot-tile[data-lot-id="${lot.lot_id}"]`);
         selectLot(lot, block, section, lotElement);
 
-        // Center on lot if element exists
-        if (lotElement) {
-            const rectEl = lotElement.querySelector('rect');
-            if (rectEl) {
-                const x = parseFloat(rectEl.getAttribute('x'));
-                const y = parseFloat(rectEl.getAttribute('y'));
-                if (!isNaN(x) && !isNaN(y)) {
-                    centerViewOnPoint(x + 50, y + 40);
-                }
-            }
-        }
+        // Center on lot (Batch 6)
+        centerOnSelectedLot();
     }
 
     /**
@@ -1591,12 +1678,18 @@
     }
 
     /**
-     * Center View on (X, Y) Coordinates
+     * Center View on (X, Y) Coordinates (with optional zoomFactor support)
      */
-    function centerViewOnPoint(x, y) {
+    function centerViewOnPoint(x, y, zoomFactor = null) {
         const vb = state.currentViewBox;
-        vb.x = Math.max(0, x - (vb.width / 2));
-        vb.y = Math.max(0, y - (vb.height / 2));
+        if (zoomFactor !== null && !isNaN(zoomFactor) && zoomFactor > 0 && zoomFactor <= 1.0) {
+            const targetW = state.baseViewBox.width * zoomFactor;
+            const targetH = state.baseViewBox.height * zoomFactor;
+            vb.width = targetW;
+            vb.height = targetH;
+        }
+        vb.x = Math.max(0, Math.min(state.baseViewBox.width - vb.width, x - (vb.width / 2)));
+        vb.y = Math.max(0, Math.min(state.baseViewBox.height - vb.height, y - (vb.height / 2)));
         applyViewBox();
     }
 

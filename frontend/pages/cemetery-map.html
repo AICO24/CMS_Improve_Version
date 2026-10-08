@@ -123,6 +123,10 @@
                                     <i class="fas fa-chevron-right separator"></i>
                                     <span id="bcBlockName">Block</span>
                                 </li>
+                                <li class="breadcrumb-item" id="bcLot" style="display: none;">
+                                    <i class="fas fa-chevron-right separator"></i>
+                                    <span id="bcLotName">Lot</span>
+                                </li>
                             </ol>
                         </nav>
 
@@ -240,6 +244,24 @@
                             <!-- FLOATING TOOLTIP -->
                             <div class="svg-floating-tooltip" id="svgFloatingTooltip" role="tooltip" style="display: none;"></div>
 
+                            <!-- ON-MAP LOCATION SUMMARY CARD (Batch 6) -->
+                            <div class="map-location-summary-card" id="mapLocationSummaryCard" style="display: none;" aria-live="polite">
+                                <div class="loc-summary-header">
+                                    <span class="loc-summary-title"><i class="fas fa-location-dot"></i> LOT LOCATION</span>
+                                    <span class="loc-summary-you-are-here"><i class="fas fa-circle-dot"></i> YOU ARE HERE</span>
+                                </div>
+                                <div class="loc-summary-body">
+                                    <div class="loc-summary-row"><span class="loc-label">Section:</span> <strong id="locSummarySection">—</strong></div>
+                                    <div class="loc-summary-row"><span class="loc-label">Block:</span> <strong id="locSummaryBlock">—</strong></div>
+                                    <div class="loc-summary-row"><span class="loc-label">Lot:</span> <strong class="loc-highlight-lot" id="locSummaryLot">—</strong></div>
+                                </div>
+                                <div class="loc-summary-footer">
+                                    <button type="button" class="btn btn-sm btn-center-on-map" id="btnCenterOnMapHud" title="Center viewport on selected lot">
+                                        <i class="fas fa-crosshairs"></i> Center on Map
+                                    </button>
+                                </div>
+                            </div>
+
                             <!-- NATIVE SVG MAP CANVAS -->
                             <svg id="cemeteryMapSvg" class="cemetery-map-svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Interactive Cemetery Map">
                                 <defs>
@@ -278,8 +300,12 @@
                                     <span class="legend-label">Unavailable</span>
                                 </div>
                                 <div class="legend-item">
+                                    <span class="legend-swatch swatch-maintenance"></span>
+                                    <span class="legend-label">Under Maintenance</span>
+                                </div>
+                                <div class="legend-item">
                                     <span class="legend-swatch swatch-selected"></span>
-                                    <span class="legend-label">Selected</span>
+                                    <span class="legend-label">Selected Lot</span>
                                 </div>
                             </div>
                         </div>
@@ -289,7 +315,10 @@
                     <div class="lot-details-drawer" id="lotDetailsDrawer" aria-hidden="true">
                         <div class="drawer-header">
                             <div class="drawer-title-group">
-                                <span class="drawer-badge" id="drawerLotBadge">Burial Lot</span>
+                                <div class="drawer-badge-row">
+                                    <span class="drawer-badge" id="drawerLotBadge">Burial Lot</span>
+                                    <span class="drawer-badge-you-are-here" id="drawerYouAreHereBadge" style="display: none;"><i class="fas fa-circle-dot"></i> YOU ARE HERE</span>
+                                </div>
                                 <h2 class="drawer-lot-number" id="drawerLotNumber">A1-001</h2>
                             </div>
                             <button type="button" class="drawer-close-btn" id="btnCloseDrawer" title="Close details panel" aria-label="Close details panel">
@@ -298,12 +327,35 @@
                         </div>
 
                         <div class="drawer-body">
+                            <!-- LOCATION NOTICE BANNER (Batch 6) -->
+                            <div class="drawer-location-notice">
+                                <i class="fas fa-location-crosshairs"></i>
+                                <span>You are viewing the location of this cemetery lot.</span>
+                            </div>
+
                             <!-- STATUS BANNER -->
                             <div class="lot-status-card" id="lotStatusCard">
                                 <div class="status-indicator-dot" id="drawerStatusDot"></div>
                                 <div class="status-meta">
                                     <span class="status-label">Current Status</span>
                                     <strong class="status-value" id="drawerStatusText">Available</strong>
+                                </div>
+                            </div>
+
+                            <!-- LOCATION HIERARCHY TRAIL (Batch 6) -->
+                            <div class="drawer-section-card location-path-card">
+                                <div class="location-path-header">
+                                    <span class="section-card-title"><i class="fas fa-sitemap"></i> Location Hierarchy</span>
+                                    <span class="badge-hierarchy-pin"><i class="fas fa-location-pin"></i> Exact Plot</span>
+                                </div>
+                                <div class="hierarchy-breadcrumb-trail">
+                                    <div class="trail-step"><i class="fas fa-monument"></i> <span id="drawerTrailFacility">—</span></div>
+                                    <i class="fas fa-chevron-right trail-arrow"></i>
+                                    <div class="trail-step"><i class="fas fa-layer-group"></i> <span id="drawerTrailSection">—</span></div>
+                                    <i class="fas fa-chevron-right trail-arrow"></i>
+                                    <div class="trail-step"><i class="fas fa-cubes"></i> <span id="drawerTrailBlock">—</span></div>
+                                    <i class="fas fa-chevron-right trail-arrow"></i>
+                                    <div class="trail-step trail-current"><i class="fas fa-map-pin"></i> <strong id="drawerTrailLot">—</strong></div>
                                 </div>
                             </div>
 
@@ -340,7 +392,7 @@
                                     <span class="meta-value price-highlight" id="drawerPrice">₱45,000.00</span>
                                 </div>
                                 <div class="meta-row" id="drawerNotesRow" style="display: none;">
-                                    <span class="meta-label">Notes</span>
+                                    <span class="meta-label">Location Notes</span>
                                     <span class="meta-value" id="drawerLocationNotes">—</span>
                                 </div>
                             </div>
@@ -348,12 +400,18 @@
                             <!-- PRIVACY-SAFE NOTICE -->
                             <div class="drawer-privacy-note">
                                 <i class="fas fa-shield-halved"></i>
-                                <span>Public lot locator. Personal decedent and reservation records are kept confidential.</span>
+                                <div>
+                                    <strong>Public Cemetery Lot Locator:</strong>
+                                    <span>Personal decedent and claimant records are kept strictly confidential. Only public location and plot layout information is displayed.</span>
+                                </div>
                             </div>
                         </div>
 
                         <!-- DRAWER ACTION FOOTER -->
                         <div class="drawer-footer">
+                            <button type="button" class="btn btn-secondary btn-block btn-center-drawer" id="btnCenterOnMapDrawer">
+                                <i class="fas fa-crosshairs"></i> Center on Map
+                            </button>
                             <a href="#" class="btn btn-primary btn-block btn-book-lot" id="btnBookThisLot">
                                 <i class="fas fa-calendar-plus"></i> Book This Lot
                             </a>
