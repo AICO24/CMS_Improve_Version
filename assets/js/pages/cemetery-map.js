@@ -58,6 +58,10 @@
     // Batch 8A: Visual Archetype Showcase DOM Elements
     let drawerVisualShowcase, drawerImageFrame, drawerArchetypeGraphic, drawerArchetypeBadgeText, drawerCapacityText, drawerDimensionSpec;
 
+    // Batch 8B: Location Value Tier & Monument Guidelines DOM Elements
+    let drawerLocationTierCard, drawerLocationTierBadge, drawerLocationTierDesc;
+    let drawerMonumentCard, drawerMonumentRule, drawerPerpetualCare, drawerIntermentPrivilege;
+
     // Wayfinding & Location Slip Modal DOM Elements (Batch 7)
     let wayfindingSlipModal, btnCloseWayfindingSlip, btnPrintSlip;
     let slipFacilityName, slipFacilityAddress, slipRefCode, slipTimestamp;
@@ -173,6 +177,15 @@
         drawerArchetypeBadgeText = document.getElementById('drawerArchetypeBadgeText');
         drawerCapacityText = document.getElementById('drawerCapacityText');
         drawerDimensionSpec = document.getElementById('drawerDimensionSpec');
+
+        // Batch 8B: Location Value Tier & Monument Guidelines Elements
+        drawerLocationTierCard = document.getElementById('drawerLocationTierCard');
+        drawerLocationTierBadge = document.getElementById('drawerLocationTierBadge');
+        drawerLocationTierDesc = document.getElementById('drawerLocationTierDesc');
+        drawerMonumentCard = document.getElementById('drawerMonumentCard');
+        drawerMonumentRule = document.getElementById('drawerMonumentRule');
+        drawerPerpetualCare = document.getElementById('drawerPerpetualCare');
+        drawerIntermentPrivilege = document.getElementById('drawerIntermentPrivilege');
 
         // Batch 7: Wayfinding Slip Modal Elements
         wayfindingSlipModal = document.getElementById('wayfindingSlipModal');
@@ -1288,7 +1301,9 @@
             capacity: '2 Caskets (Double-Depth) + 4 Urns',
             dimensions: '1.0m × 2.44m (Single Plot)',
             priceTier: '₱45,000 – ₱180,000',
-            monumentRule: 'Ground-level flush bronze or granite marker. No above-ground structures allowed.',
+            monumentRule: 'Flush ground marker only (Bronze or granite slab, level with turf)',
+            perpetualCare: 'Covered (Lawn mowing, ground leveling & perimeter security)',
+            intermentPrivilege: 'Double-depth vault (2 Caskets) + 4 cremains urns',
             svg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
     <defs>
         <linearGradient id="lawnSky" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -1343,7 +1358,9 @@
             capacity: '4–8 Caskets + 8–16 Urns (Cluster)',
             dimensions: '2.0m × 2.5m (2–4 Lots Cluster)',
             priceTier: '₱200,000 – ₱650,000',
-            monumentRule: 'Raised marble curb (18–24 inches) with landscape shrubs & low upright monument.',
+            monumentRule: 'Raised marble/granite curb (up to 24") with landscape flower bed',
+            perpetualCare: 'Covered (Hedge pruning, curb washing & perpetual security)',
+            intermentPrivilege: 'Family cluster (4–8 Caskets) + 8–16 cremains urns',
             svg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
     <defs>
         <linearGradient id="gardSky" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -1390,7 +1407,9 @@
             capacity: '12–24+ Vaults & Urns (Multi-Gen)',
             dimensions: '4.0m × 5.0m+ (8–16+ Lots)',
             priceTier: '₱1,000,000 – ₱10,000,000+',
-            monumentRule: 'Private neoclassical covered pavilion/chapel with columns, gated entry & granite steps.',
+            monumentRule: 'Neoclassical covered pavilion / chapel (Up to 4–5m, private gate)',
+            perpetualCare: 'Covered (Avenue access, grounds upkeep & 24/7 security)',
+            intermentPrivilege: 'Generational estate (12–24+ Vaults & Urns in private crypt)',
             svg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
     <defs>
         <linearGradient id="mauSky" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -1439,7 +1458,9 @@
             capacity: '2–4 Cremains Urns per Niche',
             dimensions: '0.4m × 0.4m × 0.6m (Single Niche)',
             priceTier: '₱25,000 – ₱150,000',
-            monumentRule: 'Indoor/covered sanctuary wall niche with polished brass nameplate & commemorative fixture.',
+            monumentRule: 'Polished engraved brass plate with tempered glass/marble face',
+            perpetualCare: 'Covered (Sanctuary hall upkeep, lighting & commemorative care)',
+            intermentPrivilege: 'Niche compartment (2–4 Cremains urns or ossuary transfers)',
             svg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
     <defs>
         <linearGradient id="colBg" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -1500,7 +1521,59 @@
     }
 
     /**
-     * Render Visual Archetype Showcase in Details Drawer (Batch 8A)
+     * Determine location value tier for a lot based on positioning & attributes (Batch 8B)
+     */
+    function getLotLocationTier(lot) {
+        if (!lot) {
+            return {
+                tier: 'Standard Interior',
+                badgeClass: 'is-standard',
+                icon: 'fa-tree',
+                desc: 'Serene placement along manicured interior walkways with perpetual maintenance.'
+            };
+        }
+        const notesStr = String(lot.location_notes || '').toLowerCase();
+        const numStr = String(lot.lot_number || '').toLowerCase();
+        const typeStr = String(lot.lot_type || '').toLowerCase();
+
+        const isRoadside = notesStr.includes('road') || notesStr.includes('avenue') || notesStr.includes('front') || notesStr.includes('gate') || notesStr.includes('prime');
+        const isCorner = notesStr.includes('corner') || numStr.endsWith('-01') || numStr.endsWith('-1') || numStr.endsWith('-10');
+        const isPrestige = typeStr.includes('mausoleum') || typeStr.includes('estate') || typeStr.includes('garden');
+
+        if (isRoadside) {
+            return {
+                tier: 'Prime Roadside Lot',
+                badgeClass: 'is-prime',
+                icon: 'fa-road',
+                desc: 'Direct avenue access with enhanced accessibility, faster wayfinding, and prominent visibility.'
+            };
+        }
+        if (isCorner) {
+            return {
+                tier: 'Prime Corner Lot',
+                badgeClass: 'is-prime',
+                icon: 'fa-compass',
+                desc: 'Advantageous corner position with two-sided open space and high footway visibility.'
+            };
+        }
+        if (isPrestige) {
+            return {
+                tier: 'Estate Prestige Tier',
+                badgeClass: 'is-prime',
+                icon: 'fa-crown',
+                desc: 'Exclusive clustered grounds with dedicated landscaping and private perimeter allowances.'
+            };
+        }
+        return {
+            tier: 'Standard Interior Lot',
+            badgeClass: 'is-standard',
+            icon: 'fa-location-dot',
+            desc: 'Serene placement along manicured interior walkways with standard perpetual maintenance.'
+        };
+    }
+
+    /**
+     * Render Visual Archetype Showcase in Details Drawer (Batch 8A & 8B Enhanced)
      */
     function renderLotArchetypeShowcase(lot) {
         if (!drawerVisualShowcase) return;
@@ -1517,6 +1590,27 @@
         }
         if (drawerDimensionSpec) {
             drawerDimensionSpec.textContent = lot.dimensions || archetype.dimensions;
+        }
+
+        // Batch 8B: Populate Location Value Tier
+        const tierInfo = getLotLocationTier(lot);
+        if (drawerLocationTierBadge) {
+            drawerLocationTierBadge.innerHTML = `<i class="fas ${tierInfo.icon}"></i> ${escapeHtml(tierInfo.tier)}`;
+            drawerLocationTierBadge.className = `badge-location-tier ${tierInfo.badgeClass}`;
+        }
+        if (drawerLocationTierDesc) {
+            drawerLocationTierDesc.textContent = tierInfo.desc;
+        }
+
+        // Batch 8B: Populate Monument & Memorial Guidelines
+        if (drawerMonumentRule) {
+            drawerMonumentRule.textContent = archetype.monumentRule || 'Standard cemetery regulation applies';
+        }
+        if (drawerPerpetualCare) {
+            drawerPerpetualCare.textContent = archetype.perpetualCare || 'Covered (Perpetual park grounds care)';
+        }
+        if (drawerIntermentPrivilege) {
+            drawerIntermentPrivilege.textContent = archetype.intermentPrivilege || 'Standard interment allocation';
         }
     }
 

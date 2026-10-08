@@ -1996,6 +1996,153 @@ body[data-theme="dark"] .search-field .search-field__input:focus ~ .search-field
     color: #34d399;
 }
 
+/* =========================================================================
+   BATCH 8B: LOCATION VALUE TIER & MONUMENT GUIDELINES
+   ========================================================================= */
+
+/* Location Value Tier Card */
+.location-tier-card {
+    padding: 12px 14px;
+    background: linear-gradient(135deg, rgba(240, 253, 244, 0.6) 0%, rgba(248, 250, 252, 0.8) 100%);
+    border: 1px solid rgba(44, 94, 71, 0.2);
+}
+
+[data-theme="dark"] .location-tier-card {
+    background: linear-gradient(135deg, rgba(6, 45, 31, 0.4) 0%, rgba(30, 41, 59, 0.6) 100%);
+    border-color: rgba(52, 211, 153, 0.2);
+}
+
+.location-tier-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.badge-location-tier {
+    font-size: 0.70rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 9999px;
+    letter-spacing: 0.02em;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+
+.badge-location-tier.is-prime {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    border: 1px solid #f59e0b;
+    box-shadow: 0 1px 3px rgba(217, 119, 6, 0.15);
+}
+
+[data-theme="dark"] .badge-location-tier.is-prime {
+    background: linear-gradient(135deg, #78350f 0%, #451a03 100%);
+    color: #fde047;
+    border-color: #d97706;
+}
+
+.badge-location-tier.is-standard {
+    background: rgba(44, 94, 71, 0.08);
+    color: var(--color-primary-600, #163d2c);
+    border: 1px solid rgba(44, 94, 71, 0.18);
+}
+
+[data-theme="dark"] .badge-location-tier.is-standard {
+    background: rgba(52, 211, 153, 0.12);
+    color: #34d399;
+    border-color: rgba(52, 211, 153, 0.25);
+}
+
+.location-tier-desc {
+    margin: 0;
+    font-size: 0.76rem;
+    color: var(--map-text-muted);
+    line-height: 1.4;
+}
+
+/* Monument Guidelines Card */
+.monument-guidelines-card {
+    padding: 12px 14px;
+}
+
+.monument-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.badge-guidelines-verified {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--color-primary-500, #2c5e47);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+[data-theme="dark"] .badge-guidelines-verified {
+    color: #34d399;
+}
+
+.guideline-spec-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.guideline-spec-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 7px 10px;
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid var(--map-border);
+    border-radius: 8px;
+    transition: background 0.15s ease;
+}
+
+[data-theme="dark"] .guideline-spec-item {
+    background: rgba(15, 23, 42, 0.55);
+}
+
+.guideline-icon {
+    color: var(--color-primary-500, #2c5e47);
+    font-size: 0.825rem;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+[data-theme="dark"] .guideline-icon {
+    color: #34d399;
+}
+
+.guideline-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.guideline-label {
+    color: var(--map-text-muted);
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.guideline-value {
+    color: var(--map-text);
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
 /* 3. Location Hierarchy Trail Card */
 .location-path-card {
     padding: 12px 14px;
