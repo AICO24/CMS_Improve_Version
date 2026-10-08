@@ -3297,6 +3297,34 @@ body.dark-mode .btn-wayfinding-slip:hover {
     height: 100%;
     border: 0;
     display: block;
+    position: relative;
+    z-index: 2;
+}
+
+/* Loading Placeholder Behind Google Map Frame */
+.geo-map-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: var(--map-text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.geo-map-loading i {
+    font-size: 1.6rem;
+    color: var(--color-primary-600, #163d2c);
+}
+
+[data-theme="dark"] .geo-map-loading i {
+    color: #34d399;
 }
 
 /* 3. Lot Type Zone Selector Bar (Overlaid on Real-World Map) */
@@ -3589,6 +3617,40 @@ body.dark-mode .btn-wayfinding-slip:hover {
     box-shadow: 0 4px 10px rgba(22, 61, 44, 0.35);
 }
 
+.btn-geo-waze {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 7px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(2, 132, 199, 0.3);
+    background: rgba(2, 132, 199, 0.08);
+    color: #0284c7 !important;
+    text-decoration: none;
+    transition: all 0.18s ease;
+}
+
+.btn-geo-waze:hover {
+    background: #0284c7;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(2, 132, 199, 0.25);
+}
+
+[data-theme="dark"] .btn-geo-waze {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8 !important;
+    border-color: rgba(56, 189, 248, 0.35);
+}
+
+[data-theme="dark"] .btn-geo-waze:hover {
+    background: #0284c7;
+    color: #ffffff !important;
+}
+
 .btn-geo-return-plots {
     display: inline-flex;
     align-items: center;
@@ -3626,6 +3688,29 @@ body.dark-mode .btn-wayfinding-slip:hover {
         margin: 10px;
         width: calc(100% - 20px);
     }
+
+    .geo-zone-chips {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+        width: 100%;
+    }
+
+    .geo-hud-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .btn-geo-directions,
+    .btn-geo-waze,
+    .btn-geo-return-plots {
+        width: 100%;
+    }
+
+    .geo-landmarks-list {
+        grid-template-columns: 1fr;
+    }
     
     .geo-facility-hud {
         position: static;
@@ -3641,6 +3726,20 @@ body.dark-mode .btn-wayfinding-slip:hover {
     .geo-map-frame {
         position: relative;
         min-height: 380px;
+    }
+}
+
+@media (max-width: 480px) {
+    .map-view-switcher {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .view-switch-btn {
+        flex: 1;
+        justify-content: center;
+        padding: 5px 6px;
+        font-size: 0.72rem;
     }
 }
 
@@ -3881,6 +3980,8 @@ body.dark-mode .btn-wayfinding-slip:hover {
     .top-bar,
     .map-header-card,
     .map-viewport-wrapper,
+    .map-view-switcher,
+    .geo-stage-container,
     .lot-details-drawer,
     .no-print,
     .slip-modal-screen-bar,

@@ -332,6 +332,10 @@
                         <div class="geo-stage-container" id="geoStageContainer" style="display: none;">
                             <!-- RESPONSIVE MAP CANVAS / IFRAME EMBED -->
                             <div class="geo-map-frame" id="geoMapFrame">
+                                <div class="geo-map-loading" id="geoMapLoading">
+                                    <i class="fas fa-circle-notch fa-spin"></i>
+                                    <span>Loading Real-World Map View...</span>
+                                </div>
                                 <iframe id="geoMapIframe" class="geo-map-iframe" loading="lazy" allowfullscreen="" referrerpolicy="no-referrer-when-downgrade" title="Cemetery Real-World Geographic Location"></iframe>
                             </div>
 
@@ -395,6 +399,9 @@
                                 <div class="geo-hud-actions">
                                     <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm btn-geo-directions" id="btnGetDirectionsGeo">
                                         <i class="fas fa-diamond-turn-right"></i> Open Turn-by-Turn Directions
+                                    </a>
+                                    <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm btn-geo-waze" id="btnOpenWazeGeo" title="Open navigation in Waze">
+                                        <i class="fab fa-waze"></i> Waze Navigation
                                     </a>
                                     <button type="button" class="btn btn-secondary btn-sm btn-geo-return-plots" id="btnReturnPlotsGeo">
                                         <i class="fas fa-layer-group"></i> Return to Plot Map

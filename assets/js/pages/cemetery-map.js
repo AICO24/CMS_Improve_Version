@@ -64,6 +64,7 @@
 
     // Batch 9B: Facility Landmarks & Drawer Access DOM Elements
     let geoLandmarksTray, geoLandmarkGate, geoLandmarkOffice, geoLandmarkParking, geoLandmarkChapel;
+    let btnOpenWazeGeo;
     let drawerFacilityAccessCard, drawerAccessGateBadge, drawerAccessGateText, drawerAccessAddressText, btnDrawerDirections, btnDrawerViewGeoMap;
 
     // Batch 8A: Visual Archetype Showcase DOM Elements
@@ -274,6 +275,7 @@
         geoLandmarkOffice = document.getElementById('geoLandmarkOffice');
         geoLandmarkParking = document.getElementById('geoLandmarkParking');
         geoLandmarkChapel = document.getElementById('geoLandmarkChapel');
+        btnOpenWazeGeo = document.getElementById('btnOpenWazeGeo');
 
         drawerFacilityAccessCard = document.getElementById('drawerFacilityAccessCard');
         drawerAccessGateBadge = document.getElementById('drawerAccessGateBadge');
@@ -371,16 +373,34 @@
             });
         }
 
-        // Close slip and lightbox on ESC key
+        // Close slip, lightbox, or return from geo view on ESC key (Batch 9C)
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 if (archetypeLightboxModal && archetypeLightboxModal.style.display !== 'none') {
                     closeArchetypeLightbox();
                 } else if (wayfindingSlipModal && wayfindingSlipModal.style.display !== 'none') {
                     closeWayfindingSlip();
+                } else if (state.activeMapView === 'geo') {
+                    switchMapView('plot');
                 }
             }
         });
+
+        // Batch 9C: Arrow-key keyboard accessibility on dual-view switcher tabs
+        if (btnSwitchPlotView && btnSwitchGeoView) {
+            btnSwitchPlotView.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight') {
+                    btnSwitchGeoView.focus();
+                    switchMapView('geo');
+                }
+            });
+            btnSwitchGeoView.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') {
+                    btnSwitchPlotView.focus();
+                    switchMapView('plot');
+                }
+            });
+        }
 
         if (bcBlock) {
             bcBlock.addEventListener('click', () => {
@@ -2848,6 +2868,26 @@
 
         if (btnGetDirectionsGeo) {
             btnGetDirectionsGeo.href = directionsUrl;
+        }
+
+        // Batch 9C: Construct Waze Navigation Link
+        if (btnOpenWazeGeo) {
+            let wazeUrl = '';
+            if (lat && lng) {
+                wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+            } else {
+                const query = `${cemName} ${address}`.trim();
+                wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(query)}&navigate=yes`;
+            }
+            btnOpenWazeGeo.href = wazeUrl;
+        }
+
+        // Batch 9C: Dismiss loading indicator upon iframe load
+        if (geoMapIframe) {
+            geoMapIframe.onload = function () {
+                const loadingEl = document.getElementById('geoMapLoading');
+                if (loadingEl) loadingEl.style.display = 'none';
+            };
         }
     }
 
