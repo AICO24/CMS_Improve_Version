@@ -623,6 +623,52 @@
                                 </div>
                             </div>
 
+                            <!-- OCCUPANCY & DECEDENT INFORMATION CARD (Batch 4) -->
+                            <div class="drawer-section-card occupancy-card" id="drawerOccupancyCard">
+                                <div class="occupancy-card-header">
+                                    <h3 class="section-card-title"><i class="fas fa-user-shield"></i> Occupancy &amp; Decedent Records</h3>
+                                    <span class="badge-occupancy-status" id="drawerOccupancyBadge">Available</span>
+                                </div>
+                                <div class="occupancy-loading-state" id="drawerOccupancyLoading" style="display: none;">
+                                    <i class="fas fa-circle-notch fa-spin"></i>
+                                    <span>Loading occupancy details...</span>
+                                </div>
+                                <div class="occupancy-error-state" id="drawerOccupancyError" style="display: none;">
+                                    <i class="fas fa-triangle-exclamation"></i>
+                                    <span>Unable to load lot occupancy details.</span>
+                                    <button type="button" class="btn btn-sm btn-secondary" id="btnRetryOccupancy">Retry</button>
+                                </div>
+                                <div class="occupancy-card-body" id="drawerOccupancyBody">
+                                    <div class="occupancy-desc-text" id="drawerOccupancyDesc">This lot is currently available for reservation.</div>
+                                    <div class="decedent-details-table" id="drawerDecedentDetails" style="display: none;">
+                                        <div class="meta-row">
+                                            <span class="meta-label">Deceased Name</span>
+                                            <strong class="meta-value occupant-name" id="drawerOccupantName">—</strong>
+                                        </div>
+                                        <div class="meta-row" id="drawerDobRow">
+                                            <span class="meta-label">Date of Birth</span>
+                                            <span class="meta-value" id="drawerOccupantDob">—</span>
+                                        </div>
+                                        <div class="meta-row" id="drawerDodRow">
+                                            <span class="meta-label">Date of Death</span>
+                                            <span class="meta-value" id="drawerOccupantDod">—</span>
+                                        </div>
+                                        <div class="meta-row" id="drawerBurialRow">
+                                            <span class="meta-label">Interment Date</span>
+                                            <span class="meta-value" id="drawerOccupantBurialDate">—</span>
+                                        </div>
+                                        <div class="meta-row" id="drawerDispositionRow">
+                                            <span class="meta-label">Interment Type</span>
+                                            <span class="meta-value" id="drawerOccupantDisposition">Burial Vault</span>
+                                        </div>
+                                    </div>
+                                    <div class="occupancy-empty-state" id="drawerOccupancyEmpty" style="display: none;">
+                                        <i class="fas fa-file-circle-question"></i>
+                                        <span>No deceased record is currently associated with this lot.</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- LOCATION VALUE TIER & VALUE ATTRIBUTES (Batch 8B) -->
                             <div class="drawer-section-card location-tier-card" id="drawerLocationTierCard">
                                 <div class="location-tier-header">

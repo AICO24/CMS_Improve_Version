@@ -80,6 +80,11 @@
     let mapLocationSummaryCard, locSummarySection, locSummaryBlock, locSummaryLot, btnCenterOnMapHud;
     let drawerYouAreHereBadge, drawerTrailFacility, drawerTrailSection, drawerTrailBlock, drawerTrailLot, btnCenterOnMapDrawer;
     let btnOpenWayfindingSlip;
+    // Batch 4: Selected Lot Occupancy & Decedent Information Elements
+    let drawerOccupancyCard, drawerOccupancyBadge, drawerOccupancyLoading, drawerOccupancyError, btnRetryOccupancy;
+    let drawerOccupancyBody, drawerOccupancyDesc, drawerDecedentDetails, drawerOccupantName;
+    let drawerDobRow, drawerOccupantDob, drawerDodRow, drawerOccupantDod, drawerBurialRow, drawerOccupantBurialDate;
+    let drawerDispositionRow, drawerOccupantDisposition, drawerOccupancyEmpty;
 
     // Batch 9A: Dual-View & Geographic Location Viewport DOM Elements
     let mapViewSwitcher, btnSwitchPlotView, btnSwitchGeoView;
@@ -219,6 +224,26 @@
         drawerLocationNotes = document.getElementById('drawerLocationNotes');
         btnBookThisLot = document.getElementById('btnBookThisLot');
         btnLotUnavailable = document.getElementById('btnLotUnavailable');
+
+        // Batch 4: Occupancy & Decedent Information Elements
+        drawerOccupancyCard = document.getElementById('drawerOccupancyCard');
+        drawerOccupancyBadge = document.getElementById('drawerOccupancyBadge');
+        drawerOccupancyLoading = document.getElementById('drawerOccupancyLoading');
+        drawerOccupancyError = document.getElementById('drawerOccupancyError');
+        btnRetryOccupancy = document.getElementById('btnRetryOccupancy');
+        drawerOccupancyBody = document.getElementById('drawerOccupancyBody');
+        drawerOccupancyDesc = document.getElementById('drawerOccupancyDesc');
+        drawerDecedentDetails = document.getElementById('drawerDecedentDetails');
+        drawerOccupantName = document.getElementById('drawerOccupantName');
+        drawerDobRow = document.getElementById('drawerDobRow');
+        drawerOccupantDob = document.getElementById('drawerOccupantDob');
+        drawerDodRow = document.getElementById('drawerDodRow');
+        drawerOccupantDod = document.getElementById('drawerOccupantDod');
+        drawerBurialRow = document.getElementById('drawerBurialRow');
+        drawerOccupantBurialDate = document.getElementById('drawerOccupantBurialDate');
+        drawerDispositionRow = document.getElementById('drawerDispositionRow');
+        drawerOccupantDisposition = document.getElementById('drawerOccupantDisposition');
+        drawerOccupancyEmpty = document.getElementById('drawerOccupancyEmpty');
 
         // Batch 6: On-Map Location Summary HUD Elements
         mapLocationSummaryCard = document.getElementById('mapLocationSummaryCard');
@@ -402,6 +427,16 @@
         }
         if (btnCenterOnMapDrawer) {
             btnCenterOnMapDrawer.addEventListener('click', centerOnSelectedLot);
+        }
+
+        // Batch 4: Retry Occupancy Details Fetching
+        if (btnRetryOccupancy) {
+            btnRetryOccupancy.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (state.selectedLot) {
+                    loadOccupancyDetails(state.selectedLot, state.currentBlock);
+                }
+            });
         }
 
         // Batch 7: Wayfinding Slip Modal Listeners
@@ -2122,7 +2157,54 @@
             lotElement.classList.add('is-selected');
         }
 
-        // Populate Drawer
+        // Batch 4: Vector Selection Reticle in #mapSelectionLayer
+        if (mapSelectionLayer && lotElement) {
+            mapSelectionLayer.innerHTML = '';
+            const rectEl = lotElement.querySelector('rect');
+            if (rectEl) {
+                const lx = parseFloat(rectEl.getAttribute('x'));
+                const ly = parseFloat(rectEl.getAttribute('y'));
+                const lw = parseFloat(rectEl.getAttribute('width')) || 40;
+                const lh = parseFloat(rectEl.getAttribute('height')) || 25;
+                if (!isNaN(lx) && !isNaN(ly)) {
+                    const pad = 4;
+                    const selG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    selG.setAttribute('class', 'svg-selected-lot-indicator');
+                    selG.innerHTML = `
+                        <rect x="${lx - pad}" y="${ly - pad}" width="${lw + pad * 2}" height="${lh + pad * 2}" rx="5" class="svg-selection-glow" />
+                        <rect x="${lx - 1}" y="${ly - 1}" width="${lw + 2}" height="${lh + 2}" rx="3" class="svg-selection-border" />
+                        <path d="M ${lx - 4} ${ly + 3} L ${lx - 4} ${ly - 4} L ${lx + 3} ${ly - 4}" class="svg-selection-reticle" />
+                        <path d="M ${lx + lw + 4} ${ly + 3} L ${lx + lw + 4} ${ly - 4} L ${lx + lw - 3} ${ly - 4}" class="svg-selection-reticle" />
+                        <path d="M ${lx - 4} ${ly + lh - 3} L ${lx - 4} ${ly + lh + 4} L ${lx + 3} ${ly + lh + 4}" class="svg-selection-reticle" />
+                        <path d="M ${lx + lw + 4} ${ly + lh - 3} L ${lx + lw + 4} ${ly + lh + 4} L ${lx + lw - 3} ${ly + lh + 4}" class="svg-selection-reticle" />
+                    `;
+                    mapSelectionLayer.appendChild(selG);
+
+                    // Batch 4 Focus Behavior: If off-screen or low-zoom, smoothly bring into viewport
+                    const margin = 40;
+                    const inViewport = (
+                        lx >= state.currentViewBox.x + margin &&
+                        (lx + lw) <= (state.currentViewBox.x + state.currentViewBox.width - margin) &&
+                        ly >= state.currentViewBox.y + margin &&
+                        (ly + lh) <= (state.currentViewBox.y + state.currentViewBox.height - margin)
+                    );
+                    const zoomFactor = state.baseViewBox.width / (state.currentViewBox.width || 1);
+                    if (!inViewport || zoomFactor < 1.35) {
+                        const targetZoom = Math.min(state.currentViewBox.width / state.baseViewBox.width, 0.55);
+                        centerViewOnPoint(lx + (lw / 2), ly + (lh / 2), targetZoom);
+                    }
+                }
+            }
+        }
+
+        // Highlight parent block subtly
+        document.querySelectorAll('.svg-block-card.is-focused').forEach(el => el.classList.remove('is-focused'));
+        if (block && block.block_id) {
+            const targetBlk = document.querySelector(`.svg-block-card[data-block-id="${block.block_id}"]`);
+            if (targetBlk) targetBlk.classList.add('is-focused');
+        }
+
+        // Populate Drawer Header & Status
         drawerLotNumber.textContent = lot.lot_number;
         drawerStatusText.textContent = lot.status;
 
@@ -2133,6 +2215,7 @@
             'Occupied': 'var(--lot-occupied)',
             'Unavailable': 'var(--lot-unavailable)',
             'Under Maintenance': 'var(--lot-unavailable)',
+            'Expired': 'var(--lot-expired, #a855f7)',
         };
         drawerStatusDot.style.background = statusColors[lot.status] || 'var(--lot-unavailable)';
 
@@ -2172,6 +2255,9 @@
             btnLotUnavailable.style.display = 'inline-flex';
             btnLotUnavailable.innerHTML = `<i class="fas fa-lock"></i> Lot is ${escapeHtml(lot.status)}`;
         }
+
+        // Batch 4: Load and Display Occupancy / Decedent Information
+        loadOccupancyDetails(lot, block);
 
         // Batch 6: Populate On-Map Location Summary HUD
         if (mapLocationSummaryCard) {
@@ -2237,6 +2323,189 @@
     }
 
     /**
+     * Batch 4: Load and Render Lot Occupancy & Decedent Information
+     * Handles Available, Reserved, Occupied, Expired, and Unavailable states
+     * Strict privacy rules: no contact info or unredacted personal credentials displayed.
+     */
+    async function loadOccupancyDetails(lot, block) {
+        if (!drawerOccupancyCard) return;
+
+        state.selectionCounter = (state.selectionCounter || 0) + 1;
+        const thisSelectionId = state.selectionCounter;
+
+        const status = lot.status || 'Available';
+        const statusClass = status.toLowerCase().replace(/\s+/g, '-');
+
+        // Reset badge & card class
+        drawerOccupancyCard.className = `drawer-section-card occupancy-card is-${statusClass}`;
+        if (drawerOccupancyBadge) {
+            drawerOccupancyBadge.className = `badge-occupancy-status status--${statusClass}`;
+            drawerOccupancyBadge.textContent = status;
+        }
+
+        // Hide loading, error, empty, decedent details initially
+        if (drawerOccupancyLoading) drawerOccupancyLoading.style.display = 'none';
+        if (drawerOccupancyError) drawerOccupancyError.style.display = 'none';
+        if (drawerDecedentDetails) drawerDecedentDetails.style.display = 'none';
+        if (drawerOccupancyEmpty) drawerOccupancyEmpty.style.display = 'none';
+        if (drawerOccupancyDesc) drawerOccupancyDesc.style.display = 'block';
+
+        if (status === 'Available') {
+            if (drawerOccupancyDesc) {
+                drawerOccupancyDesc.textContent = 'This lot is currently available for immediate reservation and interment booking.';
+            }
+            return;
+        }
+
+        if (status === 'Expired') {
+            if (drawerOccupancyDesc) {
+                drawerOccupancyDesc.textContent = 'The lease agreement for this plot has expired. Subject to renewal or reclamation per municipal memorial guidelines.';
+            }
+            return;
+        }
+
+        if (status === 'Unavailable' || status === 'Under Maintenance') {
+            if (drawerOccupancyDesc) {
+                drawerOccupancyDesc.textContent = 'This lot is currently designated offline or undergoing maintenance work.';
+            }
+            return;
+        }
+
+        // Status is Occupied or Reserved -> Fetch detailed decedent/occupancy records
+        if (lot._detailedInfo) {
+            renderOccupancyData(lot._detailedInfo, status);
+            return;
+        }
+
+        // Show loading state while fetching from API
+        if (drawerOccupancyLoading) drawerOccupancyLoading.style.display = 'flex';
+        if (drawerOccupancyDesc) drawerOccupancyDesc.style.display = 'none';
+
+        try {
+            const res = await api.request(`lots/${lot.lot_id}`, { method: 'GET' });
+            
+            // Check race condition (user may have clicked another lot before response returned)
+            if (thisSelectionId !== state.selectionCounter) {
+                return;
+            }
+
+            if (drawerOccupancyLoading) drawerOccupancyLoading.style.display = 'none';
+
+            if (res && !res.error) {
+                lot._detailedInfo = res;
+                renderOccupancyData(res, status);
+            } else {
+                showOccupancyError();
+            }
+        } catch (err) {
+            if (thisSelectionId === state.selectionCounter) {
+                if (drawerOccupancyLoading) drawerOccupancyLoading.style.display = 'none';
+                showOccupancyError();
+            }
+        }
+    }
+
+    function showOccupancyError() {
+        if (drawerOccupancyError) drawerOccupancyError.style.display = 'flex';
+        if (drawerOccupancyDesc) drawerOccupancyDesc.style.display = 'none';
+        if (drawerDecedentDetails) drawerDecedentDetails.style.display = 'none';
+        if (drawerOccupancyEmpty) drawerOccupancyEmpty.style.display = 'none';
+    }
+
+    function renderOccupancyData(data, status) {
+        if (drawerOccupancyDesc) drawerOccupancyDesc.style.display = 'block';
+
+        if (status === 'Reserved') {
+            const schedDate = data.schedule_date ? formatDate(data.schedule_date) : null;
+            if (drawerOccupancyDesc) {
+                drawerOccupancyDesc.textContent = schedDate 
+                    ? `This lot is currently reserved with a scheduled ceremony on ${schedDate}.`
+                    : 'This lot currently has an active reservation in place.';
+            }
+            return;
+        }
+
+        if (status === 'Occupied') {
+            const hasDecedent = data.occupant_name || data.decedent_id;
+            if (hasDecedent) {
+                if (drawerOccupancyDesc) {
+                    drawerOccupancyDesc.textContent = 'This lot is interred and maintained under active cemetery perpetual care records.';
+                }
+                if (drawerDecedentDetails) {
+                    drawerDecedentDetails.style.display = 'flex';
+                    if (drawerOccupantName) drawerOccupantName.textContent = data.occupant_name || 'Registered Decedent';
+                    
+                    if (drawerDobRow && drawerOccupantDob) {
+                        const dobFormatted = formatDate(data.dob);
+                        if (dobFormatted) {
+                            drawerOccupantDob.textContent = dobFormatted;
+                            drawerDobRow.style.display = 'flex';
+                        } else {
+                            drawerDobRow.style.display = 'none';
+                        }
+                    }
+
+                    if (drawerDodRow && drawerOccupantDod) {
+                        const dodFormatted = formatDate(data.dod);
+                        if (dodFormatted) {
+                            drawerOccupantDod.textContent = dodFormatted;
+                            drawerDodRow.style.display = 'flex';
+                        } else {
+                            drawerDodRow.style.display = 'none';
+                        }
+                    }
+
+                    if (drawerBurialRow && drawerOccupantBurialDate) {
+                        const burialDate = formatDate(data.lease_start_date || data.schedule_date);
+                        if (burialDate) {
+                            drawerOccupantBurialDate.textContent = burialDate;
+                            drawerBurialRow.style.display = 'flex';
+                        } else {
+                            drawerBurialRow.style.display = 'none';
+                        }
+                    }
+
+                    if (drawerDispositionRow && drawerOccupantDisposition) {
+                        drawerOccupantDisposition.textContent = (data.is_cremated == 1) 
+                            ? 'Cremated Remains (Niche / Urn Vault)'
+                            : 'Casket Ground Interment';
+                        drawerDispositionRow.style.display = 'flex';
+                    }
+                }
+            } else {
+                if (drawerOccupancyDesc) {
+                    drawerOccupancyDesc.textContent = 'This lot is designated as Occupied in cemetery records.';
+                }
+                if (drawerOccupancyEmpty) {
+                    drawerOccupancyEmpty.style.display = 'flex';
+                }
+            }
+        }
+    }
+
+    /**
+     * Date Formatting Helper (YYYY-MM-DD to readable format without timezone shifts)
+     */
+    function formatDate(dateStr) {
+        if (!dateStr || dateStr === '0000-00-00' || dateStr === 'null') return null;
+        try {
+            const parts = String(dateStr).split(' ')[0].split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const day = parseInt(parts[2], 10);
+                const d = new Date(year, month, day);
+                if (!isNaN(d.getTime())) {
+                    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                }
+            }
+            return dateStr;
+        } catch (e) {
+            return dateStr;
+        }
+    }
+
+    /**
      * Center SVG viewport on the currently selected lot (Batch 6)
      */
     function centerOnSelectedLot() {
@@ -2268,6 +2537,12 @@
         state.selectedLot = null;
         lotDetailsDrawer.classList.remove('is-open');
         lotDetailsDrawer.setAttribute('aria-hidden', 'true');
+        if (mapSelectionLayer) {
+            mapSelectionLayer.innerHTML = '';
+        }
+        document.querySelectorAll('.svg-block-card.is-focused').forEach(el => {
+            el.classList.remove('is-focused');
+        });
         if (mapLocationSummaryCard) {
             mapLocationSummaryCard.style.display = 'none';
         }
