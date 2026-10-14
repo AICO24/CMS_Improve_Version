@@ -685,7 +685,7 @@
      */
     function formatCurrency(amount) {
         const num = parseFloat(amount) || 0;
-        return '₱' + num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return 'â‚±' + num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     /**
@@ -1075,6 +1075,56 @@
     }
 
     /**
+     * Ensure SVG patterns, gradients and filters needed for master plan are defined
+     */
+    function ensureMasterPlanDefs() {
+        const svg = document.getElementById('cemeteryMapSvg');
+        if (!svg) return;
+        let defs = svg.querySelector('defs');
+        if (!defs) {
+            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            svg.insertBefore(defs, svg.firstChild);
+        }
+        if (!document.getElementById('mpGrassSpeckle')) {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+            g.setAttribute('id', 'mpGrassSpeckle');
+            g.setAttribute('width', '24');
+            g.setAttribute('height', '24');
+            g.setAttribute('patternUnits', 'userSpaceOnUse');
+            g.innerHTML = '<circle cx="4" cy="4" r="0.8" fill="rgba(0,0,0,0.04)"/><circle cx="16" cy="12" r="0.8" fill="rgba(255,255,255,0.06)"/><circle cx="10" cy="20" r="0.7" fill="rgba(0,0,0,0.03)"/>';
+            defs.appendChild(g);
+        }
+        if (!document.getElementById('mpPaverPattern')) {
+            const p = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+            p.setAttribute('id', 'mpPaverPattern');
+            p.setAttribute('width', '10');
+            p.setAttribute('height', '10');
+            p.setAttribute('patternUnits', 'userSpaceOnUse');
+            p.innerHTML = '<path d="M 0 5 L 10 5 M 5 0 L 5 10" stroke="rgba(0,0,0,0.09)" stroke-width="0.75" fill="none"/>';
+            defs.appendChild(p);
+        }
+        if (!document.getElementById('mpLawnStripes')) {
+            const l = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+            l.setAttribute('id', 'mpLawnStripes');
+            l.setAttribute('width', '24');
+            l.setAttribute('height', '24');
+            l.setAttribute('patternTransform', 'rotate(45)');
+            l.setAttribute('patternUnits', 'userSpaceOnUse');
+            l.innerHTML = '<rect width="12" height="24" fill="rgba(255,255,255,0.035)"/><rect x="12" width="12" height="24" fill="rgba(0,0,0,0.025)"/>';
+            defs.appendChild(l);
+        }
+        if (!document.getElementById('mpMowStripes')) {
+            const m = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+            m.setAttribute('id', 'mpMowStripes');
+            m.setAttribute('width', '6');
+            m.setAttribute('height', '6');
+            m.setAttribute('patternUnits', 'userSpaceOnUse');
+            m.innerHTML = '<rect width="3" height="6" fill="rgba(255,255,255,0.03)"/><rect x="3" width="3" height="6" fill="rgba(0,0,0,0.02)"/>';
+            defs.appendChild(m);
+        }
+    }
+
+    /**
      * Render Cemetery Overview SVG (Sections & Blocks)
      */
     function renderCemeteryOverview(layoutData) {
@@ -1090,643 +1140,993 @@
         const sections = layoutData.sections || [];
         const canvasW = state.baseViewBox.width;
         const canvasH = state.baseViewBox.height;
+// =====================================================================
+// CONTINUOUS GEOGRAPHIC CEMETERY MASTER PLAN
+// Road-first geometry: Road network carves the continuous site into
+// geographic land parcels. Pathways carve parcels into block terraces.
+// Realistic burial plots with headstones sit naturally on lawn grass.
+// No dashboard cards, no box-inside-box.
+// =====================================================================
 
-        // ==========================================
-        // LAYER 0: Ground Background, Landscaping & External Road
-        // ==========================================
-        // 1. Base Landscaped Lawn Ground
-        const groundRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        groundRect.setAttribute('x', '30');
-        groundRect.setAttribute('y', '25');
-        groundRect.setAttribute('width', '1540');
-        groundRect.setAttribute('height', '920');
-        groundRect.setAttribute('rx', '24');
-        groundRect.setAttribute('class', 'svg-cemetery-ground');
-        mapGroundLayer.appendChild(groundRect);
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const mk = (tag, attrs, parent) => {
+    const el = document.createElementNS(SVG_NS, tag);
+    if (attrs) Object.keys(attrs).forEach(k => el.setAttribute(k, attrs[k]));
+    if (parent) parent.appendChild(el);
+    return el;
+};
+const f1 = (n) => Math.round(n * 10) / 10;
 
-        // 2. Subtle lawn texture pattern overlay
-        const groundPattern = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        groundPattern.setAttribute('x', '30');
-        groundPattern.setAttribute('y', '25');
-        groundPattern.setAttribute('width', '1540');
-        groundPattern.setAttribute('height', '920');
-        groundPattern.setAttribute('rx', '24');
-        groundPattern.setAttribute('class', 'svg-cemetery-ground-texture');
-        mapGroundLayer.appendChild(groundPattern);
+ensureMasterPlanDefs();
 
-        // 3. External Road Context (P. Aquino Avenue / Letre Road)
-        const extRoadGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        extRoadGroup.setAttribute('class', 'svg-external-road-group');
-        extRoadGroup.innerHTML = `
-            <rect x="10" y="955" width="1580" height="40" rx="4" class="svg-external-road" />
-            <line x1="15" y1="975" x2="1585" y2="975" class="svg-road-centerline-yellow" />
-            <text x="380" y="979" class="svg-external-road-label">P. AQUINO AVENUE / LETRE ROAD (MAIN EXTERNAL ACCESS)</text>
-            <text x="1220" y="979" class="svg-external-road-label">P. AQUINO AVENUE / LETRE ROAD (WESTBOUND)</text>
-            <!-- Ingress Directional Chevrons -->
-            <polygon points="775,980 785,975 775,970" fill="var(--map-road-line-yellow, #f59e0b)" />
-            <polygon points="825,970 815,975 825,980" fill="var(--map-road-line-yellow, #f59e0b)" />
-            <text x="800" y="988" font-size="8" font-weight="800" letter-spacing="0.1em" fill="var(--map-road-line-yellow, #f59e0b)" text-anchor="middle" font-family="var(--font-sans)">MAIN ENTRANCE APPROACH</text>
-        `;
-        mapGroundLayer.appendChild(extRoadGroup);
+// Deterministic landscaping generator
+let mpSeed = 4242;
+const rnd = () => { mpSeed = (mpSeed * 9301 + 49297) % 233280; return mpSeed / 233280; };
 
-        // 4. Perimeter Tree Clusters & Landscaping
-        const landscapeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        landscapeGroup.setAttribute('class', 'svg-landscaping-group');
-        
-        const addTree = (cx, cy, r = 12) => {
-            const treeEl = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            treeEl.setAttribute('class', 'svg-tree-item');
-            treeEl.innerHTML = `
-                <circle cx="${cx + 1}" cy="${cy + 2}" r="${r}" class="svg-tree-shadow" />
-                <circle cx="${cx}" cy="${cy}" r="${r}" class="svg-tree-canopy" />
-            `;
-            landscapeGroup.appendChild(treeEl);
+const TREE_PALETTES = [
+    ['#23471e', '#3b702f', '#73b054'],
+    ['#2c5324', '#4b8538', '#8ec46b'],
+    ['#1d3b19', '#326127', '#649e47'],
+    ['#315a28', '#559441', '#9dd17b']
+];
+
+const treeSvg = (cx, cy, r, v = 0) => {
+    const p = TREE_PALETTES[Math.abs(v) % TREE_PALETTES.length];
+    return `<circle cx="${f1(cx + r * 0.28)}" cy="${f1(cy + r * 0.35)}" r="${f1(r)}" class="mp-tree-shadow"/>` +
+        `<circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r)}" fill="${p[0]}"/>` +
+        `<circle cx="${f1(cx - r * 0.14)}" cy="${f1(cy - r * 0.14)}" r="${f1(r * 0.72)}" fill="${p[1]}"/>` +
+        `<circle cx="${f1(cx - r * 0.3)}" cy="${f1(cy - r * 0.3)}" r="${f1(r * 0.36)}" fill="${p[2]}"/>`;
+};
+
+const shrubSvg = (cx, cy, r) =>
+    `<circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r)}" fill="#386b2b"/>` +
+    `<circle cx="${f1(cx - r * 0.25)}" cy="${f1(cy - r * 0.25)}" r="${f1(r * 0.5)}" fill="#7bb554"/>`;
+
+const treeLine = (x1, y1, x2, y2, step, rMin, rMax, jitter = 1.2) => {
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    const n = Math.max(1, Math.floor(len / step));
+    let out = '';
+    for (let i = 0; i <= n; i++) {
+        const t = i / n;
+        const x = x1 + (x2 - x1) * t + (rnd() - 0.5) * jitter * 2;
+        const y = y1 + (y2 - y1) * t + (rnd() - 0.5) * jitter * 2;
+        out += treeSvg(x, y, rMin + rnd() * (rMax - rMin), Math.floor(rnd() * 4));
+    }
+    return out;
+};
+
+const shrubLine = (x1, y1, x2, y2, step, r) => {
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    const n = Math.max(1, Math.floor(len / step));
+    let out = '';
+    for (let i = 0; i <= n; i++) {
+        const t = i / n;
+        out += shrubSvg(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t, r * (0.85 + rnd() * 0.3));
+    }
+    return out;
+};
+
+const treeCluster = (cx, cy, count, spread, rMin, rMax) => {
+    let out = '';
+    for (let i = 0; i < count; i++) {
+        const a = rnd() * Math.PI * 2;
+        const d = Math.sqrt(rnd()) * spread;
+        out += treeSvg(cx + Math.cos(a) * d, cy + Math.sin(a) * d, rMin + rnd() * (rMax - rMin), Math.floor(rnd() * 4));
+    }
+    return out;
+};
+
+// Floating map label pill (reference style)
+const pillSvg = (cx, cy, text, icon, variant) => {
+    const w = Math.round(text.length * 6.2 + (icon ? 30 : 20));
+    const x = cx - w / 2;
+    return `<g class="mp-pill mp-pill--${variant}">` +
+        `<rect x="${f1(x)}" y="${f1(cy - 11)}" width="${w}" height="22" rx="6" class="mp-pill-bg"/>` +
+        (icon ? `<text x="${f1(x + 12)}" y="${f1(cy + 3.6)}" class="mp-pill-icon">${icon}</text>` : '') +
+        `<text x="${f1(cx + (icon ? 7 : 0))}" y="${f1(cy + 3.4)}" class="mp-pill-text">${text}</text>` +
+        `</g>`;
+};
+
+// Spatial Site Plan Dimensions (1600 x 1000 Canvas)
+const PROP = { x: 36, y: 30, w: 1528, h: 875 }; // Property wall bounds (bottom = 905)
+
+// Road Network Reference Coordinates
+const RD = {
+    west: 95,
+    east: 1505,
+    spine: 800,
+    north: 80,
+    promenade: 300,
+    mainCross: 545,
+    southService: 865,
+    accW: 515,
+    accE: 1085
+};
+
+// ==========================================
+// LAYER 0: Canvas Background, Frontage Road & Continuous Property Lawn
+// ==========================================
+mk('rect', { x: 0, y: 0, width: canvasW, height: canvasH, class: 'mp-surround' }, mapGroundLayer);
+mk('rect', { x: 0, y: 0, width: canvasW, height: canvasH, fill: 'url(#mpGrassSpeckle)', class: 'mp-texture' }, mapGroundLayer);
+
+// Outer Perimeter Landscaping (Outside Wall)
+const outerFringe = mk('g', { class: 'mp-trees mp-trees--outer', 'aria-hidden': 'true' }, mapGroundLayer);
+outerFringe.innerHTML =
+    treeLine(10, 10, 1590, 10, 20, 8, 11, 2) +
+    treeLine(12, 35, 12, 890, 20, 8, 11, 1.5) +
+    treeLine(1588, 35, 1588, 890, 20, 8, 11, 1.5) +
+    treeLine(10, 988, 620, 988, 22, 8, 11, 1.5) +
+    treeLine(980, 988, 1590, 988, 22, 8, 11, 1.5);
+
+// P. Aquino Avenue (Letre Road) Frontage
+const frontage = mk('g', { class: 'svg-external-road-group mp-frontage' }, mapGroundLayer);
+let crosswalkBars = '';
+for (let cy = 918; cy < 962; cy += 6) {
+    crosswalkBars += `<rect x="780" y="${cy}" width="40" height="3.2" class="mp-crosswalk"/>`;
+}
+frontage.innerHTML = `
+    <rect x="0" y="906" width="${canvasW}" height="9" class="mp-sidewalk"/>
+    <rect x="0" y="915" width="${canvasW}" height="50" class="mp-ext-road"/>
+    <line x1="0" y1="916.5" x2="${canvasW}" y2="916.5" class="mp-ext-edge"/>
+    <line x1="0" y1="963.5" x2="${canvasW}" y2="963.5" class="mp-ext-edge"/>
+    <line x1="0" y1="940" x2="${canvasW}" y2="940" class="mp-ext-centerline"/>
+    ${crosswalkBars}
+    <rect x="0" y="965" width="${canvasW}" height="9" class="mp-sidewalk"/>
+    <text x="320" y="931" class="mp-ext-lane-label">◂  WESTBOUND</text>
+    <text x="1280" y="953" class="mp-ext-lane-label">EASTBOUND  ▸</text>
+    ${pillSvg(800, 986, '⟵   P. AQUINO AVENUE (LETRE ROAD)   ⟶', '', 'road')}
+`;
+
+// North Boundary Caption
+const northLabel = mk('text', { x: 800, y: 20, class: 'mp-north-label' }, mapGroundLayer);
+northLabel.textContent = 'NORTH BOUNDARY';
+
+// One Continuous Cemetery Property Lawn
+mk('rect', { x: PROP.x, y: PROP.y, width: PROP.w, height: PROP.h, rx: 16, class: 'svg-cemetery-ground mp-property' }, mapGroundLayer);
+mk('rect', { x: PROP.x, y: PROP.y, width: PROP.w, height: PROP.h, rx: 16, fill: 'url(#mpGrassSpeckle)', class: 'mp-texture' }, mapGroundLayer);
+
+// ==========================================
+// LAYER: Perimeter Wall, Posts & Green Buffer
+// ==========================================
+mk('rect', { x: PROP.x, y: PROP.y, width: PROP.w, height: PROP.h, rx: 16, class: 'mp-wall' }, mapBoundaryLayer);
+mk('rect', { x: PROP.x + 3.5, y: PROP.y + 3.5, width: PROP.w - 7, height: PROP.h - 7, rx: 13, class: 'mp-wall-inner' }, mapBoundaryLayer);
+
+let wallPosts = '';
+for (let px = PROP.x + 40; px < PROP.x + PROP.w - 20; px += 56) {
+    wallPosts += `<rect x="${px - 2.5}" y="${PROP.y - 2.5}" width="5" height="5" class="mp-wall-post"/>`;
+    if (px < 750 || px > 850) {
+        wallPosts += `<rect x="${px - 2.5}" y="${PROP.y + PROP.h - 2.5}" width="5" height="5" class="mp-wall-post"/>`;
+    }
+}
+for (let py = PROP.y + 40; py < PROP.y + PROP.h - 20; py += 56) {
+    wallPosts += `<rect x="${PROP.x - 2.5}" y="${py - 2.5}" width="5" height="5" class="mp-wall-post"/>`;
+    wallPosts += `<rect x="${PROP.x + PROP.w - 2.5}" y="${py - 2.5}" width="5" height="5" class="mp-wall-post"/>`;
+}
+const postG = mk('g', { class: 'mp-wall-posts', 'aria-hidden': 'true' }, mapBoundaryLayer);
+postG.innerHTML = wallPosts;
+
+// Dense Perimeter Tree Buffer (lining the inside of the wall)
+const perimeterTrees = mk('g', { class: 'svg-landscaping-group mp-trees', 'aria-hidden': 'true' }, mapBoundaryLayer);
+perimeterTrees.innerHTML =
+    treeLine(54, 52, 1546, 52, 21, 9, 12, 1.5) +
+    treeLine(56, 75, 56, 860, 21, 9, 12, 1.5) +
+    treeLine(1544, 75, 1544, 860, 21, 9, 12, 1.5) +
+    treeLine(52, 888, 740, 888, 16, 6, 7.5, 0.8) +
+    treeLine(860, 888, 1548, 888, 16, 6, 7.5, 0.8);
+
+// ==========================================
+// LAYER 1: ROAD-FIRST GEOMETRY (The Structural Skeleton of the Map)
+// ==========================================
+// Continuous connected roads that define and carve out all cemetery parcels:
+const roads = [
+    // 1. Central Boulevard Spine: from P. Aquino Ave -> Main Gate -> North Boundary
+    { d: `M ${RD.spine} 915 V ${RD.north}`, w: 30, main: true },
+    // 2. Main Cross Boulevard (Avenue of Peace): separates burial grounds from amenities campus
+    { d: `M ${RD.west} ${RD.mainCross} H ${RD.east}`, w: 26, main: true },
+    // 3. Internal Promenade: separates North sections from Mid sections
+    { d: `M ${RD.west} ${RD.promenade} H ${RD.east}`, w: 20 },
+    // 4. North Boundary Road: along north perimeter
+    { d: `M ${RD.west} ${RD.north} H ${RD.east}`, w: 18 },
+    // 5. Outer West Ring Road: connects north to south along west perimeter
+    { d: `M ${RD.west} ${RD.north} V ${RD.mainCross} V ${RD.southService}`, w: 18 },
+    // 6. Outer East Ring Road: connects north to south along east perimeter
+    { d: `M ${RD.east} ${RD.north} V ${RD.mainCross} V ${RD.southService}`, w: 18 },
+    // 7. Mid-West Section Access Road (divides Section B from Section A)
+    { d: `M ${RD.accW} ${RD.promenade} V ${RD.mainCross}`, w: 15 },
+    // 8. Mid-East Section Access Road (divides Section A from Section E)
+    { d: `M ${RD.accE} ${RD.promenade} V ${RD.mainCross}`, w: 15 },
+    // 9. South Service Road (access behind Chapel, Parking, Crematorium, Columbarium)
+    { d: `M ${RD.west} ${RD.southService} H ${RD.east}`, w: 15 },
+    // 10. Parking Driveways
+    { d: `M 730 670 H ${RD.spine}`, w: 16 },
+    { d: `M 730 805 H ${RD.spine}`, w: 16 },
+    // 11. Crematorium Driveway / Porte-Cochere Connector
+    { d: `M ${RD.spine} 745 H 960`, w: 15 }
+];
+
+// Pedestrian Walkways connecting landmarks, roads, and block parcels
+const primaryPaths = [
+    `M 235 558 V 615`, `M 235 750 V 858`,                      // Chapel north/south walks
+    `M 990 558 V 615`,                                          // Crematorium north walk
+    `M ${RD.spine + 15} 805 H 1220`,                            // Spine to Columbarium radial walk
+    `M 1325 558 V 635`,                                         // Cross road to Columbarium
+    `M 1445 558 V 595`, `M 1445 640 V 685 L 1400 700`,         // Comfort room walks
+    `M 1325 850 V 858`                                          // Columbarium south walk
+];
+
+const roadG = mk('g', { class: 'svg-road-network mp-roads' }, mapRoadLayer);
+let pathUnder = '', pathFill = '', roadCurbs = '', roadAsphalt = '', roadStripes = '';
+
+primaryPaths.forEach(d => {
+    pathUnder += `<path d="${d}" class="mp-path-edge"/>`;
+    pathFill += `<path d="${d}" class="mp-path"/>`;
+});
+
+roads.forEach(r => {
+    roadCurbs += `<path d="${r.d}" class="mp-road-curb" stroke-width="${r.w + 6}"/>`;
+    roadAsphalt += `<path d="${r.d}" class="mp-road${r.main ? ' mp-road--main' : ''}" stroke-width="${r.w}"/>`;
+    if (r.main) {
+        roadStripes += `<path d="${r.d}" class="mp-road-line"/>`;
+    }
+});
+
+roadG.innerHTML = pathUnder + pathFill + roadCurbs + roadAsphalt + roadStripes + `
+    <!-- Road Name Annotations -->
+    <text x="320" y="548" class="mp-road-label">MAIN ROAD (AVENUE OF PEACE)</text>
+    <text x="1280" y="548" class="mp-road-label">MAIN ROAD (AVENUE OF PEACE)</text>
+    <text x="803" y="190" class="mp-road-label" transform="rotate(-90 803 190)">MAIN ROAD</text>
+    <text x="803" y="710" class="mp-road-label" transform="rotate(-90 803 710)">MAIN ROAD</text>
+    <text x="440" y="302.5" class="mp-road-label mp-road-label--minor">INTERNAL PROMENADE</text>
+    <text x="1160" y="302.5" class="mp-road-label mp-road-label--minor">INTERNAL PROMENADE</text>
+`;
+
+// Boulevard Trees Lining Main Road
+const boulevardTrees = mk('g', { class: 'mp-trees', 'aria-hidden': 'true' }, mapRoadLayer);
+boulevardTrees.innerHTML =
+    // North spine tree avenue
+    treeLine(766, 95, 766, 285, 24, 7, 8.5, 0.4) +
+    treeLine(834, 95, 834, 285, 24, 7, 8.5, 0.4) +
+    // Mid spine tree avenue (between Section A left/right)
+    treeLine(766, 315, 766, 530, 24, 7, 8.5, 0.4) +
+    treeLine(834, 315, 834, 530, 24, 7, 8.5, 0.4) +
+    // South spine tree avenue (between Parking and Crematorium)
+    treeLine(768, 565, 768, 650, 22, 7, 8.5, 0.4) +
+    treeLine(768, 690, 768, 790, 22, 7, 8.5, 0.4) +
+    treeLine(768, 825, 768, 850, 16, 6.5, 7.5, 0.4) +
+    treeLine(832, 565, 832, 730, 22, 7, 8.5, 0.4) +
+    treeLine(832, 765, 832, 850, 22, 7, 8.5, 0.4);
+
+// ==========================================
+// LAYER 2: SOUTHERN LANDMARK CAMPUS
+// ==========================================
+const campusTrees = mk('g', { class: 'mp-trees', 'aria-hidden': 'true' }, mapLandmarkLayer);
+campusTrees.innerHTML =
+    // Hedge rows along southern curb of Main Road
+    shrubLine(110, 568, 220, 568, 12, 3.5) +
+    shrubLine(250, 568, 380, 568, 12, 3.5) +
+    shrubLine(845, 568, 975, 568, 12, 3.5) +
+    shrubLine(1005, 568, 1310, 568, 12, 3.5) +
+    shrubLine(1340, 568, 1495, 568, 12, 3.5) +
+    // Chapel grounds planting
+    treeCluster(125, 595, 4, 12, 8, 11) +
+    treeCluster(350, 595, 3, 10, 8, 10) +
+    treeCluster(135, 835, 5, 18, 8, 11) +
+    treeCluster(345, 835, 5, 18, 8, 11) +
+    treeLine(388, 580, 388, 850, 23, 8, 10.5, 1) +
+    // Crematorium and columbarium landscaping
+    treeLine(1155, 580, 1155, 790, 24, 8, 10.5, 1.2) +
+    treeLine(865, 840, 1185, 840, 24, 7.5, 9.5, 1) +
+    treeLine(1485, 680, 1485, 850, 24, 8, 10.5, 1) +
+    treeCluster(1430, 815, 4, 16, 7, 10) +
+    treeCluster(1190, 615, 3, 10, 7, 9);
+
+const landmarkGroup = mk('g', { class: 'svg-landmarks-group mp-landmarks' }, mapLandmarkLayer);
+
+// --- Chapel / Office (Southwest Campus) ---
+const chapelFoot = 'M 183 605 H 297 V 636 H 329 V 672 H 297 V 728 H 183 V 672 H 151 V 636 H 183 Z';
+let chapelBeds = '';
+[[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
+    chapelBeds += shrubSvg(235 + sx * 30, 775 + sy * 30, 6);
+});
+landmarkGroup.innerHTML += `
+    <g class="svg-landmark-bldg mp-landmark" data-landmark="chapel" tabindex="0" role="region" aria-label="Chapel and Administration Office">
+        <title>Chapel / Office</title>
+        <!-- Reflection Pond / Fountain Plaza -->
+        <circle cx="235" cy="775" r="36" class="mp-plaza"/>
+        <circle cx="235" cy="775" r="36" fill="url(#mpPaverPattern)" class="mp-texture"/>
+        <circle cx="235" cy="775" r="18" class="mp-water-rim"/>
+        <circle cx="235" cy="775" r="14" class="mp-water"/>
+        <circle cx="235" cy="775" r="5" class="mp-water-jet"/>
+        ${chapelBeds}
+        <rect x="221" y="728" width="28" height="14" rx="2" class="mp-plaza"/>
+        <!-- Building Shadow & Footprint -->
+        <path d="${chapelFoot}" transform="translate(5 6)" class="mp-bldg-shadow"/>
+        <path d="${chapelFoot}" class="mp-bldg-wall"/>
+        <!-- Pitched Roof Faces -->
+        <rect x="184" y="606" width="55" height="121" fill="#6a8fbb"/>
+        <rect x="239" y="606" width="57" height="121" fill="#4b6f99"/>
+        <rect x="152" y="637" width="176" height="17" fill="#7499c4"/>
+        <rect x="152" y="654" width="176" height="17" fill="#55799f"/>
+        <line x1="239" y1="606" x2="239" y2="727" class="mp-roof-ridge"/>
+        <line x1="152" y1="654" x2="328" y2="654" class="mp-roof-ridge"/>
+        <!-- Admin Wing -->
+        <rect x="302" y="684" width="50" height="42" rx="2" class="mp-bldg-wall"/>
+        <rect x="304" y="686" width="46" height="38" fill="#8aa1bd"/>
+        <line x1="304" y1="705" x2="350" y2="705" class="mp-roof-ridge mp-roof-ridge--thin"/>
+        <!-- Ceremonial Cross on Apex -->
+        <line x1="239" y1="612" x2="239" y2="628" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+        <line x1="233" y1="617.5" x2="245" y2="617.5" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+        ${pillSvg(240, 696, 'Chapel / Office', '✝', 'navy')}
+    </g>
+`;
+
+// --- Visitor Parking Area (South-Center-Left) ---
+let parking = '';
+const stallRows = [
+    { top: 596, bottom: 642 },
+    { top: 690, bottom: 734 },
+    { top: 746, bottom: 790 }
+];
+const carColors = ['#e5e7eb', '#94a3b8', '#1e3a5f', '#9f1239', '#f8fafc', '#334155', '#a16207', '#475569'];
+stallRows.forEach((row, ri) => {
+    for (let k = 0; k <= 14; k++) {
+        const sx = 418 + k * 21;
+        parking += `<line x1="${sx}" y1="${row.top}" x2="${sx}" y2="${row.bottom}" class="mp-parking-stripe"/>`;
+        if (k < 14 && !(ri === 0 && k === 0) && rnd() < 0.44) {
+            const c = carColors[Math.floor(rnd() * carColors.length)];
+            const cy = row.top + 7;
+            parking += `<rect x="${sx + 4}" y="${cy}" width="13" height="28" rx="3.5" fill="${c}" class="mp-car"/>` +
+                `<rect x="${sx + 5.5}" y="${cy + (ri === 1 ? 4 : 18)}" width="10" height="6" rx="1.5" class="mp-car-glass"/>`;
+        }
+    }
+});
+parking += `<line x1="418" y1="734" x2="712" y2="734" class="mp-parking-stripe"/>`;
+parking += `<line x1="418" y1="746" x2="712" y2="746" class="mp-parking-stripe"/>`;
+
+landmarkGroup.innerHTML += `
+    <g class="svg-landmark-bldg mp-landmark" data-landmark="parking" tabindex="0" role="region" aria-label="Visitor Parking Area">
+        <title>Parking Area</title>
+        <rect x="406" y="588" width="328" height="236" rx="8" class="mp-parking-curb"/>
+        <rect x="410" y="592" width="320" height="228" rx="6" class="mp-parking"/>
+        <rect x="418" y="735" width="294" height="10" rx="4" class="mp-parking-median"/>
+        ${shrubLine(426, 740, 704, 740, 24, 3.4)}
+        ${parking}
+        <!-- PWD Accessible Bay -->
+        <rect x="419" y="598" width="20" height="42" rx="1.5" class="mp-parking-pwd"/>
+        <text x="429" y="624" class="mp-parking-pwd-icon">♿</text>
+        <!-- Directional Arrows -->
+        <path d="M 620 668 H 680 M 670 662 L 680 668 L 670 674" class="mp-parking-arrow"/>
+        <path d="M 640 808 H 580 M 590 802 L 580 808 L 590 814" class="mp-parking-arrow"/>
+        ${pillSvg(520, 668, 'Parking Area', 'P', 'navy')}
+    </g>
+`;
+
+// --- Crematorium Facility (South-Center-Right) ---
+landmarkGroup.innerHTML += `
+    <g class="svg-landmark-bldg mp-landmark" data-landmark="crematorium" tabindex="0" role="region" aria-label="Crematorium Facility">
+        <title>Crematorium</title>
+        <rect x="870" y="588" width="260" height="196" rx="8" class="mp-landscape-pad"/>
+        <rect x="886" y="734" width="228" height="40" rx="4" class="mp-plaza"/>
+        <rect x="886" y="734" width="228" height="40" rx="4" fill="url(#mpPaverPattern)" class="mp-texture"/>
+        <rect x="900" y="604" width="194" height="120" transform="translate(5 6)" class="mp-bldg-shadow"/>
+        <rect x="900" y="604" width="194" height="120" class="mp-bldg-wall"/>
+        <!-- Multi-Faceted Hipped Roof -->
+        <polygon points="901,605 1093,605 1048,664 946,664" fill="#c3c9d0"/>
+        <polygon points="901,723 1093,723 1048,664 946,664" fill="#8e97a1"/>
+        <polygon points="901,605 946,664 901,723" fill="#a9b1ba"/>
+        <polygon points="1093,605 1048,664 1093,723" fill="#9aa2ab"/>
+        <line x1="946" y1="664" x2="1048" y2="664" class="mp-roof-ridge"/>
+        <path d="M 901 605 L 946 664 L 901 723 M 1093 605 L 1048 664 L 1093 723" class="mp-roof-hip"/>
+        <rect x="1056" y="614" width="14" height="14" rx="1.5" fill="#6b7280" stroke="#374151" stroke-width="0.8"/>
+        <!-- Porte-Cochere Hearse Drop-Off -->
+        <rect x="955" y="724" width="84" height="22" rx="2" class="mp-bldg-wall"/>
+        <rect x="957" y="726" width="80" height="18" fill="#b8bec6"/>
+        ${pillSvg(995, 686, 'Crematorium', '🔥', 'navy')}
+    </g>
+`;
+
+// --- Columbarium / Ossuary Sanctuary (Far Southeast Campus) ---
+const CX = 1325, CY = 745;
+let colRadials = '', colShrubs = '', colColumns = '';
+for (let a = 0; a < 360; a += 45) {
+    const rad = a * Math.PI / 180;
+    colRadials += `<line x1="${f1(CX + Math.cos(rad) * 40)}" y1="${f1(CY + Math.sin(rad) * 40)}" x2="${f1(CX + Math.cos(rad) * 98)}" y2="${f1(CY + Math.sin(rad) * 98)}" class="mp-path-ring"/>`;
+    const rad2 = (a + 22.5) * Math.PI / 180;
+    colShrubs += treeSvg(CX + Math.cos(rad2) * 75, CY + Math.sin(rad2) * 75, 6.5, a / 45);
+}
+for (let a = 0; a < 360; a += 30) {
+    const rad = a * Math.PI / 180;
+    colColumns += `<circle cx="${f1(CX + Math.cos(rad) * 33)}" cy="${f1(CY + Math.sin(rad) * 33)}" r="2.1" class="mp-column"/>`;
+}
+landmarkGroup.innerHTML += `
+    <g class="svg-landmark-bldg mp-landmark" data-landmark="columbarium" tabindex="0" role="region" aria-label="Columbarium and Ossuary Sanctuary">
+        <title>Columbarium / Ossuary</title>
+        <!-- Concentric Garden Hedge Rings and Radial Pathways -->
+        <circle cx="${CX}" cy="${CY}" r="105" class="mp-garden-hedge"/>
+        <circle cx="${CX}" cy="${CY}" r="99" class="mp-garden-lawn"/>
+        <circle cx="${CX}" cy="${CY}" r="88" class="mp-path-ring mp-path-ring--wide"/>
+        <circle cx="${CX}" cy="${CY}" r="62" class="mp-flower-ring"/>
+        ${colRadials}
+        ${colShrubs}
+        <!-- Multi-Tier Circular Rotunda Memorial Pavilion -->
+        <circle cx="${CX}" cy="${CY}" r="46" class="mp-plaza"/>
+        <circle cx="${CX + 4}" cy="${CY + 5}" r="38" class="mp-bldg-shadow"/>
+        <circle cx="${CX}" cy="${CY}" r="38" class="mp-bldg-wall"/>
+        ${colColumns}
+        <circle cx="${CX}" cy="${CY}" r="26" fill="#7c5cc4" stroke="#4c2f91" stroke-width="1.6"/>
+        <circle cx="${CX - 5}" cy="${CY - 5}" r="13" fill="#9d84dc" opacity="0.7"/>
+        <circle cx="${CX}" cy="${CY}" r="5" fill="#fbbf24" stroke="#b45309" stroke-width="1"/>
+        ${pillSvg(CX, CY + 66, 'Columbarium / Ossuary', '🏛', 'purple')}
+    </g>
+`;
+
+// --- Comfort Room Facility (East Campus) ---
+landmarkGroup.innerHTML += `
+    <g class="svg-landmark-bldg mp-landmark" data-landmark="restroom" tabindex="0" role="region" aria-label="Public Comfort Room Facility">
+        <title>Comfort Room</title>
+        <rect x="1414" y="594" width="76" height="44" transform="translate(4 5)" class="mp-bldg-shadow"/>
+        <rect x="1414" y="594" width="76" height="44" rx="2" class="mp-bldg-wall"/>
+        <rect x="1417" y="597" width="70" height="38" fill="#7fa7c9"/>
+        <line x1="1417" y1="616" x2="1487" y2="616" class="mp-roof-ridge mp-roof-ridge--thin"/>
+        <rect x="1446" y="635" width="12" height="4" fill="#5b4636"/>
+        ${pillSvg(1452, 656, 'Comfort Room', '🚻', 'teal')}
+    </g>
+`;
+
+// --- Main Gate Entrance Portal (Directly Connected to P. Aquino Avenue) ---
+landmarkGroup.innerHTML += `
+    <g class="svg-gate-portal mp-gate" data-landmark="gate" tabindex="0" role="region" aria-label="Main Gate">
+        <title>Main Gate — P. Aquino Avenue (Letre Road)</title>
+        <rect x="760" y="878" width="80" height="26" class="mp-gate-apron"/>
+        <rect x="760" y="878" width="80" height="26" fill="url(#mpPaverPattern)" class="mp-texture"/>
+        <rect x="764" y="879" width="12" height="24" rx="1.5" class="mp-gate-pillar"/>
+        <rect x="762" y="877" width="16" height="5" rx="1" class="mp-gate-cap"/>
+        <rect x="824" y="879" width="12" height="24" rx="1.5" class="mp-gate-pillar"/>
+        <rect x="822" y="877" width="16" height="5" rx="1" class="mp-gate-cap"/>
+        <path d="M 776 884 Q 800 869 824 884" class="mp-gate-arch"/>
+        <path d="M 776 900 L 789 893 M 824 900 L 811 893" class="mp-gate-leaf"/>
+        <line x1="786" y1="896" x2="814" y2="896" class="mp-gate-boom"/>
+        <!-- Security Sentry Kiosk -->
+        <rect x="844" y="881" width="22" height="18" transform="translate(2 3)" class="mp-bldg-shadow"/>
+        <rect x="844" y="881" width="22" height="18" rx="1.5" class="mp-bldg-wall"/>
+        <rect x="845.5" y="882.5" width="19" height="15" fill="#8b6f5a"/>
+        <line x1="845.5" y1="890" x2="864.5" y2="890" class="mp-roof-ridge mp-roof-ridge--thin"/>
+        <!-- Gate Badge -->
+        <circle cx="800" cy="826" r="11" class="mp-gate-badge"/>
+        <path d="M 794 828 L 800 822 L 806 828 V 832 H 794 Z" fill="#ffffff"/>
+        ${pillSvg(800, 850, 'MAIN GATE', '', 'navy')}
+    </g>
+`;
+
+// --- Compass Rose Indicator (Top-Left, matching reference) ---
+landmarkGroup.innerHTML += `
+    <g class="svg-north-indicator mp-compass" transform="translate(68 68)" aria-hidden="true">
+        <circle r="19" class="mp-compass-bg"/>
+        <polygon points="0,-13 4.5,2 0,0 -4.5,2" fill="#ef4444"/>
+        <polygon points="0,13 4.5,0 0,0 -4.5,0" fill="#cbd5e1"/>
+        <text x="0" y="-4" class="mp-compass-n">N</text>
+    </g>
+`;
+
+// ==========================================
+// LAYER 3 & 4: GEOGRAPHIC SECTION ZONES & NATURAL BLOCK PARCELS
+// ==========================================
+// Sections are geographic land zones sculpted by the road network.
+// Blocks are physical plot terraces separated by pedestrian pathways.
+// Lots sit naturally on the grass with memorial headstones.
+// ==========================================
+
+const count = sections.length;
+
+// Spatial parcel boundaries for the 5 zones in the master plan:
+const ZONES = {
+    c: { id: 'c', x: 106, y: 94, w: 672, h: 194, theme: 'c', defaultName: 'Sanctuario de San Jose', defaultCode: 'SECTION C' },
+    d: { id: 'd', x: 822, y: 94, w: 672, h: 194, theme: 'd', defaultName: 'Everlasting Columbarium & Ossuary', defaultCode: 'SECTION D' },
+    b: { id: 'b', x: 106, y: 312, w: 398, h: 222, theme: 'b', defaultName: 'Garden of Our Lady of Lourdes', defaultCode: 'SECTION B' },
+    a: { id: 'a', x: 526, y: 312, w: 548, h: 222, theme: 'a', defaultName: 'Garden of Everlasting Peace', defaultCode: 'SECTION A', spine: RD.spine },
+    e: { id: 'e', x: 1096, y: 312, w: 398, h: 222, theme: 'e', defaultName: 'Garden Reserve', defaultCode: 'SECTION E' }
+};
+
+const zoneOrder = ['a', 'b', 'c', 'd', 'e'];
+const usedZones = new Set();
+
+function resolveSectionZone(sec) {
+    if (count > 5) return null;
+    const name = (sec.section_name || '').toLowerCase();
+    const bNames = (sec.blocks || []).map(b => (b.block_name || '').toLowerCase()).join(' ');
+    let key = null;
+    if (name.includes('jose') || name.includes('section c') || bNames.includes('c1') || bNames.includes('c2')) key = 'c';
+    else if (name.includes('columbarium') || name.includes('ossuary') || name.includes('section d') || bNames.includes('d1') || bNames.includes('reloc')) key = 'd';
+    else if (name.includes('lourdes') || name.includes('section b') || bNames.includes('b1') || bNames.includes('b2')) key = 'b';
+    else if (name.includes('peace') || name.includes('section a') || bNames.includes('a1') || bNames.includes('a2')) key = 'a';
+    else if (name.includes('section e') || bNames.includes('e1')) key = 'e';
+    if (!key || usedZones.has(key)) key = zoneOrder.find(k => !usedZones.has(k));
+    usedZones.add(key);
+    return ZONES[key];
+}
+
+// Compute block parcel areas inside a section zone.
+// Pathways divide the blocks naturally without card borders!
+function layoutBlockTerraces(blocks, area, spineX) {
+    const n = blocks.length;
+    if (n <= 0) return { parcels: [], walkways: [] };
+
+    const walkWidth = 8; // Width of pedestrian walkway between blocks
+    const margin = 10;   // Margin from section road curb
+    const parcels = [];
+    const walkways = [];
+
+    if (spineX) {
+        // Section A: Symmetrically flanks the central boulevard spine!
+        // Left side of spine: Block A1; Right side of spine: Block A2 (etc.)
+        const spineClearance = 18;
+        const leftBox = {
+            x: area.x + margin,
+            y: area.y + margin + 14,
+            w: (spineX - spineClearance) - (area.x + margin),
+            h: area.h - margin * 2 - 16
+        };
+        const rightBox = {
+            x: spineX + spineClearance,
+            y: area.y + margin + 14,
+            w: (area.x + area.w - margin) - (spineX + spineClearance),
+            h: area.h - margin * 2 - 16
         };
 
-        // North Buffer Trees
-        for (let tx = 80; tx <= 1520; tx += 65) {
-            if (tx < 740 || tx > 860) addTree(tx, 32, 10);
+        if (n === 2) {
+            parcels.push({ ...leftBox, block: blocks[0] });
+            parcels.push({ ...rightBox, block: blocks[1] });
+        } else if (n === 4) {
+            // 2 on left (stacked), 2 on right (stacked)
+            const lh = (leftBox.h - walkWidth) / 2;
+            parcels.push({ x: leftBox.x, y: leftBox.y, w: leftBox.w, h: lh, block: blocks[0] });
+            parcels.push({ x: leftBox.x, y: leftBox.y + lh + walkWidth, w: leftBox.w, h: lh, block: blocks[2] });
+            walkways.push(`M ${leftBox.x} ${leftBox.y + lh + walkWidth / 2} H ${leftBox.x + leftBox.w}`);
+
+            const rh = (rightBox.h - walkWidth) / 2;
+            parcels.push({ x: rightBox.x, y: rightBox.y, w: rightBox.w, h: rh, block: blocks[1] });
+            parcels.push({ x: rightBox.x, y: rightBox.y + rh + walkWidth, w: rightBox.w, h: rh, block: blocks[3] });
+            walkways.push(`M ${rightBox.x} ${rightBox.y + rh + walkWidth / 2} H ${rightBox.x + rightBox.w}`);
+        } else {
+            // General N blocks across spine
+            const cols = 2;
+            const rows = Math.ceil(n / cols);
+            const bh = (leftBox.h - (rows - 1) * walkWidth) / rows;
+            for (let i = 0; i < n; i++) {
+                const isRight = (i % 2 === 1);
+                const r = Math.floor(i / 2);
+                const s = isRight ? rightBox : leftBox;
+                parcels.push({ x: s.x, y: s.y + r * (bh + walkWidth), w: s.w, h: bh, block: blocks[i] });
+                if (r > 0) {
+                    walkways.push(`M ${s.x} ${s.y + r * (bh + walkWidth) - walkWidth / 2} H ${s.x + s.w}`);
+                }
+            }
         }
-        // West Buffer Trees
-        for (let ty = 90; ty <= 820; ty += 60) {
-            if (ty < 430 || ty > 520) addTree(38, ty, 10);
+    } else {
+        // Sections B, C, D, E (Continuous Land Parcel)
+        const innerX = area.x + margin;
+        const innerY = area.y + margin + 14;
+        const innerW = area.w - margin * 2;
+        const innerH = area.h - margin * 2 - 16;
+
+        if (n === 1) {
+            // For a single block inside a wide section (such as Section D),
+            // proportion the block terrace naturally and center it, leaving balanced lawn buffer
+            const blkW = innerW > 500 ? Math.min(innerW, 460) : innerW;
+            const blkX = innerX + (innerW - blkW) / 2;
+            parcels.push({ x: blkX, y: innerY, w: blkW, h: innerH, block: blocks[0] });
+        } else if (n === 2) {
+            // 2 blocks side-by-side (left/right) with a central pedestrian walkway!
+            const bw = (innerW - walkWidth) / 2;
+            parcels.push({ x: innerX, y: innerY, w: bw, h: innerH, block: blocks[0] });
+            parcels.push({ x: innerX + bw + walkWidth, y: innerY, w: bw, h: innerH, block: blocks[1] });
+            walkways.push(`M ${innerX + bw + walkWidth / 2} ${innerY} V ${innerY + innerH}`);
+        } else if (n === 4) {
+            // 2x2 grid with cross walkways
+            const bw = (innerW - walkWidth) / 2;
+            const bh = (innerH - walkWidth) / 2;
+            parcels.push({ x: innerX, y: innerY, w: bw, h: bh, block: blocks[0] });
+            parcels.push({ x: innerX + bw + walkWidth, y: innerY, w: bw, h: bh, block: blocks[1] });
+            parcels.push({ x: innerX, y: innerY + bh + walkWidth, w: bw, h: bh, block: blocks[2] });
+            parcels.push({ x: innerX + bw + walkWidth, y: innerY + bh + walkWidth, w: bw, h: bh, block: blocks[3] });
+            walkways.push(`M ${innerX} ${innerY + bh + walkWidth / 2} H ${innerX + innerW}`);
+            walkways.push(`M ${innerX + bw + walkWidth / 2} ${innerY} V ${innerY + innerH}`);
+        } else {
+            const cols = n <= 3 ? n : Math.ceil(Math.sqrt(n));
+            const rows = Math.ceil(n / cols);
+            const bw = (innerW - (cols - 1) * walkWidth) / cols;
+            const bh = (innerH - (rows - 1) * walkWidth) / rows;
+            for (let i = 0; i < n; i++) {
+                const c = i % cols, r = Math.floor(i / cols);
+                parcels.push({ x: innerX + c * (bw + walkWidth), y: innerY + r * (bh + walkWidth), w: bw, h: bh, block: blocks[i] });
+                if (c > 0) walkways.push(`M ${innerX + c * (bw + walkWidth) - walkWidth / 2} ${innerY} V ${innerY + innerH}`);
+                if (r > 0) walkways.push(`M ${innerX} ${innerY + r * (bh + walkWidth) - walkWidth / 2} H ${innerX + innerW}`);
+            }
         }
-        // East Buffer Trees
-        for (let ty = 90; ty <= 820; ty += 60) {
-            if (ty < 430 || ty > 520) addTree(1562, ty, 10);
-        }
-        // South Garden Trees (flanking gate and facilities)
-        addTree(685, 930, 11);
-        addTree(650, 930, 10);
-        addTree(915, 930, 11);
-        addTree(950, 930, 10);
-        mapGroundLayer.appendChild(landscapeGroup);
+    }
 
-        // 5. Elegant North Compass Badge (top-right corner)
-        const northBadge = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        northBadge.setAttribute('class', 'svg-north-indicator');
-        northBadge.setAttribute('transform', 'translate(1525, 45)');
-        northBadge.innerHTML = `
-            <circle cx="0" cy="0" r="16" fill="var(--map-surface, #ffffff)" stroke="var(--map-border, #cbd5e1)" stroke-width="1.5" filter="url(#tileShadow)" />
-            <polygon points="0,-11 3.5,1.5 0,0 -3.5,1.5" fill="#ef4444" />
-            <polygon points="0,11 3.5,0 0,0 -3.5,0" fill="#94a3b8" />
-            <text x="0" y="-13" font-size="8" font-weight="800" text-anchor="middle" fill="#ef4444" font-family="var(--font-sans)">N</text>
-        `;
-        mapGroundLayer.appendChild(northBadge);
+    return { parcels, walkways };
+}
 
-        // ==========================================
-        // LAYER 0/Boundary: Perimeter & Main Gate Portal
-        // ==========================================
-        // Property Perimeter Boundary Wall
-        const perimeterRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        perimeterRect.setAttribute('x', '30');
-        perimeterRect.setAttribute('y', '25');
-        perimeterRect.setAttribute('width', '1540');
-        perimeterRect.setAttribute('height', '920');
-        perimeterRect.setAttribute('rx', '24');
-        perimeterRect.setAttribute('class', 'svg-cemetery-perimeter');
-        mapBoundaryLayer.appendChild(perimeterRect);
+sections.forEach((section, index) => {
+    const assignedZone = resolveSectionZone(section);
+    const themeCode = assignedZone ? assignedZone.theme : ['a', 'b', 'c', 'd', 'e'][index % 5];
+    const badgeLabel = (section.section_name || assignedZone?.defaultName || assignedZone?.defaultCode || `SECTION ${String.fromCharCode(65 + index)}`).toUpperCase();
 
-        // Architectural Main Gate Portal (Bottom Center: x=710..890, y=912..955)
-        const gateGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        gateGroup.setAttribute('class', 'svg-gate-portal');
-        gateGroup.innerHTML = `
-            <!-- Left Stone Pillar & Cap -->
-            <rect x="715" y="918" width="24" height="34" rx="3" class="svg-gate-pillar" />
-            <rect x="712" y="915" width="30" height="5" rx="1" fill="#334155" />
-            <!-- Right Stone Pillar & Cap -->
-            <rect x="861" y="918" width="24" height="34" rx="3" class="svg-gate-pillar" />
-            <rect x="858" y="915" width="30" height="5" rx="1" fill="#334155" />
-            <!-- Security Sentry Kiosk -->
-            <rect x="696" y="920" width="16" height="28" rx="2" fill="var(--map-surface, #ffffff)" stroke="var(--map-border, #94a3b8)" stroke-width="1.5" />
-            <text x="704" y="938" font-size="7" font-weight="700" text-anchor="middle" fill="var(--map-text-muted, #64748b)" font-family="var(--font-sans)">GUARD</text>
-            <!-- Gate Threshold & Wrought Iron Grille -->
-            <line x1="740" y1="945" x2="860" y2="945" stroke="#334155" stroke-width="3" />
-            <path d="M 740 945 Q 800 925 860 945" class="svg-gate-arch" />
-            <line x1="755" y1="945" x2="755" y2="933" class="svg-gate-grille" />
-            <line x1="770" y1="945" x2="770" y2="929" class="svg-gate-grille" />
-            <line x1="785" y1="945" x2="785" y2="927" class="svg-gate-grille" />
-            <line x1="800" y1="945" x2="800" y2="926" class="svg-gate-grille" />
-            <line x1="815" y1="945" x2="815" y2="927" class="svg-gate-grille" />
-            <line x1="830" y1="945" x2="830" y2="929" class="svg-gate-grille" />
-            <line x1="845" y1="945" x2="845" y2="933" class="svg-gate-grille" />
-            <!-- Prominent Gate Badge Label -->
-            <rect x="735" y="906" width="130" height="22" rx="4" class="svg-gate-label-badge" />
-            <text x="800" y="921" class="svg-gate-label-text">⛩️ MAIN GATE</text>
-        `;
-        mapBoundaryLayer.appendChild(gateGroup);
+    let secX = assignedZone.x;
+    let secY = assignedZone.y;
+    let curSecW = assignedZone.w;
+    let curSecH = assignedZone.h;
+    const spineX = assignedZone.spine || null;
 
-        // ==========================================
-        // LAYER 1: Road & Street Network
-        // ==========================================
-        const roadGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        roadGroup.setAttribute('class', 'svg-road-network');
+    // Custom map_config geometry priority override
+    if (section.map_config && !isNaN(Number(section.map_config.x)) && !isNaN(Number(section.map_config.y)) &&
+        Number(section.map_config.width) > 0 && Number(section.map_config.height) > 0) {
+        secX = Number(section.map_config.x);
+        secY = Number(section.map_config.y);
+        curSecW = Number(section.map_config.width);
+        curSecH = Number(section.map_config.height);
+    }
 
-        // 1. Pedestrian Walkways (Subtle Pavers Framing Sections & Landmarks)
-        roadGroup.innerHTML += `
-            <!-- South Walkway to Chapel & Restrooms -->
-            <rect x="60" y="878" width="700" height="10" rx="3" class="svg-pathway" />
-            <!-- South Walkway to Visitor Parking -->
-            <rect x="840" y="878" width="700" height="10" rx="3" class="svg-pathway" />
-            <!-- NW Section Perimeter Walkway -->
-            <rect x="54" y="74" width="662" height="364" rx="14" fill="none" stroke="var(--map-pathway-stroke, #cbd5e1)" stroke-width="8" stroke-dasharray="6 3" />
-            <!-- NE Section Perimeter Walkway -->
-            <rect x="884" y="74" width="662" height="364" rx="14" fill="none" stroke="var(--map-pathway-stroke, #cbd5e1)" stroke-width="8" stroke-dasharray="6 3" />
-            <!-- SW Section Perimeter Walkway -->
-            <rect x="54" y="506" width="662" height="328" rx="14" fill="none" stroke="var(--map-pathway-stroke, #cbd5e1)" stroke-width="8" stroke-dasharray="6 3" />
-            <!-- SE Section Perimeter Walkway -->
-            <rect x="884" y="506" width="662" height="328" rx="14" fill="none" stroke="var(--map-pathway-stroke, #cbd5e1)" stroke-width="8" stroke-dasharray="6 3" />
-        `;
+    const blocks = section.blocks || [];
 
-        // 2. North Perimeter Road: St. Peter Way
-        roadGroup.innerHTML += `
-            <rect x="45" y="44" width="1510" height="32" rx="5" class="svg-road-secondary" />
-            <line x1="55" y1="60" x2="1545" y2="60" class="svg-road-centerline" />
-            <text x="380" y="56" class="svg-street-label">ST. PETER WAY (NORTH PROMENADE)</text>
-            <text x="1220" y="56" class="svg-street-label">ST. PETER WAY (NORTH PROMENADE)</text>
-        `;
+    const secGroup = mk('g', {
+        class: `svg-section-card mp-section section--theme-${themeCode}`,
+        'data-section-id': section.section_id
+    });
+    const secTitleEl = mk('title', null, secGroup);
+    secTitleEl.textContent = `${section.section_name} — ${blocks.length} Blocks • ${section.total_lots || 0} Lots`;
 
-        // 3. South Access Connector: St. Joseph Drive (Links Chapel, Restrooms, Main Road, Parking)
-        roadGroup.innerHTML += `
-            <rect x="45" y="842" width="1510" height="36" rx="5" class="svg-road-secondary" />
-            <line x1="55" y1="860" x2="1545" y2="860" class="svg-road-centerline" />
-            <text x="490" y="855" class="svg-street-label">ST. JOSEPH DRIVE</text>
-            <text x="1150" y="855" class="svg-street-label">ST. JOSEPH DRIVE</text>
-        `;
+    // 1. Natural Geographic Lawn Terrace (Defined by Road Boundaries)
+    // If Main Road spine crosses the zone (Section A), split the land neatly on both sides of the boulevard!
+    if (spineX) {
+        const spineClearance = 16;
+        const leftW = (spineX - spineClearance) - secX;
+        const rightX = spineX + spineClearance;
+        const rightW = (secX + curSecW) - rightX;
 
-        // 4. Central Crossway Avenue: Avenue of Peace
-        roadGroup.innerHTML += `
-            <rect x="45" y="450" width="1510" height="50" rx="6" class="svg-road-secondary" />
-            <line x1="55" y1="475" x2="1545" y2="475" class="svg-road-centerline" />
-            <text x="380" y="468" class="svg-street-label">AVENUE OF PEACE (WEST)</text>
-            <text x="1220" y="468" class="svg-street-label">AVENUE OF PEACE (EAST)</text>
-        `;
+        mk('rect', { x: secX, y: secY, width: f1(leftW), height: curSecH, rx: 12, class: 'svg-section-bg mp-section-lawn' }, secGroup);
+        mk('rect', { x: secX, y: secY, width: f1(leftW), height: curSecH, rx: 12, fill: 'url(#mpLawnStripes)', class: 'mp-texture' }, secGroup);
+        mk('rect', { x: secX, y: secY, width: f1(leftW), height: curSecH, rx: 12, class: 'mp-section-hedge' }, secGroup);
 
-        // 5. Main Road (Central Boulevard Spine: x=755..845, width=90)
-        roadGroup.innerHTML += `
-            <rect x="755" y="50" width="90" height="880" rx="6" class="svg-road-main" />
-            <line x1="800" y1="925" x2="800" y2="55" class="svg-road-centerline" />
-            <!-- Main Road Street Directional Typography -->
-            <text x="795" y="730" class="svg-street-label" transform="rotate(-90 795 730)">MAIN ROAD / BOULEVARD</text>
-            <text x="795" y="240" class="svg-street-label" transform="rotate(-90 795 240)">MAIN ROAD / BOULEVARD</text>
-        `;
+        mk('rect', { x: rightX, y: secY, width: f1(rightW), height: curSecH, rx: 12, class: 'svg-section-bg mp-section-lawn' }, secGroup);
+        mk('rect', { x: rightX, y: secY, width: f1(rightW), height: curSecH, rx: 12, fill: 'url(#mpLawnStripes)', class: 'mp-texture' }, secGroup);
+        mk('rect', { x: rightX, y: secY, width: f1(rightW), height: curSecH, rx: 12, class: 'mp-section-hedge' }, secGroup);
+    } else {
+        mk('rect', { x: secX, y: secY, width: curSecW, height: curSecH, rx: 12, class: 'svg-section-bg mp-section-lawn' }, secGroup);
+        mk('rect', { x: secX, y: secY, width: curSecW, height: curSecH, rx: 12, fill: 'url(#mpLawnStripes)', class: 'mp-texture' }, secGroup);
+        mk('rect', { x: secX, y: secY, width: curSecW, height: curSecH, rx: 12, class: 'mp-section-hedge' }, secGroup);
+    }
 
-        // 6. Central Memorial Roundabout (Intersection of Main Boulevard & Avenue of Peace)
-        roadGroup.innerHTML += `
-            <circle cx="800" cy="475" r="54" class="svg-road-main" />
-            <circle cx="800" cy="475" r="30" class="svg-garden-island" />
-            <circle cx="800" cy="475" r="11" class="svg-memorial-monument" />
-            <text x="800" y="479" class="svg-street-label" style="font-size: 8px;">MEMORIAL CIRCLE</text>
-        `;
+    // 2. Pedestrian Pathways between Block Terraces (Subtle Stone Pavers, Not Card Boxes!)
+    const { parcels, walkways } = layoutBlockTerraces(blocks, { x: secX, y: secY, w: curSecW, h: curSecH }, spineX);
+    if (walkways.length > 0) {
+        const pathG = mk('g', { class: 'mp-section-internal-paths', 'aria-hidden': 'true' }, secGroup);
+        let pathHtml = '';
+        walkways.forEach(d => {
+            pathHtml += `<path d="${d}" class="mp-block-walkway-edge"/>`;
+            pathHtml += `<path d="${d}" class="mp-block-walkway"/>`;
+        });
+        pathG.innerHTML = pathHtml;
+    }
 
-        mapRoadLayer.appendChild(roadGroup);
+    // 3. Floating Section Header Badge (Clean pill matching reference)
+    const pillW = Math.max(100, Math.ceil(badgeLabel.length * 7.5 + 32));
+    const pillH = 24;
+    const pillX = secX + (curSecW - pillW) / 2;
+    const pillY = secY - 12;
+    mk('rect', { x: f1(pillX), y: pillY, width: f1(pillW), height: pillH, rx: 7, class: 'svg-section-header' }, secGroup);
+    const secTitle = mk('text', { x: f1(pillX + pillW / 2), y: pillY + 16, 'text-anchor': 'middle', class: 'svg-section-title' }, secGroup);
+    secTitle.textContent = badgeLabel;
 
-        // ==========================================
-        // LAYER 2: Landmark Architecture & Visitor Facilities
-        // ==========================================
-        const landmarkGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        landmarkGroup.setAttribute('class', 'svg-landmarks-group');
+    // 4. Physical Block Parcels and Individual Lots
+    parcels.forEach((parcel) => {
+        const block = parcel.block;
+        const blkX = parcel.x;
+        const blkY = parcel.y;
+        const curBlkW = parcel.w;
+        const curBlkH = parcel.h;
 
-        // Landmark 1: Administration & Chapel (SW Area)
-        landmarkGroup.innerHTML += `
-            <g class="svg-landmark-bldg" data-landmark="chapel" tabindex="0" role="region" aria-label="Chapel and Administration Office">
-                <!-- Foundation & Building Body -->
-                <rect x="60" y="885" width="220" height="56" rx="6" class="svg-bldg-base" />
-                <!-- Chapel Pitched Roof / Front Portico -->
-                <polygon points="68,906 170,887 272,906" class="svg-bldg-roof-chapel" />
-                <rect x="155" y="904" width="30" height="37" rx="2" fill="var(--color-primary-600, #163d2c)" />
-                <line x1="170" y1="889" x2="170" y2="899" stroke="#ffffff" stroke-width="1.5" />
-                <line x1="165" y1="894" x2="175" y2="894" stroke="#ffffff" stroke-width="1.5" />
-                <text x="170" y="922" class="svg-landmark-title">🏛️ CHAPEL / OFFICE</text>
-                <text x="170" y="934" class="svg-landmark-subtitle">Administration &amp; Inquiries</text>
-            </g>
-        `;
+        const lots = state.blockLotsCache[block.block_id] || [];
+        const isColumbarium = (function () {
+            const cName = (state.currentCemetery?.cemetery_name || '').toLowerCase();
+            const sName = (section.section_name || '').toLowerCase();
+            const bName = (block.block_name || '').toLowerCase();
+            const lType = (lots[0]?.lot_type || '').toLowerCase();
+            return cName.includes('columbarium') || cName.includes('ossuary') ||
+                   sName.includes('columbarium') || sName.includes('ossuary') ||
+                   bName.includes('columbarium') || bName.includes('ossuary') ||
+                   lType.includes('columbarium') || lType.includes('ossuary') || lType.includes('niche');
+        })();
 
-        // Landmark 2: Comfort Room / CR Facility (Near Chapel & South Pathway)
-        landmarkGroup.innerHTML += `
-            <g class="svg-landmark-bldg" data-landmark="restroom" tabindex="0" role="region" aria-label="Public Comfort Room Facility">
-                <rect x="305" y="885" width="105" height="56" rx="5" class="svg-bldg-base" />
-                <rect x="310" y="887" width="95" height="16" rx="3" class="svg-bldg-roof-cr" />
-                <line x1="357" y1="903" x2="357" y2="941" stroke="var(--map-border, #cbd5e1)" stroke-width="1" />
-                <text x="357" y="922" class="svg-landmark-title">🚻 COMFORT ROOM</text>
-                <text x="357" y="934" class="svg-landmark-subtitle">PWD Restrooms</text>
-            </g>
-        `;
+        const blkGroup = mk('g', {
+            class: `svg-block-card mp-block-parcel mp-theme-${themeCode}`,
+            'data-block-id': block.block_id,
+            role: 'button',
+            tabindex: '0',
+            'aria-label': `${block.block_name}, ${block.total_lots || 0} lots. Click to focus block.`
+        });
 
-        // Landmark 3: Visitor Parking Area (SE Area)
-        landmarkGroup.innerHTML += `
-            <g class="svg-landmark-bldg" data-landmark="parking" tabindex="0" role="region" aria-label="Visitor Parking Area">
-                <rect x="1310" y="885" width="230" height="56" rx="6" class="svg-parking-lot" />
-                <!-- Parking Stalls Stripes (Top and Bottom) -->
-                <line x1="1330" y1="885" x2="1330" y2="902" class="svg-parking-bay-line" />
-                <line x1="1350" y1="885" x2="1350" y2="902" class="svg-parking-bay-line" />
-                <line x1="1370" y1="885" x2="1370" y2="902" class="svg-parking-bay-line" />
-                <line x1="1390" y1="885" x2="1390" y2="902" class="svg-parking-bay-line" />
-                <line x1="1450" y1="885" x2="1450" y2="902" class="svg-parking-bay-line" />
-                <line x1="1470" y1="885" x2="1470" y2="902" class="svg-parking-bay-line" />
-                <line x1="1490" y1="885" x2="1490" y2="902" class="svg-parking-bay-line" />
-                <line x1="1510" y1="885" x2="1510" y2="902" class="svg-parking-bay-line" />
-                <!-- PWD Accessible Parking Bay -->
-                <rect x="1312" y="886" width="17" height="15" rx="2" class="svg-parking-pwd-bay" />
-                <text x="1320" y="897" font-size="9" text-anchor="middle" fill="#2563eb">♿</text>
-                <text x="1425" y="922" class="svg-landmark-title">🅿️ VISITOR PARKING</text>
-                <text x="1425" y="934" class="svg-landmark-subtitle">30 Slots • Free Visitor Parking</text>
-            </g>
-        `;
+        // Block Plot Terrace Ground (Natural lawn parcel with subtle boundary, NOT a card box!)
+        mk('rect', {
+            x: f1(blkX), y: f1(blkY), width: f1(curBlkW), height: f1(curBlkH), rx: 4,
+            class: `svg-block-bg mp-block-terrace${isColumbarium ? ' mp-block-terrace--niche' : ''}`
+        }, blkGroup);
 
-        mapLandmarkLayer.appendChild(landmarkGroup);
+        // Compact Floating Block Identifier Tag (Reference style, e.g. A1, A2, B1, C1)
+        const blockLabel = block.block_name.replace(/Block\s+/i, '');
+        const tagW = Math.max(22, blockLabel.length * 6.5 + 10);
+        mk('rect', { x: f1(blkX + 6), y: f1(blkY + 4), width: tagW, height: 14, rx: 3, class: 'svg-block-header-bar mp-block-tag' }, blkGroup);
+        const blkText = mk('text', { x: f1(blkX + 6 + tagW / 2), y: f1(blkY + 14.2), 'text-anchor': 'middle', class: 'svg-block-title mp-block-tag-text' }, blkGroup);
+        blkText.textContent = blockLabel;
+
+        // Block Click Handler: Focus/Zoom to Block on Master Map
+        blkGroup.addEventListener('click', (e) => {
+            e.stopPropagation();
+            focusBlockOnMasterMap(block, section, blkX, blkY, curBlkW, curBlkH);
+        });
+
+        blkGroup.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                focusBlockOnMasterMap(block, section, blkX, blkY, curBlkW, curBlkH);
+            }
+        });
+
+        // Hover Tooltip
+        blkGroup.addEventListener('mouseenter', (e) => {
+            showFloatingTooltip(e, `<strong>${escapeHtml(block.block_name)}</strong><br>${block.total_lots || 0} Lots • Click to focus`);
+        });
+        blkGroup.addEventListener('mousemove', moveFloatingTooltip);
+        blkGroup.addEventListener('mouseleave', hideFloatingTooltip);
+
+        mapBlockLayer.appendChild(blkGroup);
 
         // ==========================================
-        // LAYER 3 & 4: Sections & Nested Blocks
+        // INDIVIDUAL LOTS ON MASTER MAP (LAYER: mapLotLayer)
+        // Realistic, compact burial plots with memorial headstone markers.
+        // Plots sit naturally on the lawn — never stretched into giant boxes.
         // ==========================================
-        // Deterministic Section Layout (Geographic Quadrants with Main Corridor Isolation)
-        const count = sections.length;
-        const standardQuadrants = [
-            { x: 60, y: 82, w: 650, h: 352 },   // Northwest Zone (Framed by St. Peter Way & Avenue of Peace)
-            { x: 890, y: 82, w: 650, h: 352 },  // Northeast Zone
-            { x: 60, y: 512, w: 650, h: 320 },  // Southwest Zone (Framed by Avenue of Peace & St. Joseph Drive)
-            { x: 890, y: 512, w: 650, h: 320 }  // Southeast Zone
-        ];
+        const lotAreaX = blkX + 8;
+        const lotAreaY = blkY + 22; // space below block tag
+        const lotAreaW = Math.max(10, curBlkW - 16);
+        const lotAreaH = Math.max(10, curBlkH - 26);
 
-        sections.forEach((section, index) => {
-            let secX, secY, curSecW, curSecH;
+        if (lots.length > 0) {
+            const n = lots.length;
+            let gapX = 4.5;
+            let gapY = 4.5;
+            let doubleRowAisle = isColumbarium ? 0 : 6;
+            let cols = 0;
 
-            if (count <= 4) {
-                const q = standardQuadrants[index] || standardQuadrants[0];
-                secX = q.x;
-                secY = q.y;
-                curSecW = q.w;
-                curSecH = q.h;
+            if (block.map_config && block.map_config.grid) {
+                if (block.map_config.grid.columns && !isNaN(Number(block.map_config.grid.columns))) {
+                    cols = parseInt(block.map_config.grid.columns, 10);
+                }
+                if (block.map_config.grid.gap_x !== undefined && !isNaN(Number(block.map_config.grid.gap_x))) {
+                    gapX = parseFloat(block.map_config.grid.gap_x);
+                }
+                if (block.map_config.grid.gap_y !== undefined && !isNaN(Number(block.map_config.grid.gap_y))) {
+                    gapY = parseFloat(block.map_config.grid.gap_y);
+                }
+            }
+
+            if (!cols || cols < 1) {
+                if (n <= 5) {
+                    cols = n;
+                } else if (isColumbarium) {
+                    // Columbarium niches: target square aspect ratio across block
+                    const targetCols = Math.round(Math.sqrt(n * (lotAreaW / lotAreaH)));
+                    cols = Math.max(5, Math.min(12, targetCols));
+                } else {
+                    // Lawn burial plots: target ~0.72 width-to-height ratio (e.g. 1m x 1.5m to 2.4m)
+                    const targetCols = Math.round(Math.sqrt(1.38 * n * (lotAreaW / lotAreaH)));
+                    cols = Math.max(4, Math.min(12, targetCols));
+                }
+            }
+            cols = Math.max(1, Math.min(cols, n));
+            const rows = Math.ceil(n / cols);
+
+            // Compute maximum possible tile size fitting inside lotArea
+            const availW = Math.max(10, lotAreaW - (cols - 1) * gapX);
+            const totalAisles = Math.floor((rows - 1) / 2) * doubleRowAisle;
+            const availH = Math.max(10, lotAreaH - (rows - 1) * gapY - totalAisles);
+
+            const maxW = availW / cols;
+            const maxH = availH / rows;
+
+            let tileW, tileH;
+            if (isColumbarium) {
+                // Square niche vaults, capped at 24x24 for clean visual rhythm
+                const side = Math.min(maxW, maxH, 24);
+                tileW = Math.max(16, side);
+                tileH = Math.max(16, side);
+            } else if (n <= 10) {
+                // Blocks with few plots: allow generous, easily visible 26px x 36px plots!
+                const w = Math.min(maxW, maxH * 0.72, 26);
+                tileW = Math.max(18, w);
+                tileH = Math.max(24, Math.min(maxH, tileW / 0.72, 36));
             } else {
-                const cols = Math.ceil(Math.sqrt(count));
-                const rows = Math.ceil(count / cols);
-                const sectionW = (canvasW - (40 * 2) - ((cols - 1) * 30)) / cols;
-                const sectionH = (canvasH - (40 * 2) - ((rows - 1) * 30)) / rows;
-                const col = index % cols;
-                const row = Math.floor(index / cols);
-                secX = 40 + (col * (sectionW + 30));
-                secY = 40 + (row * (sectionH + 30));
-                curSecW = sectionW;
-                curSecH = sectionH;
+                // Larger blocks (e.g. 50 lots in Block A1): maximize available parcel space cleanly
+                const w = Math.min(maxW, maxH * 0.74, 23);
+                tileW = Math.max(16, w);
+                tileH = Math.max(22, Math.min(maxH, tileW / 0.74, 32));
             }
 
-            // Use configured geometry if available, otherwise procedural fallback
-            if (section.map_config && !isNaN(Number(section.map_config.x)) && !isNaN(Number(section.map_config.y)) &&
-                Number(section.map_config.width) > 0 && Number(section.map_config.height) > 0) {
-                secX = Number(section.map_config.x);
-                secY = Number(section.map_config.y);
-                curSecW = Number(section.map_config.width);
-                curSecH = Number(section.map_config.height);
+            // Downscale smoothly if strict bounds are exceeded
+            const calcGridW = cols * tileW + (cols - 1) * gapX;
+            const calcGridH = rows * tileH + (rows - 1) * gapY + totalAisles;
+            const fit = Math.min(1, lotAreaW / calcGridW, lotAreaH / calcGridH);
+            if (fit < 1) {
+                tileW *= fit;
+                tileH *= fit;
+                gapX *= fit;
+                gapY *= fit;
+                doubleRowAisle *= fit;
             }
 
-            const secGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            secGroup.setAttribute('class', 'svg-section-card');
-            secGroup.setAttribute('data-section-id', section.section_id);
+            // Center grid on lawn terrace
+            const finalGridW = cols * tileW + (cols - 1) * gapX;
+            const finalGridH = rows * tileH + (rows - 1) * gapY + Math.floor((rows - 1) / 2) * doubleRowAisle;
+            const gridOffsetX = Math.max(0, (lotAreaW - finalGridW) / 2);
+            const gridOffsetY = Math.max(0, (lotAreaH - finalGridH) / 2);
 
-            // Section Outer Card
-            const secBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            secBg.setAttribute('x', secX);
-            secBg.setAttribute('y', secY);
-            secBg.setAttribute('width', curSecW);
-            secBg.setAttribute('height', curSecH);
-            secBg.setAttribute('class', 'svg-section-bg');
-            secBg.setAttribute('filter', 'url(#tileShadow)');
-            secGroup.appendChild(secBg);
+            lots.forEach((lot, i) => {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                let lotX = lotAreaX + gridOffsetX + (col * (tileW + gapX));
+                let lotY = lotAreaY + gridOffsetY + (row * (tileH + gapY)) + Math.floor(row / 2) * doubleRowAisle;
+                let curTileW = tileW;
+                let curTileH = tileH;
 
-            // Section Header Bar
-            const headerH = 46;
-            const secHeader = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            secHeader.setAttribute('x', secX);
-            secHeader.setAttribute('y', secY);
-            secHeader.setAttribute('width', curSecW);
-            secHeader.setAttribute('height', headerH);
-            secHeader.setAttribute('rx', '14');
-            secHeader.setAttribute('class', 'svg-section-header');
-            secGroup.appendChild(secHeader);
+                // Optional custom lot position override
+                if (lot.map_config && !isNaN(Number(lot.map_config.x)) && !isNaN(Number(lot.map_config.y)) &&
+                    Number(lot.map_config.width) > 0 && Number(lot.map_config.height) > 0) {
+                    const rawLx = Number(lot.map_config.x);
+                    const rawLy = Number(lot.map_config.y);
+                    lotX = rawLx < curBlkW ? (blkX + rawLx) : rawLx;
+                    lotY = rawLy < curBlkH ? (blkY + rawLy) : rawLy;
+                    curTileW = Number(lot.map_config.width);
+                    curTileH = Number(lot.map_config.height);
+                }
 
-            // Section Title
-            const secTitle = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            secTitle.setAttribute('x', secX + 16);
-            secTitle.setAttribute('y', secY + 28);
-            secTitle.setAttribute('class', 'svg-section-title');
-            secTitle.textContent = section.section_name;
-            secGroup.appendChild(secTitle);
+                const tierLevel = isColumbarium ? (rows - row) : 1;
+                const isEyeLevel = isColumbarium && ((rows >= 4 && tierLevel === 3) || (rows === 3 && tierLevel === 2) || (rows < 3 && tierLevel === 1));
+                const approxH = isColumbarium ? ((0.4 + (tierLevel - 1) * 0.45).toFixed(1) + 'm') : 'Ground Level';
 
-            // Section Meta (Blocks & Lots)
-            const blocks = section.blocks || [];
-            const secMeta = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            secMeta.setAttribute('x', secX + curSecW - 16);
-            secMeta.setAttribute('y', secY + 28);
-            secMeta.setAttribute('text-anchor', 'end');
-            secMeta.setAttribute('class', 'svg-section-meta');
-            secMeta.textContent = `${blocks.length} Blocks • ${section.total_lots || 0} Lots`;
-            secGroup.appendChild(secMeta);
+                let displayLabel = lot.lot_number;
+                let isSanitizedHash = false;
+                if (lot.lot_number && lot.lot_number.length > 12) {
+                    isSanitizedHash = true;
+                    displayLabel = isColumbarium ? `V-${i + 1}` : `L-${i + 1}`;
+                }
 
-            // Render Nested Blocks Inside Section Body
-            const bodyMargin = 16;
-            const bodyX = secX + bodyMargin;
-            const bodyY = secY + headerH + bodyMargin;
-            const bodyW = curSecW - (bodyMargin * 2);
-            const bodyH = curSecH - headerH - (bodyMargin * 2);
+                lot._tierLevel = tierLevel;
+                lot._isEyeLevel = isEyeLevel;
+                lot._approxHeight = approxH;
+                lot._displayLabel = displayLabel;
+                lot._elevationDesc = isColumbarium
+                    ? `Level ${tierLevel} (${approxH}) — ${isEyeLevel ? 'Eye-Level (Optimal viewing height)' : (tierLevel === rows ? 'Top Tier Vault' : (tierLevel === 1 ? 'Base Tier (Wheelchair Accessible)' : 'Mid-Tier Vault'))}`
+                    : 'Elevated Lawn Terrace (Certified Flood-Free, +1.2m)';
 
-            const blockCount = blocks.length;
-            if (blockCount > 0) {
-                let bCols = 1;
-                if (blockCount >= 2 && blockCount <= 4) bCols = 2;
-                else if (blockCount > 4) bCols = Math.ceil(Math.sqrt(blockCount));
-                const bRows = Math.ceil(blockCount / bCols);
-                const bGap = 12;
+                const lotStatusClass = (lot.status || 'Available').toLowerCase().replace(/\s+/g, '-');
+                const isSelected = state.selectedLot && state.selectedLot.lot_id === lot.lot_id;
 
-                const blockW = (bodyW - ((bCols - 1) * bGap)) / bCols;
-                const blockH = (bodyH - ((bRows - 1) * bGap)) / bRows;
+                const lotGroup = document.createElementNS(SVG_NS, 'g');
+                lotGroup.setAttribute('class', `svg-lot-tile mp-lot-parcel lot--${lotStatusClass}${isColumbarium ? ' is-niche-vault' : ''}${isSelected ? ' is-selected' : ''}`);
+                lotGroup.setAttribute('data-lot-id', lot.lot_id);
+                lotGroup.setAttribute('data-block-id', block.block_id);
+                lotGroup.setAttribute('data-tier-level', tierLevel);
+                lotGroup.setAttribute('role', 'button');
+                lotGroup.setAttribute('tabindex', '0');
+                lotGroup.setAttribute('aria-label', `${displayLabel}, Section ${section.section_name}, Block ${block.block_name}, Status: ${lot.status}, Price: ${formatCurrency(lot.price)}`);
 
-                blocks.forEach((block, bIdx) => {
-                    const bCol = bIdx % bCols;
-                    const bRow = Math.floor(bIdx / bCols);
-                    let blkX = bodyX + (bCol * (blockW + bGap));
-                    let blkY = bodyY + (bRow * (blockH + bGap));
-                    let curBlkW = blockW;
-                    let curBlkH = blockH;
+                // Main plot boundary rectangle (CRITICAL: must be first child for selection reticle)
+                const lotRect = document.createElementNS(SVG_NS, 'rect');
+                lotRect.setAttribute('x', f1(lotX));
+                lotRect.setAttribute('y', f1(lotY));
+                lotRect.setAttribute('width', f1(curTileW));
+                lotRect.setAttribute('height', f1(curTileH));
+                lotRect.setAttribute('rx', isColumbarium ? '1.5' : '2');
+                lotRect.setAttribute('class', `svg-lot-rect mp-lot-plot${isColumbarium ? ' niche-vault-rect' : ''}`);
+                lotGroup.appendChild(lotRect);
 
-                    // Use configured block geometry if present, otherwise procedural fallback
-                    if (block.map_config && !isNaN(Number(block.map_config.x)) && !isNaN(Number(block.map_config.y)) &&
-                        Number(block.map_config.width) > 0 && Number(block.map_config.height) > 0) {
-                        const rawX = Number(block.map_config.x);
-                        const rawY = Number(block.map_config.y);
-                        blkX = rawX < curSecW ? (secX + rawX) : rawX;
-                        blkY = rawY < curSecH ? (secY + rawY) : rawY;
-                        curBlkW = Number(block.map_config.width);
-                        curBlkH = Number(block.map_config.height);
-                    }
+                // Miniature Headstone / Memorial Plaque Marker (Authentic cemetery look)
+                if (!isColumbarium && curTileW > 6 && curTileH > 8) {
+                    const markerW = curTileW * 0.65;
+                    const markerH = Math.max(2.6, curTileH * 0.16);
+                    const marker = document.createElementNS(SVG_NS, 'rect');
+                    marker.setAttribute('x', f1(lotX + (curTileW - markerW) / 2));
+                    marker.setAttribute('y', f1(lotY + 1.8));
+                    marker.setAttribute('width', f1(markerW));
+                    marker.setAttribute('height', f1(markerH));
+                    marker.setAttribute('rx', '1');
+                    marker.setAttribute('class', 'svg-lot-headstone mp-lot-headstone');
+                    lotGroup.appendChild(marker);
+                }
 
-                    const blkGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                    blkGroup.setAttribute('class', 'svg-block-card');
-                    blkGroup.setAttribute('data-block-id', block.block_id);
-                    blkGroup.setAttribute('role', 'button');
-                    blkGroup.setAttribute('tabindex', '0');
-                    blkGroup.setAttribute('aria-label', `${block.block_name}, ${block.total_lots || 0} lots. Click to focus block.`);
+                // Columbarium Niche Inner Plate
+                if (isColumbarium && curTileW >= 8 && curTileH >= 8) {
+                    const innerPlate = document.createElementNS(SVG_NS, 'rect');
+                    innerPlate.setAttribute('x', f1(lotX + 2));
+                    innerPlate.setAttribute('y', f1(lotY + 2));
+                    innerPlate.setAttribute('width', f1(Math.max(0, curTileW - 4)));
+                    innerPlate.setAttribute('height', f1(Math.max(0, curTileH - 4)));
+                    innerPlate.setAttribute('rx', '1.2');
+                    innerPlate.setAttribute('class', 'niche-inner-plate');
+                    lotGroup.appendChild(innerPlate);
+                }
 
-                    // Block Tile Rect
-                    const blkRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                    blkRect.setAttribute('x', blkX);
-                    blkRect.setAttribute('y', blkY);
-                    blkRect.setAttribute('width', curBlkW);
-                    blkRect.setAttribute('height', curBlkH);
-                    blkRect.setAttribute('class', 'svg-block-bg');
-                    blkGroup.appendChild(blkRect);
+                // Lot Number Text (Hidden at overview level, appears on hover, zoom, or selection)
+                const labelText = document.createElementNS(SVG_NS, 'text');
+                labelText.setAttribute('x', f1(lotX + (curTileW / 2)));
+                labelText.setAttribute('y', f1(isColumbarium ? (lotY + curTileH / 2 + 3) : (lotY + curTileH * 0.74)));
+                labelText.setAttribute('text-anchor', 'middle');
+                labelText.setAttribute('class', 'svg-lot-label mp-lot-number');
+                labelText.textContent = displayLabel;
+                lotGroup.appendChild(labelText);
 
-                    // Block Header Banner for Title & Plot Count (leaves space for internal lot area!)
-                    const blkHeaderH = 26;
-                    const blkHeader = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                    blkHeader.setAttribute('x', blkX);
-                    blkHeader.setAttribute('y', blkY);
-                    blkHeader.setAttribute('width', curBlkW);
-                    blkHeader.setAttribute('height', blkHeaderH);
-                    blkHeader.setAttribute('rx', '8');
-                    blkHeader.setAttribute('class', 'svg-block-header-bar');
-                    blkGroup.appendChild(blkHeader);
+                // Accessibility Title
+                const titleEl = document.createElementNS(SVG_NS, 'title');
+                titleEl.textContent = `${displayLabel} • ${lot.status} • ${formatCurrency(lot.price)}`;
+                lotGroup.appendChild(titleEl);
 
-                    // Block Name
-                    const blkText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    blkText.setAttribute('x', blkX + 10);
-                    blkText.setAttribute('y', blkY + 17);
-                    blkText.setAttribute('class', 'svg-block-title');
-                    blkText.textContent = block.block_name;
-                    blkGroup.appendChild(blkText);
+                // Click Handler
+                lotGroup.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectLot(lot, block, section, lotGroup);
+                });
 
-                    // Lot Count Badge
-                    const badgeTextContent = `${block.total_lots || 0} Plots`;
-                    const badgeW = 66;
-                    const badgeH = 18;
-                    const badgeX = blkX + curBlkW - badgeW - 6;
-                    const badgeY = blkY + 4;
-
-                    const badgeRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                    badgeRect.setAttribute('x', badgeX);
-                    badgeRect.setAttribute('y', badgeY);
-                    badgeRect.setAttribute('width', badgeW);
-                    badgeRect.setAttribute('height', badgeH);
-                    badgeRect.setAttribute('class', 'svg-block-badge-bg');
-                    blkGroup.appendChild(badgeRect);
-
-                    const badgeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    badgeText.setAttribute('x', badgeX + (badgeW / 2));
-                    badgeText.setAttribute('y', badgeY + 13);
-                    badgeText.setAttribute('text-anchor', 'middle');
-                    badgeText.setAttribute('class', 'svg-block-badge-text');
-                    badgeText.textContent = badgeTextContent;
-                    blkGroup.appendChild(badgeText);
-
-                    // Block Click Handler: Focus/Zoom to Block on Master Map
-                    blkGroup.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        focusBlockOnMasterMap(block, section, blkX, blkY, curBlkW, curBlkH);
-                    });
-
-                    blkGroup.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            focusBlockOnMasterMap(block, section, blkX, blkY, curBlkW, curBlkH);
-                        }
-                    });
-
-                    // Hover Tooltip
-                    blkGroup.addEventListener('mouseenter', (e) => {
-                        showFloatingTooltip(e, `<strong>${escapeHtml(block.block_name)}</strong><br>${block.total_lots || 0} Lots • Click to focus`);
-                    });
-                    blkGroup.addEventListener('mousemove', moveFloatingTooltip);
-                    blkGroup.addEventListener('mouseleave', hideFloatingTooltip);
-
-                    mapBlockLayer.appendChild(blkGroup);
-
-                    // ==========================================
-                    // INDIVIDUAL LOTS ON MASTER MAP (LAYER: mapLotLayer)
-                    // ==========================================
-                    const lots = state.blockLotsCache[block.block_id] || [];
-                    const isColumbarium = (function () {
-                        const cName = (state.currentCemetery?.cemetery_name || '').toLowerCase();
-                        const sName = (section.section_name || '').toLowerCase();
-                        const bName = (block.block_name || '').toLowerCase();
-                        const lType = (lots[0]?.lot_type || '').toLowerCase();
-                        return cName.includes('columbarium') || cName.includes('ossuary') ||
-                               sName.includes('columbarium') || sName.includes('ossuary') ||
-                               bName.includes('columbarium') || bName.includes('ossuary') ||
-                               lType.includes('columbarium') || lType.includes('ossuary') || lType.includes('niche');
-                    })();
-
-                    const lotMargin = 8;
-                    const lotAreaX = blkX + lotMargin;
-                    const lotAreaY = blkY + blkHeaderH + 6;
-                    const lotAreaW = Math.max(10, curBlkW - (lotMargin * 2));
-                    const lotAreaH = Math.max(10, curBlkH - blkHeaderH - 6 - lotMargin);
-
-                    if (lots.length > 0) {
-                        let cols = 5;
-                        let gapX = 4;
-                        let gapY = 4;
-
-                        if (block.map_config && block.map_config.grid) {
-                            if (block.map_config.grid.columns && !isNaN(Number(block.map_config.grid.columns))) {
-                                cols = parseInt(block.map_config.grid.columns, 10);
-                            }
-                            if (block.map_config.grid.gap_x !== undefined && !isNaN(Number(block.map_config.grid.gap_x))) {
-                                gapX = parseFloat(block.map_config.grid.gap_x);
-                            }
-                            if (block.map_config.grid.gap_y !== undefined && !isNaN(Number(block.map_config.grid.gap_y))) {
-                                gapY = parseFloat(block.map_config.grid.gap_y);
-                            }
-                        } else if (isColumbarium) {
-                            if (lots.length <= 12) cols = 4;
-                            else if (lots.length <= 25) cols = 5;
-                            else if (lots.length <= 40) cols = 7;
-                            else cols = 8;
-                            gapX = 3;
-                            gapY = 3;
-                        } else {
-                            if (lots.length <= 6) cols = 3;
-                            else if (lots.length <= 12) cols = 4;
-                            else if (lots.length <= 25) cols = 5;
-                            else if (lots.length <= 40) cols = 8;
-                            else cols = 10;
-                        }
-
-                        const rows = Math.ceil(lots.length / cols);
-                        const tileW = Math.max(8, (lotAreaW - ((cols - 1) * gapX)) / cols);
-                        const tileH = Math.max(8, (lotAreaH - ((rows - 1) * gapY)) / rows);
-
-                        lots.forEach((lot, i) => {
-                            const col = i % cols;
-                            const row = Math.floor(i / cols);
-                            let lotX = lotAreaX + (col * (tileW + gapX));
-                            let lotY = lotAreaY + (row * (tileH + gapY));
-                            let curTileW = tileW;
-                            let curTileH = tileH;
-
-                            // Optional custom lot position override
-                            if (lot.map_config && !isNaN(Number(lot.map_config.x)) && !isNaN(Number(lot.map_config.y)) &&
-                                Number(lot.map_config.width) > 0 && Number(lot.map_config.height) > 0) {
-                                const rawLx = Number(lot.map_config.x);
-                                const rawLy = Number(lot.map_config.y);
-                                lotX = rawLx < curBlkW ? (blkX + rawLx) : rawLx;
-                                lotY = rawLy < curBlkH ? (blkY + rawLy) : rawLy;
-                                curTileW = Number(lot.map_config.width);
-                                curTileH = Number(lot.map_config.height);
-                            }
-
-                            const tierLevel = isColumbarium ? (rows - row) : 1;
-                            const isEyeLevel = isColumbarium && ((rows >= 4 && tierLevel === 3) || (rows === 3 && tierLevel === 2) || (rows < 3 && tierLevel === 1));
-                            const approxH = isColumbarium ? ((0.4 + (tierLevel - 1) * 0.45).toFixed(1) + 'm') : 'Ground Level';
-
-                            let displayLabel = lot.lot_number;
-                            let isSanitizedHash = false;
-                            if (lot.lot_number && lot.lot_number.length > 12) {
-                                isSanitizedHash = true;
-                                displayLabel = isColumbarium ? `V-${i + 1}` : `L-${i + 1}`;
-                            }
-
-                            lot._tierLevel = tierLevel;
-                            lot._isEyeLevel = isEyeLevel;
-                            lot._approxHeight = approxH;
-                            lot._displayLabel = displayLabel;
-                            lot._elevationDesc = isColumbarium
-                                ? `Level ${tierLevel} (${approxH}) — ${isEyeLevel ? 'Eye-Level (Optimal viewing height)' : (tierLevel === rows ? 'Top Tier Vault' : (tierLevel === 1 ? 'Base Tier (Wheelchair Accessible)' : 'Mid-Tier Vault'))}`
-                                : 'Elevated Lawn Terrace (Certified Flood-Free, +1.2m)';
-
-                            const lotStatusClass = (lot.status || 'Available').toLowerCase().replace(/\s+/g, '-');
-                            const isSelected = state.selectedLot && state.selectedLot.lot_id === lot.lot_id;
-
-                            const lotGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                            lotGroup.setAttribute('class', `svg-lot-tile lot--${lotStatusClass}${isColumbarium ? ' is-niche-vault' : ''}${isSelected ? ' is-selected' : ''}`);
-                            lotGroup.setAttribute('data-lot-id', lot.lot_id);
-                            lotGroup.setAttribute('data-block-id', block.block_id);
-                            lotGroup.setAttribute('data-tier-level', tierLevel);
-                            lotGroup.setAttribute('role', 'button');
-                            lotGroup.setAttribute('tabindex', '0');
-                            lotGroup.setAttribute('aria-label', `${displayLabel}, Section ${section.section_name}, Block ${block.block_name}, Status: ${lot.status}, Price: ${formatCurrency(lot.price)}`);
-
-                            // Lot Tile Rectangle (Outer Frame)
-                            const lotRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                            lotRect.setAttribute('x', lotX);
-                            lotRect.setAttribute('y', lotY);
-                            lotRect.setAttribute('width', curTileW);
-                            lotRect.setAttribute('height', curTileH);
-                            lotRect.setAttribute('rx', '3');
-                            lotRect.setAttribute('class', `svg-lot-rect ${isColumbarium ? 'niche-vault-rect' : ''}`);
-                            lotGroup.appendChild(lotRect);
-
-                            // Columbarium Niche Inner Plate & Screws
-                            if (isColumbarium && curTileW > 16 && curTileH > 14) {
-                                const innerPlate = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                                innerPlate.setAttribute('x', lotX + 2);
-                                innerPlate.setAttribute('y', lotY + 2);
-                                innerPlate.setAttribute('width', Math.max(0, curTileW - 4));
-                                innerPlate.setAttribute('height', Math.max(0, curTileH - 4));
-                                innerPlate.setAttribute('rx', '2');
-                                innerPlate.setAttribute('class', 'niche-inner-plate');
-                                lotGroup.appendChild(innerPlate);
-
-                                const screwCoords = [
-                                    [lotX + 3.5, lotY + 3.5],
-                                    [lotX + curTileW - 3.5, lotY + 3.5],
-                                    [lotX + 3.5, lotY + curTileH - 3.5],
-                                    [lotX + curTileW - 3.5, lotY + curTileH - 3.5]
-                                ];
-                                screwCoords.forEach(([sx, sy]) => {
-                                    const screw = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                                    screw.setAttribute('cx', sx);
-                                    screw.setAttribute('cy', sy);
-                                    screw.setAttribute('r', '1.2');
-                                    screw.setAttribute('class', 'niche-screw');
-                                    lotGroup.appendChild(screw);
-                                });
-                            }
-
-                            // Lot Number Label
-                            const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                            labelText.setAttribute('x', lotX + (curTileW / 2));
-                            labelText.setAttribute('y', lotY + (curTileH / 2) + 3);
-                            labelText.setAttribute('text-anchor', 'middle');
-                            labelText.setAttribute('class', 'svg-lot-label');
-                            labelText.textContent = displayLabel;
-                            lotGroup.appendChild(labelText);
-
-                            // Title for native tooltip accessibility
-                            const titleEl = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-                            titleEl.textContent = `${displayLabel} • ${lot.status} • ${formatCurrency(lot.price)}`;
-                            lotGroup.appendChild(titleEl);
-
-                            // Lot Click Handler
-                            lotGroup.addEventListener('click', (e) => {
-                                e.stopPropagation();
-                                selectLot(lot, block, section, lotGroup);
-                            });
-
-                            lotGroup.addEventListener('keydown', (e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    selectLot(lot, block, section, lotGroup);
-                                }
-                            });
-
-                            // Hover Tooltip
-                            lotGroup.addEventListener('mouseenter', (e) => {
-                                const elevHtml = isColumbarium 
-                                    ? `<br>Vertical Placement: <strong>Level ${tierLevel} (${approxH})</strong>${isEyeLevel ? ' <span style="color:#f59e0b;">⭐ Eye-Level</span>' : ''}`
-                                    : `<br>Vertical Placement: <strong>Ground Level (Terraced Lawn)</strong>`;
-                                const idExtra = isSanitizedHash ? `<br><small style="opacity:0.75;">System Ref: ${escapeHtml(lot.lot_number)}</small>` : '';
-                                showFloatingTooltip(e, `<strong>${escapeHtml(displayLabel)}</strong>${elevHtml}<br>Section: ${escapeHtml(section.section_name)}<br>Block: ${escapeHtml(block.block_name)}<br>Status: <strong>${escapeHtml(lot.status)}</strong><br>Price: ${formatCurrency(lot.price)}${idExtra}`);
-                            });
-                            lotGroup.addEventListener('mousemove', moveFloatingTooltip);
-                            lotGroup.addEventListener('mouseleave', hideFloatingTooltip);
-
-                            mapLotLayer.appendChild(lotGroup);
-                        });
+                lotGroup.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        selectLot(lot, block, section, lotGroup);
                     }
                 });
-            }
 
-            mapSectionLayer.appendChild(secGroup);
-        });
+                // Hover Tooltip
+                lotGroup.addEventListener('mouseenter', (e) => {
+                    const elevHtml = isColumbarium
+                        ? `<br>Vertical Placement: <strong>Level ${tierLevel} (${approxH})</strong>${isEyeLevel ? ' <span style="color:#f59e0b;">⭐ Eye-Level</span>' : ''}`
+                        : `<br>Vertical Placement: <strong>Ground Level (Terraced Lawn)</strong>`;
+                    const idExtra = isSanitizedHash ? `<br><small style="opacity:0.75;">System Ref: ${escapeHtml(lot.lot_number)}</small>` : '';
+                    showFloatingTooltip(e, `<strong>${escapeHtml(displayLabel)}</strong>${elevHtml}<br>Section: ${escapeHtml(section.section_name)}<br>Block: ${escapeHtml(block.block_name)}<br>Status: <strong>${escapeHtml(lot.status)}</strong><br>Price: ${formatCurrency(lot.price)}${idExtra}`);
+                });
+                lotGroup.addEventListener('mousemove', moveFloatingTooltip);
+                lotGroup.addEventListener('mouseleave', hideFloatingTooltip);
+
+                mapLotLayer.appendChild(lotGroup);
+            });
+        }
+    });
+
+    mapSectionLayer.appendChild(secGroup);
+});
+
+// If the database has 4 sections, the East parcel (where Section E would be)
+// is rendered as a seamless, quiet green lawn terrace matching the cemetery
+// landscape—WITHOUT any fake "Garden / Green Area" card box!
+if (count <= 4 && !usedZones.has('e')) {
+    const z = ZONES.e;
+    const g = mk('g', { class: 'mp-natural-lawn-terrace', 'aria-hidden': 'true' }, mapSectionLayer);
+    const cx = z.x + z.w / 2;
+    const cy = z.y + z.h / 2;
+    g.innerHTML = `
+        <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="12" class="svg-section-bg mp-section-lawn"/>
+        <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="12" fill="url(#mpLawnStripes)" class="mp-texture"/>
+        <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="12" class="mp-section-hedge"/>
+        <!-- Central circular ornamental garden walkway ring in reserve park -->
+        <circle cx="${f1(cx)}" cy="${f1(cy)}" r="46" class="mp-block-walkway-edge"/>
+        <circle cx="${f1(cx)}" cy="${f1(cy)}" r="46" class="mp-block-walkway"/>
+        <circle cx="${f1(cx)}" cy="${f1(cy)}" r="22" fill="#15803d" opacity="0.35" stroke="#166534" stroke-width="1.5"/>
+        ${treeCluster(cx, cy, 3, 14, 6, 8)}
+        ${treeCluster(z.x + 70, z.y + 60, 4, 16, 7, 10)}
+        ${treeCluster(z.x + z.w - 70, z.y + 60, 4, 16, 7, 10)}
+        ${treeCluster(z.x + 70, z.y + z.h - 60, 4, 16, 7, 10)}
+        ${treeCluster(z.x + z.w - 70, z.y + z.h - 60, 4, 16, 7, 10)}
+    `;
+}
+
     }
 
     /**
@@ -1841,7 +2241,7 @@
         titleText.setAttribute('x', margin + 24);
         titleText.setAttribute('y', margin + 38);
         titleText.setAttribute('class', 'svg-section-title');
-        titleText.textContent = `${block.section_name || state.currentSection.section_name} › ${block.block_name}`;
+        titleText.textContent = `${block.section_name || state.currentSection.section_name} â€º ${block.block_name}`;
         headerGroup.appendChild(titleText);
 
         // Status Counts Breakdown
@@ -1865,7 +2265,7 @@
         })();
 
         if (isColumbarium) {
-            titleText.textContent = `${block.section_name || state.currentSection.section_name} › ${block.block_name} • Columbarium Niche Wall Elevation`;
+            titleText.textContent = `${block.section_name || state.currentSection.section_name} â€º ${block.block_name} â€¢ Columbarium Niche Wall Elevation`;
         }
 
         const subtitleText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -1874,8 +2274,8 @@
         subtitleText.setAttribute('class', 'svg-section-meta');
         subtitleText.setAttribute('id', 'blockLotsSummarySubtitle');
         subtitleText.textContent = isColumbarium
-            ? `Total Vaults: ${lots.length}  |  🟢 Available: ${counts.Available}  |  🟡 Reserved: ${counts.Reserved}  |  🔴 Occupied: ${counts.Occupied}`
-            : `Total Plots: ${lots.length}  |  🟢 Available: ${counts.Available}  |  🟡 Reserved: ${counts.Reserved}  |  🔴 Occupied: ${counts.Occupied}`;
+            ? `Total Vaults: ${lots.length}  |  ðŸŸ¢ Available: ${counts.Available}  |  ðŸŸ¡ Reserved: ${counts.Reserved}  |  ðŸ”´ Occupied: ${counts.Occupied}`
+            : `Total Plots: ${lots.length}  |  ðŸŸ¢ Available: ${counts.Available}  |  ðŸŸ¡ Reserved: ${counts.Reserved}  |  ðŸ”´ Occupied: ${counts.Occupied}`;
         headerGroup.appendChild(subtitleText);
 
         mapSectionLayer.appendChild(headerGroup);
@@ -1972,7 +2372,7 @@
                 tierTitleText.setAttribute('x', margin + 12);
                 tierTitleText.setAttribute('y', pillY + (pillH / 2) - 3);
                 tierTitleText.setAttribute('class', `svg-tier-name ${isEyeLevel ? 'tier-name--eye-level' : ''}`);
-                tierTitleText.textContent = isEyeLevel ? `⭐ Level ${tierLevel}` : `Level ${tierLevel}`;
+                tierTitleText.textContent = isEyeLevel ? `â­ Level ${tierLevel}` : `Level ${tierLevel}`;
                 tierCard.appendChild(tierTitleText);
 
                 // Subtitle: Height & description
@@ -1980,7 +2380,7 @@
                 tierSubText.setAttribute('x', margin + 12);
                 tierSubText.setAttribute('y', pillY + (pillH / 2) + 13);
                 tierSubText.setAttribute('class', 'svg-tier-subtext');
-                const tierDesc = isEyeLevel ? `${approxH} • Eye-Level` : (isTopTier ? `${approxH} • Top Vault` : (isBaseTier ? `${approxH} • Base Vault` : `${approxH} • Mid Tier`));
+                const tierDesc = isEyeLevel ? `${approxH} â€¢ Eye-Level` : (isTopTier ? `${approxH} â€¢ Top Vault` : (isBaseTier ? `${approxH} â€¢ Base Vault` : `${approxH} â€¢ Mid Tier`));
                 tierSubText.textContent = tierDesc;
                 tierCard.appendChild(tierSubText);
 
@@ -2035,7 +2435,7 @@
             lot._approxHeight = approxH;
             lot._displayLabel = displayLabel;
             lot._elevationDesc = isColumbarium
-                ? `Level ${tierLevel} (${approxH}) — ${isEyeLevel ? 'Eye-Level (Optimal viewing height)' : (tierLevel === rows ? 'Top Tier Vault' : (tierLevel === 1 ? 'Base Tier (Wheelchair Accessible)' : 'Mid-Tier Vault'))}`
+                ? `Level ${tierLevel} (${approxH}) â€” ${isEyeLevel ? 'Eye-Level (Optimal viewing height)' : (tierLevel === rows ? 'Top Tier Vault' : (tierLevel === 1 ? 'Base Tier (Wheelchair Accessible)' : 'Mid-Tier Vault'))}`
                 : 'Elevated Lawn Terrace (Certified Flood-Free, +1.2m)';
 
             const lotStatusClass = (lot.status || 'Available').toLowerCase().replace(/\s+/g, '-');
@@ -2103,12 +2503,12 @@
             statusText.setAttribute('y', lotY + (curTileH / 2) + 16);
             statusText.setAttribute('text-anchor', 'middle');
             statusText.setAttribute('class', 'svg-lot-status-text');
-            statusText.textContent = isColumbarium ? `L${tierLevel} • ${lot.status}` : lot.status;
+            statusText.textContent = isColumbarium ? `L${tierLevel} â€¢ ${lot.status}` : lot.status;
             lotGroup.appendChild(statusText);
 
             // Native Title for Tooltip Accessibility
             const titleEl = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-            titleEl.textContent = `${displayLabel} • Level ${tierLevel} (${approxH}) • ${lot.status} • ${formatCurrency(lot.price)}`;
+            titleEl.textContent = `${displayLabel} â€¢ Level ${tierLevel} (${approxH}) â€¢ ${lot.status} â€¢ ${formatCurrency(lot.price)}`;
             lotGroup.appendChild(titleEl);
 
             // Click Handler: Lot Selection & Details Drawer
@@ -2127,7 +2527,7 @@
             // Hover Tooltip
             lotGroup.addEventListener('mouseenter', (e) => {
                 const elevHtml = isColumbarium 
-                    ? `<br>Vertical Placement: <strong>Level ${tierLevel} (${approxH})</strong>${isEyeLevel ? ' <span style="color:#f59e0b;">⭐ Eye-Level</span>' : ''}`
+                    ? `<br>Vertical Placement: <strong>Level ${tierLevel} (${approxH})</strong>${isEyeLevel ? ' <span style="color:#f59e0b;">â­ Eye-Level</span>' : ''}`
                     : `<br>Vertical Placement: <strong>Ground Level (Terraced Lawn)</strong>`;
                 const idExtra = isSanitizedHash ? `<br><small style="opacity:0.75;">System Ref: ${escapeHtml(lot.lot_number)}</small>` : '';
                 showFloatingTooltip(e, `<strong>${escapeHtml(displayLabel)}</strong>${elevHtml}<br>Status: ${escapeHtml(lot.status)}<br>Category: ${escapeHtml(lot.lot_type || 'Burial Plot')}<br>Price: ${formatCurrency(lot.price)}${idExtra}`);
@@ -2219,11 +2619,11 @@
         };
         drawerStatusDot.style.background = statusColors[lot.status] || 'var(--lot-unavailable)';
 
-        drawerFacilityName.textContent = state.currentCemetery?.cemetery_name || '—';
-        drawerSectionName.textContent = section?.section_name || '—';
-        drawerBlockName.textContent = block?.block_name || '—';
+        drawerFacilityName.textContent = state.currentCemetery?.cemetery_name || 'â€”';
+        drawerSectionName.textContent = section?.section_name || 'â€”';
+        drawerBlockName.textContent = block?.block_name || 'â€”';
         drawerLotType.textContent = lot.lot_type || 'Standard Lawn';
-        drawerDimensions.textContent = lot.dimensions || '1.0m × 2.4m';
+        drawerDimensions.textContent = lot.dimensions || '1.0m Ã— 2.4m';
         drawerPrice.textContent = formatCurrency(lot.price);
 
         // Batch 10A: Populate Vertical Elevation / Tier Level Placement
@@ -2261,16 +2661,16 @@
 
         // Batch 6: Populate On-Map Location Summary HUD
         if (mapLocationSummaryCard) {
-            if (locSummarySection) locSummarySection.textContent = section?.section_name || '—';
-            if (locSummaryBlock) locSummaryBlock.textContent = block?.block_name || '—';
+            if (locSummarySection) locSummarySection.textContent = section?.section_name || 'â€”';
+            if (locSummaryBlock) locSummaryBlock.textContent = block?.block_name || 'â€”';
             if (locSummaryLot) locSummaryLot.textContent = `Lot ${lot.lot_number}`;
             mapLocationSummaryCard.style.display = 'block';
         }
 
         // Batch 6: Populate Location Hierarchy Breadcrumb Trail
-        if (drawerTrailFacility) drawerTrailFacility.textContent = state.currentCemetery?.cemetery_name || '—';
-        if (drawerTrailSection) drawerTrailSection.textContent = section?.section_name || '—';
-        if (drawerTrailBlock) drawerTrailBlock.textContent = block?.block_name || '—';
+        if (drawerTrailFacility) drawerTrailFacility.textContent = state.currentCemetery?.cemetery_name || 'â€”';
+        if (drawerTrailSection) drawerTrailSection.textContent = section?.section_name || 'â€”';
+        if (drawerTrailBlock) drawerTrailBlock.textContent = block?.block_name || 'â€”';
         if (drawerTrailLot) drawerTrailLot.textContent = `Lot ${lot.lot_number}`;
         if (drawerYouAreHereBadge) drawerYouAreHereBadge.style.display = 'inline-flex';
 
@@ -2566,8 +2966,8 @@
             name: 'Standard Lawn Lot',
             badge: '3D Lawn Lot Perspective',
             capacity: '2 Caskets (Double-Depth) + 4 Urns',
-            dimensions: '1.0m × 2.44m (Single Plot)',
-            priceTier: '₱45,000 – ₱180,000',
+            dimensions: '1.0m Ã— 2.44m (Single Plot)',
+            priceTier: 'â‚±45,000 â€“ â‚±180,000',
             materials: {
                 surface: 'Flush Imperial Black Granite & Cast Bronze Inlay',
                 structure: 'Class-A Reinforced Double-Depth Concrete Vault',
@@ -2627,7 +3027,7 @@
     <!-- Bronze Marker Etched Inscription -->
     <text x="170" y="112" fill="#451a03" font-size="7.5" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif" letter-spacing="1.5">IN LOVING MEMORY</text>
     <line x1="110" y1="116" x2="230" y2="116" stroke="#713f12" stroke-width="0.75"/>
-    <text x="170" y="124" fill="#713f12" font-size="6.5" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">1.0m × 2.44m DOUBLE-DEPTH VAULT</text>
+    <text x="170" y="124" fill="#713f12" font-size="6.5" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">1.0m Ã— 2.44m DOUBLE-DEPTH VAULT</text>
     <!-- Ceremonial Flower Tribute (Left Side) -->
     <circle cx="68" cy="116" r="6" fill="#e11d48"/>
     <circle cx="62" cy="119" r="5" fill="#fbbf24"/>
@@ -2662,17 +3062,17 @@
     <rect x="228" y="28" width="80" height="50" rx="4" fill="#ca8a04" stroke="#fef08a" stroke-width="1"/>
     <text x="268" y="58" fill="#451a03" font-size="8.5" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">CAST BRONZE</text>
     <line x1="32" y1="90" x2="308" y2="90" stroke="#334155" stroke-width="1"/>
-    <text x="40" y="110" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Sub-Vault: High-Density Reinforced Concrete (Class-A)</text>
-    <text x="40" y="126" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Drainage: Sub-base Coarse Gravel Bed (Zero Water Retention)</text>
+    <text x="40" y="110" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">âœ“ Sub-Vault: High-Density Reinforced Concrete (Class-A)</text>
+    <text x="40" y="126" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">âœ“ Drainage: Sub-base Coarse Gravel Bed (Zero Water Retention)</text>
 </svg>`
         },
         garden: {
             id: 'garden',
             name: 'Garden Memorial Lot',
             badge: '3D Garden Terrace Perspective',
-            capacity: '4–8 Caskets + 8–16 Urns (Cluster)',
-            dimensions: '2.0m × 2.5m (2–4 Lots Cluster)',
-            priceTier: '₱200,000 – ₱650,000',
+            capacity: '4â€“8 Caskets + 8â€“16 Urns (Cluster)',
+            dimensions: '2.0m Ã— 2.5m (2â€“4 Lots Cluster)',
+            priceTier: 'â‚±200,000 â€“ â‚±650,000',
             materials: {
                 surface: 'Raised White Marble Curb (24") with Granite Meditation Bench',
                 structure: 'Multi-Vault Reinforced Concrete Cluster',
@@ -2680,7 +3080,7 @@
             },
             monumentRule: 'Raised marble/granite curb (up to 24") with landscape flower bed',
             perpetualCare: 'Covered (Hedge pruning, curb washing & perpetual security)',
-            intermentPrivilege: 'Family cluster (4–8 Caskets) + 8–16 cremains urns',
+            intermentPrivilege: 'Family cluster (4â€“8 Caskets) + 8â€“16 cremains urns',
             svg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
     <defs>
         <linearGradient id="gard3dSky" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -2751,25 +3151,25 @@
     <text x="268" y="52" fill="#ffffff" font-size="8" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">FLORAL HEDGE</text>
     <text x="268" y="64" fill="#a7f3d0" font-size="7" text-anchor="middle" font-family="Inter, sans-serif">Perpetual Care</text>
     <line x1="32" y1="90" x2="308" y2="90" stroke="#334155" stroke-width="1"/>
-    <text x="40" y="110" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Cluster Structure: 4–8 Caskets Double-Depth Concrete Pods</text>
-    <text x="40" y="126" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Drainage: Integrated French Drain with Crushed Rock Filtration</text>
+    <text x="40" y="110" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">âœ“ Cluster Structure: 4â€“8 Caskets Double-Depth Concrete Pods</text>
+    <text x="40" y="126" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">âœ“ Drainage: Integrated French Drain with Crushed Rock Filtration</text>
 </svg>`
         },
         mausoleum: {
             id: 'mausoleum',
             name: 'Family Estate / Mausoleum',
             badge: '3D Family Estate Perspective',
-            capacity: '12–24+ Vaults & Urns (Multi-Gen)',
-            dimensions: '4.0m × 5.0m+ (8–16+ Lots)',
-            priceTier: '₱1,000,000 – ₱10,000,000+',
+            capacity: '12â€“24+ Vaults & Urns (Multi-Gen)',
+            dimensions: '4.0m Ã— 5.0m+ (8â€“16+ Lots)',
+            priceTier: 'â‚±1,000,000 â€“ â‚±10,000,000+',
             materials: {
                 surface: 'Neoclassical Polished Granite & Marble Pavilion',
                 structure: 'Engineered Reinforced Concrete Superstructure (4.5m Ceiling)',
                 drainage: 'Internal Gravity Roof Runoff & Sealed Crypt Chambers'
             },
-            monumentRule: 'Neoclassical covered pavilion / chapel (Up to 4–5m, private gate)',
+            monumentRule: 'Neoclassical covered pavilion / chapel (Up to 4â€“5m, private gate)',
             perpetualCare: 'Covered (Avenue access, grounds upkeep & 24/7 security)',
-            intermentPrivilege: 'Generational estate (12–24+ Vaults & Urns in private crypt)',
+            intermentPrivilege: 'Generational estate (12â€“24+ Vaults & Urns in private crypt)',
             svg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
     <defs>
         <linearGradient id="mau3dSky" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -2848,17 +3248,17 @@
     <text x="268" y="52" fill="#451a03" font-size="8" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">BRONZE GATES</text>
     <text x="268" y="64" fill="#713f12" font-size="7" text-anchor="middle" font-family="Inter, sans-serif">Double Security</text>
     <line x1="32" y1="90" x2="308" y2="90" stroke="#334155" stroke-width="1"/>
-    <text x="40" y="110" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Structure: Engineered Reinforced Concrete Superstructure (4.5m Ceiling)</text>
-    <text x="40" y="126" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Crypts: Sealed Multi-Crypt Chambers with Internal Gravity Runoff</text>
+    <text x="40" y="110" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">âœ“ Structure: Engineered Reinforced Concrete Superstructure (4.5m Ceiling)</text>
+    <text x="40" y="126" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">âœ“ Crypts: Sealed Multi-Crypt Chambers with Internal Gravity Runoff</text>
 </svg>`
         },
         columbarium: {
             id: 'columbarium',
             name: 'Columbarium Wall Niche',
             badge: '3D Columbarium Niche View',
-            capacity: '2–4 Cremains Urns per Niche',
-            dimensions: '0.4m × 0.4m × 0.6m (Single Niche)',
-            priceTier: '₱25,000 – ₱150,000',
+            capacity: '2â€“4 Cremains Urns per Niche',
+            dimensions: '0.4m Ã— 0.4m Ã— 0.6m (Single Niche)',
+            priceTier: 'â‚±25,000 â€“ â‚±150,000',
             materials: {
                 surface: 'Italian Carrara White Marble with Engraved Bronze Plaque',
                 structure: 'Modular High-Strength Reinforced Vault Wall',
@@ -2866,7 +3266,7 @@
             },
             monumentRule: 'Polished engraved brass plate with tempered glass/marble face',
             perpetualCare: 'Covered (Sanctuary hall upkeep, lighting & commemorative care)',
-            intermentPrivilege: 'Niche compartment (2–4 Cremains urns or ossuary transfers)',
+            intermentPrivilege: 'Niche compartment (2â€“4 Cremains urns or ossuary transfers)',
             svg: `<svg viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
     <defs>
         <linearGradient id="sanctuaryHall" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -2964,8 +3364,8 @@
     <text x="268" y="52" fill="#ffffff" font-size="8" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">VELVET LINER</text>
     <text x="268" y="64" fill="#a7f3d0" font-size="7" text-anchor="middle" font-family="Inter, sans-serif">Cushioned Base</text>
     <line x1="32" y1="90" x2="308" y2="90" stroke="#334155" stroke-width="1"/>
-    <text x="40" y="110" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Modular Vault Cell: Fire-Rated Engineered Polymer / Concrete</text>
-    <text x="40" y="126" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">✓ Environment: Climate-Controlled Indoor Sanctuary (24/7 Security)</text>
+    <text x="40" y="110" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">âœ“ Modular Vault Cell: Fire-Rated Engineered Polymer / Concrete</text>
+    <text x="40" y="126" fill="#e2e8f0" font-size="9" font-weight="700" font-family="Inter, sans-serif">âœ“ Environment: Climate-Controlled Indoor Sanctuary (24/7 Security)</text>
 </svg>`
         }
     };
@@ -3085,7 +3485,7 @@
             distanceMeters = 65;
             walkTime = '~1 min walk';
             terrainElev = '+2.1m (Sanctuary Hall Ground Floor)';
-            parkingDist = 'Sanctuary Porte-Cochère (~20m)';
+            parkingDist = 'Sanctuary Porte-CochÃ¨re (~20m)';
             pathwayCond = 'Climate-Controlled Step-Free Interior';
             pwdBadgeText = 'PWD Elevator & Ramp';
             pwdBadgeClass = 'is-pwd-friendly';
@@ -3117,7 +3517,7 @@
 
             if (isRoadside) {
                 terrainElev = '+1.4m (Road-Adjacent Elevated Grade)';
-                parkingDist = 'Main Boulevard Curb (~10–15m)';
+                parkingDist = 'Main Boulevard Curb (~10â€“15m)';
                 pathwayCond = 'Direct Smooth Sidewalk Connection';
                 pwdBadgeText = 'PWD Accessible';
                 pwdBadgeClass = 'is-pwd-friendly';
@@ -3301,7 +3701,7 @@
         if (slipLotNumber) slipLotNumber.textContent = `LOT ${lot.lot_number}`;
         if (slipLotType) slipLotType.textContent = lot.lot_type || 'Standard Lawn';
         if (slipStatusText) slipStatusText.textContent = lot.status || 'Available';
-        if (slipDimensions) slipDimensions.textContent = lot.dimensions || '1.0m × 2.4m';
+        if (slipDimensions) slipDimensions.textContent = lot.dimensions || '1.0m Ã— 2.4m';
 
         // Status dot color
         const statusColors = {
@@ -3324,12 +3724,12 @@
         if (slipStepLot) slipStepLot.textContent = `Plot #${lot.lot_number}`;
 
         // Location Metrics Table
-        if (slipTableFacility) slipTableFacility.textContent = cemetery?.cemetery_name || '—';
-        if (slipTableSection) slipTableSection.textContent = section?.section_name || '—';
-        if (slipTableBlock) slipTableBlock.textContent = block?.block_name || '—';
-        if (slipTableLot) slipTableLot.textContent = lot.lot_number || '—';
+        if (slipTableFacility) slipTableFacility.textContent = cemetery?.cemetery_name || 'â€”';
+        if (slipTableSection) slipTableSection.textContent = section?.section_name || 'â€”';
+        if (slipTableBlock) slipTableBlock.textContent = block?.block_name || 'â€”';
+        if (slipTableLot) slipTableLot.textContent = lot.lot_number || 'â€”';
         if (slipTableType) slipTableType.textContent = lot.lot_type || 'Standard Lawn';
-        if (slipTableDimensions) slipTableDimensions.textContent = lot.dimensions || '1.0m × 2.4m';
+        if (slipTableDimensions) slipTableDimensions.textContent = lot.dimensions || '1.0m Ã— 2.4m';
 
         // Batch 10C: Populate Wayfinding Slip Spatial & Accessibility Metrics
         const spatial = getLotSpatialMetrics(lot, block, section, cemetery);
@@ -3418,7 +3818,7 @@
             lightboxTierBadge.className = `lightbox-tier-badge ${tierInfo.badgeClass}`;
         }
         if (lightboxLotHeading) {
-            lightboxLotHeading.textContent = `Lot ${lot.lot_number} — ${archetype.name}`;
+            lightboxLotHeading.textContent = `Lot ${lot.lot_number} â€” ${archetype.name}`;
         }
         if (lightboxLotDesc) {
             lightboxLotDesc.textContent = tierInfo.desc;
@@ -3439,7 +3839,7 @@
             lightboxIntermentVal.textContent = archetype.intermentPrivilege;
         }
         if (lightboxMaterialVal && archetype.materials) {
-            lightboxMaterialVal.textContent = `${archetype.materials.surface} • ${archetype.materials.structure}`;
+            lightboxMaterialVal.textContent = `${archetype.materials.surface} â€¢ ${archetype.materials.structure}`;
         }
         if (lightboxPriceVal) {
             lightboxPriceVal.textContent = formatCurrency(lot.price);
@@ -3511,7 +3911,7 @@
         blockLabel.setAttribute('fill', '#334155');
         blockLabel.setAttribute('font-size', '13');
         blockLabel.setAttribute('font-weight', '700');
-        blockLabel.textContent = `${block?.block_name || 'Block Grid'} — Layout Scheme`;
+        blockLabel.textContent = `${block?.block_name || 'Block Grid'} â€” Layout Scheme`;
         slipMiniMapSvg.appendChild(blockLabel);
 
         // North Orientation Indicator
@@ -3521,7 +3921,7 @@
         northText.setAttribute('fill', '#64748b');
         northText.setAttribute('font-size', '11');
         northText.setAttribute('font-weight', '600');
-        northText.textContent = '▲ NORTH';
+        northText.textContent = 'â–² NORTH';
         slipMiniMapSvg.appendChild(northText);
 
         // Plot Grid Bounds
@@ -3850,7 +4250,7 @@
             btn.innerHTML = `
                 <div class="result-item-main">
                     <span class="result-lot-number">Lot ${escapeHtml(item.lot.lot_number)}</span>
-                    <span class="result-lot-meta">${escapeHtml(item.section?.section_name || '')} › ${escapeHtml(item.block?.block_name || '')} • ${formatCurrency(item.lot.price)}</span>
+                    <span class="result-lot-meta">${escapeHtml(item.section?.section_name || '')} â€º ${escapeHtml(item.block?.block_name || '')} â€¢ ${formatCurrency(item.lot.price)}</span>
                 </div>
                 <span class="result-status-pill status-pill--${statusClass}">${escapeHtml(item.lot.status)}</span>
             `;
@@ -4056,10 +4456,10 @@
         }
 
         if (state.filters.minPrice !== null || state.filters.maxPrice !== null) {
-            const minStr = state.filters.minPrice !== null ? `₱${state.filters.minPrice}` : '0';
-            const maxStr = state.filters.maxPrice !== null ? `₱${state.filters.maxPrice}` : '∞';
+            const minStr = state.filters.minPrice !== null ? `â‚±${state.filters.minPrice}` : '0';
+            const maxStr = state.filters.maxPrice !== null ? `â‚±${state.filters.maxPrice}` : 'âˆž';
             chips.push({
-                label: `Price: ${minStr} – ${maxStr}`,
+                label: `Price: ${minStr} â€“ ${maxStr}`,
                 remove: () => {
                     minPriceInput.value = '';
                     maxPriceInput.value = '';

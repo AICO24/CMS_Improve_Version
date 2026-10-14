@@ -24,11 +24,14 @@
     --lot-selected-glow: rgba(37, 99, 235, 0.35);
 
     /* Master Map Foundation Tokens */
-    --map-ground-outer: #e6ede6;
-    --map-ground-inner: #f1f6f0;
-    --map-ground-pattern: rgba(34, 197, 94, 0.04);
-    --map-perimeter-stroke: #2c5e47;
-    --map-perimeter-fill: rgba(44, 94, 71, 0.04);
+    --map-ground-outer: #527344;
+    --map-ground-inner: #446338;
+    --map-ground-fill: #689257;
+    --map-ground-mid: #5b834c;
+    --map-ground-fill-alt: #4e733f;
+    --map-ground-pattern: rgba(255, 255, 255, 0.04);
+    --map-perimeter-stroke: #2c4430;
+    --map-perimeter-fill: rgba(44, 94, 71, 0.06);
     --map-corridor-stroke: rgba(44, 94, 71, 0.22);
     --map-corridor-fill: rgba(226, 232, 240, 0.55);
     --map-corridor-text: #52675b;
@@ -37,17 +40,17 @@
     --map-landmark-res-bg: rgba(241, 245, 249, 0.82);
     --map-landmark-res-border: #cbd5e1;
     --map-landmark-res-text: #64748b;
-    --map-section-bg: #ffffff;
-    --map-section-border: #94a3b8;
+    --map-section-bg: #b8dcac;
+    --map-section-border: #4d7c3b;
     --map-section-accent: #2c5e47;
 
     /* Batch 2: Master Map Road & Street Network Tokens */
-    --map-road-surface: #cbd5e1;
-    --map-road-surface-darker: #94a3b8;
-    --map-road-curb: #64748b;
+    --map-road-surface: #475569;
+    --map-road-surface-darker: #334155;
+    --map-road-curb: #cbd5e1;
     --map-road-line: #ffffff;
     --map-road-line-yellow: #f59e0b;
-    --map-road-label: #1e293b;
+    --map-road-label: #ffffff;
     --map-pathway-fill: #e2e8f0;
     --map-pathway-stroke: #cbd5e1;
     --map-external-road-bg: #1e293b;
@@ -56,18 +59,18 @@
 
     /* Batch 2: Landmark Architecture Tokens */
     --map-bldg-wall: #ffffff;
-    --map-bldg-roof: #3b82f6;
-    --map-bldg-roof-chapel: #2c5e47;
+    --map-bldg-roof: #2563eb;
+    --map-bldg-roof-chapel: #1d4ed8;
     --map-bldg-roof-cr: #0284c7;
-    --map-bldg-stroke: #475569;
-    --map-bldg-label: #0f172a;
+    --map-bldg-stroke: #334155;
+    --map-bldg-label: #ffffff;
     --map-bldg-sublabel: #64748b;
-    --map-parking-lot: #e2e8f0;
+    --map-parking-lot: #334155;
     --map-parking-stripe: #ffffff;
     --map-parking-pwd: #3b82f6;
-    --map-tree-crown-1: #15803d;
-    --map-tree-crown-2: #14532d;
-    --map-tree-crown-light: #22c55e;
+    --map-tree-crown-1: #22c55e;
+    --map-tree-crown-2: #15803d;
+    --map-tree-crown-light: #86efac;
 }
 
 [data-theme="dark"] {
@@ -90,8 +93,8 @@
     --lot-selected-glow: rgba(59, 130, 246, 0.45);
 
     /* Master Map Foundation Dark Tokens */
-    --map-ground-outer: #0a130f;
-    --map-ground-inner: #0f1c16;
+    --map-ground-outer: #0a1710;
+    --map-ground-inner: #0f241a;
     --map-ground-pattern: rgba(52, 211, 153, 0.03);
     --map-perimeter-stroke: #10b981;
     --map-perimeter-fill: rgba(16, 185, 129, 0.05);
@@ -103,8 +106,8 @@
     --map-landmark-res-bg: rgba(15, 23, 42, 0.75);
     --map-landmark-res-border: #334155;
     --map-landmark-res-text: #94a3b8;
-    --map-section-bg: #1e293b;
-    --map-section-border: #475569;
+    --map-section-bg: #142e1d;
+    --map-section-border: rgba(52, 211, 153, 0.35);
     --map-section-accent: #34d399;
 
     /* Batch 2: Master Map Road & Street Network Dark Tokens */
@@ -113,7 +116,7 @@
     --map-road-curb: #475569;
     --map-road-line: #94a3b8;
     --map-road-line-yellow: #fbbf24;
-    --map-road-label: #e2e8f0;
+    --map-road-label: #f8fafc;
     --map-pathway-fill: #0f172a;
     --map-pathway-stroke: #334155;
     --map-external-road-bg: #0b1120;
@@ -1467,11 +1470,12 @@ body[data-theme="dark"] .search-field .search-field__input:focus ~ .search-field
 
 .svg-street-label {
     font-family: var(--font-sans, 'Inter', sans-serif);
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 10px;
+    font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    fill: var(--map-road-label);
+    fill: var(--map-road-label, #ffffff);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
     text-anchor: middle;
     pointer-events: none;
 }
@@ -1621,196 +1625,266 @@ body[data-theme="dark"] .search-field .search-field__input:focus ~ .search-field
     text-anchor: middle;
 }
 
-/* SVG Dynamic Elements Styling */
+/* SVG Dynamic Elements Styling: Continuous Spatial Cemetery Master Plan */
 .svg-section-card {
     cursor: default;
     transition: filter 0.2s ease;
 }
 
+/* Section as Physical Geographic Lawn Zone */
 .svg-section-bg {
-    fill: var(--map-surface);
-    stroke: var(--map-border);
-    stroke-width: 2px;
-    rx: 14px;
+    fill: var(--map-section-bg, #b8dcac);
+    stroke: var(--map-section-border, #4d7c3b);
+    stroke-width: 2.5px;
+    rx: 16px;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.08));
+    transition: fill 0.25s ease, stroke 0.25s ease;
 }
 
+[data-theme="dark"] .svg-section-bg {
+    fill: #142e1d;
+    stroke: rgba(52, 211, 153, 0.35);
+}
+
+/* Floating Architectural Section Header Pill Badge */
 .svg-section-header {
-    fill: var(--color-neutral-100, #eef3f7);
-    stroke: var(--map-border);
-    stroke-width: 1px;
+    fill: var(--color-primary-600, #163d2c);
+    stroke: rgba(255, 255, 255, 0.35);
+    stroke-width: 1.5px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.22));
+    rx: 13px;
 }
 
 [data-theme="dark"] .svg-section-header {
-    fill: #1e293b;
+    fill: #064e3b;
+    stroke: #34d399;
 }
+
+/* Distinctive Section Themes matching Reference Design */
+.section--theme-a .svg-section-header { fill: #ea580c; stroke: #ffedd5; }
+.section--theme-b .svg-section-header { fill: #16a34a; stroke: #dcfce7; }
+.section--theme-c .svg-section-header { fill: #2563eb; stroke: #dbeafe; }
+.section--theme-d .svg-section-header { fill: #7c3aed; stroke: #ede9fe; }
+.section--theme-e .svg-section-header { fill: #0891b2; stroke: #cffafe; }
 
 .svg-section-title {
     font-family: var(--font-sans, 'Inter', sans-serif);
-    font-size: 18px;
-    font-weight: 700;
-    fill: var(--map-text);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    fill: #ffffff;
+    pointer-events: none;
 }
 
 .svg-section-meta {
     font-family: var(--font-sans, 'Inter', sans-serif);
-    font-size: 13px;
-    font-weight: 500;
-    fill: var(--map-text-muted);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    fill: rgba(255, 255, 255, 0.88);
+    pointer-events: none;
 }
 
-/* Block Cards in SVG */
+/* Block Plot Terraces in SVG (Physical plot areas, NOT cards) */
 .svg-block-card {
     cursor: pointer;
     transition: transform 0.15s ease, filter 0.15s ease;
 }
 
 .svg-block-bg {
-    fill: var(--color-neutral-50, #f8fafc);
-    stroke: var(--map-border);
-    stroke-width: 1.5px;
-    rx: 10px;
+    fill: rgba(255, 255, 255, 0.50);
+    stroke: rgba(44, 94, 71, 0.30);
+    stroke-width: 1.2px;
+    rx: 8px;
     transition: fill 0.15s ease, stroke 0.15s ease, stroke-width 0.15s ease;
 }
 
 [data-theme="dark"] .svg-block-bg {
-    fill: #152033;
+    fill: rgba(52, 211, 153, 0.08);
+    stroke: rgba(52, 211, 153, 0.25);
 }
 
 .svg-block-card:hover .svg-block-bg {
-    fill: var(--color-primary-50, #eaf3ee);
-    stroke: var(--color-primary-500, #2c5e47);
-    stroke-width: 2px;
+    fill: rgba(255, 255, 255, 0.75);
+    stroke: #2563eb;
+    stroke-width: 1.8px;
 }
 
 [data-theme="dark"] .svg-block-card:hover .svg-block-bg {
-    fill: rgba(52, 211, 153, 0.12);
+    fill: rgba(52, 211, 153, 0.18);
+    stroke: #34d399;
+}
+
+/* Compact Floating Block Identifier Pill */
+.svg-block-header-bar {
+    fill: rgba(22, 61, 44, 0.92);
+    stroke: rgba(255, 255, 255, 0.25);
+    stroke-width: 1px;
+    rx: 8px;
+}
+
+[data-theme="dark"] .svg-block-header-bar {
+    fill: #064e3b;
     stroke: #34d399;
 }
 
 .svg-block-title {
     font-family: var(--font-sans, 'Inter', sans-serif);
-    font-size: 15px;
+    font-size: 9.5px;
     font-weight: 700;
-    fill: var(--map-text);
+    letter-spacing: 0.05em;
+    fill: #ffffff;
+    pointer-events: none;
 }
 
 .svg-block-badge-bg {
-    fill: var(--color-neutral-200, #e2e8f0);
-    rx: 6px;
+    fill: rgba(0, 0, 0, 0.25);
+    rx: 4px;
 }
 
 [data-theme="dark"] .svg-block-badge-bg {
-    fill: #334155;
+    fill: rgba(0, 0, 0, 0.40);
 }
 
 .svg-block-badge-text {
     font-family: var(--font-sans, 'Inter', sans-serif);
-    font-size: 12px;
+    font-size: 8.5px;
     font-weight: 600;
-    fill: var(--map-text);
+    fill: #ffffff;
 }
 
-/* Lot Tiles in SVG */
+/* Focused Block Highlighting */
+.svg-block-card.is-focused .svg-block-bg {
+    stroke: #3b82f6;
+    stroke-width: 2.5px;
+    filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.60));
+}
+
+/* Lot Plot Parcels in SVG (Authentic cemetery plot parcels) */
 .svg-lot-tile {
     cursor: pointer;
     transition: transform 0.12s ease;
 }
 
 .svg-lot-rect {
-    stroke-width: 1.5px;
-    rx: 8px;
+    stroke-width: 0.85px;
+    rx: 2px;
     transition: fill 0.12s ease, stroke 0.12s ease, stroke-width 0.12s ease, filter 0.12s ease;
 }
 
-/* Available */
-.lot--available .svg-lot-rect {
-    fill: var(--lot-available);
-    stroke: #15803d;
-}
-.lot--available:hover .svg-lot-rect {
-    fill: var(--lot-available-hover);
-    filter: drop-shadow(0 4px 6px rgba(22, 163, 74, 0.4));
+/* Headstone / Memorial Plaque Marker */
+.svg-lot-headstone {
+    fill: #ffffff;
+    stroke: rgba(0, 0, 0, 0.25);
+    stroke-width: 0.5px;
+    rx: 1px;
+    pointer-events: none;
+    filter: drop-shadow(0 0.5px 1px rgba(0, 0, 0, 0.20));
 }
 
-/* Reserved */
+[data-theme="dark"] .svg-lot-headstone {
+    fill: #cbd5e1;
+    stroke: rgba(255, 255, 255, 0.40);
+}
+
+/* Refined Status Palette: Authentic, subtle plot tints */
+/* Available: Soft fresh lawn tint */
+.lot--available .svg-lot-rect {
+    fill: #a7f3d0;
+    stroke: #059669;
+}
+.lot--available:hover .svg-lot-rect {
+    fill: #6ee7b7;
+    stroke: #047857;
+    filter: drop-shadow(0 2px 4px rgba(5, 150, 105, 0.45));
+}
+
+/* Reserved: Warm sand / amber tint */
 .lot--reserved .svg-lot-rect {
-    fill: var(--lot-reserved);
+    fill: #fde68a;
     stroke: #d97706;
 }
 .lot--reserved:hover .svg-lot-rect {
-    fill: var(--lot-reserved-hover);
-    filter: drop-shadow(0 4px 6px rgba(245, 158, 11, 0.4));
+    fill: #fcd34d;
+    stroke: #b45309;
+    filter: drop-shadow(0 2px 4px rgba(217, 119, 6, 0.45));
 }
 
-/* Occupied */
+/* Occupied: Soft terracotta / brick tint */
 .lot--occupied .svg-lot-rect {
-    fill: var(--lot-occupied);
-    stroke: #b91c1c;
+    fill: #fca5a5;
+    stroke: #dc2626;
 }
 .lot--occupied:hover .svg-lot-rect {
-    fill: var(--lot-occupied-hover);
-    filter: drop-shadow(0 4px 6px rgba(220, 38, 38, 0.4));
+    fill: #f87171;
+    stroke: #b91c1c;
+    filter: drop-shadow(0 2px 4px rgba(220, 38, 38, 0.45));
 }
 
-/* Unavailable / Maintenance */
+/* Unavailable / Maintenance: Muted stone slate */
 .lot--unavailable .svg-lot-rect {
-    fill: var(--lot-unavailable);
+    fill: #e2e8f0;
     stroke: #64748b;
 }
 .lot--unavailable:hover .svg-lot-rect {
-    fill: var(--lot-unavailable-hover);
-    filter: drop-shadow(0 4px 6px rgba(148, 163, 184, 0.4));
+    fill: #cbd5e1;
+    stroke: #475569;
 }
 
 .lot--under-maintenance .svg-lot-rect {
-    fill: var(--lot-unavailable);
+    fill: #e2e8f0;
     stroke: #64748b;
-    stroke-dasharray: 4 2;
+    stroke-dasharray: 2 1.5;
 }
 .lot--under-maintenance:hover .svg-lot-rect {
-    fill: var(--lot-unavailable-hover);
-    filter: drop-shadow(0 4px 6px rgba(148, 163, 184, 0.4));
+    fill: #cbd5e1;
+    stroke: #475569;
 }
 
-/* Expired Status */
+/* Expired Status: Soft lavender tint */
 .lot--expired .svg-lot-rect {
-    fill: #a855f7;
-    stroke: #7e22ce;
+    fill: #e9d5ff;
+    stroke: #9333ea;
 }
 .lot--expired:hover .svg-lot-rect {
-    fill: #9333ea;
-    filter: drop-shadow(0 4px 6px rgba(168, 85, 247, 0.4));
+    fill: #d8b4fe;
+    stroke: #7e22ce;
+    filter: drop-shadow(0 2px 4px rgba(168, 85, 247, 0.40));
+}
+
+/* Dark Mode Plot Fills */
+[data-theme="dark"] .lot--available .svg-lot-rect {
+    fill: #064e3b;
+    stroke: #10b981;
+}
+[data-theme="dark"] .lot--reserved .svg-lot-rect {
+    fill: #78350f;
+    stroke: #f59e0b;
+}
+[data-theme="dark"] .lot--occupied .svg-lot-rect {
+    fill: #7f1d1d;
+    stroke: #ef4444;
+}
+[data-theme="dark"] .lot--unavailable .svg-lot-rect {
+    fill: #334155;
+    stroke: #64748b;
 }
 [data-theme="dark"] .lot--expired .svg-lot-rect {
-    fill: #c084fc;
+    fill: #581c87;
     stroke: #a855f7;
 }
 
-/* Level of Detail (LOD) & Block Spatial Presentation (Batch 3) */
-.svg-block-header-bar {
-    fill: var(--color-neutral-100, #f1f5f9);
-    stroke: var(--map-border);
-    stroke-width: 1px;
-}
-
-[data-theme="dark"] .svg-block-header-bar {
-    fill: #1e293b;
-}
-
-.svg-block-card.is-focused .svg-block-bg {
-    stroke: var(--color-primary-600, #163d2c);
-    stroke-width: 2.5px;
-    filter: drop-shadow(0 4px 10px rgba(44, 94, 71, 0.25));
-}
-
+/* Level of Detail (LOD) & Plot Spatial Presentation */
 .cemetery-map-svg.lod-low .svg-lot-label {
     opacity: 0;
     pointer-events: none;
 }
 
 .cemetery-map-svg.lod-mid .svg-lot-label {
-    opacity: 0.7;
-    font-size: 8px;
+    opacity: 0.85;
+    font-size: 7.5px;
+    fill: #0f172a;
 }
 
 .cemetery-map-svg.lod-high .svg-lot-label,
@@ -1818,24 +1892,34 @@ body[data-theme="dark"] .search-field .search-field__input:focus ~ .search-field
 .svg-lot-tile:hover .svg-lot-label,
 .svg-lot-tile.is-selected .svg-lot-label {
     opacity: 1 !important;
-    font-size: 9.5px;
+    font-size: 8.5px;
+    font-weight: 700;
+    fill: #0f172a;
 }
 
-/* Selected State (Batch 6: High visibility, contrast, pulse glow, status fill preserved) */
+[data-theme="dark"] .cemetery-map-svg.lod-mid .svg-lot-label,
+[data-theme="dark"] .cemetery-map-svg.lod-high .svg-lot-label,
+[data-theme="dark"] .cemetery-map-svg.is-zoomed-in .svg-lot-label,
+[data-theme="dark"] .svg-lot-tile:hover .svg-lot-label,
+[data-theme="dark"] .svg-lot-tile.is-selected .svg-lot-label {
+    fill: #ffffff;
+}
+
+/* Selected State */
 .svg-lot-tile.is-selected .svg-lot-rect {
     stroke: #2563eb !important;
-    stroke-width: 4.5px !important;
+    stroke-width: 3.5px !important;
     stroke-dasharray: none !important;
-    filter: drop-shadow(0 0 10px rgba(37, 99, 235, 0.8)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35)) !important;
+    filter: drop-shadow(0 0 10px rgba(37, 99, 235, 0.85)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35)) !important;
     animation: lotSelectedGlowPulse 2.2s infinite ease-in-out;
 }
 
 @keyframes lotSelectedGlowPulse {
     0%, 100% {
-        filter: drop-shadow(0 0 8px rgba(37, 99, 235, 0.7)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        filter: drop-shadow(0 0 8px rgba(37, 99, 235, 0.70)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.30));
     }
     50% {
-        filter: drop-shadow(0 0 16px rgba(37, 99, 235, 1)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
+        filter: drop-shadow(0 0 16px rgba(37, 99, 235, 1.0)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
     }
 }
 
@@ -1868,16 +1952,14 @@ body[data-theme="dark"] .search-field .search-field__input:focus ~ .search-field
 
 .svg-lot-label {
     font-family: var(--font-sans, 'Inter', sans-serif);
-    font-size: 14px;
+    font-size: 10px;
     font-weight: 700;
-    fill: #ffffff;
     pointer-events: none;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .svg-lot-status-text {
     font-family: var(--font-sans, 'Inter', sans-serif);
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 500;
     fill: rgba(255, 255, 255, 0.9);
     pointer-events: none;
@@ -5151,3 +5233,575 @@ body.dark-mode .btn-wayfinding-slip:hover {
     }
 }
 
+
+
+/* =========================================================================
+   ILLUSTRATED CEMETERY MASTER PLAN STYLES
+   Visual correction matching approved reference: continuous property,
+   perimeter tree buffer, integrated roads, realistic landmarks, lawn zones,
+   compact blocks, and dense organized plot parcels.
+   ========================================================================= */
+
+/* Canvas Base & Ground */
+.mp-surround {
+    fill: #27452a;
+}
+[data-theme="dark"] .mp-surround {
+    fill: #0f1c12;
+}
+
+.mp-property {
+    fill: #548344;
+    stroke: #335926;
+    stroke-width: 1.5px;
+}
+[data-theme="dark"] .mp-property {
+    fill: #142a18;
+    stroke: #0a170c;
+}
+
+.mp-texture {
+    pointer-events: none;
+}
+
+/* North boundary caption */
+.mp-north-label {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    fill: rgba(255, 255, 255, 0.7);
+    text-anchor: middle;
+    pointer-events: none;
+}
+
+/* Boundary Wall & Posts */
+.mp-wall {
+    fill: none;
+    stroke: #e2e8f0;
+    stroke-width: 5px;
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.35));
+}
+.mp-wall-inner {
+    fill: none;
+    stroke: #64748b;
+    stroke-width: 1.2px;
+}
+.mp-wall-post {
+    fill: #ffffff;
+    stroke: #475569;
+    stroke-width: 0.8px;
+}
+[data-theme="dark"] .mp-wall {
+    stroke: #334155;
+}
+[data-theme="dark"] .mp-wall-inner {
+    stroke: #1e293b;
+}
+[data-theme="dark"] .mp-wall-post {
+    fill: #475569;
+    stroke: #1e293b;
+}
+
+/* Frontage Road: P. Aquino Avenue (Letre Road) */
+.mp-ext-road {
+    fill: #3b4550;
+    stroke: #1e293b;
+    stroke-width: 1.5px;
+}
+[data-theme="dark"] .mp-ext-road {
+    fill: #1e252e;
+}
+.mp-ext-edge {
+    stroke: #cbd5e1;
+    stroke-width: 1.5px;
+}
+.mp-ext-centerline {
+    stroke: #f59e0b;
+    stroke-width: 2.2px;
+    stroke-dasharray: 12 8;
+}
+.mp-sidewalk {
+    fill: #94a3b8;
+    stroke: #64748b;
+    stroke-width: 0.8px;
+}
+[data-theme="dark"] .mp-sidewalk {
+    fill: #334155;
+    stroke: #1e293b;
+}
+.mp-crosswalk {
+    fill: #ffffff;
+    opacity: 0.88;
+}
+.mp-ext-lane-label {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    fill: rgba(255, 255, 255, 0.6);
+    text-anchor: middle;
+    pointer-events: none;
+}
+
+/* Road Network */
+.mp-road-curb {
+    fill: none;
+    stroke: #9ca3af;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+[data-theme="dark"] .mp-road-curb {
+    stroke: #334155;
+}
+
+.mp-road {
+    fill: none;
+    stroke: #64748b;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.mp-road--main {
+    stroke: #475569;
+}
+[data-theme="dark"] .mp-road {
+    stroke: #1e293b;
+}
+[data-theme="dark"] .mp-road--main {
+    stroke: #0f172a;
+}
+
+.mp-road-line {
+    fill: none;
+    stroke: #f59e0b;
+    stroke-width: 1.8px;
+    stroke-dasharray: 8 6;
+    stroke-linecap: round;
+}
+
+.mp-road-label {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    fill: #ffffff;
+    text-anchor: middle;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+}
+.mp-road-label--minor {
+    font-size: 7px;
+    letter-spacing: 0.1em;
+    opacity: 0.85;
+}
+
+/* Pedestrian Pathways */
+.mp-path-edge {
+    fill: none;
+    stroke: #94a3b8;
+    stroke-width: 7px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.mp-path {
+    fill: none;
+    stroke: #e2e8f0;
+    stroke-width: 4.5px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+[data-theme="dark"] .mp-path-edge {
+    stroke: #1e293b;
+}
+[data-theme="dark"] .mp-path {
+    stroke: #475569;
+}
+
+/* Tree Foliage & Landscaping */
+.mp-tree-shadow {
+    fill: rgba(15, 23, 42, 0.28);
+}
+.mp-trees circle {
+    stroke-width: 0;
+}
+
+/* Sections as Physical Lawn Zones */
+.mp-section-lawn {
+    fill: #5a8d4a;
+    stroke: #2b5522;
+    stroke-width: 1.8px;
+    transition: fill 0.2s ease, stroke 0.2s ease;
+}
+[data-theme="dark"] .mp-section-lawn {
+    fill: #15321a;
+    stroke: #0a1b0d;
+}
+
+.mp-section-hedge {
+    fill: none;
+    stroke: #224a1b;
+    stroke-width: 2px;
+    stroke-dasharray: 6 3;
+    pointer-events: none;
+    opacity: 0.65;
+}
+[data-theme="dark"] .mp-section-hedge {
+    stroke: #0a1b0d;
+}
+
+.mp-section-pathpad {
+    fill: #cbd5e1;
+    stroke: #94a3b8;
+    stroke-width: 1px;
+}
+[data-theme="dark"] .mp-section-pathpad {
+    fill: #1e293b;
+    stroke: #0f172a;
+}
+
+/* Decorative Garden Zone (when < 5 sections configured) */
+.mp-garden-lawn {
+    fill: #4e803e;
+    stroke: #2b5522;
+    stroke-width: 1.5px;
+}
+[data-theme="dark"] .mp-garden-lawn {
+    fill: #132a17;
+    stroke: #0a1b0d;
+}
+
+/* Pedestrian Pathways between Block Terraces (Subtle Stone Pavers, Not Card Boxes) */
+.mp-block-walkway-edge {
+    fill: none;
+    stroke: #94a3b8;
+    stroke-width: 6.5px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.mp-block-walkway {
+    fill: none;
+    stroke: #e2e8f0;
+    stroke-width: 4.5px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+[data-theme="dark"] .mp-block-walkway-edge {
+    stroke: #1e293b;
+}
+[data-theme="dark"] .mp-block-walkway {
+    stroke: #475569;
+}
+
+/* Block Parcels (Natural Lawn Terraces, NOT Cards or Boxes) */
+.mp-block-terrace {
+    fill: rgba(255, 255, 255, 0.05);
+    stroke: rgba(31, 66, 22, 0.28);
+    stroke-width: 0.85px;
+    stroke-dasharray: 4 2;
+    transition: fill 0.15s ease, stroke 0.15s ease;
+}
+.mp-block-terrace--niche {
+    fill: rgba(167, 139, 250, 0.08);
+    stroke: rgba(124, 58, 237, 0.35);
+}
+[data-theme="dark"] .mp-block-terrace {
+    fill: rgba(255, 255, 255, 0.02);
+    stroke: rgba(52, 211, 153, 0.2);
+}
+[data-theme="dark"] .mp-block-terrace--niche {
+    fill: rgba(107, 33, 168, 0.12);
+    stroke: rgba(168, 85, 247, 0.35);
+}
+
+.svg-block-card:hover .mp-block-terrace {
+    fill: rgba(255, 255, 255, 0.16);
+    stroke: #2563eb;
+    stroke-width: 1.4px;
+    stroke-dasharray: none;
+}
+[data-theme="dark"] .svg-block-card:hover .mp-block-terrace {
+    fill: rgba(52, 211, 153, 0.08);
+    stroke: #3b82f6;
+}
+
+/* Block Tag Badges (Small, compact floating identifiers: A1, A2, etc.) */
+.mp-block-tag {
+    fill: #1e3a2b;
+    stroke: rgba(255, 255, 255, 0.5);
+    stroke-width: 0.8px;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+}
+.mp-block-tag-text {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 7.5px;
+    font-weight: 800;
+    fill: #ffffff;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+}
+.mp-theme-a .mp-block-tag { fill: #c2410c; }
+.mp-theme-b .mp-block-tag { fill: #15803d; }
+.mp-theme-c .mp-block-tag { fill: #1d4ed8; }
+.mp-theme-d .mp-block-tag { fill: #6b21a8; }
+.mp-theme-e .mp-block-tag { fill: #0e7490; }
+
+/* Individual Plots on Master Map (Compact burial plots with headstones) */
+.mp-lot-plot {
+    stroke-width: 0.65px;
+    transition: transform 0.1s ease, filter 0.1s ease, stroke-width 0.1s ease;
+}
+
+.mp-lot-headstone {
+    fill: #ffffff;
+    stroke: #94a3b8;
+    stroke-width: 0.4px;
+    pointer-events: none;
+    filter: drop-shadow(0 0.5px 0.5px rgba(0, 0, 0, 0.2));
+}
+[data-theme="dark"] .mp-lot-headstone {
+    fill: #cbd5e1;
+    stroke: #475569;
+}
+
+.mp-lot-number {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 6.5px;
+    font-weight: 700;
+    fill: #0f172a;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+[data-theme="dark"] .mp-lot-number {
+    fill: #ffffff;
+}
+
+.svg-lot-tile:hover .mp-lot-plot {
+    stroke-width: 1.5px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+.svg-lot-tile:hover .mp-lot-number,
+.svg-lot-tile.is-selected .mp-lot-number {
+    opacity: 1 !important;
+    font-weight: 800;
+}
+
+/* Floating Badges & Pills (Landmarks and Sections) */
+.mp-pill-bg {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+    stroke-width: 1.2px;
+}
+.mp-pill-text {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    fill: #ffffff;
+    text-anchor: middle;
+    pointer-events: none;
+}
+.mp-pill-icon {
+    font-size: 11px;
+    text-anchor: middle;
+    pointer-events: none;
+}
+
+/* Pill Themes */
+.mp-pill--navy .mp-pill-bg { fill: #1e3a5f; stroke: #93c5fd; }
+.mp-pill--purple .mp-pill-bg { fill: #581c87; stroke: #d8b4fe; }
+.mp-pill--teal .mp-pill-bg { fill: #0e7490; stroke: #a5f3fc; }
+.mp-pill--road .mp-pill-bg { fill: #0f172a; stroke: #f59e0b; }
+.mp-pill--road .mp-pill-text { fill: #fbbf24; font-size: 8.5px; letter-spacing: 0.12em; }
+.mp-pill--muted .mp-pill-bg { fill: #2d5032; stroke: #86efac; }
+.mp-pill--muted .mp-pill-text { font-size: 8px; letter-spacing: 0.1em; }
+
+/* Landmark Architecture Details */
+.mp-bldg-wall {
+    fill: #f8fafc;
+    stroke: #334155;
+    stroke-width: 1.5px;
+}
+.mp-bldg-shadow {
+    fill: rgba(15, 23, 42, 0.32);
+}
+.mp-roof-ridge {
+    stroke: #ffffff;
+    stroke-width: 1.6px;
+    stroke-linecap: round;
+}
+.mp-roof-ridge--thin {
+    stroke-width: 1px;
+}
+.mp-roof-hip {
+    fill: none;
+    stroke: rgba(0, 0, 0, 0.25);
+    stroke-width: 1.2px;
+}
+
+.mp-plaza {
+    fill: #e2e8f0;
+    stroke: #94a3b8;
+    stroke-width: 1.2px;
+}
+[data-theme="dark"] .mp-plaza {
+    fill: #334155;
+    stroke: #1e293b;
+}
+
+.mp-water-rim {
+    fill: #cbd5e1;
+    stroke: #64748b;
+    stroke-width: 1px;
+}
+.mp-water {
+    fill: #38bdf8;
+    stroke: #0284c7;
+    stroke-width: 1.2px;
+}
+.mp-water-jet {
+    fill: #ffffff;
+    filter: drop-shadow(0 0 3px #38bdf8);
+}
+
+.mp-landscape-pad {
+    fill: #558746;
+    stroke: #315b25;
+    stroke-width: 1.2px;
+}
+[data-theme="dark"] .mp-landscape-pad {
+    fill: #17361c;
+    stroke: #0c1f10;
+}
+
+/* Parking Facility */
+.mp-parking-curb {
+    fill: #94a3b8;
+}
+.mp-parking {
+    fill: #374151;
+    stroke: #1f2937;
+    stroke-width: 1.2px;
+}
+[data-theme="dark"] .mp-parking {
+    fill: #1f2937;
+}
+.mp-parking-median {
+    fill: #4b783c;
+    stroke: #94a3b8;
+    stroke-width: 0.8px;
+}
+.mp-parking-stripe {
+    stroke: #ffffff;
+    stroke-width: 1.2px;
+    opacity: 0.85;
+}
+.mp-parking-pwd {
+    fill: rgba(37, 99, 235, 0.3);
+    stroke: #2563eb;
+    stroke-width: 1px;
+}
+.mp-parking-pwd-icon {
+    font-size: 13px;
+    fill: #2563eb;
+    text-anchor: middle;
+}
+.mp-parking-arrow {
+    fill: none;
+    stroke: #ffffff;
+    stroke-width: 1.6px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.75;
+}
+.mp-car {
+    stroke: rgba(0, 0, 0, 0.35);
+    stroke-width: 0.8px;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+.mp-car-glass {
+    fill: #94a3b8;
+    opacity: 0.75;
+}
+
+/* Columbarium Rotunda Elements */
+.mp-garden-hedge {
+    fill: none;
+    stroke: #275223;
+    stroke-width: 6px;
+    stroke-dasharray: 12 4;
+}
+.mp-path-ring {
+    fill: none;
+    stroke: #cbd5e1;
+    stroke-width: 4px;
+}
+.mp-path-ring--wide {
+    stroke-width: 7px;
+}
+[data-theme="dark"] .mp-path-ring {
+    stroke: #334155;
+}
+.mp-flower-ring {
+    fill: none;
+    stroke: #ec4899;
+    stroke-width: 3px;
+    stroke-dasharray: 4 3;
+    opacity: 0.8;
+}
+.mp-column {
+    fill: #ffffff;
+    stroke: #64748b;
+    stroke-width: 0.6px;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+}
+
+/* Main Gate Entrance Portal */
+.mp-gate-apron {
+    fill: #cbd5e1;
+    stroke: #64748b;
+    stroke-width: 1px;
+}
+.mp-gate-pillar {
+    fill: #e2e8f0;
+    stroke: #334155;
+    stroke-width: 1.2px;
+}
+.mp-gate-cap {
+    fill: #1e3a5f;
+    stroke: #0f172a;
+    stroke-width: 1px;
+}
+.mp-gate-arch {
+    fill: none;
+    stroke: #f59e0b;
+    stroke-width: 2.2px;
+}
+.mp-gate-leaf {
+    stroke: #1e3a5f;
+    stroke-width: 2px;
+}
+.mp-gate-boom {
+    stroke: #ef4444;
+    stroke-width: 2.5px;
+    stroke-dasharray: 4 3;
+}
+.mp-gate-badge {
+    fill: #1e3a5f;
+    stroke: #ffffff;
+    stroke-width: 1.5px;
+}
+
+/* Compass Rose */
+.mp-compass-bg {
+    fill: #0f172a;
+    stroke: #ffffff;
+    stroke-width: 2px;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+}
+.mp-compass-n {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 8.5px;
+    font-weight: 900;
+    fill: #ffffff;
+    text-anchor: middle;
+}
