@@ -22,6 +22,24 @@
     --lot-unavailable-hover: #64748b;
     --lot-selected: #2563eb;
     --lot-selected-glow: rgba(37, 99, 235, 0.35);
+
+    /* Master Map Foundation Tokens */
+    --map-ground-outer: #e6ede6;
+    --map-ground-inner: #f1f6f0;
+    --map-ground-pattern: rgba(34, 197, 94, 0.04);
+    --map-perimeter-stroke: #2c5e47;
+    --map-perimeter-fill: rgba(44, 94, 71, 0.04);
+    --map-corridor-stroke: rgba(44, 94, 71, 0.22);
+    --map-corridor-fill: rgba(226, 232, 240, 0.55);
+    --map-corridor-text: #52675b;
+    --map-gate-primary: #1e3a2b;
+    --map-gate-accent: #f59e0b;
+    --map-landmark-res-bg: rgba(241, 245, 249, 0.82);
+    --map-landmark-res-border: #cbd5e1;
+    --map-landmark-res-text: #64748b;
+    --map-section-bg: #ffffff;
+    --map-section-border: #94a3b8;
+    --map-section-accent: #2c5e47;
 }
 
 [data-theme="dark"] {
@@ -42,6 +60,24 @@
     --lot-unavailable-hover: #475569;
     --lot-selected: #3b82f6;
     --lot-selected-glow: rgba(59, 130, 246, 0.45);
+
+    /* Master Map Foundation Dark Tokens */
+    --map-ground-outer: #0a130f;
+    --map-ground-inner: #0f1c16;
+    --map-ground-pattern: rgba(52, 211, 153, 0.03);
+    --map-perimeter-stroke: #10b981;
+    --map-perimeter-fill: rgba(16, 185, 129, 0.05);
+    --map-corridor-stroke: rgba(52, 211, 153, 0.25);
+    --map-corridor-fill: rgba(30, 41, 59, 0.65);
+    --map-corridor-text: #94a3b8;
+    --map-gate-primary: #10b981;
+    --map-gate-accent: #fbbf24;
+    --map-landmark-res-bg: rgba(15, 23, 42, 0.75);
+    --map-landmark-res-border: #334155;
+    --map-landmark-res-text: #94a3b8;
+    --map-section-bg: #1e293b;
+    --map-section-border: #475569;
+    --map-section-accent: #34d399;
 }
 
 /* Page Layout & Content Area */
@@ -1259,6 +1295,81 @@ body[data-theme="dark"] .search-field .search-field__input:focus ~ .search-field
 .dashboard-body:not([data-theme="dark"]) .logout-btn:hover .text,
 .dashboard-body:not([data-theme="dark"]) .Btn.logout-btn:hover .text {
     color: #ffffff;
+}
+
+/* Master Map Foundation Layer & Element Styles */
+.map-layer {
+    transition: opacity 0.3s ease;
+}
+
+.svg-cemetery-ground {
+    fill: url(#groundLawnGradient);
+}
+
+.svg-cemetery-ground-texture {
+    fill: url(#lawnTilePattern);
+    pointer-events: none;
+}
+
+.svg-cemetery-perimeter {
+    fill: var(--map-perimeter-fill, rgba(44, 94, 71, 0.04));
+    stroke: var(--map-perimeter-stroke, #2c5e47);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.06));
+}
+
+.svg-cemetery-boundary-line {
+    fill: none;
+    stroke: var(--map-perimeter-stroke, #2c5e47);
+    stroke-width: 1.5px;
+    stroke-dasharray: 6 4;
+    opacity: 0.7;
+}
+
+.svg-road-corridor {
+    fill: var(--map-corridor-fill, rgba(226, 232, 240, 0.55));
+    stroke: var(--map-corridor-stroke, rgba(44, 94, 71, 0.22));
+    stroke-width: 1.5px;
+    stroke-dasharray: 8 6;
+}
+
+.svg-road-corridor-label {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    fill: var(--map-corridor-text, #52675b);
+    text-anchor: middle;
+    pointer-events: none;
+    opacity: 0.85;
+}
+
+.svg-entrance-threshold {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+}
+
+.svg-north-indicator {
+    pointer-events: none;
+    user-select: none;
+}
+
+.svg-landmark-reservation-zone {
+    fill: var(--map-landmark-res-bg, rgba(241, 245, 249, 0.82));
+    stroke: var(--map-landmark-res-border, #cbd5e1);
+    stroke-width: 1.5px;
+    stroke-dasharray: 5 4;
+    rx: 8px;
+}
+
+.svg-landmark-reservation-text {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 11px;
+    font-weight: 600;
+    fill: var(--map-landmark-res-text, #64748b);
+    text-anchor: middle;
+    pointer-events: none;
 }
 
 /* SVG Dynamic Elements Styling */

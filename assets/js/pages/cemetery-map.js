@@ -47,6 +47,8 @@
     let viewLevelBadge, viewLevelText, btnBackToOverview, filterMatchesBadge;
     let btnZoomIn, btnZoomOut, btnResetZoom;
     let svgStageContainer, cemeteryMapSvg, mapTransformLayer;
+    let mapGroundLayer, mapBoundaryLayer, mapRoadLayer, mapLandmarkLayer;
+    let mapSectionLayer, mapBlockLayer, mapLotLayer, mapRouteLayer, mapSelectionLayer;
     let mapLoadingOverlay, loadingText, mapEmptyOverlay, emptyIcon, emptyTitle, emptyDesc, btnRetryMap;
     let svgFloatingTooltip;
     let lotDetailsDrawer, btnCloseDrawer, drawerLotNumber, drawerStatusDot, drawerStatusText;
@@ -156,6 +158,17 @@
         svgStageContainer = document.getElementById('svgStageContainer');
         cemeteryMapSvg = document.getElementById('cemeteryMapSvg');
         mapTransformLayer = document.getElementById('mapTransformLayer');
+
+        // Master Map Foundation SVG Layer Groups (Batch 1)
+        mapGroundLayer = document.getElementById('mapGroundLayer');
+        mapBoundaryLayer = document.getElementById('mapBoundaryLayer');
+        mapRoadLayer = document.getElementById('mapRoadLayer');
+        mapLandmarkLayer = document.getElementById('mapLandmarkLayer');
+        mapSectionLayer = document.getElementById('mapSectionLayer');
+        mapBlockLayer = document.getElementById('mapBlockLayer');
+        mapLotLayer = document.getElementById('mapLotLayer');
+        mapRouteLayer = document.getElementById('mapRouteLayer');
+        mapSelectionLayer = document.getElementById('mapSelectionLayer');
 
         mapLoadingOverlay = document.getElementById('mapLoadingOverlay');
         loadingText = document.getElementById('loadingText');
@@ -926,6 +939,62 @@
     }
 
     /**
+     * Ensure the 9 master map SVG layer groups exist inside mapTransformLayer
+     */
+    function ensureSvgLayers() {
+        if (!mapTransformLayer) return;
+
+        const layerIds = [
+            'mapGroundLayer',
+            'mapBoundaryLayer',
+            'mapRoadLayer',
+            'mapLandmarkLayer',
+            'mapSectionLayer',
+            'mapBlockLayer',
+            'mapLotLayer',
+            'mapRouteLayer',
+            'mapSelectionLayer'
+        ];
+
+        layerIds.forEach(id => {
+            let el = document.getElementById(id);
+            if (!el || !mapTransformLayer.contains(el)) {
+                el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                el.setAttribute('id', id);
+                el.setAttribute('class', 'map-layer');
+                mapTransformLayer.appendChild(el);
+            }
+        });
+
+        // Re-cache references
+        mapGroundLayer = document.getElementById('mapGroundLayer');
+        mapBoundaryLayer = document.getElementById('mapBoundaryLayer');
+        mapRoadLayer = document.getElementById('mapRoadLayer');
+        mapLandmarkLayer = document.getElementById('mapLandmarkLayer');
+        mapSectionLayer = document.getElementById('mapSectionLayer');
+        mapBlockLayer = document.getElementById('mapBlockLayer');
+        mapLotLayer = document.getElementById('mapLotLayer');
+        mapRouteLayer = document.getElementById('mapRouteLayer');
+        mapSelectionLayer = document.getElementById('mapSelectionLayer');
+    }
+
+    /**
+     * Clear all SVG layer contents
+     */
+    function clearSvgLayers() {
+        ensureSvgLayers();
+        if (mapGroundLayer) mapGroundLayer.innerHTML = '';
+        if (mapBoundaryLayer) mapBoundaryLayer.innerHTML = '';
+        if (mapRoadLayer) mapRoadLayer.innerHTML = '';
+        if (mapLandmarkLayer) mapLandmarkLayer.innerHTML = '';
+        if (mapSectionLayer) mapSectionLayer.innerHTML = '';
+        if (mapBlockLayer) mapBlockLayer.innerHTML = '';
+        if (mapLotLayer) mapLotLayer.innerHTML = '';
+        if (mapRouteLayer) mapRouteLayer.innerHTML = '';
+        if (mapSelectionLayer) mapSelectionLayer.innerHTML = '';
+    }
+
+    /**
      * Render Cemetery Overview SVG (Sections & Blocks)
      */
     function renderCemeteryOverview(layoutData) {
@@ -935,40 +1004,162 @@
         updateBreadcrumbs();
         resetView();
 
+        ensureSvgLayers();
+        clearSvgLayers();
+
         const sections = layoutData.sections || [];
         const canvasW = state.baseViewBox.width;
         const canvasH = state.baseViewBox.height;
-        const margin = 40;
-        const gap = 30;
 
-        mapTransformLayer.innerHTML = '';
+        // ==========================================
+        // LAYER 0: Ground Background & North Indicator
+        // ==========================================
+        // 1. Base Landscaped Lawn Ground
+        const groundRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        groundRect.setAttribute('x', '30');
+        groundRect.setAttribute('y', '25');
+        groundRect.setAttribute('width', '1540');
+        groundRect.setAttribute('height', '950');
+        groundRect.setAttribute('rx', '24');
+        groundRect.setAttribute('class', 'svg-cemetery-ground');
+        mapGroundLayer.appendChild(groundRect);
 
-        // Deterministic Section Grid Arrangement
+        // 2. Subtle lawn texture pattern overlay
+        const groundPattern = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        groundPattern.setAttribute('x', '30');
+        groundPattern.setAttribute('y', '25');
+        groundPattern.setAttribute('width', '1540');
+        groundPattern.setAttribute('height', '950');
+        groundPattern.setAttribute('rx', '24');
+        groundPattern.setAttribute('class', 'svg-cemetery-ground-texture');
+        mapGroundLayer.appendChild(groundPattern);
+
+        // 3. Elegant North Compass Badge (top-right corner)
+        const northBadge = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        northBadge.setAttribute('class', 'svg-north-indicator');
+        northBadge.setAttribute('transform', 'translate(1520, 60)');
+        northBadge.innerHTML = `
+            <circle cx="0" cy="0" r="18" fill="var(--map-surface, #ffffff)" stroke="var(--map-border, #cbd5e1)" stroke-width="1.5" filter="url(#tileShadow)" />
+            <polygon points="0,-12 4,2 0,0 -4,2" fill="#ef4444" />
+            <polygon points="0,12 4,0 0,0 -4,0" fill="#94a3b8" />
+            <text x="0" y="-14" font-size="9" font-weight="800" text-anchor="middle" fill="#ef4444" font-family="var(--font-sans)">N</text>
+        `;
+        mapGroundLayer.appendChild(northBadge);
+
+        // ==========================================
+        // LAYER 0/Boundary: Perimeter & Main Gate
+        // ==========================================
+        // Property Perimeter Boundary Line
+        const perimeterRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        perimeterRect.setAttribute('x', '30');
+        perimeterRect.setAttribute('y', '25');
+        perimeterRect.setAttribute('width', '1540');
+        perimeterRect.setAttribute('height', '950');
+        perimeterRect.setAttribute('rx', '24');
+        perimeterRect.setAttribute('class', 'svg-cemetery-perimeter');
+        mapBoundaryLayer.appendChild(perimeterRect);
+
+        // Main Entrance / Gate Threshold (Bottom Center: x=720..880, y=960..975)
+        const gateGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        gateGroup.setAttribute('class', 'svg-entrance-threshold');
+        gateGroup.innerHTML = `
+            <rect x="720" y="960" width="160" height="20" rx="4" fill="var(--map-gate-primary, #1e3a2b)" stroke="var(--map-gate-accent, #f59e0b)" stroke-width="2" />
+            <text x="800" y="974" font-size="10" font-weight="700" letter-spacing="0.1em" text-anchor="middle" fill="#ffffff" font-family="var(--font-sans)">MAIN ENTRANCE / GATE</text>
+        `;
+        mapBoundaryLayer.appendChild(gateGroup);
+
+        // ==========================================
+        // LAYER 1: Reserved Road Network Corridors
+        // ==========================================
+        // Central North-South Main Boulevard
+        const centralRd = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        centralRd.setAttribute('x', '735');
+        centralRd.setAttribute('y', '45');
+        centralRd.setAttribute('width', '130');
+        centralRd.setAttribute('height', '915');
+        centralRd.setAttribute('rx', '10');
+        centralRd.setAttribute('class', 'svg-road-corridor');
+        mapRoadLayer.appendChild(centralRd);
+
+        const centralRdLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        centralRdLabel.setAttribute('x', '800');
+        centralRdLabel.setAttribute('y', '480');
+        centralRdLabel.setAttribute('class', 'svg-road-corridor-label');
+        centralRdLabel.setAttribute('transform', 'rotate(-90 800 480)');
+        centralRdLabel.textContent = 'CENTRAL BOULEVARD (RESERVED CORRIDOR)';
+        mapRoadLayer.appendChild(centralRdLabel);
+
+        // Central East-West Crossway Corridor
+        const crossRd = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        crossRd.setAttribute('x', '45');
+        crossRd.setAttribute('y', '445');
+        crossRd.setAttribute('width', '1510');
+        crossRd.setAttribute('height', '60');
+        crossRd.setAttribute('rx', '8');
+        crossRd.setAttribute('class', 'svg-road-corridor');
+        mapRoadLayer.appendChild(crossRd);
+
+        const crossRdLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        crossRdLabel.setAttribute('x', '400');
+        crossRdLabel.setAttribute('y', '480');
+        crossRdLabel.setAttribute('class', 'svg-road-corridor-label');
+        crossRdLabel.textContent = 'CROSSWAY AVENUE (RESERVED CORRIDOR)';
+        mapRoadLayer.appendChild(crossRdLabel);
+
+        // ==========================================
+        // LAYER 2: Reserved Landmark Zones
+        // ==========================================
+        // Admin & Chapel Reservation Zone (SW corner)
+        const chapelZone = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        chapelZone.innerHTML = `
+            <rect x="60" y="870" width="230" height="85" class="svg-landmark-reservation-zone" />
+            <text x="175" y="910" class="svg-landmark-reservation-text">🏛️ ADMINISTRATION & CHAPEL</text>
+            <text x="175" y="928" class="svg-landmark-reservation-text" style="font-size: 9px; opacity: 0.75;">(Reserved Landmark Zone)</text>
+        `;
+        mapLandmarkLayer.appendChild(chapelZone);
+
+        // Visitor Parking Reservation Zone (SE corner)
+        const parkingZone = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        parkingZone.innerHTML = `
+            <rect x="1310" y="870" width="230" height="85" class="svg-landmark-reservation-zone" />
+            <text x="1425" y="910" class="svg-landmark-reservation-text">🅿️ VISITOR PARKING AREA</text>
+            <text x="1425" y="928" class="svg-landmark-reservation-text" style="font-size: 9px; opacity: 0.75;">(Reserved Landmark Zone)</text>
+        `;
+        mapLandmarkLayer.appendChild(parkingZone);
+
+        // ==========================================
+        // LAYER 3 & 4: Sections & Nested Blocks
+        // ==========================================
+        // Deterministic Section Layout (Geographic Quadrants with Main Corridor Isolation)
         const count = sections.length;
-        let cols = 1;
-        let rows = 1;
-
-        if (count === 2) {
-            cols = 2; rows = 1;
-        } else if (count <= 4) {
-            cols = 2; rows = Math.ceil(count / 2);
-        } else if (count <= 6) {
-            cols = 3; rows = Math.ceil(count / 3);
-        } else {
-            cols = Math.ceil(Math.sqrt(count));
-            rows = Math.ceil(count / cols);
-        }
-
-        const sectionW = (canvasW - (margin * 2) - ((cols - 1) * gap)) / cols;
-        const sectionH = (canvasH - (margin * 2) - ((rows - 1) * gap)) / rows;
+        const standardQuadrants = [
+            { x: 60, y: 55, w: 650, h: 370 },   // Northwest Zone
+            { x: 890, y: 55, w: 650, h: 370 },  // Northeast Zone
+            { x: 60, y: 520, w: 650, h: 335 },  // Southwest Zone
+            { x: 890, y: 520, w: 650, h: 335 }  // Southeast Zone
+        ];
 
         sections.forEach((section, index) => {
-            const col = index % cols;
-            const row = Math.floor(index / cols);
-            let secX = margin + (col * (sectionW + gap));
-            let secY = margin + (row * (sectionH + gap));
-            let curSecW = sectionW;
-            let curSecH = sectionH;
+            let secX, secY, curSecW, curSecH;
+
+            if (count <= 4) {
+                const q = standardQuadrants[index] || standardQuadrants[0];
+                secX = q.x;
+                secY = q.y;
+                curSecW = q.w;
+                curSecH = q.h;
+            } else {
+                const cols = Math.ceil(Math.sqrt(count));
+                const rows = Math.ceil(count / cols);
+                const sectionW = (canvasW - (40 * 2) - ((cols - 1) * 30)) / cols;
+                const sectionH = (canvasH - (40 * 2) - ((rows - 1) * 30)) / rows;
+                const col = index % cols;
+                const row = Math.floor(index / cols);
+                secX = 40 + (col * (sectionW + 30));
+                secY = 40 + (row * (sectionH + 30));
+                curSecW = sectionW;
+                curSecH = sectionH;
+            }
 
             // Use configured geometry if available, otherwise procedural fallback
             if (section.map_config && !isNaN(Number(section.map_config.x)) && !isNaN(Number(section.map_config.y)) &&
@@ -1129,7 +1320,7 @@
                 });
             }
 
-            mapTransformLayer.appendChild(secGroup);
+            mapSectionLayer.appendChild(secGroup);
         });
     }
 
@@ -1187,7 +1378,8 @@
      * Render Block Lots View in SVG
      */
     function renderBlockLotsView(block, lots) {
-        mapTransformLayer.innerHTML = '';
+        ensureSvgLayers();
+        clearSvgLayers();
         resetView();
 
         const canvasW = state.baseViewBox.width;
@@ -1249,7 +1441,7 @@
             : `Total Plots: ${lots.length}  |  🟢 Available: ${counts.Available}  |  🟡 Reserved: ${counts.Reserved}  |  🔴 Occupied: ${counts.Occupied}`;
         headerGroup.appendChild(subtitleText);
 
-        mapTransformLayer.appendChild(headerGroup);
+        mapSectionLayer.appendChild(headerGroup);
 
         if (lots.length === 0) {
             const noLotsText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -1258,7 +1450,7 @@
             noLotsText.setAttribute('text-anchor', 'middle');
             noLotsText.setAttribute('class', 'svg-section-title');
             noLotsText.textContent = 'No burial lots configured in this block.';
-            mapTransformLayer.appendChild(noLotsText);
+            mapLotLayer.appendChild(noLotsText);
             return;
         }
 
@@ -1366,7 +1558,7 @@
 
                 rulerGroup.appendChild(tierCard);
             }
-            mapTransformLayer.appendChild(rulerGroup);
+            mapLotLayer.appendChild(rulerGroup);
         }
 
         lots.forEach((lot, i) => {
@@ -1506,7 +1698,7 @@
             lotGroup.addEventListener('mousemove', moveFloatingTooltip);
             lotGroup.addEventListener('mouseleave', hideFloatingTooltip);
 
-            mapTransformLayer.appendChild(lotGroup);
+            mapLotLayer.appendChild(lotGroup);
         });
     }
 

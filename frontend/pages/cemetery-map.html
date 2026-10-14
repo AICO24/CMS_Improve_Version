@@ -321,9 +321,26 @@
                                     <filter id="tileHoverShadow" x="-8%" y="-8%" width="116%" height="120%" filterUnits="userSpaceOnUse">
                                         <feDropShadow dx="0" dy="5" stdDeviation="5" flood-opacity="0.22" flood-color="#0f172a" />
                                     </filter>
+                                    <!-- Master Map Turf Gradients & Architectural Patterns -->
+                                    <linearGradient id="groundLawnGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="var(--map-ground-fill, #edf5f0)" />
+                                        <stop offset="100%" stop-color="var(--map-ground-fill-alt, #e2efe6)" />
+                                    </linearGradient>
+                                    <pattern id="lawnTilePattern" width="60" height="60" patternUnits="userSpaceOnUse">
+                                        <path d="M 60 0 L 0 0 0 60" fill="none" stroke="var(--map-lawn-grid, rgba(44,94,71,0.05))" stroke-width="1"/>
+                                    </pattern>
                                 </defs>
                                 <g id="mapTransformLayer">
-                                    <!-- Dynamic content rendered here -->
+                                    <!-- Conceptual SVG Master Map Layers (Batch 1 Foundation) -->
+                                    <g id="mapGroundLayer" class="map-layer map-layer-ground"></g>
+                                    <g id="mapBoundaryLayer" class="map-layer map-layer-boundary"></g>
+                                    <g id="mapRoadLayer" class="map-layer map-layer-road"></g>
+                                    <g id="mapLandmarkLayer" class="map-layer map-layer-landmark"></g>
+                                    <g id="mapSectionLayer" class="map-layer map-layer-section"></g>
+                                    <g id="mapBlockLayer" class="map-layer map-layer-block"></g>
+                                    <g id="mapLotLayer" class="map-layer map-layer-lot"></g>
+                                    <g id="mapRouteLayer" class="map-layer map-layer-route"></g>
+                                    <g id="mapSelectionLayer" class="map-layer map-layer-selection"></g>
                                 </g>
                             </svg>
                         </div>
