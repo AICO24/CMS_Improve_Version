@@ -40,6 +40,34 @@
     --map-section-bg: #ffffff;
     --map-section-border: #94a3b8;
     --map-section-accent: #2c5e47;
+
+    /* Batch 2: Master Map Road & Street Network Tokens */
+    --map-road-surface: #cbd5e1;
+    --map-road-surface-darker: #94a3b8;
+    --map-road-curb: #64748b;
+    --map-road-line: #ffffff;
+    --map-road-line-yellow: #f59e0b;
+    --map-road-label: #1e293b;
+    --map-pathway-fill: #e2e8f0;
+    --map-pathway-stroke: #cbd5e1;
+    --map-external-road-bg: #1e293b;
+    --map-external-road-curb: #0f172a;
+    --map-external-road-text: #cbd5e1;
+
+    /* Batch 2: Landmark Architecture Tokens */
+    --map-bldg-wall: #ffffff;
+    --map-bldg-roof: #3b82f6;
+    --map-bldg-roof-chapel: #2c5e47;
+    --map-bldg-roof-cr: #0284c7;
+    --map-bldg-stroke: #475569;
+    --map-bldg-label: #0f172a;
+    --map-bldg-sublabel: #64748b;
+    --map-parking-lot: #e2e8f0;
+    --map-parking-stripe: #ffffff;
+    --map-parking-pwd: #3b82f6;
+    --map-tree-crown-1: #15803d;
+    --map-tree-crown-2: #14532d;
+    --map-tree-crown-light: #22c55e;
 }
 
 [data-theme="dark"] {
@@ -78,6 +106,34 @@
     --map-section-bg: #1e293b;
     --map-section-border: #475569;
     --map-section-accent: #34d399;
+
+    /* Batch 2: Master Map Road & Street Network Dark Tokens */
+    --map-road-surface: #1e293b;
+    --map-road-surface-darker: #0f172a;
+    --map-road-curb: #475569;
+    --map-road-line: #94a3b8;
+    --map-road-line-yellow: #fbbf24;
+    --map-road-label: #e2e8f0;
+    --map-pathway-fill: #0f172a;
+    --map-pathway-stroke: #334155;
+    --map-external-road-bg: #0b1120;
+    --map-external-road-curb: #020617;
+    --map-external-road-text: #94a3b8;
+
+    /* Batch 2: Landmark Architecture Dark Tokens */
+    --map-bldg-wall: #1e293b;
+    --map-bldg-roof: #1d4ed8;
+    --map-bldg-roof-chapel: #064e3b;
+    --map-bldg-roof-cr: #0369a1;
+    --map-bldg-stroke: #64748b;
+    --map-bldg-label: #f8fafc;
+    --map-bldg-sublabel: #94a3b8;
+    --map-parking-lot: #0f172a;
+    --map-parking-stripe: #475569;
+    --map-parking-pwd: #2563eb;
+    --map-tree-crown-1: #064e3b;
+    --map-tree-crown-2: #022c22;
+    --map-tree-crown-light: #10b981;
 }
 
 /* Page Layout & Content Area */
@@ -1370,6 +1426,199 @@ body[data-theme="dark"] .search-field .search-field__input:focus ~ .search-field
     fill: var(--map-landmark-res-text, #64748b);
     text-anchor: middle;
     pointer-events: none;
+}
+
+/* =========================================================================
+   BATCH 2: ROAD & STREET NETWORK STYLING
+   ========================================================================= */
+.svg-road-main {
+    fill: var(--map-road-surface);
+    stroke: var(--map-road-curb);
+    stroke-width: 2.5px;
+}
+
+.svg-road-secondary {
+    fill: var(--map-road-surface);
+    stroke: var(--map-road-curb);
+    stroke-width: 2px;
+}
+
+.svg-road-centerline {
+    fill: none;
+    stroke: var(--map-road-line);
+    stroke-width: 2px;
+    stroke-dasharray: 12 8;
+    opacity: 0.9;
+}
+
+.svg-road-centerline-yellow {
+    fill: none;
+    stroke: var(--map-road-line-yellow);
+    stroke-width: 2px;
+    stroke-dasharray: 12 8;
+    opacity: 0.95;
+}
+
+.svg-pathway {
+    fill: url(#walkwayPattern);
+    stroke: var(--map-pathway-stroke);
+    stroke-width: 1.2px;
+}
+
+.svg-street-label {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    fill: var(--map-road-label);
+    text-anchor: middle;
+    pointer-events: none;
+}
+
+.svg-external-road {
+    fill: var(--map-external-road-bg);
+    stroke: var(--map-external-road-curb);
+    stroke-width: 2px;
+}
+
+.svg-external-road-label {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    fill: var(--map-external-road-text);
+    text-anchor: middle;
+}
+
+/* =========================================================================
+   BATCH 2: LANDMARK ARCHITECTURE & VISITOR FACILITIES
+   ========================================================================= */
+.svg-landmark-bldg {
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.14));
+    transition: filter 0.2s ease;
+}
+
+.svg-landmark-bldg:hover {
+    filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.22));
+}
+
+.svg-bldg-base {
+    fill: var(--map-bldg-wall);
+    stroke: var(--map-bldg-stroke);
+    stroke-width: 2px;
+    rx: 6px;
+}
+
+.svg-bldg-roof-chapel {
+    fill: var(--map-bldg-roof-chapel);
+    stroke: var(--map-bldg-stroke);
+    stroke-width: 1.5px;
+}
+
+.svg-bldg-roof-cr {
+    fill: var(--map-bldg-roof-cr);
+    stroke: var(--map-bldg-stroke);
+    stroke-width: 1.5px;
+}
+
+.svg-landmark-title {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 11px;
+    font-weight: 700;
+    fill: var(--map-bldg-label);
+    text-anchor: middle;
+    pointer-events: none;
+}
+
+.svg-landmark-subtitle {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 9px;
+    font-weight: 600;
+    fill: var(--map-bldg-sublabel);
+    text-anchor: middle;
+    pointer-events: none;
+}
+
+/* Parking Facility */
+.svg-parking-lot {
+    fill: var(--map-parking-lot);
+    stroke: var(--map-bldg-stroke);
+    stroke-width: 1.5px;
+    rx: 6px;
+}
+
+.svg-parking-bay-line {
+    stroke: var(--map-parking-stripe);
+    stroke-width: 1.5px;
+}
+
+.svg-parking-pwd-bay {
+    fill: rgba(59, 130, 246, 0.22);
+    stroke: var(--map-parking-pwd);
+    stroke-width: 1.5px;
+}
+
+/* Landscaping, Trees & Roundabout */
+.svg-tree-shadow {
+    fill: rgba(0, 0, 0, 0.10);
+}
+
+.svg-tree-canopy {
+    fill: url(#treeCanopyGradient);
+    stroke: var(--map-tree-crown-2);
+    stroke-width: 1px;
+}
+
+.svg-garden-island {
+    fill: var(--map-perimeter-fill);
+    stroke: var(--map-perimeter-stroke);
+    stroke-width: 1.5px;
+}
+
+.svg-memorial-monument {
+    fill: #64748b;
+    stroke: #334155;
+    stroke-width: 1.5px;
+}
+
+/* Main Gate Styling */
+.svg-gate-portal {
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.20));
+}
+
+.svg-gate-pillar {
+    fill: #475569;
+    stroke: #1e293b;
+    stroke-width: 1.5px;
+}
+
+.svg-gate-arch {
+    fill: none;
+    stroke: var(--map-gate-primary, #1e3a2b);
+    stroke-width: 3.5px;
+}
+
+.svg-gate-grille {
+    stroke: var(--map-gate-accent, #f59e0b);
+    stroke-width: 1.5px;
+}
+
+.svg-gate-label-badge {
+    fill: var(--map-gate-primary, #1e3a2b);
+    stroke: var(--map-gate-accent, #f59e0b);
+    stroke-width: 1.5px;
+    rx: 4px;
+}
+
+.svg-gate-label-text {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    fill: #ffffff;
+    text-anchor: middle;
 }
 
 /* SVG Dynamic Elements Styling */

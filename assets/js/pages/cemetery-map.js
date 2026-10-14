@@ -40,6 +40,28 @@
         panStart: { x: 0, y: 0 },
     };
 
+    // =========================================================================
+    // BATCH 2: MASTER MAP ROAD & LANDMARK NETWORK COORDINATES (BATCH 6 ROUTING)
+    // =========================================================================
+    const MASTER_MAP_NETWORK = {
+        nodes: {
+            EXTERNAL_ENTRY: { id: 'EXTERNAL_ENTRY', x: 800, y: 975, label: 'P. Aquino Avenue Ingress' },
+            MAIN_GATE: { id: 'MAIN_GATE', x: 800, y: 925, label: 'Main Gate Portal' },
+            SOUTH_JUNCTION: { id: 'SOUTH_JUNCTION', x: 800, y: 860, label: 'St. Joseph Drive Junction' },
+            CENTRAL_ROUNDABOUT: { id: 'CENTRAL_ROUNDABOUT', x: 800, y: 475, label: 'Memorial Roundabout' },
+            NORTH_TERMINUS: { id: 'NORTH_TERMINUS', x: 800, y: 60, label: 'St. Peter Way Junction' },
+            WEST_CROSSWAY: { id: 'WEST_CROSSWAY', x: 60, y: 475, label: 'Avenue of Peace (West End)' },
+            EAST_CROSSWAY: { id: 'EAST_CROSSWAY', x: 1540, y: 475, label: 'Avenue of Peace (East End)' },
+            CHAPEL_ACCESS: { id: 'CHAPEL_ACCESS', x: 170, y: 860, label: 'Chapel & Admin Office' },
+            COMFORT_ROOM_ACCESS: { id: 'COMFORT_ROOM_ACCESS', x: 357, y: 860, label: 'Comfort Room (CR)' },
+            PARKING_ACCESS: { id: 'PARKING_ACCESS', x: 1425, y: 860, label: 'Visitor Parking' },
+            SEC_GARDEN_PEACE: { id: 'SEC_GARDEN_PEACE', x: 755, y: 240, label: 'Garden of Everlasting Peace Access' },
+            SEC_LOURDES: { id: 'SEC_LOURDES', x: 845, y: 240, label: 'Garden of Our Lady of Lourdes Access' },
+            SEC_SAN_JOSE: { id: 'SEC_SAN_JOSE', x: 755, y: 680, label: 'Sanctuario de San Jose Access' },
+            SEC_COLUMBARIUM: { id: 'SEC_COLUMBARIUM', x: 845, y: 680, label: 'Columbarium Sanctuary Access' }
+        }
+    };
+
     // DOM Elements
     let cemeterySelector;
     let mapBreadcrumbs, bcCemetery, bcCemeteryName, bcSection, bcSectionName, bcBlock, bcBlockName, bcLot, bcLotName;
@@ -1012,14 +1034,14 @@
         const canvasH = state.baseViewBox.height;
 
         // ==========================================
-        // LAYER 0: Ground Background & North Indicator
+        // LAYER 0: Ground Background, Landscaping & External Road
         // ==========================================
         // 1. Base Landscaped Lawn Ground
         const groundRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         groundRect.setAttribute('x', '30');
         groundRect.setAttribute('y', '25');
         groundRect.setAttribute('width', '1540');
-        groundRect.setAttribute('height', '950');
+        groundRect.setAttribute('height', '920');
         groundRect.setAttribute('rx', '24');
         groundRect.setAttribute('class', 'svg-cemetery-ground');
         mapGroundLayer.appendChild(groundRect);
@@ -1029,103 +1051,232 @@
         groundPattern.setAttribute('x', '30');
         groundPattern.setAttribute('y', '25');
         groundPattern.setAttribute('width', '1540');
-        groundPattern.setAttribute('height', '950');
+        groundPattern.setAttribute('height', '920');
         groundPattern.setAttribute('rx', '24');
         groundPattern.setAttribute('class', 'svg-cemetery-ground-texture');
         mapGroundLayer.appendChild(groundPattern);
 
-        // 3. Elegant North Compass Badge (top-right corner)
+        // 3. External Road Context (P. Aquino Avenue / Letre Road)
+        const extRoadGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        extRoadGroup.setAttribute('class', 'svg-external-road-group');
+        extRoadGroup.innerHTML = `
+            <rect x="10" y="955" width="1580" height="40" rx="4" class="svg-external-road" />
+            <line x1="15" y1="975" x2="1585" y2="975" class="svg-road-centerline-yellow" />
+            <text x="380" y="979" class="svg-external-road-label">P. AQUINO AVENUE / LETRE ROAD (MAIN EXTERNAL ACCESS)</text>
+            <text x="1220" y="979" class="svg-external-road-label">P. AQUINO AVENUE / LETRE ROAD (WESTBOUND)</text>
+            <!-- Ingress Directional Chevrons -->
+            <polygon points="775,980 785,975 775,970" fill="var(--map-road-line-yellow, #f59e0b)" />
+            <polygon points="825,970 815,975 825,980" fill="var(--map-road-line-yellow, #f59e0b)" />
+            <text x="800" y="988" font-size="8" font-weight="800" letter-spacing="0.1em" fill="var(--map-road-line-yellow, #f59e0b)" text-anchor="middle" font-family="var(--font-sans)">MAIN ENTRANCE APPROACH</text>
+        `;
+        mapGroundLayer.appendChild(extRoadGroup);
+
+        // 4. Perimeter Tree Clusters & Landscaping
+        const landscapeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        landscapeGroup.setAttribute('class', 'svg-landscaping-group');
+        
+        const addTree = (cx, cy, r = 12) => {
+            const treeEl = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            treeEl.setAttribute('class', 'svg-tree-item');
+            treeEl.innerHTML = `
+                <circle cx="${cx + 1}" cy="${cy + 2}" r="${r}" class="svg-tree-shadow" />
+                <circle cx="${cx}" cy="${cy}" r="${r}" class="svg-tree-canopy" />
+            `;
+            landscapeGroup.appendChild(treeEl);
+        };
+
+        // North Buffer Trees
+        for (let tx = 80; tx <= 1520; tx += 65) {
+            if (tx < 740 || tx > 860) addTree(tx, 32, 10);
+        }
+        // West Buffer Trees
+        for (let ty = 90; ty <= 820; ty += 60) {
+            if (ty < 430 || ty > 520) addTree(38, ty, 10);
+        }
+        // East Buffer Trees
+        for (let ty = 90; ty <= 820; ty += 60) {
+            if (ty < 430 || ty > 520) addTree(1562, ty, 10);
+        }
+        // South Garden Trees (flanking gate and facilities)
+        addTree(685, 930, 11);
+        addTree(650, 930, 10);
+        addTree(915, 930, 11);
+        addTree(950, 930, 10);
+        mapGroundLayer.appendChild(landscapeGroup);
+
+        // 5. Elegant North Compass Badge (top-right corner)
         const northBadge = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         northBadge.setAttribute('class', 'svg-north-indicator');
-        northBadge.setAttribute('transform', 'translate(1520, 60)');
+        northBadge.setAttribute('transform', 'translate(1525, 45)');
         northBadge.innerHTML = `
-            <circle cx="0" cy="0" r="18" fill="var(--map-surface, #ffffff)" stroke="var(--map-border, #cbd5e1)" stroke-width="1.5" filter="url(#tileShadow)" />
-            <polygon points="0,-12 4,2 0,0 -4,2" fill="#ef4444" />
-            <polygon points="0,12 4,0 0,0 -4,0" fill="#94a3b8" />
-            <text x="0" y="-14" font-size="9" font-weight="800" text-anchor="middle" fill="#ef4444" font-family="var(--font-sans)">N</text>
+            <circle cx="0" cy="0" r="16" fill="var(--map-surface, #ffffff)" stroke="var(--map-border, #cbd5e1)" stroke-width="1.5" filter="url(#tileShadow)" />
+            <polygon points="0,-11 3.5,1.5 0,0 -3.5,1.5" fill="#ef4444" />
+            <polygon points="0,11 3.5,0 0,0 -3.5,0" fill="#94a3b8" />
+            <text x="0" y="-13" font-size="8" font-weight="800" text-anchor="middle" fill="#ef4444" font-family="var(--font-sans)">N</text>
         `;
         mapGroundLayer.appendChild(northBadge);
 
         // ==========================================
-        // LAYER 0/Boundary: Perimeter & Main Gate
+        // LAYER 0/Boundary: Perimeter & Main Gate Portal
         // ==========================================
-        // Property Perimeter Boundary Line
+        // Property Perimeter Boundary Wall
         const perimeterRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         perimeterRect.setAttribute('x', '30');
         perimeterRect.setAttribute('y', '25');
         perimeterRect.setAttribute('width', '1540');
-        perimeterRect.setAttribute('height', '950');
+        perimeterRect.setAttribute('height', '920');
         perimeterRect.setAttribute('rx', '24');
         perimeterRect.setAttribute('class', 'svg-cemetery-perimeter');
         mapBoundaryLayer.appendChild(perimeterRect);
 
-        // Main Entrance / Gate Threshold (Bottom Center: x=720..880, y=960..975)
+        // Architectural Main Gate Portal (Bottom Center: x=710..890, y=912..955)
         const gateGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        gateGroup.setAttribute('class', 'svg-entrance-threshold');
+        gateGroup.setAttribute('class', 'svg-gate-portal');
         gateGroup.innerHTML = `
-            <rect x="720" y="960" width="160" height="20" rx="4" fill="var(--map-gate-primary, #1e3a2b)" stroke="var(--map-gate-accent, #f59e0b)" stroke-width="2" />
-            <text x="800" y="974" font-size="10" font-weight="700" letter-spacing="0.1em" text-anchor="middle" fill="#ffffff" font-family="var(--font-sans)">MAIN ENTRANCE / GATE</text>
+            <!-- Left Stone Pillar & Cap -->
+            <rect x="715" y="918" width="24" height="34" rx="3" class="svg-gate-pillar" />
+            <rect x="712" y="915" width="30" height="5" rx="1" fill="#334155" />
+            <!-- Right Stone Pillar & Cap -->
+            <rect x="861" y="918" width="24" height="34" rx="3" class="svg-gate-pillar" />
+            <rect x="858" y="915" width="30" height="5" rx="1" fill="#334155" />
+            <!-- Security Sentry Kiosk -->
+            <rect x="696" y="920" width="16" height="28" rx="2" fill="var(--map-surface, #ffffff)" stroke="var(--map-border, #94a3b8)" stroke-width="1.5" />
+            <text x="704" y="938" font-size="7" font-weight="700" text-anchor="middle" fill="var(--map-text-muted, #64748b)" font-family="var(--font-sans)">GUARD</text>
+            <!-- Gate Threshold & Wrought Iron Grille -->
+            <line x1="740" y1="945" x2="860" y2="945" stroke="#334155" stroke-width="3" />
+            <path d="M 740 945 Q 800 925 860 945" class="svg-gate-arch" />
+            <line x1="755" y1="945" x2="755" y2="933" class="svg-gate-grille" />
+            <line x1="770" y1="945" x2="770" y2="929" class="svg-gate-grille" />
+            <line x1="785" y1="945" x2="785" y2="927" class="svg-gate-grille" />
+            <line x1="800" y1="945" x2="800" y2="926" class="svg-gate-grille" />
+            <line x1="815" y1="945" x2="815" y2="927" class="svg-gate-grille" />
+            <line x1="830" y1="945" x2="830" y2="929" class="svg-gate-grille" />
+            <line x1="845" y1="945" x2="845" y2="933" class="svg-gate-grille" />
+            <!-- Prominent Gate Badge Label -->
+            <rect x="735" y="906" width="130" height="22" rx="4" class="svg-gate-label-badge" />
+            <text x="800" y="921" class="svg-gate-label-text">⛩️ MAIN GATE</text>
         `;
         mapBoundaryLayer.appendChild(gateGroup);
 
         // ==========================================
-        // LAYER 1: Reserved Road Network Corridors
+        // LAYER 1: Road & Street Network
         // ==========================================
-        // Central North-South Main Boulevard
-        const centralRd = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        centralRd.setAttribute('x', '735');
-        centralRd.setAttribute('y', '45');
-        centralRd.setAttribute('width', '130');
-        centralRd.setAttribute('height', '915');
-        centralRd.setAttribute('rx', '10');
-        centralRd.setAttribute('class', 'svg-road-corridor');
-        mapRoadLayer.appendChild(centralRd);
+        const roadGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        roadGroup.setAttribute('class', 'svg-road-network');
 
-        const centralRdLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        centralRdLabel.setAttribute('x', '800');
-        centralRdLabel.setAttribute('y', '480');
-        centralRdLabel.setAttribute('class', 'svg-road-corridor-label');
-        centralRdLabel.setAttribute('transform', 'rotate(-90 800 480)');
-        centralRdLabel.textContent = 'CENTRAL BOULEVARD (RESERVED CORRIDOR)';
-        mapRoadLayer.appendChild(centralRdLabel);
-
-        // Central East-West Crossway Corridor
-        const crossRd = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        crossRd.setAttribute('x', '45');
-        crossRd.setAttribute('y', '445');
-        crossRd.setAttribute('width', '1510');
-        crossRd.setAttribute('height', '60');
-        crossRd.setAttribute('rx', '8');
-        crossRd.setAttribute('class', 'svg-road-corridor');
-        mapRoadLayer.appendChild(crossRd);
-
-        const crossRdLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        crossRdLabel.setAttribute('x', '400');
-        crossRdLabel.setAttribute('y', '480');
-        crossRdLabel.setAttribute('class', 'svg-road-corridor-label');
-        crossRdLabel.textContent = 'CROSSWAY AVENUE (RESERVED CORRIDOR)';
-        mapRoadLayer.appendChild(crossRdLabel);
-
-        // ==========================================
-        // LAYER 2: Reserved Landmark Zones
-        // ==========================================
-        // Admin & Chapel Reservation Zone (SW corner)
-        const chapelZone = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        chapelZone.innerHTML = `
-            <rect x="60" y="870" width="230" height="85" class="svg-landmark-reservation-zone" />
-            <text x="175" y="910" class="svg-landmark-reservation-text">🏛️ ADMINISTRATION & CHAPEL</text>
-            <text x="175" y="928" class="svg-landmark-reservation-text" style="font-size: 9px; opacity: 0.75;">(Reserved Landmark Zone)</text>
+        // 1. Pedestrian Walkways (Subtle Pavers Framing Sections & Landmarks)
+        roadGroup.innerHTML += `
+            <!-- South Walkway to Chapel & Restrooms -->
+            <rect x="60" y="878" width="700" height="10" rx="3" class="svg-pathway" />
+            <!-- South Walkway to Visitor Parking -->
+            <rect x="840" y="878" width="700" height="10" rx="3" class="svg-pathway" />
+            <!-- NW Section Perimeter Walkway -->
+            <rect x="54" y="74" width="662" height="364" rx="14" fill="none" stroke="var(--map-pathway-stroke, #cbd5e1)" stroke-width="8" stroke-dasharray="6 3" />
+            <!-- NE Section Perimeter Walkway -->
+            <rect x="884" y="74" width="662" height="364" rx="14" fill="none" stroke="var(--map-pathway-stroke, #cbd5e1)" stroke-width="8" stroke-dasharray="6 3" />
+            <!-- SW Section Perimeter Walkway -->
+            <rect x="54" y="506" width="662" height="328" rx="14" fill="none" stroke="var(--map-pathway-stroke, #cbd5e1)" stroke-width="8" stroke-dasharray="6 3" />
+            <!-- SE Section Perimeter Walkway -->
+            <rect x="884" y="506" width="662" height="328" rx="14" fill="none" stroke="var(--map-pathway-stroke, #cbd5e1)" stroke-width="8" stroke-dasharray="6 3" />
         `;
-        mapLandmarkLayer.appendChild(chapelZone);
 
-        // Visitor Parking Reservation Zone (SE corner)
-        const parkingZone = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        parkingZone.innerHTML = `
-            <rect x="1310" y="870" width="230" height="85" class="svg-landmark-reservation-zone" />
-            <text x="1425" y="910" class="svg-landmark-reservation-text">🅿️ VISITOR PARKING AREA</text>
-            <text x="1425" y="928" class="svg-landmark-reservation-text" style="font-size: 9px; opacity: 0.75;">(Reserved Landmark Zone)</text>
+        // 2. North Perimeter Road: St. Peter Way
+        roadGroup.innerHTML += `
+            <rect x="45" y="44" width="1510" height="32" rx="5" class="svg-road-secondary" />
+            <line x1="55" y1="60" x2="1545" y2="60" class="svg-road-centerline" />
+            <text x="380" y="56" class="svg-street-label">ST. PETER WAY (NORTH PROMENADE)</text>
+            <text x="1220" y="56" class="svg-street-label">ST. PETER WAY (NORTH PROMENADE)</text>
         `;
-        mapLandmarkLayer.appendChild(parkingZone);
+
+        // 3. South Access Connector: St. Joseph Drive (Links Chapel, Restrooms, Main Road, Parking)
+        roadGroup.innerHTML += `
+            <rect x="45" y="842" width="1510" height="36" rx="5" class="svg-road-secondary" />
+            <line x1="55" y1="860" x2="1545" y2="860" class="svg-road-centerline" />
+            <text x="490" y="855" class="svg-street-label">ST. JOSEPH DRIVE</text>
+            <text x="1150" y="855" class="svg-street-label">ST. JOSEPH DRIVE</text>
+        `;
+
+        // 4. Central Crossway Avenue: Avenue of Peace
+        roadGroup.innerHTML += `
+            <rect x="45" y="450" width="1510" height="50" rx="6" class="svg-road-secondary" />
+            <line x1="55" y1="475" x2="1545" y2="475" class="svg-road-centerline" />
+            <text x="380" y="468" class="svg-street-label">AVENUE OF PEACE (WEST)</text>
+            <text x="1220" y="468" class="svg-street-label">AVENUE OF PEACE (EAST)</text>
+        `;
+
+        // 5. Main Road (Central Boulevard Spine: x=755..845, width=90)
+        roadGroup.innerHTML += `
+            <rect x="755" y="50" width="90" height="880" rx="6" class="svg-road-main" />
+            <line x1="800" y1="925" x2="800" y2="55" class="svg-road-centerline" />
+            <!-- Main Road Street Directional Typography -->
+            <text x="795" y="730" class="svg-street-label" transform="rotate(-90 795 730)">MAIN ROAD / BOULEVARD</text>
+            <text x="795" y="240" class="svg-street-label" transform="rotate(-90 795 240)">MAIN ROAD / BOULEVARD</text>
+        `;
+
+        // 6. Central Memorial Roundabout (Intersection of Main Boulevard & Avenue of Peace)
+        roadGroup.innerHTML += `
+            <circle cx="800" cy="475" r="54" class="svg-road-main" />
+            <circle cx="800" cy="475" r="30" class="svg-garden-island" />
+            <circle cx="800" cy="475" r="11" class="svg-memorial-monument" />
+            <text x="800" y="479" class="svg-street-label" style="font-size: 8px;">MEMORIAL CIRCLE</text>
+        `;
+
+        mapRoadLayer.appendChild(roadGroup);
+
+        // ==========================================
+        // LAYER 2: Landmark Architecture & Visitor Facilities
+        // ==========================================
+        const landmarkGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        landmarkGroup.setAttribute('class', 'svg-landmarks-group');
+
+        // Landmark 1: Administration & Chapel (SW Area)
+        landmarkGroup.innerHTML += `
+            <g class="svg-landmark-bldg" data-landmark="chapel" tabindex="0" role="region" aria-label="Chapel and Administration Office">
+                <!-- Foundation & Building Body -->
+                <rect x="60" y="885" width="220" height="56" rx="6" class="svg-bldg-base" />
+                <!-- Chapel Pitched Roof / Front Portico -->
+                <polygon points="68,906 170,887 272,906" class="svg-bldg-roof-chapel" />
+                <rect x="155" y="904" width="30" height="37" rx="2" fill="var(--color-primary-600, #163d2c)" />
+                <line x1="170" y1="889" x2="170" y2="899" stroke="#ffffff" stroke-width="1.5" />
+                <line x1="165" y1="894" x2="175" y2="894" stroke="#ffffff" stroke-width="1.5" />
+                <text x="170" y="922" class="svg-landmark-title">🏛️ CHAPEL / OFFICE</text>
+                <text x="170" y="934" class="svg-landmark-subtitle">Administration &amp; Inquiries</text>
+            </g>
+        `;
+
+        // Landmark 2: Comfort Room / CR Facility (Near Chapel & South Pathway)
+        landmarkGroup.innerHTML += `
+            <g class="svg-landmark-bldg" data-landmark="restroom" tabindex="0" role="region" aria-label="Public Comfort Room Facility">
+                <rect x="305" y="885" width="105" height="56" rx="5" class="svg-bldg-base" />
+                <rect x="310" y="887" width="95" height="16" rx="3" class="svg-bldg-roof-cr" />
+                <line x1="357" y1="903" x2="357" y2="941" stroke="var(--map-border, #cbd5e1)" stroke-width="1" />
+                <text x="357" y="922" class="svg-landmark-title">🚻 COMFORT ROOM</text>
+                <text x="357" y="934" class="svg-landmark-subtitle">PWD Restrooms</text>
+            </g>
+        `;
+
+        // Landmark 3: Visitor Parking Area (SE Area)
+        landmarkGroup.innerHTML += `
+            <g class="svg-landmark-bldg" data-landmark="parking" tabindex="0" role="region" aria-label="Visitor Parking Area">
+                <rect x="1310" y="885" width="230" height="56" rx="6" class="svg-parking-lot" />
+                <!-- Parking Stalls Stripes (Top and Bottom) -->
+                <line x1="1330" y1="885" x2="1330" y2="902" class="svg-parking-bay-line" />
+                <line x1="1350" y1="885" x2="1350" y2="902" class="svg-parking-bay-line" />
+                <line x1="1370" y1="885" x2="1370" y2="902" class="svg-parking-bay-line" />
+                <line x1="1390" y1="885" x2="1390" y2="902" class="svg-parking-bay-line" />
+                <line x1="1450" y1="885" x2="1450" y2="902" class="svg-parking-bay-line" />
+                <line x1="1470" y1="885" x2="1470" y2="902" class="svg-parking-bay-line" />
+                <line x1="1490" y1="885" x2="1490" y2="902" class="svg-parking-bay-line" />
+                <line x1="1510" y1="885" x2="1510" y2="902" class="svg-parking-bay-line" />
+                <!-- PWD Accessible Parking Bay -->
+                <rect x="1312" y="886" width="17" height="15" rx="2" class="svg-parking-pwd-bay" />
+                <text x="1320" y="897" font-size="9" text-anchor="middle" fill="#2563eb">♿</text>
+                <text x="1425" y="922" class="svg-landmark-title">🅿️ VISITOR PARKING</text>
+                <text x="1425" y="934" class="svg-landmark-subtitle">30 Slots • Free Visitor Parking</text>
+            </g>
+        `;
+
+        mapLandmarkLayer.appendChild(landmarkGroup);
 
         // ==========================================
         // LAYER 3 & 4: Sections & Nested Blocks
@@ -1133,10 +1284,10 @@
         // Deterministic Section Layout (Geographic Quadrants with Main Corridor Isolation)
         const count = sections.length;
         const standardQuadrants = [
-            { x: 60, y: 55, w: 650, h: 370 },   // Northwest Zone
-            { x: 890, y: 55, w: 650, h: 370 },  // Northeast Zone
-            { x: 60, y: 520, w: 650, h: 335 },  // Southwest Zone
-            { x: 890, y: 520, w: 650, h: 335 }  // Southeast Zone
+            { x: 60, y: 82, w: 650, h: 352 },   // Northwest Zone (Framed by St. Peter Way & Avenue of Peace)
+            { x: 890, y: 82, w: 650, h: 352 },  // Northeast Zone
+            { x: 60, y: 512, w: 650, h: 320 },  // Southwest Zone (Framed by Avenue of Peace & St. Joseph Drive)
+            { x: 890, y: 512, w: 650, h: 320 }  // Southeast Zone
         ];
 
         sections.forEach((section, index) => {

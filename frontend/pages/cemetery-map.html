@@ -329,6 +329,17 @@
                                     <pattern id="lawnTilePattern" width="60" height="60" patternUnits="userSpaceOnUse">
                                         <path d="M 60 0 L 0 0 0 60" fill="none" stroke="var(--map-lawn-grid, rgba(44,94,71,0.05))" stroke-width="1"/>
                                     </pattern>
+                                    <!-- Batch 2: Tree Foliage Radial Gradient -->
+                                    <radialGradient id="treeCanopyGradient" cx="35%" cy="35%" r="65%">
+                                        <stop offset="0%" stop-color="var(--map-tree-crown-light, #34d399)" />
+                                        <stop offset="70%" stop-color="var(--map-tree-crown-1, #15803d)" />
+                                        <stop offset="100%" stop-color="var(--map-tree-crown-2, #14532d)" />
+                                    </radialGradient>
+                                    <!-- Batch 2: Paver Walkway Pattern -->
+                                    <pattern id="walkwayPattern" width="12" height="12" patternUnits="userSpaceOnUse">
+                                        <rect width="12" height="12" fill="var(--map-pathway-fill, #e2e8f0)" />
+                                        <path d="M 0 6 L 12 6 M 6 0 L 6 12" stroke="var(--map-pathway-stroke, #cbd5e1)" stroke-width="0.8" />
+                                    </pattern>
                                 </defs>
                                 <g id="mapTransformLayer">
                                     <!-- Conceptual SVG Master Map Layers (Batch 1 Foundation) -->
