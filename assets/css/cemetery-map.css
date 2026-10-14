@@ -1772,6 +1772,55 @@ body[data-theme="dark"] .search-field .search-field__input:focus ~ .search-field
     filter: drop-shadow(0 4px 6px rgba(148, 163, 184, 0.4));
 }
 
+/* Expired Status */
+.lot--expired .svg-lot-rect {
+    fill: #a855f7;
+    stroke: #7e22ce;
+}
+.lot--expired:hover .svg-lot-rect {
+    fill: #9333ea;
+    filter: drop-shadow(0 4px 6px rgba(168, 85, 247, 0.4));
+}
+[data-theme="dark"] .lot--expired .svg-lot-rect {
+    fill: #c084fc;
+    stroke: #a855f7;
+}
+
+/* Level of Detail (LOD) & Block Spatial Presentation (Batch 3) */
+.svg-block-header-bar {
+    fill: var(--color-neutral-100, #f1f5f9);
+    stroke: var(--map-border);
+    stroke-width: 1px;
+}
+
+[data-theme="dark"] .svg-block-header-bar {
+    fill: #1e293b;
+}
+
+.svg-block-card.is-focused .svg-block-bg {
+    stroke: var(--color-primary-600, #163d2c);
+    stroke-width: 2.5px;
+    filter: drop-shadow(0 4px 10px rgba(44, 94, 71, 0.25));
+}
+
+.cemetery-map-svg.lod-low .svg-lot-label {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.cemetery-map-svg.lod-mid .svg-lot-label {
+    opacity: 0.7;
+    font-size: 8px;
+}
+
+.cemetery-map-svg.lod-high .svg-lot-label,
+.cemetery-map-svg.is-zoomed-in .svg-lot-label,
+.svg-lot-tile:hover .svg-lot-label,
+.svg-lot-tile.is-selected .svg-lot-label {
+    opacity: 1 !important;
+    font-size: 9.5px;
+}
+
 /* Selected State (Batch 6: High visibility, contrast, pulse glow, status fill preserved) */
 .svg-lot-tile.is-selected .svg-lot-rect {
     stroke: #2563eb !important;

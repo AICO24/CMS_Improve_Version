@@ -939,6 +939,29 @@
                     return;
                 }
 
+                // Batch 3: Preload all block lots in parallel for unified master map representation
+                const allBlocks = [];
+                sections.forEach(s => {
+                    (s.blocks || []).forEach(b => {
+                        allBlocks.push({ block: b, section: s });
+                    });
+                });
+
+                if (allBlocks.length > 0) {
+                    await Promise.all(allBlocks.map(async ({ block }) => {
+                        if (!state.blockLotsCache[block.block_id]) {
+                            try {
+                                const bRes = await api.request(`map/blocks/${block.block_id}/lots`, { method: 'GET' });
+                                if (bRes && bRes.success && bRes.data && bRes.data.lots) {
+                                    state.blockLotsCache[block.block_id] = bRes.data.lots;
+                                }
+                            } catch (e) {
+                                console.warn(`Could not preload lots for block ${block.block_id}:`, e);
+                            }
+                        }
+                    }));
+                }
+
                 mapEmptyOverlay.style.display = 'none';
                 renderCemeteryOverview(res.data);
             } else {
@@ -1406,7 +1429,7 @@
                     blkGroup.setAttribute('data-block-id', block.block_id);
                     blkGroup.setAttribute('role', 'button');
                     blkGroup.setAttribute('tabindex', '0');
-                    blkGroup.setAttribute('aria-label', `${block.block_name}, ${block.total_lots || 0} lots. Click to view lots.`);
+                    blkGroup.setAttribute('aria-label', `${block.block_name}, ${block.total_lots || 0} lots. Click to focus block.`);
 
                     // Block Tile Rect
                     const blkRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -1417,20 +1440,31 @@
                     blkRect.setAttribute('class', 'svg-block-bg');
                     blkGroup.appendChild(blkRect);
 
+                    // Block Header Banner for Title & Plot Count (leaves space for internal lot area!)
+                    const blkHeaderH = 26;
+                    const blkHeader = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    blkHeader.setAttribute('x', blkX);
+                    blkHeader.setAttribute('y', blkY);
+                    blkHeader.setAttribute('width', curBlkW);
+                    blkHeader.setAttribute('height', blkHeaderH);
+                    blkHeader.setAttribute('rx', '8');
+                    blkHeader.setAttribute('class', 'svg-block-header-bar');
+                    blkGroup.appendChild(blkHeader);
+
                     // Block Name
                     const blkText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    blkText.setAttribute('x', blkX + 14);
-                    blkText.setAttribute('y', blkY + (curBlkH / 2) + 5);
+                    blkText.setAttribute('x', blkX + 10);
+                    blkText.setAttribute('y', blkY + 17);
                     blkText.setAttribute('class', 'svg-block-title');
                     blkText.textContent = block.block_name;
                     blkGroup.appendChild(blkText);
 
                     // Lot Count Badge
                     const badgeTextContent = `${block.total_lots || 0} Plots`;
-                    const badgeW = 70;
-                    const badgeH = 24;
-                    const badgeX = blkX + curBlkW - badgeW - 12;
-                    const badgeY = blkY + (curBlkH / 2) - (badgeH / 2);
+                    const badgeW = 66;
+                    const badgeH = 18;
+                    const badgeX = blkX + curBlkW - badgeW - 6;
+                    const badgeY = blkY + 4;
 
                     const badgeRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                     badgeRect.setAttribute('x', badgeX);
@@ -1442,37 +1476,254 @@
 
                     const badgeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                     badgeText.setAttribute('x', badgeX + (badgeW / 2));
-                    badgeText.setAttribute('y', badgeY + 16);
+                    badgeText.setAttribute('y', badgeY + 13);
                     badgeText.setAttribute('text-anchor', 'middle');
                     badgeText.setAttribute('class', 'svg-block-badge-text');
                     badgeText.textContent = badgeTextContent;
                     blkGroup.appendChild(badgeText);
 
-                    // Block Click Handler (Progressive Drill-Down)
-                    blkGroup.addEventListener('click', () => {
-                        drillDownToBlock(block, section);
+                    // Block Click Handler: Focus/Zoom to Block on Master Map
+                    blkGroup.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        focusBlockOnMasterMap(block, section, blkX, blkY, curBlkW, curBlkH);
                     });
 
                     blkGroup.addEventListener('keydown', (e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            drillDownToBlock(block, section);
+                            focusBlockOnMasterMap(block, section, blkX, blkY, curBlkW, curBlkH);
                         }
                     });
 
                     // Hover Tooltip
                     blkGroup.addEventListener('mouseenter', (e) => {
-                        showFloatingTooltip(e, `<strong>${escapeHtml(block.block_name)}</strong><br>${block.total_lots || 0} Lots • Click to inspect`);
+                        showFloatingTooltip(e, `<strong>${escapeHtml(block.block_name)}</strong><br>${block.total_lots || 0} Lots • Click to focus`);
                     });
                     blkGroup.addEventListener('mousemove', moveFloatingTooltip);
                     blkGroup.addEventListener('mouseleave', hideFloatingTooltip);
 
-                    secGroup.appendChild(blkGroup);
+                    mapBlockLayer.appendChild(blkGroup);
+
+                    // ==========================================
+                    // INDIVIDUAL LOTS ON MASTER MAP (LAYER: mapLotLayer)
+                    // ==========================================
+                    const lots = state.blockLotsCache[block.block_id] || [];
+                    const isColumbarium = (function () {
+                        const cName = (state.currentCemetery?.cemetery_name || '').toLowerCase();
+                        const sName = (section.section_name || '').toLowerCase();
+                        const bName = (block.block_name || '').toLowerCase();
+                        const lType = (lots[0]?.lot_type || '').toLowerCase();
+                        return cName.includes('columbarium') || cName.includes('ossuary') ||
+                               sName.includes('columbarium') || sName.includes('ossuary') ||
+                               bName.includes('columbarium') || bName.includes('ossuary') ||
+                               lType.includes('columbarium') || lType.includes('ossuary') || lType.includes('niche');
+                    })();
+
+                    const lotMargin = 8;
+                    const lotAreaX = blkX + lotMargin;
+                    const lotAreaY = blkY + blkHeaderH + 6;
+                    const lotAreaW = Math.max(10, curBlkW - (lotMargin * 2));
+                    const lotAreaH = Math.max(10, curBlkH - blkHeaderH - 6 - lotMargin);
+
+                    if (lots.length > 0) {
+                        let cols = 5;
+                        let gapX = 4;
+                        let gapY = 4;
+
+                        if (block.map_config && block.map_config.grid) {
+                            if (block.map_config.grid.columns && !isNaN(Number(block.map_config.grid.columns))) {
+                                cols = parseInt(block.map_config.grid.columns, 10);
+                            }
+                            if (block.map_config.grid.gap_x !== undefined && !isNaN(Number(block.map_config.grid.gap_x))) {
+                                gapX = parseFloat(block.map_config.grid.gap_x);
+                            }
+                            if (block.map_config.grid.gap_y !== undefined && !isNaN(Number(block.map_config.grid.gap_y))) {
+                                gapY = parseFloat(block.map_config.grid.gap_y);
+                            }
+                        } else if (isColumbarium) {
+                            if (lots.length <= 12) cols = 4;
+                            else if (lots.length <= 25) cols = 5;
+                            else if (lots.length <= 40) cols = 7;
+                            else cols = 8;
+                            gapX = 3;
+                            gapY = 3;
+                        } else {
+                            if (lots.length <= 6) cols = 3;
+                            else if (lots.length <= 12) cols = 4;
+                            else if (lots.length <= 25) cols = 5;
+                            else if (lots.length <= 40) cols = 8;
+                            else cols = 10;
+                        }
+
+                        const rows = Math.ceil(lots.length / cols);
+                        const tileW = Math.max(8, (lotAreaW - ((cols - 1) * gapX)) / cols);
+                        const tileH = Math.max(8, (lotAreaH - ((rows - 1) * gapY)) / rows);
+
+                        lots.forEach((lot, i) => {
+                            const col = i % cols;
+                            const row = Math.floor(i / cols);
+                            let lotX = lotAreaX + (col * (tileW + gapX));
+                            let lotY = lotAreaY + (row * (tileH + gapY));
+                            let curTileW = tileW;
+                            let curTileH = tileH;
+
+                            // Optional custom lot position override
+                            if (lot.map_config && !isNaN(Number(lot.map_config.x)) && !isNaN(Number(lot.map_config.y)) &&
+                                Number(lot.map_config.width) > 0 && Number(lot.map_config.height) > 0) {
+                                const rawLx = Number(lot.map_config.x);
+                                const rawLy = Number(lot.map_config.y);
+                                lotX = rawLx < curBlkW ? (blkX + rawLx) : rawLx;
+                                lotY = rawLy < curBlkH ? (blkY + rawLy) : rawLy;
+                                curTileW = Number(lot.map_config.width);
+                                curTileH = Number(lot.map_config.height);
+                            }
+
+                            const tierLevel = isColumbarium ? (rows - row) : 1;
+                            const isEyeLevel = isColumbarium && ((rows >= 4 && tierLevel === 3) || (rows === 3 && tierLevel === 2) || (rows < 3 && tierLevel === 1));
+                            const approxH = isColumbarium ? ((0.4 + (tierLevel - 1) * 0.45).toFixed(1) + 'm') : 'Ground Level';
+
+                            let displayLabel = lot.lot_number;
+                            let isSanitizedHash = false;
+                            if (lot.lot_number && lot.lot_number.length > 12) {
+                                isSanitizedHash = true;
+                                displayLabel = isColumbarium ? `V-${i + 1}` : `L-${i + 1}`;
+                            }
+
+                            lot._tierLevel = tierLevel;
+                            lot._isEyeLevel = isEyeLevel;
+                            lot._approxHeight = approxH;
+                            lot._displayLabel = displayLabel;
+                            lot._elevationDesc = isColumbarium
+                                ? `Level ${tierLevel} (${approxH}) — ${isEyeLevel ? 'Eye-Level (Optimal viewing height)' : (tierLevel === rows ? 'Top Tier Vault' : (tierLevel === 1 ? 'Base Tier (Wheelchair Accessible)' : 'Mid-Tier Vault'))}`
+                                : 'Elevated Lawn Terrace (Certified Flood-Free, +1.2m)';
+
+                            const lotStatusClass = (lot.status || 'Available').toLowerCase().replace(/\s+/g, '-');
+                            const isSelected = state.selectedLot && state.selectedLot.lot_id === lot.lot_id;
+
+                            const lotGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                            lotGroup.setAttribute('class', `svg-lot-tile lot--${lotStatusClass}${isColumbarium ? ' is-niche-vault' : ''}${isSelected ? ' is-selected' : ''}`);
+                            lotGroup.setAttribute('data-lot-id', lot.lot_id);
+                            lotGroup.setAttribute('data-block-id', block.block_id);
+                            lotGroup.setAttribute('data-tier-level', tierLevel);
+                            lotGroup.setAttribute('role', 'button');
+                            lotGroup.setAttribute('tabindex', '0');
+                            lotGroup.setAttribute('aria-label', `${displayLabel}, Section ${section.section_name}, Block ${block.block_name}, Status: ${lot.status}, Price: ${formatCurrency(lot.price)}`);
+
+                            // Lot Tile Rectangle (Outer Frame)
+                            const lotRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                            lotRect.setAttribute('x', lotX);
+                            lotRect.setAttribute('y', lotY);
+                            lotRect.setAttribute('width', curTileW);
+                            lotRect.setAttribute('height', curTileH);
+                            lotRect.setAttribute('rx', '3');
+                            lotRect.setAttribute('class', `svg-lot-rect ${isColumbarium ? 'niche-vault-rect' : ''}`);
+                            lotGroup.appendChild(lotRect);
+
+                            // Columbarium Niche Inner Plate & Screws
+                            if (isColumbarium && curTileW > 16 && curTileH > 14) {
+                                const innerPlate = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                                innerPlate.setAttribute('x', lotX + 2);
+                                innerPlate.setAttribute('y', lotY + 2);
+                                innerPlate.setAttribute('width', Math.max(0, curTileW - 4));
+                                innerPlate.setAttribute('height', Math.max(0, curTileH - 4));
+                                innerPlate.setAttribute('rx', '2');
+                                innerPlate.setAttribute('class', 'niche-inner-plate');
+                                lotGroup.appendChild(innerPlate);
+
+                                const screwCoords = [
+                                    [lotX + 3.5, lotY + 3.5],
+                                    [lotX + curTileW - 3.5, lotY + 3.5],
+                                    [lotX + 3.5, lotY + curTileH - 3.5],
+                                    [lotX + curTileW - 3.5, lotY + curTileH - 3.5]
+                                ];
+                                screwCoords.forEach(([sx, sy]) => {
+                                    const screw = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                                    screw.setAttribute('cx', sx);
+                                    screw.setAttribute('cy', sy);
+                                    screw.setAttribute('r', '1.2');
+                                    screw.setAttribute('class', 'niche-screw');
+                                    lotGroup.appendChild(screw);
+                                });
+                            }
+
+                            // Lot Number Label
+                            const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                            labelText.setAttribute('x', lotX + (curTileW / 2));
+                            labelText.setAttribute('y', lotY + (curTileH / 2) + 3);
+                            labelText.setAttribute('text-anchor', 'middle');
+                            labelText.setAttribute('class', 'svg-lot-label');
+                            labelText.textContent = displayLabel;
+                            lotGroup.appendChild(labelText);
+
+                            // Title for native tooltip accessibility
+                            const titleEl = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                            titleEl.textContent = `${displayLabel} • ${lot.status} • ${formatCurrency(lot.price)}`;
+                            lotGroup.appendChild(titleEl);
+
+                            // Lot Click Handler
+                            lotGroup.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                selectLot(lot, block, section, lotGroup);
+                            });
+
+                            lotGroup.addEventListener('keydown', (e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    selectLot(lot, block, section, lotGroup);
+                                }
+                            });
+
+                            // Hover Tooltip
+                            lotGroup.addEventListener('mouseenter', (e) => {
+                                const elevHtml = isColumbarium 
+                                    ? `<br>Vertical Placement: <strong>Level ${tierLevel} (${approxH})</strong>${isEyeLevel ? ' <span style="color:#f59e0b;">⭐ Eye-Level</span>' : ''}`
+                                    : `<br>Vertical Placement: <strong>Ground Level (Terraced Lawn)</strong>`;
+                                const idExtra = isSanitizedHash ? `<br><small style="opacity:0.75;">System Ref: ${escapeHtml(lot.lot_number)}</small>` : '';
+                                showFloatingTooltip(e, `<strong>${escapeHtml(displayLabel)}</strong>${elevHtml}<br>Section: ${escapeHtml(section.section_name)}<br>Block: ${escapeHtml(block.block_name)}<br>Status: <strong>${escapeHtml(lot.status)}</strong><br>Price: ${formatCurrency(lot.price)}${idExtra}`);
+                            });
+                            lotGroup.addEventListener('mousemove', moveFloatingTooltip);
+                            lotGroup.addEventListener('mouseleave', hideFloatingTooltip);
+
+                            mapLotLayer.appendChild(lotGroup);
+                        });
+                    }
                 });
             }
 
             mapSectionLayer.appendChild(secGroup);
         });
+    }
+
+    /**
+     * Focus and Center Camera on Selected Block on Master Map (Batch 3)
+     */
+    function focusBlockOnMasterMap(block, section, blkX, blkY, curBlkW, curBlkH) {
+        state.currentSection = section;
+        state.currentBlock = block;
+        state.currentLots = state.blockLotsCache[block.block_id] || [];
+
+        // Highlight focused block card
+        document.querySelectorAll('.svg-block-card.is-focused').forEach(el => el.classList.remove('is-focused'));
+        const targetEl = document.querySelector(`.svg-block-card[data-block-id="${block.block_id}"]`);
+        if (targetEl) targetEl.classList.add('is-focused');
+
+        viewLevelText.textContent = `${section.section_name} › ${block.block_name}`;
+        btnBackToOverview.style.display = 'inline-flex';
+        updateBreadcrumbs();
+        updateLegendCounts(state.currentLots);
+
+        // Center view on the block with contextual surrounding margin
+        const pad = 50;
+        const targetW = Math.max(curBlkW + pad * 2, 420);
+        const targetH = targetW * (state.baseViewBox.height / state.baseViewBox.width);
+        const centerX = blkX + (curBlkW / 2);
+        const centerY = blkY + (curBlkH / 2);
+
+        state.currentViewBox.width = targetW;
+        state.currentViewBox.height = targetH;
+        state.currentViewBox.x = Math.max(0, Math.min(state.baseViewBox.width - targetW, centerX - (targetW / 2)));
+        state.currentViewBox.y = Math.max(0, Math.min(state.baseViewBox.height - targetH, centerY - (targetH / 2)));
+        applyViewBox();
     }
 
     /**
@@ -3082,6 +3333,7 @@
      */
     function returnToCemeteryOverview() {
         closeLotDrawer();
+        document.querySelectorAll('.svg-block-card.is-focused').forEach(el => el.classList.remove('is-focused'));
         state.currentSection = null;
         state.currentBlock = null;
         state.currentLots = [];
@@ -3460,6 +3712,38 @@
             } else {
                 filterMatchesBadge.style.display = 'none';
             }
+        } else if (state.viewLevel === 'cemetery') {
+            let matchedCount = 0;
+            let totalLots = 0;
+
+            Object.values(state.blockLotsCache).forEach(lots => {
+                lots.forEach(lot => {
+                    totalLots++;
+                    const isMatch = lotMatchesFilters(lot);
+                    const tileEl = document.querySelector(`.svg-lot-tile[data-lot-id="${lot.lot_id}"]`);
+                    if (tileEl) {
+                        if (isMatch) {
+                            tileEl.classList.remove('is-filtered-out');
+                            if (hasActiveFilter) {
+                                tileEl.classList.add('is-matched');
+                            } else {
+                                tileEl.classList.remove('is-matched');
+                            }
+                            matchedCount++;
+                        } else {
+                            tileEl.classList.add('is-filtered-out');
+                            tileEl.classList.remove('is-matched');
+                        }
+                    }
+                });
+            });
+
+            if (hasActiveFilter && filterMatchesBadge && totalLots > 0) {
+                filterMatchesBadge.style.display = 'inline-flex';
+                filterMatchesBadge.innerHTML = `<i class="fas fa-filter"></i> ${matchedCount} of ${totalLots} match`;
+            } else if (filterMatchesBadge) {
+                filterMatchesBadge.style.display = 'none';
+            }
         } else {
             filterMatchesBadge.style.display = 'none';
         }
@@ -3698,6 +3982,17 @@
     function applyViewBox() {
         const vb = state.currentViewBox;
         cemeteryMapSvg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.width} ${vb.height}`);
+
+        // Batch 3: Level of Detail (LOD) responsive scaling
+        const zoomFactor = state.baseViewBox.width / (vb.width || 1);
+        cemeteryMapSvg.classList.remove('lod-low', 'lod-mid', 'lod-high', 'is-zoomed-in');
+        if (zoomFactor < 1.35) {
+            cemeteryMapSvg.classList.add('lod-low');
+        } else if (zoomFactor < 2.4) {
+            cemeteryMapSvg.classList.add('lod-mid', 'is-zoomed-in');
+        } else {
+            cemeteryMapSvg.classList.add('lod-high', 'is-zoomed-in');
+        }
     }
 
     /**
