@@ -38,6 +38,7 @@
         zoomLevel: 1.0,
         isPanning: false,
         panStart: { x: 0, y: 0 },
+        activeRoute: null,
     };
 
     // =========================================================================
@@ -47,20 +48,116 @@
         nodes: {
             EXTERNAL_ENTRY: { id: 'EXTERNAL_ENTRY', x: 800, y: 975, label: 'P. Aquino Avenue Ingress' },
             MAIN_GATE: { id: 'MAIN_GATE', x: 800, y: 925, label: 'Main Gate Portal' },
-            SOUTH_JUNCTION: { id: 'SOUTH_JUNCTION', x: 800, y: 860, label: 'St. Joseph Drive Junction' },
-            CENTRAL_ROUNDABOUT: { id: 'CENTRAL_ROUNDABOUT', x: 800, y: 475, label: 'Memorial Roundabout' },
-            NORTH_TERMINUS: { id: 'NORTH_TERMINUS', x: 800, y: 60, label: 'St. Peter Way Junction' },
-            WEST_CROSSWAY: { id: 'WEST_CROSSWAY', x: 60, y: 475, label: 'Avenue of Peace (West End)' },
-            EAST_CROSSWAY: { id: 'EAST_CROSSWAY', x: 1540, y: 475, label: 'Avenue of Peace (East End)' },
-            CHAPEL_ACCESS: { id: 'CHAPEL_ACCESS', x: 170, y: 860, label: 'Chapel & Admin Office' },
-            COMFORT_ROOM_ACCESS: { id: 'COMFORT_ROOM_ACCESS', x: 357, y: 860, label: 'Comfort Room (CR)' },
-            PARKING_ACCESS: { id: 'PARKING_ACCESS', x: 1425, y: 860, label: 'Visitor Parking' },
-            SEC_GARDEN_PEACE: { id: 'SEC_GARDEN_PEACE', x: 755, y: 240, label: 'Garden of Everlasting Peace Access' },
-            SEC_LOURDES: { id: 'SEC_LOURDES', x: 845, y: 240, label: 'Garden of Our Lady of Lourdes Access' },
-            SEC_SAN_JOSE: { id: 'SEC_SAN_JOSE', x: 755, y: 680, label: 'Sanctuario de San Jose Access' },
-            SEC_COLUMBARIUM: { id: 'SEC_COLUMBARIUM', x: 845, y: 680, label: 'Columbarium Sanctuary Access' }
-        }
+            SOUTH_JUNCTION: { id: 'SOUTH_JUNCTION', x: 800, y: 865, label: 'St. Joseph Drive Junction' },
+            CENTRAL_ROUNDABOUT: { id: 'CENTRAL_ROUNDABOUT', x: 800, y: 545, label: 'Memorial Roundabout' },
+            NORTH_TERMINUS: { id: 'NORTH_TERMINUS', x: 800, y: 80, label: 'St. Peter Way Junction' },
+            WEST_CROSSWAY: { id: 'WEST_CROSSWAY', x: 95, y: 545, label: 'Avenue of Peace (West End)' },
+            EAST_CROSSWAY: { id: 'EAST_CROSSWAY', x: 1505, y: 545, label: 'Avenue of Peace (East End)' },
+            CHAPEL_ACCESS: { id: 'CHAPEL_ACCESS', x: 235, y: 865, label: 'Chapel & Admin Office' },
+            COMFORT_ROOM_ACCESS: { id: 'COMFORT_ROOM_ACCESS', x: 1400, y: 865, label: 'Comfort Room (CR)' },
+            PARKING_ACCESS: { id: 'PARKING_ACCESS', x: 730, y: 805, label: 'Visitor Parking' },
+            SEC_GARDEN_PEACE: { id: 'SEC_GARDEN_PEACE', x: 800, y: 300, label: 'Garden of Everlasting Peace Access' },
+            SEC_LOURDES: { id: 'SEC_LOURDES', x: 305, y: 545, label: 'Garden of Our Lady of Lourdes Access' },
+            SEC_SAN_JOSE: { id: 'SEC_SAN_JOSE', x: 515, y: 190, label: 'Sanctuario de San Jose Access' },
+            SEC_COLUMBARIUM: { id: 'SEC_COLUMBARIUM', x: 1085, y: 190, label: 'Columbarium Sanctuary Access' },
+
+            // Secondary Intersections on Master Map
+            PROMENADE_JUNCTION: { id: 'PROMENADE_JUNCTION', x: 800, y: 300, label: 'Central Promenade Junction' },
+            MID_WEST_CROSSWAY: { id: 'MID_WEST_CROSSWAY', x: 515, y: 545, label: 'Avenue of Peace (Mid-West Junction)' },
+            MID_EAST_CROSSWAY: { id: 'MID_EAST_CROSSWAY', x: 1085, y: 545, label: 'Avenue of Peace (Mid-East Junction)' },
+            WEST_PROM: { id: 'WEST_PROM', x: 95, y: 300, label: 'Internal Promenade (West End)' },
+            MID_WEST_PROM: { id: 'MID_WEST_PROM', x: 515, y: 300, label: 'Internal Promenade (Mid-West)' },
+            MID_EAST_PROM: { id: 'MID_EAST_PROM', x: 1085, y: 300, label: 'Internal Promenade (Mid-East)' },
+            EAST_PROM: { id: 'EAST_PROM', x: 1505, y: 300, label: 'Internal Promenade (East End)' },
+            NORTH_WEST: { id: 'NORTH_WEST', x: 95, y: 80, label: 'North Boundary Road (West End)' },
+            NORTH_MID_WEST: { id: 'NORTH_MID_WEST', x: 515, y: 80, label: 'North Boundary Road (Mid-West)' },
+            NORTH_MID_EAST: { id: 'NORTH_MID_EAST', x: 1085, y: 80, label: 'North Boundary Road (Mid-East)' },
+            NORTH_EAST: { id: 'NORTH_EAST', x: 1505, y: 80, label: 'North Boundary Road (East End)' },
+            WEST_SERVICE: { id: 'WEST_SERVICE', x: 95, y: 865, label: 'South Service Road (West End)' },
+            EAST_SERVICE: { id: 'EAST_SERVICE', x: 1505, y: 865, label: 'South Service Road (East End)' },
+            CREMATORIUM_ACCESS: { id: 'CREMATORIUM_ACCESS', x: 960, y: 745, label: 'Crematorium Driveway' },
+            CREMATORIUM_SPINE: { id: 'CREMATORIUM_SPINE', x: 800, y: 745, label: 'Central Spine (Mid South)' },
+            COLUMBARIUM_SOUTH: { id: 'COLUMBARIUM_SOUTH', x: 1325, y: 865, label: 'Columbarium Sanctuary Entrance' },
+            PARKING_SOUTH: { id: 'PARKING_SOUTH', x: 730, y: 865, label: 'Visitor Parking (South Entry)' },
+
+            // Block & Terrace Level Access
+            SEC_A_SPINE_LEFT: { id: 'SEC_A_SPINE_LEFT', x: 780, y: 420, label: 'Section A (Block A1 Entrance)' },
+            SEC_A_SPINE_RIGHT: { id: 'SEC_A_SPINE_RIGHT', x: 820, y: 420, label: 'Section A (Block A2 Entrance)' },
+            SEC_A_WEST_ACCESS: { id: 'SEC_A_WEST_ACCESS', x: 515, y: 420, label: 'Section A (West Access Road)' },
+            SEC_A_EAST_ACCESS: { id: 'SEC_A_EAST_ACCESS', x: 1085, y: 420, label: 'Section A (East Access Road)' },
+            SEC_B_WEST_ACCESS: { id: 'SEC_B_WEST_ACCESS', x: 95, y: 420, label: 'Section B (West Ring Access)' },
+            SEC_B_EAST_ACCESS: { id: 'SEC_B_EAST_ACCESS', x: 515, y: 420, label: 'Section B (Mid-West Road Access)' },
+            SEC_C_SOUTH_ACCESS: { id: 'SEC_C_SOUTH_ACCESS', x: 440, y: 300, label: 'Sanctuario de San Jose (Promenade Entrance)' },
+            SEC_C_NORTH_ACCESS: { id: 'SEC_C_NORTH_ACCESS', x: 440, y: 80, label: 'Sanctuario de San Jose (North Entrance)' },
+            SEC_D_SOUTH_ACCESS: { id: 'SEC_D_SOUTH_ACCESS', x: 1160, y: 300, label: 'Columbarium & Ossuary (Promenade Entrance)' },
+            SEC_D_NORTH_ACCESS: { id: 'SEC_D_NORTH_ACCESS', x: 1160, y: 80, label: 'Columbarium & Ossuary (North Entrance)' },
+            SEC_E_WEST_ACCESS: { id: 'SEC_E_WEST_ACCESS', x: 1085, y: 420, label: 'Section E (Mid-East Road Entrance)' },
+            SEC_E_EAST_ACCESS: { id: 'SEC_E_EAST_ACCESS', x: 1505, y: 420, label: 'Section E (East Ring Road Entrance)' },
+            SEC_E_SOUTH_ACCESS: { id: 'SEC_E_SOUTH_ACCESS', x: 1295, y: 545, label: 'Section E (Avenue Ingress)' }
+        },
+        edges: [
+            ['EXTERNAL_ENTRY', 'MAIN_GATE'],
+            ['MAIN_GATE', 'SOUTH_JUNCTION'],
+            ['SOUTH_JUNCTION', 'CREMATORIUM_SPINE'],
+            ['SOUTH_JUNCTION', 'PARKING_SOUTH'],
+            ['SOUTH_JUNCTION', 'COLUMBARIUM_SOUTH'],
+            ['CREMATORIUM_SPINE', 'CENTRAL_ROUNDABOUT'],
+            ['CREMATORIUM_SPINE', 'CREMATORIUM_ACCESS'],
+            ['CENTRAL_ROUNDABOUT', 'SEC_A_SPINE_LEFT'],
+            ['CENTRAL_ROUNDABOUT', 'SEC_A_SPINE_RIGHT'],
+            ['CENTRAL_ROUNDABOUT', 'MID_WEST_CROSSWAY'],
+            ['CENTRAL_ROUNDABOUT', 'MID_EAST_CROSSWAY'],
+            ['SEC_A_SPINE_LEFT', 'PROMENADE_JUNCTION'],
+            ['SEC_A_SPINE_RIGHT', 'PROMENADE_JUNCTION'],
+            ['PROMENADE_JUNCTION', 'NORTH_TERMINUS'],
+            ['PROMENADE_JUNCTION', 'SEC_GARDEN_PEACE'],
+            ['PROMENADE_JUNCTION', 'SEC_D_SOUTH_ACCESS'],
+            ['PROMENADE_JUNCTION', 'MID_WEST_PROM'],
+            ['PROMENADE_JUNCTION', 'MID_EAST_PROM'],
+            ['MID_WEST_CROSSWAY', 'SEC_LOURDES'],
+            ['SEC_LOURDES', 'WEST_CROSSWAY'],
+            ['MID_EAST_CROSSWAY', 'SEC_E_SOUTH_ACCESS'],
+            ['SEC_E_SOUTH_ACCESS', 'EAST_CROSSWAY'],
+            ['WEST_SERVICE', 'WEST_CROSSWAY'],
+            ['WEST_CROSSWAY', 'SEC_B_WEST_ACCESS'],
+            ['SEC_B_WEST_ACCESS', 'WEST_PROM'],
+            ['WEST_PROM', 'NORTH_WEST'],
+            ['WEST_PROM', 'SEC_C_SOUTH_ACCESS'],
+            ['SEC_C_SOUTH_ACCESS', 'MID_WEST_PROM'],
+            ['MID_WEST_PROM', 'SEC_A_WEST_ACCESS'],
+            ['SEC_A_WEST_ACCESS', 'MID_WEST_CROSSWAY'],
+            ['MID_WEST_PROM', 'SEC_B_EAST_ACCESS'],
+            ['SEC_B_EAST_ACCESS', 'MID_WEST_CROSSWAY'],
+            ['NORTH_WEST', 'SEC_C_NORTH_ACCESS'],
+            ['SEC_C_NORTH_ACCESS', 'NORTH_MID_WEST'],
+            ['NORTH_MID_WEST', 'SEC_SAN_JOSE'],
+            ['SEC_SAN_JOSE', 'MID_WEST_PROM'],
+            ['NORTH_MID_WEST', 'NORTH_TERMINUS'],
+            ['NORTH_TERMINUS', 'SEC_D_NORTH_ACCESS'],
+            ['SEC_D_NORTH_ACCESS', 'NORTH_MID_EAST'],
+            ['NORTH_MID_EAST', 'SEC_COLUMBARIUM'],
+            ['SEC_COLUMBARIUM', 'MID_EAST_PROM'],
+            ['NORTH_MID_EAST', 'NORTH_EAST'],
+            ['NORTH_EAST', 'EAST_PROM'],
+            ['EAST_PROM', 'SEC_E_EAST_ACCESS'],
+            ['SEC_E_EAST_ACCESS', 'EAST_CROSSWAY'],
+            ['EAST_CROSSWAY', 'EAST_SERVICE'],
+            ['MID_EAST_PROM', 'SEC_A_EAST_ACCESS'],
+            ['SEC_A_EAST_ACCESS', 'MID_EAST_CROSSWAY'],
+            ['MID_EAST_PROM', 'SEC_E_WEST_ACCESS'],
+            ['SEC_E_WEST_ACCESS', 'MID_EAST_CROSSWAY'],
+            ['WEST_SERVICE', 'CHAPEL_ACCESS'],
+            ['CHAPEL_ACCESS', 'PARKING_SOUTH'],
+            ['PARKING_SOUTH', 'PARKING_ACCESS'],
+            ['COLUMBARIUM_SOUTH', 'COMFORT_ROOM_ACCESS'],
+            ['COMFORT_ROOM_ACCESS', 'EAST_SERVICE']
+        ]
     };
+
+    // Batch 6: Wayfinding & Route Calculation DOM Elements
+    let mapRouteInfoCard, routeInfoTitle, btnCloseRoute, routeStartLabel, routeDestLabel;
+    let routeMetricDistance, routeMetricVia, routeWaypointsList, btnClearRoute, btnFitRoute;
+    let btnGetDirectionsLot, btnGetDirectionsHud;
 
     // DOM Elements
     let cemeterySelector;
@@ -391,6 +488,20 @@
         activeFiltersSummary = document.getElementById('activeFiltersSummary');
         activeFilterCount = document.getElementById('activeFilterCount');
         activeFilterChips = document.getElementById('activeFilterChips');
+
+        // Batch 6: Wayfinding & Route Calculation DOM Elements
+        mapRouteInfoCard = document.getElementById('mapRouteInfoCard');
+        routeInfoTitle = document.getElementById('routeInfoTitle');
+        btnCloseRoute = document.getElementById('btnCloseRoute');
+        routeStartLabel = document.getElementById('routeStartLabel');
+        routeDestLabel = document.getElementById('routeDestLabel');
+        routeMetricDistance = document.getElementById('routeMetricDistance');
+        routeMetricVia = document.getElementById('routeMetricVia');
+        routeWaypointsList = document.getElementById('routeWaypointsList');
+        btnClearRoute = document.getElementById('btnClearRoute');
+        btnFitRoute = document.getElementById('btnFitRoute');
+        btnGetDirectionsLot = document.getElementById('btnGetDirectionsLot');
+        btnGetDirectionsHud = document.getElementById('btnGetDirectionsHud');
     }
 
     /**
@@ -427,6 +538,35 @@
         }
         if (btnCenterOnMapDrawer) {
             btnCenterOnMapDrawer.addEventListener('click', centerOnSelectedLot);
+        }
+
+        // Batch 6: Wayfinding & Route to Lot Handlers
+        if (btnGetDirectionsLot) {
+            btnGetDirectionsLot.addEventListener('click', () => {
+                if (state.selectedLot) {
+                    generateRouteToLot(state.selectedLot, state.currentBlock, state.currentSection, true);
+                }
+            });
+        }
+        if (btnGetDirectionsHud) {
+            btnGetDirectionsHud.addEventListener('click', () => {
+                if (state.selectedLot) {
+                    generateRouteToLot(state.selectedLot, state.currentBlock, state.currentSection, true);
+                }
+            });
+        }
+        if (btnClearRoute) {
+            btnClearRoute.addEventListener('click', clearRoute);
+        }
+        if (btnCloseRoute) {
+            btnCloseRoute.addEventListener('click', clearRoute);
+        }
+        if (btnFitRoute) {
+            btnFitRoute.addEventListener('click', () => {
+                if (state.activeRoute && state.activeRoute.points) {
+                    fitRouteToViewport(state.activeRoute.points);
+                }
+            });
         }
 
         // Batch 4: Retry Occupancy Details Fetching
@@ -1149,6 +1289,18 @@
             m.setAttribute('patternUnits', 'userSpaceOnUse');
             m.innerHTML = '<rect width="3" height="6" fill="rgba(255,255,255,0.03)"/><rect x="3" width="3" height="6" fill="rgba(0,0,0,0.02)"/>';
             defs.appendChild(m);
+        }
+        if (!document.getElementById('routeArrowMarker')) {
+            const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+            marker.setAttribute('id', 'routeArrowMarker');
+            marker.setAttribute('viewBox', '0 0 10 10');
+            marker.setAttribute('refX', '6');
+            marker.setAttribute('refY', '5');
+            marker.setAttribute('markerWidth', '6');
+            marker.setAttribute('markerHeight', '6');
+            marker.setAttribute('orient', 'auto-start-reverse');
+            marker.innerHTML = '<path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#0284c7" class="route-arrow-marker" />';
+            defs.appendChild(marker);
         }
     }
 
@@ -2748,6 +2900,11 @@ if (count <= 4 && !usedZones.has('e')) {
         // Open Drawer
         lotDetailsDrawer.classList.add('is-open');
         lotDetailsDrawer.setAttribute('aria-hidden', 'false');
+
+        // Batch 6: If wayfinding route is currently active, recalibrate to the new destination lot
+        if (state.activeRoute) {
+            generateRouteToLot(lot, block, section, false);
+        }
     }
 
     /**
@@ -2981,6 +3138,458 @@ if (count <= 4 && !usedZones.has('e')) {
         document.querySelectorAll('.svg-lot-tile.is-selected').forEach(el => {
             el.classList.remove('is-selected');
         });
+    }
+
+    /**
+     * =========================================================================
+     * BATCH 6: INTERNAL CEMETERY ROUTE / WAYFINDING (MAIN GATE TO SELECTED LOT)
+     * =========================================================================
+     */
+
+    /**
+     * Dijkstra Shortest Path Solver
+     * Computes the deterministic shortest path along MASTER_MAP_NETWORK
+     * @param {string} startNodeId - Origin node ID (typically 'MAIN_GATE')
+     * @param {string} targetNodeId - Destination access node ID
+     * @returns {{ path: string[], totalDist: number } | null}
+     */
+    function dijkstraShortestPath(startNodeId, targetNodeId) {
+        const nodes = MASTER_MAP_NETWORK.nodes;
+        const edges = MASTER_MAP_NETWORK.edges;
+        if (!nodes[startNodeId] || !nodes[targetNodeId]) return null;
+        if (startNodeId === targetNodeId) return { path: [startNodeId], totalDist: 0 };
+
+        // Adjacency graph
+        const adj = {};
+        Object.keys(nodes).forEach(id => { adj[id] = []; });
+        edges.forEach(([u, v]) => {
+            if (nodes[u] && nodes[v]) {
+                const dist = Math.hypot(nodes[u].x - nodes[v].x, nodes[u].y - nodes[v].y);
+                adj[u].push({ id: v, dist });
+                adj[v].push({ id: u, dist });
+            }
+        });
+
+        const dist = {};
+        const prev = {};
+        const unvisited = new Set(Object.keys(nodes));
+
+        Object.keys(nodes).forEach(id => {
+            dist[id] = Infinity;
+            prev[id] = null;
+        });
+        dist[startNodeId] = 0;
+
+        while (unvisited.size > 0) {
+            let curr = null;
+            let smallest = Infinity;
+            for (const id of unvisited) {
+                if (dist[id] < smallest) {
+                    smallest = dist[id];
+                    curr = id;
+                }
+            }
+
+            if (curr === null || smallest === Infinity || curr === targetNodeId) break;
+            unvisited.delete(curr);
+
+            const neighbors = adj[curr] || [];
+            for (const neighbor of neighbors) {
+                if (!unvisited.has(neighbor.id)) continue;
+                const alt = dist[curr] + neighbor.dist;
+                if (alt < dist[neighbor.id]) {
+                    dist[neighbor.id] = alt;
+                    prev[neighbor.id] = curr;
+                }
+            }
+        }
+
+        if (dist[targetNodeId] === Infinity) return null;
+
+        const path = [];
+        let c = targetNodeId;
+        while (c) {
+            path.unshift(c);
+            c = prev[c];
+        }
+        return { path, totalDist: dist[targetNodeId] };
+    }
+
+    /**
+     * Resolve Destination Coordinates and Nearest Access Node for a Lot
+     */
+    function resolveLotWayfindingTarget(lot, block, section) {
+        if (!lot) return null;
+
+        let lotCenter = null;
+        const lotTile = document.querySelector(`.svg-lot-tile[data-lot-id="${lot.lot_id}"]`);
+        if (lotTile) {
+            const rect = lotTile.querySelector('rect') || lotTile;
+            const lx = parseFloat(rect.getAttribute('x'));
+            const ly = parseFloat(rect.getAttribute('y'));
+            const lw = parseFloat(rect.getAttribute('width')) || 30;
+            const lh = parseFloat(rect.getAttribute('height')) || 24;
+            if (!isNaN(lx) && !isNaN(ly)) {
+                lotCenter = { x: lx + (lw / 2), y: ly + (lh / 2) };
+            }
+        }
+
+        // Fallback to block card center if lot tile is not yet rendered
+        if (!lotCenter && block) {
+            const blkCard = document.querySelector(`.svg-block-card[data-block-id="${block.block_id}"]`);
+            if (blkCard) {
+                const rect = blkCard.querySelector('rect') || blkCard;
+                const bx = parseFloat(rect.getAttribute('x'));
+                const by = parseFloat(rect.getAttribute('y'));
+                const bw = parseFloat(rect.getAttribute('width')) || 160;
+                const bh = parseFloat(rect.getAttribute('height')) || 110;
+                if (!isNaN(bx) && !isNaN(by)) {
+                    lotCenter = { x: bx + (bw / 2), y: by + (bh / 2) };
+                }
+            }
+        }
+
+        if (!lotCenter) {
+            lotCenter = { x: 800, y: 420 };
+        }
+
+        // Determine candidate access nodes based on Section hierarchy
+        const sName = (section?.section_name || '').toLowerCase();
+        let candidateNodeIds = null;
+
+        if (sName.includes('a') || sName.includes('everlasting')) {
+            candidateNodeIds = ['SEC_A_SPINE_LEFT', 'SEC_A_SPINE_RIGHT', 'SEC_A_WEST_ACCESS', 'SEC_A_EAST_ACCESS', 'CENTRAL_ROUNDABOUT', 'PROMENADE_JUNCTION'];
+        } else if (sName.includes('b') || sName.includes('lourdes')) {
+            candidateNodeIds = ['SEC_B_WEST_ACCESS', 'SEC_B_EAST_ACCESS', 'MID_WEST_CROSSWAY', 'WEST_CROSSWAY', 'WEST_PROM'];
+        } else if (sName.includes('c') || sName.includes('san jose')) {
+            candidateNodeIds = ['SEC_C_SOUTH_ACCESS', 'SEC_C_NORTH_ACCESS', 'SEC_SAN_JOSE', 'MID_WEST_PROM', 'NORTH_MID_WEST'];
+        } else if (sName.includes('d') || sName.includes('columbarium') || sName.includes('ossuary')) {
+            candidateNodeIds = ['SEC_D_SOUTH_ACCESS', 'SEC_D_NORTH_ACCESS', 'SEC_COLUMBARIUM', 'MID_EAST_PROM', 'NORTH_MID_EAST'];
+        } else if (sName.includes('e') || sName.includes('transfiguration')) {
+            candidateNodeIds = ['SEC_E_WEST_ACCESS', 'SEC_E_EAST_ACCESS', 'SEC_E_SOUTH_ACCESS', 'MID_EAST_CROSSWAY', 'EAST_CROSSWAY'];
+        }
+
+        // If no candidate list matched, evaluate all network nodes
+        if (!candidateNodeIds || candidateNodeIds.length === 0) {
+            candidateNodeIds = Object.keys(MASTER_MAP_NETWORK.nodes);
+        }
+
+        // Find nearest candidate node to lot center
+        let bestNodeId = null;
+        let minDistance = Infinity;
+        candidateNodeIds.forEach(id => {
+            const node = MASTER_MAP_NETWORK.nodes[id];
+            if (node) {
+                const dist = Math.hypot(node.x - lotCenter.x, node.y - lotCenter.y);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    bestNodeId = id;
+                }
+            }
+        });
+
+        return {
+            lotCenter,
+            accessNodeId: bestNodeId || 'CENTRAL_ROUNDABOUT'
+        };
+    }
+
+    /**
+     * Generate Route from Main Gate to Selected Lot
+     * @param {Object} lot - Target Lot
+     * @param {Object} block - Parent Block
+     * @param {Object} section - Parent Section
+     * @param {boolean} autoFit - Whether to smoothly fit viewport around route
+     */
+    function generateRouteToLot(lot, block, section, autoFit = true) {
+        if (!lot) return;
+
+        // If drilled into a single block view, return to master overview to see full route
+        if (state.viewLevel === 'block') {
+            returnToCemeteryOverview();
+        }
+
+        const target = resolveLotWayfindingTarget(lot, block, section);
+        if (!target) {
+            showRouteError('Route unavailable for this location. Invalid destination coordinates.');
+            return;
+        }
+
+        const startNodeId = 'MAIN_GATE';
+        const solverResult = dijkstraShortestPath(startNodeId, target.accessNodeId);
+        if (!solverResult || !solverResult.path || solverResult.path.length === 0) {
+            showRouteError('Route unavailable for this location. This lot does not currently have a connected access path in the cemetery map.');
+            return;
+        }
+
+        const nodes = MASTER_MAP_NETWORK.nodes;
+        const routePoints = [];
+
+        // 1. Road network nodes from Main Gate to Section Access Node
+        solverResult.path.forEach((nodeId, idx) => {
+            const node = nodes[nodeId];
+            routePoints.push({
+                x: node.x,
+                y: node.y,
+                label: node.label || nodeId,
+                type: idx === 0 ? 'start' : 'network'
+            });
+        });
+
+        // 2. Section access to Block / Lot walkway connector
+        const accessNode = nodes[target.accessNodeId];
+        const lotPt = target.lotCenter;
+
+        // Add orthogonal pathway corner inside section/block
+        const dx = Math.abs(lotPt.x - accessNode.x);
+        const dy = Math.abs(lotPt.y - accessNode.y);
+        if (dx > 8 && dy > 8) {
+            if (dy < dx) {
+                routePoints.push({
+                    x: lotPt.x,
+                    y: accessNode.y,
+                    label: `${block?.block_name || 'Block'} Access Walkway`,
+                    type: 'walkway'
+                });
+            } else {
+                routePoints.push({
+                    x: accessNode.x,
+                    y: lotPt.y,
+                    label: `${block?.block_name || 'Block'} Access Walkway`,
+                    type: 'walkway'
+                });
+            }
+        }
+
+        // 3. Exact Lot Destination endpoint
+        routePoints.push({
+            x: lotPt.x,
+            y: lotPt.y,
+            label: `Lot ${lot.lot_number}`,
+            type: 'destination'
+        });
+
+        // Calculate total map distance
+        let totalMapDist = 0;
+        for (let i = 0; i < routePoints.length - 1; i++) {
+            totalMapDist += Math.hypot(routePoints[i + 1].x - routePoints[i].x, routePoints[i + 1].y - routePoints[i].y);
+        }
+
+        // Render SVG elements in #mapRouteLayer
+        renderRouteSvg(routePoints, lot, block, section);
+
+        // Update Route Information HUD Card
+        updateRouteInfoCard(routePoints, totalMapDist, lot, block, section, accessNode);
+
+        // Cache active route state
+        state.activeRoute = {
+            lot,
+            block,
+            section,
+            points: routePoints,
+            totalDist: totalMapDist
+        };
+
+        if (autoFit) {
+            fitRouteToViewport(routePoints);
+        }
+    }
+
+    /**
+     * Render Route SVG in #mapRouteLayer
+     */
+    function renderRouteSvg(points, lot, block, section) {
+        if (!mapRouteLayer) {
+            ensureSvgLayers();
+        }
+        if (!mapRouteLayer) return;
+        mapRouteLayer.innerHTML = '';
+
+        if (points.length < 2) return;
+
+        // Build SVG path data
+        let d = `M ${points[0].x} ${points[0].y}`;
+        for (let i = 1; i < points.length; i++) {
+            d += ` L ${points[i].x} ${points[i].y}`;
+        }
+
+        const routeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        routeGroup.setAttribute('class', 'svg-cemetery-route-group');
+
+        // 1. Route Glow Underlay
+        const underlay = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        underlay.setAttribute('d', d);
+        underlay.setAttribute('class', 'svg-route-underlay');
+        underlay.setAttribute('fill', 'none');
+        routeGroup.appendChild(underlay);
+
+        // 2. Main Animated Route Line
+        const mainLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        mainLine.setAttribute('d', d);
+        mainLine.setAttribute('class', 'svg-route-line');
+        mainLine.setAttribute('fill', 'none');
+        mainLine.setAttribute('marker-mid', 'url(#routeArrowMarker)');
+        mainLine.setAttribute('marker-end', 'url(#routeArrowMarker)');
+        routeGroup.appendChild(mainLine);
+
+        // 3. Start Marker (Main Gate)
+        const startPt = points[0];
+        const startG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        startG.setAttribute('class', 'route-marker-start');
+        startG.setAttribute('transform', `translate(${startPt.x}, ${startPt.y})`);
+        startG.innerHTML = `
+            <circle class="route-marker-pulse start-pulse" cx="0" cy="0" r="16" />
+            <circle class="route-marker-dot start-dot" cx="0" cy="0" r="7" />
+            <rect class="route-badge-bg start-badge-bg" x="-52" y="12" width="104" height="20" rx="10" />
+            <text class="route-badge-text" x="0" y="25.5" text-anchor="middle">● START Main Gate</text>
+        `;
+        routeGroup.appendChild(startG);
+
+        // 4. Destination Marker (Exact Selected Lot)
+        const destPt = points[points.length - 1];
+        const destG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        destG.setAttribute('class', 'route-marker-dest');
+        destG.setAttribute('transform', `translate(${destPt.x}, ${destPt.y})`);
+        const badgeLabel = `● DESTINATION Lot ${escapeHtml(lot.lot_number)}`;
+        const badgeW = Math.max(110, badgeLabel.length * 6.5 + 20);
+        destG.innerHTML = `
+            <circle class="route-marker-pulse dest-pulse" cx="0" cy="0" r="18" />
+            <circle class="route-marker-dot dest-dot" cx="0" cy="0" r="7" />
+            <rect class="route-badge-bg dest-badge-bg" x="${-badgeW / 2}" y="-32" width="${badgeW}" height="22" rx="11" />
+            <text class="route-badge-text" x="0" y="-17.5" text-anchor="middle">${badgeLabel}</text>
+        `;
+        routeGroup.appendChild(destG);
+
+        mapRouteLayer.appendChild(routeGroup);
+    }
+
+    /**
+     * Update Route Information Card UI
+     */
+    function updateRouteInfoCard(points, totalDist, lot, block, section, accessNode) {
+        if (!mapRouteInfoCard) return;
+
+        if (routeInfoTitle) routeInfoTitle.textContent = 'Route Navigation';
+        if (routeStartLabel) routeStartLabel.textContent = 'Main Gate (Portal)';
+        if (routeDestLabel) {
+            routeDestLabel.textContent = `Lot ${lot.lot_number} · ${section?.section_name || 'Section'} · ${block?.block_name || 'Block'}`;
+        }
+        if (routeMetricDistance) {
+            routeMetricDistance.textContent = `${Math.round(totalDist)} map units`;
+        }
+        if (routeMetricVia) {
+            routeMetricVia.textContent = `Central Spine › ${accessNode?.label || 'Access Way'}`;
+        }
+
+        if (routeWaypointsList) {
+            routeWaypointsList.innerHTML = '';
+            points.forEach((pt, idx) => {
+                const li = document.createElement('li');
+                li.className = 'route-waypoint-item';
+                
+                let iconClass = 'fa-circle-dot';
+                let stepTitle = pt.label || `Waypoint ${idx + 1}`;
+                if (pt.type === 'start') {
+                    iconClass = 'fa-door-open';
+                    stepTitle = 'Main Gate (Entry)';
+                } else if (pt.type === 'destination') {
+                    iconClass = 'fa-location-dot';
+                    stepTitle = `Lot ${lot.lot_number} (Destination)`;
+                } else if (pt.type === 'walkway') {
+                    iconClass = 'fa-person-walking';
+                } else {
+                    iconClass = 'fa-road';
+                }
+
+                li.innerHTML = `
+                    <div class="waypoint-step-num">${idx + 1}</div>
+                    <i class="fas ${iconClass} waypoint-icon"></i>
+                    <div class="waypoint-details">
+                        <span class="waypoint-title">${escapeHtml(stepTitle)}</span>
+                    </div>
+                `;
+                routeWaypointsList.appendChild(li);
+            });
+        }
+
+        mapRouteInfoCard.style.display = 'block';
+    }
+
+    /**
+     * Display Route Error Gracefully
+     */
+    function showRouteError(message) {
+        clearRoute();
+        if (mapRouteInfoCard && routeWaypointsList) {
+            if (routeInfoTitle) routeInfoTitle.textContent = 'Route Notice';
+            if (routeStartLabel) routeStartLabel.textContent = 'Main Gate';
+            if (routeDestLabel) routeDestLabel.textContent = state.selectedLot ? `Lot ${state.selectedLot.lot_number}` : 'Selected Destination';
+            if (routeMetricDistance) routeMetricDistance.textContent = 'Unavailable';
+            if (routeMetricVia) routeMetricVia.textContent = 'None';
+            routeWaypointsList.innerHTML = `
+                <li class="route-waypoint-item route-error-item" style="color:#ef4444; padding:8px 12px; font-size:0.85rem;">
+                    <i class="fas fa-circle-exclamation" style="margin-right:8px;"></i>
+                    ${escapeHtml(message)}
+                </li>
+            `;
+            mapRouteInfoCard.style.display = 'block';
+        }
+    }
+
+    /**
+     * Fit Camera Viewport to Route Points
+     */
+    function fitRouteToViewport(points) {
+        if (!points || points.length === 0) return;
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        points.forEach(pt => {
+            if (pt.x < minX) minX = pt.x;
+            if (pt.y < minY) minY = pt.y;
+            if (pt.x > maxX) maxX = pt.x;
+            if (pt.y > maxY) maxY = pt.y;
+        });
+
+        const padX = 120;
+        const padY = 90;
+        minX = Math.max(0, minX - padX);
+        minY = Math.max(0, minY - padY);
+        maxX = Math.min(state.baseViewBox.width, maxX + padX);
+        maxY = Math.min(state.baseViewBox.height, maxY + padY);
+
+        const routeW = Math.max(maxX - minX, 500);
+        const routeH = Math.max(maxY - minY, 350);
+
+        // Maintain canvas aspect ratio
+        const aspect = state.baseViewBox.width / state.baseViewBox.height;
+        let targetW = routeW;
+        let targetH = targetW / aspect;
+
+        if (targetH < routeH) {
+            targetH = routeH;
+            targetW = targetH * aspect;
+        }
+
+        // Center on route bounding box
+        const centerX = minX + (routeW / 2);
+        const centerY = minY + (routeH / 2);
+        const targetX = Math.max(0, Math.min(state.baseViewBox.width - targetW, centerX - (targetW / 2)));
+        const targetY = Math.max(0, Math.min(state.baseViewBox.height - targetH, centerY - (targetH / 2)));
+
+        animateViewBox(targetX, targetY, targetW, targetH, 380);
+    }
+
+    /**
+     * Clear / Reset Route
+     */
+    function clearRoute() {
+        if (mapRouteLayer) {
+            mapRouteLayer.innerHTML = '';
+        }
+        if (mapRouteInfoCard) {
+            mapRouteInfoCard.style.display = 'none';
+        }
+        state.activeRoute = null;
     }
 
     /**

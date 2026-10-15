@@ -308,6 +308,70 @@
                                     <button type="button" class="btn btn-sm btn-center-on-map" id="btnCenterOnMapHud" title="Center viewport on selected lot">
                                         <i class="fas fa-crosshairs"></i> Center on Map
                                     </button>
+                                    <button type="button" class="btn btn-sm btn-primary btn-get-directions-hud" id="btnGetDirectionsHud" title="Calculate route from Main Gate">
+                                        <i class="fas fa-route"></i> Get Directions
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- CEMETERY WAYFINDING ROUTE CARD (Batch 6 Route to Lot) -->
+                            <div class="map-route-info-card" id="mapRouteInfoCard" style="display: none;" aria-live="polite">
+                                <div class="route-info-header">
+                                    <div class="route-info-title-wrap">
+                                        <i class="fas fa-route route-info-icon"></i>
+                                        <div>
+                                            <span class="route-info-eyebrow">WAYFINDING ROUTE</span>
+                                            <h4 class="route-info-title" id="routeInfoTitle">Route from Main Gate</h4>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn-close-route" id="btnCloseRoute" title="Clear route" aria-label="Clear route">
+                                        <i class="fas fa-xmark"></i>
+                                    </button>
+                                </div>
+                                <div class="route-info-body">
+                                    <div class="route-info-endpoints">
+                                        <div class="route-endpoint endpoint-start">
+                                            <span class="endpoint-dot start-dot"></span>
+                                            <div class="endpoint-details">
+                                                <span class="endpoint-label">Origin</span>
+                                                <strong class="endpoint-val" id="routeStartLabel">Main Gate</strong>
+                                            </div>
+                                        </div>
+                                        <div class="route-connector-line"></div>
+                                        <div class="route-endpoint endpoint-dest">
+                                            <span class="endpoint-dot dest-dot"></span>
+                                            <div class="endpoint-details">
+                                                <span class="endpoint-label">Destination</span>
+                                                <strong class="endpoint-val" id="routeDestLabel">Lot —</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="route-metrics-bar">
+                                        <div class="route-metric-item">
+                                            <span class="metric-lbl"><i class="fas fa-ruler"></i> Map distance</span>
+                                            <strong class="metric-val" id="routeMetricDistance">— map units</strong>
+                                        </div>
+                                        <div class="route-metric-item">
+                                            <span class="metric-lbl"><i class="fas fa-location-arrow"></i> Via</span>
+                                            <strong class="metric-val" id="routeMetricVia">Central Boulevard</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="route-waypoints-section">
+                                        <span class="waypoints-label"><i class="fas fa-list-check"></i> Stops / Waypoints:</span>
+                                        <ol class="route-waypoints-list" id="routeWaypointsList">
+                                            <!-- Dynamically populated -->
+                                        </ol>
+                                    </div>
+                                </div>
+                                <div class="route-info-footer">
+                                    <button type="button" class="btn btn-sm btn-secondary btn-clear-route" id="btnClearRoute" title="Remove route from map" aria-label="Clear route">
+                                        <i class="fas fa-ban"></i> Clear Route
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-primary btn-fit-route" id="btnFitRoute" title="Frame complete route in view" aria-label="Fit route to viewport">
+                                        <i class="fas fa-expand"></i> Fit Route
+                                    </button>
                                 </div>
                             </div>
 
@@ -796,6 +860,9 @@
 
                         <!-- DRAWER ACTION FOOTER -->
                         <div class="drawer-footer">
+                            <button type="button" class="btn btn-primary btn-block btn-get-directions" id="btnGetDirectionsLot" title="Calculate route from Main Gate to this lot" aria-label="Get directions to selected lot">
+                                <i class="fas fa-route"></i> Get Directions from Main Gate
+                            </button>
                             <button type="button" class="btn btn-secondary btn-block btn-center-drawer" id="btnCenterOnMapDrawer">
                                 <i class="fas fa-crosshairs"></i> Center on Map
                             </button>

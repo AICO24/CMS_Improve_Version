@@ -5970,3 +5970,473 @@ body.dark-mode .btn-wayfinding-slip:hover {
     fill: #ffffff;
     text-anchor: middle;
 }
+
+/* ==========================================================================
+   BATCH 6: CEMETERY ROUTE & INTERNAL WAYFINDING SYSTEM
+   ========================================================================== */
+
+/* 1. On-Map Route Information Panel / Card */
+.map-route-info-card {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 40;
+    width: 320px;
+    max-width: calc(100% - 40px);
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(2, 132, 199, 0.35);
+    border-radius: 12px;
+    box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.18), 0 0 16px rgba(2, 132, 199, 0.22);
+    overflow: hidden;
+    font-family: var(--font-sans, 'Inter', -apple-system, sans-serif);
+    color: var(--color-text-dark, #0f172a);
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+[data-theme="dark"] .map-route-info-card {
+    background: rgba(15, 23, 42, 0.94);
+    border-color: rgba(56, 189, 248, 0.4);
+    color: #f8fafc;
+    box-shadow: 0 14px 32px -6px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.25);
+}
+
+.route-info-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, rgba(2, 132, 199, 0.08), rgba(14, 165, 233, 0.16));
+    border-bottom: 1px solid rgba(2, 132, 199, 0.2);
+}
+
+[data-theme="dark"] .route-info-header {
+    background: linear-gradient(135deg, rgba(2, 132, 199, 0.2), rgba(14, 165, 233, 0.28));
+    border-bottom-color: rgba(56, 189, 248, 0.25);
+}
+
+.route-info-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.route-info-icon {
+    font-size: 1.25rem;
+    color: #0284c7;
+    background: rgba(2, 132, 199, 0.14);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+}
+
+[data-theme="dark"] .route-info-icon {
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.2);
+}
+
+.route-info-eyebrow {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #0284c7;
+    text-transform: uppercase;
+}
+
+[data-theme="dark"] .route-info-eyebrow {
+    color: #38bdf8;
+}
+
+.route-info-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.btn-close-route {
+    background: none;
+    border: none;
+    color: #64748b;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.btn-close-route:hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: #0f172a;
+}
+
+[data-theme="dark"] .btn-close-route:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+.route-info-body {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.route-info-endpoints {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-left: 6px;
+}
+
+.route-connector-line {
+    position: absolute;
+    left: 11px;
+    top: 14px;
+    bottom: 14px;
+    width: 2px;
+    background: linear-gradient(to bottom, #10b981 0%, #0284c7 50%, #e11d48 100%);
+    border-radius: 1px;
+}
+
+.route-endpoint {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    position: relative;
+    z-index: 1;
+}
+
+.endpoint-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-top: 3px;
+    flex-shrink: 0;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.endpoint-dot.start-dot {
+    background: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35);
+}
+
+.endpoint-dot.dest-dot {
+    background: #e11d48;
+    box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.35);
+}
+
+.endpoint-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.endpoint-label {
+    font-size: 0.7rem;
+    color: #64748b;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+[data-theme="dark"] .endpoint-label {
+    color: #94a3b8;
+}
+
+.endpoint-val {
+    font-size: 0.85rem;
+    color: inherit;
+}
+
+.route-metrics-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(2, 132, 199, 0.05);
+    border: 1px solid rgba(2, 132, 199, 0.15);
+    border-radius: 8px;
+}
+
+[data-theme="dark"] .route-metrics-bar {
+    background: rgba(2, 132, 199, 0.12);
+    border-color: rgba(56, 189, 248, 0.2);
+}
+
+.route-metric-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.metric-lbl {
+    font-size: 0.68rem;
+    color: #64748b;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+[data-theme="dark"] .metric-lbl {
+    color: #94a3b8;
+}
+
+.metric-val {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0284c7;
+}
+
+[data-theme="dark"] .metric-val {
+    color: #38bdf8;
+}
+
+.route-waypoints-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.waypoints-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+[data-theme="dark"] .waypoints-label {
+    color: #94a3b8;
+}
+
+.route-waypoints-list {
+    margin: 0;
+    padding-left: 20px;
+    max-height: 110px;
+    overflow-y: auto;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: #334155;
+}
+
+[data-theme="dark"] .route-waypoints-list {
+    color: #cbd5e1;
+}
+
+.route-waypoints-list li {
+    margin-bottom: 4px;
+}
+
+.route-waypoints-list li:last-child {
+    font-weight: 700;
+    color: #e11d48;
+}
+
+[data-theme="dark"] .route-waypoints-list li:last-child {
+    color: #fb7185;
+}
+
+.route-info-footer {
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px 12px;
+    background: rgba(0, 0, 0, 0.02);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .route-info-footer {
+    background: rgba(255, 255, 255, 0.02);
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.route-info-footer .btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 6px 10px;
+}
+
+/* 2. Drawer "Get Directions from Main Gate" Button */
+.btn-get-directions {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff !important;
+    border: none;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-get-directions:hover {
+    background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+    box-shadow: 0 6px 16px rgba(2, 132, 199, 0.45);
+    transform: translateY(-1px);
+}
+
+.btn-get-directions:active {
+    transform: translateY(0);
+}
+
+/* 3. SVG Route Layer Styling */
+.svg-route-underlay {
+    fill: none;
+    stroke: rgba(2, 132, 199, 0.35);
+    stroke-width: 14px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 6px rgba(2, 132, 199, 0.45));
+    pointer-events: none;
+}
+
+[data-theme="dark"] .svg-route-underlay {
+    stroke: rgba(56, 189, 248, 0.4);
+    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.55));
+}
+
+.svg-route-line {
+    fill: none;
+    stroke: #0284c7;
+    stroke-width: 5px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 10 7;
+    animation: routeWalkingStroke 1.6s linear infinite;
+    pointer-events: none;
+}
+
+[data-theme="dark"] .svg-route-line {
+    stroke: #38bdf8;
+}
+
+@keyframes routeWalkingStroke {
+    from {
+        stroke-dashoffset: 0;
+    }
+    to {
+        stroke-dashoffset: -34;
+    }
+}
+
+/* Direction Arrows along Route */
+.route-arrow-marker {
+    fill: #ffffff;
+    stroke: #0369a1;
+    stroke-width: 1.2px;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+    pointer-events: none;
+}
+
+[data-theme="dark"] .route-arrow-marker {
+    fill: #38bdf8;
+    stroke: #0c4a6e;
+}
+
+/* Start Marker (Main Gate) */
+.route-marker-start {
+    pointer-events: none;
+}
+
+.route-marker-pulse.start-pulse {
+    fill: rgba(16, 185, 129, 0.3);
+    animation: routePulseStart 2.2s ease-out infinite;
+}
+
+@keyframes routePulseStart {
+    0% {
+        r: 8px;
+        opacity: 0.9;
+    }
+    100% {
+        r: 22px;
+        opacity: 0;
+    }
+}
+
+.route-marker-dot.start-dot {
+    fill: #10b981;
+    stroke: #ffffff;
+    stroke-width: 2.5px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.route-badge-bg.start-badge-bg {
+    fill: #065f46;
+    stroke: #ffffff;
+    stroke-width: 1.2px;
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.35));
+}
+
+.route-badge-text {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    fill: #ffffff;
+}
+
+/* Destination Marker (Exact Lot) */
+.route-marker-dest {
+    pointer-events: none;
+}
+
+.route-marker-pulse.dest-pulse {
+    fill: rgba(225, 29, 72, 0.38);
+    animation: routePulseDest 2s ease-out infinite;
+}
+
+@keyframes routePulseDest {
+    0% {
+        r: 10px;
+        opacity: 0.95;
+    }
+    100% {
+        r: 26px;
+        opacity: 0;
+    }
+}
+
+.route-marker-dot.dest-dot {
+    fill: #e11d48;
+    stroke: #ffffff;
+    stroke-width: 2.5px;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+}
+
+.route-badge-bg.dest-badge-bg {
+    fill: #9f1239;
+    stroke: #ffffff;
+    stroke-width: 1.2px;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+}
+
+/* Respect Accessibility Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    .svg-route-line {
+        animation: none !important;
+        stroke-dasharray: none;
+    }
+    .route-marker-pulse {
+        animation: none !important;
+        opacity: 0.4;
+    }
+    .map-route-info-card {
+        transition: none !important;
+    }
+}
+
