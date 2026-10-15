@@ -360,8 +360,14 @@
 
                 const sections = res.data.sections || [];
                 let totalBlocks = 0;
-                sections.forEach(s => totalBlocks += (s.blocks ? s.blocks.length : 0));
-                badgeStructureSummary.textContent = `${sections.length} Sections • ${totalBlocks} Blocks`;
+                let totalLots = 0;
+                sections.forEach(s => {
+                    totalBlocks += (s.blocks ? s.blocks.length : 0);
+                    (s.blocks || []).forEach(b => {
+                        totalLots += (b.total_lots || 0);
+                    });
+                });
+                badgeStructureSummary.textContent = `${sections.length} Sections · ${totalBlocks} Blocks · ${totalLots} Lots`;
 
                 renderHierarchyTree();
                 // Select cemetery facility by default
@@ -440,12 +446,12 @@
                 secRow.dataset.entityType = 'section';
                 secRow.dataset.entityId = sec.section_id;
                 secRow.innerHTML = `
-                    <div class="tree-label-group">
+                    <div class="tree-label-group" title="${escapeHtml(sec.section_name)}">
                         <i class="fas fa-layer-group tree-icon"></i>
-                        <span>${escapeHtml(sec.section_name)}</span>
+                        <span class="tree-name-label">${escapeHtml(sec.section_name)}</span>
                         ${sec.map_config ? '<span class="tree-badge-customized" title="Custom Geometry Configured"></span>' : ''}
                     </div>
-                    <small class="text-muted">${(sec.blocks || []).length} Blks</small>
+                    <span class="tree-count-pill">${(sec.blocks || []).length} Blocks</span>
                 `;
                 secRow.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -472,12 +478,12 @@
                         blkRow.dataset.entityType = 'block';
                         blkRow.dataset.entityId = blk.block_id;
                         blkRow.innerHTML = `
-                            <div class="tree-label-group">
+                            <div class="tree-label-group" title="${escapeHtml(blk.block_name)}">
                                 <i class="fas fa-th-large tree-icon"></i>
-                                <span>${escapeHtml(blk.block_name)}</span>
+                                <span class="tree-name-label">${escapeHtml(blk.block_name)}</span>
                                 ${blk.map_config ? '<span class="tree-badge-customized" title="Custom Geometry Configured"></span>' : ''}
                             </div>
-                            <small class="text-muted">${blk.total_lots || 0} Lots</small>
+                            <span class="tree-count-pill">${blk.total_lots || 0} Lots</span>
                         `;
                         blkRow.addEventListener('click', async (e) => {
                             e.stopPropagation();
@@ -633,9 +639,23 @@
             row.classList.toggle('is-selected', matches);
         });
 
-        // Update Editor Header
+        // Update Editor Header & Subtitle
         editorEntityTitle.textContent = entity.name || 'Selected Entity';
         editorEntityTypeBadge.textContent = entity.type.toUpperCase();
+
+        const subtitleEl = document.getElementById('editorEntitySubtitle');
+        if (subtitleEl) {
+            if (entity.type === 'cemetery') {
+                subtitleEl.textContent = 'Municipal Cemetery Facility Canvas';
+            } else if (entity.type === 'section') {
+                subtitleEl.textContent = `${(entity.rawData?.blocks || []).length} Blocks · ${entity.rawData?.total_lots || 0} Lots`;
+            } else if (entity.type === 'block') {
+                const parentName = entity.parent?.section_name ? `Section: ${entity.parent.section_name}` : 'Section Block';
+                subtitleEl.textContent = `${parentName} · ${entity.rawData?.total_lots || 0} Lots`;
+            } else if (entity.type === 'lot') {
+                subtitleEl.textContent = `Status: ${entity.rawData?.status || 'Available'} · Lot #${entity.rawData?.lot_number || entity.id}`;
+            }
+        }
 
         if (entity.type === 'cemetery') {
             editorHeaderIcon.className = 'fas fa-monument';
@@ -794,18 +814,31 @@
         }
 
         // Render validation UI
+        const headerVal = document.getElementById('headerValidationBadge');
         if (!isValid) {
             validationStatus.className = 'validation-status status--error';
             validationStatus.innerHTML = `<i class="fas fa-circle-xmark"></i> <span>${escapeHtml(errorMessage)}</span>`;
             btnSaveGeometry.disabled = true;
+            if (headerVal) {
+                headerVal.className = 'badge badge-geometry-status status--error';
+                headerVal.innerHTML = '<i class="fas fa-circle-xmark"></i> Geometry Error';
+            }
         } else if (warnings.length > 0) {
             validationStatus.className = 'validation-status status--warning';
             validationStatus.innerHTML = `<i class="fas fa-triangle-exclamation"></i> <span>Geometry is valid with boundary warnings.</span>`;
             btnSaveGeometry.disabled = false;
+            if (headerVal) {
+                headerVal.className = 'badge badge-geometry-status status--warning';
+                headerVal.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Review Geometry';
+            }
         } else {
             validationStatus.className = 'validation-status status--valid';
             validationStatus.innerHTML = `<i class="fas fa-check-circle"></i> <span>Geometry is valid and ready to save.</span>`;
             btnSaveGeometry.disabled = false;
+            if (headerVal) {
+                headerVal.className = 'badge badge-geometry-status status--valid';
+                headerVal.innerHTML = '<i class="fas fa-circle-check"></i> Geometry Valid';
+            }
         }
 
         if (warnings.length > 0) {
@@ -819,11 +852,21 @@
     }
 
     /**
-     * Toggle unsaved badge indicator.
+     * Toggle unsaved badge indicator and save state display.
      */
     function updateUnsavedIndicator() {
         if (unsavedIndicator) {
             unsavedIndicator.style.display = state.hasUnsavedEdits ? 'inline-flex' : 'none';
+        }
+        const saveState = document.getElementById('saveStateIndicator');
+        if (saveState) {
+            if (state.hasUnsavedEdits) {
+                saveState.innerHTML = '<i class="fas fa-circle-exclamation text-warning"></i> <span>Unsaved changes</span>';
+                saveState.className = 'save-state-row state--unsaved';
+            } else {
+                saveState.innerHTML = '<i class="fas fa-circle-check text-success"></i> <span>All changes saved</span>';
+                saveState.className = 'save-state-row state--saved';
+            }
         }
     }
 
@@ -894,6 +937,11 @@
 
         btnSaveGeometry.disabled = true;
         btnSaveGeometry.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        const saveState = document.getElementById('saveStateIndicator');
+        if (saveState) {
+            saveState.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i> <span>Saving changes...</span>';
+            saveState.className = 'save-state-row state--saving';
+        }
 
         try {
             const res = await api.request(endpoint, {
@@ -910,10 +958,18 @@
                 await reloadLayoutAndMaintainSelection();
             } else {
                 toast(res.error || 'Failed to save geometry configuration.', 'error');
+                if (saveState) {
+                    saveState.innerHTML = '<i class="fas fa-circle-xmark text-danger"></i> <span>Save failed</span>';
+                    saveState.className = 'save-state-row state--error';
+                }
             }
         } catch (err) {
             console.error('Save error:', err);
             toast(err.message || 'Error communicating with server.', 'error');
+            if (saveState) {
+                saveState.innerHTML = '<i class="fas fa-circle-xmark text-danger"></i> <span>Save failed</span>';
+                saveState.className = 'save-state-row state--error';
+            }
         } finally {
             btnSaveGeometry.disabled = false;
             btnSaveGeometry.innerHTML = '<i class="fas fa-floppy-disk"></i> Save Changes';

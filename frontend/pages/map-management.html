@@ -96,8 +96,8 @@
                 <!-- HERO PAGE HEADER -->
                 <div class="map-page-hero">
                     <div class="map-header-titles">
-                        <h1 class="map-title"><i class="fas fa-compass-drafting"></i> Map Geometry Calibration Studio</h1>
-                        <p class="map-subtitle">Configure visual layout coordinates, dimensions, and lot grids across municipal cemetery facilities.</p>
+                        <h1 class="map-title"><i class="fas fa-compass-drafting"></i> Map Calibration</h1>
+                        <p class="map-subtitle">Configure and adjust the cemetery's interactive map geometry.</p>
                     </div>
                     <div class="calibration-disclaimer-banner" role="note">
                         <div class="disclaimer-icon"><i class="fas fa-circle-info"></i></div>
@@ -121,8 +121,11 @@
 
                     <div class="facility-meta-badges">
                         <span class="badge badge-facility-code" id="badgeFacilityCode">Code: —</span>
+                        <span class="badge badge-structure-summary" id="badgeStructureSummary">0 Sections · 0 Blocks · 0 Lots</span>
                         <span class="badge badge-canvas-size" id="badgeCanvasSize">Canvas: 1600 × 1000</span>
-                        <span class="badge badge-structure-summary" id="badgeStructureSummary">0 Sections • 0 Blocks</span>
+                        <span class="badge badge-geometry-status status--valid" id="headerValidationBadge">
+                            <i class="fas fa-circle-check"></i> Geometry Valid
+                        </span>
                     </div>
 
                     <div class="facility-view-mode-toggle">
@@ -135,10 +138,10 @@
                     </div>
                 </div>
 
-                <!-- 3-PANE STUDIO WORKSPACE GRID -->
+                <!-- 3-PANE STUDIO WORKSPACE GRID: STRUCTURE (LEFT) | CANVAS (CENTER) | INSPECTOR (RIGHT) -->
                 <p class="section-label"><i class="fas fa-layer-group"></i> Interactive Layout Studio</p>
                 <div class="workspace-studio-layout">
-                    <!-- PANE 1: HIERARCHY TREE NAVIGATOR -->
+                    <!-- PANE 1: STRUCTURE HIERARCHY TREE (LEFT: ~260px) -->
                     <div class="studio-pane pane-hierarchy">
                         <div class="card hierarchy-card">
                             <div class="card-header hierarchy-header">
@@ -150,7 +153,7 @@
                             </div>
                             <div class="hierarchy-search-box">
                                 <i class="fas fa-magnifying-glass search-icon"></i>
-                                <input type="text" id="hierarchySearchInput" class="form-control form-control-sm" placeholder="Filter sections & blocks..." autocomplete="off">
+                                <input type="text" id="hierarchySearchInput" class="form-control form-control-sm" placeholder="Search sections & blocks..." autocomplete="off">
                             </div>
                             <div class="card-body hierarchy-body" id="hierarchyTreeContainer">
                                 <div class="hierarchy-loading"><i class="fas fa-spinner fa-spin"></i> Loading hierarchy...</div>
@@ -158,119 +161,24 @@
                         </div>
                     </div>
 
-                    <!-- PANE 2: GEOMETRY & GRID INSPECTOR FORM -->
-                    <div class="studio-pane pane-inspector">
-                        <div class="card geometry-card" id="geometryEditorCard">
-                            <div class="card-header geometry-header">
-                                <div class="card-title-group">
-                                    <i class="fas fa-sliders" id="editorHeaderIcon"></i>
-                                    <h3 id="editorEntityTitle">Selected Entity</h3>
-                                </div>
-                                <span class="badge badge-entity-type" id="editorEntityTypeBadge">FACILITY</span>
-                            </div>
-
-                            <div class="card-body geometry-body">
-                                <form id="geometryForm" autocomplete="off" onsubmit="return false;">
-                                    <!-- COORDINATES GROUP -->
-                                    <div class="form-section-title">
-                                        <i class="fas fa-vector-square"></i> SVG Position & Dimensions
-                                    </div>
-                                    <div class="form-grid-2col">
-                                        <div class="form-group" id="groupX">
-                                            <label for="inputX" class="form-label">
-                                                SVG X <span class="coordinate-hint" id="hintX">(Canvas X)</span>
-                                            </label>
-                                            <input type="number" step="any" min="0" class="form-control" id="inputX" placeholder="0">
-                                        </div>
-                                        <div class="form-group" id="groupY">
-                                            <label for="inputY" class="form-label">
-                                                SVG Y <span class="coordinate-hint" id="hintY">(Canvas Y)</span>
-                                            </label>
-                                            <input type="number" step="any" min="0" class="form-control" id="inputY" placeholder="0">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="inputWidth" class="form-label">Width</label>
-                                            <input type="number" step="any" min="1" class="form-control" id="inputWidth" placeholder="600" required>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="inputHeight" class="form-label">Height</label>
-                                            <input type="number" step="any" min="1" class="form-control" id="inputHeight" placeholder="300" required>
-                                        </div>
-                                    </div>
-
-                                    <!-- GRID CONFIGURATION GROUP (BLOCKS ONLY) -->
-                                    <div class="block-grid-section" id="blockGridSection" style="display: none;">
-                                        <div class="form-section-title">
-                                            <i class="fas fa-grid-2"></i> Lot Grid Parameters
-                                        </div>
-                                        <div class="form-grid-2col">
-                                            <div class="form-group">
-                                                <label for="inputGridColumns" class="form-label">Grid Columns</label>
-                                                <input type="number" min="1" max="50" class="form-control" id="inputGridColumns" placeholder="5">
-                                                <small class="field-hint">Lots per row (1 - 50)</small>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="inputGridRows" class="form-label">Estimated Rows</label>
-                                                <input type="number" min="1" max="50" class="form-control" id="inputGridRows" placeholder="Auto" readonly>
-                                                <small class="field-hint">Derived from total plot count</small>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="inputGridGapX" class="form-label">Horizontal Gap</label>
-                                                <input type="number" step="any" min="0" class="form-control" id="inputGridGapX" placeholder="14">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="inputGridGapY" class="form-label">Vertical Gap</label>
-                                                <input type="number" step="any" min="0" class="form-control" id="inputGridGapY" placeholder="14">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- VALIDATION & WARNINGS PANEL -->
-                                    <div class="validation-panel" id="validationPanel">
-                                        <div class="validation-status status--valid" id="validationStatus">
-                                            <i class="fas fa-check-circle"></i>
-                                            <span>Geometry is valid and ready.</span>
-                                        </div>
-                                        <ul class="validation-warnings-list" id="validationWarningsList" style="display: none;">
-                                            <!-- Dynamically populated warnings -->
-                                        </ul>
-                                    </div>
-
-                                    <!-- FORM ACTION BUTTONS -->
-                                    <div class="editor-actions-row">
-                                        <button type="button" class="btn btn-primary btn-save-action" id="btnSaveGeometry">
-                                            <i class="fas fa-floppy-disk"></i> Save Changes
-                                        </button>
-                                        <button type="button" class="btn btn-secondary btn-revert-action" id="btnRevertGeometry" title="Revert to last saved values">
-                                            <i class="fas fa-arrow-rotate-left"></i> Revert
-                                        </button>
-                                        <button type="button" class="btn btn-danger-soft btn-reset-action" id="btnResetGeometry" title="Clear custom map configuration and restore procedural layout">
-                                            <i class="fas fa-trash-can"></i> Reset to Default
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- PANE 3: LIVE SVG PREVIEW CANVAS -->
+                    <!-- PANE 2: MAP CANVAS / LIVE SVG PREVIEW (CENTER: DOMINANT) -->
                     <div class="studio-pane pane-preview">
                         <div class="card preview-card">
                             <div class="card-header preview-header">
                                 <div class="preview-title-group">
-                                    <i class="fas fa-eye"></i>
-                                    <h3>Live SVG Preview</h3>
-                                    <span class="live-tag"><i class="fas fa-circle-dot"></i> Real-time</span>
+                                    <i class="fas fa-map-location-dot"></i>
+                                    <h3>Map Canvas</h3>
+                                    <span class="live-tag"><i class="fas fa-circle-dot"></i> Live Preview</span>
                                 </div>
 
                                 <div class="preview-toolbar">
-                                    <button type="button" class="btn-icon" id="btnZoomIn" title="Zoom In" aria-label="Zoom In">
+                                    <button type="button" class="btn-icon" id="btnZoomIn" title="Zoom In (+)" aria-label="Zoom In">
                                         <i class="fas fa-plus"></i>
                                     </button>
-                                    <button type="button" class="btn-icon" id="btnZoomOut" title="Zoom Out" aria-label="Zoom Out">
+                                    <button type="button" class="btn-icon" id="btnZoomOut" title="Zoom Out (−)" aria-label="Zoom Out">
                                         <i class="fas fa-minus"></i>
                                     </button>
-                                    <button type="button" class="btn-icon" id="btnResetZoom" title="Reset Zoom / Fit View" aria-label="Reset Zoom">
+                                    <button type="button" class="btn-icon" id="btnResetZoom" title="Fit View / Reset Zoom" aria-label="Fit View">
                                         <i class="fas fa-expand"></i>
                                     </button>
                                 </div>
@@ -287,6 +195,18 @@
                                     <div class="empty-icon"><i class="fas fa-draw-polygon"></i></div>
                                     <h4 id="previewEmptyTitle">No Geometry Preview</h4>
                                     <p id="previewEmptyDesc">Select an entity to inspect or configure its visual representation.</p>
+                                </div>
+
+                                <!-- FLOATING COMPACT MAP LEGEND -->
+                                <div class="canvas-map-legend" id="canvasMapLegend" aria-label="Map Canvas Legend">
+                                    <div class="legend-header"><i class="fas fa-layer-group"></i> MAP ELEMENTS</div>
+                                    <div class="legend-items">
+                                        <span class="legend-chip"><span class="legend-swatch swatch-section"></span> Section</span>
+                                        <span class="legend-chip"><span class="legend-swatch swatch-block"></span> Block</span>
+                                        <span class="legend-chip"><span class="legend-swatch swatch-lot"></span> Lot</span>
+                                        <span class="legend-chip"><span class="legend-swatch swatch-road"></span> Road</span>
+                                        <span class="legend-chip"><span class="legend-swatch swatch-landmark"></span> Landmark</span>
+                                    </div>
                                 </div>
 
                                 <!-- SVG STAGE -->
@@ -308,10 +228,131 @@
                             </div>
 
                             <div class="preview-footer-notes">
-                                <span><i class="fas fa-hand-pointer"></i> Click elements on canvas or in the structure tree to select and calibrate.</span>
+                                <span><i class="fas fa-hand-pointer"></i> Click elements on canvas or in structure tree to select and calibrate.</span>
                                 <span class="unsaved-indicator" id="unsavedIndicator" style="display: none;">
-                                    <i class="fas fa-pen-ruler"></i> Unsaved edits on canvas
+                                    <i class="fas fa-pen-ruler"></i> Unsaved canvas changes
                                 </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANE 3: INSPECTOR PANEL (RIGHT: ~320px) -->
+                    <div class="studio-pane pane-inspector">
+                        <div class="card geometry-card" id="geometryEditorCard">
+                            <div class="card-header geometry-header">
+                                <div class="card-title-group">
+                                    <i class="fas fa-sliders" id="editorHeaderIcon"></i>
+                                    <h3 id="editorPanelTitle">Inspector</h3>
+                                </div>
+                                <span class="badge badge-entity-type" id="editorEntityTypeBadge">FACILITY</span>
+                            </div>
+
+                            <div class="card-body geometry-body">
+                                <!-- SELECTED ELEMENT SUMMARY CARD -->
+                                <div class="inspector-entity-card" id="inspectorEntityCard">
+                                    <div class="inspector-entity-meta-header">
+                                        <span class="inspector-section-label">SELECTED ELEMENT</span>
+                                    </div>
+                                    <h4 class="inspector-entity-title" id="editorEntityTitle">Selected Entity</h4>
+                                    <p class="inspector-entity-subtitle" id="editorEntitySubtitle">Select a section or block to inspect its geometry.</p>
+                                </div>
+
+                                <form id="geometryForm" autocomplete="off" onsubmit="return false;">
+                                    <!-- COORDINATES GROUP -->
+                                    <div class="form-section-title">
+                                        <i class="fas fa-vector-square"></i> Geometry
+                                    </div>
+                                    <div class="form-grid-2col">
+                                        <div class="form-group" id="groupX">
+                                            <label for="inputX" class="form-label">
+                                                Position X <span class="coordinate-hint" id="hintX">(Canvas X)</span>
+                                            </label>
+                                            <input type="number" step="any" min="0" class="form-control" id="inputX" placeholder="0">
+                                        </div>
+                                        <div class="form-group" id="groupY">
+                                            <label for="inputY" class="form-label">
+                                                Position Y <span class="coordinate-hint" id="hintY">(Canvas Y)</span>
+                                            </label>
+                                            <input type="number" step="any" min="0" class="form-control" id="inputY" placeholder="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="inputWidth" class="form-label">Width</label>
+                                            <input type="number" step="any" min="1" class="form-control" id="inputWidth" placeholder="600" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="inputHeight" class="form-label">Height</label>
+                                            <input type="number" step="any" min="1" class="form-control" id="inputHeight" placeholder="300" required>
+                                        </div>
+                                    </div>
+
+                                    <!-- GRID CONFIGURATION GROUP (BLOCKS ONLY) -->
+                                    <div class="block-grid-section" id="blockGridSection" style="display: none;">
+                                        <div class="form-section-title">
+                                            <i class="fas fa-table-cells"></i> Lot Grid Parameters
+                                        </div>
+                                        <div class="form-grid-2col">
+                                            <div class="form-group">
+                                                <label for="inputGridColumns" class="form-label">Grid Columns</label>
+                                                <input type="number" min="1" max="50" class="form-control" id="inputGridColumns" placeholder="5">
+                                                <small class="field-hint">Lots per row (1 - 50)</small>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="inputGridRows" class="form-label">Estimated Rows</label>
+                                                <input type="number" min="1" max="50" class="form-control" id="inputGridRows" placeholder="Auto" readonly>
+                                                <small class="field-hint">Derived from lot count</small>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="inputGridGapX" class="form-label">Horizontal Gap</label>
+                                                <input type="number" step="any" min="0" class="form-control" id="inputGridGapX" placeholder="14">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="inputGridGapY" class="form-label">Vertical Gap</label>
+                                                <input type="number" step="any" min="0" class="form-control" id="inputGridGapY" placeholder="14">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- VALIDATION & WARNINGS PANEL -->
+                                    <div class="form-section-title">
+                                        <i class="fas fa-shield-halved"></i> Validation Status
+                                    </div>
+                                    <div class="validation-panel" id="validationPanel">
+                                        <div class="validation-status status--valid" id="validationStatus">
+                                            <i class="fas fa-check-circle"></i>
+                                            <span>Geometry is valid and ready.</span>
+                                        </div>
+                                        <ul class="validation-warnings-list" id="validationWarningsList" style="display: none;">
+                                            <!-- Dynamically populated warnings -->
+                                        </ul>
+                                    </div>
+
+                                    <!-- FORM ACTION BUTTONS (STICKY BOTTOM AREA) -->
+                                    <div class="editor-actions-container">
+                                        <div class="save-state-row" id="saveStateIndicator">
+                                            <i class="fas fa-circle-check text-success"></i>
+                                            <span>All changes saved</span>
+                                        </div>
+                                        <div class="editor-actions-row">
+                                            <button type="button" class="btn btn-secondary btn-revert-action" id="btnRevertGeometry" title="Revert to last saved values">
+                                                <i class="fas fa-arrow-rotate-left"></i> Revert Changes
+                                            </button>
+                                            <button type="button" class="btn btn-primary btn-save-action" id="btnSaveGeometry">
+                                                <i class="fas fa-floppy-disk"></i> Save Changes
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- DANGER ZONE: RESET TO DEFAULT -->
+                                    <div class="inspector-danger-zone">
+                                        <div class="danger-zone-header">
+                                            <span class="danger-title"><i class="fas fa-triangle-exclamation"></i> Advanced / Reset</span>
+                                        </div>
+                                        <button type="button" class="btn btn-danger-soft btn-reset-action" id="btnResetGeometry" title="Clear custom map configuration and restore procedural layout">
+                                            <i class="fas fa-trash-can"></i> Reset to Default
+                                        </button>
+                                        <small class="danger-hint">Restores procedural layout without modifying lot ownership or prices.</small>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     </div>
