@@ -1967,7 +1967,7 @@ body[data-theme="dark"] .search-empty-sub {
 .lot--available:hover .svg-lot-rect {
     fill: #6ee7b7;
     stroke: #047857;
-    filter: drop-shadow(0 2px 4px rgba(5, 150, 105, 0.45));
+    stroke-width: 1.8px;
 }
 
 /* Reserved: Warm sand / amber tint */
@@ -1978,7 +1978,7 @@ body[data-theme="dark"] .search-empty-sub {
 .lot--reserved:hover .svg-lot-rect {
     fill: #fcd34d;
     stroke: #b45309;
-    filter: drop-shadow(0 2px 4px rgba(217, 119, 6, 0.45));
+    stroke-width: 1.8px;
 }
 
 /* Occupied: Soft terracotta / brick tint */
@@ -1989,7 +1989,7 @@ body[data-theme="dark"] .search-empty-sub {
 .lot--occupied:hover .svg-lot-rect {
     fill: #f87171;
     stroke: #b91c1c;
-    filter: drop-shadow(0 2px 4px rgba(220, 38, 38, 0.45));
+    stroke-width: 1.8px;
 }
 
 /* Unavailable / Maintenance: Muted stone slate */
@@ -2000,6 +2000,7 @@ body[data-theme="dark"] .search-empty-sub {
 .lot--unavailable:hover .svg-lot-rect {
     fill: #cbd5e1;
     stroke: #475569;
+    stroke-width: 1.8px;
 }
 
 .lot--under-maintenance .svg-lot-rect {
@@ -2010,6 +2011,7 @@ body[data-theme="dark"] .search-empty-sub {
 .lot--under-maintenance:hover .svg-lot-rect {
     fill: #cbd5e1;
     stroke: #475569;
+    stroke-width: 1.8px;
 }
 
 /* Expired Status: Soft lavender tint */
@@ -2020,7 +2022,7 @@ body[data-theme="dark"] .search-empty-sub {
 .lot--expired:hover .svg-lot-rect {
     fill: #d8b4fe;
     stroke: #7e22ce;
-    filter: drop-shadow(0 2px 4px rgba(168, 85, 247, 0.40));
+    stroke-width: 1.8px;
 }
 
 /* Dark Mode Plot Fills */
@@ -2062,7 +2064,6 @@ body[data-theme="dark"] .search-empty-sub {
 .svg-lot-tile:hover .svg-lot-label,
 .svg-lot-tile.is-selected .svg-lot-label {
     opacity: 1 !important;
-    font-size: 8.5px;
     font-weight: 700;
     fill: #0f172a;
 }
@@ -2234,8 +2235,8 @@ body[data-theme="dark"] .search-empty-sub {
 
 /* Columbarium Niche Vault Plate Appearance */
 .is-niche-vault .niche-vault-rect {
-    rx: 6px;
-    stroke-width: 2px;
+    rx: 4px;
+    stroke-width: 1.5px;
 }
 
 .is-niche-vault .niche-inner-plate {
@@ -2264,10 +2265,25 @@ body[data-theme="dark"] .search-empty-sub {
     stroke: #78350f;
 }
 
-/* Hover effect on Niche Vault */
+/* Hover effect on Niche Vault - Crisp outline without coordinate transform or Gaussian blur jitter */
 .is-niche-vault:hover .niche-vault-rect {
-    transform: scale(1.02);
-    transform-origin: center;
+    stroke: #2563eb;
+    stroke-width: 2.2px;
+}
+
+[data-theme="dark"] .is-niche-vault:hover .niche-vault-rect {
+    stroke: #60a5fa;
+    stroke-width: 2.2px;
+}
+
+.is-niche-vault:hover .niche-inner-plate {
+    fill: rgba(255, 255, 255, 0.32);
+    stroke: rgba(37, 99, 235, 0.5);
+}
+
+[data-theme="dark"] .is-niche-vault:hover .niche-inner-plate {
+    fill: rgba(37, 99, 235, 0.22);
+    stroke: rgba(96, 165, 250, 0.5);
 }
 
 /* Lot Details Drawer */
@@ -5750,7 +5766,7 @@ body.dark-mode .btn-wayfinding-slip:hover {
 /* Individual Plots on Master Map (Compact burial plots with headstones) */
 .mp-lot-plot {
     stroke-width: 0.65px;
-    transition: transform 0.1s ease, filter 0.1s ease, stroke-width 0.1s ease;
+    transition: fill 0.12s ease, stroke 0.12s ease, stroke-width 0.12s ease;
 }
 
 .mp-lot-headstone {
@@ -5779,8 +5795,12 @@ body.dark-mode .btn-wayfinding-slip:hover {
 }
 
 .svg-lot-tile:hover .mp-lot-plot {
-    stroke-width: 1.5px;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+    stroke-width: 1.8px;
+    stroke: #2563eb;
+}
+[data-theme="dark"] .svg-lot-tile:hover .mp-lot-plot {
+    stroke: #60a5fa;
+    stroke-width: 1.8px;
 }
 .svg-lot-tile:hover .mp-lot-number,
 .svg-lot-tile.is-selected .mp-lot-number {

@@ -1933,9 +1933,9 @@ function layoutBlockTerraces(blocks, area, spineX) {
         const innerH = area.h - margin * 2 - 16;
 
         if (n === 1) {
-            // For a single block inside a wide section (such as Section D),
+            // For a single block inside a wide section (such as Section D Columbarium),
             // proportion the block terrace naturally and center it, leaving balanced lawn buffer
-            const blkW = innerW > 500 ? Math.min(innerW, 460) : innerW;
+            const blkW = innerW > 500 ? Math.min(innerW, 580) : innerW;
             const blkX = innerX + (innerW - blkW) / 2;
             parcels.push({ x: blkX, y: innerY, w: blkW, h: innerH, block: blocks[0] });
         } else if (n === 2) {
@@ -2117,8 +2117,8 @@ sections.forEach((section, index) => {
 
         if (lots.length > 0) {
             const n = lots.length;
-            let gapX = 4.5;
-            let gapY = 4.5;
+            let gapX = isColumbarium ? 6 : 4.5;
+            let gapY = isColumbarium ? 6 : 4.5;
             let doubleRowAisle = isColumbarium ? 0 : 6;
             let cols = 0;
 
@@ -2138,9 +2138,9 @@ sections.forEach((section, index) => {
                 if (n <= 5) {
                     cols = n;
                 } else if (isColumbarium) {
-                    // Columbarium niches: target square aspect ratio across block
+                    // Columbarium niches: target 11 columns for 11-vault wide columbarium tiers
                     const targetCols = Math.round(Math.sqrt(n * (lotAreaW / lotAreaH)));
-                    cols = Math.max(5, Math.min(12, targetCols));
+                    cols = Math.max(5, Math.min(11, targetCols));
                 } else {
                     // Lawn burial plots: target ~0.72 width-to-height ratio (e.g. 1m x 1.5m to 2.4m)
                     const targetCols = Math.round(Math.sqrt(1.38 * n * (lotAreaW / lotAreaH)));
@@ -2160,10 +2160,9 @@ sections.forEach((section, index) => {
 
             let tileW, tileH;
             if (isColumbarium) {
-                // Square niche vaults, capped at 24x24 for clean visual rhythm
-                const side = Math.min(maxW, maxH, 24);
-                tileW = Math.max(16, side);
-                tileH = Math.max(16, side);
+                // Spacious rectangular vault plates with breathing room
+                tileW = Math.max(22, Math.min(maxW, 36));
+                tileH = Math.max(18, Math.min(maxH, 24));
             } else if (n <= 10) {
                 // Blocks with few plots: allow generous, easily visible 26px x 36px plots!
                 const w = Math.min(maxW, maxH * 0.72, 26);
@@ -2250,7 +2249,7 @@ sections.forEach((section, index) => {
                 lotRect.setAttribute('y', f1(lotY));
                 lotRect.setAttribute('width', f1(curTileW));
                 lotRect.setAttribute('height', f1(curTileH));
-                lotRect.setAttribute('rx', isColumbarium ? '1.5' : '2');
+                lotRect.setAttribute('rx', isColumbarium ? '3' : '2');
                 lotRect.setAttribute('class', `svg-lot-rect mp-lot-plot${isColumbarium ? ' niche-vault-rect' : ''}`);
                 lotGroup.appendChild(lotRect);
 
@@ -2271,11 +2270,11 @@ sections.forEach((section, index) => {
                 // Columbarium Niche Inner Plate
                 if (isColumbarium && curTileW >= 8 && curTileH >= 8) {
                     const innerPlate = document.createElementNS(SVG_NS, 'rect');
-                    innerPlate.setAttribute('x', f1(lotX + 2));
-                    innerPlate.setAttribute('y', f1(lotY + 2));
-                    innerPlate.setAttribute('width', f1(Math.max(0, curTileW - 4)));
-                    innerPlate.setAttribute('height', f1(Math.max(0, curTileH - 4)));
-                    innerPlate.setAttribute('rx', '1.2');
+                    innerPlate.setAttribute('x', f1(lotX + 2.5));
+                    innerPlate.setAttribute('y', f1(lotY + 2.5));
+                    innerPlate.setAttribute('width', f1(Math.max(0, curTileW - 5)));
+                    innerPlate.setAttribute('height', f1(Math.max(0, curTileH - 5)));
+                    innerPlate.setAttribute('rx', '2');
                     innerPlate.setAttribute('class', 'niche-inner-plate');
                     lotGroup.appendChild(innerPlate);
                 }
@@ -2283,8 +2282,11 @@ sections.forEach((section, index) => {
                 // Lot Number Text (Hidden at overview level, appears on hover, zoom, or selection)
                 const labelText = document.createElementNS(SVG_NS, 'text');
                 labelText.setAttribute('x', f1(lotX + (curTileW / 2)));
-                labelText.setAttribute('y', f1(isColumbarium ? (lotY + curTileH / 2 + 3) : (lotY + curTileH * 0.74)));
+                labelText.setAttribute('y', f1(isColumbarium ? (lotY + curTileH / 2) : (lotY + curTileH * 0.74)));
                 labelText.setAttribute('text-anchor', 'middle');
+                if (isColumbarium) {
+                    labelText.setAttribute('dominant-baseline', 'central');
+                }
                 labelText.setAttribute('class', 'svg-lot-label mp-lot-number');
                 labelText.textContent = displayLabel;
                 lotGroup.appendChild(labelText);
@@ -2309,14 +2311,21 @@ sections.forEach((section, index) => {
 
                 // Hover Tooltip
                 lotGroup.addEventListener('mouseenter', (e) => {
+                    e.stopPropagation();
                     const elevHtml = isColumbarium
                         ? `<br>Vertical Placement: <strong>Level ${tierLevel} (${approxH})</strong>${isEyeLevel ? ' <span style="color:#f59e0b;">⭐ Eye-Level</span>' : ''}`
                         : `<br>Vertical Placement: <strong>Ground Level (Terraced Lawn)</strong>`;
                     const idExtra = isSanitizedHash ? `<br><small style="opacity:0.75;">System Ref: ${escapeHtml(lot.lot_number)}</small>` : '';
                     showFloatingTooltip(e, `<strong>${escapeHtml(displayLabel)}</strong>${elevHtml}<br>Section: ${escapeHtml(section.section_name)}<br>Block: ${escapeHtml(block.block_name)}<br>Status: <strong>${escapeHtml(lot.status)}</strong><br>Price: ${formatCurrency(lot.price)}${idExtra}`);
                 });
-                lotGroup.addEventListener('mousemove', moveFloatingTooltip);
-                lotGroup.addEventListener('mouseleave', hideFloatingTooltip);
+                lotGroup.addEventListener('mousemove', (e) => {
+                    e.stopPropagation();
+                    moveFloatingTooltip(e);
+                });
+                lotGroup.addEventListener('mouseleave', (e) => {
+                    e.stopPropagation();
+                    hideFloatingTooltip();
+                });
 
                 mapLotLayer.appendChild(lotGroup);
             });
