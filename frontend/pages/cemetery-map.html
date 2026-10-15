@@ -178,7 +178,7 @@
                         <!-- SEARCH GROUP (CMS Standard Floating-Label Search-Field) -->
                         <div class="filter-group search-group">
                             <div class="search-field">
-                                <input type="text" id="mapSearchInput" class="search-field__input" placeholder="Search deceased name, lot number, section or block..." autocomplete="off">
+                                <input type="text" id="mapSearchInput" class="search-field__input" placeholder=" " autocomplete="off">
                                 <label for="mapSearchInput" class="search-field__label">Search deceased name, lot number, section or block...</label>
                                 <button type="button" id="btnMapSearch" class="search-field__icon" title="Execute search" aria-label="Search">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -296,8 +296,13 @@
                             <!-- ON-MAP LOCATION SUMMARY CARD (Batch 6) -->
                             <div class="map-location-summary-card" id="mapLocationSummaryCard" style="display: none;" aria-live="polite">
                                 <div class="loc-summary-header">
-                                    <span class="loc-summary-title"><i class="fas fa-location-dot"></i> LOT LOCATION</span>
-                                    <span class="loc-summary-you-are-here"><i class="fas fa-circle-dot"></i> YOU ARE HERE</span>
+                                    <div class="loc-summary-title-wrap">
+                                        <span class="loc-summary-title"><i class="fas fa-location-dot"></i> LOT LOCATION</span>
+                                        <span class="loc-summary-you-are-here"><i class="fas fa-circle-dot"></i> YOU ARE HERE</span>
+                                    </div>
+                                    <button type="button" class="btn-close-hud" id="btnCloseLocationSummary" title="Dismiss location card" aria-label="Close location card">
+                                        <i class="fas fa-xmark"></i>
+                                    </button>
                                 </div>
                                 <div class="loc-summary-body">
                                     <div class="loc-summary-row"><span class="loc-label">Section:</span> <strong id="locSummarySection">—</strong></div>

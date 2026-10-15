@@ -174,7 +174,7 @@
     let drawerFacilityName, drawerSectionName, drawerBlockName, drawerLotType, drawerDimensions, drawerPrice;
     let drawerElevationRow, drawerElevationPlacement;
     let drawerNotesRow, drawerLocationNotes, btnBookThisLot, btnLotUnavailable;
-    let mapLocationSummaryCard, locSummarySection, locSummaryBlock, locSummaryLot, btnCenterOnMapHud;
+    let mapLocationSummaryCard, locSummarySection, locSummaryBlock, locSummaryLot, btnCenterOnMapHud, btnCloseLocationSummary;
     let drawerYouAreHereBadge, drawerTrailFacility, drawerTrailSection, drawerTrailBlock, drawerTrailLot, btnCenterOnMapDrawer;
     let btnOpenWayfindingSlip;
     // Batch 4: Selected Lot Occupancy & Decedent Information Elements
@@ -348,6 +348,7 @@
         locSummaryBlock = document.getElementById('locSummaryBlock');
         locSummaryLot = document.getElementById('locSummaryLot');
         btnCenterOnMapHud = document.getElementById('btnCenterOnMapHud');
+        btnCloseLocationSummary = document.getElementById('btnCloseLocationSummary');
 
         // Batch 6: Drawer Location Hierarchy Elements
         drawerYouAreHereBadge = document.getElementById('drawerYouAreHereBadge');
@@ -539,6 +540,13 @@
         if (btnCenterOnMapDrawer) {
             btnCenterOnMapDrawer.addEventListener('click', centerOnSelectedLot);
         }
+        if (btnCloseLocationSummary) {
+            btnCloseLocationSummary.addEventListener('click', () => {
+                if (mapLocationSummaryCard) {
+                    mapLocationSummaryCard.style.display = 'none';
+                }
+            });
+        }
 
         // Batch 6: Wayfinding & Route to Lot Handlers
         if (btnGetDirectionsLot) {
@@ -638,7 +646,7 @@
             });
         });
 
-        // Close slip, lightbox, or return from geo view on ESC key (Batch 9C)
+        // Close slip, lightbox, route, drawer, or location summary on ESC key
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 if (archetypeLightboxModal && archetypeLightboxModal.style.display !== 'none') {
@@ -647,6 +655,12 @@
                     closeWayfindingSlip();
                 } else if (state.activeMapView === 'geo') {
                     switchMapView('plot');
+                } else if (state.activeRoute) {
+                    clearRoute();
+                } else if (lotDetailsDrawer && lotDetailsDrawer.classList.contains('is-open')) {
+                    closeLotDrawer();
+                } else if (mapLocationSummaryCard && mapLocationSummaryCard.style.display !== 'none') {
+                    mapLocationSummaryCard.style.display = 'none';
                 }
             }
         });
@@ -746,6 +760,11 @@
             document.querySelectorAll('.svg-lot-tile.is-matched').forEach(el => el.classList.remove('is-matched'));
             document.querySelectorAll('.svg-section-card.is-matched').forEach(el => el.classList.remove('is-matched'));
             document.querySelectorAll('.svg-block-card.is-matched').forEach(el => el.classList.remove('is-matched'));
+            clearRoute();
+            closeLotDrawer();
+            if (mapLocationSummaryCard) {
+                mapLocationSummaryCard.style.display = 'none';
+            }
             applyFilters();
             mapSearchInput.focus();
         });
@@ -3134,6 +3153,7 @@ if (count <= 4 && !usedZones.has('e')) {
         if (drawerYouAreHereBadge) {
             drawerYouAreHereBadge.style.display = 'none';
         }
+        clearRoute();
         updateBreadcrumbs();
         document.querySelectorAll('.svg-lot-tile.is-selected').forEach(el => {
             el.classList.remove('is-selected');
@@ -3381,6 +3401,11 @@ if (count <= 4 && !usedZones.has('e')) {
         // Update Route Information HUD Card
         updateRouteInfoCard(routePoints, totalMapDist, lot, block, section, accessNode);
 
+        // Hide location summary HUD while wayfinding route card is active so they don't overlap
+        if (mapLocationSummaryCard) {
+            mapLocationSummaryCard.style.display = 'none';
+        }
+
         // Cache active route state
         state.activeRoute = {
             lot,
@@ -3588,6 +3613,9 @@ if (count <= 4 && !usedZones.has('e')) {
         }
         if (mapRouteInfoCard) {
             mapRouteInfoCard.style.display = 'none';
+        }
+        if (mapLocationSummaryCard) {
+            mapLocationSummaryCard.style.display = 'none';
         }
         state.activeRoute = null;
     }
