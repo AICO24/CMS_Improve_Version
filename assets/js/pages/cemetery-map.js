@@ -552,34 +552,62 @@
             }
         });
 
-        // Search & Filter Listeners (Batch 4A)
-        btnMapSearch.addEventListener('click', () => executeSearch());
+        // Search & Filter Listeners (Batch 5 Global Cemetery Search)
+        let searchDebounceTimer = null;
+
+        btnMapSearch.addEventListener('click', () => {
+            if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+            executeSearch(true, true);
+        });
 
         mapSearchInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                executeSearch();
+                if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+                executeSearch(true, true);
             } else if (e.key === 'Escape') {
                 hideSearchResultsDropdown();
+            } else if (e.key === 'ArrowDown') {
+                if (searchResultsDropdown && searchResultsDropdown.style.display !== 'none') {
+                    const firstResult = searchResultsDropdown.querySelector('.search-result-item');
+                    if (firstResult) {
+                        e.preventDefault();
+                        firstResult.focus();
+                    }
+                }
             }
         });
 
         mapSearchInput.addEventListener('input', () => {
             const val = mapSearchInput.value.trim();
             btnClearSearch.style.display = val !== '' ? 'flex' : 'none';
+            if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+
             if (val === '') {
                 state.filters.search = '';
                 hideSearchResultsDropdown();
+                document.querySelectorAll('.svg-lot-tile.is-matched').forEach(el => el.classList.remove('is-matched'));
+                document.querySelectorAll('.svg-section-card.is-matched').forEach(el => el.classList.remove('is-matched'));
+                document.querySelectorAll('.svg-block-card.is-matched').forEach(el => el.classList.remove('is-matched'));
                 applyFilters();
+            } else {
+                searchDebounceTimer = setTimeout(() => {
+                    executeSearch(false, false);
+                }, 220);
             }
         });
 
         btnClearSearch.addEventListener('click', () => {
+            if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
             mapSearchInput.value = '';
             btnClearSearch.style.display = 'none';
             state.filters.search = '';
             hideSearchResultsDropdown();
+            document.querySelectorAll('.svg-lot-tile.is-matched').forEach(el => el.classList.remove('is-matched'));
+            document.querySelectorAll('.svg-section-card.is-matched').forEach(el => el.classList.remove('is-matched'));
+            document.querySelectorAll('.svg-block-card.is-matched').forEach(el => el.classList.remove('is-matched'));
             applyFilters();
+            mapSearchInput.focus();
         });
 
         statusFilter.addEventListener('change', () => {
@@ -4043,30 +4071,196 @@ if (count <= 4 && !usedZones.has('e')) {
                 bcLot.classList.add('active');
             } else {
                 if (bcLot) bcLot.style.display = 'none';
-                bcCemetery.classList.remove('active');
-                bcSection.classList.remove('active');
-                bcBlock.classList.add('active');
             }
-        } else {
-            bcSection.style.display = 'none';
-            bcBlock.style.display = 'none';
-            if (bcLot) bcLot.style.display = 'none';
-            bcCemetery.classList.add('active');
         }
     }
 
     // =========================================================================
-    // SEARCH & FILTER ENGINE (Batch 4A)
+    // BATCH 5: GLOBAL CEMETERY SEARCH & MAP CAMERA FOCUS ENGINE
     // =========================================================================
 
+    let viewBoxAnimationId = null;
+
     /**
-     * Execute Search across Lots, Sections, and Blocks
+     * Smoothly animate SVG ViewBox camera transitions (Batch 5)
      */
-    async function executeSearch() {
+    function animateViewBox(targetX, targetY, targetW, targetH, duration = 380) {
+        if (viewBoxAnimationId) {
+            cancelAnimationFrame(viewBoxAnimationId);
+            viewBoxAnimationId = null;
+        }
+
+        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReducedMotion || duration <= 0) {
+            state.currentViewBox.x = targetX;
+            state.currentViewBox.y = targetY;
+            state.currentViewBox.width = targetW;
+            state.currentViewBox.height = targetH;
+            applyViewBox();
+            return;
+        }
+
+        const startX = state.currentViewBox.x;
+        const startY = state.currentViewBox.y;
+        const startW = state.currentViewBox.width;
+        const startH = state.currentViewBox.height;
+        const startTime = performance.now();
+
+        function easeOutCubic(t) {
+            return 1 - Math.pow(1 - t, 3);
+        }
+
+        function step(now) {
+            const elapsed = now - startTime;
+            const progress = Math.min(1, elapsed / duration);
+            const ease = easeOutCubic(progress);
+
+            state.currentViewBox.x = startX + (targetX - startX) * ease;
+            state.currentViewBox.y = startY + (targetY - startY) * ease;
+            state.currentViewBox.width = startW + (targetW - startW) * ease;
+            state.currentViewBox.height = startH + (targetH - startH) * ease;
+
+            applyViewBox();
+
+            if (progress < 1) {
+                viewBoxAnimationId = requestAnimationFrame(step);
+            } else {
+                viewBoxAnimationId = null;
+            }
+        }
+
+        viewBoxAnimationId = requestAnimationFrame(step);
+    }
+
+    /**
+     * Camera Focus on specific Lot (Batch 5)
+     * Shows selected lot + parent block + nearby internal streets with contextual zoom
+     */
+    function focusOnLot(lot, block, section) {
+        let lotElement = document.querySelector(`.svg-lot-tile[data-lot-id="${lot.lot_id}"]`);
+
+        // If currently drilled down into another block, return to master overview where all lots reside
+        if (!lotElement && state.viewLevel === 'block') {
+            returnToCemeteryOverview();
+            lotElement = document.querySelector(`.svg-lot-tile[data-lot-id="${lot.lot_id}"]`);
+        }
+
+        if (lotElement) {
+            const rectEl = lotElement.querySelector('rect') || lotElement;
+            const lx = parseFloat(rectEl.getAttribute('x'));
+            const ly = parseFloat(rectEl.getAttribute('y'));
+            const lw = parseFloat(rectEl.getAttribute('width')) || 30;
+            const lh = parseFloat(rectEl.getAttribute('height')) || 24;
+
+            if (!isNaN(lx) && !isNaN(ly)) {
+                const targetW = 460;
+                const targetH = targetW * (state.baseViewBox.height / state.baseViewBox.width);
+                const centerX = lx + (lw / 2);
+                const centerY = ly + (lh / 2);
+                const targetX = Math.max(0, Math.min(state.baseViewBox.width - targetW, centerX - (targetW / 2)));
+                const targetY = Math.max(0, Math.min(state.baseViewBox.height - targetH, centerY - (targetH / 2)));
+
+                animateViewBox(targetX, targetY, targetW, targetH, 380);
+            }
+        }
+
+        // Authoritatively select lot, highlight with reticle, and open details drawer with occupancy info
+        selectLot(lot, block, section, lotElement);
+    }
+
+    /**
+     * Camera Focus on specific Block (Batch 5)
+     * Shows entire block + surrounding blocks + nearby road/path without opening lot drawer
+     */
+    function focusOnBlock(block, section) {
+        closeLotDrawer();
+        document.querySelectorAll('.svg-block-card.is-focused, .svg-block-card.is-matched').forEach(el => {
+            el.classList.remove('is-focused');
+            el.classList.remove('is-matched');
+        });
+
+        const blkEl = document.querySelector(`.svg-block-card[data-block-id="${block.block_id}"]`);
+        if (blkEl) {
+            blkEl.classList.add('is-focused');
+            blkEl.classList.add('is-matched');
+            const rectEl = blkEl.querySelector('rect') || blkEl;
+            const bx = parseFloat(rectEl.getAttribute('x'));
+            const by = parseFloat(rectEl.getAttribute('y'));
+            const bw = parseFloat(rectEl.getAttribute('width')) || 160;
+            const bh = parseFloat(rectEl.getAttribute('height')) || 110;
+
+            if (!isNaN(bx) && !isNaN(by)) {
+                const targetW = Math.max(bw + 260, 620);
+                const targetH = targetW * (state.baseViewBox.height / state.baseViewBox.width);
+                const centerX = bx + (bw / 2);
+                const centerY = by + (bh / 2);
+                const targetX = Math.max(0, Math.min(state.baseViewBox.width - targetW, centerX - (targetW / 2)));
+                const targetY = Math.max(0, Math.min(state.baseViewBox.height - targetH, centerY - (targetH / 2)));
+
+                animateViewBox(targetX, targetY, targetW, targetH, 380);
+            }
+        }
+
+        state.currentSection = section;
+        state.currentBlock = block;
+        state.currentLots = state.blockLotsCache[block.block_id] || [];
+        viewLevelText.textContent = `${section.section_name} › ${block.block_name}`;
+        btnBackToOverview.style.display = 'inline-flex';
+        updateBreadcrumbs();
+        updateLegendCounts(state.currentLots);
+    }
+
+    /**
+     * Camera Focus on specific Section (Batch 5)
+     * Shows section + blocks inside section + nearby roads without selecting arbitrary lots
+     */
+    function focusOnSection(section) {
+        closeLotDrawer();
+        document.querySelectorAll('.svg-section-card.is-matched, .svg-block-card.is-focused').forEach(el => {
+            el.classList.remove('is-matched');
+            el.classList.remove('is-focused');
+        });
+
+        const secEl = document.querySelector(`.svg-section-card[data-section-id="${section.section_id}"]`);
+        if (secEl) {
+            secEl.classList.add('is-matched');
+            const rectEl = secEl.querySelector('rect') || secEl;
+            const sx = parseFloat(rectEl.getAttribute('x'));
+            const sy = parseFloat(rectEl.getAttribute('y'));
+            const sw = parseFloat(rectEl.getAttribute('width')) || 450;
+            const sh = parseFloat(rectEl.getAttribute('height')) || 240;
+
+            if (!isNaN(sx) && !isNaN(sy)) {
+                const targetW = Math.max(sw + 280, 880);
+                const targetH = targetW * (state.baseViewBox.height / state.baseViewBox.width);
+                const centerX = sx + (sw / 2);
+                const centerY = sy + (sh / 2);
+                const targetX = Math.max(0, Math.min(state.baseViewBox.width - targetW, centerX - (targetW / 2)));
+                const targetY = Math.max(0, Math.min(state.baseViewBox.height - targetH, centerY - (targetH / 2)));
+
+                animateViewBox(targetX, targetY, targetW, targetH, 380);
+            }
+        }
+
+        state.currentSection = section;
+        state.currentBlock = null;
+        viewLevelText.textContent = `${section.section_name}`;
+        btnBackToOverview.style.display = 'inline-flex';
+        updateBreadcrumbs();
+    }
+
+    /**
+     * Execute Global Search across Deceased, Lots, Blocks, and Sections (Batch 5)
+     */
+    async function executeSearch(autoSelectIfSingle = true, forceSelectTop = false) {
         const query = (mapSearchInput.value || '').trim();
         if (!query) {
             state.filters.search = '';
             hideSearchResultsDropdown();
+            // Clear matches without resetting user's current zoom/pan position
+            document.querySelectorAll('.svg-lot-tile.is-matched').forEach(el => el.classList.remove('is-matched'));
+            document.querySelectorAll('.svg-section-card.is-matched').forEach(el => el.classList.remove('is-matched'));
+            document.querySelectorAll('.svg-block-card.is-matched').forEach(el => el.classList.remove('is-matched'));
             applyFilters();
             return;
         }
@@ -4074,196 +4268,328 @@ if (count <= 4 && !usedZones.has('e')) {
         state.filters.search = query;
         btnClearSearch.style.display = 'flex';
 
-        const normQuery = query.toLowerCase();
+        const normQuery = query.toLowerCase().trim();
+        const results = await searchLotsAcrossCemetery(normQuery);
 
-        // 1. Check if query matches a Section directly
-        const sections = state.currentLayout?.sections || [];
-        const matchedSection = sections.find(s => s.section_name.toLowerCase().includes(normQuery));
-
-        // 2. Check if query matches a Block directly
-        let matchedBlockObj = null;
-        sections.forEach(s => {
-            (s.blocks || []).forEach(b => {
-                if (b.block_name.toLowerCase().includes(normQuery)) {
-                    matchedBlockObj = { block: b, section: s };
-                }
-            });
-        });
-
-        // If the query is an exact or strong block match (e.g. "Block A1" or "A1"), drill down into that block
-        if (matchedBlockObj && !normQuery.includes('-')) {
-            hideSearchResultsDropdown();
-            await drillDownToBlock(matchedBlockObj.block, matchedBlockObj.section);
+        if (results.length === 0) {
+            renderSearchEmptyState(query);
             applyFilters();
             return;
         }
 
-        // 3. Search for Lots
-        const matchingLots = await searchLotsAcrossCemetery(normQuery);
+        const matchingLots = results.filter(r => r.type === 'lot');
+        const shouldSelectTop = forceSelectTop || (results.length === 1 && autoSelectIfSingle) || (matchingLots.length === 1 && results.length === 1 && autoSelectIfSingle);
 
-        if (matchingLots.length === 0) {
+        if (shouldSelectTop) {
             hideSearchResultsDropdown();
-            // If section matched, stay at overview and highlight section
-            if (matchedSection && state.viewLevel === 'cemetery') {
-                document.querySelectorAll('.svg-section-card').forEach(card => {
-                    const secId = parseInt(card.getAttribute('data-section-id'), 10);
-                    if (secId === matchedSection.section_id) {
-                        card.classList.add('is-matched');
-                    } else {
-                        card.classList.remove('is-matched');
-                    }
-                });
-                toast(`Found ${matchedSection.section_name}`, 'info');
-            } else {
-                toast(`No lots found matching "${query}".`, 'warning');
+            const top = results[0];
+            if (top.type === 'lot' || top.type === 'deceased') {
+                await navigateAndSelectLot(top.lot, top.block, top.section);
+            } else if (top.type === 'block') {
+                focusOnBlock(top.block, top.section);
+            } else if (top.type === 'section') {
+                focusOnSection(top.section);
             }
             applyFilters();
-            return;
-        }
-
-        if (matchingLots.length === 1) {
-            // Exactly ONE match -> drill down, highlight, open drawer
-            hideSearchResultsDropdown();
-            const single = matchingLots[0];
-            await navigateAndSelectLot(single.lot, single.block, single.section);
-            applyFilters();
         } else {
-            // Multiple matches -> render dropdown list
-            renderSearchResultsDropdown(matchingLots);
+            renderSearchResultsDropdown(results);
             applyFilters();
         }
     }
 
     /**
-     * Search Lots across current block, cached blocks, and candidate blocks
+     * Global Search Resolver across Deceased Records, Lot Numbers, Blocks, and Sections
+     * Prioritizes exact matches: Lot > Deceased > Block > Section > Partial matches
      */
     async function searchLotsAcrossCemetery(normQuery) {
         const results = [];
+        const seenKeys = new Set();
         const sections = state.currentLayout?.sections || [];
 
-        // A. Search currently active block first
-        if (state.viewLevel === 'block' && state.currentBlock && state.currentSection) {
-            state.currentLots.forEach(lot => {
-                if (lot.lot_number.toLowerCase().includes(normQuery)) {
-                    results.push({
-                        lot,
-                        block: state.currentBlock,
-                        section: state.currentSection
-                    });
-                }
-            });
-            if (results.length > 0) return results;
-        }
+        // 1. Match Sections
+        sections.forEach(sec => {
+            const secName = (sec.section_name || '').toLowerCase();
+            const secCode = (sec.section_code || '').toLowerCase();
+            const cleanSec = secName.replace(/[^a-z0-9]/g, '');
+            const cleanQ = normQuery.replace(/[^a-z0-9]/g, '');
 
-        // B. Search already-cached blocks
-        for (const [blockIdStr, lots] of Object.entries(state.blockLotsCache)) {
-            const blockId = parseInt(blockIdStr, 10);
-            let bObj = null;
-            let sObj = null;
-            sections.forEach(s => {
-                (s.blocks || []).forEach(b => {
-                    if (b.block_id === blockId) {
-                        bObj = b; sObj = s;
-                    }
+            if (secName.includes(normQuery) || cleanSec.includes(cleanQ) || (secCode && secCode.includes(normQuery))) {
+                const isExact = (secName === normQuery || cleanSec === cleanQ || secCode === normQuery);
+                const score = isExact ? 200 : 70;
+                results.push({
+                    type: 'section',
+                    title: sec.section_name,
+                    meta: 'Cemetery Section',
+                    section: sec,
+                    score
                 });
-            });
+            }
+        });
 
-            lots.forEach(lot => {
-                if (lot.lot_number.toLowerCase().includes(normQuery)) {
-                    results.push({ lot, block: bObj, section: sObj });
-                }
-            });
-        }
-        if (results.length > 0) return results;
+        // 2. Match Blocks
+        sections.forEach(sec => {
+            (sec.blocks || []).forEach(blk => {
+                const bName = (blk.block_name || '').toLowerCase();
+                const cleanB = bName.replace(/[^a-z0-9]/g, '');
+                const cleanQ = normQuery.replace(/[^a-z0-9]/g, '');
 
-        // C. Candidate block resolution based on lot prefix
-        // e.g., query "A1-05" -> Block "Block A1" or Section "Garden of Everlasting Peace"
-        const candidateBlocks = [];
-        sections.forEach(s => {
-            (s.blocks || []).forEach(b => {
-                const bNorm = b.block_name.toLowerCase().replace(/[^a-z0-9]/g, '');
-                const qClean = normQuery.replace(/[^a-z0-9]/g, '');
-                if (qClean.includes(bNorm) || bNorm.includes(qClean) || normQuery.startsWith(b.block_name.toLowerCase())) {
-                    if (!state.blockLotsCache[b.block_id]) {
-                        candidateBlocks.push({ block: b, section: s });
-                    }
+                if (bName.includes(normQuery) || cleanB.includes(cleanQ) || (cleanQ && cleanB === cleanQ)) {
+                    const isExact = (bName === normQuery || cleanB === cleanQ);
+                    const score = isExact ? 220 : 85;
+                    results.push({
+                        type: 'block',
+                        title: blk.block_name,
+                        meta: sec.section_name,
+                        block: blk,
+                        section: sec,
+                        score
+                    });
                 }
             });
         });
 
-        // Fetch candidate blocks progressively on demand
-        for (const cand of candidateBlocks) {
-            try {
-                const res = await api.request(`map/blocks/${cand.block.block_id}/lots`, { method: 'GET' });
-                if (res && res.success && res.data && Array.isArray(res.data.lots)) {
-                    state.blockLotsCache[cand.block.block_id] = res.data.lots;
-                    res.data.lots.forEach(lot => {
-                        if (lot.lot_number.toLowerCase().includes(normQuery)) {
-                            results.push({ lot, block: cand.block, section: cand.section });
-                        }
+        // Helper to resolve parent block and section for any lot
+        function resolveLotHierarchy(lot) {
+            let foundBlock = null;
+            let foundSection = null;
+            sections.forEach(s => {
+                (s.blocks || []).forEach(b => {
+                    if (b.block_id === lot.block_id || (lot.block_name && b.block_name.toLowerCase() === lot.block_name.toLowerCase())) {
+                        foundBlock = b;
+                        foundSection = s;
+                    }
+                });
+            });
+            return { block: foundBlock, section: foundSection };
+        }
+
+        // 3. Search In-Memory Cached Lots & Deceased
+        const inspectLot = (lot, blockObj, sectionObj) => {
+            const lotNum = (lot.lot_number || '').toLowerCase().trim();
+            const occupant = (lot.occupant_name || lot._detailedInfo?.occupant_name || '').toLowerCase().trim();
+
+            // Match Lot Number
+            if (lotNum && lotNum.includes(normQuery)) {
+                const key = `lot_${lot.lot_id}`;
+                if (!seenKeys.has(key)) {
+                    seenKeys.add(key);
+                    const isExact = (lotNum === normQuery);
+                    const startsWith = lotNum.startsWith(normQuery);
+                    const score = isExact ? 300 : (startsWith ? 260 : 130);
+                    results.push({
+                        type: 'lot',
+                        title: lot.lot_number,
+                        meta: `${sectionObj?.section_name || ''} • ${blockObj?.block_name || ''}`,
+                        status: lot.status,
+                        price: lot.price,
+                        lot,
+                        block: blockObj,
+                        section: sectionObj,
+                        score
                     });
                 }
-            } catch (e) {
-                console.warn(`Could not fetch candidate block #${cand.block.block_id}:`, e);
+            }
+
+            // Match Deceased Name
+            if (occupant && occupant.includes(normQuery)) {
+                const key = `dec_${lot.lot_id}_${occupant}`;
+                if (!seenKeys.has(key)) {
+                    seenKeys.add(key);
+                    const isExact = (occupant === normQuery);
+                    const startsWith = occupant.startsWith(normQuery);
+                    const score = isExact ? 280 : (startsWith ? 210 : 160);
+                    const displayName = lot.occupant_name || lot._detailedInfo?.occupant_name || 'Registered Decedent';
+                    results.push({
+                        type: 'deceased',
+                        title: displayName,
+                        meta: `${sectionObj?.section_name || ''} • ${blockObj?.block_name || ''} • Lot ${lot.lot_number}`,
+                        lot,
+                        block: blockObj,
+                        section: sectionObj,
+                        score
+                    });
+                }
+            }
+        };
+
+        // Inspect currently active lots
+        if (state.currentLots && state.currentLots.length > 0) {
+            state.currentLots.forEach(lot => inspectLot(lot, state.currentBlock, state.currentSection));
+        }
+
+        // Inspect all cached blocks in memory
+        for (const [blkIdStr, lots] of Object.entries(state.blockLotsCache)) {
+            const blkId = parseInt(blkIdStr, 10);
+            let bObj = null, sObj = null;
+            sections.forEach(s => {
+                (s.blocks || []).forEach(b => {
+                    if (b.block_id === blkId) { bObj = b; sObj = s; }
+                });
+            });
+            (lots || []).forEach(lot => inspectLot(lot, bObj, sObj));
+        }
+
+        // 4. Server-Side Global Search (Deceased names and plots across entire cemetery database)
+        try {
+            const res = await api.request(`lots?search=${encodeURIComponent(normQuery)}`, { method: 'GET' });
+            const serverLots = Array.isArray(res) ? res : (res?.data || []);
+            if (Array.isArray(serverLots) && serverLots.length > 0) {
+                serverLots.forEach(item => {
+                    const hier = resolveLotHierarchy(item);
+                    inspectLot(item, hier.block, hier.section);
+                });
+            }
+        } catch (e) {
+            // Graceful fallback to cached/candidate block fetching on API limitation or test mock
+            const candidateBlocks = [];
+            sections.forEach(s => {
+                (s.blocks || []).forEach(b => {
+                    const bNorm = b.block_name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const qClean = normQuery.replace(/[^a-z0-9]/g, '');
+                    if (qClean.includes(bNorm) || bNorm.includes(qClean) || normQuery.startsWith(b.block_name.toLowerCase())) {
+                        if (!state.blockLotsCache[b.block_id]) {
+                            candidateBlocks.push({ block: b, section: s });
+                        }
+                    }
+                });
+            });
+
+            for (const cand of candidateBlocks) {
+                try {
+                    const res = await api.request(`map/blocks/${cand.block.block_id}/lots`, { method: 'GET' });
+                    if (res && res.success && res.data && Array.isArray(res.data.lots)) {
+                        state.blockLotsCache[cand.block.block_id] = res.data.lots;
+                        res.data.lots.forEach(lot => inspectLot(lot, cand.block, cand.section));
+                    }
+                } catch (err) {
+                    // Ignore non-fatal fetch error
+                }
             }
         }
 
+        // Sort results by ranking score descending
+        results.sort((a, b) => b.score - a.score);
         return results;
     }
 
     /**
-     * Navigate to specific Lot, drill down into its block, and open drawer
+     * Navigate to specific Lot, focus camera, highlight, and open details drawer
      */
     async function navigateAndSelectLot(lot, block, section) {
-        // If not already in that block, drill down first
         if (!state.currentBlock || state.currentBlock.block_id !== block.block_id) {
-            await drillDownToBlock(block, section);
+            state.currentSection = section;
+            state.currentBlock = block;
         }
 
-        // Highlight lot in SVG & open details drawer
-        const lotElement = document.querySelector(`.svg-lot-tile[data-lot-id="${lot.lot_id}"]`);
-        selectLot(lot, block, section, lotElement);
-
-        // Center on lot (Batch 6)
-        centerOnSelectedLot();
+        // Batch 5 Camera Focus on Lot + Authoritative Lot Selection
+        focusOnLot(lot, block, section);
     }
 
     /**
-     * Render Multiple Search Results Dropdown
+     * Render Multiple Search Results Dropdown (Batch 5: Categorized, Compact, and Ranked)
      */
     function renderSearchResultsDropdown(results) {
         searchResultsDropdown.innerHTML = '';
         const maxShown = Math.min(results.length, 10);
 
+        // Header with count indicator
         const header = document.createElement('div');
-        header.style.cssText = 'padding: 8px 14px; font-size: 0.75rem; font-weight: 700; color: var(--map-text-muted); border-bottom: 1px solid var(--map-border); text-transform: uppercase;';
-        header.textContent = `${results.length} matching plots found`;
+        header.className = 'search-results-header';
+        header.textContent = results.length > 10 
+            ? `10 of ${results.length} results` 
+            : `${results.length} matching locations found`;
         searchResultsDropdown.appendChild(header);
 
-        results.slice(0, maxShown).forEach(item => {
+        results.slice(0, maxShown).forEach((item, idx) => {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'search-result-item';
+            btn.setAttribute('data-result-type', item.type);
+            btn.setAttribute('tabindex', '0');
 
-            const statusClass = (item.lot.status || 'available').toLowerCase().replace(/\s+/g, '-');
+            let iconHtml = '';
+            let badgeLabel = 'Lot';
+            if (item.type === 'deceased') {
+                iconHtml = '<i class="fas fa-cross" style="color:#9333ea;font-size:0.8rem;margin-right:5px;"></i>';
+                badgeLabel = 'Deceased';
+            } else if (item.type === 'lot') {
+                iconHtml = '<i class="fas fa-monument" style="color:#0284c7;font-size:0.8rem;margin-right:5px;"></i>';
+                badgeLabel = 'Lot';
+            } else if (item.type === 'block') {
+                iconHtml = '<i class="fas fa-cubes" style="color:#d97706;font-size:0.8rem;margin-right:5px;"></i>';
+                badgeLabel = 'Block';
+            } else if (item.type === 'section') {
+                iconHtml = '<i class="fas fa-layer-group" style="color:#059669;font-size:0.8rem;margin-right:5px;"></i>';
+                badgeLabel = 'Section';
+            }
+
+            const statusClass = (item.status || item.lot?.status || '').toLowerCase().replace(/\s+/g, '-');
+            const statusHtml = (item.type === 'lot' && item.status) 
+                ? `<span class="result-status-pill status-pill--${statusClass}">${escapeHtml(item.status)}</span>` 
+                : '';
 
             btn.innerHTML = `
                 <div class="result-item-main">
-                    <span class="result-lot-number">Lot ${escapeHtml(item.lot.lot_number)}</span>
-                    <span class="result-lot-meta">${escapeHtml(item.section?.section_name || '')} â€º ${escapeHtml(item.block?.block_name || '')} â€¢ ${formatCurrency(item.lot.price)}</span>
+                    <span class="result-lot-number">${iconHtml}${escapeHtml(item.title)}</span>
+                    <span class="result-lot-meta">${escapeHtml(item.meta || '')}</span>
                 </div>
-                <span class="result-status-pill status-pill--${statusClass}">${escapeHtml(item.lot.status)}</span>
+                <div class="result-badges-row">
+                    <span class="result-category-badge result-category--${item.type}">${badgeLabel}</span>
+                    ${statusHtml}
+                </div>
             `;
 
-            btn.addEventListener('click', async () => {
+            const activateResult = async () => {
                 hideSearchResultsDropdown();
-                await navigateAndSelectLot(item.lot, item.block, item.section);
+                if (item.type === 'deceased' || item.type === 'lot') {
+                    await navigateAndSelectLot(item.lot, item.block, item.section);
+                } else if (item.type === 'block') {
+                    focusOnBlock(item.block, item.section);
+                } else if (item.type === 'section') {
+                    focusOnSection(item.section);
+                }
                 applyFilters();
+            };
+
+            btn.addEventListener('click', activateResult);
+
+            // Arrow key navigation between items
+            btn.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const next = btn.nextElementSibling;
+                    if (next && next.classList.contains('search-result-item')) next.focus();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const prev = btn.previousElementSibling;
+                    if (prev && prev.classList.contains('search-result-item')) {
+                        prev.focus();
+                    } else {
+                        mapSearchInput.focus();
+                    }
+                } else if (e.key === 'Escape') {
+                    hideSearchResultsDropdown();
+                    mapSearchInput.focus();
+                }
             });
 
             searchResultsDropdown.appendChild(btn);
         });
 
+        searchResultsDropdown.style.display = 'block';
+    }
+
+    /**
+     * Render Empty Search State (Batch 5)
+     */
+    function renderSearchEmptyState(query) {
+        searchResultsDropdown.innerHTML = `
+            <div class="search-empty-state">
+                <i class="fas fa-magnifying-glass search-empty-icon"></i>
+                <div class="search-empty-title">No matching cemetery location found.</div>
+                <div class="search-empty-sub">No results for "${escapeHtml(query)}". Try searching for a deceased name, lot number, section, or block.</div>
+            </div>
+        `;
         searchResultsDropdown.style.display = 'block';
     }
 
