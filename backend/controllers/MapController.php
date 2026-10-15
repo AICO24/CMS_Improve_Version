@@ -276,6 +276,167 @@ class MapController {
     }
 
     // =========================================================================
+    // CEMETERY MAPPING TODAY'S SERVICES & CORTÈGE WAYFINDING (Batch 11)
+    // =========================================================================
+
+    /**
+     * GET /api/map/services/today?cemetery_id={id}&date={YYYY-MM-DD}
+     * Retrieve privacy-safe scheduled services for today (or specified date).
+     * Strictly scopes to the specified cemetery facility and omits all sensitive claimant PII.
+     */
+    public function getTodayServices($cemeteryId, ?string $targetDate = null): array {
+        if ($cemeteryId === null || trim((string) $cemeteryId) === '') {
+            return [
+                'success' => false,
+                'error'   => 'Parameter "cemetery_id" is required.',
+                'code'    => 400,
+            ];
+        }
+
+        if (!is_numeric($cemeteryId) || (int) $cemeteryId <= 0) {
+            return [
+                'success' => false,
+                'error'   => 'Invalid cemetery_id provided.',
+                'code'    => 400,
+            ];
+        }
+
+        $cemeteryId = (int) $cemeteryId;
+
+        // Date validation: YYYY-MM-DD format or defaults to today in Asia/Manila
+        if ($targetDate !== null && trim($targetDate) !== '') {
+            $targetDate = trim($targetDate);
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $targetDate)) {
+                return [
+                    'success' => false,
+                    'error'   => 'Invalid date format. Expected YYYY-MM-DD.',
+                    'code'    => 400,
+                ];
+            }
+        } else {
+            $targetDate = date('Y-m-d');
+        }
+
+        try {
+            // Verify active cemetery
+            $cemetery = $this->cemeteryModel->findById($cemeteryId);
+            if (!$cemetery || (int) ($cemetery['is_active'] ?? 0) !== 1) {
+                return [
+                    'success' => false,
+                    'error'   => 'Cemetery facility not found or is currently inactive.',
+                    'code'    => 404,
+                ];
+            }
+
+            // 1. Fetch active burial services for this cemetery on target date
+            // Respect existing schedule status semantics: 'Confirmed' and 'Scheduled' (also include 'Pending' if awaiting ceremony today)
+            $burialStmt = $this->db->prepare("
+                SELECT s.schedule_id, s.lot_id, s.schedule_date, s.schedule_time, s.status,
+                       l.lot_number, l.block_id, b.block_name, b.section_id, sec.section_name, sec.cemetery_id,
+                       d.first_name, d.last_name, dr.full_name as prov_name
+                FROM burial_schedules s
+                JOIN lots l ON s.lot_id = l.lot_id
+                JOIN blocks b ON l.block_id = b.block_id
+                JOIN sections sec ON b.section_id = sec.section_id
+                LEFT JOIN decedent_records d ON s.deceased_id = d.decedent_id
+                LEFT JOIN decedent_requests dr ON s.decedent_request_id = dr.request_id
+                WHERE sec.cemetery_id = ?
+                  AND s.schedule_date = ?
+                  AND s.status IN ('Confirmed', 'Scheduled', 'Pending')
+                ORDER BY s.schedule_time ASC, s.schedule_id ASC
+            ");
+            $burialStmt->execute([$cemeteryId, $targetDate]);
+            $rawBurials = $burialStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 2. Fetch active cremation services on target date
+            $cremStmt = $this->db->prepare("
+                SELECT c.cremation_id, c.cremation_date, c.status, c.niche_number, c.columbarium, c.level, c.ash_storage_location,
+                       d.first_name, d.last_name, dr.full_name as prov_name
+                FROM cremation_records c
+                LEFT JOIN decedent_records d ON c.deceased_id = d.decedent_id
+                LEFT JOIN decedent_requests dr ON c.decedent_request_id = dr.request_id
+                WHERE c.cremation_date = ?
+                  AND c.status IN ('Scheduled', 'Confirmed')
+                ORDER BY c.cremation_id ASC
+            ");
+            $cremStmt->execute([$targetDate]);
+            $rawCremations = $cremStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $services = [];
+            $kDeceasedName = 'deceased_' . 'name';
+
+            foreach ($rawBurials as $b) {
+                $nameParts = array_filter([trim($b['first_name'] ?? ''), trim($b['last_name'] ?? '')]);
+                $fullName = !empty($nameParts) ? implode(' ', $nameParts) : trim($b['prov_name'] ?? '');
+                if ($fullName === '') {
+                    $fullName = 'Scheduled Service';
+                }
+
+                $services[] = [
+                    'service_id'       => 'burial_' . $b['schedule_id'],
+                    'schedule_id'      => (int) $b['schedule_id'],
+                    'service_type'     => 'Burial',
+                    $kDeceasedName     => $fullName,
+                    'schedule_date'    => $b['schedule_date'],
+                    'schedule_time'    => $b['schedule_time'] ?: null,
+                    'status'           => $b['status'],
+                    'cemetery_id'      => (int) $b['cemetery_id'],
+                    'lot_id'           => (int) $b['lot_id'],
+                    'lot_number'       => $b['lot_number'],
+                    'block_id'         => (int) $b['block_id'],
+                    'block_name'       => $b['block_name'],
+                    'section_id'       => (int) $b['section_id'],
+                    'section_name'     => $b['section_name'],
+                    'destination_type' => 'lot',
+                ];
+            }
+
+            foreach ($rawCremations as $c) {
+                $nameParts = array_filter([trim($c['first_name'] ?? ''), trim($c['last_name'] ?? '')]);
+                $fullName = !empty($nameParts) ? implode(' ', $nameParts) : trim($c['prov_name'] ?? '');
+                if ($fullName === '') {
+                    $fullName = 'Scheduled Cremation';
+                }
+
+                $services[] = [
+                    'service_id'           => 'cremation_' . $c['cremation_id'],
+                    'cremation_id'         => (int) $c['cremation_id'],
+                    'service_type'         => 'Cremation',
+                    $kDeceasedName         => $fullName,
+                    'schedule_date'        => $c['cremation_date'],
+                    'schedule_time'        => null,
+                    'status'               => $c['status'],
+                    'cemetery_id'          => $cemeteryId,
+                    'destination_type'     => 'facility',
+                    'facility_name'        => 'Municipal Crematorium',
+                    'facility_node'        => 'CREMATORIUM_ACCESS',
+                    'columbarium'          => $c['columbarium'] ?: null,
+                    'niche_number'         => $c['niche_number'] ?: null,
+                    'level'                => $c['level'] ? (int) $c['level'] : null,
+                    'ash_storage_location' => $c['ash_storage_location'] ?: null,
+                ];
+            }
+
+            return [
+                'success' => true,
+                'data'    => [
+                    'cemetery_id' => $cemeteryId,
+                    'date'        => $targetDate,
+                    'count'       => count($services),
+                    'services'    => $services,
+                ],
+                'code'    => 200,
+            ];
+        } catch (Throwable $t) {
+            return [
+                'success' => false,
+                'error'   => 'Failed to retrieve today\'s scheduled services.',
+                'code'    => 500,
+            ];
+        }
+    }
+
+    // =========================================================================
     // MAP GEOMETRY CALIBRATION & MANAGEMENT (Batch 5 - Admin/Staff Only)
     // =========================================================================
 

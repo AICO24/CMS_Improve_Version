@@ -43,6 +43,13 @@
         isPanning: false,
         panStart: { x: 0, y: 0 },
         activeRoute: null,
+
+        // Batch 11: Today's Services & Funeral Cortège Wayfinding State
+        todayServices: [],
+        isTodayServicesOpen: false,
+        selectedTodayServiceId: null,
+        isTodayServicesLoading: false,
+        activeCortegeService: null,
     };
 
     // =========================================================================
@@ -235,6 +242,12 @@
     let mapSearchInput, btnClearSearch, btnMapSearch, searchResultsDropdown;
     let statusFilter, minPriceInput, maxPriceInput, btnClearFilters;
     let activeFiltersSummary, activeFilterCount, activeFilterChips;
+
+    // Batch 11: Today's Services & Funeral Cortège DOM Elements
+    let btnToggleTodayServices, todayServicesCountBadge;
+    let todayServicesPanel, btnCloseTodayServices, todayServicesLoading, todayServicesError, btnRetryTodayServices;
+    let todayServicesEmpty, todayServicesList;
+    let drawerTodayServiceBanner, drawerServiceTime, drawerServiceDeceased, drawerServiceType, btnDrawerServiceRoute;
 
     /**
      * Entry Point on DOM Content Loaded
@@ -518,6 +531,23 @@
         btnPrevStep = document.getElementById('btnPrevStep');
         routeStepCounter = document.getElementById('routeStepCounter');
         btnNextStep = document.getElementById('btnNextStep');
+
+        // Batch 11: Today's Services & Funeral Cortège Elements
+        btnToggleTodayServices = document.getElementById('btnToggleTodayServices');
+        todayServicesCountBadge = document.getElementById('todayServicesCountBadge');
+        todayServicesPanel = document.getElementById('todayServicesPanel');
+        btnCloseTodayServices = document.getElementById('btnCloseTodayServices');
+        todayServicesLoading = document.getElementById('todayServicesLoading');
+        todayServicesError = document.getElementById('todayServicesError');
+        btnRetryTodayServices = document.getElementById('btnRetryTodayServices');
+        todayServicesEmpty = document.getElementById('todayServicesEmpty');
+        todayServicesList = document.getElementById('todayServicesList');
+
+        drawerTodayServiceBanner = document.getElementById('drawerTodayServiceBanner');
+        drawerServiceTime = document.getElementById('drawerServiceTime');
+        drawerServiceDeceased = document.getElementById('drawerServiceDeceased');
+        drawerServiceType = document.getElementById('drawerServiceType');
+        btnDrawerServiceRoute = document.getElementById('btnDrawerServiceRoute');
     }
 
     /**
@@ -712,13 +742,15 @@
             });
         });
 
-        // Close slip, lightbox, route, drawer, or location summary on ESC key
+        // Close slip, lightbox, route, drawer, location summary, or today's services panel on ESC key
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 if (archetypeLightboxModal && archetypeLightboxModal.style.display !== 'none') {
                     closeArchetypeLightbox();
                 } else if (wayfindingSlipModal && wayfindingSlipModal.style.display !== 'none') {
                     closeWayfindingSlip();
+                } else if (state.isTodayServicesOpen) {
+                    toggleTodayServices(false);
                 } else if (state.activeMapView === 'geo') {
                     switchMapView('plot');
                 } else if (state.activeRoute) {
@@ -730,6 +762,25 @@
                 }
             }
         });
+
+        // Batch 11: Today's Services Panel Toggle & Controls
+        if (btnToggleTodayServices) {
+            btnToggleTodayServices.addEventListener('click', () => {
+                toggleTodayServices();
+            });
+        }
+        if (btnCloseTodayServices) {
+            btnCloseTodayServices.addEventListener('click', () => {
+                toggleTodayServices(false);
+            });
+        }
+        if (btnRetryTodayServices) {
+            btnRetryTodayServices.addEventListener('click', () => {
+                if (state.currentCemeteryId) {
+                    loadTodayServices(state.currentCemeteryId);
+                }
+            });
+        }
 
         // Batch 9C: Arrow-key keyboard accessibility on dual-view switcher tabs
         if (btnSwitchPlotView && btnSwitchGeoView) {
@@ -1181,6 +1232,14 @@
         state.selectedLot = null;
         state.viewLevel = 'cemetery';
 
+        // Batch 11: Clear Today's Services on cemetery switch
+        state.todayServices = [];
+        state.activeCortegeService = null;
+        state.selectedTodayServiceId = null;
+        if (todayServicesCountBadge) {
+            todayServicesCountBadge.style.display = 'none';
+        }
+
         updateBreadcrumbs();
         await loadCemeteryLayout(cemeteryId);
     }
@@ -1252,6 +1311,9 @@
 
                 mapEmptyOverlay.style.display = 'none';
                 renderCemeteryOverview(res.data);
+
+                // Batch 11: Load and highlight today's scheduled services
+                loadTodayServices(cemeteryId, true);
             } else {
                 showEmptyOverlay(
                     'Layout Not Found',
@@ -2421,6 +2483,8 @@ if (count <= 4 && !usedZones.has('e')) {
     `;
 }
 
+        // Batch 11: Apply scheduled service markers to rendered lots
+        highlightServiceLotsOnMap();
     }
 
     /**
@@ -2806,6 +2870,9 @@ if (count <= 4 && !usedZones.has('e')) {
 
             mapLotLayer.appendChild(lotGroup);
         });
+
+        // Batch 11: Apply scheduled service markers to rendered lots
+        highlightServiceLotsOnMap();
     }
 
     /**
@@ -2998,6 +3065,26 @@ if (count <= 4 && !usedZones.has('e')) {
             }
             drawerAccessibilityCard.style.display = 'block';
         }
+
+        // Batch 11: Scheduled Today Service Banner in Lot Details Drawer
+        if (drawerTodayServiceBanner) {
+            const todaySvc = (state.todayServices || []).find(s => parseInt(s.lot_id, 10) === parseInt(lot.lot_id, 10));
+            if (todaySvc) {
+                drawerTodayServiceBanner.style.display = 'block';
+                if (drawerServiceTime) drawerServiceTime.textContent = todaySvc.schedule_time ? formatServiceTime(todaySvc.schedule_time) : 'Today';
+                if (drawerServiceDeceased) drawerServiceDeceased.textContent = todaySvc.deceased_name || 'Scheduled Service';
+                if (drawerServiceType) drawerServiceType.textContent = `${todaySvc.service_type || 'Burial'} Service`;
+                if (btnDrawerServiceRoute) {
+                    btnDrawerServiceRoute.onclick = (e) => {
+                        e.preventDefault();
+                        routeToTodayService(todaySvc);
+                    };
+                }
+            } else {
+                drawerTodayServiceBanner.style.display = 'none';
+            }
+        }
+
         updateBreadcrumbs();
         updateViewLevelIndicator();
 
@@ -3640,18 +3727,22 @@ if (count <= 4 && !usedZones.has('e')) {
 
         const routeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         routeGroup.setAttribute('class', 'svg-cemetery-route-group');
+        const isCortege = !!state.activeCortegeService;
+        if (isCortege) {
+            routeGroup.classList.add('is-cortege-route');
+        }
 
         // 1. Route Glow Underlay
         const underlay = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         underlay.setAttribute('d', d);
-        underlay.setAttribute('class', 'svg-route-underlay');
+        underlay.setAttribute('class', `svg-route-underlay ${isCortege ? 'is-cortege-route' : ''}`);
         underlay.setAttribute('fill', 'none');
         routeGroup.appendChild(underlay);
 
         // 2. Main Animated Route Line
         const mainLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         mainLine.setAttribute('d', d);
-        mainLine.setAttribute('class', 'svg-route-line');
+        mainLine.setAttribute('class', `svg-route-line ${isCortege ? 'is-cortege-route' : ''}`);
         mainLine.setAttribute('fill', 'none');
         mainLine.setAttribute('marker-mid', 'url(#routeArrowMarker)');
         mainLine.setAttribute('marker-end', 'url(#routeArrowMarker)');
@@ -3724,14 +3815,16 @@ if (count <= 4 && !usedZones.has('e')) {
         destG.setAttribute('transform', `translate(${destPt.x}, ${destPt.y})`);
         destG.setAttribute('tabindex', '0');
         destG.setAttribute('role', 'button');
-        destG.setAttribute('aria-label', `Route Step ${destIdx + 1}: Destination Lot ${lot.lot_number}`);
+        destG.setAttribute('aria-label', `Route Step ${destIdx + 1}: ${lot.lot_number ? 'Destination Lot ' + lot.lot_number : 'Destination Facility'}`);
         destG.style.cursor = 'pointer';
-        const badgeLabel = `● DESTINATION Lot ${escapeHtml(lot.lot_number)}`;
-        const badgeW = Math.max(110, badgeLabel.length * 6.5 + 20);
+        const badgeLabel = isCortege
+            ? `● FUNERAL CORTÈGE ${lot.lot_number ? 'Lot ' + escapeHtml(lot.lot_number) : 'Facility'}`
+            : `● DESTINATION ${lot.lot_number ? 'Lot ' + escapeHtml(lot.lot_number) : 'Facility'}`;
+        const badgeW = Math.max(120, badgeLabel.length * 6.5 + 24);
         destG.innerHTML = `
-            <circle class="route-marker-pulse dest-pulse" cx="0" cy="0" r="18" />
-            <circle class="route-marker-dot dest-dot" cx="0" cy="0" r="7" />
-            <rect class="route-badge-bg dest-badge-bg" x="${-badgeW / 2}" y="-32" width="${badgeW}" height="22" rx="11" />
+            <circle class="route-marker-pulse dest-pulse ${isCortege ? 'cortege-pulse' : ''}" cx="0" cy="0" r="18" />
+            <circle class="route-marker-dot dest-dot ${isCortege ? 'cortege-dot' : ''}" cx="0" cy="0" r="7" />
+            <rect class="route-badge-bg dest-badge-bg ${isCortege ? 'cortege-badge-bg' : ''}" x="${-badgeW / 2}" y="-32" width="${badgeW}" height="22" rx="11" />
             <text class="route-badge-text" x="0" y="-17.5" text-anchor="middle">${badgeLabel}</text>
         `;
         destG.addEventListener('click', (e) => {
@@ -3845,10 +3938,21 @@ if (count <= 4 && !usedZones.has('e')) {
     function updateRouteInfoCard(points, totalDist, lot, block, section, accessNode, guidanceSteps) {
         if (!mapRouteInfoCard) return;
 
-        if (routeInfoTitle) routeInfoTitle.textContent = 'Route Navigation';
+        if (state.activeCortegeService) {
+            if (routeInfoTitle) routeInfoTitle.textContent = `Today's Service Cortège • ${state.activeCortegeService.deceased_name}`;
+            mapRouteInfoCard.classList.add('is-cortege-route');
+        } else {
+            if (routeInfoTitle) routeInfoTitle.textContent = 'Route Navigation';
+            mapRouteInfoCard.classList.remove('is-cortege-route');
+        }
+
         if (routeStartLabel) routeStartLabel.textContent = 'Main Gate (Portal)';
         if (routeDestLabel) {
-            routeDestLabel.textContent = `Lot ${lot.lot_number} · ${section?.section_name || 'Section'} · ${block?.block_name || 'Block'}`;
+            if (lot && lot.lot_number) {
+                routeDestLabel.textContent = `Lot ${lot.lot_number} · ${section?.section_name || 'Section'} · ${block?.block_name || 'Block'}`;
+            } else {
+                routeDestLabel.textContent = state.activeCortegeService?.facility_name || 'Municipal Crematorium';
+            }
         }
         if (routeMetricDistance) {
             routeMetricDistance.textContent = `${Math.round(totalDist)} map units`;
@@ -4003,6 +4107,10 @@ if (count <= 4 && !usedZones.has('e')) {
             btnNextStep.disabled = true;
         }
         state.activeRoute = null;
+        state.activeCortegeService = null;
+        if (mapRouteInfoCard) {
+            mapRouteInfoCard.classList.remove('is-cortege-route');
+        }
     }
 
     /**
@@ -6404,6 +6512,500 @@ if (count <= 4 && !usedZones.has('e')) {
         }
 
         toast(`Viewing ${zoneLabel} in plot map`, 'info');
+    }
+
+    // =========================================================================
+    // BATCH 11: TODAY'S SERVICES & FUNERAL CORTÈGE WAYFINDING
+    // =========================================================================
+
+    /**
+     * Format schedule time string (HH:MM:SS) into user-friendly 12-hour format (e.g. 9:00 AM)
+     */
+    function formatServiceTime(timeStr) {
+        if (!timeStr) return 'Today';
+        const parts = String(timeStr).split(':');
+        if (parts.length < 2) return timeStr;
+        let hours = parseInt(parts[0], 10);
+        const minutes = parts[1];
+        if (isNaN(hours)) return timeStr;
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${hours}:${minutes} ${ampm}`;
+    }
+
+    /**
+     * Load Today's Scheduled Services for current cemetery
+     * Uses cemetery-scoped, date-filtered read-only map endpoint: GET /api/map/services/today
+     * Privacy-safe: zero claimant contacts, billing, or financial data.
+     * @param {number} cemeteryId
+     * @param {boolean} silent - Whether to suppress loading indicators (used on layout init)
+     */
+    async function loadTodayServices(cemeteryId, silent = false) {
+        if (!cemeteryId) return;
+        if (state.isTodayServicesLoading) return;
+
+        state.isTodayServicesLoading = true;
+        if (!silent) {
+            if (todayServicesLoading) todayServicesLoading.style.display = 'block';
+            if (todayServicesError) todayServicesError.style.display = 'none';
+            if (todayServicesEmpty) todayServicesEmpty.style.display = 'none';
+        }
+
+        try {
+            const res = await api.request(`map/services/today?cemetery_id=${cemeteryId}`, { method: 'GET' });
+            if (res && res.success && res.data) {
+                state.todayServices = Array.isArray(res.data.services) ? res.data.services : [];
+                const count = state.todayServices.length;
+
+                // Update count badge in viewport toolbar
+                if (todayServicesCountBadge) {
+                    if (count > 0) {
+                        todayServicesCountBadge.textContent = count;
+                        todayServicesCountBadge.style.display = 'inline-flex';
+                    } else {
+                        todayServicesCountBadge.textContent = '0';
+                        todayServicesCountBadge.style.display = 'none';
+                    }
+                }
+
+                // Render list in sliding panel
+                renderTodayServicesList(state.todayServices);
+
+                // Highlight scheduled lots on SVG map canvas
+                highlightServiceLotsOnMap();
+
+                // If a lot is currently selected, refresh its drawer service banner
+                if (state.selectedLot && drawerTodayServiceBanner) {
+                    const todaySvc = state.todayServices.find(s => parseInt(s.lot_id, 10) === parseInt(state.selectedLot.lot_id, 10));
+                    if (todaySvc) {
+                        drawerTodayServiceBanner.style.display = 'block';
+                        if (drawerServiceTime) drawerServiceTime.textContent = todaySvc.schedule_time ? formatServiceTime(todaySvc.schedule_time) : 'Today';
+                        if (drawerServiceDeceased) drawerServiceDeceased.textContent = todaySvc.deceased_name || 'Scheduled Service';
+                        if (drawerServiceType) drawerServiceType.textContent = `${todaySvc.service_type || 'Burial'} Service`;
+                    } else {
+                        drawerTodayServiceBanner.style.display = 'none';
+                    }
+                }
+            } else {
+                if (!silent && todayServicesError) {
+                    todayServicesError.style.display = 'block';
+                }
+            }
+        } catch (err) {
+            console.warn('Could not load today services:', err);
+            if (!silent && todayServicesError) {
+                todayServicesError.style.display = 'block';
+            }
+        } finally {
+            state.isTodayServicesLoading = false;
+            if (todayServicesLoading) todayServicesLoading.style.display = 'none';
+        }
+    }
+
+    /**
+     * Toggle Today's Services Sliding Overlay Panel
+     * @param {boolean} [forceOpen]
+     */
+    function toggleTodayServices(forceOpen) {
+        const nextState = (typeof forceOpen === 'boolean') ? forceOpen : !state.isTodayServicesOpen;
+        state.isTodayServicesOpen = nextState;
+
+        if (todayServicesPanel) {
+            todayServicesPanel.classList.toggle('is-open', nextState);
+            todayServicesPanel.setAttribute('aria-hidden', nextState ? 'false' : 'true');
+        }
+        if (btnToggleTodayServices) {
+            btnToggleTodayServices.classList.toggle('is-active', nextState);
+            btnToggleTodayServices.setAttribute('aria-expanded', nextState ? 'true' : 'false');
+        }
+
+        if (nextState) {
+            // If empty or never loaded, trigger fetch
+            if (state.todayServices.length === 0 && state.currentCemeteryId) {
+                loadTodayServices(state.currentCemeteryId, false);
+            } else {
+                renderTodayServicesList(state.todayServices);
+            }
+        }
+    }
+
+    /**
+     * Render the Today's Services Cards inside #todayServicesList
+     * @param {Array} services
+     */
+    function renderTodayServicesList(services) {
+        if (!todayServicesList) return;
+        todayServicesList.innerHTML = '';
+
+        if (!services || services.length === 0) {
+            if (todayServicesEmpty) todayServicesEmpty.style.display = 'block';
+            todayServicesList.style.display = 'none';
+            return;
+        }
+
+        if (todayServicesEmpty) todayServicesEmpty.style.display = 'none';
+        todayServicesList.style.display = 'flex';
+
+        services.forEach((service) => {
+            const card = document.createElement('div');
+            card.className = `today-service-card ${state.selectedTodayServiceId === service.schedule_id ? 'is-active' : ''}`;
+            card.setAttribute('data-service-id', String(service.schedule_id));
+            card.setAttribute('tabindex', '0');
+            card.setAttribute('role', 'region');
+
+            const timeFormatted = formatServiceTime(service.schedule_time);
+            const typeClass = (service.service_type || 'burial').toLowerCase();
+            const typeLabel = service.service_type || 'Burial';
+
+            let locLabel = 'Scheduled Location';
+            if (service.lot_number) {
+                locLabel = `Lot ${service.lot_number}${service.block_name ? ' • ' + service.block_name : ''}${service.section_name ? ' (' + service.section_name + ')' : ''}`;
+            } else if (service.facility_name) {
+                locLabel = service.facility_name;
+            } else if (service.service_type === 'Cremation') {
+                locLabel = 'Municipal Crematorium Facility';
+            }
+
+            card.setAttribute('aria-label', `${typeLabel} service for ${service.deceased_name || 'Scheduled Service'} at ${timeFormatted}`);
+
+            card.innerHTML = `
+                <div class="today-service-card-header">
+                    <span class="service-time-badge"><i class="far fa-clock"></i> ${escapeHtml(timeFormatted)}</span>
+                    <span class="service-type-badge service-type-badge--${escapeHtml(typeClass)}">${escapeHtml(typeLabel)}</span>
+                </div>
+                <div class="today-service-card-body">
+                    <h4 class="service-deceased-name">${escapeHtml(service.deceased_name || 'Scheduled Service')}</h4>
+                    <div class="service-location-meta">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>${escapeHtml(locLabel)}</span>
+                    </div>
+                </div>
+                <div class="today-service-card-actions">
+                    <button type="button" class="btn-service-action btn-service-view" data-action="view" aria-label="View ${escapeHtml(service.deceased_name || '')} on Map">
+                        <i class="fas fa-crosshairs"></i> View on Map
+                    </button>
+                    <button type="button" class="btn-service-action btn-service-route" data-action="route" aria-label="Get Directions to ${escapeHtml(service.deceased_name || '')}">
+                        <i class="fas fa-directions"></i> Get Directions
+                    </button>
+                </div>
+            `;
+
+            // Interactive handlers
+            const btnView = card.querySelector('.btn-service-view');
+            const btnRoute = card.querySelector('.btn-service-route');
+
+            if (btnView) {
+                btnView.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    viewServiceOnMap(service);
+                });
+            }
+            if (btnRoute) {
+                btnRoute.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    routeToTodayService(service);
+                });
+            }
+
+            card.addEventListener('click', () => {
+                viewServiceOnMap(service);
+            });
+
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    viewServiceOnMap(service);
+                }
+            });
+
+            todayServicesList.appendChild(card);
+        });
+    }
+
+    /**
+     * Resolve a Scheduled Service Lot in Current Layout
+     * Looks through memory cache or layout block structures.
+     * @param {Object} service
+     * @returns {Promise<Object|null>} { lot, block, section }
+     */
+    async function resolveServiceLot(service) {
+        if (!service || !service.lot_id || !state.currentLayout) return null;
+        const targetLotId = parseInt(service.lot_id, 10);
+        const sections = state.currentLayout.sections || [];
+
+        // 1. Check in-memory block lots cache
+        for (const s of sections) {
+            for (const b of (s.blocks || [])) {
+                const cachedLots = state.blockLotsCache[b.block_id];
+                if (cachedLots) {
+                    const found = cachedLots.find(l => parseInt(l.lot_id, 10) === targetLotId);
+                    if (found) {
+                        return { lot: found, block: b, section: s };
+                    }
+                }
+            }
+        }
+
+        // 2. Look up matching block by block_id or block_name
+        let candidateBlock = null;
+        let candidateSection = null;
+        if (service.block_id || service.block_name) {
+            for (const s of sections) {
+                for (const b of (s.blocks || [])) {
+                    if ((service.block_id && b.block_id === service.block_id) ||
+                        (service.block_name && b.block_name.toLowerCase() === service.block_name.toLowerCase())) {
+                        candidateBlock = b;
+                        candidateSection = s;
+                        break;
+                    }
+                }
+                if (candidateBlock) break;
+            }
+        }
+
+        if (candidateBlock) {
+            try {
+                const res = await api.request(`map/blocks/${candidateBlock.block_id}/lots`, { method: 'GET' });
+                if (res && res.success && res.data && Array.isArray(res.data.lots)) {
+                    state.blockLotsCache[candidateBlock.block_id] = res.data.lots;
+                    const found = res.data.lots.find(l => parseInt(l.lot_id, 10) === targetLotId);
+                    if (found) {
+                        return { lot: found, block: candidateBlock, section: candidateSection };
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not retrieve candidate block lots:', e);
+            }
+        }
+
+        // 3. Fallback: Search across remaining layout blocks
+        for (const s of sections) {
+            for (const b of (s.blocks || [])) {
+                if (!state.blockLotsCache[b.block_id]) {
+                    try {
+                        const res = await api.request(`map/blocks/${b.block_id}/lots`, { method: 'GET' });
+                        if (res && res.success && res.data && Array.isArray(res.data.lots)) {
+                            state.blockLotsCache[b.block_id] = res.data.lots;
+                            const found = res.data.lots.find(l => parseInt(l.lot_id, 10) === targetLotId);
+                            if (found) {
+                                return { lot: found, block: b, section: s };
+                            }
+                        }
+                    } catch (e) {
+                        // ignore and continue searching
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * View Scheduled Service Destination on Interactive Map
+     * Centers camera, selects lot/facility, and updates hierarchy breadcrumbs.
+     * @param {Object} service
+     */
+    async function viewServiceOnMap(service) {
+        if (!service) return;
+        state.selectedTodayServiceId = service.schedule_id;
+
+        // Highlight active service item in list
+        document.querySelectorAll('.today-service-card').forEach(el => {
+            el.classList.toggle('is-active', el.getAttribute('data-service-id') === String(service.schedule_id));
+        });
+
+        if (service.lot_id) {
+            const resolved = await resolveServiceLot(service);
+            if (resolved) {
+                await navigateAndSelectLot(resolved.lot, resolved.block, resolved.section);
+            } else {
+                toast('Service location is not currently mapped.', 'warning');
+            }
+        } else if (service.service_type === 'Cremation' || (service.facility_name && service.facility_name.toLowerCase().includes('cremat'))) {
+            // Crematorium facility destination
+            if (state.viewLevel === 'block') {
+                returnToCemeteryOverview();
+            }
+            centerViewOnPoint(995, 686, 0.75);
+            const cremEl = document.querySelector('.svg-landmark-bldg[data-landmark="crematorium"]');
+            if (cremEl) {
+                cremEl.classList.add('has-scheduled-service');
+            }
+            toast(`Viewing Municipal Crematorium for ${service.deceased_name || 'Scheduled Service'}`, 'info');
+        } else {
+            toast('Service location is not currently mapped.', 'warning');
+        }
+    }
+
+    /**
+     * Route directly to a Today's Scheduled Service Destination
+     * Reuses Batch 6 Dijkstra routing engine and Batch 7 route guidance.
+     * Marks route visually as Funeral Cortège Route.
+     * @param {Object} service
+     */
+    async function routeToTodayService(service) {
+        if (!service) return;
+        state.selectedTodayServiceId = service.schedule_id;
+        state.activeCortegeService = service;
+
+        // Highlight active card in panel
+        document.querySelectorAll('.today-service-card').forEach(el => {
+            el.classList.toggle('is-active', el.getAttribute('data-service-id') === String(service.schedule_id));
+        });
+
+        if (service.lot_id) {
+            const resolved = await resolveServiceLot(service);
+            if (resolved) {
+                focusOnLot(resolved.lot, resolved.block, resolved.section);
+                generateRouteToLot(resolved.lot, resolved.block, resolved.section, true);
+            } else {
+                showRouteError('Service location is not currently mapped.');
+            }
+        } else if (service.service_type === 'Cremation' || (service.facility_name && service.facility_name.toLowerCase().includes('cremat'))) {
+            centerViewOnPoint(995, 686, 0.75);
+            generateRouteToFacility('CREMATORIUM_ACCESS', 'Municipal Crematorium', true);
+        } else {
+            showRouteError('Route unavailable for this location.');
+        }
+    }
+
+    /**
+     * Route directly to a Mapped Facility (e.g. Crematorium) using existing Dijkstra Engine
+     * @param {string} facilityNodeId
+     * @param {string} facilityLabel
+     * @param {boolean} autoFit
+     */
+    function generateRouteToFacility(facilityNodeId, facilityLabel, autoFit = true) {
+        if (state.viewLevel === 'block') {
+            returnToCemeteryOverview();
+        }
+
+        const nodes = MASTER_MAP_NETWORK.nodes;
+        const destNode = nodes[facilityNodeId];
+        if (!destNode) {
+            showRouteError('Route unavailable for this location.');
+            return;
+        }
+
+        const startNodeId = 'MAIN_GATE';
+        const solverResult = dijkstraShortestPath(startNodeId, facilityNodeId);
+        if (!solverResult || !solverResult.path || solverResult.path.length === 0) {
+            showRouteError('Route unavailable for this location.');
+            return;
+        }
+
+        const routePoints = [];
+        solverResult.path.forEach((nodeId, idx) => {
+            const node = nodes[nodeId];
+            routePoints.push({
+                x: node.x,
+                y: node.y,
+                label: node.label || nodeId,
+                type: idx === 0 ? 'start' : (idx === solverResult.path.length - 1 ? 'destination' : 'network'),
+                nodeId: nodeId
+            });
+        });
+
+        let totalMapDist = 0;
+        for (let i = 0; i < routePoints.length - 1; i++) {
+            totalMapDist += Math.hypot(routePoints[i + 1].x - routePoints[i].x, routePoints[i + 1].y - routePoints[i].y);
+        }
+
+        // Build guidance steps for facility route
+        const guidanceSteps = [];
+        routePoints.forEach((pt, idx) => {
+            const step = {
+                index: idx,
+                point: pt,
+                title: pt.label,
+                instruction: '',
+                category: 'road',
+                icon: 'fa-arrow-up',
+                landmark: null
+            };
+            if (idx === 0) {
+                step.title = 'Main Gate Portal';
+                step.instruction = 'Depart Main Gate Portal along St. Joseph Drive';
+                step.category = 'start';
+                step.icon = 'fa-door-open';
+                step.landmark = 'Main Gate';
+            } else if (idx === routePoints.length - 1) {
+                step.title = facilityLabel;
+                step.instruction = `Arrive at destination: ${facilityLabel}`;
+                step.category = 'destination';
+                step.icon = 'fa-location-dot';
+                step.landmark = facilityLabel;
+            } else if (pt.nodeId === 'SOUTH_JUNCTION') {
+                step.title = 'St. Joseph Drive Junction';
+                step.instruction = 'Follow St. Joseph Drive toward central cemetery corridor';
+                step.category = 'junction';
+                step.icon = 'fa-road';
+                step.landmark = 'St. Joseph Drive';
+            } else if (pt.nodeId === 'CREMATORIUM_SPINE') {
+                step.title = 'Central Spine (Mid South)';
+                step.instruction = 'Proceed north toward crematorium driveway';
+                step.category = 'road';
+                step.icon = 'fa-road';
+                step.landmark = 'Central Spine';
+            } else {
+                step.instruction = `Continue toward ${facilityLabel}`;
+            }
+            guidanceSteps.push(step);
+        });
+
+        state.activeRoute = {
+            lot: { lot_number: facilityLabel, lot_type: 'Facility' },
+            block: null,
+            section: null,
+            points: routePoints,
+            steps: guidanceSteps,
+            totalDist: totalMapDist,
+            activeStepIndex: 0,
+            isCortege: true
+        };
+
+        renderRouteSvg(routePoints, { lot_number: facilityLabel }, null, null, guidanceSteps);
+        updateRouteInfoCard(routePoints, totalMapDist, { lot_number: facilityLabel }, null, null, destNode, guidanceSteps);
+        setActiveRouteStep(0, false);
+
+        if (mapLocationSummaryCard) {
+            mapLocationSummaryCard.style.display = 'none';
+        }
+        if (autoFit) {
+            fitRouteToViewport(routePoints);
+        }
+    }
+
+    /**
+     * Subtle Scheduled Service Map Markers
+     * Applies .has-scheduled-service to SVG lot tiles and facilities
+     */
+    function highlightServiceLotsOnMap() {
+        // Clear existing service markers
+        document.querySelectorAll('.svg-lot-tile.has-scheduled-service').forEach(el => {
+            el.classList.remove('has-scheduled-service');
+        });
+        document.querySelectorAll('.svg-landmark-bldg.has-scheduled-service').forEach(el => {
+            el.classList.remove('has-scheduled-service');
+        });
+
+        if (!state.todayServices || state.todayServices.length === 0) return;
+
+        state.todayServices.forEach((svc) => {
+            if (svc.lot_id) {
+                const tile = document.querySelector(`.svg-lot-tile[data-lot-id="${svc.lot_id}"]`);
+                if (tile) {
+                    tile.classList.add('has-scheduled-service');
+                }
+            } else if (svc.service_type === 'Cremation') {
+                const cremBldg = document.querySelector('.svg-landmark-bldg[data-landmark="crematorium"]');
+                if (cremBldg) {
+                    cremBldg.classList.add('has-scheduled-service');
+                }
+            }
+        });
     }
 
 })();

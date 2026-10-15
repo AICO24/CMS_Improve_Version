@@ -256,6 +256,11 @@
                                     <i class="fas fa-arrow-up" id="btnBackIcon"></i> <span id="btnBackText">Up to Overview</span>
                                 </button>
                                 <span class="filter-matches-badge" id="filterMatchesBadge" style="display: none;"></span>
+                                <!-- BATCH 11: TODAY'S SERVICES TOGGLE BUTTON -->
+                                <button type="button" class="btn btn-today-services" id="btnToggleTodayServices" title="View Today's Services &amp; Funeral Cortège Wayfinding" aria-label="Toggle Today's Services" aria-expanded="false">
+                                    <i class="fas fa-cross"></i> <span>Today's Services</span>
+                                    <span class="today-services-badge" id="todayServicesCountBadge" style="display: none;">0</span>
+                                </button>
                             </div>
                             <div class="toolbar-right">
                                 <div class="map-zoom-controls">
@@ -390,6 +395,44 @@
                                         <i class="fas fa-expand"></i> Fit Route
                                     </button>
                                 </div>
+                            </div>
+
+                            <!-- BATCH 11: TODAY'S SERVICES & FUNERAL CORTÈGE WAYFINDING PANEL -->
+                            <div class="today-services-panel" id="todayServicesPanel" style="display: none;" aria-live="polite">
+                                <div class="today-services-header">
+                                    <div class="today-services-title-wrap">
+                                        <span class="today-services-icon"><i class="fas fa-cross"></i></span>
+                                        <div>
+                                            <h4 class="today-services-title">Today's Services</h4>
+                                            <span class="today-services-date" id="todayServicesDateLabel">Loading date...</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn-close-services" id="btnCloseTodayServices" title="Close Today's Services" aria-label="Close Today's Services">
+                                        <i class="fas fa-xmark"></i>
+                                    </button>
+                                </div>
+
+                                <!-- LOADING STATE -->
+                                <div class="today-services-loading" id="todayServicesLoading" style="display: none;">
+                                    <div class="services-spinner"></div>
+                                    <span>Checking scheduled services...</span>
+                                </div>
+
+                                <!-- ERROR STATE -->
+                                <div class="today-services-error" id="todayServicesError" style="display: none;">
+                                    <i class="fas fa-triangle-exclamation"></i>
+                                    <span>Today's services could not be loaded.</span>
+                                    <button type="button" class="btn btn-xs btn-retry-services" id="btnRetryTodayServices">Retry</button>
+                                </div>
+
+                                <!-- EMPTY STATE -->
+                                <div class="today-services-empty" id="todayServicesEmpty" style="display: none;">
+                                    <i class="fas fa-calendar-check"></i>
+                                    <p>No scheduled services today.</p>
+                                </div>
+
+                                <!-- SERVICES LIST -->
+                                <div class="today-services-list" id="todayServicesList" role="list"></div>
                             </div>
 
                             <!-- NATIVE SVG MAP CANVAS -->
@@ -583,6 +626,21 @@
                             <div class="drawer-location-notice">
                                 <i class="fas fa-location-crosshairs"></i>
                                 <span>You are viewing the location of this cemetery lot.</span>
+                            </div>
+
+                            <!-- BATCH 11: TODAY'S SCHEDULED SERVICE CEREMONIAL BANNER -->
+                            <div class="drawer-today-service-banner" id="drawerTodayServiceBanner" style="display: none;">
+                                <div class="service-banner-icon-wrap">
+                                    <i class="fas fa-cross"></i>
+                                </div>
+                                <div class="service-banner-content">
+                                    <span class="service-banner-eyebrow">TODAY'S SCHEDULED SERVICE</span>
+                                    <div class="service-banner-title" id="drawerServiceBannerTitle">Burial Service</div>
+                                    <div class="service-banner-sub" id="drawerServiceBannerSub">Deceased: —</div>
+                                </div>
+                                <button type="button" class="btn btn-xs btn-cortege-route" id="btnDrawerServiceRoute" title="Start Funeral Cortège Route">
+                                    <i class="fas fa-route"></i> Cortège Route
+                                </button>
                             </div>
 
                             <!-- VISUAL ARCHETYPE SHOWCASE (Batch 8A & 10B) -->

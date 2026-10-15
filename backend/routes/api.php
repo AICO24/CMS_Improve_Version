@@ -327,6 +327,15 @@ if (preg_match('/^map\/blocks\/(\d+)\/lots$/', $path, $matches) && $requestMetho
     exit;
 }
 
+if ($path === 'map/services/today' && $requestMethod === 'GET') {
+    $mapController = new MapController();
+    $result = $mapController->getTodayServices($_GET['cemetery_id'] ?? null, $_GET['date'] ?? null);
+    http_response_code($result['code'] ?? 200);
+    unset($result['code']);
+    echo json_encode($result);
+    exit;
+}
+
 try {
     $user = AuthMiddleware::authenticate();
 } catch (Exception $e) {
