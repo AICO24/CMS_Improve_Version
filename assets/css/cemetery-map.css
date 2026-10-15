@@ -1158,50 +1158,108 @@ body[data-theme="dark"] .search-empty-sub {
 
 /* Toolbar */
 .map-viewport-toolbar {
-    padding: 14px 20px;
+    padding: 10px 16px;
     background: var(--map-surface);
     border-bottom: 1px solid var(--map-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
+    min-height: 58px;
+    box-sizing: border-box;
 }
 
 .toolbar-left {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .view-level-badge {
+    height: 38px;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     font-weight: 600;
-    padding: 4px 12px;
-    border-radius: 6px;
-    background: rgba(44, 94, 71, 0.1);
-    color: var(--color-primary-500, #2c5e47);
+    padding: 0 12px;
+    border-radius: 8px;
+    background: rgba(44, 94, 71, 0.08);
+    border: 1px solid rgba(44, 94, 71, 0.18);
+    color: var(--color-primary-600, #163d2c);
+    white-space: nowrap;
+    box-sizing: border-box;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 [data-theme="dark"] .view-level-badge {
-    background: rgba(52, 211, 153, 0.15);
+    background: rgba(52, 211, 153, 0.12);
+    border-color: rgba(52, 211, 153, 0.25);
     color: #34d399;
 }
 
+/* Up Navigation Button */
+#btnBackToOverview,
+.btn-back-level {
+    height: 38px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    padding: 0 12px !important;
+    border-radius: 8px !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    color: var(--color-primary-700, #1b382b) !important;
+    background: var(--map-card-bg, #ffffff) !important;
+    border: 1px solid var(--map-border) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    cursor: pointer !important;
+    transition: all 0.18s ease !important;
+    box-sizing: border-box !important;
+    line-height: 1 !important;
+    text-decoration: none !important;
+}
+
+#btnBackToOverview:hover,
+.btn-back-level:hover {
+    background: var(--color-neutral-100, #f1f5f9) !important;
+    border-color: var(--color-primary-500, #2c5e47) !important;
+    color: var(--color-primary-800, #13271e) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-theme="dark"] #btnBackToOverview,
+[data-theme="dark"] .btn-back-level {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] #btnBackToOverview:hover,
+[data-theme="dark"] .btn-back-level:hover {
+    background: #334155 !important;
+    border-color: #34d399 !important;
+    color: #ffffff !important;
+}
+
 .map-zoom-controls {
-    display: flex;
+    height: 38px;
+    display: inline-flex;
     align-items: center;
     border: 1px solid var(--map-border);
     border-radius: 8px;
     overflow: hidden;
     background: var(--map-surface);
+    box-sizing: border-box;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .zoom-btn {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border: none;
     background: transparent;
     color: var(--map-text);
@@ -1211,6 +1269,7 @@ body[data-theme="dark"] .search-empty-sub {
     justify-content: center;
     font-size: 0.85rem;
     transition: background 0.15s ease, color 0.15s ease;
+    box-sizing: border-box;
 }
 
 .zoom-btn:not(:last-child) {
@@ -4548,34 +4607,39 @@ body.dark-mode .btn-wayfinding-slip:hover {
 
 /* 1. Map View Mode Switcher (Plot Vector Map vs Facility & Directions) */
 .map-view-switcher {
+    height: 38px;
     display: inline-flex;
     align-items: center;
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--color-neutral-100, #f1f5f9);
     border: 1px solid var(--map-border);
-    border-radius: 9px;
-    padding: 3px;
+    border-radius: 8px;
+    padding: 2px;
     gap: 3px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
 }
 
 [data-theme="dark"] .map-view-switcher {
-    background: rgba(15, 23, 42, 0.8);
-    border-color: rgba(52, 211, 153, 0.2);
+    background: #0f172a;
+    border-color: #334155;
 }
 
 .view-switch-btn {
+    height: 32px;
     border: none;
     background: transparent;
     color: var(--map-text-muted);
     font-size: 0.775rem;
     font-weight: 600;
-    padding: 5px 11px;
-    border-radius: 7px;
+    padding: 0 11px;
+    border-radius: 6px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    white-space: nowrap;
     transition: all 0.18s ease;
+    box-sizing: border-box;
 }
 
 .view-switch-btn i {
@@ -4583,25 +4647,25 @@ body.dark-mode .btn-wayfinding-slip:hover {
 }
 
 .view-switch-btn:hover:not(.active) {
-    background: var(--color-neutral-100, #f1f5f9);
+    background: rgba(0, 0, 0, 0.04);
     color: var(--map-text);
 }
 
 [data-theme="dark"] .view-switch-btn:hover:not(.active) {
-    background: rgba(51, 65, 85, 0.6);
+    background: rgba(255, 255, 255, 0.08);
     color: #e2e8f0;
 }
 
 .view-switch-btn.active {
     background: var(--color-primary-600, #163d2c);
     color: #ffffff;
-    box-shadow: 0 2px 6px rgba(22, 61, 44, 0.35);
+    box-shadow: 0 1px 3px rgba(22, 61, 44, 0.35);
 }
 
 [data-theme="dark"] .view-switch-btn.active {
     background: #059669;
     color: #ffffff;
-    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.4);
+    box-shadow: 0 1px 4px rgba(5, 150, 105, 0.4);
 }
 
 /* 2. Real-World Geographic Stage Container */
@@ -6925,34 +6989,49 @@ body.dark-mode .btn-wayfinding-slip:hover {
    ========================================================================= */
 
 /* 1. Viewport Toolbar Toggle Button */
-.btn-today-services {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 6px 14px;
-    border-radius: 9999px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #92400e;
-    background: #fef3c7;
-    border: 1px solid #fde68a;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+.btn-today-services,
+button.btn-today-services,
+.btn.btn-today-services {
+    height: 38px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 0 12px !important;
+    border-radius: 8px !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    color: #92400e !important;
+    background: #fef3c7 !important;
+    border: 1px solid #fde68a !important;
+    cursor: pointer !important;
+    transition: all 0.18s ease !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    box-sizing: border-box !important;
+    line-height: 1 !important;
+    text-decoration: none !important;
 }
 
-.btn-today-services:hover {
-    background: #fde68a;
-    color: #78350f;
-    border-color: #fcd34d;
-    transform: translateY(-1px);
+.btn-today-services:hover,
+button.btn-today-services:hover,
+.btn.btn-today-services:hover {
+    background: #fde68a !important;
+    color: #78350f !important;
+    border-color: #fcd34d !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(217, 119, 6, 0.15) !important;
 }
 
-.btn-today-services.active {
-    background: #d97706;
-    color: #ffffff;
-    border-color: #b45309;
-    box-shadow: 0 2px 6px rgba(217, 119, 6, 0.35);
+.btn-today-services.active,
+.btn-today-services.is-active,
+button.btn-today-services.active,
+button.btn-today-services.is-active,
+.btn.btn-today-services.active,
+.btn.btn-today-services.is-active {
+    background: #d97706 !important;
+    color: #ffffff !important;
+    border-color: #b45309 !important;
+    box-shadow: 0 2px 6px rgba(217, 119, 6, 0.35) !important;
 }
 
 .today-services-badge,
@@ -6960,14 +7039,16 @@ body.dark-mode .btn-wayfinding-slip:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    font-size: 0.7rem;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    font-size: 0.72rem;
     font-weight: 700;
     border-radius: 9999px;
     background: #b45309;
     color: #ffffff;
+    line-height: 1;
+    box-sizing: border-box;
 }
 
 .btn-today-services.active .today-services-badge,
@@ -6978,15 +7059,15 @@ body.dark-mode .btn-wayfinding-slip:hover {
 }
 
 [data-theme="dark"] .btn-today-services {
-    background: rgba(245, 158, 11, 0.15);
+    background: rgba(245, 158, 11, 0.14);
     color: #fbbf24;
-    border-color: rgba(245, 158, 11, 0.3);
+    border-color: rgba(245, 158, 11, 0.32);
 }
 
 [data-theme="dark"] .btn-today-services:hover {
-    background: rgba(245, 158, 11, 0.25);
+    background: rgba(245, 158, 11, 0.24);
     color: #fef3c7;
-    border-color: rgba(245, 158, 11, 0.45);
+    border-color: rgba(245, 158, 11, 0.48);
 }
 
 [data-theme="dark"] .btn-today-services.active,
@@ -7471,6 +7552,10 @@ body.dark-mode .btn-wayfinding-slip:hover {
 
 /* 8. Mobile Responsiveness */
 @media (max-width: 768px) {
+    .map-viewport-toolbar {
+        padding: 8px 12px;
+        gap: 8px;
+    }
     .today-services-panel {
         position: fixed;
         top: auto;
@@ -7482,13 +7567,14 @@ body.dark-mode .btn-wayfinding-slip:hover {
         max-height: 48vh;
         z-index: 45;
     }
-    .btn-today-services span {
+    .btn-today-services > span:not(.today-services-badge):not(.badge-services-count) {
         display: none;
     }
     .btn-today-services {
-        padding: 6px 10px;
+        padding: 0 10px;
     }
-    .today-services-badge {
+    .today-services-badge,
+    .badge-services-count {
         display: inline-flex !important;
     }
 }
