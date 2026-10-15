@@ -615,14 +615,21 @@ body[data-theme='dark'] .preview-toolbar .btn-icon:hover {
 }
 
 .svg-section-bg {
-    fill: #ffffff;
-    stroke: #cbd5e1;
+    fill: rgba(255, 255, 255, 0.72);
+    stroke: #059669;
     stroke-width: 2px;
     rx: 14px;
+    backdrop-filter: blur(4px);
+    transition: all 0.2s ease;
+}
+
+.svg-section-card:hover .svg-section-bg {
+    fill: rgba(255, 255, 255, 0.88);
+    stroke: #10b981;
 }
 
 .svg-section-header {
-    fill: #f1f5f9;
+    fill: rgba(241, 245, 249, 0.9);
     stroke: #cbd5e1;
     stroke-width: 1px;
 }
@@ -647,8 +654,8 @@ body[data-theme='dark'] .preview-toolbar .btn-icon:hover {
 }
 
 .svg-block-bg {
-    fill: #f8fafc;
-    stroke: #cbd5e1;
+    fill: rgba(248, 250, 252, 0.82);
+    stroke: #94a3b8;
     stroke-width: 1.5px;
     rx: 10px;
     transition: all 0.15s ease;
@@ -677,6 +684,110 @@ body[data-theme='dark'] .preview-toolbar .btn-icon:hover {
     font-size: 12px;
     font-weight: 600;
     fill: #334155;
+}
+
+/* Lot Plots styling in Block Lot Grid */
+.svg-lot-rect {
+    rx: 8px;
+    stroke-width: 1.5px;
+    transition: all 0.15s ease;
+}
+
+.svg-lot-tile:hover .svg-lot-rect {
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.18));
+}
+
+.svg-lot-tile.lot--available .svg-lot-rect {
+    fill: #d1fae5;
+    stroke: #10b981;
+}
+
+.svg-lot-tile.lot--occupied .svg-lot-rect {
+    fill: #fee2e2;
+    stroke: #f87171;
+}
+
+.svg-lot-tile.lot--reserved .svg-lot-rect {
+    fill: #fef3c7;
+    stroke: #f59e0b;
+}
+
+.svg-lot-tile.lot--unavailable .svg-lot-rect {
+    fill: #ede9fe;
+    stroke: #a78bfa;
+}
+
+.svg-lot-label {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 15px;
+    font-weight: 700;
+    fill: #0f172a;
+    pointer-events: none;
+}
+
+.svg-lot-status-text {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 12.5px;
+    font-weight: 600;
+    fill: #475569;
+    pointer-events: none;
+}
+
+body[data-theme='dark'] .svg-section-bg {
+    fill: rgba(15, 23, 42, 0.75);
+    stroke: #059669;
+}
+
+body[data-theme='dark'] .svg-section-card:hover .svg-section-bg {
+    fill: rgba(15, 23, 42, 0.9);
+    stroke: #34d399;
+}
+
+body[data-theme='dark'] .svg-section-header {
+    fill: rgba(30, 41, 59, 0.92);
+    stroke: #334155;
+}
+
+body[data-theme='dark'] .svg-section-title {
+    fill: #f8fafc;
+}
+
+body[data-theme='dark'] .svg-section-meta {
+    fill: #94a3b8;
+}
+
+body[data-theme='dark'] .svg-block-bg {
+    fill: rgba(30, 41, 59, 0.85);
+    stroke: #475569;
+}
+
+body[data-theme='dark'] .svg-block-card:hover .svg-block-bg {
+    fill: rgba(6, 78, 59, 0.5);
+    stroke: #34d399;
+}
+
+body[data-theme='dark'] .svg-block-title {
+    fill: #f1f5f9;
+}
+
+body[data-theme='dark'] .svg-lot-tile.lot--available .svg-lot-rect {
+    fill: #a7f3d0;
+    stroke: #059669;
+}
+
+body[data-theme='dark'] .svg-lot-tile.lot--occupied .svg-lot-rect {
+    fill: #fecaca;
+    stroke: #dc2626;
+}
+
+body[data-theme='dark'] .svg-lot-tile.lot--reserved .svg-lot-rect {
+    fill: #fde68a;
+    stroke: #d97706;
+}
+
+body[data-theme='dark'] .svg-lot-tile.lot--unavailable .svg-lot-rect {
+    fill: #ddd6fe;
+    stroke: #7c3aed;
 }
 
 /* Highlighting Selected Entity in Preview */

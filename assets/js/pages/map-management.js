@@ -1236,6 +1236,17 @@
             return out;
         };
 
+        const shrubLine = (x1, y1, x2, y2, step, r) => {
+            const len = Math.hypot(x2 - x1, y2 - y1);
+            const n = Math.max(1, Math.floor(len / step));
+            let out = '';
+            for (let i = 0; i <= n; i++) {
+                const t = i / n;
+                out += shrubSvg(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t, r * (0.85 + rnd() * 0.3));
+            }
+            return out;
+        };
+
         const pillSvg = (cx, cy, text, icon, variant) => {
             const w = Math.round(text.length * 6.2 + (icon ? 30 : 20));
             const x = cx - w / 2;
@@ -1833,6 +1844,7 @@
             const statusClass = (lot.status || 'Available').toLowerCase();
             const lotGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             lotGroup.setAttribute('class', `svg-lot-tile lot--${statusClass}`);
+            lotGroup.setAttribute('data-lot-id', lot.lot_id);
             lotGroup.style.cursor = 'pointer';
 
             const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -1878,24 +1890,74 @@
      * Update highlight ring on the currently selected entity in the SVG preview.
      */
     function updateSelectedHighlightInPreview() {
+        if (!selectedEntityHighlightRect) return;
+
         if (!state.selectedEntity || state.selectedEntity.type === 'cemetery') {
             selectedEntityHighlightRect.style.display = 'none';
             return;
         }
 
         const entity = state.selectedEntity;
-        const config = entity.config;
-        if (!config || isNaN(Number(config.width)) || isNaN(Number(config.height))) {
+
+        // In block_lots mode, we ONLY highlight if a specific individual LOT is selected
+        if (state.viewMode === 'block_lots') {
+            if (entity.type !== 'lot') {
+                selectedEntityHighlightRect.style.display = 'none';
+                return;
+            }
+            const lotEl = previewTransformLayer.querySelector(`[data-lot-id="${entity.id}"] rect.svg-lot-rect`);
+            if (lotEl) {
+                const lx = parseFloat(lotEl.getAttribute('x'));
+                const ly = parseFloat(lotEl.getAttribute('y'));
+                const lw = parseFloat(lotEl.getAttribute('width'));
+                const lh = parseFloat(lotEl.getAttribute('height'));
+                selectedEntityHighlightRect.setAttribute('x', lx - 3);
+                selectedEntityHighlightRect.setAttribute('y', ly - 3);
+                selectedEntityHighlightRect.setAttribute('width', lw + 6);
+                selectedEntityHighlightRect.setAttribute('height', lh + 6);
+                selectedEntityHighlightRect.setAttribute('rx', '8');
+                selectedEntityHighlightRect.style.display = 'block';
+                return;
+            }
             selectedEntityHighlightRect.style.display = 'none';
             return;
         }
 
-        let targetX = Number(config.x) || 0;
-        let targetY = Number(config.y) || 0;
-        let targetW = Number(config.width) || 100;
-        let targetH = Number(config.height) || 100;
-
+        // In overview mode:
         if (state.viewMode === 'overview') {
+            let targetRectEl = null;
+            if (entity.type === 'block') {
+                targetRectEl = previewTransformLayer.querySelector(`[data-block-id="${entity.id}"] rect.svg-block-bg`);
+            } else if (entity.type === 'section') {
+                targetRectEl = previewTransformLayer.querySelector(`[data-section-id="${entity.id}"] rect.svg-section-bg`);
+            }
+
+            if (targetRectEl) {
+                const rx = parseFloat(targetRectEl.getAttribute('x'));
+                const ry = parseFloat(targetRectEl.getAttribute('y'));
+                const rw = parseFloat(targetRectEl.getAttribute('width'));
+                const rh = parseFloat(targetRectEl.getAttribute('height'));
+                selectedEntityHighlightRect.setAttribute('x', rx - 4);
+                selectedEntityHighlightRect.setAttribute('y', ry - 4);
+                selectedEntityHighlightRect.setAttribute('width', rw + 8);
+                selectedEntityHighlightRect.setAttribute('height', rh + 8);
+                selectedEntityHighlightRect.setAttribute('rx', '10');
+                selectedEntityHighlightRect.style.display = 'block';
+                return;
+            }
+
+            // Fallback calculation if not in DOM
+            const config = entity.config;
+            if (!config || isNaN(Number(config.width)) || isNaN(Number(config.height))) {
+                selectedEntityHighlightRect.style.display = 'none';
+                return;
+            }
+
+            let targetX = Number(config.x) || 0;
+            let targetY = Number(config.y) || 0;
+            let targetW = Number(config.width) || 100;
+            let targetH = Number(config.height) || 100;
+
             if (entity.type === 'block' && entity.parent) {
                 const secCfg = entity.parent.map_config || calculateDefaultSectionBounds(entity.parent);
                 const secX = Number(secCfg.x) || 0;
@@ -1903,14 +1965,17 @@
                 targetX = targetX < Number(secCfg.width) ? (secX + targetX) : targetX;
                 targetY = targetY < Number(secCfg.height) ? (secY + targetY) : targetY;
             }
+
+            selectedEntityHighlightRect.setAttribute('x', targetX - 4);
+            selectedEntityHighlightRect.setAttribute('y', targetY - 4);
+            selectedEntityHighlightRect.setAttribute('width', targetW + 8);
+            selectedEntityHighlightRect.setAttribute('height', targetH + 8);
+            selectedEntityHighlightRect.setAttribute('rx', '8');
+            selectedEntityHighlightRect.style.display = 'block';
+            return;
         }
 
-        selectedEntityHighlightRect.setAttribute('x', targetX - 4);
-        selectedEntityHighlightRect.setAttribute('y', targetY - 4);
-        selectedEntityHighlightRect.setAttribute('width', targetW + 8);
-        selectedEntityHighlightRect.setAttribute('height', targetH + 8);
-        selectedEntityHighlightRect.setAttribute('rx', '8');
-        selectedEntityHighlightRect.style.display = 'block';
+        selectedEntityHighlightRect.style.display = 'none';
     }
 
     // =========================================================================
