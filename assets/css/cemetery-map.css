@@ -6833,4 +6833,92 @@ body.dark-mode .btn-wayfinding-slip:hover {
     }
 }
 
+/* =========================================================================
+ * BATCH 8: VIEW HIERARCHY & DRILL-DOWN NAVIGATION STYLING
+ * ========================================================================= */
+
+/* Level Indicator HUD Steps */
+.view-level-badge .level-sep {
+    opacity: 0.45;
+    margin: 0 4px;
+    font-size: 0.8rem;
+    user-select: none;
+}
+
+.view-level-badge .level-step.clickable {
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    opacity: 0.82;
+    transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.view-level-badge .level-step.clickable:hover {
+    opacity: 1;
+    color: var(--color-primary-700, #1b382b);
+}
+
+[data-theme="dark"] .view-level-badge .level-step.clickable:hover {
+    color: #6ee7b7;
+}
+
+.view-level-badge .level-step.current {
+    font-weight: 700;
+}
+
+/* Breadcrumb Keyboard Focus & Accessibility */
+.breadcrumb-item:focus-visible {
+    outline: 2px solid var(--color-primary-500, #2c5e47);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* Section Focus Spatial Highlight (Subtle hedge & header highlight, NOT a card box) */
+.svg-section-card.is-focused-section .mp-section-hedge {
+    stroke: #059669;
+    stroke-width: 2.4px;
+}
+
+[data-theme="dark"] .svg-section-card.is-focused-section .mp-section-hedge {
+    stroke: #34d399;
+    stroke-width: 2.4px;
+}
+
+.svg-section-card.is-focused-section .svg-section-header {
+    stroke: #059669;
+    stroke-width: 2px;
+}
+
+[data-theme="dark"] .svg-section-card.is-focused-section .svg-section-header {
+    stroke: #34d399;
+    stroke-width: 2px;
+}
+
+/* Block Focus Spatial Highlight */
+.svg-block-card.is-focused-block .svg-block-bg,
+.svg-block-card.is-focused .svg-block-bg {
+    stroke: #2563eb;
+    stroke-width: 2.2px;
+}
+
+[data-theme="dark"] .svg-block-card.is-focused-block .svg-block-bg,
+[data-theme="dark"] .svg-block-card.is-focused .svg-block-bg {
+    stroke: #60a5fa;
+    stroke-width: 2.2px;
+}
+
+.svg-section-card {
+    cursor: pointer;
+}
+
+.svg-section-card:focus-visible {
+    outline: none;
+}
+
+.svg-section-card:focus-visible .svg-section-header {
+    stroke: #2563eb;
+    stroke-width: 2.5px;
+}
+
+
 

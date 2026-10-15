@@ -153,20 +153,20 @@
                         <!-- BREADCRUMBS -->
                         <nav class="map-breadcrumbs" id="mapBreadcrumbs" aria-label="Map navigation breadcrumbs">
                             <ol class="breadcrumb-list">
-                                <li class="breadcrumb-item active" id="bcCemetery">
+                                <li class="breadcrumb-item active" id="bcCemetery" role="button" tabindex="0" aria-label="Return to Cemetery Overview">
                                     <i class="fas fa-city"></i>
                                     <span id="bcCemeteryName">Cemetery Overview</span>
                                 </li>
-                                <li class="breadcrumb-item" id="bcSection" style="display: none;">
-                                    <i class="fas fa-chevron-right separator"></i>
+                                <li class="breadcrumb-item" id="bcSection" style="display: none;" role="button" tabindex="0" aria-label="Navigate to Section">
+                                    <i class="fas fa-chevron-right separator" aria-hidden="true"></i>
                                     <span id="bcSectionName">Section</span>
                                 </li>
-                                <li class="breadcrumb-item" id="bcBlock" style="display: none;">
-                                    <i class="fas fa-chevron-right separator"></i>
+                                <li class="breadcrumb-item" id="bcBlock" style="display: none;" role="button" tabindex="0" aria-label="Navigate to Block">
+                                    <i class="fas fa-chevron-right separator" aria-hidden="true"></i>
                                     <span id="bcBlockName">Block</span>
                                 </li>
-                                <li class="breadcrumb-item" id="bcLot" style="display: none;">
-                                    <i class="fas fa-chevron-right separator"></i>
+                                <li class="breadcrumb-item" id="bcLot" style="display: none;" role="button" tabindex="0" aria-label="Currently Selected Lot">
+                                    <i class="fas fa-chevron-right separator" aria-hidden="true"></i>
                                     <span id="bcLotName">Lot</span>
                                 </li>
                             </ol>
@@ -252,8 +252,8 @@
                                 <span class="view-level-badge" id="viewLevelBadge">
                                     <i class="fas fa-map"></i> <span id="viewLevelText">Cemetery Overview</span>
                                 </span>
-                                <button type="button" class="btn btn-secondary btn-sm" id="btnBackToOverview" style="display: none;">
-                                    <i class="fas fa-arrow-left"></i> Back to Overview
+                                <button type="button" class="btn btn-secondary btn-sm" id="btnBackToOverview" style="display: none;" title="Navigate up one level" aria-label="Navigate up one level">
+                                    <i class="fas fa-arrow-up" id="btnBackIcon"></i> <span id="btnBackText">Up to Overview</span>
                                 </button>
                                 <span class="filter-matches-badge" id="filterMatchesBadge" style="display: none;"></span>
                             </div>

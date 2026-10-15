@@ -17,7 +17,11 @@
         currentBlock: null,
         currentLots: [],
         selectedLot: null,
-        viewLevel: 'cemetery', // 'cemetery' | 'block'
+        viewLevel: 'cemetery', // 'cemetery' | 'block' (legacy fallback)
+        mapViewLevel: 'overview', // 'overview' | 'section' | 'block' | 'lot' (Batch 8)
+        focusedSectionId: null,
+        focusedBlockId: null,
+        focusedLotId: null,
         activeMapView: 'plot', // 'plot' | 'geo' (Batch 9A)
         isLoading: false,
 
@@ -165,7 +169,7 @@
     let cemeterySelector;
     let mapBreadcrumbs, bcCemetery, bcCemeteryName, bcSection, bcSectionName, bcBlock, bcBlockName, bcLot, bcLotName;
     let statSections, statBlocks, statLots, statFacilityActive;
-    let viewLevelBadge, viewLevelText, btnBackToOverview, filterMatchesBadge;
+    let viewLevelBadge, viewLevelText, btnBackToOverview, btnBackText, btnBackIcon, filterMatchesBadge;
     let btnZoomIn, btnZoomOut, btnResetZoom;
     let svgStageContainer, cemeteryMapSvg, mapTransformLayer;
     let mapGroundLayer, mapBoundaryLayer, mapRoadLayer, mapLandmarkLayer;
@@ -275,6 +279,8 @@
         viewLevelBadge = document.getElementById('viewLevelBadge');
         viewLevelText = document.getElementById('viewLevelText');
         btnBackToOverview = document.getElementById('btnBackToOverview');
+        btnBackText = document.getElementById('btnBackText');
+        btnBackIcon = document.getElementById('btnBackIcon');
         filterMatchesBadge = document.getElementById('filterMatchesBadge');
 
         btnZoomIn = document.getElementById('btnZoomIn');
@@ -526,16 +532,52 @@
             }
         });
 
-        // Breadcrumb navigation
+        // Breadcrumb navigation (Batch 8 enhanced hierarchy navigation)
         bcCemetery.addEventListener('click', () => {
-            if (state.viewLevel !== 'cemetery') {
+            if (state.mapViewLevel !== 'overview') {
+                returnToCemeteryOverview();
+            }
+        });
+        bcCemetery.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
                 returnToCemeteryOverview();
             }
         });
 
-        btnBackToOverview.addEventListener('click', () => {
-            returnToCemeteryOverview();
-        });
+        if (bcSection) {
+            bcSection.addEventListener('click', () => {
+                if (state.currentSection && state.mapViewLevel !== 'section') {
+                    focusOnSection(state.currentSection);
+                }
+            });
+            bcSection.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (state.currentSection) focusOnSection(state.currentSection);
+                }
+            });
+        }
+
+        if (bcBlock) {
+            bcBlock.addEventListener('click', () => {
+                if (state.currentBlock && state.mapViewLevel !== 'block') {
+                    focusOnBlock(state.currentBlock, state.currentSection);
+                }
+            });
+            bcBlock.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (state.currentBlock) focusOnBlock(state.currentBlock, state.currentSection);
+                }
+            });
+        }
+
+        if (btnBackToOverview) {
+            btnBackToOverview.addEventListener('click', () => {
+                navigateUpOneLevel();
+            });
+        }
 
         // Zoom & Reset controls
         btnZoomIn.addEventListener('click', () => zoomView(0.8));
@@ -1352,9 +1394,8 @@
      */
     function renderCemeteryOverview(layoutData) {
         state.viewLevel = 'cemetery';
-        viewLevelText.textContent = 'Cemetery Overview';
-        btnBackToOverview.style.display = 'none';
         updateBreadcrumbs();
+        updateViewLevelIndicator();
         resetView();
 
         ensureSvgLayers();
@@ -1995,10 +2036,31 @@ sections.forEach((section, index) => {
 
     const secGroup = mk('g', {
         class: `svg-section-card mp-section section--theme-${themeCode}`,
-        'data-section-id': section.section_id
+        'data-section-id': section.section_id,
+        role: 'button',
+        tabindex: '0',
+        'aria-label': `${section.section_name}. Click to view section.`
     });
     const secTitleEl = mk('title', null, secGroup);
     secTitleEl.textContent = `${section.section_name} — ${blocks.length} Blocks • ${section.total_lots || 0} Lots`;
+
+    // Section Click Handler: Focus Section on Master Map (Batch 8)
+    secGroup.addEventListener('click', (e) => {
+        if (e.target.closest('.svg-block-card') || e.target.closest('.svg-lot-tile')) {
+            return;
+        }
+        e.stopPropagation();
+        focusOnSection(section);
+    });
+
+    secGroup.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            if (e.target === secGroup) {
+                e.preventDefault();
+                focusOnSection(section);
+            }
+        }
+    });
 
     // 1. Natural Geographic Lawn Terrace (Defined by Road Boundaries)
     // If Main Road spine crosses the zone (Section A), split the land neatly on both sides of the boulevard!
@@ -2086,13 +2148,13 @@ sections.forEach((section, index) => {
         // Block Click Handler: Focus/Zoom to Block on Master Map
         blkGroup.addEventListener('click', (e) => {
             e.stopPropagation();
-            focusBlockOnMasterMap(block, section, blkX, blkY, curBlkW, curBlkH);
+            focusOnBlock(block, section);
         });
 
         blkGroup.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                focusBlockOnMasterMap(block, section, blkX, blkY, curBlkW, curBlkH);
+                focusOnBlock(block, section);
             }
         });
 
@@ -2362,35 +2424,10 @@ if (count <= 4 && !usedZones.has('e')) {
     }
 
     /**
-     * Focus and Center Camera on Selected Block on Master Map (Batch 3)
+     * Focus and Center Camera on Selected Block on Master Map (Batch 3 & 8)
      */
     function focusBlockOnMasterMap(block, section, blkX, blkY, curBlkW, curBlkH) {
-        state.currentSection = section;
-        state.currentBlock = block;
-        state.currentLots = state.blockLotsCache[block.block_id] || [];
-
-        // Highlight focused block card
-        document.querySelectorAll('.svg-block-card.is-focused').forEach(el => el.classList.remove('is-focused'));
-        const targetEl = document.querySelector(`.svg-block-card[data-block-id="${block.block_id}"]`);
-        if (targetEl) targetEl.classList.add('is-focused');
-
-        viewLevelText.textContent = `${section.section_name} › ${block.block_name}`;
-        btnBackToOverview.style.display = 'inline-flex';
-        updateBreadcrumbs();
-        updateLegendCounts(state.currentLots);
-
-        // Center view on the block with contextual surrounding margin
-        const pad = 50;
-        const targetW = Math.max(curBlkW + pad * 2, 420);
-        const targetH = targetW * (state.baseViewBox.height / state.baseViewBox.width);
-        const centerX = blkX + (curBlkW / 2);
-        const centerY = blkY + (curBlkH / 2);
-
-        state.currentViewBox.width = targetW;
-        state.currentViewBox.height = targetH;
-        state.currentViewBox.x = Math.max(0, Math.min(state.baseViewBox.width - targetW, centerX - (targetW / 2)));
-        state.currentViewBox.y = Math.max(0, Math.min(state.baseViewBox.height - targetH, centerY - (targetH / 2)));
-        applyViewBox();
+        focusOnBlock(block, section);
     }
 
     /**
@@ -2777,6 +2814,21 @@ if (count <= 4 && !usedZones.has('e')) {
     function selectLot(lot, block, section, lotElement) {
         state.selectedLot = lot;
 
+        // Batch 8: Update Map View State to Lot Level
+        state.mapViewLevel = 'lot';
+        state.focusedSectionId = section ? section.section_id : null;
+        state.focusedBlockId = block ? block.block_id : null;
+        state.focusedLotId = lot.lot_id;
+        state.currentSection = section;
+        state.currentBlock = block;
+
+        // Highlight parent section (Batch 8 spatial indicator)
+        document.querySelectorAll('.svg-section-card.is-focused-section').forEach(el => el.classList.remove('is-focused-section'));
+        if (section) {
+            const secEl = document.querySelector(`.svg-section-card[data-section-id="${section.section_id}"]`);
+            if (secEl) secEl.classList.add('is-focused-section');
+        }
+
         // Visual selection highlight in SVG
         document.querySelectorAll('.svg-lot-tile.is-selected').forEach(el => {
             el.classList.remove('is-selected');
@@ -2946,8 +2998,8 @@ if (count <= 4 && !usedZones.has('e')) {
             }
             drawerAccessibilityCard.style.display = 'block';
         }
-
         updateBreadcrumbs();
+        updateViewLevelIndicator();
 
         // Open Drawer
         lotDetailsDrawer.classList.add('is-open');
@@ -5002,46 +5054,192 @@ if (count <= 4 && !usedZones.has('e')) {
     }
 
     /**
-     * Return to Cemetery Overview
+     * Return to Cemetery Overview (Batch 8)
      */
     function returnToCemeteryOverview() {
-        closeLotDrawer();
-        document.querySelectorAll('.svg-block-card.is-focused').forEach(el => el.classList.remove('is-focused'));
+        state.mapViewLevel = 'overview';
+        state.viewLevel = 'cemetery';
+        state.focusedSectionId = null;
+        state.focusedBlockId = null;
+        state.focusedLotId = null;
         state.currentSection = null;
         state.currentBlock = null;
         state.currentLots = [];
-        state.viewLevel = 'cemetery';
-        if (state.currentLayout) {
-            renderCemeteryOverview(state.currentLayout);
+
+        // Clear section and block spatial highlights
+        document.querySelectorAll('.svg-section-card.is-focused-section, .svg-section-card.is-matched').forEach(el => {
+            el.classList.remove('is-focused-section');
+            el.classList.remove('is-matched');
+        });
+        document.querySelectorAll('.svg-block-card.is-focused, .svg-block-card.is-focused-block, .svg-block-card.is-matched').forEach(el => {
+            el.classList.remove('is-focused');
+            el.classList.remove('is-focused-block');
+            el.classList.remove('is-matched');
+        });
+
+        // If no route is active, dismiss lot details drawer and selection reticle
+        if (!state.activeRoute) {
+            closeLotDrawer();
+            if (mapSelectionLayer) mapSelectionLayer.innerHTML = '';
+            document.querySelectorAll('.svg-lot-tile.is-selected').forEach(el => el.classList.remove('is-selected'));
+            state.selectedLot = null;
         }
+
+        // Animate camera smoothly back to full cemetery overview without destroying SVG DOM or route
+        animateViewBox(state.baseViewBox.x, state.baseViewBox.y, state.baseViewBox.width, state.baseViewBox.height, 380);
+
+        updateBreadcrumbs();
+        updateViewLevelIndicator();
         updateLegendCounts([]);
         applyFilters();
     }
 
     /**
-     * Update Breadcrumbs Bar (Batch 6: Includes exact lot level)
+     * Update Breadcrumbs Bar across View Hierarchy Levels (Batch 8)
+     * Levels: overview -> section -> block -> lot
      */
     function updateBreadcrumbs() {
-        bcCemeteryName.textContent = state.currentCemetery?.cemetery_name || 'Cemetery Overview';
+        if (!bcCemeteryName) return;
+        const cemName = state.currentCemetery?.cemetery_name || 'Cemetery Overview';
+        bcCemeteryName.textContent = cemName;
 
-        if (state.viewLevel === 'block' && state.currentSection && state.currentBlock) {
-            bcSection.style.display = 'inline-flex';
-            bcSectionName.textContent = state.currentSection.section_name;
+        const level = state.mapViewLevel || 'overview';
 
-            bcBlock.style.display = 'inline-flex';
-            bcBlockName.textContent = state.currentBlock.block_name;
+        // Clear active classes
+        [bcCemetery, bcSection, bcBlock, bcLot].forEach(el => {
+            if (el) el.classList.remove('active');
+        });
 
-            if (state.selectedLot && bcLot && bcLotName) {
-                bcLot.style.display = 'inline-flex';
-                bcLotName.textContent = `Lot ${state.selectedLot.lot_number}`;
-
-                bcCemetery.classList.remove('active');
-                bcSection.classList.remove('active');
-                bcBlock.classList.remove('active');
-                bcLot.classList.add('active');
-            } else {
-                if (bcLot) bcLot.style.display = 'none';
+        if (level === 'overview') {
+            bcCemetery.classList.add('active');
+            if (bcSection) bcSection.style.display = 'none';
+            if (bcBlock) bcBlock.style.display = 'none';
+            if (bcLot) bcLot.style.display = 'none';
+        } else if (level === 'section') {
+            if (bcSection && state.currentSection) {
+                bcSection.style.display = 'inline-flex';
+                bcSectionName.textContent = state.currentSection.section_name;
+                bcSection.classList.add('active');
             }
+            if (bcBlock) bcBlock.style.display = 'none';
+            if (bcLot) bcLot.style.display = 'none';
+        } else if (level === 'block') {
+            if (bcSection && state.currentSection) {
+                bcSection.style.display = 'inline-flex';
+                bcSectionName.textContent = state.currentSection.section_name;
+            }
+            if (bcBlock && state.currentBlock) {
+                bcBlock.style.display = 'inline-flex';
+                bcBlockName.textContent = state.currentBlock.block_name;
+                bcBlock.classList.add('active');
+            }
+            if (bcLot) bcLot.style.display = 'none';
+        } else if (level === 'lot') {
+            if (bcSection && state.currentSection) {
+                bcSection.style.display = 'inline-flex';
+                bcSectionName.textContent = state.currentSection.section_name;
+            }
+            if (bcBlock && state.currentBlock) {
+                bcBlock.style.display = 'inline-flex';
+                bcBlockName.textContent = state.currentBlock.block_name;
+            }
+            if (bcLot && state.selectedLot) {
+                bcLot.style.display = 'inline-flex';
+                const disp = state.selectedLot._displayLabel || state.selectedLot.lot_number;
+                bcLotName.textContent = `Lot ${disp}`;
+                bcLot.classList.add('active');
+            }
+        }
+    }
+
+    /**
+     * Update Dynamic View Level Indicator HUD (Batch 8)
+     * Renders clickable parent breadcrumb steps & dynamic Up-navigation button
+     */
+    function updateViewLevelIndicator() {
+        if (!viewLevelText) return;
+
+        const level = state.mapViewLevel || 'overview';
+        const sName = state.currentSection?.section_name;
+        const bName = state.currentBlock?.block_name;
+        const lNum = state.selectedLot ? (state.selectedLot._displayLabel || state.selectedLot.lot_number) : null;
+
+        if (level === 'overview') {
+            viewLevelText.innerHTML = '<span class="level-step current">Cemetery Overview</span>';
+            if (btnBackToOverview) btnBackToOverview.style.display = 'none';
+        } else if (level === 'section') {
+            viewLevelText.innerHTML = `
+                <span class="level-step clickable" data-level="overview" title="Return to Overview">Overview</span>
+                <span class="level-sep">›</span>
+                <span class="level-step current">${escapeHtml(sName || 'Section')}</span>
+            `;
+            if (btnBackToOverview) {
+                btnBackToOverview.style.display = 'inline-flex';
+                if (btnBackText) btnBackText.textContent = 'Up to Overview';
+            }
+        } else if (level === 'block') {
+            viewLevelText.innerHTML = `
+                <span class="level-step clickable" data-level="overview" title="Return to Overview">Overview</span>
+                <span class="level-sep">›</span>
+                <span class="level-step clickable" data-level="section" title="Navigate to Section">${escapeHtml(sName || 'Section')}</span>
+                <span class="level-sep">›</span>
+                <span class="level-step current">${escapeHtml(bName || 'Block')}</span>
+            `;
+            if (btnBackToOverview) {
+                btnBackToOverview.style.display = 'inline-flex';
+                if (btnBackText) btnBackText.textContent = `Up to ${sName || 'Section'}`;
+            }
+        } else if (level === 'lot') {
+            viewLevelText.innerHTML = `
+                <span class="level-step clickable" data-level="overview" title="Return to Overview">Overview</span>
+                <span class="level-sep">›</span>
+                <span class="level-step clickable" data-level="section" title="Navigate to Section">${escapeHtml(sName || 'Section')}</span>
+                <span class="level-sep">›</span>
+                <span class="level-step clickable" data-level="block" title="Navigate to Block">${escapeHtml(bName || 'Block')}</span>
+                <span class="level-sep">›</span>
+                <span class="level-step current">${escapeHtml(lNum ? `Lot ${lNum}` : 'Lot')}</span>
+            `;
+            if (btnBackToOverview) {
+                btnBackToOverview.style.display = 'inline-flex';
+                if (btnBackText) btnBackText.textContent = `Up to ${bName || 'Block'}`;
+            }
+        }
+
+        // Attach event listeners to clickable level steps in HUD
+        viewLevelText.querySelectorAll('.level-step.clickable').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const target = el.getAttribute('data-level');
+                if (target === 'overview') returnToCemeteryOverview();
+                else if (target === 'section' && state.currentSection) focusOnSection(state.currentSection);
+                else if (target === 'block' && state.currentBlock && state.currentSection) focusOnBlock(state.currentBlock, state.currentSection);
+            });
+        });
+    }
+
+    /**
+     * Navigate Up One Level in the View Hierarchy (Batch 8)
+     * Lot -> Block -> Section -> Overview
+     */
+    function navigateUpOneLevel() {
+        if (state.mapViewLevel === 'lot') {
+            if (state.currentBlock && state.currentSection) {
+                focusOnBlock(state.currentBlock, state.currentSection);
+            } else if (state.currentSection) {
+                focusOnSection(state.currentSection);
+            } else {
+                returnToCemeteryOverview();
+            }
+        } else if (state.mapViewLevel === 'block') {
+            if (state.currentSection) {
+                focusOnSection(state.currentSection);
+            } else {
+                returnToCemeteryOverview();
+            }
+        } else if (state.mapViewLevel === 'section') {
+            returnToCemeteryOverview();
+        } else {
+            returnToCemeteryOverview();
         }
     }
 
@@ -5139,20 +5337,41 @@ if (count <= 4 && !usedZones.has('e')) {
     }
 
     /**
-     * Camera Focus on specific Block (Batch 5)
-     * Shows entire block + surrounding blocks + nearby road/path without opening lot drawer
+     * Camera Focus on specific Block (Batch 5 & 8)
+     * Shows entire block + surrounding block pathway context with clear readability
      */
     function focusOnBlock(block, section) {
-        closeLotDrawer();
-        document.querySelectorAll('.svg-block-card.is-focused, .svg-block-card.is-matched').forEach(el => {
+        if (!block) return;
+        if (!section && state.currentLayout) {
+            section = state.currentLayout.sections.find(s => s.blocks && s.blocks.some(b => b.block_id === block.block_id));
+        }
+
+        state.mapViewLevel = 'block';
+        state.viewLevel = 'block';
+        state.focusedSectionId = section ? section.section_id : null;
+        state.focusedBlockId = block.block_id;
+        state.focusedLotId = null;
+        state.currentSection = section;
+        state.currentBlock = block;
+        state.currentLots = state.blockLotsCache[block.block_id] || [];
+
+        // Highlights: Highlight parent section and focused block
+        document.querySelectorAll('.svg-section-card.is-focused-section').forEach(el => el.classList.remove('is-focused-section'));
+        if (section) {
+            const secEl = document.querySelector(`.svg-section-card[data-section-id="${section.section_id}"]`);
+            if (secEl) secEl.classList.add('is-focused-section');
+        }
+
+        document.querySelectorAll('.svg-block-card.is-focused, .svg-block-card.is-focused-block, .svg-block-card.is-matched').forEach(el => {
             el.classList.remove('is-focused');
+            el.classList.remove('is-focused-block');
             el.classList.remove('is-matched');
         });
 
         const blkEl = document.querySelector(`.svg-block-card[data-block-id="${block.block_id}"]`);
         if (blkEl) {
             blkEl.classList.add('is-focused');
-            blkEl.classList.add('is-matched');
+            blkEl.classList.add('is-focused-block');
             const rectEl = blkEl.querySelector('rect') || blkEl;
             const bx = parseFloat(rectEl.getAttribute('x'));
             const by = parseFloat(rectEl.getAttribute('y'));
@@ -5160,7 +5379,8 @@ if (count <= 4 && !usedZones.has('e')) {
             const bh = parseFloat(rectEl.getAttribute('height')) || 110;
 
             if (!isNaN(bx) && !isNaN(by)) {
-                const targetW = Math.max(bw + 260, 620);
+                // Focus camera with comfortable margin to display block clearly
+                const targetW = Math.max(bw + 180, 520);
                 const targetH = targetW * (state.baseViewBox.height / state.baseViewBox.width);
                 const centerX = bx + (bw / 2);
                 const centerY = by + (bh / 2);
@@ -5171,29 +5391,49 @@ if (count <= 4 && !usedZones.has('e')) {
             }
         }
 
-        state.currentSection = section;
-        state.currentBlock = block;
-        state.currentLots = state.blockLotsCache[block.block_id] || [];
-        viewLevelText.textContent = `${section.section_name} › ${block.block_name}`;
-        btnBackToOverview.style.display = 'inline-flex';
+        // If no route active, close lot drawer; if route active, preserve route presentation
+        if (!state.activeRoute) {
+            closeLotDrawer();
+            if (mapSelectionLayer) mapSelectionLayer.innerHTML = '';
+            document.querySelectorAll('.svg-lot-tile.is-selected').forEach(el => el.classList.remove('is-selected'));
+            state.selectedLot = null;
+        }
+
         updateBreadcrumbs();
+        updateViewLevelIndicator();
         updateLegendCounts(state.currentLots);
+        applyFilters();
     }
 
     /**
-     * Camera Focus on specific Section (Batch 5)
-     * Shows section + blocks inside section + nearby roads without selecting arbitrary lots
+     * Camera Focus on specific Section (Batch 5 & 8)
+     * Shows section + blocks inside section + nearby roads maintaining spatial geographic context
      */
     function focusOnSection(section) {
-        closeLotDrawer();
-        document.querySelectorAll('.svg-section-card.is-matched, .svg-block-card.is-focused').forEach(el => {
+        if (!section) return;
+
+        state.mapViewLevel = 'section';
+        state.viewLevel = 'cemetery';
+        state.focusedSectionId = section.section_id;
+        state.focusedBlockId = null;
+        state.focusedLotId = null;
+        state.currentSection = section;
+        state.currentBlock = null;
+
+        // Visual highlight: Focused section
+        document.querySelectorAll('.svg-section-card.is-focused-section, .svg-section-card.is-matched').forEach(el => {
+            el.classList.remove('is-focused-section');
             el.classList.remove('is-matched');
+        });
+        document.querySelectorAll('.svg-block-card.is-focused, .svg-block-card.is-focused-block, .svg-block-card.is-matched').forEach(el => {
             el.classList.remove('is-focused');
+            el.classList.remove('is-focused-block');
+            el.classList.remove('is-matched');
         });
 
         const secEl = document.querySelector(`.svg-section-card[data-section-id="${section.section_id}"]`);
         if (secEl) {
-            secEl.classList.add('is-matched');
+            secEl.classList.add('is-focused-section');
             const rectEl = secEl.querySelector('rect') || secEl;
             const sx = parseFloat(rectEl.getAttribute('x'));
             const sy = parseFloat(rectEl.getAttribute('y'));
@@ -5201,7 +5441,8 @@ if (count <= 4 && !usedZones.has('e')) {
             const sh = parseFloat(rectEl.getAttribute('height')) || 240;
 
             if (!isNaN(sx) && !isNaN(sy)) {
-                const targetW = Math.max(sw + 280, 880);
+                // Focus camera to show section + surrounding access roads
+                const targetW = Math.max(sw + 260, 800);
                 const targetH = targetW * (state.baseViewBox.height / state.baseViewBox.width);
                 const centerX = sx + (sw / 2);
                 const centerY = sy + (sh / 2);
@@ -5212,11 +5453,17 @@ if (count <= 4 && !usedZones.has('e')) {
             }
         }
 
-        state.currentSection = section;
-        state.currentBlock = null;
-        viewLevelText.textContent = `${section.section_name}`;
-        btnBackToOverview.style.display = 'inline-flex';
+        // If no route active, close lot drawer; if route active, preserve route presentation
+        if (!state.activeRoute) {
+            closeLotDrawer();
+            if (mapSelectionLayer) mapSelectionLayer.innerHTML = '';
+            document.querySelectorAll('.svg-lot-tile.is-selected').forEach(el => el.classList.remove('is-selected'));
+            state.selectedLot = null;
+        }
+
         updateBreadcrumbs();
+        updateViewLevelIndicator();
+        applyFilters();
     }
 
     /**
@@ -5943,8 +6190,7 @@ if (count <= 4 && !usedZones.has('e')) {
      * Reset ViewBox to Base Dimensions
      */
     function resetView() {
-        state.currentViewBox = { ...state.baseViewBox };
-        applyViewBox();
+        returnToCemeteryOverview();
     }
 
     /**
