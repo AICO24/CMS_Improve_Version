@@ -6244,6 +6244,13 @@ body.dark-mode .btn-wayfinding-slip:hover {
     gap: 6px;
 }
 
+.route-waypoints-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
 .waypoints-label {
     font-size: 0.72rem;
     font-weight: 700;
@@ -6259,31 +6266,246 @@ body.dark-mode .btn-wayfinding-slip:hover {
     color: #94a3b8;
 }
 
-.route-waypoints-list {
-    margin: 0;
-    padding-left: 20px;
-    max-height: 110px;
-    overflow-y: auto;
-    font-size: 0.78rem;
-    line-height: 1.45;
-    color: #334155;
+.route-step-progress {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #0284c7;
+    background: rgba(2, 132, 199, 0.1);
+    padding: 2px 7px;
+    border-radius: 10px;
+    letter-spacing: 0.02em;
 }
 
-[data-theme="dark"] .route-waypoints-list {
+[data-theme="dark"] .route-step-progress {
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.16);
+}
+
+.route-step-nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 3px 6px;
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 6px;
+}
+
+[data-theme="dark"] .route-step-nav-bar {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.btn-route-step-nav {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    color: #334155;
+    font-size: 0.70rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+}
+
+.btn-route-step-nav:hover:not(:disabled) {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+}
+
+.btn-route-step-nav:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+[data-theme="dark"] .btn-route-step-nav {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(255, 255, 255, 0.15);
     color: #cbd5e1;
 }
 
-.route-waypoints-list li {
-    margin-bottom: 4px;
+[data-theme="dark"] .btn-route-step-nav:hover:not(:disabled) {
+    background: #38bdf8;
+    color: #0f172a;
+    border-color: #38bdf8;
 }
 
-.route-waypoints-list li:last-child {
+.route-step-counter {
+    font-size: 0.72rem;
     font-weight: 700;
-    color: #e11d48;
+    color: var(--map-text-muted, #64748b);
+    font-variant-numeric: tabular-nums;
 }
 
-[data-theme="dark"] .route-waypoints-list li:last-child {
-    color: #fb7185;
+[data-theme="dark"] .route-step-counter {
+    color: #94a3b8;
+}
+
+.route-waypoints-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 140px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.route-waypoint-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: rgba(0, 0, 0, 0.02);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    outline: none;
+}
+
+.route-waypoint-item:hover {
+    background: rgba(2, 132, 199, 0.08);
+    border-color: rgba(2, 132, 199, 0.2);
+}
+
+.route-waypoint-item:focus-visible {
+    outline: 2px solid #0284c7;
+    outline-offset: 1px;
+}
+
+.route-waypoint-item.is-active {
+    background: rgba(2, 132, 199, 0.14);
+    border-color: #0284c7;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.18);
+}
+
+[data-theme="dark"] .route-waypoint-item {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .route-waypoint-item:hover {
+    background: rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.3);
+}
+
+[data-theme="dark"] .route-waypoint-item:focus-visible {
+    outline-color: #38bdf8;
+}
+
+[data-theme="dark"] .route-waypoint-item.is-active {
+    background: rgba(56, 189, 248, 0.18);
+    border-color: #38bdf8;
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.22);
+}
+
+.waypoint-step-num {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #0284c7;
+    color: #ffffff;
+    font-size: 0.62rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.route-waypoint-item.is-active .waypoint-step-num {
+    background: #0369a1;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.35);
+}
+
+[data-theme="dark"] .waypoint-step-num {
+    background: #0284c7;
+}
+
+[data-theme="dark"] .route-waypoint-item.is-active .waypoint-step-num {
+    background: #38bdf8;
+    color: #0f172a;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.4);
+}
+
+.waypoint-icon {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.route-waypoint-item.is-active .waypoint-icon {
+    color: #0284c7;
+}
+
+[data-theme="dark"] .waypoint-icon {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .route-waypoint-item.is-active .waypoint-icon {
+    color: #38bdf8;
+}
+
+.waypoint-details {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.waypoint-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+}
+
+.waypoint-title {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+[data-theme="dark"] .waypoint-title {
+    color: #f1f5f9;
+}
+
+.waypoint-landmark-badge {
+    font-size: 0.60rem;
+    font-weight: 700;
+    color: #0284c7;
+    background: rgba(2, 132, 199, 0.12);
+    padding: 1px 4px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+}
+
+[data-theme="dark"] .waypoint-landmark-badge {
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.18);
+}
+
+.waypoint-instruction {
+    font-size: 0.68rem;
+    color: #64748b;
+    line-height: 1.35;
+    margin-top: 1px;
+}
+
+[data-theme="dark"] .waypoint-instruction {
+    color: #94a3b8;
 }
 
 .route-info-footer {
@@ -6462,18 +6684,133 @@ body.dark-mode .btn-wayfinding-slip:hover {
     filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
 }
 
+/* Intermediate Route Waypoint Markers (Batch 7) */
+.svg-route-waypoint {
+    cursor: pointer;
+    outline: none;
+}
+
+.svg-route-waypoint .svg-waypoint-hitbox {
+    fill: transparent;
+    stroke: none;
+}
+
+.svg-route-waypoint .svg-waypoint-circle {
+    fill: #ffffff;
+    stroke: #0284c7;
+    stroke-width: 2.2px;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.25));
+    transition: all 0.2s ease;
+}
+
+.svg-route-waypoint .svg-waypoint-core {
+    fill: #0284c7;
+    transition: all 0.2s ease;
+}
+
+.svg-route-waypoint:hover .svg-waypoint-circle,
+.svg-route-waypoint:focus-visible .svg-waypoint-circle {
+    stroke: #0369a1;
+    stroke-width: 3.2px;
+    filter: drop-shadow(0 0 6px rgba(2, 132, 199, 0.65));
+}
+
+.svg-route-waypoint.is-active .svg-waypoint-circle {
+    stroke: #0369a1;
+    stroke-width: 3.5px;
+    fill: #e0f2fe;
+}
+
+.svg-route-waypoint.is-active .svg-waypoint-core {
+    fill: #0369a1;
+}
+
+[data-theme="dark"] .svg-route-waypoint .svg-waypoint-circle {
+    fill: #0f172a;
+    stroke: #38bdf8;
+}
+
+[data-theme="dark"] .svg-route-waypoint .svg-waypoint-core {
+    fill: #38bdf8;
+}
+
+[data-theme="dark"] .svg-route-waypoint:hover .svg-waypoint-circle,
+[data-theme="dark"] .svg-route-waypoint:focus-visible .svg-waypoint-circle {
+    stroke: #7dd3fc;
+    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.75));
+}
+
+[data-theme="dark"] .svg-route-waypoint.is-active .svg-waypoint-circle {
+    stroke: #7dd3fc;
+    fill: #082f49;
+}
+
+/* Active Waypoint Reticle Pulse (Batch 7) */
+.svg-active-waypoint-reticle {
+    pointer-events: none;
+}
+
+.svg-active-waypoint-reticle .reticle-ring-pulse {
+    fill: none;
+    stroke: #0284c7;
+    stroke-width: 2px;
+    stroke-dasharray: 4 2;
+    animation: waypointReticlePulse 1.8s ease-out infinite;
+}
+
+@keyframes waypointReticlePulse {
+    0% {
+        r: 8px;
+        opacity: 1;
+    }
+    100% {
+        r: 26px;
+        opacity: 0;
+    }
+}
+
+.svg-active-waypoint-reticle .reticle-ring-inner {
+    fill: rgba(2, 132, 199, 0.16);
+    stroke: #0284c7;
+    stroke-width: 2px;
+}
+
+.svg-active-waypoint-reticle .reticle-center-dot {
+    fill: #0284c7;
+    stroke: #ffffff;
+    stroke-width: 1.5px;
+}
+
+[data-theme="dark"] .svg-active-waypoint-reticle .reticle-ring-pulse {
+    stroke: #38bdf8;
+}
+
+[data-theme="dark"] .svg-active-waypoint-reticle .reticle-ring-inner {
+    fill: rgba(56, 189, 248, 0.22);
+    stroke: #38bdf8;
+}
+
+[data-theme="dark"] .svg-active-waypoint-reticle .reticle-center-dot {
+    fill: #38bdf8;
+    stroke: #0f172a;
+}
+
 /* Respect Accessibility Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
     .svg-route-line {
         animation: none !important;
         stroke-dasharray: none;
     }
-    .route-marker-pulse {
+    .route-marker-pulse,
+    .svg-active-waypoint-reticle .reticle-ring-pulse {
         animation: none !important;
         opacity: 0.4;
     }
-    .map-route-info-card {
+    .map-route-info-card,
+    .btn-route-step-nav,
+    .route-waypoint-item {
         transition: none !important;
     }
 }
+
 

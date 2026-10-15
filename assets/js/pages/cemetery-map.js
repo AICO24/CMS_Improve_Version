@@ -158,6 +158,8 @@
     let mapRouteInfoCard, routeInfoTitle, btnCloseRoute, routeStartLabel, routeDestLabel;
     let routeMetricDistance, routeMetricVia, routeWaypointsList, btnClearRoute, btnFitRoute;
     let btnGetDirectionsLot, btnGetDirectionsHud;
+    // Batch 7: Route Guidance & Waypoint Navigation DOM Elements
+    let routeStepProgress, routeStepNavBar, btnPrevStep, routeStepCounter, btnNextStep;
 
     // DOM Elements
     let cemeterySelector;
@@ -503,6 +505,13 @@
         btnFitRoute = document.getElementById('btnFitRoute');
         btnGetDirectionsLot = document.getElementById('btnGetDirectionsLot');
         btnGetDirectionsHud = document.getElementById('btnGetDirectionsHud');
+
+        // Batch 7: Route Guidance & Waypoint Navigation DOM Elements
+        routeStepProgress = document.getElementById('routeStepProgress');
+        routeStepNavBar = document.getElementById('routeStepNavBar');
+        btnPrevStep = document.getElementById('btnPrevStep');
+        routeStepCounter = document.getElementById('routeStepCounter');
+        btnNextStep = document.getElementById('btnNextStep');
     }
 
     /**
@@ -573,6 +582,21 @@
             btnFitRoute.addEventListener('click', () => {
                 if (state.activeRoute && state.activeRoute.points) {
                     fitRouteToViewport(state.activeRoute.points);
+                }
+            });
+        }
+        // Batch 7: Step-by-Step Navigation Controls
+        if (btnPrevStep) {
+            btnPrevStep.addEventListener('click', () => {
+                if (state.activeRoute && typeof state.activeRoute.activeStepIndex === 'number') {
+                    setActiveRouteStep(state.activeRoute.activeStepIndex - 1, true);
+                }
+            });
+        }
+        if (btnNextStep) {
+            btnNextStep.addEventListener('click', () => {
+                if (state.activeRoute && typeof state.activeRoute.activeStepIndex === 'number') {
+                    setActiveRouteStep(state.activeRoute.activeStepIndex + 1, true);
                 }
             });
         }
@@ -3315,7 +3339,109 @@ if (count <= 4 && !usedZones.has('e')) {
     }
 
     /**
-     * Generate Route from Main Gate to Selected Lot
+     * BATCH 7: Build Human-Readable Route Guidance Steps
+     * Converts Dijkstra route nodes & access walkway points into structured, landmark-aware steps.
+     * @param {Array} routePoints - Sequence of route coordinate objects
+     * @param {Object} lot - Target lot
+     * @param {Object} block - Parent block
+     * @param {Object} section - Parent section
+     * @param {Object} accessNode - Section access node
+     * @returns {Array} List of step objects
+     */
+    function buildRouteGuidance(routePoints, lot, block, section, accessNode) {
+        if (!routePoints || routePoints.length === 0) return [];
+
+        const steps = [];
+
+        routePoints.forEach((pt, idx) => {
+            const step = {
+                index: idx + 1,
+                point: { x: pt.x, y: pt.y },
+                type: pt.type,
+                nodeId: pt.nodeId || null,
+                title: '',
+                instruction: '',
+                category: 'road',
+                icon: 'fa-road',
+                landmark: null
+            };
+
+            if (pt.type === 'start') {
+                step.title = pt.label || 'Main Gate Portal';
+                step.instruction = 'Enter cemetery grounds via main portal from P. Aquino Avenue';
+                step.category = 'start';
+                step.icon = 'fa-door-open';
+                step.landmark = 'Main Gate';
+            } else if (pt.type === 'destination') {
+                step.title = `Lot ${lot.lot_number}`;
+                step.instruction = `Arrive at destination plot (${section?.section_name || 'Section'} · ${block?.block_name || 'Block'})`;
+                step.category = 'destination';
+                step.icon = 'fa-location-dot';
+                step.landmark = 'Destination';
+            } else if (pt.type === 'walkway') {
+                step.title = `${block?.block_name || 'Block'} Walkway`;
+                step.instruction = `Follow paved pedestrian walkway toward ${block?.block_name || 'Block'}`;
+                step.category = 'block';
+                step.icon = 'fa-person-walking';
+                step.landmark = block?.block_name || null;
+            } else {
+                // Internal network node
+                const isAccessNode = (pt.nodeId && accessNode && pt.nodeId === accessNode.id);
+                const isRoundabout = (pt.nodeId === 'CENTRAL_ROUNDABOUT' || (pt.label && pt.label.toLowerCase().includes('roundabout')));
+
+                if (isAccessNode) {
+                    step.title = pt.label || `${section?.section_name || 'Section'} Access Road`;
+                    step.instruction = `Turn into ${section?.section_name || 'Section'} access road`;
+                    step.category = 'section';
+                    step.icon = 'fa-signs-post';
+                    step.landmark = section?.section_name || 'Section Access';
+                } else if (isRoundabout) {
+                    step.title = pt.label || 'Memorial Roundabout';
+                    step.instruction = 'Navigate through central memorial roundabout';
+                    step.category = 'roundabout';
+                    step.icon = 'fa-arrows-spin';
+                    step.landmark = 'Roundabout';
+                } else if (pt.nodeId === 'SOUTH_JUNCTION') {
+                    step.title = pt.label || 'St. Joseph Drive Junction';
+                    step.instruction = 'Follow St. Joseph Drive toward central cemetery corridor';
+                    step.category = 'junction';
+                    step.icon = 'fa-road';
+                    step.landmark = 'St. Joseph Drive';
+                } else if (pt.nodeId === 'CREMATORIUM_SPINE') {
+                    step.title = pt.label || 'Central Spine (Mid South)';
+                    step.instruction = 'Proceed north past crematorium and chapel access';
+                    step.category = 'road';
+                    step.icon = 'fa-road';
+                    step.landmark = 'Central Spine';
+                } else if (pt.label && pt.label.toLowerCase().includes('crossway')) {
+                    step.title = pt.label;
+                    step.instruction = 'Continue through crossway intersection';
+                    step.category = 'junction';
+                    step.icon = 'fa-road';
+                    step.landmark = 'Crossway';
+                } else if (pt.label && pt.label.toLowerCase().includes('promenade')) {
+                    step.title = pt.label;
+                    step.instruction = 'Follow internal promenade walkway';
+                    step.category = 'road';
+                    step.icon = 'fa-road';
+                    step.landmark = 'Promenade';
+                } else {
+                    step.title = pt.label || `Waypoint ${idx + 1}`;
+                    step.instruction = `Follow cemetery road toward ${section?.section_name || 'Section'}`;
+                    step.category = 'road';
+                    step.icon = 'fa-road';
+                    step.landmark = null;
+                }
+            }
+
+            steps.push(step);
+        });
+
+        return steps;
+    }
+
+    /**
+     * Generate Route from Main Gate to Selected Lot (Batch 6 & Batch 7)
      * @param {Object} lot - Target Lot
      * @param {Object} block - Parent Block
      * @param {Object} section - Parent Section
@@ -3352,7 +3478,8 @@ if (count <= 4 && !usedZones.has('e')) {
                 x: node.x,
                 y: node.y,
                 label: node.label || nodeId,
-                type: idx === 0 ? 'start' : 'network'
+                type: idx === 0 ? 'start' : 'network',
+                nodeId: nodeId
             });
         });
 
@@ -3369,14 +3496,16 @@ if (count <= 4 && !usedZones.has('e')) {
                     x: lotPt.x,
                     y: accessNode.y,
                     label: `${block?.block_name || 'Block'} Access Walkway`,
-                    type: 'walkway'
+                    type: 'walkway',
+                    nodeId: 'BLOCK_WALKWAY'
                 });
             } else {
                 routePoints.push({
                     x: accessNode.x,
                     y: lotPt.y,
                     label: `${block?.block_name || 'Block'} Access Walkway`,
-                    type: 'walkway'
+                    type: 'walkway',
+                    nodeId: 'BLOCK_WALKWAY'
                 });
             }
         }
@@ -3386,7 +3515,8 @@ if (count <= 4 && !usedZones.has('e')) {
             x: lotPt.x,
             y: lotPt.y,
             label: `Lot ${lot.lot_number}`,
-            type: 'destination'
+            type: 'destination',
+            nodeId: `LOT_${lot.lot_id || lot.lot_number}`
         });
 
         // Calculate total map distance
@@ -3395,16 +3525,8 @@ if (count <= 4 && !usedZones.has('e')) {
             totalMapDist += Math.hypot(routePoints[i + 1].x - routePoints[i].x, routePoints[i + 1].y - routePoints[i].y);
         }
 
-        // Render SVG elements in #mapRouteLayer
-        renderRouteSvg(routePoints, lot, block, section);
-
-        // Update Route Information HUD Card
-        updateRouteInfoCard(routePoints, totalMapDist, lot, block, section, accessNode);
-
-        // Hide location summary HUD while wayfinding route card is active so they don't overlap
-        if (mapLocationSummaryCard) {
-            mapLocationSummaryCard.style.display = 'none';
-        }
+        // Generate Batch 7 Human-Readable Guidance Steps
+        const guidanceSteps = buildRouteGuidance(routePoints, lot, block, section, accessNode);
 
         // Cache active route state
         state.activeRoute = {
@@ -3412,8 +3534,24 @@ if (count <= 4 && !usedZones.has('e')) {
             block,
             section,
             points: routePoints,
-            totalDist: totalMapDist
+            steps: guidanceSteps,
+            totalDist: totalMapDist,
+            activeStepIndex: 0
         };
+
+        // Render SVG elements in #mapRouteLayer with interactive waypoint markers
+        renderRouteSvg(routePoints, lot, block, section, guidanceSteps);
+
+        // Update Route Information HUD Card with structured step list
+        updateRouteInfoCard(routePoints, totalMapDist, lot, block, section, accessNode, guidanceSteps);
+
+        // Activate step 1 initially without overriding the full route framing
+        setActiveRouteStep(0, false);
+
+        // Hide location summary HUD while wayfinding route card is active so they don't overlap
+        if (mapLocationSummaryCard) {
+            mapLocationSummaryCard.style.display = 'none';
+        }
 
         if (autoFit) {
             fitRouteToViewport(routePoints);
@@ -3421,9 +3559,10 @@ if (count <= 4 && !usedZones.has('e')) {
     }
 
     /**
-     * Render Route SVG in #mapRouteLayer
+     * Render Route SVG in #mapRouteLayer (Batch 6 & Batch 7)
+     * Renders path line, glow underlay, start/destination markers, and interactive intermediate waypoints.
      */
-    function renderRouteSvg(points, lot, block, section) {
+    function renderRouteSvg(points, lot, block, section, guidanceSteps) {
         if (!mapRouteLayer) {
             ensureSvgLayers();
         }
@@ -3457,24 +3596,75 @@ if (count <= 4 && !usedZones.has('e')) {
         mainLine.setAttribute('marker-end', 'url(#routeArrowMarker)');
         routeGroup.appendChild(mainLine);
 
-        // 3. Start Marker (Main Gate)
+        // 3. Batch 7: Intermediate Waypoint Markers
+        if (guidanceSteps && guidanceSteps.length > 2) {
+            for (let idx = 1; idx < guidanceSteps.length - 1; idx++) {
+                const step = guidanceSteps[idx];
+                const wpG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                wpG.setAttribute('class', 'svg-route-waypoint');
+                wpG.setAttribute('data-step-index', String(idx));
+                wpG.setAttribute('transform', `translate(${step.point.x}, ${step.point.y})`);
+                wpG.setAttribute('tabindex', '0');
+                wpG.setAttribute('role', 'button');
+                wpG.setAttribute('aria-label', `Route Step ${idx + 1}: ${step.title}`);
+                wpG.innerHTML = `
+                    <circle class="svg-waypoint-hitbox" cx="0" cy="0" r="14" />
+                    <circle class="svg-waypoint-circle" cx="0" cy="0" r="5.5" />
+                    <circle class="svg-waypoint-core" cx="0" cy="0" r="2.5" />
+                `;
+                wpG.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    setActiveRouteStep(idx, true);
+                });
+                wpG.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setActiveRouteStep(idx, true);
+                    }
+                });
+                routeGroup.appendChild(wpG);
+            }
+        }
+
+        // 4. Start Marker (Main Gate)
         const startPt = points[0];
         const startG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         startG.setAttribute('class', 'route-marker-start');
         startG.setAttribute('transform', `translate(${startPt.x}, ${startPt.y})`);
+        startG.setAttribute('tabindex', '0');
+        startG.setAttribute('role', 'button');
+        startG.setAttribute('aria-label', 'Route Step 1: Main Gate Portal');
+        startG.style.cursor = 'pointer';
         startG.innerHTML = `
             <circle class="route-marker-pulse start-pulse" cx="0" cy="0" r="16" />
             <circle class="route-marker-dot start-dot" cx="0" cy="0" r="7" />
             <rect class="route-badge-bg start-badge-bg" x="-52" y="12" width="104" height="20" rx="10" />
             <text class="route-badge-text" x="0" y="25.5" text-anchor="middle">● START Main Gate</text>
         `;
+        startG.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setActiveRouteStep(0, true);
+        });
+        startG.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                setActiveRouteStep(0, true);
+            }
+        });
         routeGroup.appendChild(startG);
 
-        // 4. Destination Marker (Exact Selected Lot)
+        // 5. Destination Marker (Exact Selected Lot)
         const destPt = points[points.length - 1];
+        const destIdx = (guidanceSteps ? guidanceSteps.length - 1 : points.length - 1);
         const destG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         destG.setAttribute('class', 'route-marker-dest');
         destG.setAttribute('transform', `translate(${destPt.x}, ${destPt.y})`);
+        destG.setAttribute('tabindex', '0');
+        destG.setAttribute('role', 'button');
+        destG.setAttribute('aria-label', `Route Step ${destIdx + 1}: Destination Lot ${lot.lot_number}`);
+        destG.style.cursor = 'pointer';
         const badgeLabel = `● DESTINATION Lot ${escapeHtml(lot.lot_number)}`;
         const badgeW = Math.max(110, badgeLabel.length * 6.5 + 20);
         destG.innerHTML = `
@@ -3483,15 +3673,115 @@ if (count <= 4 && !usedZones.has('e')) {
             <rect class="route-badge-bg dest-badge-bg" x="${-badgeW / 2}" y="-32" width="${badgeW}" height="22" rx="11" />
             <text class="route-badge-text" x="0" y="-17.5" text-anchor="middle">${badgeLabel}</text>
         `;
+        destG.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setActiveRouteStep(destIdx, true);
+        });
+        destG.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                setActiveRouteStep(destIdx, true);
+            }
+        });
         routeGroup.appendChild(destG);
 
         mapRouteLayer.appendChild(routeGroup);
     }
 
     /**
-     * Update Route Information Card UI
+     * BATCH 7: Set Active Route Step
+     * Emphasizes waypoint in list and on SVG map, updates progress indicator, and optionally focuses camera.
+     * @param {number} stepIndex - Zero-based index of the step to activate
+     * @param {boolean} shouldFocusCamera - Whether to animate camera to waypoint
      */
-    function updateRouteInfoCard(points, totalDist, lot, block, section, accessNode) {
+    function setActiveRouteStep(stepIndex, shouldFocusCamera = true) {
+        if (!state.activeRoute || !state.activeRoute.steps || state.activeRoute.steps.length === 0) return;
+
+        const steps = state.activeRoute.steps;
+        const clampedIndex = Math.max(0, Math.min(steps.length - 1, stepIndex));
+        state.activeRoute.activeStepIndex = clampedIndex;
+        const activeStep = steps[clampedIndex];
+
+        // 1. Update Progress Header and Counter
+        if (routeStepProgress) {
+            routeStepProgress.textContent = `Step ${clampedIndex + 1} of ${steps.length}`;
+        }
+        if (routeStepCounter) {
+            routeStepCounter.textContent = `${clampedIndex + 1} / ${steps.length}`;
+        }
+
+        // 2. Update Prev / Next Button States
+        if (btnPrevStep) {
+            btnPrevStep.disabled = (clampedIndex <= 0);
+        }
+        if (btnNextStep) {
+            btnNextStep.disabled = (clampedIndex >= steps.length - 1);
+        }
+
+        // 3. Update Step List Selection
+        if (routeWaypointsList) {
+            const items = routeWaypointsList.querySelectorAll('.route-waypoint-item');
+            items.forEach((item, idx) => {
+                const isActive = (idx === clampedIndex);
+                item.classList.toggle('is-active', isActive);
+                item.setAttribute('aria-current', isActive ? 'step' : 'false');
+                if (isActive) {
+                    item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            });
+        }
+
+        // 4. Update SVG Active Reticle and Node Highlighting
+        if (mapRouteLayer) {
+            const existingReticle = mapRouteLayer.querySelector('.svg-active-waypoint-reticle');
+            if (existingReticle) {
+                existingReticle.remove();
+            }
+
+            const wpNodes = mapRouteLayer.querySelectorAll('.svg-route-waypoint');
+            wpNodes.forEach(wp => {
+                const idx = parseInt(wp.getAttribute('data-step-index'), 10);
+                wp.classList.toggle('is-active', idx === clampedIndex);
+            });
+
+            if (activeStep && activeStep.point) {
+                const reticleG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                reticleG.setAttribute('class', 'svg-active-waypoint-reticle');
+                reticleG.setAttribute('transform', `translate(${activeStep.point.x}, ${activeStep.point.y})`);
+                reticleG.innerHTML = `
+                    <circle class="reticle-ring-pulse" cx="0" cy="0" r="14" />
+                    <circle class="reticle-ring-inner" cx="0" cy="0" r="8" />
+                    <circle class="reticle-center-dot" cx="0" cy="0" r="3.5" />
+                `;
+                mapRouteLayer.appendChild(reticleG);
+            }
+        }
+
+        // 5. Smooth Camera Centering on Waypoint
+        if (shouldFocusCamera && activeStep && activeStep.point) {
+            focusRouteWaypoint(activeStep.point);
+        }
+    }
+
+    /**
+     * BATCH 7: Focus Camera Viewport on Route Waypoint
+     * Zooms and centers around a waypoint while preserving road and surrounding context.
+     * @param {Object} point - { x, y } coordinates
+     */
+    function focusRouteWaypoint(point) {
+        if (!point) return;
+        const viewW = 600;
+        const viewH = 375;
+        const targetX = Math.max(0, Math.min(state.baseViewBox.width - viewW, point.x - (viewW / 2)));
+        const targetY = Math.max(0, Math.min(state.baseViewBox.height - viewH, point.y - (viewH / 2)));
+        animateViewBox(targetX, targetY, viewW, viewH, 320);
+    }
+
+    /**
+     * Update Route Information Card UI (Batch 6 & Batch 7)
+     */
+    function updateRouteInfoCard(points, totalDist, lot, block, section, accessNode, guidanceSteps) {
         if (!mapRouteInfoCard) return;
 
         if (routeInfoTitle) routeInfoTitle.textContent = 'Route Navigation';
@@ -3506,33 +3796,61 @@ if (count <= 4 && !usedZones.has('e')) {
             routeMetricVia.textContent = `Central Spine › ${accessNode?.label || 'Access Way'}`;
         }
 
+        const steps = guidanceSteps || buildRouteGuidance(points, lot, block, section, accessNode);
+
+        if (routeStepProgress) {
+            routeStepProgress.textContent = `Step 1 of ${steps.length}`;
+        }
+        if (routeStepCounter) {
+            routeStepCounter.textContent = `1 / ${steps.length}`;
+        }
+        if (btnPrevStep) {
+            btnPrevStep.disabled = true;
+        }
+        if (btnNextStep) {
+            btnNextStep.disabled = (steps.length <= 1);
+        }
+
         if (routeWaypointsList) {
             routeWaypointsList.innerHTML = '';
-            points.forEach((pt, idx) => {
+            steps.forEach((step, idx) => {
                 const li = document.createElement('li');
-                li.className = 'route-waypoint-item';
-                
-                let iconClass = 'fa-circle-dot';
-                let stepTitle = pt.label || `Waypoint ${idx + 1}`;
-                if (pt.type === 'start') {
-                    iconClass = 'fa-door-open';
-                    stepTitle = 'Main Gate (Entry)';
-                } else if (pt.type === 'destination') {
-                    iconClass = 'fa-location-dot';
-                    stepTitle = `Lot ${lot.lot_number} (Destination)`;
-                } else if (pt.type === 'walkway') {
-                    iconClass = 'fa-person-walking';
-                } else {
-                    iconClass = 'fa-road';
-                }
+                li.className = `route-waypoint-item ${idx === 0 ? 'is-active' : ''}`;
+                li.setAttribute('data-step-index', String(idx));
+                li.setAttribute('tabindex', '0');
+                li.setAttribute('role', 'button');
+                li.setAttribute('aria-label', `Route step ${idx + 1}: ${step.title}. ${step.instruction}`);
+                li.setAttribute('aria-current', idx === 0 ? 'step' : 'false');
+
+                const landmarkBadge = step.landmark 
+                    ? `<span class="waypoint-landmark-badge"><i class="fas fa-landmark"></i> ${escapeHtml(step.landmark)}</span>`
+                    : '';
 
                 li.innerHTML = `
                     <div class="waypoint-step-num">${idx + 1}</div>
-                    <i class="fas ${iconClass} waypoint-icon"></i>
+                    <i class="fas ${step.icon} waypoint-icon"></i>
                     <div class="waypoint-details">
-                        <span class="waypoint-title">${escapeHtml(stepTitle)}</span>
+                        <div class="waypoint-title-row">
+                            <strong class="waypoint-title">${escapeHtml(step.title)}</strong>
+                            ${landmarkBadge}
+                        </div>
+                        <span class="waypoint-instruction">${escapeHtml(step.instruction)}</span>
                     </div>
                 `;
+
+                li.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    setActiveRouteStep(idx, true);
+                });
+
+                li.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setActiveRouteStep(idx, true);
+                    }
+                });
+
                 routeWaypointsList.appendChild(li);
             });
         }
@@ -3605,7 +3923,7 @@ if (count <= 4 && !usedZones.has('e')) {
     }
 
     /**
-     * Clear / Reset Route
+     * Clear / Reset Route (Batch 6 & Batch 7)
      */
     function clearRoute() {
         if (mapRouteLayer) {
@@ -3616,6 +3934,12 @@ if (count <= 4 && !usedZones.has('e')) {
         }
         if (mapLocationSummaryCard) {
             mapLocationSummaryCard.style.display = 'none';
+        }
+        if (btnPrevStep) {
+            btnPrevStep.disabled = true;
+        }
+        if (btnNextStep) {
+            btnNextStep.disabled = true;
         }
         state.activeRoute = null;
     }

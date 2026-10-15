@@ -364,8 +364,20 @@
                                     </div>
 
                                     <div class="route-waypoints-section">
-                                        <span class="waypoints-label"><i class="fas fa-list-check"></i> Stops / Waypoints:</span>
-                                        <ol class="route-waypoints-list" id="routeWaypointsList">
+                                        <div class="route-waypoints-header">
+                                            <span class="waypoints-label"><i class="fas fa-list-check"></i> Stops / Waypoints:</span>
+                                            <span class="route-step-progress" id="routeStepProgress">Step 1 of —</span>
+                                        </div>
+                                        <div class="route-step-nav-bar" id="routeStepNavBar">
+                                            <button type="button" class="btn btn-xs btn-route-step-nav" id="btnPrevStep" title="Previous route step" aria-label="Previous route step" disabled>
+                                                <i class="fas fa-chevron-left"></i> Prev
+                                            </button>
+                                            <span class="route-step-counter" id="routeStepCounter">— / —</span>
+                                            <button type="button" class="btn btn-xs btn-route-step-nav" id="btnNextStep" title="Next route step" aria-label="Next route step">
+                                                Next <i class="fas fa-chevron-right"></i>
+                                            </button>
+                                        </div>
+                                        <ol class="route-waypoints-list" id="routeWaypointsList" role="list" aria-label="Step-by-step route directions">
                                             <!-- Dynamically populated -->
                                         </ol>
                                     </div>
