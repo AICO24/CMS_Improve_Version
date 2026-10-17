@@ -5560,6 +5560,42 @@ body.dark-mode .btn-wayfinding-slip:hover {
     pointer-events: none;
 }
 
+/* Surrounding Context & Neighbors (Batch 13 OSM Verification) */
+.mp-context-label {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    fill: rgba(255, 255, 255, 0.45);
+    text-anchor: middle;
+    pointer-events: none;
+}
+.mp-context-sublabel {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 7px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    fill: rgba(255, 255, 255, 0.35);
+    text-anchor: middle;
+    pointer-events: none;
+}
+[data-theme="dark"] .mp-context-label {
+    fill: rgba(148, 163, 184, 0.5);
+}
+[data-theme="dark"] .mp-context-sublabel {
+    fill: rgba(148, 163, 184, 0.35);
+}
+.mp-residential-cutout {
+    fill: rgba(15, 23, 42, 0.12);
+    stroke: rgba(255, 255, 255, 0.08);
+    stroke-dasharray: 4 4;
+    pointer-events: none;
+}
+[data-theme="dark"] .mp-residential-cutout {
+    fill: rgba(0, 0, 0, 0.25);
+    stroke: rgba(255, 255, 255, 0.04);
+}
+
 /* North boundary caption */
 .mp-north-label {
     font-family: var(--font-sans, 'Inter', sans-serif);

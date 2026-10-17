@@ -1449,6 +1449,12 @@
             marker.innerHTML = '<path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#0284c7" class="route-arrow-marker" />';
             defs.appendChild(marker);
         }
+        if (!document.getElementById('cemeteryParcelClip')) {
+            const cp = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+            cp.setAttribute('id', 'cemeteryParcelClip');
+            cp.innerHTML = '<polygon points="1168.9,900.0 956.7,863.5 952.1,610.6 1001.0,608.1 963.7,432.3 637.0,531.8 617.6,493.5 576.8,444.4 689.6,282.2 766.2,264.0 808.5,194.0 864.5,162.8 975.8,147.7 1022.1,146.6 1022.7,403.1 1033.7,400.5 1052.4,491.2 1058.9,697.8 1102.3,690.7"/>';
+            defs.appendChild(cp);
+        }
     }
 
     /**
@@ -1553,8 +1559,10 @@ const pillSvg = (cx, cy, text, icon, variant) => {
         `</g>`;
 };
 
-// Spatial Site Plan Dimensions (1600 x 1000 Canvas)
-const PROP = { x: 36, y: 30, w: 1528, h: 875 }; // Property wall bounds (bottom = 905)
+// Verified OSM Relation 16828676 Site Perimeter Coordinates (Batch 13)
+// 19 Unique Perimeter Vertices projected into 1600x1000 Canvas at 3.4937 px/m
+const CEMETERY_POLYGON_POINTS = "1168.9,900.0 956.7,863.5 952.1,610.6 1001.0,608.1 963.7,432.3 637.0,531.8 617.6,493.5 576.8,444.4 689.6,282.2 766.2,264.0 808.5,194.0 864.5,162.8 975.8,147.7 1022.1,146.6 1022.7,403.1 1033.7,400.5 1052.4,491.2 1058.9,697.8 1102.3,690.7";
+const CEMETERY_INNER_POLYGON_POINTS = "1163.8,895.6 960.1,860.5 955.7,613.9 1005.3,611.4 966.3,427.8 638.8,527.6 620.5,491.6 581.2,444.2 691.8,285.3 768.4,267.1 811.1,196.6 865.6,166.1 976.0,151.2 1018.6,150.2 1019.2,407.5 1031.0,404.8 1048.9,491.6 1055.5,701.9 1099.8,694.7";
 
 // Road Network Reference Coordinates
 const RD = {
@@ -1570,21 +1578,26 @@ const RD = {
 };
 
 // ==========================================
-// LAYER 0: Canvas Background, Frontage Road & Continuous Property Lawn
+// LAYER 0: Canvas Background, Surrounding Context & Continuous Property Lawn
 // ==========================================
 mk('rect', { x: 0, y: 0, width: canvasW, height: canvasH, class: 'mp-surround' }, mapGroundLayer);
 mk('rect', { x: 0, y: 0, width: canvasW, height: canvasH, fill: 'url(#mpGrassSpeckle)', class: 'mp-texture' }, mapGroundLayer);
 
-// Outer Perimeter Landscaping (Outside Wall)
-const outerFringe = mk('g', { class: 'mp-trees mp-trees--outer', 'aria-hidden': 'true' }, mapGroundLayer);
-outerFringe.innerHTML =
-    treeLine(10, 10, 1590, 10, 20, 8, 11, 2) +
-    treeLine(12, 35, 12, 890, 20, 8, 11, 1.5) +
-    treeLine(1588, 35, 1588, 890, 20, 8, 11, 1.5) +
-    treeLine(10, 988, 620, 988, 22, 8, 11, 1.5) +
-    treeLine(980, 988, 1590, 988, 22, 8, 11, 1.5);
+// Surrounding Geographic Context (OSM Relations & Neighborhoods)
+const surroundingContext = mk('g', { class: 'mp-surrounding-context', 'aria-hidden': 'true' }, mapGroundLayer);
+surroundingContext.innerHTML = `
+    <!-- Southwest Residential Cutout (Outside Cemetery Property) -->
+    <rect x="50" y="620" width="880" height="280" rx="8" class="mp-residential-cutout"/>
+    <text x="490" y="740" class="mp-context-label">BARANGAY TONSUYA RESIDENTIAL AREA</text>
+    <text x="490" y="756" class="mp-context-sublabel">Residential Properties along Prudencio St. (Outside Boundary)</text>
 
-// P. Aquino Avenue (Letre Road) Frontage
+    <!-- Eastern Adjacent Memorial Park (OSM Relation 16828677) -->
+    <rect x="1185" y="140" width="375" height="760" rx="8" class="mp-residential-cutout"/>
+    <text x="1370" y="520" class="mp-context-label">Adjacent: Our Lady of Lourdes Eternal Park</text>
+    <text x="1370" y="536" class="mp-context-sublabel">OSM Relation 16828677 (Dagat-dagatan Memorial Park)</text>
+`;
+
+// P. Aquino Avenue (Letre Road) Frontage along southern edge (Bearing ~99.5° WNW to ESE)
 const frontage = mk('g', { class: 'svg-external-road-group mp-frontage' }, mapGroundLayer);
 let crosswalkBars = '';
 for (let cy = 918; cy < 962; cy += 6) {
@@ -1604,41 +1617,97 @@ frontage.innerHTML = `
 `;
 
 // North Boundary Caption
-const northLabel = mk('text', { x: 800, y: 20, class: 'mp-north-label' }, mapGroundLayer);
-northLabel.textContent = 'NORTH BOUNDARY';
+const northLabel = mk('text', { x: 890, y: 132, class: 'mp-north-label' }, mapGroundLayer);
+northLabel.textContent = 'NORTH BOUNDARY (MALABON/TONSUYA)';
 
-// One Continuous Cemetery Property Lawn
-mk('rect', { x: PROP.x, y: PROP.y, width: PROP.w, height: PROP.h, rx: 16, class: 'svg-cemetery-ground mp-property' }, mapGroundLayer);
-mk('rect', { x: PROP.x, y: PROP.y, width: PROP.w, height: PROP.h, rx: 16, fill: 'url(#mpGrassSpeckle)', class: 'mp-texture' }, mapGroundLayer);
+// One Continuous Verified Cemetery Property Lawn (19-Vertex Polygon, OSM Relation 16828676)
+mk('polygon', { points: CEMETERY_POLYGON_POINTS, class: 'svg-cemetery-ground mp-property' }, mapGroundLayer);
+mk('polygon', { points: CEMETERY_POLYGON_POINTS, fill: 'url(#mpGrassSpeckle)', class: 'mp-texture' }, mapGroundLayer);
 
 // ==========================================
-// LAYER: Perimeter Wall, Posts & Green Buffer
+// LAYER: Perimeter Wall, Posts & Green Buffer (19-Vertex Polygon)
 // ==========================================
-mk('rect', { x: PROP.x, y: PROP.y, width: PROP.w, height: PROP.h, rx: 16, class: 'mp-wall' }, mapBoundaryLayer);
-mk('rect', { x: PROP.x + 3.5, y: PROP.y + 3.5, width: PROP.w - 7, height: PROP.h - 7, rx: 13, class: 'mp-wall-inner' }, mapBoundaryLayer);
+mk('polygon', { points: CEMETERY_POLYGON_POINTS, class: 'mp-wall' }, mapBoundaryLayer);
+mk('polygon', { points: CEMETERY_INNER_POLYGON_POINTS, class: 'mp-wall-inner' }, mapBoundaryLayer);
 
-let wallPosts = '';
-for (let px = PROP.x + 40; px < PROP.x + PROP.w - 20; px += 56) {
-    wallPosts += `<rect x="${px - 2.5}" y="${PROP.y - 2.5}" width="5" height="5" class="mp-wall-post"/>`;
-    if (px < 750 || px > 850) {
-        wallPosts += `<rect x="${px - 2.5}" y="${PROP.y + PROP.h - 2.5}" width="5" height="5" class="mp-wall-post"/>`;
-    }
-}
-for (let py = PROP.y + 40; py < PROP.y + PROP.h - 20; py += 56) {
-    wallPosts += `<rect x="${PROP.x - 2.5}" y="${py - 2.5}" width="5" height="5" class="mp-wall-post"/>`;
-    wallPosts += `<rect x="${PROP.x + PROP.w - 2.5}" y="${py - 2.5}" width="5" height="5" class="mp-wall-post"/>`;
-}
+// Wall Posts placed along verified perimeter edges
 const postG = mk('g', { class: 'mp-wall-posts', 'aria-hidden': 'true' }, mapBoundaryLayer);
-postG.innerHTML = wallPosts;
+postG.innerHTML = `
+    <rect x="1166.4" y="897.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1007.3" y="870.1" width="5" height="5" class="mp-wall-post"/>
+    <rect x="954.2" y="861.0" width="5" height="5" class="mp-wall-post"/>
+    <rect x="953.3" y="810.4" width="5" height="5" class="mp-wall-post"/>
+    <rect x="952.4" y="759.8" width="5" height="5" class="mp-wall-post"/>
+    <rect x="951.5" y="709.3" width="5" height="5" class="mp-wall-post"/>
+    <rect x="950.6" y="658.7" width="5" height="5" class="mp-wall-post"/>
+    <rect x="949.6" y="608.1" width="5" height="5" class="mp-wall-post"/>
+    <rect x="974.0" y="606.8" width="5" height="5" class="mp-wall-post"/>
+    <rect x="998.5" y="605.6" width="5" height="5" class="mp-wall-post"/>
+    <rect x="989.2" y="561.7" width="5" height="5" class="mp-wall-post"/>
+    <rect x="979.9" y="517.8" width="5" height="5" class="mp-wall-post"/>
+    <rect x="970.5" y="473.8" width="5" height="5" class="mp-wall-post"/>
+    <rect x="961.2" y="429.8" width="5" height="5" class="mp-wall-post"/>
+    <rect x="880.8" y="454.4" width="5" height="5" class="mp-wall-post"/>
+    <rect x="797.9" y="479.9" width="5" height="5" class="mp-wall-post"/>
+    <rect x="717.6" y="504.6" width="5" height="5" class="mp-wall-post"/>
+    <rect x="634.5" y="529.3" width="5" height="5" class="mp-wall-post"/>
+    <rect x="615.1" y="491.0" width="5" height="5" class="mp-wall-post"/>
+    <rect x="574.3" y="441.9" width="5" height="5" class="mp-wall-post"/>
+    <rect x="602.5" y="401.4" width="5" height="5" class="mp-wall-post"/>
+    <rect x="630.7" y="360.8" width="5" height="5" class="mp-wall-post"/>
+    <rect x="658.9" y="320.3" width="5" height="5" class="mp-wall-post"/>
+    <rect x="687.1" y="279.7" width="5" height="5" class="mp-wall-post"/>
+    <rect x="725.4" y="270.6" width="5" height="5" class="mp-wall-post"/>
+    <rect x="763.7" y="261.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="784.8" y="226.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="806.0" y="191.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="834.0" y="175.9" width="5" height="5" class="mp-wall-post"/>
+    <rect x="862.0" y="160.3" width="5" height="5" class="mp-wall-post"/>
+    <rect x="917.6" y="152.7" width="5" height="5" class="mp-wall-post"/>
+    <rect x="973.3" y="145.2" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1019.6" y="144.1" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1019.8" y="195.4" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1019.9" y="246.7" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1020.0" y="297.9" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1020.1" y="349.2" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1020.2" y="400.6" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1031.2" y="398.0" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1040.6" y="443.3" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1049.9" y="488.7" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1051.5" y="540.3" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1053.1" y="592.0" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1054.8" y="643.6" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1056.4" y="695.3" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1078.1" y="691.8" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1099.8" y="688.2" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1116.5" y="740.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1133.1" y="792.8" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1149.8" y="845.2" width="5" height="5" class="mp-wall-post"/>
+`;
 
-// Dense Perimeter Tree Buffer (lining the inside of the wall)
+// Dense Perimeter Tree Buffer (lining the inside of the verified 19-vertex wall)
 const perimeterTrees = mk('g', { class: 'svg-landscaping-group mp-trees', 'aria-hidden': 'true' }, mapBoundaryLayer);
 perimeterTrees.innerHTML =
-    treeLine(54, 52, 1546, 52, 21, 9, 12, 1.5) +
-    treeLine(56, 75, 56, 860, 21, 9, 12, 1.5) +
-    treeLine(1544, 75, 1544, 860, 21, 9, 12, 1.5) +
-    treeLine(52, 888, 740, 888, 16, 6, 7.5, 0.8) +
-    treeLine(860, 888, 1548, 888, 16, 6, 7.5, 0.8);
+    treeLine(1168.9, 900.0, 1125, 894, 20, 6, 8, 1.0) +
+    treeLine(1060, 882, 956.7, 863.5, 20, 6, 8, 1.0) +
+    treeLine(956.7, 863.5, 952.1, 610.6, 22, 6.5, 9, 1.2) +
+    treeLine(952.1, 610.6, 1001.0, 608.1, 22, 6.5, 9, 1.2) +
+    treeLine(1001.0, 608.1, 963.7, 432.3, 22, 6.5, 9, 1.2) +
+    treeLine(963.7, 432.3, 637.0, 531.8, 22, 6.5, 9, 1.2) +
+    treeLine(637.0, 531.8, 617.6, 493.5, 20, 6.5, 8.5, 1.0) +
+    treeLine(617.6, 493.5, 576.8, 444.4, 20, 6.5, 8.5, 1.0) +
+    treeLine(576.8, 444.4, 689.6, 282.2, 22, 6.5, 9, 1.2) +
+    treeLine(689.6, 282.2, 766.2, 264.0, 22, 6.5, 9, 1.2) +
+    treeLine(766.2, 264.0, 808.5, 194.0, 22, 6.5, 9, 1.2) +
+    treeLine(808.5, 194.0, 864.5, 162.8, 22, 6.5, 9, 1.2) +
+    treeLine(864.5, 162.8, 975.8, 147.7, 22, 6.5, 9, 1.2) +
+    treeLine(975.8, 147.7, 1022.1, 146.6, 20, 6, 8, 1.0) +
+    treeLine(1022.1, 146.6, 1022.7, 403.1, 22, 6.5, 9, 1.2) +
+    treeLine(1022.7, 403.1, 1033.7, 400.5, 18, 5.5, 7, 0.8) +
+    treeLine(1033.7, 400.5, 1052.4, 491.2, 20, 6, 8.5, 1.0) +
+    treeLine(1052.4, 491.2, 1058.9, 697.8, 22, 6.5, 9, 1.2) +
+    treeLine(1058.9, 697.8, 1102.3, 690.7, 20, 6, 8, 1.0) +
+    treeLine(1102.3, 690.7, 1168.9, 900.0, 22, 6.5, 9, 1.2);
 
 // ==========================================
 // LAYER 1: ROAD-FIRST GEOMETRY (The Structural Skeleton of the Map)
@@ -6432,8 +6501,13 @@ if (count <= 4 && !usedZones.has('e')) {
         const cemName = cemetery.cemetery_name || 'Cemetery Facility';
         const address = cemetery.address || 'Municipal Cemetery Grounds';
         const geo = (cemetery.map_config && cemetery.map_config.geo) ? cemetery.map_config.geo : null;
-        const lat = geo ? geo.latitude : null;
-        const lng = geo ? geo.longitude : null;
+        // Batch 13: Verified OSM Relation 16828676 Centroid (14.6609601, 120.9580702) replaces outdated 14.6633, 120.9608
+        let lat = geo ? Number(geo.latitude) : null;
+        let lng = geo ? Number(geo.longitude) : null;
+        if (!lat || !lng || (Math.abs(lat - 14.6633) < 0.001 && Math.abs(lng - 120.9608) < 0.001)) {
+            lat = 14.6609601;
+            lng = 120.9580702;
+        }
         const accessCue = (geo && geo.access_cue) || 'Main Visitor Entrance & Parking Gate';
 
         if (geoHudFacilityName) {
