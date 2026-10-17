@@ -568,7 +568,7 @@
         if (name.includes('jose') || name.includes('section c') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('c1')))) {
             return { x: 700, y: 288, width: 66, height: 62 };
         }
-        if (name.includes('columbarium') || name.includes('ossuary') || name.includes('section d') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('d1')))) {
+        if (name.includes('columbarium') || name.includes('ossuary') || name.includes('section d') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('d1') || (b.block_name || '').toLowerCase().includes('reloc')))) {
             return { x: 825, y: 190, width: 92, height: 125 };
         }
         if (name.includes('reserve') || name.includes('section e') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('e1')))) {
@@ -674,14 +674,14 @@
             }
         }
 
-        // Section D (Columbarium & Ossuary Sanctuary: single block D1):
-        if (name.includes('columbarium') || name.includes('ossuary') || name.includes('section d') || bName.includes('d1')) {
+        // Section D (Columbarium & Ossuary Sanctuary: single block D1 / Block Reloc):
+        if (name.includes('columbarium') || name.includes('ossuary') || name.includes('section d') || bName.includes('d1') || bName.includes('reloc')) {
             return {
                 x: 7,
                 y: 14,
                 width: 78,
                 height: 100,
-                grid: { columns: 5, rows: Math.ceil((blk.total_lots || 10) / 5), gap_x: 4, gap_y: 4 }
+                grid: { columns: 7, rows: 5, gap_x: 1.0, gap_y: 1.5 }
             };
         }
 
@@ -1913,7 +1913,7 @@
                             name: blk.block_name,
                             rawData: blk,
                             parent: sec,
-                            config: blkCfg || { x: blkX - secX, y: blkY - secY, width: blkW, height: blkH, grid: { columns: 5 } }
+                            config: blkCfg || { x: blkX - secX, y: blkY - secY, width: blkW, height: blkH, grid: defBlkBounds?.grid || { columns: 7, rows: 5, gap_x: 1.0, gap_y: 1.5 } }
                         });
                     });
 
@@ -1997,9 +1997,12 @@
         const isEditingBlock = state.selectedEntity?.type === 'block' && state.selectedEntity.id === blk.block_id;
         const gridConfig = isEditingBlock ? (state.selectedEntity.config?.grid || {}) : (blk.map_config?.grid || {});
 
-        const cols = parseInt(gridConfig.columns, 10) || 5;
-        const gapX = parseFloat(gridConfig.gap_x) || 14;
-        const gapY = parseFloat(gridConfig.gap_y) || 14;
+        const defBounds = calculateDefaultBlockBounds(blk, state.currentLayout?.sections?.find(s => s.section_id === blk.section_id));
+        const defGrid = defBounds?.grid || {};
+
+        const cols = parseInt(gridConfig.columns, 10) || defGrid.columns || 5;
+        const gapX = parseFloat(gridConfig.gap_x) || defGrid.gap_x || 14;
+        const gapY = parseFloat(gridConfig.gap_y) || defGrid.gap_y || 14;
         const rows = Math.ceil(lots.length / cols);
 
         const tileW = (gridW - ((cols - 1) * gapX)) / cols;

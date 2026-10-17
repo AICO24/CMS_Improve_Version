@@ -2404,8 +2404,8 @@ sections.forEach((section, index) => {
 
         if (lots.length > 0) {
             const n = lots.length;
-            let gapX = isColumbarium ? 4.5 : (n > 25 ? 0.4 : 1.5);
-            let gapY = isColumbarium ? 4.5 : (n > 25 ? 0.4 : 1.5);
+            let gapX = isColumbarium ? 1.0 : (n > 25 ? 0.4 : 1.5);
+            let gapY = isColumbarium ? 1.5 : (n > 25 ? 0.4 : 1.5);
             let doubleRowAisle = 0;
             let cols = 0;
 
@@ -2423,7 +2423,11 @@ sections.forEach((section, index) => {
 
             if (!cols || cols < 1) {
                 if (isColumbarium) {
-                    cols = Math.max(5, Math.min(11, Math.round(Math.sqrt(n * (lotAreaW / lotAreaH)))));
+                    // Match vertical tier columbarium elevation (5 tiers for ~34 vaults)
+                    if (n <= 12) cols = 4;
+                    else if (n <= 25) cols = 5;
+                    else if (n <= 40) cols = 7;
+                    else cols = 8;
                 } else if (n > 25) {
                     // Dense ground block (e.g. Block A1: 50 lots -> 10 cols x 5 rows)
                     cols = 10;
@@ -2450,8 +2454,10 @@ sections.forEach((section, index) => {
             let tileH = maxH;
 
             if (isColumbarium) {
-                tileW = Math.max(16, Math.min(maxW, 36));
-                tileH = Math.max(14, Math.min(maxH, 24));
+                // Columbarium vertical vault plates:
+                // Cap dimensions so vaults have architectural proportion
+                tileW = Math.min(maxW, 9.8);
+                tileH = Math.min(maxH, 13.5);
             } else if (n <= 5) {
                 // Ground burial plots in small blocks (A2, B1, B2, C1, C2)
                 // Cap tile size so they look like elegant plots with breathing room, not massive cards
@@ -2543,7 +2549,7 @@ sections.forEach((section, index) => {
                 lotRect.setAttribute('y', f1(lotY));
                 lotRect.setAttribute('width', f1(curTileW));
                 lotRect.setAttribute('height', f1(curTileH));
-                lotRect.setAttribute('rx', isColumbarium ? '3' : '2');
+                lotRect.setAttribute('rx', isColumbarium ? '1.5' : '2');
                 lotRect.setAttribute('class', `svg-lot-rect mp-lot-plot${isColumbarium ? ' niche-vault-rect' : ''}`);
                 lotGroup.appendChild(lotRect);
 
@@ -2562,13 +2568,14 @@ sections.forEach((section, index) => {
                 }
 
                 // Columbarium Niche Inner Plate
-                if (isColumbarium && curTileW >= 8 && curTileH >= 8) {
+                if (isColumbarium && curTileW >= 6 && curTileH >= 6) {
                     const innerPlate = document.createElementNS(SVG_NS, 'rect');
-                    innerPlate.setAttribute('x', f1(lotX + 2.5));
-                    innerPlate.setAttribute('y', f1(lotY + 2.5));
-                    innerPlate.setAttribute('width', f1(Math.max(0, curTileW - 5)));
-                    innerPlate.setAttribute('height', f1(Math.max(0, curTileH - 5)));
-                    innerPlate.setAttribute('rx', '2');
+                    const inset = 1.2;
+                    innerPlate.setAttribute('x', f1(lotX + inset));
+                    innerPlate.setAttribute('y', f1(lotY + inset));
+                    innerPlate.setAttribute('width', f1(Math.max(0, curTileW - (inset * 2))));
+                    innerPlate.setAttribute('height', f1(Math.max(0, curTileH - (inset * 2))));
+                    innerPlate.setAttribute('rx', '1');
                     innerPlate.setAttribute('class', 'niche-inner-plate');
                     lotGroup.appendChild(innerPlate);
                 }
