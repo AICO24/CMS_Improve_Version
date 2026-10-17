@@ -1100,8 +1100,27 @@
         // Switch to the validated cemetery (loads layout & resets filters)
         await switchCemetery(targetCem.cemetery_id);
 
-        // Case 5: If block_id is not provided, stop at cemetery overview
+        // Case 5: If block_id is not provided, stop at cemetery overview (or resolve direct lot_id if supplied)
         if (rawBlkId === null) {
+            if (rawLotId !== null) {
+                const directLotId = parsePositiveInt(rawLotId);
+                if (directLotId !== -1) {
+                    const secs = state.currentLayout?.sections || [];
+                    for (const s of secs) {
+                        for (const b of (s.blocks || [])) {
+                            const cached = state.blockLotsCache[b.block_id];
+                            if (cached) {
+                                const targetLot = cached.find(l => l.lot_id === directLotId);
+                                if (targetLot) {
+                                    resetAllFilters(false);
+                                    await navigateAndSelectLot(targetLot, b, s);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             return;
         }
 
@@ -3177,7 +3196,20 @@ if (count <= 4 && !usedZones.has('e')) {
             btnLotUnavailable.style.display = 'none';
 
             // Connect to authoritative booking-assistant.html deep link
-            btnBookThisLot.href = `booking-assistant.html?service=burial&lot_id=${lot.lot_id}&lot_number=${encodeURIComponent(lot.lot_number)}`;
+            const isColumbariumNiche = (function () {
+                const sName = (section?.section_name || '').toLowerCase();
+                const bName = (block?.block_name || '').toLowerCase();
+                const lType = (lot?.lot_type || '').toLowerCase();
+                return sName.includes('columbarium') || sName.includes('ossuary') ||
+                       bName.includes('columbarium') || bName.includes('ossuary') ||
+                       lType.includes('columbarium') || lType.includes('ossuary') || lType.includes('niche');
+            })();
+
+            if (isColumbariumNiche) {
+                btnBookThisLot.href = `booking-assistant.html?service=cremation&lot_id=${lot.lot_id}&lot_number=${encodeURIComponent(lot.lot_number)}`;
+            } else {
+                btnBookThisLot.href = `booking-assistant.html?service=burial&lot_id=${lot.lot_id}&lot_number=${encodeURIComponent(lot.lot_number)}`;
+            }
         } else {
             btnBookThisLot.style.display = 'none';
             btnLotUnavailable.style.display = 'inline-flex';
@@ -5868,19 +5900,29 @@ if (count <= 4 && !usedZones.has('e')) {
         // 3. Search In-Memory Cached Lots & Deceased
         const inspectLot = (lot, blockObj, sectionObj) => {
             const lotNum = (lot.lot_number || '').toLowerCase().trim();
+            const displayLabel = (lot._displayLabel || '').toLowerCase().trim();
             const occupant = (lot.occupant_name || lot._detailedInfo?.occupant_name || '').toLowerCase().trim();
+            const lotIdStr = String(lot.lot_id || '');
+            const cleanQ = normQuery.replace(/[^a-z0-9]/g, '');
 
-            // Match Lot Number
-            if (lotNum && lotNum.includes(normQuery)) {
+            // Match Lot Number, Display Label (e.g. V-1, L-5), or Lot ID
+            const cleanLotNum = lotNum.replace(/[^a-z0-9]/g, '');
+            const cleanDisplay = displayLabel.replace(/[^a-z0-9]/g, '');
+
+            const matchNum = lotNum && (lotNum.includes(normQuery) || (cleanQ && cleanLotNum.includes(cleanQ)));
+            const matchDisplay = displayLabel && (displayLabel.includes(normQuery) || (cleanQ && (cleanDisplay === cleanQ || cleanDisplay.includes(cleanQ))));
+            const matchId = (lotIdStr === normQuery);
+
+            if (matchNum || matchDisplay || matchId) {
                 const key = `lot_${lot.lot_id}`;
                 if (!seenKeys.has(key)) {
                     seenKeys.add(key);
-                    const isExact = (lotNum === normQuery);
-                    const startsWith = lotNum.startsWith(normQuery);
+                    const isExact = (lotNum === normQuery || displayLabel === normQuery || (cleanQ && cleanDisplay === cleanQ) || matchId);
+                    const startsWith = lotNum.startsWith(normQuery) || (displayLabel && displayLabel.startsWith(normQuery));
                     const score = isExact ? 300 : (startsWith ? 260 : 130);
                     results.push({
                         type: 'lot',
-                        title: lot.lot_number,
+                        title: lot._displayLabel || lot.lot_number,
                         meta: `${sectionObj?.section_name || ''} • ${blockObj?.block_name || ''}`,
                         status: lot.status,
                         price: lot.price,
