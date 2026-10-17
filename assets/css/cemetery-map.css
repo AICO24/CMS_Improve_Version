@@ -6059,6 +6059,30 @@ body.dark-mode .btn-wayfinding-slip:hover {
     opacity: 0.75;
 }
 
+/* Batch 15: Verified Physical Facility Structures (OSM Relation 16828676) */
+.mp-facility-structures {
+    pointer-events: none;
+}
+.mp-facility-footprint {
+    fill: #cbd5e1;
+    stroke: #64748b;
+    stroke-width: 1px;
+}
+.mp-facility-roof {
+    fill: #e2e8f0;
+    stroke: #94a3b8;
+    stroke-width: 0.6px;
+    opacity: 0.85;
+}
+[data-theme="dark"] .mp-facility-footprint {
+    fill: #334155;
+    stroke: #475569;
+}
+[data-theme="dark"] .mp-facility-roof {
+    fill: #1e293b;
+    stroke: #64748b;
+}
+
 /* Columbarium Rotunda Elements */
 .mp-garden-hedge {
     fill: none;
