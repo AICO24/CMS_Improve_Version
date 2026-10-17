@@ -57,9 +57,9 @@
     // =========================================================================
     const MASTER_MAP_NETWORK = {
         nodes: {
-            EXTERNAL_ENTRY: { id: 'EXTERNAL_ENTRY', x: 800, y: 975, label: 'P. Aquino Avenue Ingress' },
-            MAIN_GATE: { id: 'MAIN_GATE', x: 800, y: 925, label: 'Main Gate Portal' },
-            SOUTH_JUNCTION: { id: 'SOUTH_JUNCTION', x: 800, y: 865, label: 'St. Joseph Drive Junction' },
+            EXTERNAL_ENTRY: { id: 'EXTERNAL_ENTRY', x: 1101, y: 928, label: 'P. Aquino Avenue Ingress' },
+            MAIN_GATE: { id: 'MAIN_GATE', x: 1096, y: 881, label: 'Main Gate Portal (P. Aquino Ave)' },
+            SOUTH_JUNCTION: { id: 'SOUTH_JUNCTION', x: 1090, y: 820, label: 'St. Joseph Drive Junction' },
             CENTRAL_ROUNDABOUT: { id: 'CENTRAL_ROUNDABOUT', x: 800, y: 545, label: 'Memorial Roundabout' },
             NORTH_TERMINUS: { id: 'NORTH_TERMINUS', x: 800, y: 80, label: 'St. Peter Way Junction' },
             WEST_CROSSWAY: { id: 'WEST_CROSSWAY', x: 95, y: 545, label: 'Avenue of Peace (West End)' },
@@ -109,6 +109,7 @@
         edges: [
             ['EXTERNAL_ENTRY', 'MAIN_GATE'],
             ['MAIN_GATE', 'SOUTH_JUNCTION'],
+            ['SOUTH_JUNCTION', 'MID_EAST_CROSSWAY'],
             ['SOUTH_JUNCTION', 'CREMATORIUM_SPINE'],
             ['SOUTH_JUNCTION', 'PARKING_SOUTH'],
             ['SOUTH_JUNCTION', 'COLUMBARIUM_SOUTH'],
@@ -1598,22 +1599,26 @@ surroundingContext.innerHTML = `
 `;
 
 // P. Aquino Avenue (Letre Road) Frontage along southern edge (Bearing ~99.5° WNW to ESE)
+// Aligned to verified frontage edge P01(956.7, 863.5) -> P00(1168.9, 900.0) [Bearing 99.8°]
 const frontage = mk('g', { class: 'svg-external-road-group mp-frontage' }, mapGroundLayer);
 let crosswalkBars = '';
-for (let cy = 918; cy < 962; cy += 6) {
-    crosswalkBars += `<rect x="780" y="${cy}" width="40" height="3.2" class="mp-crosswalk"/>`;
+// Pedestrian zebra crossing across P. Aquino Ave near the Main Gate
+for (let cx = 1076; cx <= 1120; cx += 8) {
+    const cy = 948 + (cx - 1096) * 0.172;
+    crosswalkBars += `<rect x="${cx}" y="${f1(cy)}" width="5" height="34" transform="rotate(9.8 ${cx} ${f1(cy)})" class="mp-crosswalk"/>`;
 }
 frontage.innerHTML = `
-    <rect x="0" y="906" width="${canvasW}" height="9" class="mp-sidewalk"/>
-    <rect x="0" y="915" width="${canvasW}" height="50" class="mp-ext-road"/>
-    <line x1="0" y1="916.5" x2="${canvasW}" y2="916.5" class="mp-ext-edge"/>
-    <line x1="0" y1="963.5" x2="${canvasW}" y2="963.5" class="mp-ext-edge"/>
-    <line x1="0" y1="940" x2="${canvasW}" y2="940" class="mp-ext-centerline"/>
+    <!-- P. Aquino Avenue Sidewalks & Roadbed aligned to 99.5 deg bearing -->
+    <polygon points="-50,892 1650,1184 1650,1196 -50,904" class="mp-sidewalk"/>
+    <polygon points="-50,902 1650,1194 1650,1260 -50,968" class="mp-ext-road"/>
+    <line x1="-50" y1="903.5" x2="1650" y2="1195.5" class="mp-ext-edge"/>
+    <line x1="-50" y1="966.5" x2="1650" y2="1258.5" class="mp-ext-edge"/>
+    <line x1="-50" y1="935.0" x2="1650" y2="1227.0" class="mp-ext-centerline"/>
     ${crosswalkBars}
-    <rect x="0" y="965" width="${canvasW}" height="9" class="mp-sidewalk"/>
-    <text x="320" y="931" class="mp-ext-lane-label">◂  WESTBOUND</text>
-    <text x="1280" y="953" class="mp-ext-lane-label">EASTBOUND  ▸</text>
-    ${pillSvg(800, 986, '⟵   P. AQUINO AVENUE (LETRE ROAD)   ⟶', '', 'road')}
+    <polygon points="-50,968 1650,1260 1650,1272 -50,980" class="mp-sidewalk"/>
+    <text x="520" y="942" transform="rotate(9.8 520 942)" class="mp-ext-lane-label">◂  WESTBOUND (TONSUYA / LETRE)</text>
+    <text x="1380" y="1088" transform="rotate(9.8 1380 1088)" class="mp-ext-lane-label">EASTBOUND (MALABON / C-4)  ▸</text>
+    ${pillSvg(1096, 978, '⟵   P. AQUINO AVENUE (LETRE ROAD)   ⟶', '', 'road')}
 `;
 
 // North Boundary Caption
@@ -1625,14 +1630,20 @@ mk('polygon', { points: CEMETERY_POLYGON_POINTS, class: 'svg-cemetery-ground mp-
 mk('polygon', { points: CEMETERY_POLYGON_POINTS, fill: 'url(#mpGrassSpeckle)', class: 'mp-texture' }, mapGroundLayer);
 
 // ==========================================
-// LAYER: Perimeter Wall, Posts & Green Buffer (19-Vertex Polygon)
+// LAYER: Perimeter Wall with Main Gate Opening & Posts (19-Vertex Geometry)
 // ==========================================
-mk('polygon', { points: CEMETERY_POLYGON_POINTS, class: 'mp-wall' }, mapBoundaryLayer);
-mk('polygon', { points: CEMETERY_INNER_POLYGON_POINTS, class: 'mp-wall-inner' }, mapBoundaryLayer);
+// Outer and inner boundary walls with verified opening at Main Gate (x=1078.0..1113.4, y=877.8..884.0)
+const outerWallD = "M 1078.0 877.8 L 956.7 863.5 L 952.1 610.6 L 1001.0 608.1 L 963.7 432.3 L 637.0 531.8 L 617.6 493.5 L 576.8 444.4 L 689.6 282.2 L 766.2 264.0 L 808.5 194.0 L 864.5 162.8 L 975.8 147.7 L 1022.1 146.6 L 1022.7 403.1 L 1033.7 400.5 L 1052.4 491.2 L 1058.9 697.8 L 1102.3 690.7 L 1168.9 900.0 L 1113.4 884.0";
+const innerWallD = "M 1078.0 874.3 L 960.1 860.5 L 955.7 613.9 L 1005.3 611.4 L 966.3 427.8 L 638.8 527.6 L 620.5 491.6 L 581.2 444.2 L 691.8 285.3 L 768.4 267.1 L 811.1 196.6 L 865.6 166.1 L 976.0 151.2 L 1018.6 150.2 L 1019.2 407.5 L 1031.0 404.8 L 1048.9 491.6 L 1055.5 701.9 L 1099.8 694.7 L 1163.8 895.6 L 1113.4 880.5";
+mk('path', { d: outerWallD, class: 'mp-wall' }, mapBoundaryLayer);
+mk('path', { d: innerWallD, class: 'mp-wall-inner' }, mapBoundaryLayer);
 
-// Wall Posts placed along verified perimeter edges
+// Wall Posts placed along verified perimeter edges and flanking Main Gate portal
 const postG = mk('g', { class: 'mp-wall-posts', 'aria-hidden': 'true' }, mapBoundaryLayer);
 postG.innerHTML = `
+    <!-- Gate Portal Flanking Wall Terminal Posts -->
+    <rect x="1075.5" y="875.3" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1110.9" y="881.5" width="5" height="5" class="mp-wall-post"/>
     <rect x="1166.4" y="897.5" width="5" height="5" class="mp-wall-post"/>
     <rect x="1007.3" y="870.1" width="5" height="5" class="mp-wall-post"/>
     <rect x="954.2" y="861.0" width="5" height="5" class="mp-wall-post"/>
@@ -1714,28 +1725,30 @@ perimeterTrees.innerHTML =
 // ==========================================
 // Continuous connected roads that define and carve out all cemetery parcels:
 const roads = [
-    // 1. Central Boulevard Spine: from P. Aquino Ave -> Main Gate -> North Boundary
-    { d: `M ${RD.spine} 915 V ${RD.north}`, w: 30, main: true },
-    // 2. Main Cross Boulevard (Avenue of Peace): separates burial grounds from amenities campus
+    // 1. Entrance Service Road (OSM Way 1203404189 & 1392737965: P. Aquino Ave -> Main Gate -> Neck Corridor -> Avenue of Peace)
+    { d: 'M 1101 928 L 1096 881 L 1090 820 L 1085 680 L 1085 545', w: 22, main: true },
+    // 2. Central Boulevard Spine: from South Campus -> North Boundary
+    { d: `M ${RD.spine} ${RD.southService} V ${RD.north}`, w: 30, main: true },
+    // 3. Main Cross Boulevard (Avenue of Peace): separates burial grounds from amenities campus
     { d: `M ${RD.west} ${RD.mainCross} H ${RD.east}`, w: 26, main: true },
-    // 3. Internal Promenade: separates North sections from Mid sections
+    // 4. Internal Promenade: separates North sections from Mid sections
     { d: `M ${RD.west} ${RD.promenade} H ${RD.east}`, w: 20 },
-    // 4. North Boundary Road: along north perimeter
+    // 5. North Boundary Road: along north perimeter
     { d: `M ${RD.west} ${RD.north} H ${RD.east}`, w: 18 },
-    // 5. Outer West Ring Road: connects north to south along west perimeter
+    // 6. Outer West Ring Road: connects north to south along west perimeter
     { d: `M ${RD.west} ${RD.north} V ${RD.mainCross} V ${RD.southService}`, w: 18 },
-    // 6. Outer East Ring Road: connects north to south along east perimeter
+    // 7. Outer East Ring Road: connects north to south along east perimeter
     { d: `M ${RD.east} ${RD.north} V ${RD.mainCross} V ${RD.southService}`, w: 18 },
-    // 7. Mid-West Section Access Road (divides Section B from Section A)
+    // 8. Mid-West Section Access Road (divides Section B from Section A)
     { d: `M ${RD.accW} ${RD.promenade} V ${RD.mainCross}`, w: 15 },
-    // 8. Mid-East Section Access Road (divides Section A from Section E)
+    // 9. Mid-East Section Access Road (divides Section A from Section E)
     { d: `M ${RD.accE} ${RD.promenade} V ${RD.mainCross}`, w: 15 },
-    // 9. South Service Road (access behind Chapel, Parking, Crematorium, Columbarium)
+    // 10. South Service Road (access behind Chapel, Parking, Crematorium, Columbarium)
     { d: `M ${RD.west} ${RD.southService} H ${RD.east}`, w: 15 },
-    // 10. Parking Driveways
+    // 11. Parking Driveways
     { d: `M 730 670 H ${RD.spine}`, w: 16 },
     { d: `M 730 805 H ${RD.spine}`, w: 16 },
-    // 11. Crematorium Driveway / Porte-Cochere Connector
+    // 12. Crematorium Driveway / Porte-Cochere Connector
     { d: `M ${RD.spine} 745 H 960`, w: 15 }
 ];
 
@@ -1773,6 +1786,7 @@ roadG.innerHTML = pathUnder + pathFill + roadCurbs + roadAsphalt + roadStripes +
     <text x="803" y="710" class="mp-road-label" transform="rotate(-90 803 710)">MAIN ROAD</text>
     <text x="440" y="302.5" class="mp-road-label mp-road-label--minor">INTERNAL PROMENADE</text>
     <text x="1160" y="302.5" class="mp-road-label mp-road-label--minor">INTERNAL PROMENADE</text>
+    <text x="1075" y="760" class="mp-road-label mp-road-label--minor" transform="rotate(-90 1075 760)">ENTRANCE ROAD</text>
 `;
 
 // Boulevard Trees Lining Main Road
@@ -1968,28 +1982,33 @@ landmarkGroup.innerHTML += `
     </g>
 `;
 
-// --- Main Gate Entrance Portal (Directly Connected to P. Aquino Avenue) ---
+// --- Main Gate Entrance Portal (Verified OSM Node 8348620486 & 9928981748, P. Aquino Avenue) ---
+// Positioned at verified coordinates (1095.7, 880.9) oriented to P01-P00 frontage angle (~9.8 deg)
 landmarkGroup.innerHTML += `
-    <g class="svg-gate-portal mp-gate" data-landmark="gate" tabindex="0" role="region" aria-label="Main Gate">
-        <title>Main Gate — P. Aquino Avenue (Letre Road)</title>
-        <rect x="760" y="878" width="80" height="26" class="mp-gate-apron"/>
-        <rect x="760" y="878" width="80" height="26" fill="url(#mpPaverPattern)" class="mp-texture"/>
-        <rect x="764" y="879" width="12" height="24" rx="1.5" class="mp-gate-pillar"/>
-        <rect x="762" y="877" width="16" height="5" rx="1" class="mp-gate-cap"/>
-        <rect x="824" y="879" width="12" height="24" rx="1.5" class="mp-gate-pillar"/>
-        <rect x="822" y="877" width="16" height="5" rx="1" class="mp-gate-cap"/>
-        <path d="M 776 884 Q 800 869 824 884" class="mp-gate-arch"/>
-        <path d="M 776 900 L 789 893 M 824 900 L 811 893" class="mp-gate-leaf"/>
-        <line x1="786" y1="896" x2="814" y2="896" class="mp-gate-boom"/>
-        <!-- Security Sentry Kiosk -->
-        <rect x="844" y="881" width="22" height="18" transform="translate(2 3)" class="mp-bldg-shadow"/>
-        <rect x="844" y="881" width="22" height="18" rx="1.5" class="mp-bldg-wall"/>
-        <rect x="845.5" y="882.5" width="19" height="15" fill="#8b6f5a"/>
-        <line x1="845.5" y1="890" x2="864.5" y2="890" class="mp-roof-ridge mp-roof-ridge--thin"/>
-        <!-- Gate Badge -->
-        <circle cx="800" cy="826" r="11" class="mp-gate-badge"/>
-        <path d="M 794 828 L 800 822 L 806 828 V 832 H 794 Z" fill="#ffffff"/>
-        ${pillSvg(800, 850, 'MAIN GATE', '', 'navy')}
+    <g class="svg-gate-portal mp-gate" data-landmark="gate" tabindex="0" role="region" aria-label="Main Gate" transform="translate(1096 881) rotate(9.8)">
+        <title>Main Gate — 3 P. Aquino Avenue (Letre Road)</title>
+        <!-- Paved entrance apron connecting P. Aquino Avenue to Cemetery Entrance -->
+        <rect x="-24" y="-12" width="48" height="24" rx="2" class="mp-gate-apron"/>
+        <rect x="-24" y="-12" width="48" height="24" rx="2" fill="url(#mpPaverPattern)" class="mp-texture"/>
+        <!-- West & East Monument Gate Pillars -->
+        <rect x="-21" y="-10" width="8" height="20" rx="1.5" class="mp-gate-pillar"/>
+        <rect x="-22" y="-12" width="10" height="4" rx="1" class="mp-gate-cap"/>
+        <rect x="13" y="-10" width="8" height="20" rx="1.5" class="mp-gate-pillar"/>
+        <rect x="12" y="-12" width="10" height="4" rx="1" class="mp-gate-cap"/>
+        <!-- Ceremonial Wrought-Iron Arch & Gate Leaves -->
+        <path d="M -13 -6 Q 0 -17 13 -6" class="mp-gate-arch"/>
+        <path d="M -13 6 L -3 0 M 13 6 L 3 0" class="mp-gate-leaf"/>
+        <!-- Barrier Lift-Gate (OSM Node 9928981748 barrier=lift_gate) -->
+        <line x1="-8" y1="4" x2="10" y2="4" class="mp-gate-boom"/>
+        <!-- Security Sentry Post Kiosk (East of Gate) -->
+        <rect x="23" y="-8" width="16" height="16" transform="translate(1.5 2)" class="mp-bldg-shadow"/>
+        <rect x="23" y="-8" width="16" height="16" rx="1.5" class="mp-bldg-wall"/>
+        <rect x="24" y="-7" width="14" height="14" fill="#8b6f5a"/>
+        <line x1="24" y1="0" x2="38" y2="0" class="mp-roof-ridge mp-roof-ridge--thin"/>
+        <!-- Entrance Badge & Pill -->
+        <circle cx="0" cy="-32" r="10" class="mp-gate-badge"/>
+        <path d="M -5 -30 L 0 -35 L 5 -30 V -26 H -5 Z" fill="#ffffff"/>
+        ${pillSvg(0, -50, 'MAIN GATE (GATE 1)', '', 'navy')}
     </g>
 `;
 
