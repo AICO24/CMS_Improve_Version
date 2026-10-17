@@ -619,7 +619,7 @@
                     y: 12,
                     width: 42,
                     height: 32,
-                    grid: { columns: 3, rows: Math.ceil((blk.total_lots || 10) / 3), gap_x: 4, gap_y: 4 }
+                    grid: { columns: 10, rows: 5, gap_x: 0.4, gap_y: 0.4 }
                 };
             } else {
                 return {
@@ -627,7 +627,7 @@
                     y: 12,
                     width: 42,
                     height: 32,
-                    grid: { columns: 3, rows: Math.ceil((blk.total_lots || 10) / 3), gap_x: 4, gap_y: 4 }
+                    grid: { columns: 5, rows: 1, gap_x: 1.5, gap_y: 1.5 }
                 };
             }
         }
@@ -640,7 +640,7 @@
                     y: 12,
                     width: 63,
                     height: 40,
-                    grid: { columns: 4, rows: Math.ceil((blk.total_lots || 10) / 4), gap_x: 4, gap_y: 4 }
+                    grid: { columns: 5, rows: 1, gap_x: 2.5, gap_y: 2.5 }
                 };
             } else {
                 return {
@@ -648,7 +648,7 @@
                     y: 56,
                     width: 63,
                     height: 40,
-                    grid: { columns: 4, rows: Math.ceil((blk.total_lots || 10) / 4), gap_x: 4, gap_y: 4 }
+                    grid: { columns: 5, rows: 1, gap_x: 2.5, gap_y: 2.5 }
                 };
             }
         }
@@ -661,7 +661,7 @@
                     y: 12,
                     width: 25,
                     height: 44,
-                    grid: { columns: 2, rows: Math.ceil((blk.total_lots || 10) / 2), gap_x: 3, gap_y: 3 }
+                    grid: { columns: 2, rows: 3, gap_x: 1.5, gap_y: 1.75 }
                 };
             } else {
                 return {
@@ -669,7 +669,7 @@
                     y: 12,
                     width: 25,
                     height: 44,
-                    grid: { columns: 2, rows: Math.ceil((blk.total_lots || 10) / 2), gap_x: 3, gap_y: 3 }
+                    grid: { columns: 2, rows: 3, gap_x: 1.5, gap_y: 1.75 }
                 };
             }
         }

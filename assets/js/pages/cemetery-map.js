@@ -2361,10 +2361,10 @@ sections.forEach((section, index) => {
 
         // Compact Floating Block Identifier Tag (Reference style, e.g. A1, A2, B1, C1)
         const blockLabel = block.block_name.replace(/Block\s+/i, '');
-        const tagW = Math.max(16, Math.min(curBlkW - 6, blockLabel.length * 5 + 8));
-        const tagH = 11;
-        mk('rect', { x: f1(blkX + 3), y: f1(blkY + 2), width: tagW, height: tagH, rx: 2, class: 'svg-block-header-bar mp-block-tag' }, blkGroup);
-        const blkText = mk('text', { x: f1(blkX + 3 + tagW / 2), y: f1(blkY + 9.5), 'text-anchor': 'middle', class: 'svg-block-title mp-block-tag-text', style: 'font-size: 7px;' }, blkGroup);
+        const tagW = Math.max(14, Math.min(curBlkW - 4, blockLabel.length * 5 + 6));
+        const tagH = 10;
+        mk('rect', { x: f1(blkX + 2), y: f1(blkY + 1.5), width: tagW, height: tagH, rx: 2, class: 'svg-block-header-bar mp-block-tag' }, blkGroup);
+        const blkText = mk('text', { x: f1(blkX + 2 + tagW / 2), y: f1(blkY + 8.5), 'text-anchor': 'middle', class: 'svg-block-title mp-block-tag-text', style: 'font-size: 6.5px;' }, blkGroup);
         blkText.textContent = blockLabel;
 
         // Block Click Handler: Focus/Zoom to Block on Master Map
@@ -2394,16 +2394,19 @@ sections.forEach((section, index) => {
         // Realistic, compact burial plots with memorial headstone markers.
         // Plots sit naturally on the lawn — never stretched into giant boxes.
         // ==========================================
-        const lotAreaX = blkX + 8;
-        const lotAreaY = blkY + 22; // space below block tag
-        const lotAreaW = Math.max(10, curBlkW - 16);
-        const lotAreaH = Math.max(10, curBlkH - 26);
+        const padX = 2.5;
+        const padTop = 13.5; // space below block tag (tag y=1.5 + h=10 = 11.5 + 2px margin)
+        const padBottom = 2.5;
+        const lotAreaX = blkX + padX;
+        const lotAreaY = blkY + padTop;
+        const lotAreaW = Math.max(8, curBlkW - (padX * 2));
+        const lotAreaH = Math.max(8, curBlkH - padTop - padBottom);
 
         if (lots.length > 0) {
             const n = lots.length;
-            let gapX = isColumbarium ? 6 : 4.5;
-            let gapY = isColumbarium ? 6 : 4.5;
-            let doubleRowAisle = isColumbarium ? 0 : 6;
+            let gapX = isColumbarium ? 4.5 : (n > 25 ? 0.4 : 1.5);
+            let gapY = isColumbarium ? 4.5 : (n > 25 ? 0.4 : 1.5);
+            let doubleRowAisle = 0;
             let cols = 0;
 
             if (block.map_config && block.map_config.grid) {
@@ -2419,61 +2422,68 @@ sections.forEach((section, index) => {
             }
 
             if (!cols || cols < 1) {
-                if (n <= 5) {
-                    cols = n;
-                } else if (isColumbarium) {
-                    // Columbarium niches: target 11 columns for 11-vault wide columbarium tiers
-                    const targetCols = Math.round(Math.sqrt(n * (lotAreaW / lotAreaH)));
-                    cols = Math.max(5, Math.min(11, targetCols));
+                if (isColumbarium) {
+                    cols = Math.max(5, Math.min(11, Math.round(Math.sqrt(n * (lotAreaW / lotAreaH)))));
+                } else if (n > 25) {
+                    // Dense ground block (e.g. Block A1: 50 lots -> 10 cols x 5 rows)
+                    cols = 10;
+                } else if (n <= 5) {
+                    // Small ground blocks (e.g. 5 lots):
+                    // If lot area is wider than tall, single row (5 cols x 1 row) e.g. A2, B1, B2
+                    // If taller than wide, 2 cols x 3 rows e.g. C1, C2
+                    cols = (lotAreaW >= lotAreaH * 1.1) ? n : 2;
                 } else {
-                    // Lawn burial plots: target ~0.72 width-to-height ratio (e.g. 1m x 1.5m to 2.4m)
-                    const targetCols = Math.round(Math.sqrt(1.38 * n * (lotAreaW / lotAreaH)));
-                    cols = Math.max(4, Math.min(12, targetCols));
+                    cols = Math.max(2, Math.min(8, Math.round(Math.sqrt(1.2 * n * (lotAreaW / lotAreaH)))));
                 }
             }
             cols = Math.max(1, Math.min(cols, n));
             const rows = Math.ceil(n / cols);
 
-            // Compute maximum possible tile size fitting inside lotArea
-            const availW = Math.max(10, lotAreaW - (cols - 1) * gapX);
-            const totalAisles = Math.floor((rows - 1) / 2) * doubleRowAisle;
-            const availH = Math.max(10, lotAreaH - (rows - 1) * gapY - totalAisles);
+            // Compute maximum tile size fitting strictly inside lotArea
+            const availW = Math.max(4, lotAreaW - (cols - 1) * gapX);
+            const availH = Math.max(4, lotAreaH - (rows - 1) * gapY);
 
             const maxW = availW / cols;
             const maxH = availH / rows;
 
-            let tileW, tileH;
+            let tileW = maxW;
+            let tileH = maxH;
+
             if (isColumbarium) {
-                // Spacious rectangular vault plates with breathing room
-                tileW = Math.max(22, Math.min(maxW, 36));
-                tileH = Math.max(18, Math.min(maxH, 24));
-            } else if (n <= 10) {
-                // Blocks with few plots: allow generous, easily visible 26px x 36px plots!
-                const w = Math.min(maxW, maxH * 0.72, 26);
-                tileW = Math.max(18, w);
-                tileH = Math.max(24, Math.min(maxH, tileW / 0.72, 36));
-            } else {
-                // Larger blocks (e.g. 50 lots in Block A1): maximize available parcel space cleanly
-                const w = Math.min(maxW, maxH * 0.74, 23);
-                tileW = Math.max(16, w);
-                tileH = Math.max(22, Math.min(maxH, tileW / 0.74, 32));
+                tileW = Math.max(16, Math.min(maxW, 36));
+                tileH = Math.max(14, Math.min(maxH, 24));
+            } else if (n <= 5) {
+                // Ground burial plots in small blocks (A2, B1, B2, C1, C2)
+                // Cap tile size so they look like elegant plots with breathing room, not massive cards
+                if (cols === n) {
+                    // 1-row layout: cap tile width and height
+                    tileW = Math.min(maxW, 10.0);
+                    tileH = Math.min(maxH, 16.0);
+                } else {
+                    // Multi-row layout (e.g. C1, C2: 2 cols x 3 rows)
+                    tileW = Math.min(maxW, 9.5);
+                    tileH = Math.min(maxH, 8.5);
+                }
+            } else if (n > 25) {
+                // Block A1: tightly packed grid (3.34 x 2.78 approx)
+                tileW = maxW;
+                tileH = maxH;
             }
 
             // Downscale smoothly if strict bounds are exceeded
             const calcGridW = cols * tileW + (cols - 1) * gapX;
-            const calcGridH = rows * tileH + (rows - 1) * gapY + totalAisles;
+            const calcGridH = rows * tileH + (rows - 1) * gapY;
             const fit = Math.min(1, lotAreaW / calcGridW, lotAreaH / calcGridH);
             if (fit < 1) {
                 tileW *= fit;
                 tileH *= fit;
                 gapX *= fit;
                 gapY *= fit;
-                doubleRowAisle *= fit;
             }
 
             // Center grid on lawn terrace
             const finalGridW = cols * tileW + (cols - 1) * gapX;
-            const finalGridH = rows * tileH + (rows - 1) * gapY + Math.floor((rows - 1) / 2) * doubleRowAisle;
+            const finalGridH = rows * tileH + (rows - 1) * gapY;
             const gridOffsetX = Math.max(0, (lotAreaW - finalGridW) / 2);
             const gridOffsetY = Math.max(0, (lotAreaH - finalGridH) / 2);
 
@@ -2538,15 +2548,15 @@ sections.forEach((section, index) => {
                 lotGroup.appendChild(lotRect);
 
                 // Miniature Headstone / Memorial Plaque Marker (Authentic cemetery look)
-                if (!isColumbarium && curTileW > 6 && curTileH > 8) {
+                if (!isColumbarium && curTileW >= 5 && curTileH >= 6) {
                     const markerW = curTileW * 0.65;
-                    const markerH = Math.max(2.6, curTileH * 0.16);
+                    const markerH = Math.max(1.8, curTileH * 0.18);
                     const marker = document.createElementNS(SVG_NS, 'rect');
                     marker.setAttribute('x', f1(lotX + (curTileW - markerW) / 2));
-                    marker.setAttribute('y', f1(lotY + 1.8));
+                    marker.setAttribute('y', f1(lotY + 1.2));
                     marker.setAttribute('width', f1(markerW));
                     marker.setAttribute('height', f1(markerH));
-                    marker.setAttribute('rx', '1');
+                    marker.setAttribute('rx', '0.8');
                     marker.setAttribute('class', 'svg-lot-headstone mp-lot-headstone');
                     lotGroup.appendChild(marker);
                 }
