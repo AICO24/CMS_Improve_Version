@@ -70,9 +70,9 @@
             CREMATORIUM_ACCESS: { id: 'CREMATORIUM_ACCESS', x: 978, y: 271, label: 'Crematorium Facility' },
             COMFORT_ROOM_ACCESS: { id: 'COMFORT_ROOM_ACCESS', x: 932, y: 247, label: 'Comfort Room (CR)' },
             PARKING_ACCESS: { id: 'PARKING_ACCESS', x: 1035, y: 755, label: 'Visitor Parking Zone' },
-            SEC_GARDEN_PEACE: { id: 'SEC_GARDEN_PEACE', x: 800, y: 300, label: 'Garden of Everlasting Peace Access' },
-            SEC_LOURDES: { id: 'SEC_LOURDES', x: 305, y: 545, label: 'Garden of Our Lady of Lourdes Access' },
-            SEC_SAN_JOSE: { id: 'SEC_SAN_JOSE', x: 515, y: 190, label: 'Sanctuario de San Jose Access' },
+            SEC_GARDEN_PEACE: { id: 'SEC_GARDEN_PEACE', x: 800, y: 425, label: 'Garden of Everlasting Peace Access' },
+            SEC_LOURDES: { id: 'SEC_LOURDES', x: 672, y: 427, label: 'Garden of Our Lady of Lourdes Access' },
+            SEC_SAN_JOSE: { id: 'SEC_SAN_JOSE', x: 733, y: 280, label: 'Sanctuario de San Jose Access' },
             SEC_COLUMBARIUM: { id: 'SEC_COLUMBARIUM', x: 886, y: 274, label: 'Columbarium Sanctuary Access' },
 
             // Secondary Intersections on Master Map
@@ -94,19 +94,19 @@
             PARKING_SOUTH: { id: 'PARKING_SOUTH', x: 1035, y: 785, label: 'Visitor Parking (South Bay)' },
 
             // Block & Terrace Level Access
-            SEC_A_SPINE_LEFT: { id: 'SEC_A_SPINE_LEFT', x: 780, y: 420, label: 'Section A (Block A1 Entrance)' },
-            SEC_A_SPINE_RIGHT: { id: 'SEC_A_SPINE_RIGHT', x: 820, y: 420, label: 'Section A (Block A2 Entrance)' },
-            SEC_A_WEST_ACCESS: { id: 'SEC_A_WEST_ACCESS', x: 515, y: 420, label: 'Section A (West Access Road)' },
-            SEC_A_EAST_ACCESS: { id: 'SEC_A_EAST_ACCESS', x: 1085, y: 420, label: 'Section A (East Access Road)' },
-            SEC_B_WEST_ACCESS: { id: 'SEC_B_WEST_ACCESS', x: 95, y: 420, label: 'Section B (West Ring Access)' },
-            SEC_B_EAST_ACCESS: { id: 'SEC_B_EAST_ACCESS', x: 515, y: 420, label: 'Section B (Mid-West Road Access)' },
-            SEC_C_SOUTH_ACCESS: { id: 'SEC_C_SOUTH_ACCESS', x: 440, y: 300, label: 'Sanctuario de San Jose (Promenade Entrance)' },
-            SEC_C_NORTH_ACCESS: { id: 'SEC_C_NORTH_ACCESS', x: 440, y: 80, label: 'Sanctuario de San Jose (North Entrance)' },
-            SEC_D_SOUTH_ACCESS: { id: 'SEC_D_SOUTH_ACCESS', x: 1160, y: 300, label: 'Columbarium & Ossuary (Promenade Entrance)' },
-            SEC_D_NORTH_ACCESS: { id: 'SEC_D_NORTH_ACCESS', x: 1160, y: 80, label: 'Columbarium & Ossuary (North Entrance)' },
-            SEC_E_WEST_ACCESS: { id: 'SEC_E_WEST_ACCESS', x: 1085, y: 420, label: 'Section E (Mid-East Road Entrance)' },
-            SEC_E_EAST_ACCESS: { id: 'SEC_E_EAST_ACCESS', x: 1505, y: 420, label: 'Section E (East Ring Road Entrance)' },
-            SEC_E_SOUTH_ACCESS: { id: 'SEC_E_SOUTH_ACCESS', x: 1295, y: 545, label: 'Section E (Avenue Ingress)' }
+            SEC_A_SPINE_LEFT: { id: 'SEC_A_SPINE_LEFT', x: 780, y: 425, label: 'Section A (Block A1 Entrance)' },
+            SEC_A_SPINE_RIGHT: { id: 'SEC_A_SPINE_RIGHT', x: 820, y: 425, label: 'Section A (Block A2 Entrance)' },
+            SEC_A_WEST_ACCESS: { id: 'SEC_A_WEST_ACCESS', x: 735, y: 425, label: 'Section A (West Access Road)' },
+            SEC_A_EAST_ACCESS: { id: 'SEC_A_EAST_ACCESS', x: 865, y: 425, label: 'Section A (East Access Road)' },
+            SEC_B_WEST_ACCESS: { id: 'SEC_B_WEST_ACCESS', x: 635, y: 427, label: 'Section B (West Ring Access)' },
+            SEC_B_EAST_ACCESS: { id: 'SEC_B_EAST_ACCESS', x: 710, y: 427, label: 'Section B (Mid-West Road Access)' },
+            SEC_C_SOUTH_ACCESS: { id: 'SEC_C_SOUTH_ACCESS', x: 733, y: 350, label: 'Sanctuario de San Jose (Promenade Entrance)' },
+            SEC_C_NORTH_ACCESS: { id: 'SEC_C_NORTH_ACCESS', x: 733, y: 280, label: 'Sanctuario de San Jose (North Entrance)' },
+            SEC_D_SOUTH_ACCESS: { id: 'SEC_D_SOUTH_ACCESS', x: 871, y: 315, label: 'Columbarium & Ossuary (Promenade Entrance)' },
+            SEC_D_NORTH_ACCESS: { id: 'SEC_D_NORTH_ACCESS', x: 871, y: 190, label: 'Columbarium & Ossuary (North Entrance)' },
+            SEC_E_WEST_ACCESS: { id: 'SEC_E_WEST_ACCESS', x: 875, y: 411, label: 'Section E (Mid-East Road Entrance)' },
+            SEC_E_EAST_ACCESS: { id: 'SEC_E_EAST_ACCESS', x: 945, y: 411, label: 'Section E (East Ring Road Entrance)' },
+            SEC_E_SOUTH_ACCESS: { id: 'SEC_E_SOUTH_ACCESS', x: 910, y: 432, label: 'Section E (Avenue Ingress)' }
         },
         edges: [
             ['EXTERNAL_ENTRY', 'MAIN_GATE'],
@@ -2096,11 +2096,11 @@ const count = sections.length;
 
 // Spatial parcel boundaries for the 5 zones in the master plan:
 const ZONES = {
-    c: { id: 'c', x: 106, y: 94, w: 672, h: 194, theme: 'c', defaultName: 'Sanctuario de San Jose', defaultCode: 'SECTION C' },
-    d: { id: 'd', x: 822, y: 94, w: 672, h: 194, theme: 'd', defaultName: 'Everlasting Columbarium & Ossuary', defaultCode: 'SECTION D' },
-    b: { id: 'b', x: 106, y: 312, w: 398, h: 222, theme: 'b', defaultName: 'Garden of Our Lady of Lourdes', defaultCode: 'SECTION B' },
-    a: { id: 'a', x: 526, y: 312, w: 548, h: 222, theme: 'a', defaultName: 'Garden of Everlasting Peace', defaultCode: 'SECTION A', spine: RD.spine },
-    e: { id: 'e', x: 1096, y: 312, w: 398, h: 222, theme: 'e', defaultName: 'Garden Reserve', defaultCode: 'SECTION E' }
+    c: { id: 'c', x: 700, y: 288, w: 66, h: 62, theme: 'c', defaultName: 'Sanctuario de San Jose', defaultCode: 'SECTION C' },
+    d: { id: 'd', x: 825, y: 190, w: 92, h: 125, theme: 'd', defaultName: 'Everlasting Columbarium & Ossuary', defaultCode: 'SECTION D' },
+    b: { id: 'b', x: 635, y: 375, w: 75, h: 105, theme: 'b', defaultName: 'Garden of Our Lady of Lourdes', defaultCode: 'SECTION B', stackVertical: true },
+    a: { id: 'a', x: 735, y: 400, w: 130, h: 50, theme: 'a', defaultName: 'Garden of Everlasting Peace', defaultCode: 'SECTION A', spine: RD.spine },
+    e: { id: 'e', x: 875, y: 390, w: 70, h: 42, theme: 'e', defaultName: 'Garden Reserve', defaultCode: 'SECTION E' }
 };
 
 const zoneOrder = ['a', 'b', 'c', 'd', 'e'];
@@ -2123,30 +2123,31 @@ function resolveSectionZone(sec) {
 
 // Compute block parcel areas inside a section zone.
 // Pathways divide the blocks naturally without card borders!
-function layoutBlockTerraces(blocks, area, spineX) {
+function layoutBlockTerraces(blocks, area, spineX, stackVertical) {
     const n = blocks.length;
     if (n <= 0) return { parcels: [], walkways: [] };
 
-    const walkWidth = 8; // Width of pedestrian walkway between blocks
-    const margin = 10;   // Margin from section road curb
+    const walkWidth = 6; // Width of pedestrian walkway between blocks
     const parcels = [];
     const walkways = [];
 
     if (spineX) {
-        // Section A: Symmetrically flanks the central boulevard spine!
-        // Left side of spine: Block A1; Right side of spine: Block A2 (etc.)
-        const spineClearance = 18;
+        // Section A: Symmetrically flanks the central boulevard spine at x=800!
+        // Left side of spine: Block A1; Right side of spine: Block A2
+        const margin = 7;
+        const topMargin = 10;
+        const spineClearance = 16;
         const leftBox = {
             x: area.x + margin,
-            y: area.y + margin + 14,
+            y: area.y + topMargin,
             w: (spineX - spineClearance) - (area.x + margin),
-            h: area.h - margin * 2 - 16
+            h: area.h - topMargin - 8
         };
         const rightBox = {
             x: spineX + spineClearance,
-            y: area.y + margin + 14,
+            y: area.y + topMargin,
             w: (area.x + area.w - margin) - (spineX + spineClearance),
-            h: area.h - margin * 2 - 16
+            h: area.h - topMargin - 8
         };
 
         if (n === 2) {
@@ -2180,23 +2181,30 @@ function layoutBlockTerraces(blocks, area, spineX) {
         }
     } else {
         // Sections B, C, D, E (Continuous Land Parcel)
+        const margin = 5;
+        const topMargin = 10;
         const innerX = area.x + margin;
-        const innerY = area.y + margin + 14;
+        const innerY = area.y + topMargin;
         const innerW = area.w - margin * 2;
-        const innerH = area.h - margin * 2 - 16;
+        const innerH = area.h - topMargin - 6;
 
         if (n === 1) {
-            // For a single block inside a wide section (such as Section D Columbarium),
-            // proportion the block terrace naturally and center it, leaving balanced lawn buffer
-            const blkW = innerW > 500 ? Math.min(innerW, 580) : innerW;
-            const blkX = innerX + (innerW - blkW) / 2;
-            parcels.push({ x: blkX, y: innerY, w: blkW, h: innerH, block: blocks[0] });
+            // Single block inside section (Section D Columbarium)
+            parcels.push({ x: innerX, y: innerY, w: innerW, h: innerH, block: blocks[0] });
         } else if (n === 2) {
-            // 2 blocks side-by-side (left/right) with a central pedestrian walkway!
-            const bw = (innerW - walkWidth) / 2;
-            parcels.push({ x: innerX, y: innerY, w: bw, h: innerH, block: blocks[0] });
-            parcels.push({ x: innerX + bw + walkWidth, y: innerY, w: bw, h: innerH, block: blocks[1] });
-            walkways.push(`M ${innerX + bw + walkWidth / 2} ${innerY} V ${innerY + innerH}`);
+            if (stackVertical || (area.h > area.w * 1.2)) {
+                // Section B: 2 blocks stacked vertically (B1 North, B2 South) with horizontal walkway
+                const bh = (innerH - walkWidth) / 2;
+                parcels.push({ x: innerX, y: innerY, w: innerW, h: bh, block: blocks[0] });
+                parcels.push({ x: innerX, y: innerY + bh + walkWidth, w: innerW, h: bh, block: blocks[1] });
+                walkways.push(`M ${innerX} ${innerY + bh + walkWidth / 2} H ${innerX + innerW}`);
+            } else {
+                // Section C: 2 blocks side-by-side (C1 West, C2 East) with central walkway
+                const bw = (innerW - walkWidth) / 2;
+                parcels.push({ x: innerX, y: innerY, w: bw, h: innerH, block: blocks[0] });
+                parcels.push({ x: innerX + bw + walkWidth, y: innerY, w: bw, h: innerH, block: blocks[1] });
+                walkways.push(`M ${innerX + bw + walkWidth / 2} ${innerY} V ${innerY + innerH}`);
+            }
         } else if (n === 4) {
             // 2x2 grid with cross walkways
             const bw = (innerW - walkWidth) / 2;
@@ -2296,7 +2304,8 @@ sections.forEach((section, index) => {
     }
 
     // 2. Pedestrian Pathways between Block Terraces (Subtle Stone Pavers, Not Card Boxes!)
-    const { parcels, walkways } = layoutBlockTerraces(blocks, { x: secX, y: secY, w: curSecW, h: curSecH }, spineX);
+    const isStackVertical = assignedZone?.stackVertical || false;
+    const { parcels, walkways } = layoutBlockTerraces(blocks, { x: secX, y: secY, w: curSecW, h: curSecH }, spineX, isStackVertical);
     if (walkways.length > 0) {
         const pathG = mk('g', { class: 'mp-section-internal-paths', 'aria-hidden': 'true' }, secGroup);
         let pathHtml = '';
@@ -2308,12 +2317,12 @@ sections.forEach((section, index) => {
     }
 
     // 3. Floating Section Header Badge (Clean pill matching reference)
-    const pillW = Math.max(100, Math.ceil(badgeLabel.length * 7.5 + 32));
-    const pillH = 24;
+    const pillW = Math.max(50, Math.min(curSecW - 6, Math.ceil(badgeLabel.length * 4.6 + 14)));
+    const pillH = 15;
     const pillX = secX + (curSecW - pillW) / 2;
-    const pillY = secY - 12;
-    mk('rect', { x: f1(pillX), y: pillY, width: f1(pillW), height: pillH, rx: 7, class: 'svg-section-header' }, secGroup);
-    const secTitle = mk('text', { x: f1(pillX + pillW / 2), y: pillY + 16, 'text-anchor': 'middle', class: 'svg-section-title' }, secGroup);
+    const pillY = secY - 8;
+    mk('rect', { x: f1(pillX), y: pillY, width: f1(pillW), height: pillH, rx: 4, class: 'svg-section-header' }, secGroup);
+    const secTitle = mk('text', { x: f1(pillX + pillW / 2), y: pillY + 11, 'text-anchor': 'middle', class: 'svg-section-title', style: 'font-size: 7.5px;' }, secGroup);
     secTitle.textContent = badgeLabel;
 
     // 4. Physical Block Parcels and Individual Lots
@@ -2346,15 +2355,16 @@ sections.forEach((section, index) => {
 
         // Block Plot Terrace Ground (Natural lawn parcel with subtle boundary, NOT a card box!)
         mk('rect', {
-            x: f1(blkX), y: f1(blkY), width: f1(curBlkW), height: f1(curBlkH), rx: 4,
+            x: f1(blkX), y: f1(blkY), width: f1(curBlkW), height: f1(curBlkH), rx: 3,
             class: `svg-block-bg mp-block-terrace${isColumbarium ? ' mp-block-terrace--niche' : ''}`
         }, blkGroup);
 
         // Compact Floating Block Identifier Tag (Reference style, e.g. A1, A2, B1, C1)
         const blockLabel = block.block_name.replace(/Block\s+/i, '');
-        const tagW = Math.max(22, blockLabel.length * 6.5 + 10);
-        mk('rect', { x: f1(blkX + 6), y: f1(blkY + 4), width: tagW, height: 14, rx: 3, class: 'svg-block-header-bar mp-block-tag' }, blkGroup);
-        const blkText = mk('text', { x: f1(blkX + 6 + tagW / 2), y: f1(blkY + 14.2), 'text-anchor': 'middle', class: 'svg-block-title mp-block-tag-text' }, blkGroup);
+        const tagW = Math.max(16, Math.min(curBlkW - 6, blockLabel.length * 5 + 8));
+        const tagH = 11;
+        mk('rect', { x: f1(blkX + 3), y: f1(blkY + 2), width: tagW, height: tagH, rx: 2, class: 'svg-block-header-bar mp-block-tag' }, blkGroup);
+        const blkText = mk('text', { x: f1(blkX + 3 + tagW / 2), y: f1(blkY + 9.5), 'text-anchor': 'middle', class: 'svg-block-title mp-block-tag-text', style: 'font-size: 7px;' }, blkGroup);
         blkText.textContent = blockLabel;
 
         // Block Click Handler: Focus/Zoom to Block on Master Map
@@ -2618,18 +2628,18 @@ if (count <= 4 && !usedZones.has('e')) {
     const cx = z.x + z.w / 2;
     const cy = z.y + z.h / 2;
     g.innerHTML = `
-        <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="12" class="svg-section-bg mp-section-lawn"/>
-        <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="12" fill="url(#mpLawnStripes)" class="mp-texture"/>
-        <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="12" class="mp-section-hedge"/>
+        <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="6" class="svg-section-bg mp-section-lawn"/>
+        <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="6" fill="url(#mpLawnStripes)" class="mp-texture"/>
+        <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="6" class="mp-section-hedge"/>
         <!-- Central circular ornamental garden walkway ring in reserve park -->
-        <circle cx="${f1(cx)}" cy="${f1(cy)}" r="46" class="mp-block-walkway-edge"/>
-        <circle cx="${f1(cx)}" cy="${f1(cy)}" r="46" class="mp-block-walkway"/>
-        <circle cx="${f1(cx)}" cy="${f1(cy)}" r="22" fill="#15803d" opacity="0.35" stroke="#166534" stroke-width="1.5"/>
-        ${treeCluster(cx, cy, 3, 14, 6, 8)}
-        ${treeCluster(z.x + 70, z.y + 60, 4, 16, 7, 10)}
-        ${treeCluster(z.x + z.w - 70, z.y + 60, 4, 16, 7, 10)}
-        ${treeCluster(z.x + 70, z.y + z.h - 60, 4, 16, 7, 10)}
-        ${treeCluster(z.x + z.w - 70, z.y + z.h - 60, 4, 16, 7, 10)}
+        <circle cx="${f1(cx)}" cy="${f1(cy)}" r="14" class="mp-block-walkway-edge"/>
+        <circle cx="${f1(cx)}" cy="${f1(cy)}" r="14" class="mp-block-walkway"/>
+        <circle cx="${f1(cx)}" cy="${f1(cy)}" r="7" fill="#15803d" opacity="0.35" stroke="#166534" stroke-width="1"/>
+        ${treeCluster(cx, cy, 2, 8, 3, 5)}
+        ${treeCluster(z.x + 15, z.y + 12, 2, 8, 3, 5)}
+        ${treeCluster(z.x + z.w - 15, z.y + 12, 2, 8, 3, 5)}
+        ${treeCluster(z.x + 15, z.y + z.h - 12, 2, 8, 3, 5)}
+        ${treeCluster(z.x + z.w - 15, z.y + z.h - 12, 2, 8, 3, 5)}
     `;
 }
 

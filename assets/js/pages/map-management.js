@@ -560,19 +560,19 @@
 
         // Match known cemetery master plan parcels if applicable
         if (name.includes('peace') || name.includes('section a') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('a1')))) {
-            return { x: 526, y: 312, width: 548, height: 222 };
+            return { x: 735, y: 400, width: 130, height: 50 };
         }
         if (name.includes('lourdes') || name.includes('section b') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('b1')))) {
-            return { x: 106, y: 312, width: 398, height: 222 };
+            return { x: 635, y: 375, width: 75, height: 105 };
         }
         if (name.includes('jose') || name.includes('section c') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('c1')))) {
-            return { x: 106, y: 94, width: 672, height: 194 };
+            return { x: 700, y: 288, width: 66, height: 62 };
         }
         if (name.includes('columbarium') || name.includes('ossuary') || name.includes('section d') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('d1')))) {
-            return { x: 822, y: 94, width: 672, height: 194 };
+            return { x: 825, y: 190, width: 92, height: 125 };
         }
         if (name.includes('reserve') || name.includes('section e') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('e1')))) {
-            return { x: 1096, y: 312, width: 398, height: 222 };
+            return { x: 875, y: 390, width: 70, height: 42 };
         }
 
         // Generic fallback grid
@@ -608,43 +608,96 @@
     function calculateDefaultBlockBounds(blk, sec) {
         const blocks = sec.blocks || [];
         const bIdx = blocks.findIndex(b => b.block_id === blk.block_id);
-        const secBounds = sec.map_config || calculateDefaultSectionBounds(sec);
         const name = (sec.section_name || '').toLowerCase();
         const bName = (blk.block_name || '').toLowerCase();
 
-        // If Section A (Everlasting Peace flanks the central spine at x=800):
-        if (name.includes('peace') || name.includes('section a')) {
+        // Section A (Everlasting Peace flanks central spine at relative x = 65):
+        if (name.includes('peace') || name.includes('section a') || bName.includes('a1') || bName.includes('a2')) {
             if (bName.includes('a1') || bIdx === 0) {
                 return {
-                    x: 18,
-                    y: 52,
-                    width: 236,
-                    height: 154,
-                    grid: { columns: 5, rows: Math.ceil((blk.total_lots || 10) / 5), gap_x: 14, gap_y: 14 }
+                    x: 7,
+                    y: 12,
+                    width: 42,
+                    height: 32,
+                    grid: { columns: 3, rows: Math.ceil((blk.total_lots || 10) / 3), gap_x: 4, gap_y: 4 }
                 };
-            } else if (bName.includes('a2') || bIdx === 1) {
+            } else {
                 return {
-                    x: 294,
-                    y: 52,
-                    width: 236,
-                    height: 154,
-                    grid: { columns: 5, rows: Math.ceil((blk.total_lots || 10) / 5), gap_x: 14, gap_y: 14 }
+                    x: 81,
+                    y: 12,
+                    width: 42,
+                    height: 32,
+                    grid: { columns: 3, rows: Math.ceil((blk.total_lots || 10) / 3), gap_x: 4, gap_y: 4 }
                 };
             }
         }
 
-        // Standard block distribution inside section
+        // Section B (Our Lady of Lourdes: vertical stack B1 North, B2 South):
+        if (name.includes('lourdes') || name.includes('section b') || bName.includes('b1') || bName.includes('b2')) {
+            if (bName.includes('b1') || bIdx === 0) {
+                return {
+                    x: 6,
+                    y: 12,
+                    width: 63,
+                    height: 40,
+                    grid: { columns: 4, rows: Math.ceil((blk.total_lots || 10) / 4), gap_x: 4, gap_y: 4 }
+                };
+            } else {
+                return {
+                    x: 6,
+                    y: 56,
+                    width: 63,
+                    height: 40,
+                    grid: { columns: 4, rows: Math.ceil((blk.total_lots || 10) / 4), gap_x: 4, gap_y: 4 }
+                };
+            }
+        }
+
+        // Section C (Sanctuario de San Jose: side-by-side C1 West, C2 East):
+        if (name.includes('jose') || name.includes('section c') || bName.includes('c1') || bName.includes('c2')) {
+            if (bName.includes('c1') || bIdx === 0) {
+                return {
+                    x: 5,
+                    y: 12,
+                    width: 25,
+                    height: 44,
+                    grid: { columns: 2, rows: Math.ceil((blk.total_lots || 10) / 2), gap_x: 3, gap_y: 3 }
+                };
+            } else {
+                return {
+                    x: 36,
+                    y: 12,
+                    width: 25,
+                    height: 44,
+                    grid: { columns: 2, rows: Math.ceil((blk.total_lots || 10) / 2), gap_x: 3, gap_y: 3 }
+                };
+            }
+        }
+
+        // Section D (Columbarium & Ossuary Sanctuary: single block D1):
+        if (name.includes('columbarium') || name.includes('ossuary') || name.includes('section d') || bName.includes('d1')) {
+            return {
+                x: 7,
+                y: 14,
+                width: 78,
+                height: 100,
+                grid: { columns: 5, rows: Math.ceil((blk.total_lots || 10) / 5), gap_x: 4, gap_y: 4 }
+            };
+        }
+
+        // Standard block distribution inside section (generic fallback)
         const blockCount = blocks.length || 1;
         let bCols = 1;
         if (blockCount >= 2 && blockCount <= 4) bCols = 2;
         else if (blockCount > 4) bCols = Math.ceil(Math.sqrt(blockCount));
         const bRows = Math.ceil(blockCount / bCols);
 
-        const bodyMargin = 16;
-        const headerH = 46;
+        const bodyMargin = 5;
+        const headerH = 14;
+        const secBounds = sec.map_config || calculateDefaultSectionBounds(sec);
         const bodyW = secBounds.width - (bodyMargin * 2);
         const bodyH = secBounds.height - headerH - (bodyMargin * 2);
-        const bGap = 12;
+        const bGap = 6;
 
         const blockW = (bodyW - ((bCols - 1) * bGap)) / bCols;
         const blockH = (bodyH - ((bRows - 1) * bGap)) / bRows;
@@ -659,8 +712,8 @@
             grid: {
                 columns: 5,
                 rows: Math.ceil((blk.total_lots || 10) / 5),
-                gap_x: 14,
-                gap_y: 14
+                gap_x: 6,
+                gap_y: 6
             }
         };
     }
@@ -1724,32 +1777,34 @@
             secGroup.appendChild(bgRect);
 
             // Header Rect
-            const headerH = 46;
+            const headerH = 14;
             const headRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             headRect.setAttribute('x', secX);
             headRect.setAttribute('y', secY);
             headRect.setAttribute('width', secW);
             headRect.setAttribute('height', headerH);
-            headRect.setAttribute('rx', '14');
+            headRect.setAttribute('rx', '4');
             headRect.setAttribute('class', 'svg-section-header');
             secGroup.appendChild(headRect);
 
             // Section Title
             const titleText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            titleText.setAttribute('x', secX + 16);
-            titleText.setAttribute('y', secY + 28);
+            titleText.setAttribute('x', secX + 6);
+            titleText.setAttribute('y', secY + 10);
             titleText.setAttribute('class', 'svg-section-title');
+            titleText.style.fontSize = '8px';
             titleText.textContent = sec.section_name;
             secGroup.appendChild(titleText);
 
             // Section Meta Pill / Count
             const blocks = sec.blocks || [];
             const secMeta = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            secMeta.setAttribute('x', secX + secW - 16);
-            secMeta.setAttribute('y', secY + 28);
+            secMeta.setAttribute('x', secX + secW - 6);
+            secMeta.setAttribute('y', secY + 10);
             secMeta.setAttribute('text-anchor', 'end');
             secMeta.setAttribute('class', 'svg-section-meta');
-            secMeta.textContent = `${blocks.length} ${blocks.length === 1 ? 'Block' : 'Blocks'} • ${sec.total_lots || 0} Lots`;
+            secMeta.style.fontSize = '7px';
+            secMeta.textContent = `${blocks.length} ${blocks.length === 1 ? 'Blk' : 'Blks'} • ${sec.total_lots || 0} Lots`;
             secGroup.appendChild(secMeta);
 
             // Section Click to Select
@@ -1765,7 +1820,7 @@
             });
 
             // Blocks in Section
-            const bodyMargin = 16;
+            const bodyMargin = 4;
             const bodyX = secX + bodyMargin;
             const bodyY = secY + headerH + bodyMargin;
             const bodyW = secW - (bodyMargin * 2);
@@ -1777,7 +1832,7 @@
                 if (bCount >= 2 && bCount <= 4) bCols = 2;
                 else if (bCount > 4) bCols = Math.ceil(Math.sqrt(bCount));
                 const bRows = Math.ceil(bCount / bCols);
-                const bGap = 12;
+                const bGap = 4;
 
                 const defBlkW = (bodyW - ((bCols - 1) * bGap)) / bCols;
                 const defBlkH = (bodyH - ((bRows - 1) * bGap)) / bRows;
@@ -1811,37 +1866,40 @@
                     blkRect.setAttribute('y', blkY);
                     blkRect.setAttribute('width', blkW);
                     blkRect.setAttribute('height', blkH);
+                    blkRect.setAttribute('rx', '3');
                     blkRect.setAttribute('class', 'svg-block-bg');
                     blkGroup.appendChild(blkRect);
 
                     const blkTitle = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    blkTitle.setAttribute('x', blkX + 12);
-                    blkTitle.setAttribute('y', blkY + (blkH / 2) + 5);
+                    blkTitle.setAttribute('x', blkX + 4);
+                    blkTitle.setAttribute('y', blkY + (blkH / 2) + 3);
                     blkTitle.setAttribute('class', 'svg-block-title');
+                    blkTitle.style.fontSize = '7px';
                     blkTitle.textContent = blk.block_name;
                     blkGroup.appendChild(blkTitle);
 
                     // Block plot count badge
-                    if (blkW > 95 && blkH > 28) {
-                        const badgeW = 54;
-                        const badgeH = 18;
-                        const badgeX = blkX + blkW - badgeW - 10;
-                        const badgeY = blkY + (blkH / 2) - 9;
+                    if (blkW > 45 && blkH > 18) {
+                        const badgeW = 38;
+                        const badgeH = 12;
+                        const badgeX = blkX + blkW - badgeW - 4;
+                        const badgeY = blkY + (blkH / 2) - 6;
 
                         const badgeRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                         badgeRect.setAttribute('x', badgeX);
                         badgeRect.setAttribute('y', badgeY);
                         badgeRect.setAttribute('width', badgeW);
                         badgeRect.setAttribute('height', badgeH);
-                        badgeRect.setAttribute('rx', '4');
+                        badgeRect.setAttribute('rx', '2');
                         badgeRect.setAttribute('class', 'svg-block-badge-bg');
                         blkGroup.appendChild(badgeRect);
 
                         const badgeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                         badgeText.setAttribute('x', badgeX + (badgeW / 2));
-                        badgeText.setAttribute('y', badgeY + 13);
+                        badgeText.setAttribute('y', badgeY + 9);
                         badgeText.setAttribute('text-anchor', 'middle');
                         badgeText.setAttribute('class', 'svg-block-badge-text');
+                        badgeText.style.fontSize = '6.5px';
                         badgeText.textContent = `${blk.total_lots || 0} Plots`;
                         blkGroup.appendChild(badgeText);
                     }
