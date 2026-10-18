@@ -383,31 +383,6 @@
                                 </div>
                             </div>
 
-                            <!-- BATCH 35: GOOGLE MAPS STREET VIEW & ENTRANCE CLUSTER (Concern 4) -->
-                            <div class="map-streetview-cluster" id="mapStreetviewCluster">
-                                <!-- Street View Entrance Thumbnail Card (matches screenshot media_1792295513850_dccf3478.png) -->
-                                <div class="streetview-thumb-card" id="streetviewThumbCard" role="button" tabindex="0" title="Click to open Street View of P. Aquino Ave Entrance" aria-label="Open Street View Entrance">
-                                    <div class="streetview-thumb-img-wrap">
-                                        <div class="streetview-thumb-gradient"></div>
-                                        <div class="streetview-360-badge" aria-hidden="true">
-                                            <i class="fas fa-arrows-rotate"></i>
-                                        </div>
-                                        <div class="streetview-thumb-label">
-                                            <span>P. Aquino Ave Gate</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Pegman Street View Floating Button & Recenter Button -->
-                                <div class="streetview-tools-col">
-                                    <button type="button" class="map-tool-btn" id="btnRecenterEntrance" title="Center on Main Entrance Gate" aria-label="Center on Main Entrance">
-                                        <i class="fas fa-crosshairs"></i>
-                                    </button>
-                                    <button type="button" class="map-tool-btn btn-pegman" id="btnPegmanStreetView" title="Explore Street View of Cemetery Entrance" aria-label="Street View Entrance">
-                                        <i class="fas fa-person-walking"></i>
-                                    </button>
-                                </div>
-                            </div>
 
                             <!-- ON-MAP LOCATION SUMMARY CARD (Batch 6) -->
                             <div class="map-location-summary-card" id="mapLocationSummaryCard" style="display: none;" aria-live="polite">
@@ -468,22 +443,6 @@
                                         </div>
                                     </div>
 
-                                    <!-- BATCH 35: ACTUAL ROAD ENTRANCE STREET VIEW PREVIEW (Concern 4) -->
-                                    <div class="route-streetview-preview" id="routeStreetviewPreview">
-                                        <div class="route-streetview-header">
-                                            <span class="route-streetview-badge"><i class="fas fa-camera"></i> ACTUAL ROAD VIEW</span>
-                                            <span class="route-streetview-sub">P. Aquino Ave Entrance</span>
-                                        </div>
-                                        <div class="route-streetview-media" id="btnOpenStreetViewFromRoute" role="button" tabindex="0" title="Click to view Street View of Gate Entrance" aria-label="Open Street View of Gate">
-                                            <div class="route-streetview-thumb-bg">
-                                                <div class="route-streetview-badge-360"><i class="fas fa-arrows-rotate"></i> 360°</div>
-                                            </div>
-                                            <div class="route-streetview-caption-wrap">
-                                                <strong class="route-streetview-caption">Main Ingress Gate Portal</strong>
-                                                <small class="route-streetview-hint"><i class="fas fa-arrow-up-right-from-square"></i> Open Street View Walkthrough</small>
-                                            </div>
-                                        </div>
-                                    </div>
 
                                     <div class="route-metrics-bar">
                                         <div class="route-metric-item">
@@ -1381,92 +1340,6 @@
         </div>
     </div>
 
-    <!-- BATCH 35: GOOGLE STREET VIEW WALKTHROUGH MODAL (Concern 4) -->
-    <div class="modal-backdrop streetview-modal-backdrop" id="streetViewModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="streetViewModalTitle">
-        <div class="streetview-modal-dialog">
-            <!-- Street View Top Navigation Bar -->
-            <div class="streetview-modal-header">
-                <div class="streetview-header-left">
-                    <div class="streetview-header-badge"><i class="fas fa-street-view"></i> Google Street View</div>
-                    <div>
-                        <h3 class="streetview-header-title" id="streetViewModalTitle">Everlasting Peace Memorial Park &amp; Crematorium</h3>
-                        <p class="streetview-header-subtitle"><i class="fas fa-location-dot"></i> 3 P. Aquino Ave, Tonsuya, Malabon, Metro Manila</p>
-                    </div>
-                </div>
-                <div class="streetview-header-actions">
-                    <button type="button" class="btn btn-sm btn-primary" id="btnGuideFromStreetView"><i class="fas fa-route"></i> Guide Me Into Grounds</button>
-                    <button type="button" class="btn-close-streetview" id="btnCloseStreetViewModal" title="Close Street View" aria-label="Close Street View"><i class="fas fa-xmark"></i></button>
-                </div>
-            </div>
-
-            <!-- Street View Panorama Viewport -->
-            <div class="streetview-panorama-viewport" id="streetviewPanoramaViewport">
-                <!-- Realistic Google Street View Scene Graphics (Matching media_1792295943460_fea4dda9.png) -->
-                <div class="streetview-photo-stage" id="streetviewPhotoStage">
-                    <!-- Street View Address Overlay -->
-                    <div class="streetview-hud-address">
-                        <span class="hud-address-title">77 P. Aquino Ave</span>
-                        <span class="hud-address-sub">Malabon, Metro Manila • Google Street View</span>
-                    </div>
-
-                    <!-- Gate Directional Pin / Guidance Callout -->
-                    <div class="streetview-gate-callout">
-                        <div class="callout-pin"><i class="fas fa-arrow-turn-down"></i></div>
-                        <div class="callout-card">
-                            <strong>West Ingress Gate Portal</strong>
-                            <small>Enter here from P. Aquino Ave -> St. Joseph Drive</small>
-                        </div>
-                    </div>
-
-                    <!-- Compass Widget in Street View -->
-                    <div class="streetview-compass-badge" title="Facing North-East into Cemetery Gate">
-                        <div class="compass-needle"></div>
-                        <span>N</span>
-                    </div>
-
-                    <!-- 360 Rotation Prompt -->
-                    <div class="streetview-controls-hint">
-                        <i class="fas fa-arrows-rotate"></i> Pan and inspect actual road entrance
-                    </div>
-                </div>
-
-                <!-- Turn-by-Turn Road Walkthrough Steps -->
-                <div class="streetview-walkthrough-bar">
-                    <div class="walkthrough-step is-active" data-step="0">
-                        <span class="step-num">1</span>
-                        <div class="step-info">
-                            <strong>P. Aquino Avenue Gate</strong>
-                            <small>Primary access entrance</small>
-                        </div>
-                    </div>
-                    <div class="walkthrough-arrow"><i class="fas fa-chevron-right"></i></div>
-                    <div class="walkthrough-step" data-step="1">
-                        <span class="step-num">2</span>
-                        <div class="step-info">
-                            <strong>St. Joseph Drive (Main Ingress)</strong>
-                            <small>Paved two-lane driveway</small>
-                        </div>
-                    </div>
-                    <div class="walkthrough-arrow"><i class="fas fa-chevron-right"></i></div>
-                    <div class="walkthrough-step" data-step="2">
-                        <span class="step-num">3</span>
-                        <div class="step-info">
-                            <strong>Central Connector / Rotunda</strong>
-                            <small>Memorial circle transition</small>
-                        </div>
-                    </div>
-                    <div class="walkthrough-arrow"><i class="fas fa-chevron-right"></i></div>
-                    <div class="walkthrough-step" data-step="3">
-                        <span class="step-num">4</span>
-                        <div class="step-info">
-                            <strong>Pedestrian Stone Footway</strong>
-                            <small>Direct access to burial plot</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- SHARED LIBRARIES & PAGE CONTROLLER -->
     <script src="../../assets/js/shared/navigation-config.js"></script>
