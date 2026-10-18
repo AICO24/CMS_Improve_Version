@@ -21,9 +21,9 @@
         blockLotsCache: {},
         hasUnsavedEdits: false,
 
-        // SVG Viewport Matrix
-        baseViewBox: { x: 0, y: 0, width: 1600, height: 1000 },
-        currentViewBox: { x: 0, y: 0, width: 1600, height: 1000 },
+        // SVG Viewport Matrix (Batch 26: Calibrated to Google Maps Layout)
+        baseViewBox: { x: 440, y: 95, width: 880, height: 890 },
+        currentViewBox: { x: 440, y: 95, width: 880, height: 890 },
         isPanning: false,
         panStart: { x: 0, y: 0 },
     };
@@ -348,12 +348,17 @@
                 state.currentLayout = res.data;
                 state.currentCemetery = res.data.cemetery;
 
-                // Sync Canvas dimensions
+                // Sync Canvas dimensions (Batch 26: Calibrated to Google Maps Layout)
                 const cemCfg = res.data.cemetery?.map_config;
-                if (cemCfg && cemCfg.width && cemCfg.height) {
-                    state.baseViewBox = { x: 0, y: 0, width: parseFloat(cemCfg.width), height: parseFloat(cemCfg.height) };
+                if (cemCfg && cemCfg.width && cemCfg.height && (cemCfg.width !== 1600 || cemCfg.x !== undefined)) {
+                    state.baseViewBox = {
+                        x: cemCfg.x !== undefined ? parseFloat(cemCfg.x) : 440,
+                        y: cemCfg.y !== undefined ? parseFloat(cemCfg.y) : 95,
+                        width: parseFloat(cemCfg.width),
+                        height: parseFloat(cemCfg.height)
+                    };
                 } else {
-                    state.baseViewBox = { x: 0, y: 0, width: 1600, height: 1000 };
+                    state.baseViewBox = { x: 440, y: 95, width: 880, height: 890 };
                 }
                 state.currentViewBox = { ...state.baseViewBox };
                 badgeCanvasSize.textContent = `Canvas: ${state.baseViewBox.width} × ${state.baseViewBox.height}`;
@@ -376,7 +381,7 @@
                     id: state.currentCemetery.cemetery_id,
                     name: state.currentCemetery.cemetery_name,
                     rawData: state.currentCemetery,
-                    config: state.currentCemetery.map_config || { width: 1600, height: 1000 }
+                    config: state.currentCemetery.map_config || { width: 880, height: 890 }
                 });
 
                 renderPreview();
@@ -558,21 +563,21 @@
         const index = sections.findIndex(s => s.section_id === sec.section_id);
         const name = (sec.section_name || '').toLowerCase();
 
-        // Match known cemetery master plan parcels if applicable
+        // Match known cemetery master plan parcels (Batch 26: Calibrated to Google Maps Layout)
         if (name.includes('peace') || name.includes('section a') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('a1')))) {
-            return { x: 735, y: 400, width: 130, height: 50 };
+            return { x: 726, y: 395, width: 148, height: 130 };
         }
         if (name.includes('lourdes') || name.includes('section b') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('b1')))) {
-            return { x: 635, y: 375, width: 75, height: 105 };
+            return { x: 636, y: 320, width: 86, height: 202 };
         }
         if (name.includes('jose') || name.includes('section c') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('c1')))) {
-            return { x: 700, y: 288, width: 66, height: 62 };
+            return { x: 672, y: 185, width: 116, height: 82 };
         }
         if (name.includes('columbarium') || name.includes('ossuary') || name.includes('section d') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('d1') || (b.block_name || '').toLowerCase().includes('reloc')))) {
-            return { x: 825, y: 190, width: 92, height: 125 };
+            return { x: 815, y: 165, width: 106, height: 100 };
         }
         if (name.includes('reserve') || name.includes('section e') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('e1')))) {
-            return { x: 875, y: 390, width: 70, height: 42 };
+            return { x: 885, y: 375, width: 140, height: 150 };
         }
 
         // Generic fallback grid
@@ -611,77 +616,88 @@
         const name = (sec.section_name || '').toLowerCase();
         const bName = (blk.block_name || '').toLowerCase();
 
-        // Section A (Everlasting Peace flanks central spine at relative x = 65):
+        // Section A (Everlasting Peace flanks central spine at relative x = 74, width: 148, height: 130):
         if (name.includes('peace') || name.includes('section a') || bName.includes('a1') || bName.includes('a2')) {
             if (bName.includes('a1') || bIdx === 0) {
                 return {
                     x: 7,
                     y: 12,
-                    width: 42,
-                    height: 32,
-                    grid: { columns: 10, rows: 5, gap_x: 0.4, gap_y: 0.4 }
+                    width: 58,
+                    height: 110,
+                    grid: { columns: 5, rows: 10, gap_x: 0.8, gap_y: 0.8 }
                 };
             } else {
                 return {
-                    x: 81,
+                    x: 83,
                     y: 12,
-                    width: 42,
-                    height: 32,
-                    grid: { columns: 5, rows: 1, gap_x: 1.5, gap_y: 1.5 }
+                    width: 58,
+                    height: 110,
+                    grid: { columns: 5, rows: 2, gap_x: 1.5, gap_y: 1.5 }
                 };
             }
         }
 
-        // Section B (Our Lady of Lourdes: vertical stack B1 North, B2 South):
+        // Section B (Our Lady of Lourdes: vertical corridor B1 North, B2 South, width: 86, height: 202):
         if (name.includes('lourdes') || name.includes('section b') || bName.includes('b1') || bName.includes('b2')) {
             if (bName.includes('b1') || bIdx === 0) {
                 return {
                     x: 6,
                     y: 12,
-                    width: 63,
-                    height: 40,
-                    grid: { columns: 5, rows: 1, gap_x: 2.5, gap_y: 2.5 }
+                    width: 74,
+                    height: 86,
+                    grid: { columns: 5, rows: 2, gap_x: 1.5, gap_y: 1.5 }
                 };
             } else {
                 return {
                     x: 6,
-                    y: 56,
-                    width: 63,
-                    height: 40,
-                    grid: { columns: 5, rows: 1, gap_x: 2.5, gap_y: 2.5 }
+                    y: 104,
+                    width: 74,
+                    height: 86,
+                    grid: { columns: 5, rows: 2, gap_x: 1.5, gap_y: 1.5 }
                 };
             }
         }
 
-        // Section C (Sanctuario de San Jose: side-by-side C1 West, C2 East):
+        // Section C (Sanctuario de San Jose: side-by-side C1 West, C2 East, width: 116, height: 82):
         if (name.includes('jose') || name.includes('section c') || bName.includes('c1') || bName.includes('c2')) {
             if (bName.includes('c1') || bIdx === 0) {
                 return {
-                    x: 5,
+                    x: 6,
                     y: 12,
-                    width: 25,
-                    height: 44,
-                    grid: { columns: 2, rows: 3, gap_x: 1.5, gap_y: 1.75 }
+                    width: 50,
+                    height: 60,
+                    grid: { columns: 3, rows: 3, gap_x: 1.2, gap_y: 1.2 }
                 };
             } else {
                 return {
-                    x: 36,
+                    x: 60,
                     y: 12,
-                    width: 25,
-                    height: 44,
-                    grid: { columns: 2, rows: 3, gap_x: 1.5, gap_y: 1.75 }
+                    width: 50,
+                    height: 60,
+                    grid: { columns: 3, rows: 3, gap_x: 1.2, gap_y: 1.2 }
                 };
             }
         }
 
-        // Section D (Columbarium & Ossuary Sanctuary: single block D1 / Block Reloc):
+        // Section D (Columbarium & Ossuary Sanctuary: single block D1 / Block Reloc, width: 106, height: 100):
         if (name.includes('columbarium') || name.includes('ossuary') || name.includes('section d') || bName.includes('d1') || bName.includes('reloc')) {
             return {
-                x: 7,
+                x: 8,
                 y: 14,
-                width: 78,
-                height: 100,
-                grid: { columns: 7, rows: 5, gap_x: 1.0, gap_y: 1.5 }
+                width: 90,
+                height: 76,
+                grid: { columns: 7, rows: 5, gap_x: 1.0, gap_y: 1.2 }
+            };
+        }
+
+        // Section E (Garden Reserve: E1, width: 140, height: 150):
+        if (name.includes('reserve') || name.includes('section e') || bName.includes('e1')) {
+            return {
+                x: 8,
+                y: 14,
+                width: 124,
+                height: 124,
+                grid: { columns: 5, rows: 4, gap_x: 1.5, gap_y: 1.5 }
             };
         }
 
@@ -762,8 +778,8 @@
             groupY.style.display = 'none';
             blockGridSection.style.display = 'none';
 
-            inputWidth.value = entity.config?.width || 1600;
-            inputHeight.value = entity.config?.height || 1000;
+            inputWidth.value = entity.config?.width || 880;
+            inputHeight.value = entity.config?.height || 890;
         } else if (entity.type === 'section') {
             editorHeaderIcon.className = 'fas fa-layer-group';
             editorEntityTypeBadge.style.background = '#e0e7ff';
@@ -774,10 +790,10 @@
             hintY.textContent = '(Canvas Y)';
             blockGridSection.style.display = 'none';
 
-            inputX.value = entity.config?.x ?? 40;
-            inputY.value = entity.config?.y ?? 40;
-            inputWidth.value = entity.config?.width ?? 600;
-            inputHeight.value = entity.config?.height ?? 300;
+            inputX.value = entity.config?.x ?? 726;
+            inputY.value = entity.config?.y ?? 395;
+            inputWidth.value = entity.config?.width ?? 148;
+            inputHeight.value = entity.config?.height ?? 130;
         } else if (entity.type === 'block') {
             editorHeaderIcon.className = 'fas fa-th-large';
             editorEntityTypeBadge.style.background = '#fef3c7';
@@ -788,16 +804,16 @@
             hintY.textContent = '(Section Offset Y)';
             blockGridSection.style.display = 'block';
 
-            inputX.value = entity.config?.x ?? 20;
-            inputY.value = entity.config?.y ?? 60;
-            inputWidth.value = entity.config?.width ?? 250;
-            inputHeight.value = entity.config?.height ?? 150;
+            inputX.value = entity.config?.x ?? 7;
+            inputY.value = entity.config?.y ?? 12;
+            inputWidth.value = entity.config?.width ?? 58;
+            inputHeight.value = entity.config?.height ?? 110;
 
             const grid = entity.config?.grid || {};
             inputGridColumns.value = grid.columns ?? 5;
             inputGridRows.value = grid.rows ?? Math.ceil((entity.rawData?.total_lots || 10) / (grid.columns || 5));
-            inputGridGapX.value = grid.gap_x ?? 14;
-            inputGridGapY.value = grid.gap_y ?? 14;
+            inputGridGapX.value = grid.gap_x ?? 1.5;
+            inputGridGapY.value = grid.gap_y ?? 1.5;
         } else if (entity.type === 'lot') {
             editorHeaderIcon.className = 'fas fa-square';
             editorEntityTypeBadge.style.background = '#ede9fe';
@@ -810,8 +826,8 @@
 
             inputX.value = entity.config?.x ?? 0;
             inputY.value = entity.config?.y ?? 0;
-            inputWidth.value = entity.config?.width ?? 80;
-            inputHeight.value = entity.config?.height ?? 60;
+            inputWidth.value = entity.config?.width ?? 10;
+            inputHeight.value = entity.config?.height ?? 10;
         }
 
         validateCurrentForm();
@@ -830,8 +846,8 @@
         // Update working config
         const entity = state.selectedEntity;
         if (entity.type === 'cemetery') {
-            entity.config.width = parseFloat(inputWidth.value) || 1600;
-            entity.config.height = parseFloat(inputHeight.value) || 1000;
+            entity.config.width = parseFloat(inputWidth.value) || 880;
+            entity.config.height = parseFloat(inputHeight.value) || 890;
         } else {
             entity.config.x = parseFloat(inputX.value) || 0;
             entity.config.y = parseFloat(inputY.value) || 0;
@@ -841,8 +857,8 @@
             if (entity.type === 'block') {
                 if (!entity.config.grid) entity.config.grid = {};
                 entity.config.grid.columns = parseInt(inputGridColumns.value, 10) || 5;
-                entity.config.grid.gap_x = parseFloat(inputGridGapX.value) || 14;
-                entity.config.grid.gap_y = parseFloat(inputGridGapY.value) || 14;
+                entity.config.grid.gap_x = parseFloat(inputGridGapX.value) || 1.5;
+                entity.config.grid.gap_y = parseFloat(inputGridGapY.value) || 1.5;
                 const totLots = entity.rawData?.total_lots || 10;
                 inputGridRows.value = Math.ceil(totLots / (entity.config.grid.columns || 5));
             }
@@ -879,15 +895,18 @@
                 errorMessage = 'Coordinates (SVG X and Y) cannot be negative.';
             }
 
-            // Section canvas boundary validation
+            // Section canvas boundary validation (Batch 26: Respects baseViewBox offset & dimensions)
             if (entity.type === 'section') {
-                const canvasW = state.baseViewBox.width;
-                const canvasH = state.baseViewBox.height;
-                if (x >= canvasW || y >= canvasH) {
+                const canvasMinX = state.baseViewBox.x;
+                const canvasMaxX = state.baseViewBox.x + state.baseViewBox.width;
+                const canvasMinY = state.baseViewBox.y;
+                const canvasMaxY = state.baseViewBox.y + state.baseViewBox.height;
+
+                if ((x + w) < canvasMinX || x > canvasMaxX || (y + h) < canvasMinY || y > canvasMaxY) {
                     isValid = false;
                     errorMessage = 'Section is positioned completely outside the cemetery canvas.';
-                } else if ((x + w) > canvasW || (y + h) > canvasH) {
-                    warnings.push(`Section extends beyond canvas boundaries (${canvasW} × ${canvasH}).`);
+                } else if (x < canvasMinX || (x + w) > canvasMaxX || y < canvasMinY || (y + h) > canvasMaxY) {
+                    warnings.push(`Section extends beyond canvas boundaries (${canvasMinX}..${canvasMaxX} × ${canvasMinY}..${canvasMaxY}).`);
                 }
             }
 
@@ -1244,6 +1263,16 @@
             p.innerHTML = '<path d="M 0 5 L 10 5 M 5 0 L 5 10" stroke="rgba(0,0,0,0.09)" stroke-width="0.75" fill="none"/>';
             defs.appendChild(p);
         }
+        if (!document.getElementById('mpLawnStripes')) {
+            const ls = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+            ls.setAttribute('id', 'mpLawnStripes');
+            ls.setAttribute('width', '16');
+            ls.setAttribute('height', '16');
+            ls.setAttribute('patternUnits', 'userSpaceOnUse');
+            ls.setAttribute('patternTransform', 'rotate(45)');
+            ls.innerHTML = '<rect width="8" height="16" fill="rgba(255,255,255,0.03)"/><rect x="8" width="8" height="16" fill="rgba(0,0,0,0.03)"/>';
+            defs.appendChild(ls);
+        }
         if (!document.getElementById('cemeteryParcelClip')) {
             const cp = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
             cp.setAttribute('id', 'cemeteryParcelClip');
@@ -1255,6 +1284,7 @@
     /**
      * Render the Continuous Geographic Cemetery Master Plan Base
      * (Roads, Landscaping, Frontage, Landmarks, and Boundaries).
+     * Synchronized with Google Maps layout in Batch 26.
      */
     function renderMasterPlanBackdrop(container, canvasW, canvasH) {
         ensureMasterPlanDefs();
@@ -1306,6 +1336,18 @@
             return out;
         };
 
+        const treeCluster = (cx, cy, count, radius, rMin, rMax) => {
+            let out = '';
+            for (let i = 0; i < count; i++) {
+                const ang = (i / count) * Math.PI * 2 + rnd() * 0.5;
+                const dist = rnd() * radius;
+                const x = cx + Math.cos(ang) * dist;
+                const y = cy + Math.sin(ang) * dist;
+                out += treeSvg(x, y, rMin + rnd() * (rMax - rMin), Math.floor(rnd() * 4));
+            }
+            return out;
+        };
+
         const pillSvg = (cx, cy, text, icon, variant) => {
             const w = Math.round(text.length * 6.2 + (icon ? 30 : 20));
             const x = cx - w / 2;
@@ -1316,79 +1358,44 @@
                 `</g>`;
         };
 
-        // Verified OSM Relation 16828676 Site Perimeter Coordinates (Batch 13)
-        // 19 Unique Perimeter Vertices projected into 1600x1000 Canvas at 3.4937 px/m
+        // Verified OSM Relation 16828676 Site Perimeter Coordinates
         const CEMETERY_POLYGON_POINTS = "1168.9,900.0 956.7,863.5 952.1,610.6 1001.0,608.1 963.7,432.3 637.0,531.8 617.6,493.5 576.8,444.4 689.6,282.2 766.2,264.0 808.5,194.0 864.5,162.8 975.8,147.7 1022.1,146.6 1022.7,403.1 1033.7,400.5 1052.4,491.2 1058.9,697.8 1102.3,690.7";
-        const CEMETERY_INNER_POLYGON_POINTS = "1163.8,895.6 960.1,860.5 955.7,613.9 1005.3,611.4 966.3,427.8 638.8,527.6 620.5,491.6 581.2,444.2 691.8,285.3 768.4,267.1 811.1,196.6 865.6,166.1 976.0,151.2 1018.6,150.2 1019.2,407.5 1031.0,404.8 1048.9,491.6 1055.5,701.9 1099.8,694.7";
 
-        // =========================================================================
-        // BATCH 15: VERIFIED PHYSICAL FACILITY STRUCTURES & OPERATIONAL LANDMARK ANCHORS
-        // 15 Mapped Roofed Structures projected into 1600x1000 Canvas at 3.4937 px/m
-        // =========================================================================
+        // Verified physical facility footprints
         const FACILITY_STRUCTURES = [
-            // Central Spine Structures
             { id: 'bldg-927998601', wayId: 927998601, points: '776.2,365.4 790.5,364.9 791.3,385.0 776.8,385.8', cx: 783.7, cy: 375.3 },
             { id: 'bldg-927998602', wayId: 927998602, points: '774.0,373.8 788.3,373.4 789.1,393.4 774.5,394.2', cx: 781.5, cy: 383.7 },
-            // North-Central Pavilion Row 1 (West Column)
             { id: 'bldg-930065359', wayId: 930065359, points: '861.0,203.5 828.5,202.9 828.1,225.3 862.0,223.7', cx: 844.9, cy: 213.8 },
             { id: 'bldg-930065360', wayId: 930065360, points: '859.5,230.5 826.9,230.0 826.6,252.3 860.4,250.7', cx: 843.4, cy: 240.9 },
             { id: 'bldg-930065361', wayId: 930065361, points: '857.4,262.3 824.8,261.8 824.5,284.1 858.3,282.6', cx: 841.2, cy: 272.7 },
             { id: 'bldg-930065362', wayId: 930065362, points: '857.4,292.5 824.8,291.9 824.5,314.2 858.3,312.6', cx: 841.2, cy: 302.8 },
-            // North-Central Pavilion Row 2 (Mid Column)
             { id: 'bldg-930065364', wayId: 930065364, points: '899.4,231.0 866.8,230.4 866.5,252.7 900.3,251.2', cx: 883.2, cy: 241.3 },
             { id: 'bldg-930065363', wayId: 930065363, points: '901.9,263.6 869.3,263.0 869.0,285.4 902.9,283.8', cx: 885.8, cy: 273.9 },
             { id: 'bldg-930065367', wayId: 930065367, points: '903.2,289.5 870.6,288.9 870.3,311.2 904.1,309.7', cx: 887.0, cy: 299.8 },
-            // Central Court Structures
             { id: 'bldg-930065369', wayId: 930065369, points: '866.2,349.0 843.7,349.7 851.0,374.1 869.6,373.4', cx: 857.6, cy: 361.6 },
             { id: 'bldg-930065370', wayId: 930065370, points: '896.4,346.9 873.8,347.6 881.2,372.0 899.7,371.3', cx: 887.8, cy: 359.4 },
-            // Eastern Structures & Terraces
             { id: 'bldg-930065365', wayId: 930065365, points: '936.7,243.8 927.3,243.7 927.2,250.1 937.0,249.7', cx: 932.0, cy: 246.8 },
             { id: 'bldg-930065366', wayId: 930065366, points: '949.4,262.3 933.2,261.8 935.2,276.2 947.5,276.9 952.5,277.0', cx: 943.6, cy: 270.8 },
             { id: 'bldg-930065368', wayId: 930065368, points: '947.5,276.9 933.5,282.0 932.3,302.0 950.9,301.4', cx: 941.0, cy: 290.6 },
             { id: 'bldg-930065371', wayId: 930065371, points: '994.8,255.7 956.2,255.9 965.6,285.5 996.5,284.8', cx: 978.3, cy: 270.5 }
         ];
 
-        const FACILITY_ANCHORS = {
-            gate: { id: 'gate', landmark: 'gate', x: 1096, y: 881, label: 'Main Gate (Gate 1)' },
-            parking: { id: 'parking', landmark: 'parking', x: 1035, y: 755, label: 'Visitor Parking Zone' },
-            admin: { id: 'admin', landmark: 'admin', x: 782, y: 380, label: 'Administration Office' },
-            chapel: { id: 'chapel', landmark: 'chapel', x: 858, y: 362, label: 'Memorial Chapel' },
-            crematorium: { id: 'crematorium', landmark: 'crematorium', x: 978, y: 271, label: 'Crematorium Facility' },
-            columbarium: { id: 'columbarium', landmark: 'columbarium', x: 886, y: 274, label: 'Columbarium & Ossuary' },
-            restroom: { id: 'restroom', landmark: 'restroom', x: 932, y: 247, label: 'Comfort Room (CR)' }
-        };
-
-        const RD = {
-            west: 95,
-            east: 1505,
-            spine: 800,
-            north: 80,
-            promenade: 300,
-            mainCross: 545,
-            southService: 865,
-            accW: 515,
-            accE: 1085
-        };
-
         const sitePlanGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         sitePlanGroup.setAttribute('class', 'mp-master-site-plan-backdrop');
         sitePlanGroup.style.pointerEvents = 'none';
 
-        // 1. Surround Canvas & Ground Lawn (Verified 19-Vertex Polygon)
+        // 1. Surround Canvas & Ground Lawn
         let groundHtml = `
-            <rect x="0" y="0" width="${canvasW}" height="${canvasH}" class="mp-surround"/>
-            <rect x="0" y="0" width="${canvasW}" height="${canvasH}" fill="url(#mpGrassSpeckle)" class="mp-texture"/>
+            <rect x="300" y="0" width="1100" height="1100" class="mp-surround"/>
+            <rect x="300" y="0" width="1100" height="1100" fill="url(#mpGrassSpeckle)" class="mp-texture"/>
 
-            <!-- Southwest Residential Cutout (Outside Cemetery Property) -->
+            <!-- Surrounding Geographic Context (Matching Google Maps Neighborhood) -->
             <g class="mp-surrounding-context" aria-hidden="true">
-                <rect x="50" y="620" width="880" height="280" rx="8" class="mp-residential-cutout"/>
-                <text x="490" y="740" class="mp-context-label">BARANGAY TONSUYA RESIDENTIAL AREA</text>
-                <text x="490" y="756" class="mp-context-sublabel">Residential Properties along Prudencio St. (Outside Boundary)</text>
+                <text x="510" y="470" class="mp-context-label" style="font-size: 8px;">BARANGAY TONSUYA</text>
+                <text x="510" y="484" class="mp-context-sublabel" style="font-size: 6.8px;">Residential Area • Rosal St.</text>
 
-                <!-- Eastern Adjacent Memorial Park (OSM Relation 16828677) -->
-                <rect x="1185" y="140" width="375" height="760" rx="8" class="mp-residential-cutout"/>
-                <text x="1370" y="520" class="mp-context-label">Adjacent: Our Lady of Lourdes Eternal Park</text>
-                <text x="1370" y="536" class="mp-context-sublabel">OSM Relation 16828677 (Dagat-dagatan Memorial Park)</text>
+                <text x="1210" y="470" class="mp-context-label" style="font-size: 8px;">OUR LADY OF LOURDES</text>
+                <text x="1210" y="484" class="mp-context-sublabel" style="font-size: 6.8px;">Adjacent Memorial Park</text>
             </g>
 
             <!-- Verified 19-Vertex Cemetery Property Boundary (OSM Relation 16828676) -->
@@ -1396,8 +1403,7 @@
             <polygon points="${CEMETERY_POLYGON_POINTS}" fill="url(#mpGrassSpeckle)" class="mp-texture"/>
         `;
 
-        // P. Aquino Avenue (Letre Road) Frontage along southern edge (Bearing ~99.5° WNW to ESE)
-        // Aligned to verified frontage edge P01(956.7, 863.5) -> P00(1168.9, 900.0) [Bearing 99.8°]
+        // P. Aquino Avenue (Letre Road) Frontage along southern edge
         let crosswalkBars = '';
         for (let cx = 1076; cx <= 1120; cx += 8) {
             const cy = 948 + (cx - 1096) * 0.172;
@@ -1405,22 +1411,21 @@
         }
         groundHtml += `
             <g class="svg-external-road-group mp-frontage">
-                <!-- P. Aquino Avenue Sidewalks & Roadbed aligned to 99.5 deg bearing -->
-                <polygon points="-50,892 1650,1184 1650,1196 -50,904" class="mp-sidewalk"/>
-                <polygon points="-50,902 1650,1194 1650,1260 -50,968" class="mp-ext-road"/>
-                <line x1="-50" y1="903.5" x2="1650" y2="1195.5" class="mp-ext-edge"/>
-                <line x1="-50" y1="966.5" x2="1650" y2="1258.5" class="mp-ext-edge"/>
-                <line x1="-50" y1="935.0" x2="1650" y2="1227.0" class="mp-ext-centerline"/>
+                <polygon points="350,962 1450,1154 1450,1166 350,974" class="mp-sidewalk"/>
+                <polygon points="350,972 1450,1164 1450,1230 350,1038" class="mp-ext-road"/>
+                <line x1="350" y1="973.5" x2="1450" y2="1165.5" class="mp-ext-edge"/>
+                <line x1="350" y1="1036.5" x2="1450" y2="1228.5" class="mp-ext-edge"/>
+                <line x1="350" y1="1005.0" x2="1450" y2="1197.0" class="mp-ext-centerline"/>
                 ${crosswalkBars}
-                <polygon points="-50,968 1650,1260 1650,1272 -50,980" class="mp-sidewalk"/>
-                <text x="520" y="942" transform="rotate(9.8 520 942)" class="mp-ext-lane-label">◂  WESTBOUND (TONSUYA / LETRE)</text>
-                <text x="1380" y="1088" transform="rotate(9.8 1380 1088)" class="mp-ext-lane-label">EASTBOUND (MALABON / C-4)  ▸</text>
-                ${pillSvg(1096, 978, '⟵   P. AQUINO AVENUE (LETRE ROAD)   ⟶', '', 'road')}
+                <polygon points="350,1038 1450,1230 1450,1242 350,1050" class="mp-sidewalk"/>
+                <text x="620" y="995" transform="rotate(9.8 620 995)" class="mp-ext-lane-label">◂  WESTBOUND (TONSUYA / LETRE)</text>
+                <text x="1240" y="1105" transform="rotate(9.8 1240 1105)" class="mp-ext-lane-label">EASTBOUND (MALABON / C-4)  ▸</text>
+                ${pillSvg(1096, 960, '⟵   P. AQUINO AVENUE (LETRE ROAD)   ⟶', '', 'road')}
             </g>
             <text x="890" y="132" class="mp-north-label">NORTH BOUNDARY (MALABON/TONSUYA)</text>
         `;
 
-        // Perimeter Wall with Main Gate Opening & Posts (19-Vertex Geometry)
+        // Perimeter Wall with Main Gate Opening & Posts
         const outerWallD = "M 1078.0 877.8 L 956.7 863.5 L 952.1 610.6 L 1001.0 608.1 L 963.7 432.3 L 637.0 531.8 L 617.6 493.5 L 576.8 444.4 L 689.6 282.2 L 766.2 264.0 L 808.5 194.0 L 864.5 162.8 L 975.8 147.7 L 1022.1 146.6 L 1022.7 403.1 L 1033.7 400.5 L 1052.4 491.2 L 1058.9 697.8 L 1102.3 690.7 L 1168.9 900.0 L 1113.4 884.0";
         const innerWallD = "M 1078.0 874.3 L 960.1 860.5 L 955.7 613.9 L 1005.3 611.4 L 966.3 427.8 L 638.8 527.6 L 620.5 491.6 L 581.2 444.2 L 691.8 285.3 L 768.4 267.1 L 811.1 196.6 L 865.6 166.1 L 976.0 151.2 L 1018.6 150.2 L 1019.2 407.5 L 1031.0 404.8 L 1048.9 491.6 L 1055.5 701.9 L 1099.8 694.7 L 1163.8 895.6 L 1113.4 880.5";
         groundHtml += `
@@ -1506,29 +1511,32 @@
 
         // 2. Connected Roads & Pathways
         const roads = [
-            // 1. Entrance Service Road (OSM Way 1203404189 & 1392737965: P. Aquino Ave -> Main Gate -> Neck Corridor -> Avenue of Peace)
+            // 1. Entrance Service Road (P. Aquino Ave -> Main Gate -> Neck Corridor -> Avenue of Peace)
             { d: 'M 1101 928 L 1096 881 L 1090 820 L 1085 680 L 1085 545', w: 22, main: true },
-            // 2. Central Boulevard Spine: from South Campus -> North Boundary
-            { d: `M ${RD.spine} ${RD.southService} V ${RD.north}`, w: 30, main: true },
-            { d: `M ${RD.west} ${RD.mainCross} H ${RD.east}`, w: 26, main: true },
-            { d: `M ${RD.west} ${RD.promenade} H ${RD.east}`, w: 20 },
-            { d: `M ${RD.west} ${RD.north} H ${RD.east}`, w: 18 },
-            { d: `M ${RD.west} ${RD.north} V ${RD.mainCross} V ${RD.southService}`, w: 18 },
-            { d: `M ${RD.east} ${RD.north} V ${RD.mainCross} V ${RD.southService}`, w: 18 },
-            { d: `M ${RD.accW} ${RD.promenade} V ${RD.mainCross}`, w: 15 },
-            { d: `M ${RD.accE} ${RD.promenade} V ${RD.mainCross}`, w: 15 },
-            { d: `M ${RD.west} ${RD.southService} H ${RD.east}`, w: 15 },
-            { d: 'M 1035 755 H 1085', w: 16 }
+            // 2. Northbound Circulation Ingress to Northeast Rotunda
+            { d: 'M 1085 545 Q 1075 425 970 344', w: 20, main: true },
+            // 3. Main Cross Boulevard (Avenue of Peace): central east-west axis
+            { d: 'M 1085 545 H 800 H 655', w: 22, main: true },
+            // 4. Western Curving Ring Road (Google Maps authentic western garden perimeter)
+            { d: 'M 655 545 C 620 480 620 400 655 330 C 675 290 730 275 800 275', w: 18, main: true },
+            // 5. Central Boulevard Spine: connecting Avenue of Peace through campus to North Promenade
+            { d: 'M 800 545 V 275', w: 20, main: true },
+            // 6. North Promenade: connecting Central Spine eastward directly into Rotunda West Portal
+            { d: 'M 800 275 H 948', w: 18 },
+            // 7. Chapel Courtyard to Rotunda South Approach
+            { d: 'M 800 410 H 935 Q 970 410 970 344', w: 14 },
+            // 8. Visitor Parking Access Driveway
+            { d: 'M 1034 749 H 1088', w: 16 }
         ];
 
         // Pedestrian Walkways connecting landmarks, roads, and block parcels
         const primaryPaths = [
-            `M 782 300 V 360`,
-            `M 858 300 V 345`,
-            `M 886 215 V 320`,
-            `M 920 270 H 955`,
-            `M 978 288 V 300`,
-            `M 1035 755 H 1085`
+            `M 778 275 V 332`,
+            `M 852 275 V 330`,
+            `M 887 236 V 275`,
+            `M 924 242 H 952`,
+            `M 979 284 V 298`,
+            `M 1034 749 H 1088`
         ];
 
         let pathUnder = '', pathFill = '', roadCurbs = '', roadAsphalt = '', roadStripes = '';
@@ -1544,6 +1552,20 @@
             }
         });
 
+        // Northeast Roundabout / Rotunda
+        const rotundaHtml = `
+            <circle cx="970" cy="320" r="26" class="mp-road-curb" stroke-width="26"/>
+            <circle cx="970" cy="320" r="26" class="mp-road mp-road--main" stroke-width="20"/>
+            <circle cx="970" cy="320" r="26" class="mp-road-line" stroke-dasharray="6 5"/>
+            <circle cx="970" cy="320" r="16" class="mp-road-curb" stroke-width="2"/>
+            <circle cx="970" cy="320" r="15" fill="#4e8346" stroke="#2e5926" stroke-width="1.5"/>
+            <circle cx="970" cy="320" r="15" fill="url(#mpLawnStripes)" class="mp-texture"/>
+            <circle cx="970" cy="320" r="4.5" fill="#e2e8f0" stroke="#475569" stroke-width="1"/>
+            <circle cx="970" cy="320" r="2" fill="#f59e0b"/>
+            ${treeCluster(970, 320, 3, 7, 2.5, 4.2)}
+            ${pillSvg(970, 276, 'Memorial Rotunda', '⭕', 'navy')}
+        `;
+
         groundHtml += `
             <g class="svg-road-network mp-roads">
                 ${pathUnder}
@@ -1551,19 +1573,20 @@
                 ${roadCurbs}
                 ${roadAsphalt}
                 ${roadStripes}
-                <text x="320" y="548" class="mp-road-label">MAIN ROAD (AVENUE OF PEACE)</text>
-                <text x="1280" y="548" class="mp-road-label">MAIN ROAD (AVENUE OF PEACE)</text>
-                <text x="803" y="190" class="mp-road-label" transform="rotate(-90 803 190)">MAIN ROAD</text>
-                <text x="803" y="710" class="mp-road-label" transform="rotate(-90 803 710)">MAIN ROAD</text>
-                <text x="440" y="302.5" class="mp-road-label mp-road-label--minor">INTERNAL PROMENADE</text>
-                <text x="1160" y="302.5" class="mp-road-label mp-road-label--minor">INTERNAL PROMENADE</text>
+                ${rotundaHtml}
+                <!-- Road Name Annotations -->
+                <text x="730" y="541" class="mp-road-label">AVENUE OF PEACE</text>
+                <text x="965" y="541" class="mp-road-label">AVENUE OF PEACE</text>
+                <text x="803" y="370" class="mp-road-label" transform="rotate(-90 803 370)">MAIN SPINE</text>
+                <text x="870" y="271" class="mp-road-label mp-road-label--minor">PROMENADE</text>
                 <text x="1075" y="760" class="mp-road-label mp-road-label--minor" transform="rotate(-90 1075 760)">ENTRANCE ROAD</text>
+                <text x="635" y="420" class="mp-road-label mp-road-label--minor" transform="rotate(-90 635 420)">WEST PARK DRIVE</text>
             </g>
             <g class="mp-trees" aria-hidden="true">${
                 treeLine(766, 95, 766, 285, 24, 7, 8.5, 0.4) +
                 treeLine(834, 95, 834, 285, 24, 7, 8.5, 0.4) +
-                treeLine(766, 315, 766, 530, 24, 7, 8.5, 0.4) +
-                treeLine(834, 315, 834, 530, 24, 7, 8.5, 0.4) +
+                treeLine(766, 315, 766, 385, 24, 6.5, 8.5, 0.4) +
+                treeLine(834, 315, 834, 385, 24, 6.5, 8.5, 0.4) +
                 treeLine(1096, 680, 1096, 850, 24, 6.5, 8.5, 0.4)
             }</g>
         `;
@@ -1598,109 +1621,113 @@
 
         groundHtml += `
             <g class="svg-landmarks-group mp-landmarks">
-                <!-- Visitor Parking Area (Operational Landmark along Entrance Neck) -->
+                <!-- Visitor Parking Area -->
                 <g class="svg-landmark-bldg mp-landmark" data-landmark="parking">
                     <title>Visitor Parking Area — Entrance Corridor (Operational Landmark)</title>
-                    <rect x="990" y="720" width="80" height="70" rx="4" class="mp-parking-curb"/>
-                    <rect x="993" y="723" width="74" height="64" rx="3" class="mp-parking"/>
-                    <line x1="993" y1="738" x2="1040" y2="738" class="mp-parking-stripe"/>
-                    <line x1="993" y1="753" x2="1040" y2="753" class="mp-parking-stripe"/>
-                    <line x1="993" y1="768" x2="1040" y2="768" class="mp-parking-stripe"/>
-                    <rect x="998" y="726" width="24" height="10" rx="2" fill="#1e3a5f" class="mp-car"/>
-                    <rect x="998" y="741" width="24" height="10" rx="2" fill="#e5e7eb" class="mp-car"/>
-                    <rect x="998" y="756" width="24" height="10" rx="2" fill="#9f1239" class="mp-car"/>
-                    <rect x="995" y="770" width="28" height="15" rx="1.5" class="mp-parking-pwd"/>
-                    <text x="1009" y="782" class="mp-parking-pwd-icon">♿</text>
-                    <path d="M 1052 730 V 770 M 1047 764 L 1052 770 L 1057 764" class="mp-parking-arrow"/>
-                    ${pillSvg(1030, 755, 'Visitor Parking', 'P', 'navy')}
+                    <rect x="990" y="706" width="86" height="86" rx="4" class="mp-parking-curb"/>
+                    <rect x="993" y="709" width="80" height="80" rx="3" class="mp-parking"/>
+                    <line x1="993" y1="724" x2="1044" y2="724" class="mp-parking-stripe"/>
+                    <line x1="993" y1="739" x2="1044" y2="739" class="mp-parking-stripe"/>
+                    <line x1="993" y1="754" x2="1044" y2="754" class="mp-parking-stripe"/>
+                    <line x1="993" y1="769" x2="1044" y2="769" class="mp-parking-stripe"/>
+                    <rect x="998" y="712" width="24" height="10" rx="2" fill="#1e3a5f" class="mp-car"/>
+                    <rect x="998" y="727" width="24" height="10" rx="2" fill="#e5e7eb" class="mp-car"/>
+                    <rect x="998" y="742" width="24" height="10" rx="2" fill="#9f1239" class="mp-car"/>
+                    <rect x="998" y="757" width="24" height="10" rx="2" fill="#475569" class="mp-car"/>
+                    <rect x="995" y="772" width="30" height="15" rx="1.5" class="mp-parking-pwd"/>
+                    <text x="1010" y="784" class="mp-parking-pwd-icon">♿</text>
+                    <path d="M 1056 720 V 764 M 1051 758 L 1056 764 L 1061 758" class="mp-parking-arrow"/>
+                    ${pillSvg(1034, 749, 'Visitor Parking', 'P', 'navy')}
                 </g>
 
-                <!-- Administration Office (Calibrated Facility Anchor: Way 927998601/927998602) -->
+                <!-- Administration Office -->
                 <g class="svg-landmark-bldg mp-landmark" data-landmark="admin">
                     <title>Administration Office — Mapped Structures 927998601/927998602</title>
-                    <rect x="768" y="360" width="30" height="38" rx="2" class="mp-bldg-shadow" transform="translate(1.5 2)"/>
-                    <rect x="768" y="360" width="30" height="38" rx="2" class="mp-bldg-wall"/>
-                    <rect x="770" y="362" width="26" height="34" rx="1" fill="#8aa1bd"/>
-                    <line x1="770" y1="379" x2="796" y2="379" class="mp-roof-ridge mp-roof-ridge--thin"/>
-                    <rect x="777" y="394" width="12" height="6" rx="1" class="mp-bldg-wall"/>
-                    <rect x="778" y="395" width="10" height="4" fill="#cbd5e1"/>
-                    ${pillSvg(782, 380, 'Admin Office', '🏢', 'navy')}
+                    <rect x="764" y="332" width="30" height="40" rx="2" class="mp-bldg-shadow" transform="translate(1.5 2)"/>
+                    <rect x="764" y="332" width="30" height="40" rx="2" class="mp-bldg-wall"/>
+                    <rect x="766" y="334" width="26" height="36" rx="1" fill="#8aa1bd"/>
+                    <line x1="766" y1="352" x2="792" y2="352" class="mp-roof-ridge mp-roof-ridge--thin"/>
+                    <rect x="788" y="347" width="8" height="10" rx="1" class="mp-bldg-wall"/>
+                    <rect x="789" y="348" width="6" height="8" fill="#cbd5e1"/>
+                    ${pillSvg(778, 320, 'Admin Office', '🏢', 'navy')}
                 </g>
 
-                <!-- Memorial Chapel (Calibrated Facility Anchor: Way 930065369) -->
+                <!-- Memorial Chapel -->
                 <g class="svg-landmark-bldg mp-landmark" data-landmark="chapel">
                     <title>Memorial Chapel — Mapped Structure 930065369</title>
-                    <rect x="840" y="346" width="34" height="32" rx="2" class="mp-bldg-shadow" transform="translate(1.5 2)"/>
-                    <rect x="840" y="346" width="34" height="32" rx="2" class="mp-bldg-wall"/>
-                    <rect x="842" y="348" width="15" height="28" fill="#6a8fbb"/>
-                    <rect x="857" y="348" width="15" height="28" fill="#4b6f99"/>
-                    <line x1="857" y1="348" x2="857" y2="376" class="mp-roof-ridge"/>
-                    <line x1="857" y1="341" x2="857" y2="352" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-                    <line x1="853" y1="345" x2="861" y2="345" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-                    <rect x="850" y="374" width="14" height="5" rx="1" class="mp-bldg-wall"/>
-                    ${pillSvg(858, 362, 'Memorial Chapel', '✝', 'navy')}
+                    <rect x="834" y="330" width="36" height="42" rx="2" class="mp-bldg-shadow" transform="translate(1.5 2)"/>
+                    <rect x="834" y="330" width="36" height="42" rx="2" class="mp-bldg-wall"/>
+                    <rect x="836" y="332" width="16" height="38" fill="#5b80ab"/>
+                    <rect x="852" y="332" width="16" height="38" fill="#3d628d"/>
+                    <line x1="852" y1="332" x2="852" y2="370" class="mp-roof-ridge"/>
+                    <line x1="852" y1="324" x2="852" y2="336" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="848" y1="328" x2="856" y2="328" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+                    <rect x="845" y="370" width="14" height="6" rx="1" class="mp-bldg-wall"/>
+                    ${pillSvg(852, 318, 'Memorial Chapel', '✝', 'navy')}
                 </g>
 
-                <!-- Crematorium Facility (Calibrated Facility Anchor: Way 930065371) -->
+                <!-- Crematorium Facility -->
                 <g class="svg-landmark-bldg mp-landmark" data-landmark="crematorium">
-                    <title>Crematorium Facility — Mapped Structure 930065371</title>
-                    <rect x="954" y="252" width="46" height="36" rx="2" class="mp-bldg-shadow" transform="translate(2 2)"/>
-                    <rect x="954" y="252" width="46" height="36" rx="2" class="mp-bldg-wall"/>
-                    <polygon points="955,253 999,253 986,270 967,270" fill="#c3c9d0"/>
-                    <polygon points="955,287 999,287 986,270 967,270" fill="#8e97a1"/>
-                    <polygon points="955,253 967,270 955,287" fill="#a9b1ba"/>
-                    <polygon points="999,253 986,270 999,287" fill="#9aa2ab"/>
-                    <line x1="967" y1="270" x2="986" y2="270" class="mp-roof-ridge"/>
-                    <rect x="990" y="255" width="5" height="5" rx="1" fill="#475569" stroke="#1e293b" stroke-width="0.6"/>
-                    <rect x="965" y="284" width="24" height="6" rx="1" class="mp-bldg-wall"/>
-                    <rect x="966" y="285" width="22" height="4" fill="#b8bec6"/>
-                    ${pillSvg(978, 271, 'Crematorium', '🔥', 'navy')}
+                    <title>Everlasting Peace Crematorium — Calibrated Structure (Google Maps Verified)</title>
+                    <rect x="952" y="240" width="54" height="44" rx="2" class="mp-bldg-shadow" transform="translate(2 2)"/>
+                    <rect x="952" y="240" width="54" height="44" rx="2" fill="#f8f6f0" stroke="#334155" stroke-width="1.4"/>
+                    <rect x="956" y="262" width="46" height="16" rx="1" fill="#1e293b" stroke="#0f172a" stroke-width="0.8"/>
+                    <line x1="979" y1="262" x2="979" y2="278" stroke="#475569" stroke-width="0.8"/>
+                    <rect x="954" y="242" width="50" height="18" fill="#ece8dd" stroke="#94a3b8" stroke-width="0.8"/>
+                    <line x1="954" y1="245" x2="1004" y2="245" stroke="#64748b" stroke-width="1.2"/>
+                    <line x1="954" y1="242" x2="954" y2="248" stroke="#64748b" stroke-width="0.8"/>
+                    <line x1="966" y1="242" x2="966" y2="248" stroke="#64748b" stroke-width="0.8"/>
+                    <line x1="979" y1="242" x2="979" y2="248" stroke="#64748b" stroke-width="0.8"/>
+                    <line x1="992" y1="242" x2="992" y2="248" stroke="#64748b" stroke-width="0.8"/>
+                    <line x1="1004" y1="242" x2="1004" y2="248" stroke="#64748b" stroke-width="0.8"/>
+                    <rect x="961" y="250" width="36" height="8" rx="1" fill="#e2ded4" stroke="#94a3b8" stroke-width="0.6"/>
+                    <text x="979" y="255.8" font-family="'Inter', sans-serif" font-size="3.4" font-weight="900" letter-spacing="0.1em" fill="#0f172a" text-anchor="middle">CREMATORIUM</text>
+                    <rect x="993" y="242" width="6" height="6" rx="1" fill="#475569" stroke="#1e293b" stroke-width="0.6"/>
+                    <circle cx="996" cy="245" r="1.5" fill="#1e293b"/>
+                    <rect x="962" y="280" width="34" height="6" rx="1" class="mp-bldg-wall"/>
+                    <rect x="963" y="281" width="32" height="4" fill="#cbd5e1"/>
+                    ${pillSvg(979, 226, 'Crematorium Facility', '🔥', 'navy')}
                 </g>
 
-                <!-- Columbarium & Ossuary Sanctuary (Calibrated Facility Anchor: Pavilion Cluster) -->
+                <!-- Columbarium & Ossuary Sanctuary -->
                 <g class="svg-landmark-bldg mp-landmark" data-landmark="columbarium">
                     <title>Columbarium / Ossuary Sanctuary — Pavilion Cluster</title>
-                    <rect x="864" y="260" width="44" height="32" rx="4" class="mp-garden-hedge"/>
-                    <rect x="867" y="263" width="38" height="26" rx="2" fill="#7c5cc4" opacity="0.15"/>
-                    <circle cx="886" cy="274" r="14" class="mp-bldg-shadow" transform="translate(1.5 2)"/>
-                    <circle cx="886" cy="274" r="14" class="mp-bldg-wall"/>
-                    <circle cx="886" cy="274" r="10" fill="#7c5cc4" stroke="#4c2f91" stroke-width="1.2"/>
-                    <circle cx="886" cy="274" r="3" fill="#fbbf24" stroke="#b45309" stroke-width="0.8"/>
-                    ${pillSvg(886, 274, 'Columbarium / Ossuary', '🏛', 'purple')}
+                    <rect x="860" y="194" width="54" height="42" rx="4" class="mp-garden-hedge"/>
+                    <rect x="863" y="197" width="48" height="36" rx="2" fill="#7c5cc4" opacity="0.12"/>
+                    <circle cx="887" cy="215" r="14" class="mp-bldg-shadow" transform="translate(1.5 2)"/>
+                    <circle cx="887" cy="215" r="14" class="mp-bldg-wall"/>
+                    <circle cx="887" cy="215" r="10" fill="#7c5cc4" stroke="#4c2f91" stroke-width="1.2"/>
+                    <circle cx="887" cy="215" r="3.2" fill="#fbbf24" stroke="#b45309" stroke-width="0.8"/>
+                    <circle cx="887" cy="215" r="18" fill="none" stroke="#cbd5e1" stroke-width="1.8" stroke-dasharray="3 3"/>
+                    ${pillSvg(887, 180, 'Columbarium Sanctuary', '🏛', 'purple')}
                 </g>
 
-                <!-- Public Comfort Room Facility (Calibrated Facility Anchor: Way 930065365) -->
+                <!-- Public Comfort Room Facility -->
                 <g class="svg-landmark-bldg mp-landmark" data-landmark="restroom">
                     <title>Public Comfort Room (CR) — Mapped Structure 930065365</title>
-                    <rect x="924" y="240" width="16" height="14" rx="1.5" class="mp-bldg-shadow" transform="translate(1 1)"/>
-                    <rect x="924" y="240" width="16" height="14" rx="1.5" class="mp-bldg-wall"/>
-                    <rect x="925" y="241" width="14" height="12" fill="#7fa7c9"/>
-                    <line x1="925" y1="247" x2="939" y2="247" class="mp-roof-ridge mp-roof-ridge--thin"/>
-                    ${pillSvg(932, 247, 'Comfort Room', '🚻', 'teal')}
+                    <rect x="924" y="234" width="18" height="16" rx="1.5" class="mp-bldg-shadow" transform="translate(1 1)"/>
+                    <rect x="924" y="234" width="18" height="16" rx="1.5" class="mp-bldg-wall"/>
+                    <rect x="925" y="235" width="16" height="14" fill="#7fa7c9"/>
+                    <line x1="925" y1="242" x2="941" y2="242" class="mp-roof-ridge mp-roof-ridge--thin"/>
+                    ${pillSvg(933, 224, 'Comfort Room', '🚻', 'teal')}
                 </g>
 
-                <!-- Main Gate Entrance Portal (Verified OSM Node 8348620486 & 9928981748, P. Aquino Avenue) -->
+                <!-- Main Gate Entrance Portal -->
                 <g class="svg-gate-portal mp-gate" data-landmark="gate" transform="translate(1096 881) rotate(9.8)">
                     <title>Main Gate — 3 P. Aquino Avenue (Letre Road)</title>
-                    <!-- Paved entrance apron connecting P. Aquino Avenue to Cemetery Entrance -->
                     <rect x="-24" y="-12" width="48" height="24" rx="2" class="mp-gate-apron"/>
                     <rect x="-24" y="-12" width="48" height="24" rx="2" fill="url(#mpPaverPattern)" class="mp-texture"/>
-                    <!-- West & East Monument Gate Pillars -->
                     <rect x="-21" y="-10" width="8" height="20" rx="1.5" class="mp-gate-pillar"/>
                     <rect x="-22" y="-12" width="10" height="4" rx="1" class="mp-gate-cap"/>
                     <rect x="13" y="-10" width="8" height="20" rx="1.5" class="mp-gate-pillar"/>
                     <rect x="12" y="-12" width="10" height="4" rx="1" class="mp-gate-cap"/>
-                    <!-- Ceremonial Wrought-Iron Arch & Gate Leaves -->
                     <path d="M -13 -6 Q 0 -17 13 -6" class="mp-gate-arch"/>
                     <path d="M -13 6 L -3 0 M 13 6 L 3 0" class="mp-gate-leaf"/>
-                    <!-- Barrier Lift-Gate (OSM Node 9928981748 barrier=lift_gate) -->
                     <line x1="-8" y1="4" x2="10" y2="4" class="mp-gate-boom"/>
-                    <!-- Security Sentry Post Kiosk (East of Gate) -->
                     <rect x="23" y="-8" width="16" height="16" transform="translate(1.5 2)" class="mp-bldg-shadow"/>
                     <rect x="23" y="-8" width="16" height="16" rx="1.5" class="mp-bldg-wall"/>
                     <rect x="24" y="-7" width="14" height="14" fill="#8b6f5a"/>
                     <line x1="24" y1="0" x2="38" y2="0" class="mp-roof-ridge mp-roof-ridge--thin"/>
-                    <!-- Entrance Badge & Pill -->
                     <circle cx="0" cy="-32" r="10" class="mp-gate-badge"/>
                     <path d="M -5 -30 L 0 -35 L 5 -30 V -26 H -5 Z" fill="#ffffff"/>
                     ${pillSvg(0, -50, 'MAIN GATE (GATE 1)', '', 'navy')}
@@ -2179,7 +2206,7 @@
         const newW = vb.width * factor;
         const newH = vb.height * factor;
 
-        if (newW < 400 || newW > 3200) return;
+        if (newW < 200 || newW > 2500) return;
 
         const centerX = vb.x + (vb.width / 2);
         const centerY = vb.y + (vb.height / 2);
