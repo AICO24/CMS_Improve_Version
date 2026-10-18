@@ -36,9 +36,9 @@
             maxPrice: null,
         },
 
-        // SVG Viewport & Navigation Matrix
-        baseViewBox: { x: 0, y: 0, width: 1600, height: 1000 },
-        currentViewBox: { x: 0, y: 0, width: 1600, height: 1000 },
+        // SVG Viewport & Navigation Matrix (Refocused on Everlasting Peace parcel)
+        baseViewBox: { x: 440, y: 95, width: 880, height: 890 },
+        currentViewBox: { x: 440, y: 95, width: 880, height: 890 },
         zoomLevel: 1.0,
         isPanning: false,
         panStart: { x: 0, y: 0 },
@@ -1708,21 +1708,18 @@ const RD = {
 // ==========================================
 // LAYER 0: Canvas Background, Surrounding Context & Continuous Property Lawn
 // ==========================================
-mk('rect', { x: 0, y: 0, width: canvasW, height: canvasH, class: 'mp-surround' }, mapGroundLayer);
-mk('rect', { x: 0, y: 0, width: canvasW, height: canvasH, fill: 'url(#mpGrassSpeckle)', class: 'mp-texture' }, mapGroundLayer);
+mk('rect', { x: 300, y: 0, width: 1100, height: 1100, class: 'mp-surround' }, mapGroundLayer);
 
-// Surrounding Geographic Context (OSM Relations & Neighborhoods)
+// Surrounding Geographic Context (Matching Google Maps Neighborhood: Tonsuya, Malabon & Adjacent Park)
 const surroundingContext = mk('g', { class: 'mp-surrounding-context', 'aria-hidden': 'true' }, mapGroundLayer);
 surroundingContext.innerHTML = `
-    <!-- Southwest Residential Cutout (Outside Cemetery Property) -->
-    <rect x="50" y="620" width="880" height="280" rx="8" class="mp-residential-cutout"/>
-    <text x="490" y="740" class="mp-context-label">BARANGAY TONSUYA RESIDENTIAL AREA</text>
-    <text x="490" y="756" class="mp-context-sublabel">Residential Properties along Prudencio St. (Outside Boundary)</text>
+    <!-- West Urban Context (Barangay Tonsuya, Delos Santos, Rosal St.) -->
+    <text x="510" y="470" class="mp-context-label" style="font-size: 8px;">BARANGAY TONSUYA</text>
+    <text x="510" y="484" class="mp-context-sublabel" style="font-size: 6.8px;">Residential Area • Rosal St.</text>
 
-    <!-- Eastern Adjacent Memorial Park (OSM Relation 16828677) -->
-    <rect x="1185" y="140" width="375" height="760" rx="8" class="mp-residential-cutout"/>
-    <text x="1370" y="520" class="mp-context-label">Adjacent: Our Lady of Lourdes Eternal Park</text>
-    <text x="1370" y="536" class="mp-context-sublabel">OSM Relation 16828677 (Dagat-dagatan Memorial Park)</text>
+    <!-- East Urban Context (Our Lady of Lourdes Eternal Park) -->
+    <text x="1210" y="470" class="mp-context-label" style="font-size: 8px;">OUR LADY OF LOURDES</text>
+    <text x="1210" y="484" class="mp-context-sublabel" style="font-size: 6.8px;">Adjacent Memorial Park</text>
 `;
 
 // P. Aquino Avenue (Letre Road) Frontage along southern edge (Bearing ~99.5° WNW to ESE)
@@ -1736,16 +1733,16 @@ for (let cx = 1076; cx <= 1120; cx += 8) {
 }
 frontage.innerHTML = `
     <!-- P. Aquino Avenue Sidewalks & Roadbed aligned to 99.5 deg bearing -->
-    <polygon points="-50,892 1650,1184 1650,1196 -50,904" class="mp-sidewalk"/>
-    <polygon points="-50,902 1650,1194 1650,1260 -50,968" class="mp-ext-road"/>
-    <line x1="-50" y1="903.5" x2="1650" y2="1195.5" class="mp-ext-edge"/>
-    <line x1="-50" y1="966.5" x2="1650" y2="1258.5" class="mp-ext-edge"/>
-    <line x1="-50" y1="935.0" x2="1650" y2="1227.0" class="mp-ext-centerline"/>
+    <polygon points="350,962 1450,1154 1450,1166 350,974" class="mp-sidewalk"/>
+    <polygon points="350,972 1450,1164 1450,1230 350,1038" class="mp-ext-road"/>
+    <line x1="350" y1="973.5" x2="1450" y2="1165.5" class="mp-ext-edge"/>
+    <line x1="350" y1="1036.5" x2="1450" y2="1228.5" class="mp-ext-edge"/>
+    <line x1="350" y1="1005.0" x2="1450" y2="1197.0" class="mp-ext-centerline"/>
     ${crosswalkBars}
-    <polygon points="-50,968 1650,1260 1650,1272 -50,980" class="mp-sidewalk"/>
-    <text x="520" y="942" transform="rotate(9.8 520 942)" class="mp-ext-lane-label">◂  WESTBOUND (TONSUYA / LETRE)</text>
-    <text x="1380" y="1088" transform="rotate(9.8 1380 1088)" class="mp-ext-lane-label">EASTBOUND (MALABON / C-4)  ▸</text>
-    ${pillSvg(1096, 978, '⟵   P. AQUINO AVENUE (LETRE ROAD)   ⟶', '', 'road')}
+    <polygon points="350,1038 1450,1230 1450,1242 350,1050" class="mp-sidewalk"/>
+    <text x="620" y="995" transform="rotate(9.8 620 995)" class="mp-ext-lane-label">◂  WESTBOUND (TONSUYA / LETRE)</text>
+    <text x="1240" y="1105" transform="rotate(9.8 1240 1105)" class="mp-ext-lane-label">EASTBOUND (MALABON / C-4)  ▸</text>
+    ${pillSvg(1096, 960, '⟵   P. AQUINO AVENUE (LETRE ROAD)   ⟶', '', 'road')}
 `;
 
 // North Boundary Caption
@@ -1852,26 +1849,18 @@ perimeterTrees.innerHTML =
 // ==========================================
 // Continuous connected roads that define and carve out all cemetery parcels:
 const roads = [
-    // 1. Entrance Service Road (OSM Way 1203404189 & 1392737965: P. Aquino Ave -> Main Gate -> Neck Corridor -> Avenue of Peace)
+    // 1. Entrance Service Road (P. Aquino Ave -> Main Gate -> Neck Corridor -> Central Spine)
     { d: 'M 1101 928 L 1096 881 L 1090 820 L 1085 680 L 1085 545', w: 22, main: true },
-    // 2. Central Boulevard Spine: from South Campus -> North Boundary
-    { d: `M ${RD.spine} ${RD.southService} V ${RD.north}`, w: 30, main: true },
-    // 3. Main Cross Boulevard (Avenue of Peace): separates burial grounds from amenities campus
-    { d: `M ${RD.west} ${RD.mainCross} H ${RD.east}`, w: 26, main: true },
+    // 2. Central Boulevard Spine: from Avenue of Peace junction -> North amenities court
+    { d: `M ${RD.spine} ${RD.mainCross} V 190`, w: 24, main: true },
+    // 3. Main Cross Boulevard (Avenue of Peace): internal circulation inside memorial park
+    { d: `M 640 ${RD.mainCross} H 1050`, w: 22, main: true },
     // 4. Internal Promenade: separates North sections from Mid sections
-    { d: `M ${RD.west} ${RD.promenade} H ${RD.east}`, w: 20 },
-    // 5. North Boundary Road: along north perimeter
-    { d: `M ${RD.west} ${RD.north} H ${RD.east}`, w: 18 },
-    // 6. Outer West Ring Road: connects north to south along west perimeter
-    { d: `M ${RD.west} ${RD.north} V ${RD.mainCross} V ${RD.southService}`, w: 18 },
-    // 7. Outer East Ring Road: connects north to south along east perimeter
-    { d: `M ${RD.east} ${RD.north} V ${RD.mainCross} V ${RD.southService}`, w: 18 },
+    { d: `M 680 ${RD.promenade} H 1020`, w: 18 },
     // 8. Mid-West Section Access Road (divides Section B from Section A)
-    { d: `M ${RD.accW} ${RD.promenade} V ${RD.mainCross}`, w: 15 },
+    { d: `M ${RD.accW} ${RD.promenade} V ${RD.mainCross}`, w: 14 },
     // 9. Mid-East Section Access Road (divides Section A from Section E)
-    { d: `M ${RD.accE} ${RD.promenade} V ${RD.mainCross}`, w: 15 },
-    // 10. South Service Road (access behind Chapel, Parking, Crematorium, Columbarium)
-    { d: `M ${RD.west} ${RD.southService} H ${RD.east}`, w: 15 },
+    { d: `M ${RD.accE} ${RD.promenade} V ${RD.mainCross}`, w: 14 },
     // 11. Visitor Parking Access Driveway
     { d: 'M 1035 755 H 1085', w: 16 }
 ];
@@ -1904,12 +1893,10 @@ roads.forEach(r => {
 
 roadG.innerHTML = pathUnder + pathFill + roadCurbs + roadAsphalt + roadStripes + `
     <!-- Road Name Annotations -->
-    <text x="320" y="548" class="mp-road-label">MAIN ROAD (AVENUE OF PEACE)</text>
-    <text x="1280" y="548" class="mp-road-label">MAIN ROAD (AVENUE OF PEACE)</text>
-    <text x="803" y="190" class="mp-road-label" transform="rotate(-90 803 190)">MAIN ROAD</text>
-    <text x="803" y="710" class="mp-road-label" transform="rotate(-90 803 710)">MAIN ROAD</text>
-    <text x="440" y="302.5" class="mp-road-label mp-road-label--minor">INTERNAL PROMENADE</text>
-    <text x="1160" y="302.5" class="mp-road-label mp-road-label--minor">INTERNAL PROMENADE</text>
+    <text x="730" y="541" class="mp-road-label">AVENUE OF PEACE</text>
+    <text x="965" y="541" class="mp-road-label">AVENUE OF PEACE</text>
+    <text x="803" y="370" class="mp-road-label" transform="rotate(-90 803 370)">MAIN SPINE</text>
+    <text x="880" y="297" class="mp-road-label mp-road-label--minor">INTERNAL PROMENADE</text>
     <text x="1075" y="760" class="mp-road-label mp-road-label--minor" transform="rotate(-90 1075 760)">ENTRANCE ROAD</text>
 `;
 
@@ -2095,7 +2082,7 @@ landmarkGroup.innerHTML += `
 
 // --- Compass Rose Indicator (Top-Left, matching reference) ---
 landmarkGroup.innerHTML += `
-    <g class="svg-north-indicator mp-compass" transform="translate(68 68)" aria-hidden="true">
+    <g class="svg-north-indicator mp-compass" transform="translate(485 145)" aria-hidden="true">
         <circle r="19" class="mp-compass-bg"/>
         <polygon points="0,-13 4.5,2 0,0 -4.5,2" fill="#ef4444"/>
         <polygon points="0,13 4.5,0 0,0 -4.5,0" fill="#cbd5e1"/>
@@ -5638,12 +5625,16 @@ if (count <= 4 && !usedZones.has('e')) {
             const lh = parseFloat(rectEl.getAttribute('height')) || 24;
 
             if (!isNaN(lx) && !isNaN(ly)) {
-                const targetW = 460;
+                const targetW = 380;
                 const targetH = targetW * (state.baseViewBox.height / state.baseViewBox.width);
                 const centerX = lx + (lw / 2);
                 const centerY = ly + (lh / 2);
-                const targetX = Math.max(0, Math.min(state.baseViewBox.width - targetW, centerX - (targetW / 2)));
-                const targetY = Math.max(0, Math.min(state.baseViewBox.height - targetH, centerY - (targetH / 2)));
+                const minTargetX = state.baseViewBox.x;
+                const maxTargetX = state.baseViewBox.x + state.baseViewBox.width - targetW;
+                const minTargetY = state.baseViewBox.y;
+                const maxTargetY = state.baseViewBox.y + state.baseViewBox.height - targetH;
+                const targetX = Math.max(minTargetX - 60, Math.min(maxTargetX + 60, centerX - (targetW / 2)));
+                const targetY = Math.max(minTargetY - 40, Math.min(maxTargetY + 40, centerY - (targetH / 2)));
 
                 animateViewBox(targetX, targetY, targetW, targetH, 380);
             }
@@ -5697,12 +5688,16 @@ if (count <= 4 && !usedZones.has('e')) {
 
             if (!isNaN(bx) && !isNaN(by)) {
                 // Focus camera with comfortable margin to display block clearly
-                const targetW = Math.max(bw + 180, 520);
+                const targetW = Math.max(bw + 140, 420);
                 const targetH = targetW * (state.baseViewBox.height / state.baseViewBox.width);
                 const centerX = bx + (bw / 2);
                 const centerY = by + (bh / 2);
-                const targetX = Math.max(0, Math.min(state.baseViewBox.width - targetW, centerX - (targetW / 2)));
-                const targetY = Math.max(0, Math.min(state.baseViewBox.height - targetH, centerY - (targetH / 2)));
+                const minTargetX = state.baseViewBox.x;
+                const maxTargetX = state.baseViewBox.x + state.baseViewBox.width - targetW;
+                const minTargetY = state.baseViewBox.y;
+                const maxTargetY = state.baseViewBox.y + state.baseViewBox.height - targetH;
+                const targetX = Math.max(minTargetX - 60, Math.min(maxTargetX + 60, centerX - (targetW / 2)));
+                const targetY = Math.max(minTargetY - 40, Math.min(maxTargetY + 40, centerY - (targetH / 2)));
 
                 animateViewBox(targetX, targetY, targetW, targetH, 380);
             }
@@ -5759,12 +5754,16 @@ if (count <= 4 && !usedZones.has('e')) {
 
             if (!isNaN(sx) && !isNaN(sy)) {
                 // Focus camera to show section + surrounding access roads
-                const targetW = Math.max(sw + 260, 800);
+                const targetW = Math.max(sw + 180, 560);
                 const targetH = targetW * (state.baseViewBox.height / state.baseViewBox.width);
                 const centerX = sx + (sw / 2);
                 const centerY = sy + (sh / 2);
-                const targetX = Math.max(0, Math.min(state.baseViewBox.width - targetW, centerX - (targetW / 2)));
-                const targetY = Math.max(0, Math.min(state.baseViewBox.height - targetH, centerY - (targetH / 2)));
+                const minTargetX = state.baseViewBox.x;
+                const maxTargetX = state.baseViewBox.x + state.baseViewBox.width - targetW;
+                const minTargetY = state.baseViewBox.y;
+                const maxTargetY = state.baseViewBox.y + state.baseViewBox.height - targetH;
+                const targetX = Math.max(minTargetX - 60, Math.min(maxTargetX + 60, centerX - (targetW / 2)));
+                const targetY = Math.max(minTargetY - 40, Math.min(maxTargetY + 40, centerY - (targetH / 2)));
 
                 animateViewBox(targetX, targetY, targetW, targetH, 380);
             }
@@ -6483,8 +6482,8 @@ if (count <= 4 && !usedZones.has('e')) {
         const newW = vb.width * factor;
         const newH = vb.height * factor;
 
-        // Bound zoom limits
-        if (newW < 400 || newW > 2400) return;
+        // Bound zoom limits for refocused parcel
+        if (newW < 220 || newW > 1400) return;
 
         const centerX = vb.x + (vb.width / 2);
         const centerY = vb.y + (vb.height / 2);
@@ -6508,8 +6507,12 @@ if (count <= 4 && !usedZones.has('e')) {
             vb.width = targetW;
             vb.height = targetH;
         }
-        vb.x = Math.max(0, Math.min(state.baseViewBox.width - vb.width, x - (vb.width / 2)));
-        vb.y = Math.max(0, Math.min(state.baseViewBox.height - vb.height, y - (vb.height / 2)));
+        const minX = state.baseViewBox.x - 120;
+        const maxX = state.baseViewBox.x + state.baseViewBox.width + 120 - vb.width;
+        const minY = state.baseViewBox.y - 80;
+        const maxY = state.baseViewBox.y + state.baseViewBox.height + 80 - vb.height;
+        vb.x = Math.max(minX, Math.min(maxX, x - (vb.width / 2)));
+        vb.y = Math.max(minY, Math.min(maxY, y - (vb.height / 2)));
         applyViewBox();
     }
 

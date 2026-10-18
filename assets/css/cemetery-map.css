@@ -5538,17 +5538,17 @@ body.dark-mode .btn-wayfinding-slip:hover {
    compact blocks, and dense organized plot parcels.
    ========================================================================= */
 
-/* Canvas Base & Ground */
+/* Canvas Base & Ground (Google Maps Style Urban Backdrop & Lush Park Turf) */
 .mp-surround {
-    fill: #27452a;
+    fill: #e8edf2;
 }
 [data-theme="dark"] .mp-surround {
-    fill: #0f1c12;
+    fill: #0b1120;
 }
 
 .mp-property {
-    fill: #548344;
-    stroke: #335926;
+    fill: #4e8346;
+    stroke: #2e5926;
     stroke-width: 1.5px;
 }
 [data-theme="dark"] .mp-property {
