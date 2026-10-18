@@ -4093,6 +4093,178 @@ document.addEventListener('DOMContentLoaded', async function() {
                     </table>
                 </div>
             `;
+        } else if (tabKey === 'periodic') {
+            const pData = currentPeriodicData || await api.request('reports/dashboard-summary?period=' + encodeURIComponent(currentPeriodicPeriod || 'daily'), { method: 'GET' });
+            const pPeriod = currentPeriodicPeriod || 'daily';
+            
+            const titleMap = {
+                daily: 'Official Daily Operations & Cashier Cut-off Master Audit',
+                weekly: 'Official Weekly Operations & Throughput Performance Audit',
+                monthly: 'Official Monthly Financial Statement & Cemetery Operations Reconciliation',
+                overall: 'Comprehensive Master Audit & Cumulative Cemetery Registry Report',
+                custom: 'Official Custom Interval Operations & Financial Audit Report'
+            };
+            const subtitleMap = {
+                daily: 'Daily Revenue Collections, Burial Interments, Retort Cremations, and Cashier Settlement Audit',
+                weekly: 'Consolidated Weekly Interments, Cremation Throughput, Fiscal Collections, and Space Utilization',
+                monthly: 'Monthly City Treasury Settlement, Revenue by Payment Stream, Burial Records, and Space Capacity Audit',
+                overall: 'Cumulative Master History, All-Time Revenue, Historical Interments, and Columbarium Utilization',
+                custom: `Consolidated Fiscal Collections, Interments, and Cremations (${pData?.date_from || ''} to ${pData?.date_to || ''})`
+            };
+
+            reportTitle = titleMap[pPeriod] || 'Official Periodic Operations & Management Audit';
+            reportSubtitle = subtitleMap[pPeriod] || 'Consolidated Operations, Collections, and Space Allocation Audit';
+            scopeNotes = `Time Horizon: ${pData?.period_label || pPeriod.toUpperCase()} (Records from ${pData?.date_from || 'N/A'} to ${pData?.date_to || 'N/A'})`;
+
+            const pRev = Number(pData?.revenue?.total ?? pData?.revenue?.total_revenue ?? 0);
+            const pPendingRev = Number(pData?.revenue?.pending_revenue ?? 0);
+            const pCount = Number(pData?.revenue?.transaction_count ?? 0);
+            const pSched = Number(pData?.schedules?.total ?? 0);
+            const pSchedConf = Number(pData?.schedules?.confirmed ?? 0);
+            const pCrem = Number(pData?.cremations?.total ?? 0);
+            const pCapRate = Number(pData?.occupancy?.occupancy_rate ?? pData?.occupancy?.utilization_rate ?? 0);
+            const pAvail = Number(pData?.occupancy?.available ?? 0);
+            const pExpSoon = Number(pData?.expirations?.expiring_soon ?? 0);
+
+            kpiBlocksHtml = `
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #064e3b; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Verified Collections</div>
+                    <div style="font-size: 19px; font-weight: 800; color: #064e3b; margin-top: 3px;">${formatPeso(pRev)}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">${pCount} verified receipts (${formatPeso(pPendingRev)} pending)</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #1e40af; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Burial Interments</div>
+                    <div style="font-size: 19px; font-weight: 800; color: #1e40af; margin-top: 3px;">${pSched}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">${pSchedConf} confirmed · ready for disposition</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #d97706; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Cremations Handled</div>
+                    <div style="font-size: 19px; font-weight: 800; color: #b45309; margin-top: 3px;">${pCrem}</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Columbarium / Retort processing</div>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3.5px solid #047857; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Cemetery Capacity</div>
+                    <div style="font-size: 19px; font-weight: 800; color: #047857; margin-top: 3px;">${pCapRate}%</div>
+                    <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">${pAvail.toLocaleString()} active plots open</div>
+                </div>
+            `;
+
+            executiveSummaryHtml = `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #059669; border-radius: 6px; padding: 10px 14px; margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 10px; font-weight: 800; color: #065f46; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
+                        <span>★</span> EXECUTIVE PERIODIC AUDIT TAKEAWAY &amp; OPERATIONAL SUMMARY
+                    </div>
+                    <div style="font-size: 9px; color: #166534; line-height: 1.45;">
+                        Official monitoring for <strong>${pData?.period_label || pPeriod}</strong> verifies total cemetery receipts of <strong>${formatPeso(pRev)}</strong> across <strong>${pCount} transactions</strong>. Operational throughput registered <strong>${pSched} burial schedules</strong> and <strong>${pCrem} cremation cases</strong>. Public ground capacity is maintained at <strong>${pCapRate}% utilization</strong> with <strong>${pAvail.toLocaleString()} open plots</strong> available, while <strong>${pExpSoon} grave leases</strong> require 30-day renewal notice actions under Sanitation Code compliance.
+                    </div>
+                </div>
+            `;
+
+            // Methods Table
+            const methods = Array.isArray(pData?.revenue_by_method) ? pData.revenue_by_method : [];
+            const methodTotal = methods.reduce((acc, m) => acc + Number(m.total || 0), 0);
+            const methodRowsHtml = methods.length ? methods.map((m, idx) => `
+                <tr style="${zebraBg(idx)}; page-break-inside: avoid; break-inside: avoid;">
+                    <td style="${tdStyle}"><strong>${safeEscape(m.payment_method || 'Unspecified')}</strong></td>
+                    <td style="${tdRightStyle}">${Number(m.count || 0).toLocaleString()}</td>
+                    <td style="${tdRightStyle}"><strong>${formatPeso(m.total || 0)}</strong></td>
+                    <td style="${tdRightStyle}">${methodTotal > 0 ? ((Number(m.total || 0) / methodTotal) * 100).toFixed(1) : 0}%</td>
+                </tr>
+            `).join('') : `<tr><td colspan="4" style="${tdCenterStyle}">No payment records for this period.</td></tr>`;
+
+            // Services Table
+            const services = Array.isArray(pData?.revenue_by_service) ? pData.revenue_by_service : [];
+            const serviceRowsHtml = services.length ? services.map((s, idx) => {
+                const cnt = Number(s.count || 0);
+                const tot = Number(s.total || 0);
+                const avg = cnt > 0 ? (tot / cnt) : 0;
+                return `
+                    <tr style="${zebraBg(idx)}; page-break-inside: avoid; break-inside: avoid;">
+                        <td style="${tdStyle}"><strong>${safeEscape(s.transaction_type || 'General')}</strong></td>
+                        <td style="${tdRightStyle}">${cnt.toLocaleString()}</td>
+                        <td style="${tdRightStyle}"><strong>${formatPeso(tot)}</strong></td>
+                        <td style="${tdRightStyle}">${formatPeso(avg)}</td>
+                    </tr>
+                `;
+            }).join('') : `<tr><td colspan="4" style="${tdCenterStyle}">No service records for this period.</td></tr>`;
+
+            tablesContentHtml = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px;">
+                    <div>
+                        <div style="font-size: 10px; font-weight: 700; color: #064e3b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;">
+                            <span style="background: #064e3b; color: #ffffff; padding: 2px 6px; border-radius: 3px; font-size: 8.5px; font-weight: 800;">AUDIT</span> Collections by Payment Method
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th style="${thStyle}">Payment Method</th>
+                                    <th style="${thRightStyle}">Receipts</th>
+                                    <th style="${thRightStyle}">Verified Total</th>
+                                    <th style="${thRightStyle}">Share</th>
+                                </tr>
+                            </thead>
+                            <tbody>${methodRowsHtml}</tbody>
+                        </table>
+                    </div>
+
+                    <div>
+                        <div style="font-size: 10px; font-weight: 700; color: #064e3b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;">
+                            <span style="background: #064e3b; color: #ffffff; padding: 2px 6px; border-radius: 3px; font-size: 8.5px; font-weight: 800;">AUDIT</span> Revenue by Service Stream
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th style="${thStyle}">Service Stream</th>
+                                    <th style="${thRightStyle}">Count</th>
+                                    <th style="${thRightStyle}">Total Amount</th>
+                                    <th style="${thRightStyle}">Average</th>
+                                </tr>
+                            </thead>
+                            <tbody>${serviceRowsHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 10px; font-weight: 700; color: #064e3b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;">
+                        <span style="background: #064e3b; color: #ffffff; padding: 2px 6px; border-radius: 3px; font-size: 8.5px; font-weight: 800;">AUDIT</span> Operations &amp; Statutory Compliance Summary
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="${thStyle}">Operational Department</th>
+                                <th style="${thRightStyle}">Confirmed / Ready</th>
+                                <th style="${thRightStyle}">Pending Review</th>
+                                <th style="${thRightStyle}">Completed</th>
+                                <th style="${thRightStyle}">Total Recorded</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="${zebraBg(0)}">
+                                <td style="${tdStyle}"><strong>Ground Burial Interments</strong> (burial_schedules)</td>
+                                <td style="${tdRightStyle} color: #047857; font-weight: 700;">${Number(pData?.schedules?.confirmed || 0).toLocaleString()}</td>
+                                <td style="${tdRightStyle} color: #d97706; font-weight: 700;">${Number(pData?.schedules?.pending || 0).toLocaleString()}</td>
+                                <td style="${tdRightStyle} color: #2563eb; font-weight: 700;">${Number(pData?.schedules?.completed || 0).toLocaleString()}</td>
+                                <td style="${tdRightStyle}"><strong>${Number(pData?.schedules?.total || 0).toLocaleString()}</strong></td>
+                            </tr>
+                            <tr style="${zebraBg(1)}">
+                                <td style="${tdStyle}"><strong>Retort Cremation Services</strong> (cremation_records)</td>
+                                <td style="${tdRightStyle} color: #047857; font-weight: 700;">${Number(pData?.cremations?.scheduled || 0).toLocaleString()}</td>
+                                <td style="${tdRightStyle} color: #d97706; font-weight: 700;">${Number(pData?.cremations?.pending || 0).toLocaleString()}</td>
+                                <td style="${tdRightStyle} color: #2563eb; font-weight: 700;">${Number(pData?.cremations?.completed || 0).toLocaleString()}</td>
+                                <td style="${tdRightStyle}"><strong>${Number(pData?.cremations?.total || 0).toLocaleString()}</strong></td>
+                            </tr>
+                            <tr style="${zebraBg(2)}">
+                                <td style="${tdStyle}"><strong>Lease Expiration &amp; Compliance</strong> (PD 856 Sanitation)</td>
+                                <td style="${tdRightStyle} color: #047857; font-weight: 700;">${Number(pData?.expirations?.renewal_due || 0).toLocaleString()} due</td>
+                                <td style="${tdRightStyle} color: #d97706; font-weight: 700;">${Number(pData?.expirations?.expiring_soon || 0).toLocaleString()} in 30d</td>
+                                <td style="${tdRightStyle} color: #dc2626; font-weight: 700;">${Number(pData?.expirations?.expired || 0).toLocaleString()} expired</td>
+                                <td style="${tdRightStyle}"><strong>${(Number(pData?.expirations?.expiring_soon || 0) + Number(pData?.expirations?.expired || 0)).toLocaleString()}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
         }
 
         printRoot.innerHTML = `
@@ -4274,6 +4446,63 @@ document.addEventListener('DOMContentLoaded', async function() {
         const wb = XLSX.utils.book_new();
         const container = getActiveReportTab();
 
+        if (container?.id === 'periodicTab') {
+            const pData = currentPeriodicData || {};
+            const pPeriod = currentPeriodicPeriod || 'daily';
+            // Sheet 1: Executive Summary
+            const summaryRows = [
+                ['Report Title', pData.period_label || `${pPeriod.toUpperCase()} Report`],
+                ['Period Horizon', pPeriod.toUpperCase()],
+                ['Date From', pData.date_from || ''],
+                ['Date To', pData.date_to || ''],
+                ['Verified Collections (PHP)', Number(pData.revenue?.total ?? pData.revenue?.total_revenue ?? 0)],
+                ['Pending Collections (PHP)', Number(pData.revenue?.pending_revenue ?? 0)],
+                ['Transaction Count', Number(pData.revenue?.transaction_count ?? 0)],
+                ['Burial Interments Total', Number(pData.schedules?.total ?? 0)],
+                ['Burials Confirmed', Number(pData.schedules?.confirmed ?? 0)],
+                ['Cremation Requests Total', Number(pData.cremations?.total ?? 0)],
+                ['Cremations Scheduled', Number(pData.cremations?.scheduled ?? 0)],
+                ['Capacity Utilization (%)', Number(pData.occupancy?.occupancy_rate ?? pData.occupancy?.utilization_rate ?? 0)],
+                ['Available Lots', Number(pData.occupancy?.available ?? 0)],
+                ['Leases Expiring in 30 Days', Number(pData.expirations?.expiring_soon ?? 0)],
+                ['Expired Lots', Number(pData.expirations?.expired ?? 0)]
+            ];
+            const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+            XLSX.utils.book_append_sheet(wb, wsSummary, "Executive_Summary");
+
+            // Sheet 2: Collections by Method
+            const methods = Array.isArray(pData.revenue_by_method) ? pData.revenue_by_method : [];
+            const methodRows = [['Payment Method', 'Transactions', 'Verified Amount (PHP)']];
+            methods.forEach(m => methodRows.push([m.payment_method || 'Unspecified', Number(m.count || 0), Number(m.total || 0)]));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(methodRows), "Payment_Methods");
+
+            // Sheet 3: Revenue by Service
+            const services = Array.isArray(pData.revenue_by_service) ? pData.revenue_by_service : [];
+            const serviceRows = [['Service Stream', 'Count', 'Total Amount (PHP)', 'Average Amount (PHP)']];
+            services.forEach(s => {
+                const cnt = Number(s.count || 0);
+                const tot = Number(s.total || 0);
+                serviceRows.push([s.transaction_type || 'General', cnt, tot, cnt > 0 ? (tot / cnt) : 0]);
+            });
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(serviceRows), "Service_Streams");
+
+            // Sheet 4: Operations & Scheduling
+            const opsRows = [
+                ['Department', 'Confirmed / Ready', 'Pending Review', 'Completed', 'Total Recorded'],
+                ['Ground Burial Interments', Number(pData.schedules?.confirmed || 0), Number(pData.schedules?.pending || 0), Number(pData.schedules?.completed || 0), Number(pData.schedules?.total || 0)],
+                ['Retort Cremation Services', Number(pData.cremations?.scheduled || 0), Number(pData.cremations?.pending || 0), Number(pData.cremations?.completed || 0), Number(pData.cremations?.total || 0)],
+                ['Lease Expirations', Number(pData.expirations?.renewal_due || 0), Number(pData.expirations?.expiring_soon || 0), Number(pData.expirations?.expired || 0), Number(pData.expirations?.expiring_soon || 0) + Number(pData.expirations?.expired || 0)]
+            ];
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(opsRows), "Operations_Status");
+
+            const filename = `Cemetery_${pPeriod.charAt(0).toUpperCase() + pPeriod.slice(1)}_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = URL.createObjectURL(blob);
+            triggerFileDownload(url, filename);
+            return { url, filename };
+        }
+
         const tables = container.querySelectorAll('table');
         if (tables.length > 0) {
             tables.forEach((tbl, idx) => {
@@ -4388,17 +4617,31 @@ document.addEventListener('DOMContentLoaded', async function() {
         onOpen: (result) => { if (result?.url) window.open(result.url, '_blank'); }
     });
 
+    const periodicPdfToggle = setupDownloadToggle('exportPeriodicPdfBtn', {
+        run: generateDetailedPdfExport,
+        onOpen: (result) => { if (result?.url) window.open(result.url, '_blank'); }
+    });
+
+    const periodicExcelToggle = setupDownloadToggle('exportPeriodicExcelBtn', {
+        run: generateExcelExport,
+        onOpen: (result) => { if (result) triggerFileDownload(result.url, result.filename); }
+    });
+
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             pdfToggle.reset();
             excelToggle.reset();
             detailedPdfToggle.reset();
+            periodicPdfToggle.reset();
+            periodicExcelToggle.reset();
         });
     });
 
     // Periodic Summary Switcher Listeners
     document.querySelectorAll('.period-pill-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
+            periodicPdfToggle.reset();
+            periodicExcelToggle.reset();
             document.querySelectorAll('.period-pill-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             const period = btn.getAttribute('data-period');
