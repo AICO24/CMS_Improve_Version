@@ -158,12 +158,15 @@
             ['SOUTH_JUNCTION', 'WEST_INGRESS_MID'],
             ['WEST_INGRESS_MID', 'CENTRAL_FORK'],
             ['WEST_INGRESS_MID', 'SEC_A_WEST_ACCESS'],
+            ['SEC_A_WEST_ACCESS', 'CENTRAL_FORK'],
 
             // Central Fork branches
             ['CENTRAL_FORK', 'CENTRAL_CROSSWAY'],
             ['CENTRAL_FORK', 'NW_LOOP_WEST'],
             ['CENTRAL_FORK', 'SEC_B_EAST_ACCESS'],
             ['CENTRAL_FORK', 'SEC_A_SPINE_LEFT'],
+            ['SEC_A_SPINE_LEFT', 'SEC_A_SPINE_RIGHT'],
+            ['SEC_A_SPINE_RIGHT', 'CENTRAL_CROSSWAY'],
 
             // Connector eastward to Rotunda
             ['CENTRAL_CROSSWAY', 'CONNECTOR_MID'],
@@ -229,7 +232,8 @@
             ['ADMIN_ACCESS', 'CHAPEL_ACCESS'],
             ['CENTRAL_ROUNDABOUT', 'CENTRAL_CROSSWAY'],
             ['SEC_LOURDES', 'NW_LOOP_WEST'],
-            ['SEC_GARDEN_PEACE', 'CENTRAL_CROSSWAY']
+            ['SEC_GARDEN_PEACE', 'CENTRAL_CROSSWAY'],
+            ['WEST_INGRESS_MID', 'SEC_B_EAST_ACCESS']
         ]
     };
 
@@ -4331,20 +4335,26 @@ if (count <= 4 && !usedZones.has('e')) {
             lotCenter = { x: 800, y: 420 };
         }
 
-        // Determine candidate access nodes based on Section hierarchy
+        // Determine candidate access nodes based on Section hierarchy and spatial orientation
         const sName = (section?.section_name || '').toLowerCase();
         let candidateNodeIds = null;
 
         if (sName.includes('a') || sName.includes('everlasting')) {
-            candidateNodeIds = ['SEC_A_SPINE_LEFT', 'SEC_A_SPINE_RIGHT', 'SEC_A_WEST_ACCESS', 'SEC_A_EAST_ACCESS', 'CENTRAL_ROUNDABOUT', 'PROMENADE_JUNCTION'];
+            if (lotCenter.x < 850) {
+                // West half of Section A (Block A1 and West plots along West Ingress Road)
+                candidateNodeIds = ['SEC_A_WEST_ACCESS', 'WEST_INGRESS_MID', 'SOUTH_JUNCTION', 'SEC_A_SPINE_LEFT'];
+            } else {
+                // East half of Section A (Block A2 and East plots along East Egress Road / Spine)
+                candidateNodeIds = ['SEC_A_EAST_ACCESS', 'EAST_EGRESS_MID', 'EAST_EGRESS_SOUTH', 'SEC_A_SPINE_RIGHT'];
+            }
         } else if (sName.includes('b') || sName.includes('lourdes')) {
-            candidateNodeIds = ['SEC_B_WEST_ACCESS', 'SEC_B_EAST_ACCESS', 'MID_WEST_CROSSWAY', 'WEST_CROSSWAY', 'WEST_PROM'];
+            candidateNodeIds = ['WEST_INGRESS_MID', 'SOUTH_JUNCTION', 'SEC_B_EAST_ACCESS', 'SEC_B_WEST_ACCESS', 'CENTRAL_FORK'];
         } else if (sName.includes('c') || sName.includes('san jose')) {
-            candidateNodeIds = ['SEC_C_SOUTH_ACCESS', 'SEC_C_NORTH_ACCESS', 'SEC_SAN_JOSE', 'MID_WEST_PROM', 'NORTH_MID_WEST'];
+            candidateNodeIds = ['SEC_C_SOUTH_ACCESS', 'SEC_C_NORTH_ACCESS', 'SEC_SAN_JOSE', 'NW_LOOP_BEND', 'NORTH_AVENUE_MID'];
         } else if (sName.includes('d') || sName.includes('columbarium') || sName.includes('ossuary')) {
-            candidateNodeIds = ['SEC_D_SOUTH_ACCESS', 'SEC_D_NORTH_ACCESS', 'SEC_COLUMBARIUM', 'MID_EAST_PROM', 'NORTH_MID_EAST'];
-        } else if (sName.includes('e') || sName.includes('transfiguration')) {
-            candidateNodeIds = ['SEC_E_WEST_ACCESS', 'SEC_E_EAST_ACCESS', 'SEC_E_SOUTH_ACCESS', 'MID_EAST_CROSSWAY', 'EAST_CROSSWAY'];
+            candidateNodeIds = ['SEC_D_SOUTH_ACCESS', 'SEC_D_NORTH_ACCESS', 'SEC_COLUMBARIUM', 'COLUMBARIUM_ACCESS', 'COLUMBARIUM_SOUTH'];
+        } else if (sName.includes('e') || sName.includes('transfiguration') || sName.includes('reserve')) {
+            candidateNodeIds = ['SEC_E_WEST_ACCESS', 'SEC_E_EAST_ACCESS', 'SEC_E_SOUTH_ACCESS', 'EAST_EGRESS_NORTH', 'EAST_EGRESS_MID'];
         }
 
         // If no candidate list matched, evaluate all network nodes
@@ -4435,12 +4445,24 @@ if (count <= 4 && !usedZones.has('e')) {
                     step.category = 'roundabout';
                     step.icon = 'fa-arrows-spin';
                     step.landmark = 'Roundabout';
+                } else if (pt.nodeId === 'WEST_INGRESS_MID') {
+                    step.title = 'West Ingress Corridor';
+                    step.instruction = 'Proceed north along West Ingress Road past entrance neck';
+                    step.category = 'road';
+                    step.icon = 'fa-road';
+                    step.landmark = 'West Ingress Road';
                 } else if (pt.nodeId === 'SOUTH_JUNCTION') {
-                    step.title = pt.label || 'St. Joseph Drive Junction';
-                    step.instruction = 'Follow St. Joseph Drive toward central cemetery corridor';
+                    step.title = 'West Ingress Approach';
+                    step.instruction = 'Follow main avenue into cemetery grounds from Main Gate';
                     step.category = 'junction';
                     step.icon = 'fa-road';
-                    step.landmark = 'St. Joseph Drive';
+                    step.landmark = 'Ingress Approach';
+                } else if (pt.nodeId === 'CENTRAL_FORK') {
+                    step.title = 'Avenue 3-Way Junction';
+                    step.instruction = 'Continue along main corridor toward section walkway';
+                    step.category = 'junction';
+                    step.icon = 'fa-diamond-turn-right';
+                    step.landmark = 'Main Junction';
                 } else if (pt.nodeId === 'CREMATORIUM_SPINE') {
                     step.title = pt.label || 'Central Spine (Mid South)';
                     step.instruction = 'Proceed north past crematorium and chapel access';
@@ -4625,16 +4647,14 @@ if (count <= 4 && !usedZones.has('e')) {
         underlay.setAttribute('fill', 'none');
         routeGroup.appendChild(underlay);
 
-        // 2. Main Animated Route Line
+        // 2. Main Animated Route Line (Walking Dash Cadence - No Ugly Arrowheads)
         const mainLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         mainLine.setAttribute('d', d);
         mainLine.setAttribute('class', `svg-route-line ${isCortege ? 'is-cortege-route' : ''}`);
         mainLine.setAttribute('fill', 'none');
-        mainLine.setAttribute('marker-mid', 'url(#routeArrowMarker)');
-        mainLine.setAttribute('marker-end', 'url(#routeArrowMarker)');
         routeGroup.appendChild(mainLine);
 
-        // 3. Batch 7: Intermediate Waypoint Markers
+        // 3. Batch 7: Streamlined Intermediate Waypoint Turn Markers
         if (guidanceSteps && guidanceSteps.length > 2) {
             for (let idx = 1; idx < guidanceSteps.length - 1; idx++) {
                 const step = guidanceSteps[idx];
@@ -4646,9 +4666,9 @@ if (count <= 4 && !usedZones.has('e')) {
                 wpG.setAttribute('role', 'button');
                 wpG.setAttribute('aria-label', `Route Step ${idx + 1}: ${step.title}`);
                 wpG.innerHTML = `
-                    <circle class="svg-waypoint-hitbox" cx="0" cy="0" r="14" />
-                    <circle class="svg-waypoint-circle" cx="0" cy="0" r="5.5" />
-                    <circle class="svg-waypoint-core" cx="0" cy="0" r="2.5" />
+                    <circle class="svg-waypoint-hitbox" cx="0" cy="0" r="10" />
+                    <circle class="svg-waypoint-circle" cx="0" cy="0" r="3.5" />
+                    <circle class="svg-waypoint-core" cx="0" cy="0" r="1.8" />
                 `;
                 wpG.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -4665,7 +4685,7 @@ if (count <= 4 && !usedZones.has('e')) {
             }
         }
 
-        // 4. Start Marker (Main Gate)
+        // 4. Start Marker (Main Gate - Clean, compact orientation pin)
         const startPt = points[0];
         const startG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         startG.setAttribute('class', 'route-marker-start');
@@ -4675,10 +4695,10 @@ if (count <= 4 && !usedZones.has('e')) {
         startG.setAttribute('aria-label', 'Route Step 1: Main Gate Portal');
         startG.style.cursor = 'pointer';
         startG.innerHTML = `
-            <circle class="route-marker-pulse start-pulse" cx="0" cy="0" r="16" />
-            <circle class="route-marker-dot start-dot" cx="0" cy="0" r="7" />
-            <rect class="route-badge-bg start-badge-bg" x="-52" y="12" width="104" height="20" rx="10" />
-            <text class="route-badge-text" x="0" y="25.5" text-anchor="middle">● START Main Gate</text>
+            <circle class="route-marker-pulse start-pulse" cx="0" cy="0" r="12" />
+            <circle class="route-marker-dot start-dot" cx="0" cy="0" r="5.5" />
+            <rect class="route-badge-bg start-badge-bg" x="-42" y="10" width="84" height="16" rx="8" />
+            <text class="route-badge-text" x="0" y="21" text-anchor="middle">● START Main Gate</text>
         `;
         startG.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -4693,7 +4713,7 @@ if (count <= 4 && !usedZones.has('e')) {
         });
         routeGroup.appendChild(startG);
 
-        // 5. Destination Marker (Exact Selected Lot)
+        // 5. Destination Marker (Exact Selected Lot - Sleek Google Maps Pin with Non-Obstructing Mini-Badge)
         const destPt = points[points.length - 1];
         const destIdx = (guidanceSteps ? guidanceSteps.length - 1 : points.length - 1);
         const destG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -4703,15 +4723,27 @@ if (count <= 4 && !usedZones.has('e')) {
         destG.setAttribute('role', 'button');
         destG.setAttribute('aria-label', `Route Step ${destIdx + 1}: ${lot.lot_number ? 'Destination Lot ' + lot.lot_number : 'Destination Facility'}`);
         destG.style.cursor = 'pointer';
-        const badgeLabel = isCortege
-            ? `● FUNERAL CORTÈGE ${lot.lot_number ? 'Lot ' + escapeHtml(lot.lot_number) : 'Facility'}`
-            : `● DESTINATION ${lot.lot_number ? 'Lot ' + escapeHtml(lot.lot_number) : 'Facility'}`;
-        const badgeW = Math.max(120, badgeLabel.length * 6.5 + 24);
+
+        const shortLotLabel = lot.lot_number ? 'Lot ' + escapeHtml(lot.lot_number) : 'Destination';
+        const badgeLabel = isCortege ? `Cortège · ${shortLotLabel}` : shortLotLabel;
+        const badgeW = Math.max(54, badgeLabel.length * 5.2 + 14);
         destG.innerHTML = `
-            <circle class="route-marker-pulse dest-pulse ${isCortege ? 'cortege-pulse' : ''}" cx="0" cy="0" r="18" />
-            <circle class="route-marker-dot dest-dot ${isCortege ? 'cortege-dot' : ''}" cx="0" cy="0" r="7" />
-            <rect class="route-badge-bg dest-badge-bg ${isCortege ? 'cortege-badge-bg' : ''}" x="${-badgeW / 2}" y="-32" width="${badgeW}" height="22" rx="11" />
-            <text class="route-badge-text" x="0" y="-17.5" text-anchor="middle">${badgeLabel}</text>
+            <!-- Ground Level Target Pulse & Shadow -->
+            <circle class="route-dest-ground-pulse ${isCortege ? 'cortege-pulse' : ''}" cx="0" cy="0" r="10" />
+            <ellipse class="route-dest-shadow" cx="0" cy="1" rx="6" ry="2.2" />
+
+            <!-- Elevated Teardrop Pin pointing precisely to (0, 0) -->
+            <g class="route-dest-pin-body" transform="translate(0, -18)">
+                <path d="M 0 18 C -4 11 -8.5 6 -8.5 -1.5 A 8.5 8.5 0 1 1 8.5 -1.5 C 8.5 6 4 11 0 18 Z" class="route-dest-teardrop ${isCortege ? 'is-cortege' : ''}" />
+                <circle cx="0" cy="-2" r="3.2" fill="#ffffff" />
+                <circle cx="0" cy="-2" r="1.5" fill="${isCortege ? '#7c3aed' : '#e11d48'}" />
+            </g>
+
+            <!-- Compact Floating Mini-Badge (elevated above pin, non-blocking) -->
+            <g class="route-dest-badge-wrap" transform="translate(0, -32)">
+                <rect class="route-badge-bg dest-badge-bg ${isCortege ? 'cortege-badge-bg' : ''}" x="${-badgeW / 2}" y="-8" width="${badgeW}" height="16" rx="8" />
+                <text class="route-badge-text dest-badge-text" x="0" y="3.2" text-anchor="middle">${badgeLabel}</text>
+            </g>
         `;
         destG.addEventListener('click', (e) => {
             e.stopPropagation();

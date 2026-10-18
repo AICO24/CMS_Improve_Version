@@ -6950,27 +6950,32 @@ body.dark-mode .btn-wayfinding-slip:hover {
 /* 3. SVG Route Layer Styling */
 .svg-route-underlay {
     fill: none;
-    stroke: rgba(2, 132, 199, 0.35);
-    stroke-width: 14px;
+    stroke: rgba(2, 132, 199, 0.22);
+    stroke-width: 11px;
     stroke-linecap: round;
     stroke-linejoin: round;
-    filter: drop-shadow(0 0 6px rgba(2, 132, 199, 0.45));
+    filter: drop-shadow(0 0 5px rgba(2, 132, 199, 0.35));
     pointer-events: none;
 }
 
 [data-theme="dark"] .svg-route-underlay {
-    stroke: rgba(56, 189, 248, 0.4);
-    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.55));
+    stroke: rgba(56, 189, 248, 0.28);
+    filter: drop-shadow(0 0 7px rgba(56, 189, 248, 0.45));
+}
+
+.svg-route-underlay.is-cortege-route {
+    stroke: rgba(139, 92, 246, 0.22);
+    filter: drop-shadow(0 0 5px rgba(139, 92, 246, 0.35));
 }
 
 .svg-route-line {
     fill: none;
     stroke: #0284c7;
-    stroke-width: 5px;
+    stroke-width: 4px;
     stroke-linecap: round;
     stroke-linejoin: round;
-    stroke-dasharray: 10 7;
-    animation: routeWalkingStroke 1.6s linear infinite;
+    stroke-dasharray: 8 6;
+    animation: routeWalkingStroke 1.2s linear infinite;
     pointer-events: none;
 }
 
@@ -6978,27 +6983,22 @@ body.dark-mode .btn-wayfinding-slip:hover {
     stroke: #38bdf8;
 }
 
+.svg-route-line.is-cortege-route {
+    stroke: #8b5cf6;
+}
+
 @keyframes routeWalkingStroke {
     from {
         stroke-dashoffset: 0;
     }
     to {
-        stroke-dashoffset: -34;
+        stroke-dashoffset: -28;
     }
 }
 
-/* Direction Arrows along Route */
+/* Direction Arrows along Route (Deprecated in favor of animated walking dash cadence) */
 .route-arrow-marker {
-    fill: #ffffff;
-    stroke: #0369a1;
-    stroke-width: 1.2px;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
-    pointer-events: none;
-}
-
-[data-theme="dark"] .route-arrow-marker {
-    fill: #38bdf8;
-    stroke: #0c4a6e;
+    display: none !important;
 }
 
 /* Start Marker (Main Gate) */
@@ -7013,11 +7013,11 @@ body.dark-mode .btn-wayfinding-slip:hover {
 
 @keyframes routePulseStart {
     0% {
-        r: 8px;
+        r: 6px;
         opacity: 0.9;
     }
     100% {
-        r: 22px;
+        r: 16px;
         opacity: 0;
     }
 }
@@ -7025,58 +7025,86 @@ body.dark-mode .btn-wayfinding-slip:hover {
 .route-marker-dot.start-dot {
     fill: #10b981;
     stroke: #ffffff;
-    stroke-width: 2.5px;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    stroke-width: 2px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
 }
 
 .route-badge-bg.start-badge-bg {
     fill: #065f46;
     stroke: #ffffff;
-    stroke-width: 1.2px;
-    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.35));
+    stroke-width: 1px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .route-badge-text {
     font-family: var(--font-sans, 'Inter', sans-serif);
-    font-size: 9.5px;
+    font-size: 8px;
     font-weight: 800;
     letter-spacing: 0.04em;
     fill: #ffffff;
 }
 
-/* Destination Marker (Exact Lot) */
+/* Destination Marker (Exact Selected Lot - Sleek Google Maps Style Pin) */
 .route-marker-dest {
     pointer-events: none;
 }
 
-.route-marker-pulse.dest-pulse {
-    fill: rgba(225, 29, 72, 0.38);
+.route-dest-ground-pulse {
+    fill: rgba(225, 29, 72, 0.22);
     animation: routePulseDest 2s ease-out infinite;
+    pointer-events: none;
+}
+
+.route-dest-ground-pulse.cortege-pulse {
+    fill: rgba(124, 58, 237, 0.22);
 }
 
 @keyframes routePulseDest {
     0% {
-        r: 10px;
+        r: 5px;
         opacity: 0.95;
     }
     100% {
-        r: 26px;
+        r: 18px;
         opacity: 0;
     }
 }
 
-.route-marker-dot.dest-dot {
+.route-dest-shadow {
+    fill: rgba(15, 23, 42, 0.26);
+    pointer-events: none;
+}
+
+.route-dest-teardrop {
     fill: #e11d48;
     stroke: #ffffff;
-    stroke-width: 2.5px;
-    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+    stroke-width: 1.4px;
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.35));
+    transition: transform 0.15s ease;
+}
+
+.route-dest-teardrop.is-cortege {
+    fill: #7c3aed;
 }
 
 .route-badge-bg.dest-badge-bg {
-    fill: #9f1239;
+    fill: #e11d48;
     stroke: #ffffff;
-    stroke-width: 1.2px;
-    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+    stroke-width: 1px;
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.28));
+}
+
+.route-badge-bg.dest-badge-bg.cortege-badge-bg {
+    fill: #7c3aed;
+}
+
+.route-badge-text.dest-badge-text {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 7.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    fill: #ffffff;
+    pointer-events: none;
 }
 
 /* Intermediate Route Waypoint Markers (Batch 7) */
