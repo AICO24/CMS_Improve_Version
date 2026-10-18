@@ -8573,29 +8573,34 @@ button.btn-today-services.is-active,
    ========================================================================= */
 .svg-amenity-marker {
     cursor: pointer;
-    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), filter 0.18s ease;
-    transform-origin: center;
+    pointer-events: all;
+    transition: filter 0.16s ease;
 }
 
 .svg-amenity-marker:hover,
 .svg-amenity-marker:focus {
-    transform: scale(1.28);
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.28));
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.95)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45));
     outline: none;
 }
 
 .mp-amenity-bg {
-    transition: fill 0.18s ease, stroke-width 0.18s ease;
+    transition: stroke 0.16s ease, stroke-width 0.16s ease, filter 0.16s ease;
 }
 
 .svg-amenity-marker:hover .mp-amenity-bg {
-    stroke-width: 2px;
+    stroke: #ffffff !important;
+    stroke-width: 2.4px !important;
+    filter: brightness(1.22);
+}
+
+.mp-amenity-shadow,
+.mp-amenity-icon {
+    pointer-events: none !important;
+    user-select: none;
 }
 
 .mp-amenity-icon {
     font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
-    user-select: none;
-    pointer-events: none;
 }
 
 /* Feature Toggle for Amenities */

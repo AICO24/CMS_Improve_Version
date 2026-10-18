@@ -3208,9 +3208,9 @@ if (count <= 4 && !usedZones.has('e')) {
             }
 
             g.innerHTML = `
-                <circle cx="${amenity.x}" cy="${amenity.y}" r="8.5" fill="rgba(0,0,0,0.22)" class="mp-amenity-shadow" transform="translate(1 1)"/>
-                <circle cx="${amenity.x}" cy="${amenity.y}" r="7.5" fill="${bgFill}" stroke="${borderStroke}" stroke-width="1.3" class="mp-amenity-bg"/>
-                <text x="${amenity.x}" y="${amenity.y + 3.2}" font-size="7.5" text-anchor="middle" class="mp-amenity-icon">${amenity.icon}</text>
+                <circle cx="${amenity.x}" cy="${amenity.y}" r="8.5" fill="rgba(0,0,0,0.22)" class="mp-amenity-shadow" transform="translate(1 1)" pointer-events="none"/>
+                <circle cx="${amenity.x}" cy="${amenity.y}" r="8" fill="${bgFill}" stroke="${borderStroke}" stroke-width="1.4" class="mp-amenity-bg"/>
+                <text x="${amenity.x}" y="${amenity.y + 3.2}" font-size="7.5" text-anchor="middle" class="mp-amenity-icon" pointer-events="none">${amenity.icon}</text>
             `;
 
             // Hover tooltip
