@@ -2106,17 +2106,20 @@ body[data-theme="dark"] .search-empty-sub {
     stroke: #a855f7;
 }
 
-/* Level of Detail (LOD) & Plot Spatial Presentation (Batch 24) */
+/* Level of Detail (LOD) & Plot Spatial Presentation (Batch 24 & Batch 29) */
 .cemetery-map-svg.lod-low .svg-lot-label,
 .cemetery-map-svg.lod-low .mp-lot-number {
-    opacity: 0 !important;
+    opacity: 0.85 !important;
+    font-size: 5.2px;
+    font-weight: 800;
+    fill: #0f172a;
     pointer-events: none;
 }
 
 .cemetery-map-svg.lod-mid .svg-lot-label,
 .cemetery-map-svg.lod-mid .mp-lot-number {
-    opacity: 0.92 !important;
-    font-size: 5.8px;
+    opacity: 0.95 !important;
+    font-size: 6.2px;
     font-weight: 800;
     fill: #0f172a;
     pointer-events: none;
@@ -2131,11 +2134,13 @@ body[data-theme="dark"] .search-empty-sub {
 .svg-lot-tile.is-selected .svg-lot-label,
 .svg-lot-tile.is-selected .mp-lot-number {
     opacity: 1 !important;
-    font-size: 6.8px;
+    font-size: 7.2px;
     font-weight: 800;
     fill: #0f172a;
 }
 
+[data-theme="dark"] .cemetery-map-svg.lod-low .svg-lot-label,
+[data-theme="dark"] .cemetery-map-svg.lod-low .mp-lot-number,
 [data-theme="dark"] .cemetery-map-svg.lod-mid .svg-lot-label,
 [data-theme="dark"] .cemetery-map-svg.lod-mid .mp-lot-number,
 [data-theme="dark"] .cemetery-map-svg.lod-high .svg-lot-label,
@@ -5907,16 +5912,16 @@ body.dark-mode .btn-wayfinding-slip:hover {
 
 .mp-lot-headstone,
 .svg-lot-headstone {
-    fill: #ffffff;
-    stroke: #64748b;
-    stroke-width: 0.5px;
+    fill: #f8fafc;
+    stroke: #475569;
+    stroke-width: 0.65px;
     pointer-events: none;
-    filter: drop-shadow(0 0.5px 1px rgba(0, 0, 0, 0.25));
+    filter: drop-shadow(0 0.5px 1px rgba(0, 0, 0, 0.28));
 }
 [data-theme="dark"] .mp-lot-headstone,
 [data-theme="dark"] .svg-lot-headstone {
     fill: #cbd5e1;
-    stroke: #334155;
+    stroke: #1e293b;
 }
 
 .mp-lot-number,

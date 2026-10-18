@@ -563,21 +563,21 @@
         const index = sections.findIndex(s => s.section_id === sec.section_id);
         const name = (sec.section_name || '').toLowerCase();
 
-        // Match known cemetery master plan parcels (Batch 26: Calibrated to Google Maps Layout)
+        // Match known cemetery master plan parcels (Full-Canvas Google Maps Acreage)
         if (name.includes('peace') || name.includes('section a') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('a1')))) {
-            return { x: 726, y: 395, width: 148, height: 130 };
+            return { x: 740, y: 460, width: 245, height: 370 };
         }
         if (name.includes('lourdes') || name.includes('section b') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('b1')))) {
-            return { x: 636, y: 320, width: 86, height: 202 };
+            return { x: 575, y: 460, width: 115, height: 370 };
         }
         if (name.includes('jose') || name.includes('section c') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('c1')))) {
-            return { x: 672, y: 185, width: 116, height: 82 };
+            return { x: 615, y: 175, width: 165, height: 165 };
         }
         if (name.includes('columbarium') || name.includes('ossuary') || name.includes('section d') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('d1') || (b.block_name || '').toLowerCase().includes('reloc')))) {
-            return { x: 815, y: 165, width: 106, height: 100 };
+            return { x: 815, y: 165, width: 125, height: 155 };
         }
         if (name.includes('reserve') || name.includes('section e') || (sec.blocks && sec.blocks.some(b => (b.block_name || '').toLowerCase().includes('e1')))) {
-            return { x: 885, y: 375, width: 140, height: 150 };
+            return { x: 1040, y: 460, width: 110, height: 370 };
         }
 
         // Generic fallback grid
@@ -616,87 +616,87 @@
         const name = (sec.section_name || '').toLowerCase();
         const bName = (blk.block_name || '').toLowerCase();
 
-        // Section A (Everlasting Peace flanks central spine at relative x = 74, width: 148, height: 130):
+        // Section A (Everlasting Peace, width: 245, height: 370):
         if (name.includes('peace') || name.includes('section a') || bName.includes('a1') || bName.includes('a2')) {
             if (bName.includes('a1') || bIdx === 0) {
                 return {
-                    x: 7,
-                    y: 12,
-                    width: 58,
-                    height: 110,
-                    grid: { columns: 5, rows: 10, gap_x: 0.8, gap_y: 0.8 }
+                    x: 6,
+                    y: 10,
+                    width: 112,
+                    height: 352,
+                    grid: { columns: 5, rows: 10, gap_x: 2.2, gap_y: 4.5 }
                 };
             } else {
                 return {
-                    x: 83,
-                    y: 12,
-                    width: 58,
-                    height: 110,
-                    grid: { columns: 5, rows: 2, gap_x: 1.5, gap_y: 1.5 }
+                    x: 126,
+                    y: 10,
+                    width: 112,
+                    height: 352,
+                    grid: { columns: 2, rows: 3, gap_x: 12.0, gap_y: 16.0 }
                 };
             }
         }
 
-        // Section B (Our Lady of Lourdes: vertical corridor B1 North, B2 South, width: 86, height: 202):
+        // Section B (Our Lady of Lourdes: width: 115, height: 370):
         if (name.includes('lourdes') || name.includes('section b') || bName.includes('b1') || bName.includes('b2')) {
             if (bName.includes('b1') || bIdx === 0) {
                 return {
-                    x: 6,
-                    y: 12,
-                    width: 74,
-                    height: 86,
-                    grid: { columns: 5, rows: 2, gap_x: 1.5, gap_y: 1.5 }
+                    x: 5,
+                    y: 10,
+                    width: 105,
+                    height: 170,
+                    grid: { columns: 2, rows: 3, gap_x: 6.0, gap_y: 8.0 }
                 };
             } else {
                 return {
-                    x: 6,
-                    y: 104,
-                    width: 74,
-                    height: 86,
-                    grid: { columns: 5, rows: 2, gap_x: 1.5, gap_y: 1.5 }
+                    x: 5,
+                    y: 192,
+                    width: 105,
+                    height: 170,
+                    grid: { columns: 2, rows: 3, gap_x: 6.0, gap_y: 8.0 }
                 };
             }
         }
 
-        // Section C (Sanctuario de San Jose: side-by-side C1 West, C2 East, width: 116, height: 82):
+        // Section C (Sanctuario de San Jose: width: 165, height: 165):
         if (name.includes('jose') || name.includes('section c') || bName.includes('c1') || bName.includes('c2')) {
             if (bName.includes('c1') || bIdx === 0) {
                 return {
                     x: 6,
-                    y: 12,
-                    width: 50,
-                    height: 60,
-                    grid: { columns: 3, rows: 3, gap_x: 1.2, gap_y: 1.2 }
+                    y: 10,
+                    width: 73,
+                    height: 146,
+                    grid: { columns: 2, rows: 3, gap_x: 4.0, gap_y: 6.0 }
                 };
             } else {
                 return {
-                    x: 60,
-                    y: 12,
-                    width: 50,
-                    height: 60,
-                    grid: { columns: 3, rows: 3, gap_x: 1.2, gap_y: 1.2 }
+                    x: 86,
+                    y: 10,
+                    width: 73,
+                    height: 146,
+                    grid: { columns: 2, rows: 3, gap_x: 4.0, gap_y: 6.0 }
                 };
             }
         }
 
-        // Section D (Columbarium & Ossuary Sanctuary: single block D1 / Block Reloc, width: 106, height: 100):
+        // Section D (Columbarium & Ossuary Sanctuary: width: 125, height: 155):
         if (name.includes('columbarium') || name.includes('ossuary') || name.includes('section d') || bName.includes('d1') || bName.includes('reloc')) {
             return {
                 x: 8,
-                y: 14,
-                width: 90,
-                height: 76,
+                y: 15,
+                width: 109,
+                height: 130,
                 grid: { columns: 7, rows: 5, gap_x: 1.0, gap_y: 1.2 }
             };
         }
 
-        // Section E (Garden Reserve: E1, width: 140, height: 150):
+        // Section E (Garden Reserve: width: 110, height: 370):
         if (name.includes('reserve') || name.includes('section e') || bName.includes('e1')) {
             return {
                 x: 8,
-                y: 14,
-                width: 124,
-                height: 124,
+                y: 15,
+                width: 94,
+                height: 345,
                 grid: { columns: 5, rows: 4, gap_x: 1.5, gap_y: 1.5 }
             };
         }
@@ -790,10 +790,10 @@
             hintY.textContent = '(Canvas Y)';
             blockGridSection.style.display = 'none';
 
-            inputX.value = entity.config?.x ?? 726;
-            inputY.value = entity.config?.y ?? 395;
-            inputWidth.value = entity.config?.width ?? 148;
-            inputHeight.value = entity.config?.height ?? 130;
+            inputX.value = entity.config?.x ?? 740;
+            inputY.value = entity.config?.y ?? 460;
+            inputWidth.value = entity.config?.width ?? 245;
+            inputHeight.value = entity.config?.height ?? 370;
         } else if (entity.type === 'block') {
             editorHeaderIcon.className = 'fas fa-th-large';
             editorEntityTypeBadge.style.background = '#fef3c7';
@@ -804,10 +804,10 @@
             hintY.textContent = '(Section Offset Y)';
             blockGridSection.style.display = 'block';
 
-            inputX.value = entity.config?.x ?? 7;
-            inputY.value = entity.config?.y ?? 12;
-            inputWidth.value = entity.config?.width ?? 58;
-            inputHeight.value = entity.config?.height ?? 110;
+            inputX.value = entity.config?.x ?? 8;
+            inputY.value = entity.config?.y ?? 15;
+            inputWidth.value = entity.config?.width ?? 112;
+            inputHeight.value = entity.config?.height ?? 345;
 
             const grid = entity.config?.grid || {};
             inputGridColumns.value = grid.columns ?? 5;
@@ -1276,7 +1276,7 @@
         if (!document.getElementById('cemeteryParcelClip')) {
             const cp = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
             cp.setAttribute('id', 'cemeteryParcelClip');
-            cp.innerHTML = '<polygon points="1168.9,900.0 956.7,863.5 952.1,610.6 1001.0,608.1 963.7,432.3 637.0,531.8 617.6,493.5 576.8,444.4 689.6,282.2 766.2,264.0 808.5,194.0 864.5,162.8 975.8,147.7 1022.1,146.6 1022.7,403.1 1033.7,400.5 1052.4,491.2 1058.9,697.8 1102.3,690.7"/>';
+            cp.innerHTML = '<polygon points="560.0,835.0 715.0,862.0 745.0,867.0 990.0,873.0 1020.0,877.0 1168.9,900.0 1102.3,690.7 1058.9,697.8 1052.4,491.2 1033.7,400.5 1022.7,403.1 1022.1,146.6 975.8,145.0 864.5,145.0 808.5,145.0 720.0,150.0 660.0,165.0 600.0,200.0 575.0,300.0 565.0,440.0 560.0,600.0"/>';
             defs.appendChild(cp);
         }
     }
@@ -1284,7 +1284,7 @@
     /**
      * Render the Continuous Geographic Cemetery Master Plan Base
      * (Roads, Landscaping, Frontage, Landmarks, and Boundaries).
-     * Synchronized with Google Maps layout in Batch 26.
+     * Synchronized with Google Maps layout in Batch 26-28.
      */
     function renderMasterPlanBackdrop(container, canvasW, canvasH) {
         ensureMasterPlanDefs();
@@ -1349,17 +1349,18 @@
         };
 
         const pillSvg = (cx, cy, text, icon, variant) => {
-            const w = Math.round(text.length * 6.2 + (icon ? 30 : 20));
+            const w = Math.round(text.length * 4.6 + (icon ? 18 : 10));
+            const h = 13;
             const x = cx - w / 2;
-            return `<g class="mp-pill mp-pill--${variant}">` +
-                `<rect x="${f1(x)}" y="${f1(cy - 11)}" width="${w}" height="22" rx="6" class="mp-pill-bg"/>` +
-                (icon ? `<text x="${f1(x + 12)}" y="${f1(cy + 3.6)}" class="mp-pill-icon">${icon}</text>` : '') +
-                `<text x="${f1(cx + (icon ? 7 : 0))}" y="${f1(cy + 3.4)}" class="mp-pill-text">${text}</text>` +
+            return `<g class="mp-pill mp-pill--${variant}" opacity="0.92">` +
+                `<rect x="${f1(x)}" y="${f1(cy - 7)}" width="${w}" height="${h}" rx="3" class="mp-pill-bg"/>` +
+                (icon ? `<text x="${f1(x + 7)}" y="${f1(cy + 2.2)}" class="mp-pill-icon" font-size="7">${icon}</text>` : '') +
+                `<text x="${f1(cx + (icon ? 3.5 : 0))}" y="${f1(cy + 2.0)}" class="mp-pill-text" font-size="6.4">${text}</text>` +
                 `</g>`;
         };
 
-        // Verified OSM Relation 16828676 Site Perimeter Coordinates
-        const CEMETERY_POLYGON_POINTS = "1168.9,900.0 956.7,863.5 952.1,610.6 1001.0,608.1 963.7,432.3 637.0,531.8 617.6,493.5 576.8,444.4 689.6,282.2 766.2,264.0 808.5,194.0 864.5,162.8 975.8,147.7 1022.1,146.6 1022.7,403.1 1033.7,400.5 1052.4,491.2 1058.9,697.8 1102.3,690.7";
+        // Continuous Verified Cemetery Grounds: Full Canvas Perimeter (Google Maps Geometry)
+        const CEMETERY_POLYGON_POINTS = "560.0,835.0 715.0,862.0 745.0,867.0 990.0,873.0 1020.0,877.0 1168.9,900.0 1102.3,690.7 1058.9,697.8 1052.4,491.2 1033.7,400.5 1022.7,403.1 1022.1,146.6 975.8,145.0 864.5,145.0 808.5,145.0 720.0,150.0 660.0,165.0 600.0,200.0 575.0,300.0 565.0,440.0 560.0,600.0";
 
         // Verified physical facility footprints
         const FACILITY_STRUCTURES = [
@@ -1405,8 +1406,12 @@
 
         // P. Aquino Avenue (Letre Road) Frontage along southern edge
         let crosswalkBars = '';
-        for (let cx = 1076; cx <= 1120; cx += 8) {
-            const cy = 948 + (cx - 1096) * 0.172;
+        for (let cx = 710; cx <= 750; cx += 8) {
+            const cy = 948 + (cx - 730) * 0.172;
+            crosswalkBars += `<rect x="${cx}" y="${f1(cy)}" width="5" height="34" transform="rotate(9.8 ${cx} ${f1(cy)})" class="mp-crosswalk"/>`;
+        }
+        for (let cx = 985; cx <= 1025; cx += 8) {
+            const cy = 948 + (cx - 1005) * 0.172;
             crosswalkBars += `<rect x="${cx}" y="${f1(cy)}" width="5" height="34" transform="rotate(9.8 ${cx} ${f1(cy)})" class="mp-crosswalk"/>`;
         }
         groundHtml += `
@@ -1418,125 +1423,83 @@
                 <line x1="350" y1="1005.0" x2="1450" y2="1197.0" class="mp-ext-centerline"/>
                 ${crosswalkBars}
                 <polygon points="350,1038 1450,1230 1450,1242 350,1050" class="mp-sidewalk"/>
-                <text x="620" y="995" transform="rotate(9.8 620 995)" class="mp-ext-lane-label">◂  WESTBOUND (TONSUYA / LETRE)</text>
-                <text x="1240" y="1105" transform="rotate(9.8 1240 1105)" class="mp-ext-lane-label">EASTBOUND (MALABON / C-4)  ▸</text>
-                ${pillSvg(1096, 960, '⟵   P. AQUINO AVENUE (LETRE ROAD)   ⟶', '', 'road')}
+                <text x="560" y="990" transform="rotate(9.8 560 990)" class="mp-ext-lane-label">◂  WESTBOUND (TONSUYA / LETRE)</text>
+                <text x="1140" y="1090" transform="rotate(9.8 1140 1090)" class="mp-ext-lane-label">EASTBOUND (MALABON / C-4)  ▸</text>
+                ${pillSvg(870, 995, '⟵   P. AQUINO AVENUE (LETRE ROAD)   ⟶', '', 'road')}
             </g>
             <text x="890" y="132" class="mp-north-label">NORTH BOUNDARY (MALABON/TONSUYA)</text>
         `;
 
         // Perimeter Wall with Main Gate Opening & Posts
-        const outerWallD = "M 1078.0 877.8 L 956.7 863.5 L 952.1 610.6 L 1001.0 608.1 L 963.7 432.3 L 637.0 531.8 L 617.6 493.5 L 576.8 444.4 L 689.6 282.2 L 766.2 264.0 L 808.5 194.0 L 864.5 162.8 L 975.8 147.7 L 1022.1 146.6 L 1022.7 403.1 L 1033.7 400.5 L 1052.4 491.2 L 1058.9 697.8 L 1102.3 690.7 L 1168.9 900.0 L 1113.4 884.0";
-        const innerWallD = "M 1078.0 874.3 L 960.1 860.5 L 955.7 613.9 L 1005.3 611.4 L 966.3 427.8 L 638.8 527.6 L 620.5 491.6 L 581.2 444.2 L 691.8 285.3 L 768.4 267.1 L 811.1 196.6 L 865.6 166.1 L 976.0 151.2 L 1018.6 150.2 L 1019.2 407.5 L 1031.0 404.8 L 1048.9 491.6 L 1055.5 701.9 L 1099.8 694.7 L 1163.8 895.6 L 1113.4 880.5";
+        const outerWallD = "M 1020.0 877.0 L 1168.9 900.0 L 1102.3 690.7 L 1058.9 697.8 L 1052.4 491.2 L 1033.7 400.5 L 1022.7 403.1 L 1022.1 146.6 L 975.8 145.0 L 864.5 145.0 L 808.5 145.0 L 720.0 150.0 L 660.0 165.0 L 600.0 200.0 L 575.0 300.0 L 565.0 440.0 L 560.0 600.0 L 560.0 835.0 L 715.0 862.0 M 745.0 867.0 L 990.0 873.0";
+        const innerWallD = "M 1020.0 873.0 L 1163.8 895.6 L 1098.0 693.0 L 1055.5 701.9 L 1048.9 491.6 L 1031.0 404.8 L 1019.2 407.5 L 1018.6 150.2 L 976.0 149.0 L 865.6 149.0 L 811.1 149.0 L 722.0 154.0 L 663.0 169.0 L 604.0 203.0 L 579.0 302.0 L 569.0 441.0 L 564.0 600.0 L 564.0 831.0 L 715.0 858.0 M 745.0 863.0 L 990.0 869.0";
         groundHtml += `
             <path d="${outerWallD}" class="mp-wall"/>
             <path d="${innerWallD}" class="mp-wall-inner"/>
             <g class="mp-wall-posts" aria-hidden="true">
-                <rect x="1075.5" y="875.3" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1110.9" y="881.5" width="5" height="5" class="mp-wall-post"/>
+                <rect x="712.5" y="859.5" width="5" height="5" class="mp-wall-post"/>
+                <rect x="744.5" y="864.5" width="5" height="5" class="mp-wall-post"/>
+                <rect x="987.5" y="870.5" width="5" height="5" class="mp-wall-post"/>
+                <rect x="1019.5" y="874.5" width="5" height="5" class="mp-wall-post"/>
                 <rect x="1166.4" y="897.5" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1007.3" y="870.1" width="5" height="5" class="mp-wall-post"/>
-                <rect x="954.2" y="861.0" width="5" height="5" class="mp-wall-post"/>
-                <rect x="953.3" y="810.4" width="5" height="5" class="mp-wall-post"/>
-                <rect x="952.4" y="759.8" width="5" height="5" class="mp-wall-post"/>
-                <rect x="951.5" y="709.3" width="5" height="5" class="mp-wall-post"/>
-                <rect x="950.6" y="658.7" width="5" height="5" class="mp-wall-post"/>
-                <rect x="949.6" y="608.1" width="5" height="5" class="mp-wall-post"/>
-                <rect x="974.0" y="606.8" width="5" height="5" class="mp-wall-post"/>
-                <rect x="998.5" y="605.6" width="5" height="5" class="mp-wall-post"/>
-                <rect x="989.2" y="561.7" width="5" height="5" class="mp-wall-post"/>
-                <rect x="979.9" y="517.8" width="5" height="5" class="mp-wall-post"/>
-                <rect x="970.5" y="473.8" width="5" height="5" class="mp-wall-post"/>
-                <rect x="961.2" y="429.8" width="5" height="5" class="mp-wall-post"/>
-                <rect x="880.8" y="454.4" width="5" height="5" class="mp-wall-post"/>
-                <rect x="797.9" y="479.9" width="5" height="5" class="mp-wall-post"/>
-                <rect x="717.6" y="504.6" width="5" height="5" class="mp-wall-post"/>
-                <rect x="634.5" y="529.3" width="5" height="5" class="mp-wall-post"/>
-                <rect x="615.1" y="491.0" width="5" height="5" class="mp-wall-post"/>
-                <rect x="574.3" y="441.9" width="5" height="5" class="mp-wall-post"/>
-                <rect x="602.5" y="401.4" width="5" height="5" class="mp-wall-post"/>
-                <rect x="630.7" y="360.8" width="5" height="5" class="mp-wall-post"/>
-                <rect x="658.9" y="320.3" width="5" height="5" class="mp-wall-post"/>
-                <rect x="687.1" y="279.7" width="5" height="5" class="mp-wall-post"/>
-                <rect x="725.4" y="270.6" width="5" height="5" class="mp-wall-post"/>
-                <rect x="763.7" y="261.5" width="5" height="5" class="mp-wall-post"/>
-                <rect x="784.8" y="226.5" width="5" height="5" class="mp-wall-post"/>
-                <rect x="806.0" y="191.5" width="5" height="5" class="mp-wall-post"/>
-                <rect x="834.0" y="175.9" width="5" height="5" class="mp-wall-post"/>
-                <rect x="862.0" y="160.3" width="5" height="5" class="mp-wall-post"/>
-                <rect x="917.6" y="152.7" width="5" height="5" class="mp-wall-post"/>
-                <rect x="973.3" y="145.2" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1019.6" y="144.1" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1019.8" y="195.4" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1019.9" y="246.7" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1020.0" y="297.9" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1020.1" y="349.2" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1020.2" y="400.6" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1031.2" y="398.0" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1040.6" y="443.3" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1049.9" y="488.7" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1051.5" y="540.3" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1053.1" y="592.0" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1054.8" y="643.6" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1056.4" y="695.3" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1078.1" y="691.8" width="5" height="5" class="mp-wall-post"/>
                 <rect x="1099.8" y="688.2" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1116.5" y="740.5" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1133.1" y="792.8" width="5" height="5" class="mp-wall-post"/>
-                <rect x="1149.8" y="845.2" width="5" height="5" class="mp-wall-post"/>
+                <rect x="1056.4" y="695.3" width="5" height="5" class="mp-wall-post"/>
+                <rect x="1049.9" y="488.7" width="5" height="5" class="mp-wall-post"/>
+                <rect x="1031.2" y="398.0" width="5" height="5" class="mp-wall-post"/>
+                <rect x="1019.6" y="144.1" width="5" height="5" class="mp-wall-post"/>
+                <rect x="973.3" y="142.5" width="5" height="5" class="mp-wall-post"/>
+                <rect x="862.0" y="142.5" width="5" height="5" class="mp-wall-post"/>
+                <rect x="806.0" y="142.5" width="5" height="5" class="mp-wall-post"/>
+                <rect x="717.5" y="147.5" width="5" height="5" class="mp-wall-post"/>
+                <rect x="657.5" y="162.5" width="5" height="5" class="mp-wall-post"/>
+                <rect x="597.5" y="197.5" width="5" height="5" class="mp-wall-post"/>
+                <rect x="572.5" y="297.5" width="5" height="5" class="mp-wall-post"/>
+                <rect x="562.5" y="437.5" width="5" height="5" class="mp-wall-post"/>
+                <rect x="557.5" y="597.5" width="5" height="5" class="mp-wall-post"/>
+                <rect x="557.5" y="832.5" width="5" height="5" class="mp-wall-post"/>
             </g>
             <g class="svg-landscaping-group mp-trees" aria-hidden="true">${
-                treeLine(1168.9, 900.0, 1125, 894, 20, 6, 8, 1.0) +
-                treeLine(1060, 882, 956.7, 863.5, 20, 6, 8, 1.0) +
-                treeLine(956.7, 863.5, 952.1, 610.6, 22, 6.5, 9, 1.2) +
-                treeLine(952.1, 610.6, 1001.0, 608.1, 22, 6.5, 9, 1.2) +
-                treeLine(1001.0, 608.1, 963.7, 432.3, 22, 6.5, 9, 1.2) +
-                treeLine(963.7, 432.3, 637.0, 531.8, 22, 6.5, 9, 1.2) +
-                treeLine(637.0, 531.8, 617.6, 493.5, 20, 6.5, 8.5, 1.0) +
-                treeLine(617.6, 493.5, 576.8, 444.4, 20, 6.5, 8.5, 1.0) +
-                treeLine(576.8, 444.4, 689.6, 282.2, 22, 6.5, 9, 1.2) +
-                treeLine(689.6, 282.2, 766.2, 264.0, 22, 6.5, 9, 1.2) +
-                treeLine(766.2, 264.0, 808.5, 194.0, 22, 6.5, 9, 1.2) +
-                treeLine(808.5, 194.0, 864.5, 162.8, 22, 6.5, 9, 1.2) +
-                treeLine(864.5, 162.8, 975.8, 147.7, 22, 6.5, 9, 1.2) +
-                treeLine(975.8, 147.7, 1022.1, 146.6, 20, 6, 8, 1.0) +
-                treeLine(1022.1, 146.6, 1022.7, 403.1, 22, 6.5, 9, 1.2) +
-                treeLine(1022.7, 403.1, 1033.7, 400.5, 18, 5.5, 7, 0.8) +
-                treeLine(1033.7, 400.5, 1052.4, 491.2, 20, 6, 8.5, 1.0) +
-                treeLine(1052.4, 491.2, 1058.9, 697.8, 22, 6.5, 9, 1.2) +
-                treeLine(1058.9, 697.8, 1102.3, 690.7, 20, 6, 8, 1.0) +
-                treeLine(1102.3, 690.7, 1168.9, 900.0, 22, 6.5, 9, 1.2)
+                treeLine(560, 835, 715, 862, 22, 6, 8, 1.0) +
+                treeLine(745, 867, 990, 873, 24, 6, 8, 1.0) +
+                treeLine(1020, 877, 1168.9, 900.0, 22, 6, 8, 1.0) +
+                treeLine(1168.9, 900.0, 1102.3, 690.7, 22, 6.5, 9, 1.2) +
+                treeLine(1102.3, 690.7, 1058.9, 697.8, 20, 6, 8, 1.0) +
+                treeLine(1058.9, 697.8, 1052.4, 491.2, 22, 6.5, 9, 1.2) +
+                treeLine(1052.4, 491.2, 1033.7, 400.5, 20, 6, 8.5, 1.0) +
+                treeLine(1033.7, 400.5, 1022.7, 403.1, 18, 5.5, 7, 0.8) +
+                treeLine(1022.7, 403.1, 1022.1, 146.6, 22, 6.5, 9, 1.2) +
+                treeLine(1022.1, 146.6, 975.8, 145.0, 20, 6, 8, 1.0) +
+                treeLine(975.8, 145.0, 864.5, 145.0, 22, 6.5, 9, 1.2) +
+                treeLine(864.5, 145.0, 808.5, 145.0, 22, 6.5, 9, 1.2) +
+                treeLine(808.5, 145.0, 720.0, 150.0, 22, 6.5, 9, 1.2) +
+                treeLine(720.0, 150.0, 660.0, 165.0, 22, 6.5, 9, 1.2) +
+                treeLine(660.0, 165.0, 600.0, 200.0, 22, 6.5, 8.5, 1.0) +
+                treeLine(600.0, 200.0, 575.0, 300.0, 22, 6.5, 8.5, 1.0) +
+                treeLine(575.0, 300.0, 565.0, 440.0, 22, 6.5, 9, 1.2) +
+                treeLine(565.0, 440.0, 560.0, 600.0, 22, 6.5, 9, 1.2) +
+                treeLine(560.0, 600.0, 560.0, 835.0, 22, 6.5, 9, 1.2)
             }</g>
         `;
 
         // 2. Connected Roads & Pathways
         const roads = [
-            // 1. Entrance Service Road (P. Aquino Ave -> Main Gate -> Neck Corridor -> Avenue of Peace)
-            { d: 'M 1101 928 L 1096 881 L 1090 820 L 1085 680 L 1085 545', w: 22, main: true },
-            // 2. Northbound Circulation Ingress to Northeast Rotunda
-            { d: 'M 1085 545 Q 1075 425 970 344', w: 20, main: true },
-            // 3. Main Cross Boulevard (Avenue of Peace): central east-west axis
-            { d: 'M 1085 545 H 800 H 655', w: 22, main: true },
-            // 4. Western Curving Ring Road (Google Maps authentic western garden perimeter)
-            { d: 'M 655 545 C 620 480 620 400 655 330 C 675 290 730 275 800 275', w: 18, main: true },
-            // 5. Central Boulevard Spine: connecting Avenue of Peace through campus to North Promenade
-            { d: 'M 800 545 V 275', w: 20, main: true },
-            // 6. North Promenade: connecting Central Spine eastward directly into Rotunda West Portal
-            { d: 'M 800 275 H 948', w: 18 },
-            // 7. Chapel Courtyard to Rotunda South Approach
-            { d: 'M 800 410 H 935 Q 970 410 970 344', w: 14 },
-            // 8. Visitor Parking Access Driveway
-            { d: 'M 1034 749 H 1088', w: 16 }
+            { d: 'M 730 920 L 730 870 C 725 800 705 720 705 600 L 705 440', w: 22, main: true },
+            { d: 'M 705 440 C 720 410 780 395 860 380 C 910 370 955 365 980 365', w: 20, main: true },
+            { d: 'M 705 440 C 680 410 620 395 595 350 C 575 300 580 230 620 185 C 660 155 720 150 800 150 H 940', w: 18, main: true },
+            { d: 'M 940 150 C 990 150 1015 185 1015 250 L 1015 340', w: 18, main: true },
+            { d: 'M 800 385 V 150', w: 16 },
+            { d: 'M 1010 400 C 1015 500 1015 630 1010 750 L 1005 870 L 1005 920', w: 20, main: true }
         ];
 
         // Pedestrian Walkways connecting landmarks, roads, and block parcels
         const primaryPaths = [
-            `M 778 275 V 332`,
-            `M 852 275 V 330`,
-            `M 887 236 V 275`,
-            `M 924 242 H 952`,
-            `M 979 284 V 298`,
-            `M 1034 749 H 1088`
+            `M 705 600 H 740`,
+            `M 800 380 V 430`,
+            `M 860 380 V 330`,
+            `M 800 270 H 750`,
+            `M 932 245 H 960`,
+            `M 1010 340 V 270`,
+            `M 1005 750 H 970`
         ];
 
         let pathUnder = '', pathFill = '', roadCurbs = '', roadAsphalt = '', roadStripes = '';
@@ -1554,16 +1517,17 @@
 
         // Northeast Roundabout / Rotunda
         const rotundaHtml = `
-            <circle cx="970" cy="320" r="26" class="mp-road-curb" stroke-width="26"/>
-            <circle cx="970" cy="320" r="26" class="mp-road mp-road--main" stroke-width="20"/>
-            <circle cx="970" cy="320" r="26" class="mp-road-line" stroke-dasharray="6 5"/>
-            <circle cx="970" cy="320" r="16" class="mp-road-curb" stroke-width="2"/>
-            <circle cx="970" cy="320" r="15" fill="#4e8346" stroke="#2e5926" stroke-width="1.5"/>
-            <circle cx="970" cy="320" r="15" fill="url(#mpLawnStripes)" class="mp-texture"/>
-            <circle cx="970" cy="320" r="4.5" fill="#e2e8f0" stroke="#475569" stroke-width="1"/>
-            <circle cx="970" cy="320" r="2" fill="#f59e0b"/>
-            ${treeCluster(970, 320, 3, 7, 2.5, 4.2)}
-            ${pillSvg(970, 276, 'Memorial Rotunda', '⭕', 'navy')}
+            <circle cx="1010" cy="370" r="30" class="mp-road-curb" stroke-width="26"/>
+            <circle cx="1010" cy="370" r="30" class="mp-road mp-road--main" stroke-width="22"/>
+            <circle cx="1010" cy="370" r="30" class="mp-road-line" stroke-dasharray="6 5"/>
+            <path d="M 1018 340 L 1002 340 M 1007 336 L 1002 340 L 1007 344" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+            <circle cx="1010" cy="370" r="18" class="mp-road-curb" stroke-width="2"/>
+            <circle cx="1010" cy="370" r="17" fill="#4e8346" stroke="#2e5926" stroke-width="1.5"/>
+            <circle cx="1010" cy="370" r="17" fill="url(#mpLawnStripes)" class="mp-texture"/>
+            <circle cx="1010" cy="370" r="5" fill="#e2e8f0" stroke="#475569" stroke-width="1"/>
+            <circle cx="1010" cy="370" r="2.2" fill="#f59e0b"/>
+            ${treeCluster(1010, 370, 3, 7, 2.5, 4.2)}
+            ${pillSvg(1010, 322, 'Memorial Rotunda', '⭕', 'navy')}
         `;
 
         groundHtml += `
@@ -1575,19 +1539,18 @@
                 ${roadStripes}
                 ${rotundaHtml}
                 <!-- Road Name Annotations -->
-                <text x="730" y="541" class="mp-road-label">AVENUE OF PEACE</text>
-                <text x="965" y="541" class="mp-road-label">AVENUE OF PEACE</text>
-                <text x="803" y="370" class="mp-road-label" transform="rotate(-90 803 370)">MAIN SPINE</text>
-                <text x="870" y="271" class="mp-road-label mp-road-label--minor">PROMENADE</text>
-                <text x="1075" y="760" class="mp-road-label mp-road-label--minor" transform="rotate(-90 1075 760)">ENTRANCE ROAD</text>
-                <text x="635" y="420" class="mp-road-label mp-road-label--minor" transform="rotate(-90 635 420)">WEST PARK DRIVE</text>
+                <text x="715" y="720" class="mp-road-label mp-road-label--minor" transform="rotate(-90 715 720)">MAIN INGRESS (WEST)</text>
+                <text x="995" y="720" class="mp-road-label mp-road-label--minor" transform="rotate(90 995 720)">EGRESS ROAD (EAST)</text>
+                <text x="860" y="372" class="mp-road-label">CENTRAL CONNECTOR</text>
+                <text x="610" y="270" class="mp-road-label mp-road-label--minor" transform="rotate(-65 610 270)">NORTHWEST DRIVE</text>
+                <text x="860" y="145" class="mp-road-label mp-road-label--minor">NORTH PERIMETER ROAD</text>
+                <text x="795" y="270" class="mp-road-label mp-road-label--minor" transform="rotate(-90 795 270)">AVENUE OF PEACE</text>
             </g>
             <g class="mp-trees" aria-hidden="true">${
-                treeLine(766, 95, 766, 285, 24, 7, 8.5, 0.4) +
-                treeLine(834, 95, 834, 285, 24, 7, 8.5, 0.4) +
-                treeLine(766, 315, 766, 385, 24, 6.5, 8.5, 0.4) +
-                treeLine(834, 315, 834, 385, 24, 6.5, 8.5, 0.4) +
-                treeLine(1096, 680, 1096, 850, 24, 6.5, 8.5, 0.4)
+                treeLine(685, 870, 680, 500, 26, 6.5, 8.5, 0.4) +
+                treeLine(1030, 430, 1030, 870, 26, 6.5, 8.5, 0.4) +
+                treeLine(565, 330, 600, 200, 24, 6.5, 8.5, 0.4) +
+                treeLine(620, 165, 780, 135, 26, 6.5, 8.5, 0.4)
             }</g>
         `;
 

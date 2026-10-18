@@ -1522,7 +1522,7 @@
         if (!document.getElementById('cemeteryParcelClip')) {
             const cp = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
             cp.setAttribute('id', 'cemeteryParcelClip');
-            cp.innerHTML = '<polygon points="1168.9,900.0 956.7,863.5 952.1,610.6 1001.0,608.1 963.7,432.3 637.0,531.8 617.6,493.5 576.8,444.4 689.6,282.2 766.2,264.0 808.5,194.0 864.5,162.8 975.8,147.7 1022.1,146.6 1022.7,403.1 1033.7,400.5 1052.4,491.2 1058.9,697.8 1102.3,690.7"/>';
+            cp.innerHTML = '<polygon points="560.0,835.0 715.0,862.0 745.0,867.0 990.0,873.0 1020.0,877.0 1168.9,900.0 1102.3,690.7 1058.9,697.8 1052.4,491.2 1033.7,400.5 1022.7,403.1 1022.1,146.6 975.8,145.0 864.5,145.0 808.5,145.0 720.0,150.0 660.0,165.0 600.0,200.0 575.0,300.0 565.0,440.0 560.0,600.0"/>';
             defs.appendChild(cp);
         }
     }
@@ -1618,21 +1618,21 @@ const treeCluster = (cx, cy, count, spread, rMin, rMax) => {
     return out;
 };
 
-// Floating map label pill (reference style)
+// Floating map label pill (compact, de-cluttered & non-blocking)
 const pillSvg = (cx, cy, text, icon, variant) => {
-    const w = Math.round(text.length * 6.2 + (icon ? 30 : 20));
+    const w = Math.round(text.length * 4.6 + (icon ? 18 : 10));
+    const h = 13;
     const x = cx - w / 2;
-    return `<g class="mp-pill mp-pill--${variant}">` +
-        `<rect x="${f1(x)}" y="${f1(cy - 11)}" width="${w}" height="22" rx="6" class="mp-pill-bg"/>` +
-        (icon ? `<text x="${f1(x + 12)}" y="${f1(cy + 3.6)}" class="mp-pill-icon">${icon}</text>` : '') +
-        `<text x="${f1(cx + (icon ? 7 : 0))}" y="${f1(cy + 3.4)}" class="mp-pill-text">${text}</text>` +
+    return `<g class="mp-pill mp-pill--${variant}" opacity="0.92">` +
+        `<rect x="${f1(x)}" y="${f1(cy - 7)}" width="${w}" height="${h}" rx="3" class="mp-pill-bg"/>` +
+        (icon ? `<text x="${f1(x + 7)}" y="${f1(cy + 2.2)}" class="mp-pill-icon" font-size="7">${icon}</text>` : '') +
+        `<text x="${f1(cx + (icon ? 3.5 : 0))}" y="${f1(cy + 2.0)}" class="mp-pill-text" font-size="6.4">${text}</text>` +
         `</g>`;
 };
 
-// Verified OSM Relation 16828676 Site Perimeter Coordinates (Batch 13)
-// 19 Unique Perimeter Vertices projected into 1600x1000 Canvas at 3.4937 px/m
-const CEMETERY_POLYGON_POINTS = "1168.9,900.0 956.7,863.5 952.1,610.6 1001.0,608.1 963.7,432.3 637.0,531.8 617.6,493.5 576.8,444.4 689.6,282.2 766.2,264.0 808.5,194.0 864.5,162.8 975.8,147.7 1022.1,146.6 1022.7,403.1 1033.7,400.5 1052.4,491.2 1058.9,697.8 1102.3,690.7";
-const CEMETERY_INNER_POLYGON_POINTS = "1163.8,895.6 960.1,860.5 955.7,613.9 1005.3,611.4 966.3,427.8 638.8,527.6 620.5,491.6 581.2,444.2 691.8,285.3 768.4,267.1 811.1,196.6 865.6,166.1 976.0,151.2 1018.6,150.2 1019.2,407.5 1031.0,404.8 1048.9,491.6 1055.5,701.9 1099.8,694.7";
+// Continuous Verified Cemetery Grounds: Full Canvas Perimeter (Google Maps Geometry)
+const CEMETERY_POLYGON_POINTS = "560.0,835.0 715.0,862.0 745.0,867.0 990.0,873.0 1020.0,877.0 1168.9,900.0 1102.3,690.7 1058.9,697.8 1052.4,491.2 1033.7,400.5 1022.7,403.1 1022.1,146.6 975.8,145.0 864.5,145.0 808.5,145.0 720.0,150.0 660.0,165.0 600.0,200.0 575.0,300.0 565.0,440.0 560.0,600.0";
+const CEMETERY_INNER_POLYGON_POINTS = "564.0,831.0 715.0,858.0 745.0,863.0 990.0,869.0 1020.0,873.0 1163.8,895.6 1098.0,693.0 1055.5,701.9 1048.9,491.6 1031.0,404.8 1019.2,407.5 1018.6,150.2 976.0,149.0 865.6,149.0 811.1,149.0 722.0,154.0 663.0,169.0 604.0,203.0 579.0,302.0 569.0,441.0 564.0,600.0";
 
 // =========================================================================
 // BATCH 15: VERIFIED PHYSICAL FACILITY STRUCTURES & OPERATIONAL LANDMARK ANCHORS
@@ -1810,93 +1810,62 @@ mk('polygon', { points: CEMETERY_POLYGON_POINTS, fill: 'url(#mpGrassSpeckle)', c
 // ==========================================
 // LAYER: Perimeter Wall with Main Gate Opening & Posts (19-Vertex Geometry)
 // ==========================================
-// Outer and inner boundary walls with verified opening at Main Gate (x=1078.0..1113.4, y=877.8..884.0)
-const outerWallD = "M 1078.0 877.8 L 956.7 863.5 L 952.1 610.6 L 1001.0 608.1 L 963.7 432.3 L 637.0 531.8 L 617.6 493.5 L 576.8 444.4 L 689.6 282.2 L 766.2 264.0 L 808.5 194.0 L 864.5 162.8 L 975.8 147.7 L 1022.1 146.6 L 1022.7 403.1 L 1033.7 400.5 L 1052.4 491.2 L 1058.9 697.8 L 1102.3 690.7 L 1168.9 900.0 L 1113.4 884.0";
-const innerWallD = "M 1078.0 874.3 L 960.1 860.5 L 955.7 613.9 L 1005.3 611.4 L 966.3 427.8 L 638.8 527.6 L 620.5 491.6 L 581.2 444.2 L 691.8 285.3 L 768.4 267.1 L 811.1 196.6 L 865.6 166.1 L 976.0 151.2 L 1018.6 150.2 L 1019.2 407.5 L 1031.0 404.8 L 1048.9 491.6 L 1055.5 701.9 L 1099.8 694.7 L 1163.8 895.6 L 1113.4 880.5";
+// Outer and inner boundary walls with verified openings at West Ingress (x=715..745) and East Egress (x=990..1020)
+const outerWallD = "M 1020.0 877.0 L 1168.9 900.0 L 1102.3 690.7 L 1058.9 697.8 L 1052.4 491.2 L 1033.7 400.5 L 1022.7 403.1 L 1022.1 146.6 L 975.8 145.0 L 864.5 145.0 L 808.5 145.0 L 720.0 150.0 L 660.0 165.0 L 600.0 200.0 L 575.0 300.0 L 565.0 440.0 L 560.0 600.0 L 560.0 835.0 L 715.0 862.0 M 745.0 867.0 L 990.0 873.0";
+const innerWallD = "M 1020.0 873.0 L 1163.8 895.6 L 1098.0 693.0 L 1055.5 701.9 L 1048.9 491.6 L 1031.0 404.8 L 1019.2 407.5 L 1018.6 150.2 L 976.0 149.0 L 865.6 149.0 L 811.1 149.0 L 722.0 154.0 L 663.0 169.0 L 604.0 203.0 L 579.0 302.0 L 569.0 441.0 L 564.0 600.0 L 564.0 831.0 L 715.0 858.0 M 745.0 863.0 L 990.0 869.0";
 mk('path', { d: outerWallD, class: 'mp-wall' }, mapBoundaryLayer);
 mk('path', { d: innerWallD, class: 'mp-wall-inner' }, mapBoundaryLayer);
 
-// Wall Posts placed along verified perimeter edges and flanking Main Gate portal
+// Wall Posts placed along expanded perimeter edges and flanking gate portals
 const postG = mk('g', { class: 'mp-wall-posts', 'aria-hidden': 'true' }, mapBoundaryLayer);
 postG.innerHTML = `
-    <!-- Gate Portal Flanking Wall Terminal Posts -->
-    <rect x="1075.5" y="875.3" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1110.9" y="881.5" width="5" height="5" class="mp-wall-post"/>
+    <!-- West Gate Portal Flanking Posts -->
+    <rect x="712.5" y="859.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="744.5" y="864.5" width="5" height="5" class="mp-wall-post"/>
+    <!-- East Gate Portal Flanking Posts -->
+    <rect x="987.5" y="870.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1019.5" y="874.5" width="5" height="5" class="mp-wall-post"/>
+    <!-- Corner and Perimeter Posts -->
     <rect x="1166.4" y="897.5" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1007.3" y="870.1" width="5" height="5" class="mp-wall-post"/>
-    <rect x="954.2" y="861.0" width="5" height="5" class="mp-wall-post"/>
-    <rect x="953.3" y="810.4" width="5" height="5" class="mp-wall-post"/>
-    <rect x="952.4" y="759.8" width="5" height="5" class="mp-wall-post"/>
-    <rect x="951.5" y="709.3" width="5" height="5" class="mp-wall-post"/>
-    <rect x="950.6" y="658.7" width="5" height="5" class="mp-wall-post"/>
-    <rect x="949.6" y="608.1" width="5" height="5" class="mp-wall-post"/>
-    <rect x="974.0" y="606.8" width="5" height="5" class="mp-wall-post"/>
-    <rect x="998.5" y="605.6" width="5" height="5" class="mp-wall-post"/>
-    <rect x="989.2" y="561.7" width="5" height="5" class="mp-wall-post"/>
-    <rect x="979.9" y="517.8" width="5" height="5" class="mp-wall-post"/>
-    <rect x="970.5" y="473.8" width="5" height="5" class="mp-wall-post"/>
-    <rect x="961.2" y="429.8" width="5" height="5" class="mp-wall-post"/>
-    <rect x="880.8" y="454.4" width="5" height="5" class="mp-wall-post"/>
-    <rect x="797.9" y="479.9" width="5" height="5" class="mp-wall-post"/>
-    <rect x="717.6" y="504.6" width="5" height="5" class="mp-wall-post"/>
-    <rect x="634.5" y="529.3" width="5" height="5" class="mp-wall-post"/>
-    <rect x="615.1" y="491.0" width="5" height="5" class="mp-wall-post"/>
-    <rect x="574.3" y="441.9" width="5" height="5" class="mp-wall-post"/>
-    <rect x="602.5" y="401.4" width="5" height="5" class="mp-wall-post"/>
-    <rect x="630.7" y="360.8" width="5" height="5" class="mp-wall-post"/>
-    <rect x="658.9" y="320.3" width="5" height="5" class="mp-wall-post"/>
-    <rect x="687.1" y="279.7" width="5" height="5" class="mp-wall-post"/>
-    <rect x="725.4" y="270.6" width="5" height="5" class="mp-wall-post"/>
-    <rect x="763.7" y="261.5" width="5" height="5" class="mp-wall-post"/>
-    <rect x="784.8" y="226.5" width="5" height="5" class="mp-wall-post"/>
-    <rect x="806.0" y="191.5" width="5" height="5" class="mp-wall-post"/>
-    <rect x="834.0" y="175.9" width="5" height="5" class="mp-wall-post"/>
-    <rect x="862.0" y="160.3" width="5" height="5" class="mp-wall-post"/>
-    <rect x="917.6" y="152.7" width="5" height="5" class="mp-wall-post"/>
-    <rect x="973.3" y="145.2" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1019.6" y="144.1" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1019.8" y="195.4" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1019.9" y="246.7" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1020.0" y="297.9" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1020.1" y="349.2" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1020.2" y="400.6" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1031.2" y="398.0" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1040.6" y="443.3" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1049.9" y="488.7" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1051.5" y="540.3" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1053.1" y="592.0" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1054.8" y="643.6" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1056.4" y="695.3" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1078.1" y="691.8" width="5" height="5" class="mp-wall-post"/>
     <rect x="1099.8" y="688.2" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1116.5" y="740.5" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1133.1" y="792.8" width="5" height="5" class="mp-wall-post"/>
-    <rect x="1149.8" y="845.2" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1056.4" y="695.3" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1049.9" y="488.7" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1031.2" y="398.0" width="5" height="5" class="mp-wall-post"/>
+    <rect x="1019.6" y="144.1" width="5" height="5" class="mp-wall-post"/>
+    <rect x="973.3" y="142.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="862.0" y="142.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="806.0" y="142.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="717.5" y="147.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="657.5" y="162.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="597.5" y="197.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="572.5" y="297.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="562.5" y="437.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="557.5" y="597.5" width="5" height="5" class="mp-wall-post"/>
+    <rect x="557.5" y="832.5" width="5" height="5" class="mp-wall-post"/>
 `;
 
-// Dense Perimeter Tree Buffer (lining the inside of the verified 19-vertex wall)
+// Dense Perimeter Tree Buffer (lining the expanded boundary)
 const perimeterTrees = mk('g', { class: 'svg-landscaping-group mp-trees', 'aria-hidden': 'true' }, mapBoundaryLayer);
 perimeterTrees.innerHTML =
-    treeLine(1168.9, 900.0, 1125, 894, 20, 6, 8, 1.0) +
-    treeLine(1060, 882, 956.7, 863.5, 20, 6, 8, 1.0) +
-    treeLine(956.7, 863.5, 952.1, 610.6, 22, 6.5, 9, 1.2) +
-    treeLine(952.1, 610.6, 1001.0, 608.1, 22, 6.5, 9, 1.2) +
-    treeLine(1001.0, 608.1, 963.7, 432.3, 22, 6.5, 9, 1.2) +
-    treeLine(963.7, 432.3, 637.0, 531.8, 22, 6.5, 9, 1.2) +
-    treeLine(637.0, 531.8, 617.6, 493.5, 20, 6.5, 8.5, 1.0) +
-    treeLine(617.6, 493.5, 576.8, 444.4, 20, 6.5, 8.5, 1.0) +
-    treeLine(576.8, 444.4, 689.6, 282.2, 22, 6.5, 9, 1.2) +
-    treeLine(689.6, 282.2, 766.2, 264.0, 22, 6.5, 9, 1.2) +
-    treeLine(766.2, 264.0, 808.5, 194.0, 22, 6.5, 9, 1.2) +
-    treeLine(808.5, 194.0, 864.5, 162.8, 22, 6.5, 9, 1.2) +
-    treeLine(864.5, 162.8, 975.8, 147.7, 22, 6.5, 9, 1.2) +
-    treeLine(975.8, 147.7, 1022.1, 146.6, 20, 6, 8, 1.0) +
-    treeLine(1022.1, 146.6, 1022.7, 403.1, 22, 6.5, 9, 1.2) +
-    treeLine(1022.7, 403.1, 1033.7, 400.5, 18, 5.5, 7, 0.8) +
-    treeLine(1033.7, 400.5, 1052.4, 491.2, 20, 6, 8.5, 1.0) +
-    treeLine(1052.4, 491.2, 1058.9, 697.8, 22, 6.5, 9, 1.2) +
-    treeLine(1058.9, 697.8, 1102.3, 690.7, 20, 6, 8, 1.0) +
-    treeLine(1102.3, 690.7, 1168.9, 900.0, 22, 6.5, 9, 1.2);
+    treeLine(560, 835, 715, 862, 22, 6, 8, 1.0) +
+    treeLine(745, 867, 990, 873, 24, 6, 8, 1.0) +
+    treeLine(1020, 877, 1168.9, 900.0, 22, 6, 8, 1.0) +
+    treeLine(1168.9, 900.0, 1102.3, 690.7, 22, 6.5, 9, 1.2) +
+    treeLine(1102.3, 690.7, 1058.9, 697.8, 20, 6, 8, 1.0) +
+    treeLine(1058.9, 697.8, 1052.4, 491.2, 22, 6.5, 9, 1.2) +
+    treeLine(1052.4, 491.2, 1033.7, 400.5, 20, 6, 8.5, 1.0) +
+    treeLine(1033.7, 400.5, 1022.7, 403.1, 18, 5.5, 7, 0.8) +
+    treeLine(1022.7, 403.1, 1022.1, 146.6, 22, 6.5, 9, 1.2) +
+    treeLine(1022.1, 146.6, 975.8, 145.0, 20, 6, 8, 1.0) +
+    treeLine(975.8, 145.0, 864.5, 145.0, 22, 6.5, 9, 1.2) +
+    treeLine(864.5, 145.0, 808.5, 145.0, 22, 6.5, 9, 1.2) +
+    treeLine(808.5, 145.0, 720.0, 150.0, 22, 6.5, 9, 1.2) +
+    treeLine(720.0, 150.0, 660.0, 165.0, 22, 6.5, 9, 1.2) +
+    treeLine(660.0, 165.0, 600.0, 200.0, 22, 6.5, 8.5, 1.0) +
+    treeLine(600.0, 200.0, 575.0, 300.0, 22, 6.5, 8.5, 1.0) +
+    treeLine(575.0, 300.0, 565.0, 440.0, 22, 6.5, 9, 1.2) +
+    treeLine(565.0, 440.0, 560.0, 600.0, 22, 6.5, 9, 1.2) +
+    treeLine(560.0, 600.0, 560.0, 835.0, 22, 6.5, 9, 1.2);
 
 // ==========================================
 // LAYER 1: ROAD-FIRST GEOMETRY (Google Maps Authentic Road Skeleton)
@@ -2141,33 +2110,41 @@ landmarkGroup.innerHTML += `
     </g>
 `;
 
-// --- Main Gate Entrance Portal (Verified OSM Node 8348620486 & 9928981748, P. Aquino Avenue) ---
-// Positioned at verified coordinates (1095.7, 880.9) oriented to P01-P00 frontage angle (~9.8 deg)
+// --- Main Ingress Gate Portal (Google Maps West Portal, P. Aquino Avenue) ---
 landmarkGroup.innerHTML += `
-    <g class="svg-gate-portal mp-gate" data-landmark="gate" tabindex="0" role="region" aria-label="Main Gate" transform="translate(1096 881) rotate(9.8)">
-        <title>Main Gate — 3 P. Aquino Avenue (Letre Road)</title>
+    <g class="svg-gate-portal mp-gate" data-landmark="gate" tabindex="0" role="region" aria-label="Main Ingress Gate" transform="translate(730 870) rotate(9.8)">
+        <title>Main Ingress Gate (West Portal) — P. Aquino Avenue</title>
         <!-- Paved entrance apron connecting P. Aquino Avenue to Cemetery Entrance -->
-        <rect x="-24" y="-12" width="48" height="24" rx="2" class="mp-gate-apron"/>
-        <rect x="-24" y="-12" width="48" height="24" rx="2" fill="url(#mpPaverPattern)" class="mp-texture"/>
+        <rect x="-20" y="-10" width="40" height="20" rx="2" class="mp-gate-apron"/>
+        <rect x="-20" y="-10" width="40" height="20" rx="2" fill="url(#mpPaverPattern)" class="mp-texture"/>
         <!-- West & East Monument Gate Pillars -->
-        <rect x="-21" y="-10" width="8" height="20" rx="1.5" class="mp-gate-pillar"/>
-        <rect x="-22" y="-12" width="10" height="4" rx="1" class="mp-gate-cap"/>
-        <rect x="13" y="-10" width="8" height="20" rx="1.5" class="mp-gate-pillar"/>
-        <rect x="12" y="-12" width="10" height="4" rx="1" class="mp-gate-cap"/>
+        <rect x="-18" y="-9" width="7" height="18" rx="1.5" class="mp-gate-pillar"/>
+        <rect x="-19" y="-11" width="9" height="3.5" rx="1" class="mp-gate-cap"/>
+        <rect x="11" y="-9" width="7" height="18" rx="1.5" class="mp-gate-pillar"/>
+        <rect x="10" y="-11" width="9" height="3.5" rx="1" class="mp-gate-cap"/>
         <!-- Ceremonial Wrought-Iron Arch & Gate Leaves -->
-        <path d="M -13 -6 Q 0 -17 13 -6" class="mp-gate-arch"/>
-        <path d="M -13 6 L -3 0 M 13 6 L 3 0" class="mp-gate-leaf"/>
-        <!-- Barrier Lift-Gate (OSM Node 9928981748 barrier=lift_gate) -->
-        <line x1="-8" y1="4" x2="10" y2="4" class="mp-gate-boom"/>
-        <!-- Security Sentry Post Kiosk (East of Gate) -->
-        <rect x="23" y="-8" width="16" height="16" transform="translate(1.5 2)" class="mp-bldg-shadow"/>
-        <rect x="23" y="-8" width="16" height="16" rx="1.5" class="mp-bldg-wall"/>
-        <rect x="24" y="-7" width="14" height="14" fill="#8b6f5a"/>
-        <line x1="24" y1="0" x2="38" y2="0" class="mp-roof-ridge mp-roof-ridge--thin"/>
+        <path d="M -11 -5 Q 0 -14 11 -5" class="mp-gate-arch"/>
+        <path d="M -11 5 L -2 0 M 11 5 L 2 0" class="mp-gate-leaf"/>
+        <!-- Barrier Lift-Gate -->
+        <line x1="-7" y1="3" x2="8" y2="3" class="mp-gate-boom"/>
+        <!-- Security Sentry Post Kiosk -->
+        <rect x="20" y="-7" width="14" height="14" rx="1.5" class="mp-bldg-wall"/>
+        <rect x="21" y="-6" width="12" height="12" fill="#8b6f5a"/>
         <!-- Entrance Badge & Pill -->
-        <circle cx="0" cy="-32" r="10" class="mp-gate-badge"/>
-        <path d="M -5 -30 L 0 -35 L 5 -30 V -26 H -5 Z" fill="#ffffff"/>
-        ${pillSvg(0, -50, 'MAIN GATE (GATE 1)', '', 'navy')}
+        <circle cx="0" cy="-26" r="8" class="mp-gate-badge"/>
+        <path d="M -4 -24 L 0 -29 L 4 -24 V -20 H -4 Z" fill="#ffffff"/>
+        ${pillSvg(0, -40, 'WEST INGRESS GATE', '', 'navy')}
+    </g>
+    <!-- East Egress Gate Portal (P. Aquino Avenue) -->
+    <g class="svg-gate-portal mp-gate" data-landmark="gateEast" tabindex="0" role="region" aria-label="East Egress Gate" transform="translate(1005 870) rotate(9.8)">
+        <title>East Egress Gate Portal — P. Aquino Avenue</title>
+        <rect x="-18" y="-9" width="36" height="18" rx="2" class="mp-gate-apron"/>
+        <rect x="-16" y="-8" width="6" height="16" rx="1.5" class="mp-gate-pillar"/>
+        <rect x="10" y="-8" width="6" height="16" rx="1.5" class="mp-gate-pillar"/>
+        <line x1="-6" y1="3" x2="7" y2="3" class="mp-gate-boom"/>
+        <circle cx="0" cy="-24" r="7" class="mp-gate-badge"/>
+        <path d="M -3 -22 L 0 -26 L 3 -22 V -19 H -3 Z" fill="#ffffff"/>
+        ${pillSvg(0, -36, 'EAST EGRESS GATE', '', 'navy')}
     </g>
 `;
 
@@ -2191,13 +2168,13 @@ landmarkGroup.innerHTML += `
 
 const count = sections.length;
 
-// Spatial parcel boundaries for the 5 zones in the master plan (Calibrated to Google Maps Acreage):
+// Spatial parcel boundaries for the 5 zones in the master plan (Full-Canvas Google Maps Acreage):
 const ZONES = {
-    c: { id: 'c', x: 672, y: 185, w: 116, h: 82, theme: 'c', defaultName: 'Sanctuario de San Jose', defaultCode: 'SECTION C' },
-    d: { id: 'd', x: 815, y: 165, w: 106, h: 100, theme: 'd', defaultName: 'Everlasting Columbarium & Ossuary', defaultCode: 'SECTION D' },
-    b: { id: 'b', x: 636, y: 320, w: 86, h: 202, theme: 'b', defaultName: 'Garden of Our Lady of Lourdes', defaultCode: 'SECTION B', stackVertical: true },
-    a: { id: 'a', x: 726, y: 395, w: 148, h: 130, theme: 'a', defaultName: 'Garden of Everlasting Peace', defaultCode: 'SECTION A', spine: RD.spine },
-    e: { id: 'e', x: 885, y: 375, w: 140, h: 150, theme: 'e', defaultName: 'Garden Reserve', defaultCode: 'SECTION E' }
+    c: { id: 'c', x: 615, y: 175, w: 165, h: 165, theme: 'c', defaultName: 'Sanctuario de San Jose', defaultCode: 'SECTION C' },
+    d: { id: 'd', x: 815, y: 165, w: 125, h: 155, theme: 'd', defaultName: 'Everlasting Columbarium & Ossuary', defaultCode: 'SECTION D' },
+    b: { id: 'b', x: 575, y: 460, w: 115, h: 370, theme: 'b', defaultName: 'Garden of Our Lady of Lourdes', defaultCode: 'SECTION B', stackVertical: true },
+    a: { id: 'a', x: 740, y: 460, w: 245, h: 370, theme: 'a', defaultName: 'Garden of Everlasting Peace', defaultCode: 'SECTION A' },
+    e: { id: 'e', x: 1040, y: 460, w: 110, h: 370, theme: 'e', defaultName: 'Garden Reserve', defaultCode: 'SECTION E' }
 };
 
 const zoneOrder = ['a', 'b', 'c', 'd', 'e'];
@@ -2220,11 +2197,11 @@ function resolveSectionZone(sec) {
 
 // Compute block parcel areas inside a section zone.
 // Pathways divide the blocks naturally without card borders!
-function layoutBlockTerraces(blocks, area, spineX, stackVertical) {
+function layoutBlockTerraces(blocks, area, spineX, stackVertical, themeCode) {
     const n = blocks.length;
     if (n <= 0) return { parcels: [], walkways: [] };
 
-    const walkWidth = 6; // Width of pedestrian walkway between blocks
+    const walkWidth = 8; // Width of pedestrian walkway between blocks
     const parcels = [];
     const walkways = [];
 
@@ -2277,7 +2254,7 @@ function layoutBlockTerraces(blocks, area, spineX, stackVertical) {
             }
         }
     } else {
-        // Sections B, C, D, E (Continuous Land Parcel)
+        // Sections A, B, C, D, E (Continuous Land Parcel)
         const margin = 5;
         const topMargin = 10;
         const innerX = area.x + margin;
@@ -2289,18 +2266,18 @@ function layoutBlockTerraces(blocks, area, spineX, stackVertical) {
             // Single block inside section (Section D Columbarium)
             parcels.push({ x: innerX, y: innerY, w: innerW, h: innerH, block: blocks[0] });
         } else if (n === 2) {
-            if (stackVertical || (area.h > area.w * 1.2)) {
+            if (themeCode === 'a' || (!stackVertical && (themeCode === 'c' || area.w >= 140))) {
+                // Section A & Section C: 2 blocks side-by-side (A1 West, A2 East / C1 West, C2 East) with central walkway
+                const bw = (innerW - walkWidth) / 2;
+                parcels.push({ x: innerX, y: innerY, w: bw, h: innerH, block: blocks[0] });
+                parcels.push({ x: innerX + bw + walkWidth, y: innerY, w: bw, h: innerH, block: blocks[1] });
+                walkways.push(`M ${innerX + bw + walkWidth / 2} ${innerY} V ${innerY + innerH}`);
+            } else {
                 // Section B: 2 blocks stacked vertically (B1 North, B2 South) with horizontal walkway
                 const bh = (innerH - walkWidth) / 2;
                 parcels.push({ x: innerX, y: innerY, w: innerW, h: bh, block: blocks[0] });
                 parcels.push({ x: innerX, y: innerY + bh + walkWidth, w: innerW, h: bh, block: blocks[1] });
                 walkways.push(`M ${innerX} ${innerY + bh + walkWidth / 2} H ${innerX + innerW}`);
-            } else {
-                // Section C: 2 blocks side-by-side (C1 West, C2 East) with central walkway
-                const bw = (innerW - walkWidth) / 2;
-                parcels.push({ x: innerX, y: innerY, w: bw, h: innerH, block: blocks[0] });
-                parcels.push({ x: innerX + bw + walkWidth, y: innerY, w: bw, h: innerH, block: blocks[1] });
-                walkways.push(`M ${innerX + bw + walkWidth / 2} ${innerY} V ${innerY + innerH}`);
             }
         } else if (n === 4) {
             // 2x2 grid with cross walkways
@@ -2308,7 +2285,7 @@ function layoutBlockTerraces(blocks, area, spineX, stackVertical) {
             const bh = (innerH - walkWidth) / 2;
             parcels.push({ x: innerX, y: innerY, w: bw, h: bh, block: blocks[0] });
             parcels.push({ x: innerX + bw + walkWidth, y: innerY, w: bw, h: bh, block: blocks[1] });
-            parcels.push({ x: innerX, y: innerY + bh + walkWidth, w: bw, h: bh, block: blocks[2] });
+            parcels.push({ x: innerX, y: innerY + bh + walkWidth, w: innerW, h: bh, block: blocks[2] });
             parcels.push({ x: innerX + bw + walkWidth, y: innerY + bh + walkWidth, w: bw, h: bh, block: blocks[3] });
             walkways.push(`M ${innerX} ${innerY + bh + walkWidth / 2} H ${innerX + innerW}`);
             walkways.push(`M ${innerX + bw + walkWidth / 2} ${innerY} V ${innerY + innerH}`);
@@ -2402,7 +2379,7 @@ sections.forEach((section, index) => {
 
     // 2. Pedestrian Pathways between Block Terraces (Subtle Stone Pavers, Not Card Boxes!)
     const isStackVertical = assignedZone?.stackVertical || false;
-    const { parcels, walkways } = layoutBlockTerraces(blocks, { x: secX, y: secY, w: curSecW, h: curSecH }, spineX, isStackVertical);
+    const { parcels, walkways } = layoutBlockTerraces(blocks, { x: secX, y: secY, w: curSecW, h: curSecH }, spineX, isStackVertical, themeCode);
     if (walkways.length > 0) {
         const pathG = mk('g', { class: 'mp-section-internal-paths', 'aria-hidden': 'true' }, secGroup);
         let pathHtml = '';
@@ -2413,22 +2390,33 @@ sections.forEach((section, index) => {
         pathG.innerHTML = pathHtml;
     }
 
-    // 3. Floating Section Header Badge (Clean pill matching reference)
-    const pillW = Math.max(50, Math.min(curSecW - 6, Math.ceil(badgeLabel.length * 4.6 + 14)));
-    const pillH = 15;
+    // 3. Floating Section Header Badge (Slim & unobtrusive, sitting cleanly above lawn)
+    const pillW = Math.max(40, Math.min(curSecW - 10, Math.ceil(badgeLabel.length * 4.2 + 12)));
+    const pillH = 12;
     const pillX = secX + (curSecW - pillW) / 2;
-    const pillY = secY - 8;
-    mk('rect', { x: f1(pillX), y: pillY, width: f1(pillW), height: pillH, rx: 4, class: 'svg-section-header' }, secGroup);
-    const secTitle = mk('text', { x: f1(pillX + pillW / 2), y: pillY + 11, 'text-anchor': 'middle', class: 'svg-section-title', style: 'font-size: 7.5px;' }, secGroup);
+    const pillY = secY - 6;
+    mk('rect', { x: f1(pillX), y: pillY, width: f1(pillW), height: pillH, rx: 3, class: 'svg-section-header' }, secGroup);
+    const secTitle = mk('text', { x: f1(pillX + pillW / 2), y: pillY + 8.5, 'text-anchor': 'middle', class: 'svg-section-title', style: 'font-size: 6.2px; font-weight: 700;' }, secGroup);
     secTitle.textContent = badgeLabel;
 
     // 4. Physical Block Parcels and Individual Lots
     parcels.forEach((parcel) => {
         const block = parcel.block;
-        const blkX = parcel.x;
-        const blkY = parcel.y;
-        const curBlkW = parcel.w;
-        const curBlkH = parcel.h;
+        let blkX = parcel.x;
+        let blkY = parcel.y;
+        let curBlkW = parcel.w;
+        let curBlkH = parcel.h;
+
+        // Custom map_config priority override for block if configured
+        if (block.map_config && !isNaN(Number(block.map_config.x)) && !isNaN(Number(block.map_config.y)) &&
+            Number(block.map_config.width) > 0 && Number(block.map_config.height) > 0) {
+            const rawBx = Number(block.map_config.x);
+            const rawBy = Number(block.map_config.y);
+            blkX = rawBx < curSecW ? (secX + rawBx) : rawBx;
+            blkY = rawBy < curSecH ? (secY + rawBy) : rawBy;
+            curBlkW = Number(block.map_config.width);
+            curBlkH = Number(block.map_config.height);
+        }
 
         const lots = state.blockLotsCache[block.block_id] || [];
         const isColumbarium = (function () {
@@ -2492,8 +2480,8 @@ sections.forEach((section, index) => {
         // Plots sit naturally on the lawn — never stretched into giant boxes.
         // ==========================================
         const padX = 2.5;
-        const padTop = 13.5; // space below block tag (tag y=1.5 + h=10 = 11.5 + 2px margin)
-        const padBottom = 2.5;
+        const padTop = 15.0; // space below block tag (tag y=1.5 + h=10 = 11.5 + clearance)
+        const padBottom = 4.0;
         const lotAreaX = blkX + padX;
         const lotAreaY = blkY + padTop;
         const lotAreaW = Math.max(8, curBlkW - (padX * 2));
@@ -2501,8 +2489,8 @@ sections.forEach((section, index) => {
 
         if (lots.length > 0) {
             const n = lots.length;
-            let gapX = isColumbarium ? 1.0 : (n > 25 ? 0.4 : 1.5);
-            let gapY = isColumbarium ? 1.5 : (n > 25 ? 0.4 : 1.5);
+            let gapX = isColumbarium ? 1.2 : (n > 25 ? 2.2 : 3.0);
+            let gapY = isColumbarium ? 2.0 : (n > 25 ? 4.5 : 5.0);
             let doubleRowAisle = 0;
             let cols = 0;
 
@@ -2526,13 +2514,10 @@ sections.forEach((section, index) => {
                     else if (n <= 40) cols = 7;
                     else cols = 8;
                 } else if (n > 25) {
-                    // Dense ground block (e.g. Block A1: 50 lots)
-                    // Adapt columns to parcel aspect ratio (vertical parcels get 5 cols x 10 rows for square/rectangular plots)
+                    // Dense ground block (e.g. Block A1: 50 lots in 5 cols x 10 rows)
                     cols = (lotAreaH >= lotAreaW * 1.3) ? 5 : 10;
                 } else if (n <= 5) {
-                    // Small ground blocks (e.g. 5 lots):
-                    // If lot area is wider than tall, single row (5 cols x 1 row) e.g. A2, B1, B2
-                    // If taller than wide, 2 cols x 3 rows e.g. C1, C2
+                    // Small ground blocks (e.g. 5 lots in A2, B1, B2, C1, C2)
                     cols = (lotAreaW >= lotAreaH * 1.1) ? n : 2;
                 } else {
                     cols = Math.max(2, Math.min(8, Math.round(Math.sqrt(1.2 * n * (lotAreaW / lotAreaH)))));
@@ -2552,27 +2537,24 @@ sections.forEach((section, index) => {
             let tileH = maxH;
 
             if (isColumbarium) {
-                // Columbarium vertical vault plates:
-                tileW = Math.min(maxW, 12.0);
-                tileH = Math.min(maxH, 14.5);
+                tileW = Math.min(maxW, 13.0);
+                tileH = Math.min(maxH, 15.5);
+            } else if (n > 25) {
+                // Section A1: 50 lots in 5 cols x 10 rows
+                tileW = Math.min(maxW, 19.5);
+                tileH = Math.min(maxH, 28.0);
             } else if (n <= 5) {
                 // Ground burial plots in small blocks (A2, B1, B2, C1, C2)
                 if (cols === n) {
-                    // 1-row layout
-                    tileW = Math.min(maxW, 14.0);
-                    tileH = Math.min(maxH, 18.0);
+                    tileW = Math.min(maxW, 18.0);
+                    tileH = Math.min(maxH, 26.0);
                 } else {
-                    // Multi-row layout (e.g. C1, C2: 2 cols x 3 rows)
-                    tileW = Math.min(maxW, 13.0);
-                    tileH = Math.min(maxH, 14.0);
+                    tileW = Math.min(maxW, 24.0);
+                    tileH = Math.min(maxH, 32.0);
                 }
-            } else if (n > 25) {
-                // Dense ground block (e.g. Block A1: 50 lots)
-                tileW = maxW;
-                tileH = maxH;
             } else {
-                tileW = Math.min(maxW, 13.0);
-                tileH = Math.min(maxH, 15.0);
+                tileW = Math.min(maxW, 20.0);
+                tileH = Math.min(maxH, 26.0);
             }
 
             // Downscale smoothly if strict bounds are exceeded
@@ -2586,9 +2568,9 @@ sections.forEach((section, index) => {
                 gapY *= fit;
             }
 
-            // Batch 24: Enforce minimum discernible plot dimensions (prevents microscopic 3x2px dots)
-            tileW = Math.max(tileW, 8.2);
-            tileH = Math.max(tileH, 8.2);
+            // Enforce minimum discernible plot dimensions
+            tileW = Math.max(tileW, 9.0);
+            tileH = Math.max(tileH, 9.0);
 
             // Center grid on lawn terrace
             const finalGridW = cols * tileW + (cols - 1) * gapX;
@@ -2665,8 +2647,8 @@ sections.forEach((section, index) => {
 
                 // Miniature Headstone / Memorial Plaque Marker (Authentic cemetery look)
                 if (!isColumbarium && curTileW >= 5 && curTileH >= 6) {
-                    const markerW = curTileW * 0.65;
-                    const markerH = Math.max(1.8, curTileH * 0.18);
+                    const markerW = curTileW * 0.68;
+                    const markerH = Math.max(2.0, Math.min(5.5, curTileH * 0.17));
                     const marker = document.createElementNS(SVG_NS, 'rect');
                     marker.setAttribute('x', f1(lotX + (curTileW - markerW) / 2));
                     marker.setAttribute('y', f1(lotY + 1.2));
@@ -2690,10 +2672,10 @@ sections.forEach((section, index) => {
                     lotGroup.appendChild(innerPlate);
                 }
 
-                // Lot Number Text (Responsive LOD: overview=hidden, mid=shortLabel, high/hover=fullLabel)
+                // Lot Number Text (Responsive LOD: overview=shortLabel, mid/high=fullLabel)
                 const labelText = document.createElementNS(SVG_NS, 'text');
                 labelText.setAttribute('x', f1(lotX + (curTileW / 2)));
-                labelText.setAttribute('y', f1(isColumbarium ? (lotY + curTileH / 2) : (lotY + curTileH * 0.74)));
+                labelText.setAttribute('y', f1(isColumbarium ? (lotY + curTileH / 2) : (lotY + curTileH * 0.68)));
                 labelText.setAttribute('text-anchor', 'middle');
                 if (isColumbarium) {
                     labelText.setAttribute('dominant-baseline', 'central');
@@ -2701,7 +2683,7 @@ sections.forEach((section, index) => {
                 labelText.setAttribute('class', 'svg-lot-label mp-lot-number');
                 labelText.setAttribute('data-full-label', displayLabel);
                 labelText.setAttribute('data-short-label', shortLabel);
-                labelText.textContent = curTileW < 12 ? shortLabel : displayLabel;
+                labelText.textContent = curTileW < 14 ? shortLabel : displayLabel;
                 lotGroup.appendChild(labelText);
 
                 // Accessibility Title
