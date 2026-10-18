@@ -323,6 +323,10 @@
     let layerBtnDefault, layerBtnSatellite, layerBtnTerrain;
     let btnToggleLabels, btnToggleFoliage, btnToggleSurroundings, btnToggleAmenities;
 
+    // Batch 38: Multi-Depth Vault & Capacity Cross-Section Graphic DOM Elements
+    let drawerVaultCrossSectionCard, vaultCapacitySummaryBadge, vaultOccupancyRatio;
+    let vaultCrossSectionGraphic, vaultCasketCapText, vaultUrnCapText, vaultDrainageText;
+
     /**
      * Entry Point on DOM Content Loaded
      */
@@ -645,6 +649,15 @@
         btnToggleFoliage = document.getElementById('btnToggleFoliage');
         btnToggleSurroundings = document.getElementById('btnToggleSurroundings');
         btnToggleAmenities = document.getElementById('btnToggleAmenities');
+
+        // Batch 38: Multi-Depth Vault & Capacity Graphic Elements
+        drawerVaultCrossSectionCard = document.getElementById('drawerVaultCrossSectionCard');
+        vaultCapacitySummaryBadge = document.getElementById('vaultCapacitySummaryBadge');
+        vaultOccupancyRatio = document.getElementById('vaultOccupancyRatio');
+        vaultCrossSectionGraphic = document.getElementById('vaultCrossSectionGraphic');
+        vaultCasketCapText = document.getElementById('vaultCasketCapText');
+        vaultUrnCapText = document.getElementById('vaultUrnCapText');
+        vaultDrainageText = document.getElementById('vaultDrainageText');
     }
 
     /**
@@ -3795,6 +3808,9 @@ if (count <= 4 && !usedZones.has('e')) {
         // Batch 8A: Populate Visual Archetype Showcase & Specifications
         renderLotArchetypeShowcase(lot);
 
+        // Batch 38: Populate Multi-Depth Vault & Burial Cross-Section Graphic
+        renderVaultCrossSection(lot, block, section, lot._detailedInfo);
+
         // Batch 9B: Populate Facility Access & Navigation Card in Details Drawer
         if (drawerFacilityAccessCard) {
             const cemetery = state.currentCemetery;
@@ -4023,6 +4039,11 @@ if (count <= 4 && !usedZones.has('e')) {
                     drawerOccupancyEmpty.style.display = 'flex';
                 }
             }
+        }
+
+        // Batch 38: Refresh Multi-Depth Vault Schematic with live decedent records
+        if (state.selectedLot) {
+            renderVaultCrossSection(state.selectedLot, state.currentBlock, state.currentSection, data);
         }
     }
 
@@ -5586,6 +5607,359 @@ if (count <= 4 && !usedZones.has('e')) {
         if (drawerIntermentPrivilege) {
             drawerIntermentPrivilege.textContent = archetype.intermentPrivilege || 'Standard interment allocation';
         }
+    }
+
+    /**
+     * BATCH 38: Render Dynamic Multi-Depth Vault & Burial Cross-Section Graphic
+     * Visualizes structural underground depth (Upper Vault -1.2m, Lower Vault -2.1m, Gravel Drainage -2.5m)
+     * or Columbarium Niche Interior with exact interment capacity and decedent assignment.
+     */
+    function renderVaultCrossSection(lot, block, section, detailedInfo) {
+        if (!drawerVaultCrossSectionCard || !vaultCrossSectionGraphic) return;
+        if (!lot) {
+            drawerVaultCrossSectionCard.style.display = 'none';
+            return;
+        }
+
+        drawerVaultCrossSectionCard.style.display = 'block';
+
+        const sName = (section?.section_name || state.currentSection?.section_name || '').toLowerCase();
+        const bName = (block?.block_name || state.currentBlock?.block_name || '').toLowerCase();
+        const lType = (lot?.lot_type || '').toLowerCase();
+
+        const isColumbarium = sName.includes('columbarium') || sName.includes('ossuary') ||
+                              bName.includes('columbarium') || bName.includes('ossuary') ||
+                              lType.includes('columbarium') || lType.includes('ossuary') || lType.includes('niche');
+
+        const isMausoleum = sName.includes('mausoleum') || sName.includes('estate') ||
+                            bName.includes('mausoleum') || bName.includes('estate') ||
+                            lType.includes('mausoleum') || lType.includes('estate');
+
+        const isGarden = sName.includes('garden') || bName.includes('garden') || lType.includes('garden');
+
+        const status = lot.status || 'Available';
+        const occupantName = (detailedInfo && (detailedInfo.occupant_name || detailedInfo.decedent_name))
+            || lot.occupant_name
+            || '';
+        const displayName = occupantName || 'Registered Decedent';
+
+        let burialYear = '';
+        if (detailedInfo && (detailedInfo.dod || detailedInfo.lease_start_date || detailedInfo.schedule_date)) {
+            const rawDate = detailedInfo.dod || detailedInfo.lease_start_date || detailedInfo.schedule_date;
+            try {
+                const d = new Date(rawDate);
+                if (!isNaN(d.getTime())) burialYear = ` (${d.getFullYear()})`;
+            } catch (e) {}
+        }
+
+        if (isColumbarium) {
+            // COLUMBARIUM NICHE CHAMBER CUTAWAY
+            if (vaultCapacitySummaryBadge) {
+                vaultCapacitySummaryBadge.textContent = 'Columbarium Niche Chamber';
+            }
+            if (vaultOccupancyRatio) {
+                if (status === 'Occupied') {
+                    vaultOccupancyRatio.textContent = '1 of 2 Urn Slots Occupied';
+                    vaultOccupancyRatio.className = 'vault-status-indicator is-occupied';
+                } else if (status === 'Reserved') {
+                    vaultOccupancyRatio.textContent = '2 Urn Slots Reserved';
+                    vaultOccupancyRatio.className = 'vault-status-indicator is-reserved';
+                } else {
+                    vaultOccupancyRatio.textContent = '2 Urn Slots Available (100% Vacant)';
+                    vaultOccupancyRatio.className = 'vault-status-indicator is-available';
+                }
+            }
+            if (vaultCasketCapText) vaultCasketCapText.textContent = 'None (Cremains Only)';
+            if (vaultUrnCapText) vaultUrnCapText.textContent = '2 to 4 Urns (Standard)';
+            if (vaultDrainageText) vaultDrainageText.textContent = 'Climate & Moisture Sealed';
+
+            const urn1Filled = (status === 'Occupied');
+
+            vaultCrossSectionGraphic.innerHTML = `
+                <svg viewBox="0 0 380 180" class="vault-svg-canvas" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="nicheWallBg" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#0f172a" />
+                            <stop offset="100%" stop-color="#1e293b" />
+                        </linearGradient>
+                        <linearGradient id="nicheChamberBg" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#020617" />
+                            <stop offset="100%" stop-color="#0f172a" />
+                        </linearGradient>
+                        <linearGradient id="nicheGoldUrn" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#fef08a" />
+                            <stop offset="40%" stop-color="#f59e0b" />
+                            <stop offset="80%" stop-color="#b45309" />
+                            <stop offset="100%" stop-color="#78350f" />
+                        </linearGradient>
+                        <linearGradient id="marbleDoorBevel" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#ffffff" />
+                            <stop offset="60%" stop-color="#f1f5f9" />
+                            <stop offset="100%" stop-color="#cbd5e1" />
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Background Chamber Shell -->
+                    <rect x="0" y="0" width="380" height="180" fill="url(#nicheWallBg)" rx="8" />
+
+                    <!-- Wall Structure Grid Surround -->
+                    <rect x="14" y="14" width="352" height="152" fill="none" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" rx="6" />
+
+                    <!-- Section Elevation Benchmark Line -->
+                    <line x1="28" y1="28" x2="352" y2="28" stroke="#475569" stroke-width="0.8" />
+                    <text x="32" y="24" fill="#94a3b8" font-size="8.5" font-weight="700" font-family="Inter, sans-serif">NICHE ELEVATION: INTERIOR CUTAWAY (40cm × 40cm × 60cm)</text>
+
+                    <!-- Unlatched Carrara Marble Front Door (Left Flank) -->
+                    <g transform="translate(24, 38)">
+                        <rect x="0" y="0" width="56" height="116" rx="4" fill="url(#marbleDoorBevel)" stroke="#94a3b8" stroke-width="1.2" />
+                        <rect x="6" y="32" width="44" height="24" rx="2" fill="#d97706" stroke="#fef08a" stroke-width="0.75" />
+                        <text x="28" y="44" fill="#0f172a" font-size="6.5" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">NICHE</text>
+                        <text x="28" y="52" fill="#451a03" font-size="6" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">${escapeHtml(lot.lot_number)}</text>
+                        <circle cx="8" cy="12" r="2" fill="#ca8a04" />
+                        <circle cx="48" cy="12" r="2" fill="#ca8a04" />
+                        <circle cx="8" cy="104" r="2" fill="#ca8a04" />
+                        <circle cx="48" cy="104" r="2" fill="#ca8a04" />
+                        <text x="28" y="112" fill="#64748b" font-size="6" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">FACEPLATE</text>
+                    </g>
+
+                    <!-- Interior Sanctuary Chamber (Right Section) -->
+                    <g transform="translate(90, 38)">
+                        <!-- Chamber Box -->
+                        <rect x="0" y="0" width="266" height="116" rx="5" fill="url(#nicheChamberBg)" stroke="#10b981" stroke-width="1.5" />
+
+                        <!-- Velvet Pedestal -->
+                        <rect x="12" y="94" width="242" height="14" rx="2" fill="#064e3b" stroke="#059669" stroke-width="1" />
+                        <line x1="12" y1="94" x2="254" y2="94" stroke="#34d399" stroke-width="1.5" />
+                        <text x="133" y="104" fill="#a7f3d0" font-size="7" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">HONORIFIC VELVET PEDESTAL BASE</text>
+
+                        <!-- Urn Slot 1 (Primary) -->
+                        <g transform="translate(24, 14)">
+                            ${urn1Filled ? `
+                                <!-- Occupied Urn Slot 1 -->
+                                <rect x="0" y="0" width="102" height="74" rx="4" fill="#065f46" fill-opacity="0.25" stroke="#10b981" stroke-width="1.2" />
+                                <!-- Golden Cremains Urn Silhouette -->
+                                <path d="M 40 16 C 40 10 62 10 62 16 L 66 24 C 74 34 74 54 64 62 L 38 62 C 28 54 28 34 36 24 Z" fill="url(#nicheGoldUrn)" stroke="#fef08a" stroke-width="1" />
+                                <ellipse cx="51" cy="14" rx="11" ry="3.5" fill="#fef08a" />
+                                <text x="51" y="44" fill="#ffffff" font-size="7" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">INTERRED</text>
+                                <text x="51" y="70" fill="#a7f3d0" font-size="6.5" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">${escapeHtml(displayName.length > 14 ? displayName.substring(0, 13) + '…' : displayName)}${burialYear}</text>
+                                <rect x="12" y="2" width="78" height="12" rx="2" fill="#047857" />
+                                <text x="51" y="10.5" fill="#ffffff" font-size="6.5" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">URN SLOT 1: OCCUPIED</text>
+                            ` : `
+                                <!-- Vacant Urn Slot 1 -->
+                                <rect x="0" y="0" width="102" height="74" rx="4" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="3 3" />
+                                <path d="M 40 22 C 40 16 62 16 62 22 L 66 30 C 72 38 72 52 64 58 L 38 58 C 30 52 30 38 36 30 Z" fill="none" stroke="#38bdf8" stroke-width="1" stroke-dasharray="2 2" opacity="0.6" />
+                                <text x="51" y="42" fill="#38bdf8" font-size="7" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">AVAILABLE</text>
+                                <text x="51" y="52" fill="#94a3b8" font-size="6" font-weight="600" text-anchor="middle" font-family="Inter, sans-serif">Primary Cremains Slot</text>
+                                <rect x="12" y="2" width="78" height="12" rx="2" fill="#0284c7" fill-opacity="0.3" />
+                                <text x="51" y="10.5" fill="#bae6fd" font-size="6.5" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">URN SLOT 1: VACANT</text>
+                            `}
+                        </g>
+
+                        <!-- Urn Slot 2 (Secondary Privilege) -->
+                        <g transform="translate(138, 14)">
+                            <rect x="0" y="0" width="102" height="74" rx="4" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="3 3" />
+                            <path d="M 40 22 C 40 16 62 16 62 22 L 66 30 C 72 38 72 52 64 58 L 38 58 C 30 52 30 38 36 30 Z" fill="none" stroke="#38bdf8" stroke-width="1" stroke-dasharray="2 2" opacity="0.6" />
+                            <text x="51" y="42" fill="#38bdf8" font-size="7" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">AVAILABLE</text>
+                            <text x="51" y="52" fill="#94a3b8" font-size="6" font-weight="600" text-anchor="middle" font-family="Inter, sans-serif">Secondary Privilege</text>
+                            <rect x="12" y="2" width="78" height="12" rx="2" fill="#0284c7" fill-opacity="0.3" />
+                            <text x="51" y="10.5" fill="#bae6fd" font-size="6.5" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">URN SLOT 2: VACANT</text>
+                        </g>
+                    </g>
+                </svg>
+            `;
+            return;
+        }
+
+        // DOUBLE-DEPTH LAWN CRYPT / STANDARD GROUND LOT
+        if (vaultCapacitySummaryBadge) {
+            vaultCapacitySummaryBadge.textContent = isMausoleum 
+                ? 'Mausoleum Crypt Superstructure' 
+                : (isGarden ? 'Garden Terrace Double-Depth Crypt' : 'Double-Depth Lawn Crypt');
+        }
+
+        const tier1Occupied = false; // Upper vault available for secondary family privilege
+        const tier2Occupied = (status === 'Occupied'); // Standard burial practice fills bottom tier first
+
+        if (vaultOccupancyRatio) {
+            if (status === 'Occupied') {
+                vaultOccupancyRatio.textContent = '1 of 2 Vaults Occupied • 1 Tier Available';
+                vaultOccupancyRatio.className = 'vault-status-indicator is-occupied';
+            } else if (status === 'Reserved') {
+                vaultOccupancyRatio.textContent = '2 Tiers Allocated (Reserved)';
+                vaultOccupancyRatio.className = 'vault-status-indicator is-reserved';
+            } else if (status === 'Available') {
+                vaultOccupancyRatio.textContent = '0 of 2 Vaults Occupied (100% Vacant)';
+                vaultOccupancyRatio.className = 'vault-status-indicator is-available';
+            } else {
+                vaultOccupancyRatio.textContent = `${status} (Offline)`;
+                vaultOccupancyRatio.className = 'vault-status-indicator is-offline';
+            }
+        }
+
+        if (vaultCasketCapText) vaultCasketCapText.textContent = '2 Caskets (Tier 1 & 2)';
+        if (vaultUrnCapText) vaultUrnCapText.textContent = 'Up to 4 Urns (Dual Tier)';
+        if (vaultDrainageText) vaultDrainageText.textContent = 'Class-A Concrete + Dry-Well';
+
+        vaultCrossSectionGraphic.innerHTML = `
+            <svg viewBox="0 0 400 230" class="vault-svg-canvas" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <!-- Turf Gradient -->
+                    <linearGradient id="turfGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#22c55e" />
+                        <stop offset="60%" stop-color="#16a34a" />
+                        <stop offset="100%" stop-color="#15803d" />
+                    </linearGradient>
+                    <!-- Earth Stratum -->
+                    <linearGradient id="earthSoilGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#451a03" />
+                        <stop offset="40%" stop-color="#291102" />
+                        <stop offset="100%" stop-color="#1c0b02" />
+                    </linearGradient>
+                    <!-- Reinforced Concrete Vault Box -->
+                    <linearGradient id="concreteVaultWall" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#475569" />
+                        <stop offset="25%" stop-color="#64748b" />
+                        <stop offset="75%" stop-color="#64748b" />
+                        <stop offset="100%" stop-color="#334155" />
+                    </linearGradient>
+                    <!-- Mahogany Casket -->
+                    <linearGradient id="casketMahogany" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#b45309" />
+                        <stop offset="25%" stop-color="#92400e" />
+                        <stop offset="70%" stop-color="#78350f" />
+                        <stop offset="100%" stop-color="#451a03" />
+                    </linearGradient>
+                    <!-- Gold Casket Trim -->
+                    <linearGradient id="casketGoldTrim" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#fef08a" />
+                        <stop offset="50%" stop-color="#eab308" />
+                        <stop offset="100%" stop-color="#a16207" />
+                    </linearGradient>
+                    <!-- Gravel Pattern -->
+                    <pattern id="gravelPattern" width="10" height="10" patternUnits="userSpaceOnUse">
+                        <circle cx="2" cy="2" r="1.5" fill="#64748b" opacity="0.6"/>
+                        <circle cx="7" cy="4" r="1.8" fill="#475569" opacity="0.7"/>
+                        <circle cx="4" cy="8" r="1.4" fill="#94a3b8" opacity="0.5"/>
+                        <circle cx="8" cy="8" r="1.6" fill="#334155" opacity="0.8"/>
+                    </pattern>
+                </defs>
+
+                <!-- 1. Background Earth & Soil Stratum -->
+                <rect x="0" y="24" width="400" height="206" fill="url(#earthSoilGradient)" />
+
+                <!-- 2. Surface Bermuda Grass Turf Layer (Depth 0.0m) -->
+                <rect x="0" y="24" width="400" height="12" fill="url(#turfGradient)" />
+                <line x1="0" y1="24" x2="400" y2="24" stroke="#86efac" stroke-width="1.5" />
+
+                <!-- Flush Memorial Marker on Turf (Center) -->
+                <g transform="translate(160, 16)">
+                    <rect x="0" y="0" width="80" height="12" rx="2" fill="#0f172a" stroke="#334155" stroke-width="1" />
+                    <rect x="4" y="2" width="72" height="8" rx="1" fill="#d97706" stroke="#fef08a" stroke-width="0.5" />
+                    <text x="40" y="8" fill="#0f172a" font-size="5.5" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">LOT ${escapeHtml(lot.lot_number)}</text>
+                </g>
+
+                <!-- 3. Left Architectural Elevation Ruler (0.0m to -2.5m) -->
+                <g class="vault-elevation-ruler">
+                    <line x1="58" y1="24" x2="58" y2="218" stroke="#64748b" stroke-width="1.2" />
+
+                    <!-- Grade 0.0m -->
+                    <line x1="50" y1="24" x2="62" y2="24" stroke="#94a3b8" stroke-width="1.5" />
+                    <text x="46" y="27" fill="#86efac" font-size="7.5" font-weight="800" text-anchor="end" font-family="Inter, sans-serif">0.0m</text>
+                    <text x="46" y="35" fill="#94a3b8" font-size="5.5" text-anchor="end" font-family="Inter, sans-serif">Turf</text>
+
+                    <!-- Depth -1.2m (Tier 1 Upper Vault) -->
+                    <line x1="50" y1="78" x2="62" y2="78" stroke="#94a3b8" stroke-width="1.5" />
+                    <text x="46" y="81" fill="#38bdf8" font-size="7.5" font-weight="800" text-anchor="end" font-family="Inter, sans-serif">-1.2m</text>
+                    <text x="46" y="89" fill="#94a3b8" font-size="5.5" text-anchor="end" font-family="Inter, sans-serif">Tier 1</text>
+
+                    <!-- Intermediate Slab -1.6m -->
+                    <line x1="52" y1="124" x2="60" y2="124" stroke="#64748b" stroke-width="1" />
+                    <text x="46" y="127" fill="#cbd5e1" font-size="6.5" font-weight="700" text-anchor="end" font-family="Inter, sans-serif">-1.6m</text>
+
+                    <!-- Depth -2.1m (Tier 2 Lower Vault) -->
+                    <line x1="50" y1="152" x2="62" y2="152" stroke="#94a3b8" stroke-width="1.5" />
+                    <text x="46" y="155" fill="#f59e0b" font-size="7.5" font-weight="800" text-anchor="end" font-family="Inter, sans-serif">-2.1m</text>
+                    <text x="46" y="163" fill="#94a3b8" font-size="5.5" text-anchor="end" font-family="Inter, sans-serif">Tier 2</text>
+
+                    <!-- Sub-Base Drainage -2.5m -->
+                    <line x1="50" y1="198" x2="62" y2="198" stroke="#94a3b8" stroke-width="1.5" />
+                    <text x="46" y="201" fill="#cbd5e1" font-size="7.5" font-weight="800" text-anchor="end" font-family="Inter, sans-serif">-2.5m</text>
+                    <text x="46" y="209" fill="#94a3b8" font-size="5.5" text-anchor="end" font-family="Inter, sans-serif">Gravel</text>
+                </g>
+
+                <!-- 4. Reinforced Concrete Outer Vault Structure (Width: 280, x: 80 to 360) -->
+                <g transform="translate(80, 48)">
+                    <!-- Outer Concrete Shell (Thick Bevel) -->
+                    <rect x="0" y="0" width="280" height="150" rx="4" fill="url(#concreteVaultWall)" stroke="#1e293b" stroke-width="1.5" />
+
+                    <!-- Top Precast Vault Seal Cover Slab -->
+                    <rect x="4" y="2" width="272" height="12" rx="2" fill="#334155" stroke="#1e293b" stroke-width="1" />
+                    <text x="140" y="10" fill="#94a3b8" font-size="6" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">DOUBLE-SEALED PRECAST CONCRETE COVER (-0.60m DEPTH)</text>
+
+                    <!-- TIER 1: UPPER VAULT CHAMBER (Depth -1.2m) -->
+                    <g transform="translate(10, 18)">
+                        ${tier1Occupied ? `
+                            <rect x="0" y="0" width="260" height="48" rx="3" fill="#1e293b" stroke="#10b981" stroke-width="1.5" />
+                            <!-- Occupied Upper Vault -->
+                            <rect x="14" y="8" width="232" height="32" rx="4" fill="url(#casketMahogany)" stroke="url(#casketGoldTrim)" stroke-width="1.5" />
+                            <text x="130" y="24" fill="#ffffff" font-size="8.5" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">OCCUPIED: REGISTERED DECEDENT</text>
+                        ` : `
+                            <!-- Vacant Upper Vault Chamber (Available for future family interment) -->
+                            <rect x="0" y="0" width="260" height="48" rx="3" fill="#0f172a" fill-opacity="0.85" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4 3" />
+                            <rect x="8" y="5" width="244" height="38" rx="2" fill="#0284c7" fill-opacity="0.08" />
+                            <text x="130" y="22" fill="#38bdf8" font-size="8.5" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">TIER 1 (UPPER VAULT): AVAILABLE FOR INTERMENT</text>
+                            <text x="130" y="34" fill="#94a3b8" font-size="7" font-weight="600" text-anchor="middle" font-family="Inter, sans-serif">Depth: -1.20m • Capacity: 1 Casket or 2-4 Cremation Urns</text>
+                        `}
+                    </g>
+
+                    <!-- Intermediate Division Slab (Precast Concrete Separator) -->
+                    <rect x="6" y="70" width="268" height="10" rx="1" fill="#334155" stroke="#1e293b" stroke-width="1" />
+                    <line x1="10" y1="75" x2="270" y2="75" stroke="#64748b" stroke-width="0.75" stroke-dasharray="3 3" />
+                    <text x="140" y="77.5" fill="#cbd5e1" font-size="5.5" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">REINFORCED CONCRETE INTERMEDIATE VAULT DIVIDER SLAB (-1.60m)</text>
+
+                    <!-- TIER 2: LOWER VAULT CHAMBER (Depth -2.1m) -->
+                    <g transform="translate(10, 84)">
+                        ${tier2Occupied ? `
+                            <!-- Occupied Lower Vault with Detailed Casket & Decedent Inscription -->
+                            <rect x="0" y="0" width="260" height="48" rx="3" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5" />
+                            <!-- Mahogany Casket Profile -->
+                            <rect x="14" y="7" width="232" height="34" rx="4" fill="url(#casketMahogany)" stroke="url(#casketGoldTrim)" stroke-width="1.5" />
+                            <!-- Casket Bevel & Handles -->
+                            <rect x="22" y="10" width="216" height="5" rx="1" fill="url(#casketGoldTrim)" opacity="0.8" />
+                            <circle cx="35" cy="24" r="2.5" fill="#fef08a" />
+                            <circle cx="75" cy="24" r="2.5" fill="#fef08a" />
+                            <circle cx="130" cy="24" r="2.5" fill="#fef08a" />
+                            <circle cx="185" cy="24" r="2.5" fill="#fef08a" />
+                            <circle cx="225" cy="24" r="2.5" fill="#fef08a" />
+                            <!-- Inscription Text -->
+                            <text x="130" y="22" fill="#ffffff" font-size="8.5" font-weight="900" text-anchor="middle" font-family="Inter, sans-serif">TIER 2: INTERRED • ${escapeHtml(displayName.length > 20 ? displayName.substring(0, 19) + '…' : displayName)}${burialYear}</text>
+                            <text x="130" y="32" fill="#fef08a" font-size="6.5" font-weight="700" text-anchor="middle" font-family="Inter, sans-serif">Perpetual Care • Depth: -2.10m • Sealed Concrete Chamber</text>
+                        ` : (status === 'Reserved' ? `
+                            <!-- Reserved Lower Vault -->
+                            <rect x="0" y="0" width="260" height="48" rx="3" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 3" />
+                            <text x="130" y="22" fill="#f59e0b" font-size="8.5" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">TIER 2 (LOWER VAULT): RESERVED</text>
+                            <text x="130" y="34" fill="#94a3b8" font-size="7" font-weight="600" text-anchor="middle" font-family="Inter, sans-serif">Pre-Need Interment Allocation • Depth: -2.10m</text>
+                        ` : `
+                            <!-- Vacant Lower Vault -->
+                            <rect x="0" y="0" width="260" height="48" rx="3" fill="#0f172a" fill-opacity="0.85" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4 3" />
+                            <rect x="8" y="5" width="244" height="38" rx="2" fill="#0284c7" fill-opacity="0.08" />
+                            <text x="130" y="22" fill="#38bdf8" font-size="8.5" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">TIER 2 (LOWER VAULT): AVAILABLE FOR INTERMENT</text>
+                            <text x="130" y="34" fill="#94a3b8" font-size="7" font-weight="600" text-anchor="middle" font-family="Inter, sans-serif">Primary Casket Depth: -2.10m • Reinforced Concrete Foundation</text>
+                        `)}
+                    </g>
+
+                    <!-- Concrete Bottom Base Slab -->
+                    <rect x="4" y="136" width="272" height="10" rx="1" fill="#334155" stroke="#1e293b" stroke-width="1" />
+                </g>
+
+                <!-- 5. Sub-Base Coarse Gravel Bed Drainage System (Depth: -2.5m) -->
+                <g transform="translate(65, 202)">
+                    <rect x="0" y="0" width="310" height="20" fill="url(#gravelPattern)" rx="2" />
+                    <rect x="0" y="0" width="310" height="20" fill="#334155" fill-opacity="0.25" stroke="#475569" stroke-width="1" rx="2" />
+                    <text x="155" y="13" fill="#cbd5e1" font-size="6.5" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">PERPETUAL DRY-WELL COARSE GRAVEL DRAINAGE BED (-2.50m SUBGRADE)</text>
+                </g>
+            </svg>
+        `;
     }
 
     /**
