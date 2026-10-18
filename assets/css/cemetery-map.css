@@ -2107,22 +2107,30 @@ body[data-theme="dark"] .search-empty-sub {
 }
 
 /* Level of Detail (LOD) & Plot Spatial Presentation (Batch 24 & Batch 29) */
+.cemetery-map-svg .svg-lot-label,
+.cemetery-map-svg .mp-lot-number {
+    font-family: var(--font-sans, 'Inter', -apple-system, sans-serif);
+    font-weight: 900 !important;
+    paint-order: stroke fill;
+    stroke: #ffffff;
+    stroke-width: 2.6px;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    fill: #0f172a !important;
+    pointer-events: none;
+    letter-spacing: -0.02em;
+}
+
 .cemetery-map-svg.lod-low .svg-lot-label,
 .cemetery-map-svg.lod-low .mp-lot-number {
-    opacity: 0.85 !important;
-    font-size: 5.2px;
-    font-weight: 800;
-    fill: #0f172a;
-    pointer-events: none;
+    opacity: 0.95 !important;
+    font-size: 6.0px !important;
 }
 
 .cemetery-map-svg.lod-mid .svg-lot-label,
 .cemetery-map-svg.lod-mid .mp-lot-number {
-    opacity: 0.95 !important;
-    font-size: 6.2px;
-    font-weight: 800;
-    fill: #0f172a;
-    pointer-events: none;
+    opacity: 1 !important;
+    font-size: 7.2px !important;
 }
 
 .cemetery-map-svg.lod-high .svg-lot-label,
@@ -2134,24 +2142,49 @@ body[data-theme="dark"] .search-empty-sub {
 .svg-lot-tile.is-selected .svg-lot-label,
 .svg-lot-tile.is-selected .mp-lot-number {
     opacity: 1 !important;
-    font-size: 7.2px;
-    font-weight: 800;
-    fill: #0f172a;
+    font-size: 8.5px !important;
+    stroke-width: 3px;
 }
 
-[data-theme="dark"] .cemetery-map-svg.lod-low .svg-lot-label,
-[data-theme="dark"] .cemetery-map-svg.lod-low .mp-lot-number,
-[data-theme="dark"] .cemetery-map-svg.lod-mid .svg-lot-label,
-[data-theme="dark"] .cemetery-map-svg.lod-mid .mp-lot-number,
-[data-theme="dark"] .cemetery-map-svg.lod-high .svg-lot-label,
-[data-theme="dark"] .cemetery-map-svg.lod-high .mp-lot-number,
-[data-theme="dark"] .cemetery-map-svg.is-zoomed-in .svg-lot-label,
-[data-theme="dark"] .cemetery-map-svg.is-zoomed-in .mp-lot-number,
-[data-theme="dark"] .svg-lot-tile:hover .svg-lot-label,
-[data-theme="dark"] .svg-lot-tile:hover .mp-lot-number,
-[data-theme="dark"] .svg-lot-tile.is-selected .svg-lot-label,
-[data-theme="dark"] .svg-lot-tile.is-selected .mp-lot-number {
-    fill: #ffffff;
+[data-theme="dark"] .cemetery-map-svg .svg-lot-label,
+[data-theme="dark"] .cemetery-map-svg .mp-lot-number {
+    stroke: #090d16 !important;
+    fill: #f8fafc !important;
+}
+
+/* Road Name Typography with Google Maps White Halo */
+.mp-road-label {
+    font-family: var(--font-sans, 'Inter', -apple-system, sans-serif);
+    font-size: 8.5px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    fill: #0f172a;
+    text-anchor: middle;
+    pointer-events: none;
+    paint-order: stroke fill;
+    stroke: #ffffff;
+    stroke-width: 3.5px;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.mp-road-label--minor {
+    font-size: 7.5px;
+    font-weight: 800;
+    fill: #334155;
+    stroke: #ffffff;
+    stroke-width: 3px;
+}
+
+[data-theme="dark"] .mp-road-label {
+    fill: #f1f5f9;
+    stroke: #0f172a;
+}
+
+[data-theme="dark"] .mp-road-label--minor {
+    fill: #e2e8f0;
+    stroke: #0f172a;
 }
 
 /* Selected State */

@@ -1379,6 +1379,9 @@
                     }));
                 }
 
+                // Immediately update legend counters with accurate real-time plot counts
+                updateLegendCounts();
+
                 mapEmptyOverlay.style.display = 'none';
                 renderCemeteryOverview(res.data);
 
@@ -6449,6 +6452,7 @@ if (count <= 4 && !usedZones.has('e')) {
     function applyFilters() {
         updateActiveFilterChips();
         syncLegendButtons();
+        updateLegendCounts(state.viewLevel === 'block' ? state.currentLots : null);
 
         const hasActiveFilter = (
             state.filters.search !== '' ||
@@ -6665,7 +6669,8 @@ if (count <= 4 && !usedZones.has('e')) {
     }
 
     /**
-     * Dynamically update lot counts on the interactive legend buttons
+     * Dynamically update lot counts on the interactive legend buttons (Batch 33 Fix)
+     * Accurately aggregates counts from active lots, block cache, or layout sections
      */
     function updateLegendCounts(lots) {
         const counts = {
@@ -6676,12 +6681,22 @@ if (count <= 4 && !usedZones.has('e')) {
             'Under Maintenance': 0
         };
 
-        if (Array.isArray(lots) && lots.length > 0) {
-            lots.forEach(l => {
-                const st = l.status || 'Available';
-                if (counts[st] !== undefined) {
-                    counts[st]++;
-                } else if (st.toLowerCase().includes('maint')) {
+        let targetLots = Array.isArray(lots) && lots.length > 0 ? lots : null;
+        if (!targetLots && state.blockLotsCache && Object.keys(state.blockLotsCache).length > 0) {
+            targetLots = Object.values(state.blockLotsCache).flat();
+        }
+
+        if (Array.isArray(targetLots) && targetLots.length > 0) {
+            targetLots.forEach(l => {
+                const rawSt = (l.status || 'Available').trim();
+                const stLower = rawSt.toLowerCase();
+                if (stLower === 'available') {
+                    counts.Available++;
+                } else if (stLower === 'reserved') {
+                    counts.Reserved++;
+                } else if (stLower === 'occupied') {
+                    counts.Occupied++;
+                } else if (stLower.includes('maint')) {
                     counts['Under Maintenance']++;
                 } else {
                     counts.Unavailable++;
@@ -6707,6 +6722,12 @@ if (count <= 4 && !usedZones.has('e')) {
         if (elOcc) elOcc.textContent = counts.Occupied;
         if (elUnavail) elUnavail.textContent = counts.Unavailable;
         if (elMaint) elMaint.textContent = counts['Under Maintenance'];
+
+        // Sync header total plots stat if available
+        if (statLots) {
+            const sumAll = counts.Available + counts.Reserved + counts.Occupied + counts.Unavailable + counts['Under Maintenance'];
+            if (sumAll > 0) statLots.textContent = sumAll;
+        }
     }
 
     // =========================================================================
