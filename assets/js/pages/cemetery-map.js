@@ -58,6 +58,14 @@
             foliage: true,
             surroundings: true
         },
+
+        // Batch 36: Mobile Touch Gestures & Responsive Pan/Pinch State
+        touchPanStart: { x: 0, y: 0 },
+        isTouchPanning: false,
+        isPinching: false,
+        pinchStartDist: 0,
+        pinchStartViewBox: null,
+        hasTouchMoved: false,
     };
 
     // =========================================================================
@@ -896,6 +904,49 @@
         cemeteryMapSvg.addEventListener('mousedown', handleMouseDown);
         window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('mouseup', handleMouseUp);
+
+        // Batch 36: Mobile Touch Pan & Pinch-to-Zoom on SVG
+        cemeteryMapSvg.addEventListener('touchstart', handleTouchStart, { passive: false });
+        cemeteryMapSvg.addEventListener('touchmove', handleTouchMove, { passive: false });
+        cemeteryMapSvg.addEventListener('touchend', handleTouchEnd);
+        cemeteryMapSvg.addEventListener('touchcancel', handleTouchEnd);
+
+        // Batch 36: Mobile Bottom Sheet Swipe Down to Dismiss
+        const drawerDragHandle = document.getElementById('drawerDragHandle');
+        if (drawerDragHandle) {
+            let dragStartY = 0;
+            let currentDragY = 0;
+            let isDraggingHandle = false;
+
+            drawerDragHandle.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    isDraggingHandle = true;
+                    dragStartY = e.touches[0].clientY;
+                    currentDragY = dragStartY;
+                }
+            }, { passive: true });
+
+            drawerDragHandle.addEventListener('touchmove', (e) => {
+                if (!isDraggingHandle || e.touches.length !== 1) return;
+                currentDragY = e.touches[0].clientY;
+                const diffY = currentDragY - dragStartY;
+                if (diffY > 0 && lotDetailsDrawer) {
+                    lotDetailsDrawer.style.transform = `translateY(${diffY}px)`;
+                }
+            }, { passive: true });
+
+            drawerDragHandle.addEventListener('touchend', () => {
+                if (!isDraggingHandle) return;
+                isDraggingHandle = false;
+                const diffY = currentDragY - dragStartY;
+                if (lotDetailsDrawer) {
+                    lotDetailsDrawer.style.transform = '';
+                    if (diffY > 80) {
+                        closeLotDrawer();
+                    }
+                }
+            });
+        }
 
         // Drawer Close
         btnCloseDrawer.addEventListener('click', closeLotDrawer);
@@ -2721,6 +2772,7 @@ sections.forEach((section, index) => {
 
         // Block Click Handler: Focus/Zoom to Block on Master Map
         blkGroup.addEventListener('click', (e) => {
+            if (state.hasTouchMoved) return;
             e.stopPropagation();
             focusOnBlock(block, section);
         });
@@ -2960,6 +3012,7 @@ sections.forEach((section, index) => {
 
                 // Click Handler
                 lotGroup.addEventListener('click', (e) => {
+                    if (state.hasTouchMoved) return;
                     e.stopPropagation();
                     selectLot(lot, block, section, lotGroup);
                 });
@@ -3042,6 +3095,7 @@ if (count <= 4 && !usedZones.has('e')) {
             el.setAttribute('role', 'button');
 
             const handleTrigger = (e) => {
+                if (state.hasTouchMoved) return;
                 e.stopPropagation();
                 const lm = el.getAttribute('data-landmark');
                 if (lm === 'admin') {
@@ -3440,6 +3494,7 @@ if (count <= 4 && !usedZones.has('e')) {
 
             // Click Handler: Lot Selection & Details Drawer
             lotGroup.addEventListener('click', (e) => {
+                if (state.hasTouchMoved) return;
                 e.stopPropagation();
                 selectLot(lot, block, state.currentSection, lotGroup);
             });
@@ -6996,6 +7051,100 @@ if (count <= 4 && !usedZones.has('e')) {
 
     function handleMouseUp() {
         state.isPanning = false;
+    }
+
+    /**
+     * Batch 36: Mobile Touch Engine Handlers (Pan & Pinch-to-Zoom)
+     */
+    function getTouchDistance(t1, t2) {
+        const dx = t1.clientX - t2.clientX;
+        const dy = t1.clientY - t2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function handleTouchStart(e) {
+        if (e.touches.length === 1) {
+            state.isTouchPanning = true;
+            state.isPinching = false;
+            state.hasTouchMoved = false;
+            state.touchPanStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        } else if (e.touches.length === 2) {
+            if (e.cancelable) e.preventDefault();
+            state.isTouchPanning = false;
+            state.isPinching = true;
+            state.hasTouchMoved = true;
+            state.pinchStartDist = getTouchDistance(e.touches[0], e.touches[1]);
+            state.pinchStartViewBox = { ...state.currentViewBox };
+        }
+    }
+
+    function handleTouchMove(e) {
+        if (state.isPinching && e.touches.length === 2) {
+            if (e.cancelable) e.preventDefault();
+            const currentDist = getTouchDistance(e.touches[0], e.touches[1]);
+            if (!state.pinchStartDist || state.pinchStartDist <= 0 || !state.pinchStartViewBox) return;
+
+            const scale = state.pinchStartDist / currentDist;
+            const vb = state.pinchStartViewBox;
+            const newW = vb.width * scale;
+            const newH = vb.height * scale;
+
+            // Restrict zoom limits
+            if (newW < 220 || newW > 1400) return;
+
+            // Center zoom between the two fingers
+            const rect = svgStageContainer.getBoundingClientRect();
+            const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            const ratioX = Math.max(0, Math.min(1, (midX - rect.left) / (rect.width || 1)));
+            const ratioY = Math.max(0, Math.min(1, (midY - rect.top) / (rect.height || 1)));
+
+            const focalSvgX = vb.x + vb.width * ratioX;
+            const focalSvgY = vb.y + vb.height * ratioY;
+
+            state.currentViewBox.width = newW;
+            state.currentViewBox.height = newH;
+            state.currentViewBox.x = focalSvgX - newW * ratioX;
+            state.currentViewBox.y = focalSvgY - newH * ratioY;
+            applyViewBox();
+            state.hasTouchMoved = true;
+        } else if (state.isTouchPanning && e.touches.length === 1) {
+            const touch = e.touches[0];
+            const moveDeltaX = touch.clientX - state.touchPanStart.x;
+            const moveDeltaY = touch.clientY - state.touchPanStart.y;
+
+            if (Math.abs(moveDeltaX) > 6 || Math.abs(moveDeltaY) > 6) {
+                state.hasTouchMoved = true;
+                if (e.cancelable) e.preventDefault();
+            }
+
+            if (state.hasTouchMoved) {
+                const stageW = svgStageContainer.clientWidth || 1;
+                const stageH = svgStageContainer.clientHeight || 1;
+                const dx = moveDeltaX * (state.currentViewBox.width / stageW);
+                const dy = moveDeltaY * (state.currentViewBox.height / stageH);
+
+                state.currentViewBox.x -= dx;
+                state.currentViewBox.y -= dy;
+                applyViewBox();
+
+                state.touchPanStart = { x: touch.clientX, y: touch.clientY };
+            }
+        }
+    }
+
+    function handleTouchEnd(e) {
+        if (e.touches.length === 0) {
+            state.isTouchPanning = false;
+            state.isPinching = false;
+            setTimeout(() => {
+                state.hasTouchMoved = false;
+            }, 60);
+        } else if (e.touches.length === 1) {
+            state.isPinching = false;
+            state.isTouchPanning = true;
+            state.touchPanStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
     }
 
     /**
