@@ -3315,5 +3315,301 @@
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.40) !important;
 }
 
+/* ── Batch 2: Periodic Reports (Daily / Weekly / Monthly / Overall) ────────── */
+.periodic-control-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(44, 94, 71, 0.16);
+    border-radius: 12px;
+    padding: 12px 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.dashboard-body[data-theme="dark"] .periodic-control-bar {
+    background: rgba(18, 30, 24, 0.85);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.period-pill-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(44, 94, 71, 0.08);
+    border-radius: 10px;
+    padding: 4px;
+}
+
+.dashboard-body[data-theme="dark"] .period-pill-group {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.period-pill-btn {
+    border: none;
+    background: transparent;
+    color: #475569;
+    font-size: 0.84rem;
+    font-weight: 700;
+    font-family: inherit;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.period-pill-btn:hover {
+    color: #064e3b;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.period-pill-btn.active {
+    background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(6, 78, 59, 0.28);
+}
+
+.dashboard-body[data-theme="dark"] .period-pill-btn {
+    color: #94a3b8;
+}
+
+.dashboard-body[data-theme="dark"] .period-pill-btn:hover {
+    color: #34d399;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-body[data-theme="dark"] .period-pill-btn.active {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    color: #06170f;
+    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35);
+}
+
+.period-date-range {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.periodic-banner {
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 60%, #047857 100%);
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    box-shadow: 0 8px 24px rgba(6, 78, 59, 0.22);
+}
+
+.periodic-banner__badge-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.periodic-banner__badge {
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 9px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.periodic-banner__tag {
+    font-size: 0.72rem;
+    font-weight: 600;
+    opacity: 0.85;
+    letter-spacing: 0.03em;
+}
+
+.periodic-banner__title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 6px 0;
+    line-height: 1.25;
+}
+
+.periodic-banner__desc {
+    font-size: 0.88rem;
+    margin: 0;
+    opacity: 0.92;
+    max-width: 650px;
+    line-height: 1.45;
+}
+
+.periodic-banner__actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.periodic-export-btn {
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: #064e3b !important;
+    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.2s ease !important;
+}
+
+.periodic-export-btn:hover {
+    background: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+}
+
+.periodic-ops-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 16px;
+}
+
+.periodic-ops-tile {
+    background: rgba(248, 250, 252, 0.85);
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.periodic-ops-tile:hover {
+    transform: translateY(-2px);
+    border-color: #cbd5e1;
+}
+
+.dashboard-body[data-theme="dark"] .periodic-ops-tile {
+    background: rgba(18, 30, 24, 0.6);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.periodic-ops-tile__label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.dashboard-body[data-theme="dark"] .periodic-ops-tile__label {
+    color: #94a3b8;
+}
+
+.periodic-ops-tile__val {
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.1;
+}
+
+.dashboard-body[data-theme="dark"] .periodic-ops-tile__val {
+    color: #f8fafc;
+}
+
+.periodic-ops-tile--confirmed .periodic-ops-tile__val {
+    color: #047857;
+}
+
+.periodic-ops-tile--pending .periodic-ops-tile__val {
+    color: #d97706;
+}
+
+.periodic-ops-tile--completed .periodic-ops-tile__val {
+    color: #2563eb;
+}
+
+.dashboard-body[data-theme="dark"] .periodic-ops-tile--confirmed .periodic-ops-tile__val {
+    color: #34d399;
+}
+
+.dashboard-body[data-theme="dark"] .periodic-ops-tile--pending .periodic-ops-tile__val {
+    color: #fbbf24;
+}
+
+.dashboard-body[data-theme="dark"] .periodic-ops-tile--completed .periodic-ops-tile__val {
+    color: #60a5fa;
+}
+
+.periodic-brief-body {
+    padding: 20px;
+}
+
+.periodic-brief-narrative {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #334155;
+    background: #f8fafc;
+    border-left: 4px solid #059669;
+    padding: 14px 18px;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 18px;
+}
+
+.dashboard-body[data-theme="dark"] .periodic-brief-narrative {
+    background: rgba(18, 30, 24, 0.6);
+    color: #cbd5e1;
+    border-left-color: #34d399;
+}
+
+.periodic-brief-kpis {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.periodic-kpi-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.84rem;
+    color: #1e293b;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.dashboard-body[data-theme="dark"] .periodic-kpi-chip {
+    background: rgba(22, 34, 27, 0.85);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f1f5f9;
+}
+
+.periodic-kpi-chip strong {
+    color: #047857;
+}
+
+.dashboard-body[data-theme="dark"] .periodic-kpi-chip strong {
+    color: #34d399;
+}
+
 
 

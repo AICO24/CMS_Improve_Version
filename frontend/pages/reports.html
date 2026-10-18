@@ -155,6 +155,41 @@
                 <div class="content-area">
 
                 <!-- ── Stat cards — always at top, toggled by JS ──────── -->
+                <div id="periodicStats" class="report-stats">
+                    <div class="stat-card" role="button" tabindex="0" title="View payments collection" data-href="payments.html" aria-pressed="false">
+                        <div class="stat-title">
+                            <span id="periodicRevTitle">Collections (Period)</span>
+                            <span class="card-icon"><i class="fas fa-peso-sign"></i></span>
+                        </div>
+                        <div class="stat-value" id="periodicRevValue">₱0.00</div>
+                        <div class="stat-sub" id="periodicRevSub">0 verified transactions</div>
+                    </div>
+                    <div class="stat-card" role="button" tabindex="0" title="View scheduled bookings" data-href="manage-bookings.html" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Interments &amp; Cremations</span>
+                            <span class="card-icon"><i class="fas fa-calendar-check"></i></span>
+                        </div>
+                        <div class="stat-value" id="periodicOpsValue">0</div>
+                        <div class="stat-sub" id="periodicOpsSub">0 burials · 0 cremations</div>
+                    </div>
+                    <div class="stat-card" role="button" tabindex="0" title="View cemetery capacity" data-href="lot-management.html" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Capacity Utilization</span>
+                            <span class="card-icon"><i class="fas fa-layer-group"></i></span>
+                        </div>
+                        <div class="stat-value" id="periodicCapValue">0%</div>
+                        <div class="stat-sub" id="periodicCapSub">0 available · 0 occupied</div>
+                    </div>
+                    <div class="stat-card" role="button" tabindex="0" title="View expiration items" data-href="expiration-monitoring.html" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Expiring &amp; Due</span>
+                            <span class="card-icon"><i class="fas fa-triangle-exclamation"></i></span>
+                        </div>
+                        <div class="stat-value" id="periodicExpValue">0</div>
+                        <div class="stat-sub" id="periodicExpSub">0 expiring in 30d · 0 expired</div>
+                    </div>
+                </div>
+
                 <div id="occupancyStats" class="report-stats active">
                     <div class="stat-card" role="button" tabindex="0" title="View all cemetery lots inventory" data-href="lot-management.html" aria-pressed="false">
                         <div class="stat-title">
@@ -338,6 +373,9 @@
                         </button>
                         <div class="report-tabs-scroll-track" id="reportTabsTrack">
                             <div class="tab-buttons-row">
+                                <button class="tab-btn" data-tab="periodic">
+                                    <i class="fas fa-calendar-days"></i> Periodic Summary
+                                </button>
                                 <button class="tab-btn active" data-tab="occupancy">
                                     <i class="fas fa-chart-pie"></i> Occupancy
                                 </button>
@@ -383,6 +421,183 @@
 
                 <!-- ── Tab chart content ──────────────────────────────── -->
                 <div id="reportExportContainer">
+
+                    <div id="periodicTab" class="report-content">
+                        <!-- Period Controls: Quick switcher pill group + Date Range -->
+                        <div class="periodic-control-bar">
+                            <div class="period-pill-group" role="group" aria-label="Select report time interval">
+                                <button type="button" class="period-pill-btn active" data-period="daily">
+                                    <i class="fas fa-calendar-day"></i> <span>Day Report (Today)</span>
+                                </button>
+                                <button type="button" class="period-pill-btn" data-period="weekly">
+                                    <i class="fas fa-calendar-week"></i> <span>Weekly Report</span>
+                                </button>
+                                <button type="button" class="period-pill-btn" data-period="monthly">
+                                    <i class="fas fa-calendar"></i> <span>Monthly Report</span>
+                                </button>
+                                <button type="button" class="period-pill-btn" data-period="overall">
+                                    <i class="fas fa-earth-asia"></i> <span>Overall Summary</span>
+                                </button>
+                            </div>
+                            <div class="period-date-range">
+                                <label class="date-filter-field">
+                                    <span>From</span>
+                                    <input type="date" id="periodicDateFrom" aria-label="From date">
+                                </label>
+                                <label class="date-filter-field">
+                                    <span>To</span>
+                                    <input type="date" id="periodicDateTo" aria-label="To date">
+                                </label>
+                                <button type="button" class="btn-filter" id="applyPeriodicFilter">Apply</button>
+                                <button type="button" class="btn-secondary" id="resetPeriodicFilter" title="Reset to today"><i class="fas fa-rotate-left"></i><span>Reset</span></button>
+                            </div>
+                        </div>
+
+                        <!-- Active Period Overview Banner -->
+                        <div class="periodic-banner" id="periodicBanner">
+                            <div class="periodic-banner__info">
+                                <div class="periodic-banner__badge-row">
+                                    <span class="periodic-banner__badge" id="periodicBadge"><i class="fas fa-clock"></i> Daily Operations</span>
+                                    <span class="periodic-banner__tag" id="periodicTag">Live System Record</span>
+                                </div>
+                                <h4 class="periodic-banner__title" id="periodicTitle">Daily Operations Report · Today</h4>
+                                <p class="periodic-banner__desc" id="periodicDesc">Consolidated overview of financial collections, burial schedules, cremation requests, and space capacity for this period.</p>
+                            </div>
+                            <div class="periodic-banner__actions">
+                                <button type="button" class="btn-secondary btn-action-pill periodic-export-btn" id="exportPeriodicPdfBtn" title="Export this specific period report as PDF">
+                                    <i class="fas fa-file-pdf"></i> <span>Export Period PDF</span>
+                                </button>
+                                <button type="button" class="btn-secondary btn-action-pill periodic-export-btn" id="exportPeriodicExcelBtn" title="Export this specific period report as Excel">
+                                    <i class="fas fa-file-excel"></i> <span>Export Period Excel</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Section 1: Financial Collections for the Period -->
+                        <p class="section-label"><i class="fas fa-peso-sign"></i> Period Collections &amp; Revenue Breakdown</p>
+                        <div class="chart-grid-2">
+                            <div class="chart-card chart-card--compact">
+                                <div class="chart-card__header">
+                                    <div class="chart-card__header-left">
+                                        <span class="chart-card__title">Collections by Payment Method</span>
+                                        <span class="chart-card__badge" id="periodicMethodBadge">Cash vs Online</span>
+                                    </div>
+                                </div>
+                                <div class="table-wrap">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Payment Method</th>
+                                                <th class="text-right">Transactions</th>
+                                                <th class="text-right">Verified Total</th>
+                                                <th class="text-right">Share (%)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="periodicMethodTableBody">
+                                            <tr><td colspan="4" class="text-center">Loading payment methods...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="chart-card chart-card--compact">
+                                <div class="chart-card__header">
+                                    <div class="chart-card__header-left">
+                                        <span class="chart-card__title">Revenue by Service Stream</span>
+                                        <span class="chart-card__badge" id="periodicServiceBadge">Services</span>
+                                    </div>
+                                </div>
+                                <div class="table-wrap">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Service Category</th>
+                                                <th class="text-right">Count</th>
+                                                <th class="text-right">Total Amount</th>
+                                                <th class="text-right">Average</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="periodicServiceTableBody">
+                                            <tr><td colspan="4" class="text-center">Loading service breakdown...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Operations, Scheduling & Throughput -->
+                        <p class="section-label"><i class="fas fa-calendar-check"></i> Operational Schedules &amp; Service Throughput</p>
+                        <div class="chart-grid-2">
+                            <div class="chart-card chart-card--compact">
+                                <div class="chart-card__header">
+                                    <div class="chart-card__header-left">
+                                        <span class="chart-card__title">Burial Schedules Status</span>
+                                        <span class="chart-card__badge">Ground Interments</span>
+                                    </div>
+                                </div>
+                                <div class="periodic-ops-grid" id="periodicBurialGrid">
+                                    <div class="periodic-ops-tile">
+                                        <span class="periodic-ops-tile__label">Total Scheduled</span>
+                                        <strong class="periodic-ops-tile__val" id="schedTileTotal">0</strong>
+                                    </div>
+                                    <div class="periodic-ops-tile periodic-ops-tile--confirmed">
+                                        <span class="periodic-ops-tile__label">Confirmed / Ready</span>
+                                        <strong class="periodic-ops-tile__val" id="schedTileConfirmed">0</strong>
+                                    </div>
+                                    <div class="periodic-ops-tile periodic-ops-tile--pending">
+                                        <span class="periodic-ops-tile__label">Pending Approval</span>
+                                        <strong class="periodic-ops-tile__val" id="schedTilePending">0</strong>
+                                    </div>
+                                    <div class="periodic-ops-tile periodic-ops-tile--completed">
+                                        <span class="periodic-ops-tile__label">Completed Interments</span>
+                                        <strong class="periodic-ops-tile__val" id="schedTileCompleted">0</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="chart-card chart-card--compact">
+                                <div class="chart-card__header">
+                                    <div class="chart-card__header-left">
+                                        <span class="chart-card__title">Cremation Records Status</span>
+                                        <span class="chart-card__badge">Crematory Operations</span>
+                                    </div>
+                                </div>
+                                <div class="periodic-ops-grid" id="periodicCremationGrid">
+                                    <div class="periodic-ops-tile">
+                                        <span class="periodic-ops-tile__label">Total Requests</span>
+                                        <strong class="periodic-ops-tile__val" id="cremTileTotal">0</strong>
+                                    </div>
+                                    <div class="periodic-ops-tile periodic-ops-tile--confirmed">
+                                        <span class="periodic-ops-tile__label">Scheduled Retort</span>
+                                        <strong class="periodic-ops-tile__val" id="cremTileScheduled">0</strong>
+                                    </div>
+                                    <div class="periodic-ops-tile periodic-ops-tile--pending">
+                                        <span class="periodic-ops-tile__label">Pending Review</span>
+                                        <strong class="periodic-ops-tile__val" id="cremTilePending">0</strong>
+                                    </div>
+                                    <div class="periodic-ops-tile periodic-ops-tile--completed">
+                                        <span class="periodic-ops-tile__label">Completed Cremations</span>
+                                        <strong class="periodic-ops-tile__val" id="cremTileCompleted">0</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 3: Summary Highlights & Key Takeaways -->
+                        <p class="section-label"><i class="fas fa-clipboard-list"></i> Period Executive Summary &amp; Legal Audit Notes</p>
+                        <div class="chart-card chart-card--focus">
+                            <div class="chart-card__header">
+                                <span class="chart-card__title">Periodic Executive Briefing</span>
+                                <span class="chart-card__badge" id="periodicAuditBadge">Audit Brief</span>
+                            </div>
+                            <div class="periodic-brief-body" id="periodicBriefBody">
+                                <div class="periodic-brief-narrative" id="periodicNarrative">Loading periodic summary narrative...</div>
+                                <div class="periodic-brief-kpis" id="periodicKpisRow">
+                                    <!-- Dynamically populated KPI chips -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div id="occupancyTab" class="report-content active">
                         <!-- Section Label 1: Section Occupancy -->
