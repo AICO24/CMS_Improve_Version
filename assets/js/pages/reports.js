@@ -55,6 +55,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             showTab(btn.dataset.tab);
             const activeButton = document.querySelector('.tab-btn.active');
             activeButton?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            if (btn.dataset.tab === 'periodic' && !currentPeriodicData) {
+                loadPeriodicSummary('daily');
+            }
         });
     });
 
@@ -760,6 +763,198 @@ document.addEventListener('DOMContentLoaded', async function() {
                 badge.style.display = result.count > 0 ? 'flex' : 'none';
             }
         } catch (e) {}
+    }
+
+    // ── Batch 3: Periodic Reports (Daily / Weekly / Monthly / Overall) ────────
+    let currentPeriodicData = null;
+    let currentPeriodicPeriod = 'daily';
+
+    async function loadPeriodicSummary(period = currentPeriodicPeriod, customFilters = null) {
+        currentPeriodicPeriod = period;
+        try {
+            const params = [];
+            if (period && period !== 'custom') {
+                params.push(`period=${encodeURIComponent(period)}`);
+            }
+            if (customFilters?.date_from) {
+                params.push(`date_from=${encodeURIComponent(customFilters.date_from)}`);
+            }
+            if (customFilters?.date_to) {
+                params.push(`date_to=${encodeURIComponent(customFilters.date_to)}`);
+            }
+
+            const url = `reports/dashboard-summary${params.length ? '?' + params.join('&') : ''}`;
+            const data = await api.request(url, { method: 'GET' });
+            currentPeriodicData = data;
+
+            // 1. Update Top Stat Cards (#periodicStats)
+            const revTitleEl = document.getElementById('periodicRevTitle');
+            const revValEl = document.getElementById('periodicRevValue');
+            const revSubEl = document.getElementById('periodicRevSub');
+            const opsValEl = document.getElementById('periodicOpsValue');
+            const opsSubEl = document.getElementById('periodicOpsSub');
+            const capValEl = document.getElementById('periodicCapValue');
+            const capSubEl = document.getElementById('periodicCapSub');
+            const expValEl = document.getElementById('periodicExpValue');
+            const expSubEl = document.getElementById('periodicExpSub');
+
+            const periodNameMap = {
+                daily: "Today's Collections",
+                weekly: "Weekly Collections",
+                monthly: "Monthly Collections",
+                overall: "Overall All-Time Collections",
+                custom: "Period Collections"
+            };
+            if (revTitleEl) revTitleEl.textContent = periodNameMap[period] || 'Period Collections';
+
+            const totalRev = Number(data.revenue?.total ?? data.revenue?.total_revenue ?? 0);
+            const pendingRev = Number(data.revenue?.pending_revenue ?? 0);
+            const txCount = Number(data.revenue?.transaction_count ?? 0);
+            if (revValEl) revValEl.textContent = formatPeso(totalRev);
+            if (revSubEl) revSubEl.textContent = `${txCount} verified${pendingRev > 0 ? ' · Pending: ' + formatPeso(pendingRev) : ''}`;
+
+            const schedTotal = Number(data.schedules?.total ?? 0);
+            const schedConfirmed = Number(data.schedules?.confirmed ?? 0);
+            const cremTotal = Number(data.cremations?.total ?? 0);
+            if (opsValEl) opsValEl.textContent = String(schedTotal + cremTotal);
+            if (opsSubEl) opsSubEl.textContent = `${schedTotal} burials (${schedConfirmed} confirmed) · ${cremTotal} cremations`;
+
+            const occRate = Number(data.occupancy?.occupancy_rate ?? data.occupancy?.utilization_rate ?? 0);
+            const occAvail = Number(data.occupancy?.available ?? 0);
+            const occUsed = Number(data.occupancy?.occupied ?? 0);
+            if (capValEl) capValEl.textContent = `${occRate}%`;
+            if (capSubEl) capSubEl.textContent = `${occAvail.toLocaleString()} open · ${occUsed.toLocaleString()} occupied`;
+
+            const expSoon = Number(data.expirations?.expiring_soon ?? 0);
+            const expDone = Number(data.expirations?.expired ?? 0);
+            if (expValEl) expValEl.textContent = String(expSoon + expDone);
+            if (expSubEl) expSubEl.textContent = `${expSoon} expiring in 30d · ${expDone} expired`;
+
+            // 2. Active Period Banner
+            const badgeEl = document.getElementById('periodicBadge');
+            const titleEl = document.getElementById('periodicTitle');
+            const descEl = document.getElementById('periodicDesc');
+
+            const badgeLabels = {
+                daily: '<i class="fas fa-calendar-day"></i> Day Report (Today)',
+                weekly: '<i class="fas fa-calendar-week"></i> Weekly Operations',
+                monthly: '<i class="fas fa-calendar"></i> Monthly Financial & Operations',
+                overall: '<i class="fas fa-earth-asia"></i> Overall Master Audit',
+                custom: '<i class="fas fa-filter"></i> Custom Filtered Horizon'
+            };
+            if (badgeEl) badgeEl.innerHTML = badgeLabels[period] || '<i class="fas fa-clock"></i> Periodic Report';
+            if (titleEl) titleEl.textContent = data.period_label || 'Periodic Operations Report';
+
+            const descriptions = {
+                daily: "Cashier daily cut-off, today's burial interments, retort cremations, and operational intake for the day.",
+                weekly: "Weekly throughput log, scheduled services vs capacity, recent payment verifications, and compliance monitoring.",
+                monthly: "Monthly reconciliation summary for City Treasury and administrative space utilization.",
+                overall: "Cumulative master audit encompassing all-time revenue, total recorded decedents, active cemetery capacity, and statutory compliance.",
+                custom: `Consolidated operational and revenue overview between ${data.date_from || ''} and ${data.date_to || ''}.`
+            };
+            if (descEl) descEl.textContent = descriptions[period] || descriptions.daily;
+
+            // 3. Payment Method Table
+            const methodTbody = document.getElementById('periodicMethodTableBody');
+            if (methodTbody) {
+                const methods = Array.isArray(data.revenue_by_method) ? data.revenue_by_method : [];
+                if (!methods.length) {
+                    methodTbody.innerHTML = '<tr><td colspan="4" class="text-center" style="padding: 16px; color: #64748b;">No payment transactions recorded for this period.</td></tr>';
+                } else {
+                    const totalMethodRev = methods.reduce((acc, m) => acc + Number(m.total || 0), 0);
+                    methodTbody.innerHTML = methods.map(item => {
+                        const mTotal = Number(item.total || 0);
+                        const mCount = Number(item.count || 0);
+                        const share = totalMethodRev > 0 ? ((mTotal / totalMethodRev) * 100).toFixed(1) : 0;
+                        return `
+                            <tr>
+                                <td><strong><i class="fas fa-wallet" style="margin-right: 6px; color: #047857;"></i>${item.payment_method || 'Unspecified'}</strong></td>
+                                <td class="text-right">${mCount.toLocaleString()}</td>
+                                <td class="text-right"><strong>${formatPeso(mTotal)}</strong></td>
+                                <td class="text-right">${share}%</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            }
+
+            // 4. Service Stream Table
+            const serviceTbody = document.getElementById('periodicServiceTableBody');
+            if (serviceTbody) {
+                const services = Array.isArray(data.revenue_by_service) ? data.revenue_by_service : [];
+                if (!services.length) {
+                    serviceTbody.innerHTML = '<tr><td colspan="4" class="text-center" style="padding: 16px; color: #64748b;">No service revenue recorded for this period.</td></tr>';
+                } else {
+                    serviceTbody.innerHTML = services.map(item => {
+                        const sTotal = Number(item.total || 0);
+                        const sCount = Number(item.count || 0);
+                        const sAvg = sCount > 0 ? (sTotal / sCount) : 0;
+                        return `
+                            <tr>
+                                <td><strong>${item.transaction_type || 'General Service'}</strong></td>
+                                <td class="text-right">${sCount.toLocaleString()}</td>
+                                <td class="text-right"><strong>${formatPeso(sTotal)}</strong></td>
+                                <td class="text-right">${formatPeso(sAvg)}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            }
+
+            // 5. Operations Tiles
+            const sTotalEl = document.getElementById('schedTileTotal');
+            const sConfEl = document.getElementById('schedTileConfirmed');
+            const sPendEl = document.getElementById('schedTilePending');
+            const sCompEl = document.getElementById('schedTileCompleted');
+            if (sTotalEl) sTotalEl.textContent = Number(data.schedules?.total || 0).toLocaleString();
+            if (sConfEl) sConfEl.textContent = Number(data.schedules?.confirmed || 0).toLocaleString();
+            if (sPendEl) sPendEl.textContent = Number(data.schedules?.pending || 0).toLocaleString();
+            if (sCompEl) sCompEl.textContent = Number(data.schedules?.completed || 0).toLocaleString();
+
+            const cTotalEl = document.getElementById('cremTileTotal');
+            const cSchedEl = document.getElementById('cremTileScheduled');
+            const cPendEl = document.getElementById('cremTilePending');
+            const cCompEl = document.getElementById('cremTileCompleted');
+            if (cTotalEl) cTotalEl.textContent = Number(data.cremations?.total || 0).toLocaleString();
+            if (cSchedEl) cSchedEl.textContent = Number(data.cremations?.scheduled || 0).toLocaleString();
+            if (cPendEl) cPendEl.textContent = Number(data.cremations?.pending || 0).toLocaleString();
+            if (cCompEl) cCompEl.textContent = Number(data.cremations?.completed || 0).toLocaleString();
+
+            // 6. Narrative & KPI Chips
+            const narrEl = document.getElementById('periodicNarrative');
+            const kpiRowEl = document.getElementById('periodicKpisRow');
+
+            if (narrEl) {
+                const decPeriod = Number(data.decedents?.period_total || 0);
+                const decAll = Number(data.decedents?.all_time_total || 0);
+                narrEl.innerHTML = `
+                    For <strong>${data.period_label || 'the selected period'}</strong>, total verified revenue collections reached 
+                    <strong>${formatPeso(totalRev)}</strong> across <strong>${txCount} transactions</strong> 
+                    (with <strong>${formatPeso(pendingRev)}</strong> currently pending verification). 
+                    During this timeframe, <strong>${schedTotal} burial schedules</strong> were recorded (${schedConfirmed} confirmed, ${Number(data.schedules?.pending || 0)} pending) 
+                    and <strong>${cremTotal} cremation requests</strong> were processed. 
+                    Overall cemetery capacity remains at <strong>${occRate}% utilization</strong> with <strong>${occAvail.toLocaleString()} open plots</strong> available for assignment. 
+                    A total of <strong>${decPeriod} decedents</strong> were logged during this period (bringing the master cemetery decedent registry to <strong>${decAll.toLocaleString()} decedents</strong>).
+                `;
+            }
+
+            if (kpiRowEl) {
+                kpiRowEl.innerHTML = `
+                    <div class="periodic-kpi-chip"><i class="fas fa-peso-sign"></i> Verified Revenue: <strong>${formatPeso(totalRev)}</strong></div>
+                    <div class="periodic-kpi-chip"><i class="fas fa-receipt"></i> Transactions: <strong>${txCount}</strong></div>
+                    <div class="periodic-kpi-chip"><i class="fas fa-calendar-check"></i> Bookings: <strong>${schedTotal}</strong></div>
+                    <div class="periodic-kpi-chip"><i class="fas fa-fire"></i> Cremations: <strong>${cremTotal}</strong></div>
+                    <div class="periodic-kpi-chip"><i class="fas fa-users"></i> Decedents: <strong>${Number(data.decedents?.period_total || 0)}</strong></div>
+                    <div class="periodic-kpi-chip"><i class="fas fa-hourglass-half"></i> Leases Expiring Soon: <strong>${expSoon}</strong></div>
+                `;
+            }
+
+        } catch (error) {
+            console.error('Failed to load periodic summary:', error);
+            if (typeof showToast === 'function') {
+                showToast('Failed to load periodic report data', { type: 'error' });
+            }
+        }
     }
 
     async function loadOccupancy() {
@@ -4201,6 +4396,41 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     });
 
+    // Periodic Summary Switcher Listeners
+    document.querySelectorAll('.period-pill-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            document.querySelectorAll('.period-pill-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const period = btn.getAttribute('data-period');
+            const dateFromInput = document.getElementById('periodicDateFrom');
+            const dateToInput = document.getElementById('periodicDateTo');
+            if (dateFromInput) dateFromInput.value = '';
+            if (dateToInput) dateToInput.value = '';
+            await loadPeriodicSummary(period);
+        });
+    });
+
+    document.getElementById('applyPeriodicFilter')?.addEventListener('click', async () => {
+        const from = document.getElementById('periodicDateFrom')?.value;
+        const to = document.getElementById('periodicDateTo')?.value;
+        if (!from && !to) {
+            if (typeof showToast === 'function') showToast('Please select at least one date', { type: 'warning' });
+            return;
+        }
+        document.querySelectorAll('.period-pill-btn').forEach(b => b.classList.remove('active'));
+        await loadPeriodicSummary('custom', { date_from: from, date_to: to });
+    });
+
+    document.getElementById('resetPeriodicFilter')?.addEventListener('click', async () => {
+        const dateFromInput = document.getElementById('periodicDateFrom');
+        const dateToInput = document.getElementById('periodicDateTo');
+        if (dateFromInput) dateFromInput.value = '';
+        if (dateToInput) dateToInput.value = '';
+        document.querySelectorAll('.period-pill-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.period-pill-btn[data-period="daily"]')?.classList.add('active');
+        await loadPeriodicSummary('daily');
+    });
+
     document.getElementById('revDateFrom').value = '';
     document.getElementById('revDateTo').value = '';
 
@@ -4210,6 +4440,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadReservations();
     await loadDemographics();
     await loadExpiration();
+    await loadPeriodicSummary('daily');
     updateNotificationBadge();
     setInterval(updateNotificationBadge, 30000);
 
