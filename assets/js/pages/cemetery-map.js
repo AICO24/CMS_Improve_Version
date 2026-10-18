@@ -59,39 +59,37 @@
         nodes: {
             EXTERNAL_ENTRY: { id: 'EXTERNAL_ENTRY', x: 1101, y: 928, label: 'P. Aquino Avenue Ingress' },
             MAIN_GATE: { id: 'MAIN_GATE', x: 1096, y: 881, label: 'Main Gate Portal (P. Aquino Ave)' },
-            SOUTH_JUNCTION: { id: 'SOUTH_JUNCTION', x: 1090, y: 820, label: 'Entrance Corridor Junction' },
-            CENTRAL_ROUNDABOUT: { id: 'CENTRAL_ROUNDABOUT', x: 800, y: 545, label: 'Memorial Roundabout' },
-            NORTH_TERMINUS: { id: 'NORTH_TERMINUS', x: 800, y: 80, label: 'St. Peter Way Junction' },
-            WEST_CROSSWAY: { id: 'WEST_CROSSWAY', x: 95, y: 545, label: 'Avenue of Peace (West End)' },
-            EAST_CROSSWAY: { id: 'EAST_CROSSWAY', x: 1505, y: 545, label: 'Avenue of Peace (East End)' },
+            SOUTH_JUNCTION: { id: 'SOUTH_JUNCTION', x: 1088, y: 755, label: 'Entrance Corridor Junction' },
+            PARKING_ACCESS: { id: 'PARKING_ACCESS', x: 1035, y: 755, label: 'Visitor Parking Zone' },
+            PARKING_SOUTH: { id: 'PARKING_SOUTH', x: 1035, y: 785, label: 'Visitor Parking (South Bay)' },
+            EAST_CORRIDOR_JUNCTION: { id: 'EAST_CORRIDOR_JUNCTION', x: 1085, y: 545, label: 'Avenue of Peace (East Entrance)' },
+            CENTRAL_ROUNDABOUT: { id: 'CENTRAL_ROUNDABOUT', x: 800, y: 545, label: 'Avenue of Peace (Central Spine Crossing)' },
+            CENTRAL_CROSSWAY: { id: 'CENTRAL_CROSSWAY', x: 800, y: 545, label: 'Avenue of Peace (Central Spine Crossing)' },
+            WEST_CROSSWAY: { id: 'WEST_CROSSWAY', x: 655, y: 545, label: 'Western Avenue Crossing' },
+            WEST_CURVE_MID: { id: 'WEST_CURVE_MID', x: 630, y: 410, label: 'Western Park Drive (Mid Curve)' },
+            WEST_CURVE_NORTH: { id: 'WEST_CURVE_NORTH', x: 690, y: 275, label: 'Northwest Lawn Junction' },
+            PROMENADE_JUNCTION: { id: 'PROMENADE_JUNCTION', x: 800, y: 275, label: 'Central Promenade Crossing' },
+
+            // Northeast Roundabout (Google Maps Signature Feature)
+            ROTUNDA_ENTRY: { id: 'ROTUNDA_ENTRY', x: 970, y: 342, label: 'Memorial Rotunda (South Ingress)' },
+            ROTUNDA_CENTER: { id: 'ROTUNDA_CENTER', x: 970, y: 320, label: 'Memorial Rotunda Island' },
+            ROTUNDA_NORTH: { id: 'ROTUNDA_NORTH', x: 970, y: 298, label: 'Memorial Rotunda (North Ingress)' },
+            ROTUNDA_WEST: { id: 'ROTUNDA_WEST', x: 948, y: 320, label: 'Memorial Rotunda (West Ingress)' },
+            ROTUNDA_EAST: { id: 'ROTUNDA_EAST', x: 992, y: 320, label: 'Memorial Rotunda (East Ingress)' },
+
+            // Facility Anchors
             ADMIN_ACCESS: { id: 'ADMIN_ACCESS', x: 782, y: 380, label: 'Administration Office' },
             CHAPEL_ACCESS: { id: 'CHAPEL_ACCESS', x: 858, y: 362, label: 'Memorial Chapel' },
             COLUMBARIUM_ACCESS: { id: 'COLUMBARIUM_ACCESS', x: 886, y: 274, label: 'Columbarium Sanctuary' },
             CREMATORIUM_ACCESS: { id: 'CREMATORIUM_ACCESS', x: 978, y: 271, label: 'Crematorium Facility' },
             COMFORT_ROOM_ACCESS: { id: 'COMFORT_ROOM_ACCESS', x: 932, y: 247, label: 'Comfort Room (CR)' },
-            PARKING_ACCESS: { id: 'PARKING_ACCESS', x: 1035, y: 755, label: 'Visitor Parking Zone' },
-            SEC_GARDEN_PEACE: { id: 'SEC_GARDEN_PEACE', x: 800, y: 425, label: 'Garden of Everlasting Peace Access' },
-            SEC_LOURDES: { id: 'SEC_LOURDES', x: 672, y: 427, label: 'Garden of Our Lady of Lourdes Access' },
-            SEC_SAN_JOSE: { id: 'SEC_SAN_JOSE', x: 733, y: 280, label: 'Sanctuario de San Jose Access' },
-            SEC_COLUMBARIUM: { id: 'SEC_COLUMBARIUM', x: 886, y: 274, label: 'Columbarium Sanctuary Access' },
-
-            // Secondary Intersections on Master Map
-            PROMENADE_JUNCTION: { id: 'PROMENADE_JUNCTION', x: 800, y: 300, label: 'Central Promenade Junction' },
-            MID_WEST_CROSSWAY: { id: 'MID_WEST_CROSSWAY', x: 515, y: 545, label: 'Avenue of Peace (Mid-West Junction)' },
-            MID_EAST_CROSSWAY: { id: 'MID_EAST_CROSSWAY', x: 1085, y: 545, label: 'Avenue of Peace (Mid-East Junction)' },
-            WEST_PROM: { id: 'WEST_PROM', x: 95, y: 300, label: 'Internal Promenade (West End)' },
-            MID_WEST_PROM: { id: 'MID_WEST_PROM', x: 515, y: 300, label: 'Internal Promenade (Mid-West)' },
-            MID_EAST_PROM: { id: 'MID_EAST_PROM', x: 1085, y: 300, label: 'Internal Promenade (Mid-East)' },
-            EAST_PROM: { id: 'EAST_PROM', x: 1505, y: 300, label: 'Internal Promenade (East End)' },
-            NORTH_WEST: { id: 'NORTH_WEST', x: 95, y: 80, label: 'North Boundary Road (West End)' },
-            NORTH_MID_WEST: { id: 'NORTH_MID_WEST', x: 515, y: 80, label: 'North Boundary Road (Mid-West)' },
-            NORTH_MID_EAST: { id: 'NORTH_MID_EAST', x: 1085, y: 80, label: 'North Boundary Road (Mid-East)' },
-            NORTH_EAST: { id: 'NORTH_EAST', x: 1505, y: 80, label: 'North Boundary Road (East End)' },
-            WEST_SERVICE: { id: 'WEST_SERVICE', x: 95, y: 865, label: 'South Service Road (West End)' },
-            EAST_SERVICE: { id: 'EAST_SERVICE', x: 1505, y: 865, label: 'South Service Road (East End)' },
-            CREMATORIUM_SPINE: { id: 'CREMATORIUM_SPINE', x: 800, y: 545, label: 'Central Spine (Memorial Roundabout)' },
             COLUMBARIUM_SOUTH: { id: 'COLUMBARIUM_SOUTH', x: 886, y: 310, label: 'Columbarium South Approach' },
-            PARKING_SOUTH: { id: 'PARKING_SOUTH', x: 1035, y: 785, label: 'Visitor Parking (South Bay)' },
+
+            // Legacy & Context Intersections
+            MID_WEST_CROSSWAY: { id: 'MID_WEST_CROSSWAY', x: 655, y: 545, label: 'Avenue of Peace (West Junction)' },
+            MID_EAST_CROSSWAY: { id: 'MID_EAST_CROSSWAY', x: 1085, y: 545, label: 'Avenue of Peace (East Junction)' },
+            CREMATORIUM_SPINE: { id: 'CREMATORIUM_SPINE', x: 970, y: 342, label: 'Crematorium Rotunda Ingress' },
+            NORTH_TERMINUS: { id: 'NORTH_TERMINUS', x: 871, y: 190, label: 'Columbarium North Court' },
 
             // Block & Terrace Level Access
             SEC_A_SPINE_LEFT: { id: 'SEC_A_SPINE_LEFT', x: 780, y: 425, label: 'Section A (Block A1 Entrance)' },
@@ -104,74 +102,62 @@
             SEC_C_NORTH_ACCESS: { id: 'SEC_C_NORTH_ACCESS', x: 733, y: 280, label: 'Sanctuario de San Jose (North Entrance)' },
             SEC_D_SOUTH_ACCESS: { id: 'SEC_D_SOUTH_ACCESS', x: 871, y: 315, label: 'Columbarium & Ossuary (Promenade Entrance)' },
             SEC_D_NORTH_ACCESS: { id: 'SEC_D_NORTH_ACCESS', x: 871, y: 190, label: 'Columbarium & Ossuary (North Entrance)' },
-            SEC_E_WEST_ACCESS: { id: 'SEC_E_WEST_ACCESS', x: 875, y: 411, label: 'Section E (Mid-East Road Entrance)' },
-            SEC_E_EAST_ACCESS: { id: 'SEC_E_EAST_ACCESS', x: 945, y: 411, label: 'Section E (East Ring Road Entrance)' },
-            SEC_E_SOUTH_ACCESS: { id: 'SEC_E_SOUTH_ACCESS', x: 910, y: 432, label: 'Section E (Avenue Ingress)' }
+            SEC_E_WEST_ACCESS: { id: 'SEC_E_WEST_ACCESS', x: 885, y: 411, label: 'Section E (Courtyard Entrance)' },
+            SEC_E_EAST_ACCESS: { id: 'SEC_E_EAST_ACCESS', x: 945, y: 411, label: 'Section E (Rotunda Approach)' },
+            SEC_E_SOUTH_ACCESS: { id: 'SEC_E_SOUTH_ACCESS', x: 920, y: 432, label: 'Section E (Avenue Ingress)' },
+            SEC_GARDEN_PEACE: { id: 'SEC_GARDEN_PEACE', x: 800, y: 425, label: 'Garden of Everlasting Peace Access' },
+            SEC_LOURDES: { id: 'SEC_LOURDES', x: 672, y: 427, label: 'Garden of Our Lady of Lourdes Access' },
+            SEC_SAN_JOSE: { id: 'SEC_SAN_JOSE', x: 733, y: 280, label: 'Sanctuario de San Jose Access' },
+            SEC_COLUMBARIUM: { id: 'SEC_COLUMBARIUM', x: 886, y: 274, label: 'Columbarium Sanctuary Access' }
         },
         edges: [
             ['EXTERNAL_ENTRY', 'MAIN_GATE'],
             ['MAIN_GATE', 'SOUTH_JUNCTION'],
             ['SOUTH_JUNCTION', 'PARKING_ACCESS'],
             ['PARKING_ACCESS', 'PARKING_SOUTH'],
-            ['SOUTH_JUNCTION', 'MID_EAST_CROSSWAY'],
-            ['SOUTH_JUNCTION', 'CREMATORIUM_SPINE'],
-            ['SOUTH_JUNCTION', 'COLUMBARIUM_SOUTH'],
-            ['MID_EAST_CROSSWAY', 'CENTRAL_ROUNDABOUT'],
-            ['MID_EAST_CROSSWAY', 'MID_EAST_PROM'],
-            ['MID_EAST_CROSSWAY', 'SEC_E_SOUTH_ACCESS'],
-            ['CREMATORIUM_SPINE', 'CENTRAL_ROUNDABOUT'],
-            ['CENTRAL_ROUNDABOUT', 'SEC_A_SPINE_LEFT'],
-            ['CENTRAL_ROUNDABOUT', 'SEC_A_SPINE_RIGHT'],
-            ['CENTRAL_ROUNDABOUT', 'MID_WEST_CROSSWAY'],
+            ['SOUTH_JUNCTION', 'EAST_CORRIDOR_JUNCTION'],
+            ['EAST_CORRIDOR_JUNCTION', 'MID_EAST_CROSSWAY'],
+            ['EAST_CORRIDOR_JUNCTION', 'CENTRAL_CROSSWAY'],
+            ['EAST_CORRIDOR_JUNCTION', 'ROTUNDA_ENTRY'],
+            ['EAST_CORRIDOR_JUNCTION', 'SEC_E_SOUTH_ACCESS'],
+            ['CENTRAL_CROSSWAY', 'CENTRAL_ROUNDABOUT'],
+            ['CENTRAL_CROSSWAY', 'WEST_CROSSWAY'],
+            ['CENTRAL_CROSSWAY', 'SEC_A_SPINE_LEFT'],
+            ['CENTRAL_CROSSWAY', 'SEC_A_SPINE_RIGHT'],
+            ['CENTRAL_CROSSWAY', 'SEC_B_EAST_ACCESS'],
+            ['WEST_CROSSWAY', 'MID_WEST_CROSSWAY'],
+            ['WEST_CROSSWAY', 'WEST_CURVE_MID'],
+            ['WEST_CURVE_MID', 'SEC_B_WEST_ACCESS'],
+            ['WEST_CURVE_MID', 'WEST_CURVE_NORTH'],
+            ['WEST_CURVE_NORTH', 'PROMENADE_JUNCTION'],
+            ['WEST_CURVE_NORTH', 'SEC_C_NORTH_ACCESS'],
             ['SEC_A_SPINE_LEFT', 'ADMIN_ACCESS'],
             ['ADMIN_ACCESS', 'PROMENADE_JUNCTION'],
             ['SEC_A_SPINE_RIGHT', 'CHAPEL_ACCESS'],
             ['CHAPEL_ACCESS', 'PROMENADE_JUNCTION'],
-            ['PROMENADE_JUNCTION', 'COLUMBARIUM_ACCESS'],
-            ['COLUMBARIUM_ACCESS', 'CREMATORIUM_ACCESS'],
-            ['CREMATORIUM_ACCESS', 'COMFORT_ROOM_ACCESS'],
-            ['CREMATORIUM_ACCESS', 'MID_EAST_PROM'],
-            ['PROMENADE_JUNCTION', 'NORTH_TERMINUS'],
-            ['PROMENADE_JUNCTION', 'SEC_GARDEN_PEACE'],
+            ['CHAPEL_ACCESS', 'SEC_E_WEST_ACCESS'],
+            ['PROMENADE_JUNCTION', 'SEC_C_SOUTH_ACCESS'],
+            ['SEC_C_SOUTH_ACCESS', 'SEC_C_NORTH_ACCESS'],
             ['PROMENADE_JUNCTION', 'SEC_D_SOUTH_ACCESS'],
-            ['PROMENADE_JUNCTION', 'MID_WEST_PROM'],
-            ['MID_WEST_CROSSWAY', 'SEC_LOURDES'],
-            ['SEC_LOURDES', 'WEST_CROSSWAY'],
-            ['SEC_E_SOUTH_ACCESS', 'EAST_CROSSWAY'],
-            ['WEST_SERVICE', 'WEST_CROSSWAY'],
-            ['WEST_CROSSWAY', 'SEC_B_WEST_ACCESS'],
-            ['SEC_B_WEST_ACCESS', 'WEST_PROM'],
-            ['WEST_PROM', 'NORTH_WEST'],
-            ['WEST_PROM', 'SEC_C_SOUTH_ACCESS'],
-            ['SEC_C_SOUTH_ACCESS', 'MID_WEST_PROM'],
-            ['MID_WEST_PROM', 'SEC_A_WEST_ACCESS'],
-            ['SEC_A_WEST_ACCESS', 'MID_WEST_CROSSWAY'],
-            ['MID_WEST_PROM', 'SEC_B_EAST_ACCESS'],
-            ['SEC_B_EAST_ACCESS', 'MID_WEST_CROSSWAY'],
-            ['NORTH_WEST', 'SEC_C_NORTH_ACCESS'],
-            ['SEC_C_NORTH_ACCESS', 'NORTH_MID_WEST'],
-            ['NORTH_MID_WEST', 'SEC_SAN_JOSE'],
-            ['SEC_SAN_JOSE', 'MID_WEST_PROM'],
-            ['NORTH_MID_WEST', 'NORTH_TERMINUS'],
-            ['NORTH_TERMINUS', 'SEC_D_NORTH_ACCESS'],
-            ['SEC_D_NORTH_ACCESS', 'NORTH_MID_EAST'],
-            ['NORTH_MID_EAST', 'SEC_COLUMBARIUM'],
-            ['SEC_COLUMBARIUM', 'COLUMBARIUM_ACCESS'],
-            ['NORTH_MID_EAST', 'NORTH_EAST'],
-            ['NORTH_EAST', 'EAST_PROM'],
-            ['EAST_PROM', 'SEC_E_EAST_ACCESS'],
-            ['SEC_E_EAST_ACCESS', 'EAST_CROSSWAY'],
-            ['EAST_CROSSWAY', 'EAST_SERVICE'],
-            ['MID_EAST_PROM', 'SEC_A_EAST_ACCESS'],
-            ['SEC_A_EAST_ACCESS', 'MID_EAST_CROSSWAY'],
-            ['MID_EAST_PROM', 'SEC_E_WEST_ACCESS'],
-            ['SEC_E_WEST_ACCESS', 'MID_EAST_CROSSWAY'],
+            ['SEC_D_SOUTH_ACCESS', 'SEC_D_NORTH_ACCESS'],
+            ['PROMENADE_JUNCTION', 'COLUMBARIUM_ACCESS'],
             ['COLUMBARIUM_ACCESS', 'COLUMBARIUM_SOUTH'],
-            ['WEST_SERVICE', 'CHAPEL_ACCESS'],
-            ['CHAPEL_ACCESS', 'PARKING_SOUTH'],
-            ['PARKING_SOUTH', 'PARKING_ACCESS'],
-            ['COLUMBARIUM_SOUTH', 'COMFORT_ROOM_ACCESS'],
-            ['COMFORT_ROOM_ACCESS', 'EAST_SERVICE']
+            ['PROMENADE_JUNCTION', 'ROTUNDA_WEST'],
+            ['ROTUNDA_WEST', 'ROTUNDA_NORTH'],
+            ['ROTUNDA_NORTH', 'ROTUNDA_EAST'],
+            ['ROTUNDA_EAST', 'ROTUNDA_ENTRY'],
+            ['ROTUNDA_ENTRY', 'ROTUNDA_WEST'],
+            ['ROTUNDA_NORTH', 'CREMATORIUM_ACCESS'],
+            ['CREMATORIUM_ACCESS', 'COMFORT_ROOM_ACCESS'],
+            ['ROTUNDA_ENTRY', 'SEC_E_EAST_ACCESS'],
+            ['SEC_E_EAST_ACCESS', 'SEC_E_SOUTH_ACCESS'],
+            ['SEC_E_SOUTH_ACCESS', 'SEC_E_WEST_ACCESS'],
+            ['PROMENADE_JUNCTION', 'SEC_GARDEN_PEACE'],
+            ['MID_WEST_CROSSWAY', 'SEC_LOURDES'],
+            ['SEC_LOURDES', 'SEC_B_WEST_ACCESS'],
+            ['SEC_D_NORTH_ACCESS', 'NORTH_TERMINUS'],
+            ['COLUMBARIUM_ACCESS', 'SEC_COLUMBARIUM'],
+            ['PROMENADE_JUNCTION', 'SEC_SAN_JOSE']
         ]
     };
 
@@ -1845,33 +1831,34 @@ perimeterTrees.innerHTML =
     treeLine(1102.3, 690.7, 1168.9, 900.0, 22, 6.5, 9, 1.2);
 
 // ==========================================
-// LAYER 1: ROAD-FIRST GEOMETRY (The Structural Skeleton of the Map)
+// LAYER 1: ROAD-FIRST GEOMETRY (Google Maps Authentic Road Skeleton)
 // ==========================================
-// Continuous connected roads that define and carve out all cemetery parcels:
 const roads = [
-    // 1. Entrance Service Road (P. Aquino Ave -> Main Gate -> Neck Corridor -> Central Spine)
+    // 1. Entrance Service Road (P. Aquino Ave -> Main Gate -> Neck Corridor -> Avenue of Peace)
     { d: 'M 1101 928 L 1096 881 L 1090 820 L 1085 680 L 1085 545', w: 22, main: true },
-    // 2. Central Boulevard Spine: from Avenue of Peace junction -> North amenities court
-    { d: `M ${RD.spine} ${RD.mainCross} V 190`, w: 24, main: true },
-    // 3. Main Cross Boulevard (Avenue of Peace): internal circulation inside memorial park
-    { d: `M 640 ${RD.mainCross} H 1050`, w: 22, main: true },
-    // 4. Internal Promenade: separates North sections from Mid sections
-    { d: `M 680 ${RD.promenade} H 1020`, w: 18 },
-    // 8. Mid-West Section Access Road (divides Section B from Section A)
-    { d: `M ${RD.accW} ${RD.promenade} V ${RD.mainCross}`, w: 14 },
-    // 9. Mid-East Section Access Road (divides Section A from Section E)
-    { d: `M ${RD.accE} ${RD.promenade} V ${RD.mainCross}`, w: 14 },
-    // 11. Visitor Parking Access Driveway
-    { d: 'M 1035 755 H 1085', w: 16 }
+    // 2. Northbound Circulation Ingress to Northeast Rotunda
+    { d: 'M 1085 545 Q 1075 425 970 344', w: 20, main: true },
+    // 3. Main Cross Boulevard (Avenue of Peace): central east-west axis
+    { d: 'M 1085 545 H 800 H 655', w: 22, main: true },
+    // 4. Western Curving Ring Road (Google Maps authentic western garden perimeter)
+    { d: 'M 655 545 C 620 480 620 400 655 330 C 675 290 730 275 800 275', w: 18, main: true },
+    // 5. Central Boulevard Spine: connecting Avenue of Peace through campus to North Promenade
+    { d: 'M 800 545 V 275', w: 20, main: true },
+    // 6. North Promenade: connecting Central Spine eastward directly into Rotunda West Portal
+    { d: 'M 800 275 H 948', w: 18 },
+    // 7. Chapel Courtyard to Rotunda South Approach
+    { d: 'M 800 410 H 935 Q 970 410 970 344', w: 14 },
+    // 8. Visitor Parking Access Driveway
+    { d: 'M 1035 755 H 1088', w: 16 }
 ];
 
 // Pedestrian Walkways connecting landmarks, roads, and block parcels
 const primaryPaths = [
-    `M 782 300 V 360`,                                          // Spine Promenade to Admin Office
-    `M 858 300 V 345`,                                          // Promenade to Memorial Chapel
-    `M 886 215 V 320`,                                          // North walk through Columbarium pavilion cluster
-    `M 920 270 H 955`,                                          // East cross walk to Crematorium
-    `M 978 288 V 300`,                                          // Crematorium south approach to Promenade
+    `M 782 275 V 360`,                                          // Promenade to Admin Office
+    `M 858 275 V 345`,                                          // Promenade to Memorial Chapel
+    `M 886 215 V 275`,                                          // North walk through Columbarium pavilion cluster
+    `M 920 270 H 965`,                                          // East cross walk to Crematorium
+    `M 975 255 V 298`,                                          // Crematorium south approach to Rotunda North Ingress
     `M 1035 755 H 1085`                                         // Parking pedestrian connection to Entrance Road
 ];
 
@@ -1891,13 +1878,38 @@ roads.forEach(r => {
     }
 });
 
-roadG.innerHTML = pathUnder + pathFill + roadCurbs + roadAsphalt + roadStripes + `
+// ==========================================
+// NORTHEAST ROUNDABOUT / ROTUNDA (Signature Google Maps Feature)
+// ==========================================
+const rotundaHtml = `
+    <!-- Roundabout Outer Curb -->
+    <circle cx="970" cy="320" r="26" class="mp-road-curb" stroke-width="26"/>
+    <!-- Roundabout Asphalt Roadbed -->
+    <circle cx="970" cy="320" r="26" class="mp-road mp-road--main" stroke-width="20"/>
+    <!-- Roundabout Circulating Centerline -->
+    <circle cx="970" cy="320" r="26" class="mp-road-line" stroke-dasharray="6 5"/>
+    <!-- Central Island Curb -->
+    <circle cx="970" cy="320" r="16" class="mp-road-curb" stroke-width="2"/>
+    <!-- Central Landscaped Lawn Island -->
+    <circle cx="970" cy="320" r="15" fill="#4e8346" stroke="#2e5926" stroke-width="1.5"/>
+    <circle cx="970" cy="320" r="15" fill="url(#mpLawnStripes)" class="mp-texture"/>
+    <!-- Central Ornamental Shrubs and Memorial Plinth -->
+    <circle cx="970" cy="320" r="4.5" fill="#e2e8f0" stroke="#475569" stroke-width="1"/>
+    <circle cx="970" cy="320" r="2" fill="#f59e0b"/>
+    <!-- Decorative Tree Cluster on Island -->
+    ${treeCluster(970, 320, 3, 7, 2.5, 4.2)}
+    <!-- Rotunda Identifier Pill -->
+    ${pillSvg(970, 276, 'Memorial Rotunda', '⭕', 'navy')}
+`;
+
+roadG.innerHTML = pathUnder + pathFill + roadCurbs + roadAsphalt + roadStripes + rotundaHtml + `
     <!-- Road Name Annotations -->
     <text x="730" y="541" class="mp-road-label">AVENUE OF PEACE</text>
     <text x="965" y="541" class="mp-road-label">AVENUE OF PEACE</text>
     <text x="803" y="370" class="mp-road-label" transform="rotate(-90 803 370)">MAIN SPINE</text>
-    <text x="880" y="297" class="mp-road-label mp-road-label--minor">INTERNAL PROMENADE</text>
+    <text x="870" y="271" class="mp-road-label mp-road-label--minor">PROMENADE</text>
     <text x="1075" y="760" class="mp-road-label mp-road-label--minor" transform="rotate(-90 1075 760)">ENTRANCE ROAD</text>
+    <text x="635" y="420" class="mp-road-label mp-road-label--minor" transform="rotate(-90 635 420)">WEST PARK DRIVE</text>
 `;
 
 // Boulevard Trees Lining Main Road

@@ -6115,6 +6115,14 @@ body.dark-mode .btn-wayfinding-slip:hover {
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
 }
 
+/* Northeast Memorial Rotunda (Batch 22 Google Maps Feature) */
+.mp-rotunda-group {
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.16));
+}
+[data-theme="dark"] .mp-rotunda-group {
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+}
+
 /* Main Gate Entrance Portal */
 .mp-gate-apron {
     fill: #cbd5e1;
