@@ -1064,6 +1064,14 @@
                             <button type="button" class="btn btn-primary btn-block btn-get-directions" id="btnGetDirectionsLot" title="Calculate route from Main Gate to this lot" aria-label="Get directions to selected lot">
                                 <i class="fas fa-route"></i> Get Directions from Main Gate
                             </button>
+                            <div class="drawer-actions-grid">
+                                <button type="button" class="btn btn-secondary btn-share-qr-walk" id="btnShareQrWalk" title="Generate Walk-to-Grave Mobile QR Code">
+                                    <i class="fas fa-qrcode"></i> Walk-to-Grave QR
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-request-maintenance" id="btnRequestMaintenance" title="Report grounds maintenance work order">
+                                    <i class="fas fa-handyman"></i> Grounds Ticket
+                                </button>
+                            </div>
                             <button type="button" class="btn btn-secondary btn-block btn-center-drawer" id="btnCenterOnMapDrawer">
                                 <i class="fas fa-crosshairs"></i> Center on Map
                             </button>
@@ -1372,6 +1380,173 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- BATCH 39: WALK-TO-GRAVE MOBILE QR WAYFINDING MODAL (CIMS/PERPETUA BENCHMARK) -->
+    <div class="qr-modal-backdrop" id="qrWalkToGraveModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="qrModalTitle">
+        <div class="qr-modal-dialog">
+            <div class="qr-modal-header">
+                <div class="qr-title-wrap">
+                    <div class="qr-icon-emblem"><i class="fas fa-qrcode"></i></div>
+                    <div>
+                        <h2 class="qr-modal-title" id="qrModalTitle">Walk-to-Grave Mobile Wayfinding</h2>
+                        <p class="qr-modal-subtitle">Scan on any smartphone to open live turn-by-turn walking route directly to this plot</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-qr-modal-close" id="btnCloseQrModal" aria-label="Close Walk-to-Grave QR Modal">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="qr-modal-body">
+                <!-- PLOT HERO SUMMARY -->
+                <div class="qr-lot-summary-card">
+                    <div class="qr-lot-badge-row">
+                        <span class="qr-lot-badge" id="qrModalPlotBadge">Plot Lot —</span>
+                        <span class="qr-lot-status-pill" id="qrModalStatusPill">Available</span>
+                    </div>
+                    <div class="qr-lot-hierarchy" id="qrModalHierarchy">Section — &bull; Block —</div>
+                    <div class="qr-decedent-tag" id="qrModalDecedentTag" style="display: none;">
+                        <i class="fas fa-cross"></i> <span id="qrModalDecedentName">—</span>
+                    </div>
+                </div>
+
+                <!-- QR STAGE -->
+                <div class="qr-stage-card">
+                    <div class="qr-canvas-wrapper" id="qrCanvasWrapper">
+                        <div class="qr-svg-holder" id="qrSvgHolder" role="img" aria-label="QR Code for mobile navigation">
+                            <!-- Dynamic SVG QR Matrix rendered here -->
+                        </div>
+                        <div class="qr-center-logo">
+                            <i class="fas fa-person-walking"></i>
+                        </div>
+                    </div>
+                    <div class="qr-scan-badge">
+                        <i class="fas fa-camera"></i> Point Camera or Lens to Navigate
+                    </div>
+                </div>
+
+                <!-- DIRECT MOBILE LINK COPY BOX -->
+                <div class="qr-link-copy-card">
+                    <label for="qrDirectUrlInput" class="qr-url-label">Direct Mobile Navigation Link:</label>
+                    <div class="qr-url-input-group">
+                        <input type="text" id="qrDirectUrlInput" class="qr-url-input" readonly value="" />
+                        <button type="button" class="btn btn-primary btn-copy-qr" id="btnCopyQrUrl" title="Copy navigation link to clipboard">
+                            <i class="fas fa-copy"></i> <span id="copyQrBtnText">Copy Link</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- QUICK ACTIONS IN MODAL -->
+                <div class="qr-modal-actions-row">
+                    <button type="button" class="btn btn-secondary btn-qr-action" id="btnOpenMobileViewNow">
+                        <i class="fas fa-arrow-up-right-from-square"></i> Test on Device
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-qr-action" id="btnPrintQrMarkerCard">
+                        <i class="fas fa-print"></i> Print Marker QR Tag
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-qr-action" id="btnShareMobileLink">
+                        <i class="fas fa-share-nodes"></i> Share Link
+                    </button>
+                </div>
+
+                <!-- VISITOR ON-GROUNDS GUIDELINES -->
+                <div class="qr-guide-box">
+                    <div class="qr-guide-step">
+                        <span class="guide-num">1</span>
+                        <span>Scan this QR code using any smartphone camera or QR reader.</span>
+                    </div>
+                    <div class="qr-guide-step">
+                        <span class="guide-num">2</span>
+                        <span>Tap the link to open the map centered directly on this plot.</span>
+                    </div>
+                    <div class="qr-guide-step">
+                        <span class="guide-num">3</span>
+                        <span>The live turn-by-turn walking route from the Main Gate is automatically drawn.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BATCH 39: GROUNDS MAINTENANCE WORK ORDER MODAL (CIMS WORK ORDER BENCHMARK) -->
+    <div class="maint-modal-backdrop" id="groundsMaintenanceModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="maintModalTitle">
+        <div class="maint-modal-dialog">
+            <div class="maint-modal-header">
+                <div class="maint-title-wrap">
+                    <div class="maint-icon-emblem"><i class="fas fa-handyman"></i></div>
+                    <div>
+                        <h2 class="maint-modal-title" id="maintModalTitle">Submit Grounds Maintenance Ticket</h2>
+                        <p class="maint-modal-subtitle">Dispatch groundskeeping or care order for Plot <strong id="maintPlotRef">—</strong></p>
+                    </div>
+                </div>
+                <button type="button" class="btn-maint-modal-close" id="btnCloseMaintModal" aria-label="Close Maintenance Modal">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <form class="maint-modal-form" id="groundsMaintenanceForm">
+                <div class="maint-modal-body">
+                    <div class="maint-lot-summary-pill">
+                        <i class="fas fa-map-pin"></i>
+                        <span id="maintSummaryLocation">Plot Details</span>
+                    </div>
+
+                    <div class="maint-form-group">
+                        <label for="maintCategory" class="maint-form-label">Maintenance Request Category <span class="required">*</span></label>
+                        <select id="maintCategory" class="form-control maint-select" required>
+                            <option value="Turf Care & Grass Trimming">Turf Care &amp; Grass Trimming</option>
+                            <option value="Monument Cleaning & Wash">Monument / Marker Cleaning &amp; Power-Wash</option>
+                            <option value="Sunken Soil Re-leveling">Sunken Soil &amp; Ground Re-leveling</option>
+                            <option value="Headstone / Vault Inspection">Headstone &amp; Concrete Vault Inspection</option>
+                            <option value="Floral & Debris Clean-up">Floral / Debris / Leaf Clean-up</option>
+                            <option value="Pest & Ant Control">Ant &amp; Pest Control Treatment</option>
+                            <option value="Other Grounds Maintenance">Other Grounds Maintenance Service</option>
+                        </select>
+                    </div>
+
+                    <div class="maint-form-row">
+                        <div class="maint-form-group">
+                            <label for="maintPriority" class="maint-form-label">Urgency Priority</label>
+                            <select id="maintPriority" class="form-control maint-select">
+                                <option value="Standard">Standard Routine (Regular Maintenance Schedule)</option>
+                                <option value="Priority">Priority (Upcoming Memorial / Family Visit)</option>
+                                <option value="Urgent">Urgent (Safety Hazard / Sunken Ground)</option>
+                            </select>
+                        </div>
+                        <div class="maint-form-group">
+                            <label for="maintRequesterType" class="maint-form-label">Requester Role</label>
+                            <select id="maintRequesterType" class="form-control maint-select">
+                                <option value="Family / Plot Owner">Family / Plot Owner</option>
+                                <option value="Visitor">Park Visitor</option>
+                                <option value="Grounds Staff">Grounds Staff / Field Ranger</option>
+                                <option value="Office Admin">Administration Office</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="maint-form-row">
+                        <div class="maint-form-group">
+                            <label for="maintContactName" class="maint-form-label">Requester Name</label>
+                            <input type="text" id="maintContactName" class="form-control" placeholder="e.g. Maria Santos" />
+                        </div>
+                        <div class="maint-form-group">
+                            <label for="maintContactPhone" class="maint-form-label">Contact Mobile / Email</label>
+                            <input type="text" id="maintContactPhone" class="form-control" placeholder="e.g. 0917-123-4567" />
+                        </div>
+                    </div>
+
+                    <div class="maint-form-group">
+                        <label for="maintNotes" class="maint-form-label">Work Order Details &amp; Observations</label>
+                        <textarea id="maintNotes" class="form-control maint-textarea" rows="3" placeholder="Describe the specific maintenance required (e.g. Grass overgrown over the brass headstone marker, needs trimming before Saturday service)..."></textarea>
+                    </div>
+                </div>
+                <div class="maint-modal-footer">
+                    <button type="button" class="btn btn-secondary" id="btnCancelMaint">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="btnSubmitMaint">
+                        <i class="fas fa-check-circle"></i> Submit Maintenance Ticket
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

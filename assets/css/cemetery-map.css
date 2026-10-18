@@ -8761,5 +8761,547 @@ button.btn-today-services.is-active,
     color: #38bdf8;
 }
 
+/* =========================================================================
+   BATCH 39: WALK-TO-GRAVE MOBILE QR WAYFINDING & QUICK ACTIONS (CIMS/PERPETUA)
+   ========================================================================= */
+
+/* Drawer Quick Actions 2-Column Grid */
+.drawer-actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.btn-share-qr-walk,
+.btn-request-maintenance {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 8px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.btn-share-qr-walk {
+    background: #0284c7;
+    color: #ffffff;
+    border: 1px solid #0284c7;
+}
+
+.btn-share-qr-walk:hover {
+    background: #0369a1;
+    border-color: #0369a1;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+}
+
+.btn-request-maintenance {
+    background: #f8fafc;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+}
+
+.btn-request-maintenance:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+/* =========================================================================
+   WALK-TO-GRAVE QR MODAL
+   ========================================================================= */
+.qr-modal-backdrop,
+.maint-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    animation: qrFadeIn 0.2s ease;
+}
+
+@keyframes qrFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.qr-modal-dialog,
+.maint-modal-dialog {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.2);
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: qrSlideUp 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes qrSlideUp {
+    from { transform: translateY(20px) scale(0.97); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.qr-modal-header,
+.maint-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.qr-title-wrap,
+.maint-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.qr-icon-emblem,
+.maint-icon-emblem {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
+.qr-icon-emblem {
+    background: rgba(2, 132, 199, 0.12);
+    color: #0284c7;
+}
+
+.maint-icon-emblem {
+    background: rgba(245, 158, 11, 0.14);
+    color: #d97706;
+}
+
+.qr-modal-title,
+.maint-modal-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    line-height: 1.25;
+}
+
+.qr-modal-subtitle,
+.maint-modal-subtitle {
+    font-size: 0.76rem;
+    color: #64748b;
+    margin: 2px 0 0 0;
+    line-height: 1.3;
+}
+
+.btn-qr-modal-close,
+.btn-maint-modal-close {
+    background: transparent;
+    border: none;
+    font-size: 1.15rem;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.btn-qr-modal-close:hover,
+.btn-maint-modal-close:hover {
+    color: #0f172a;
+    background: #e2e8f0;
+}
+
+.qr-modal-body,
+.maint-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Plot Summary Banner */
+.qr-lot-summary-card {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+
+.qr-lot-badge-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.qr-lot-badge {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #0284c7;
+}
+
+.qr-lot-status-pill {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.qr-lot-hierarchy {
+    font-size: 0.78rem;
+    color: #475569;
+}
+
+.qr-decedent-tag {
+    margin-top: 6px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* QR Stage */
+.qr-stage-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+}
+
+.qr-canvas-wrapper {
+    position: relative;
+    width: 210px;
+    height: 210px;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qr-svg-holder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qr-svg-matrix {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.qr-center-logo {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    background: #0284c7;
+    color: #ffffff;
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    pointer-events: none;
+}
+
+.qr-scan-badge {
+    margin-top: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Copy URL Box */
+.qr-link-copy-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.qr-url-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #475569;
+    margin: 0;
+}
+
+.qr-url-input-group {
+    display: flex;
+    gap: 8px;
+}
+
+.qr-url-input {
+    flex: 1;
+    font-size: 0.78rem;
+    font-family: monospace;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #334155;
+    outline: none;
+    text-overflow: ellipsis;
+}
+
+.btn-copy-qr {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+/* Quick Action Buttons in Modal */
+.qr-modal-actions-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.btn-qr-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 8px 6px;
+    border-radius: 8px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* Guide Steps */
+.qr-guide-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.qr-guide-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: #475569;
+    line-height: 1.35;
+}
+
+.qr-guide-step .guide-num {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #0284c7;
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+/* =========================================================================
+   GROUNDS MAINTENANCE MODAL
+   ========================================================================= */
+.maint-modal-dialog {
+    max-width: 520px;
+}
+
+.maint-lot-summary-pill {
+    background: rgba(2, 132, 199, 0.08);
+    border: 1px solid rgba(2, 132, 199, 0.2);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #0284c7;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.maint-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.maint-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.maint-form-label {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #334155;
+    margin: 0;
+}
+
+.maint-form-label .required {
+    color: #ef4444;
+}
+
+.maint-select,
+.maint-textarea {
+    font-size: 0.82rem;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    padding: 8px 10px;
+    background: #ffffff;
+    color: #0f172a;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.maint-select:focus,
+.maint-textarea:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.maint-textarea {
+    resize: vertical;
+}
+
+.maint-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 20px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* =========================================================================
+   DARK THEME OVERRIDES (BATCH 39)
+   ========================================================================= */
+[data-theme="dark"] .btn-share-qr-walk {
+    background: #0284c7;
+    border-color: #0284c7;
+}
+
+[data-theme="dark"] .btn-request-maintenance {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .btn-request-maintenance:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .qr-modal-dialog,
+[data-theme="dark"] .maint-modal-dialog {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+}
+
+[data-theme="dark"] .qr-modal-header,
+[data-theme="dark"] .maint-modal-header,
+[data-theme="dark"] .maint-modal-footer {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .qr-modal-title,
+[data-theme="dark"] .maint-modal-title {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .qr-modal-subtitle,
+[data-theme="dark"] .maint-modal-subtitle,
+[data-theme="dark"] .qr-url-label,
+[data-theme="dark"] .maint-form-label {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .qr-lot-summary-card,
+[data-theme="dark"] .qr-stage-card,
+[data-theme="dark"] .qr-guide-box {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .qr-url-input,
+[data-theme="dark"] .maint-select,
+[data-theme="dark"] .maint-textarea {
+    background: #0b1120;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .qr-lot-hierarchy,
+[data-theme="dark"] .qr-guide-step {
+    color: #cbd5e1;
+}
+
+@media (max-width: 480px) {
+    .qr-modal-actions-row {
+        grid-template-columns: 1fr;
+    }
+    .maint-form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+
 
 

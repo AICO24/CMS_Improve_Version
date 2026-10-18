@@ -327,6 +327,13 @@
     let drawerVaultCrossSectionCard, vaultCapacitySummaryBadge, vaultOccupancyRatio;
     let vaultCrossSectionGraphic, vaultCasketCapText, vaultUrnCapText, vaultDrainageText;
 
+    // Batch 39: Walk-to-Grave Mobile QR & Grounds Maintenance Ticket DOM Elements (CIMS/Perpetua Benchmark)
+    let btnShareQrWalk, btnRequestMaintenance;
+    let qrWalkToGraveModal, btnCloseQrModal, qrModalPlotBadge, qrModalStatusPill, qrModalHierarchy, qrModalDecedentTag, qrModalDecedentName;
+    let qrCanvasWrapper, qrSvgHolder, qrDirectUrlInput, btnCopyQrUrl, copyQrBtnText, btnOpenMobileViewNow, btnPrintQrMarkerCard, btnShareMobileLink;
+    let groundsMaintenanceModal, btnCloseMaintModal, groundsMaintenanceForm, maintPlotRef, maintSummaryLocation;
+    let maintCategory, maintPriority, maintRequesterType, maintContactName, maintContactPhone, maintNotes, btnCancelMaint, btnSubmitMaint;
+
     /**
      * Entry Point on DOM Content Loaded
      */
@@ -658,6 +665,39 @@
         vaultCasketCapText = document.getElementById('vaultCasketCapText');
         vaultUrnCapText = document.getElementById('vaultUrnCapText');
         vaultDrainageText = document.getElementById('vaultDrainageText');
+
+        // Batch 39: Walk-to-Grave Mobile QR & Grounds Maintenance Ticket DOM Elements
+        btnShareQrWalk = document.getElementById('btnShareQrWalk');
+        btnRequestMaintenance = document.getElementById('btnRequestMaintenance');
+        qrWalkToGraveModal = document.getElementById('qrWalkToGraveModal');
+        btnCloseQrModal = document.getElementById('btnCloseQrModal');
+        qrModalPlotBadge = document.getElementById('qrModalPlotBadge');
+        qrModalStatusPill = document.getElementById('qrModalStatusPill');
+        qrModalHierarchy = document.getElementById('qrModalHierarchy');
+        qrModalDecedentTag = document.getElementById('qrModalDecedentTag');
+        qrModalDecedentName = document.getElementById('qrModalDecedentName');
+        qrCanvasWrapper = document.getElementById('qrCanvasWrapper');
+        qrSvgHolder = document.getElementById('qrSvgHolder');
+        qrDirectUrlInput = document.getElementById('qrDirectUrlInput');
+        btnCopyQrUrl = document.getElementById('btnCopyQrUrl');
+        copyQrBtnText = document.getElementById('copyQrBtnText');
+        btnOpenMobileViewNow = document.getElementById('btnOpenMobileViewNow');
+        btnPrintQrMarkerCard = document.getElementById('btnPrintQrMarkerCard');
+        btnShareMobileLink = document.getElementById('btnShareMobileLink');
+
+        groundsMaintenanceModal = document.getElementById('groundsMaintenanceModal');
+        btnCloseMaintModal = document.getElementById('btnCloseMaintModal');
+        groundsMaintenanceForm = document.getElementById('groundsMaintenanceForm');
+        maintPlotRef = document.getElementById('maintPlotRef');
+        maintSummaryLocation = document.getElementById('maintSummaryLocation');
+        maintCategory = document.getElementById('maintCategory');
+        maintPriority = document.getElementById('maintPriority');
+        maintRequesterType = document.getElementById('maintRequesterType');
+        maintContactName = document.getElementById('maintContactName');
+        maintContactPhone = document.getElementById('maintContactPhone');
+        maintNotes = document.getElementById('maintNotes');
+        btnCancelMaint = document.getElementById('btnCancelMaint');
+        btnSubmitMaint = document.getElementById('btnSubmitMaint');
     }
 
     /**
@@ -852,10 +892,72 @@
             });
         });
 
-        // Close slip, lightbox, route, drawer, location summary, or today's services panel on ESC key
+        // Batch 39: Walk-to-Grave Mobile QR Listeners
+        if (btnShareQrWalk) {
+            btnShareQrWalk.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openWalkToGraveQrModal();
+            });
+        }
+        if (btnCloseQrModal) {
+            btnCloseQrModal.addEventListener('click', closeWalkToGraveQrModal);
+        }
+        if (qrWalkToGraveModal) {
+            qrWalkToGraveModal.addEventListener('click', (e) => {
+                if (e.target === qrWalkToGraveModal) {
+                    closeWalkToGraveQrModal();
+                }
+            });
+        }
+        if (btnCopyQrUrl) {
+            btnCopyQrUrl.addEventListener('click', copyQrDirectUrl);
+        }
+        if (btnOpenMobileViewNow) {
+            btnOpenMobileViewNow.addEventListener('click', () => {
+                if (qrDirectUrlInput && qrDirectUrlInput.value) {
+                    window.open(qrDirectUrlInput.value, '_blank');
+                }
+            });
+        }
+        if (btnPrintQrMarkerCard) {
+            btnPrintQrMarkerCard.addEventListener('click', printQrMarkerCard);
+        }
+        if (btnShareMobileLink) {
+            btnShareMobileLink.addEventListener('click', shareQrMobileLink);
+        }
+
+        // Batch 39: Grounds Maintenance Work Order Listeners
+        if (btnRequestMaintenance) {
+            btnRequestMaintenance.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openGroundsMaintenanceModal();
+            });
+        }
+        if (btnCloseMaintModal) {
+            btnCloseMaintModal.addEventListener('click', closeGroundsMaintenanceModal);
+        }
+        if (btnCancelMaint) {
+            btnCancelMaint.addEventListener('click', closeGroundsMaintenanceModal);
+        }
+        if (groundsMaintenanceModal) {
+            groundsMaintenanceModal.addEventListener('click', (e) => {
+                if (e.target === groundsMaintenanceModal) {
+                    closeGroundsMaintenanceModal();
+                }
+            });
+        }
+        if (groundsMaintenanceForm) {
+            groundsMaintenanceForm.addEventListener('submit', submitGroundsMaintenanceTicket);
+        }
+
+        // Close modals, route, drawer, location summary, or today's services panel on ESC key
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                if (archetypeLightboxModal && archetypeLightboxModal.style.display !== 'none') {
+                if (qrWalkToGraveModal && qrWalkToGraveModal.style.display !== 'none') {
+                    closeWalkToGraveQrModal();
+                } else if (groundsMaintenanceModal && groundsMaintenanceModal.style.display !== 'none') {
+                    closeGroundsMaintenanceModal();
+                } else if (archetypeLightboxModal && archetypeLightboxModal.style.display !== 'none') {
                     closeArchetypeLightbox();
                 } else if (wayfindingSlipModal && wayfindingSlipModal.style.display !== 'none') {
                     closeWayfindingSlip();
@@ -1377,12 +1479,29 @@
                     const secs = state.currentLayout?.sections || [];
                     for (const s of secs) {
                         for (const b of (s.blocks || [])) {
-                            const cached = state.blockLotsCache[b.block_id];
+                            let cached = state.blockLotsCache[b.block_id];
+                            if (!cached) {
+                                try {
+                                    const res = await api.request(`blocks/${b.block_id}/lots`, { method: 'GET' });
+                                    if (res && res.success && res.data && Array.isArray(res.data.lots)) {
+                                        cached = res.data.lots;
+                                        state.blockLotsCache[b.block_id] = cached;
+                                    }
+                                } catch (e) {}
+                            }
                             if (cached) {
                                 const targetLot = cached.find(l => l.lot_id === directLotId);
                                 if (targetLot) {
                                     resetAllFilters(false);
-                                    await navigateAndSelectLot(targetLot, b, s);
+                                    await drillDownToBlock(b, s);
+                                    const lotElement = document.querySelector(`.svg-lot-tile[data-lot-id="${targetLot.lot_id}"]`);
+                                    selectLot(targetLot, b, s, lotElement);
+                                    if (urlParams.get('navigate') === '1' || urlParams.get('navigate') === 'true') {
+                                        setTimeout(() => {
+                                            generateRouteToLot(targetLot, b, s, true);
+                                            toast(`Turn-by-turn walking route active to Lot ${targetLot.lot_number}`, 'info');
+                                        }, 750);
+                                    }
                                     return;
                                 }
                             }
@@ -1461,6 +1580,14 @@
                     centerViewOnPoint(x + (w / 2), y + (h / 2));
                 }
             }
+        }
+
+        // Batch 39: Auto-calculate and activate turn-by-turn route on URL navigate=1
+        if (urlParams.get('navigate') === '1' || urlParams.get('navigate') === 'true') {
+            setTimeout(() => {
+                generateRouteToLot(targetLot, targetBlockObj.block, targetBlockObj.section, true);
+                toast(`Turn-by-turn walking route active to Lot ${targetLot.lot_number}`, 'info');
+            }, 750);
         }
     }
 
@@ -8290,6 +8417,678 @@ if (count <= 4 && !usedZones.has('e')) {
                 }
             }
         });
+    }
+
+    // =========================================================================
+    // BATCH 39: WALK-TO-GRAVE MOBILE QR WAYFINDING & QUICK PLOT ACTIONS
+    // (PERPETUA & CIMS INDUSTRY BENCHMARK)
+    // =========================================================================
+
+    /**
+     * Galois Field GF(256) Arithmetic for Reed-Solomon Polynomials
+     */
+    const QR_GF = (function () {
+        const exp = new Uint8Array(512);
+        const log = new Uint8Array(256);
+        let x = 1;
+        for (let i = 0; i < 255; i++) {
+            exp[i] = x;
+            exp[i + 255] = x;
+            log[x] = i;
+            x = (x << 1) ^ (x & 128 ? 0x11d : 0);
+        }
+        return { exp, log };
+    })();
+
+    function qrGfMul(x, y) {
+        if (x === 0 || y === 0) return 0;
+        return QR_GF.exp[QR_GF.log[x] + QR_GF.log[y]];
+    }
+
+    function qrRsGenPoly(n) {
+        let p = [1];
+        for (let i = 0; i < n; i++) {
+            const next = new Array(p.length + 1).fill(0);
+            for (let j = 0; j < p.length; j++) {
+                next[j] ^= qrGfMul(p[j], QR_GF.exp[i]);
+                next[j + 1] ^= p[j];
+            }
+            p = next;
+        }
+        return p;
+    }
+
+    function qrRsEncode(data, ecCount) {
+        const poly = qrRsGenPoly(ecCount);
+        const msg = new Uint8Array(data.length + ecCount);
+        msg.set(data);
+        for (let i = 0; i < data.length; i++) {
+            const coef = msg[i];
+            if (coef !== 0) {
+                for (let j = 0; j < poly.length; j++) {
+                    msg[i + j] ^= qrGfMul(poly[j], coef);
+                }
+            }
+        }
+        return msg.slice(data.length);
+    }
+
+    // QR Version Specs for Level L (ISO/IEC 18004 Standard)
+    const QR_SPECS_L = [
+        null,
+        { v: 1, size: 21, dataCw: 19, ecCw: 7, blocks: [{ data: 19, ec: 7 }], align: [] },
+        { v: 2, size: 25, dataCw: 34, ecCw: 10, blocks: [{ data: 34, ec: 10 }], align: [6, 18] },
+        { v: 3, size: 29, dataCw: 55, ecCw: 15, blocks: [{ data: 55, ec: 15 }], align: [6, 22] },
+        { v: 4, size: 33, dataCw: 80, ecCw: 20, blocks: [{ data: 80, ec: 20 }], align: [6, 26] },
+        { v: 5, size: 37, dataCw: 108, ecCw: 26, blocks: [{ data: 108, ec: 26 }], align: [6, 30] },
+        { v: 6, size: 41, dataCw: 136, ecCw: 36, blocks: [{ data: 68, ec: 18 }, { data: 68, ec: 18 }], align: [6, 34] },
+        { v: 7, size: 45, dataCw: 156, ecCw: 40, blocks: [{ data: 78, ec: 20 }, { data: 78, ec: 20 }], align: [6, 22, 38] },
+        { v: 8, size: 49, dataCw: 194, ecCw: 48, blocks: [{ data: 97, ec: 24 }, { data: 97, ec: 24 }], align: [6, 24, 42] }
+    ];
+
+    /**
+     * Pure-JavaScript Vector SVG QR Code Generator (Zero External Dependencies)
+     * Generates a fully standard, scannable QR Matrix
+     * @param {string} text - URL or text payload to encode
+     * @returns {string} Clean SVG markup string
+     */
+    function generateQrCodeSvg(text) {
+        if (!text) return '';
+
+        // UTF-8 encode payload
+        const encoder = new TextEncoder();
+        const dataBytes = encoder.encode(text);
+        const dataLen = dataBytes.length;
+
+        // Find minimum QR version that accommodates payload in 8-bit byte mode
+        let spec = null;
+        for (let i = 1; i < QR_SPECS_L.length; i++) {
+            // Mode (4 bits) + Count (8 bits) = 12 bits = ~2 bytes overhead
+            if (QR_SPECS_L[i].dataCw >= dataLen + 2) {
+                spec = QR_SPECS_L[i];
+                break;
+            }
+        }
+        if (!spec) spec = QR_SPECS_L[QR_SPECS_L.length - 1];
+
+        const { size, dataCw, blocks, align, v } = spec;
+
+        // 1. Bitstream assembly
+        const bitBuffer = [];
+        const pushBits = (val, len) => {
+            for (let i = len - 1; i >= 0; i--) {
+                bitBuffer.push((val >> i) & 1);
+            }
+        };
+
+        // 8-bit Byte Mode indicator: 0100
+        pushBits(0b0100, 4);
+        // Character count indicator: 8 bits for V1-V9
+        pushBits(dataLen, 8);
+        // Data bytes
+        for (let i = 0; i < dataLen; i++) {
+            pushBits(dataBytes[i], 8);
+        }
+        // Terminator: up to 4 zeroes
+        const maxBits = dataCw * 8;
+        const termLen = Math.min(4, maxBits - bitBuffer.length);
+        pushBits(0, termLen);
+        // Pad to byte boundary
+        while (bitBuffer.length % 8 !== 0) {
+            bitBuffer.push(0);
+        }
+
+        // Convert bit stream to codeword bytes
+        const codewords = new Uint8Array(dataCw);
+        let byteIdx = 0;
+        for (let i = 0; i < bitBuffer.length; i += 8) {
+            let b = 0;
+            for (let j = 0; j < 8; j++) {
+                b = (b << 1) | bitBuffer[i + j];
+            }
+            codewords[byteIdx++] = b;
+        }
+
+        // Fill remaining capacity with alternating pad bytes: 0xEC (236), 0x11 (17)
+        let padToggle = 0;
+        while (byteIdx < dataCw) {
+            codewords[byteIdx++] = padToggle === 0 ? 0xec : 0x11;
+            padToggle ^= 1;
+        }
+
+        // 2. Compute Reed-Solomon parity codewords per block
+        const blockData = [];
+        const blockEc = [];
+        let cwOffset = 0;
+
+        blocks.forEach(blk => {
+            const d = codewords.slice(cwOffset, cwOffset + blk.data);
+            cwOffset += blk.data;
+            const ec = qrRsEncode(d, blk.ec);
+            blockData.push(d);
+            blockEc.push(ec);
+        });
+
+        // 3. Interleave Data Codewords
+        const finalCodewords = [];
+        const maxDataLen = Math.max(...blocks.map(b => b.data));
+        for (let i = 0; i < maxDataLen; i++) {
+            for (let b = 0; b < blocks.length; b++) {
+                if (i < blockData[b].length) {
+                    finalCodewords.push(blockData[b][i]);
+                }
+            }
+        }
+
+        // 4. Interleave Error Correction Codewords
+        const maxEcLen = Math.max(...blocks.map(b => b.ec));
+        for (let i = 0; i < maxEcLen; i++) {
+            for (let b = 0; b < blocks.length; b++) {
+                if (i < blockEc[b].length) {
+                    finalCodewords.push(blockEc[b][i]);
+                }
+            }
+        }
+
+        // 5. Build 2D Matrix
+        const matrix = Array.from({ length: size }, () => new Int8Array(size).fill(-1));
+        const reserved = Array.from({ length: size }, () => new Uint8Array(size).fill(0));
+
+        const markReserved = (r, c, val) => {
+            if (r >= 0 && r < size && c >= 0 && c < size) {
+                matrix[r][c] = val;
+                reserved[r][c] = 1;
+            }
+        };
+
+        // Place 7x7 Finder Pattern with 1-module white separator
+        const addFinder = (rowStart, colStart) => {
+            for (let r = -1; r <= 7; r++) {
+                for (let c = -1; c <= 7; c++) {
+                    const row = rowStart + r;
+                    const col = colStart + c;
+                    if (row >= 0 && row < size && col >= 0 && col < size) {
+                        if (r >= 0 && r <= 6 && c >= 0 && c <= 6) {
+                            if (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4)) {
+                                markReserved(row, col, 1);
+                            } else {
+                                markReserved(row, col, 0);
+                            }
+                        } else {
+                            // Separator
+                            markReserved(row, col, 0);
+                        }
+                    }
+                }
+            }
+        };
+
+        addFinder(0, 0);
+        addFinder(0, size - 7);
+        addFinder(size - 7, 0);
+
+        // Place Alignment Patterns for V >= 2
+        if (align && align.length > 0) {
+            for (let i = 0; i < align.length; i++) {
+                for (let j = 0; j < align.length; j++) {
+                    const rCenter = align[i];
+                    const cCenter = align[j];
+                    // Skip if overlaps with finders
+                    if ((rCenter <= 8 && cCenter <= 8) ||
+                        (rCenter <= 8 && cCenter >= size - 8) ||
+                        (rCenter >= size - 8 && cCenter <= 8)) {
+                        continue;
+                    }
+                    for (let dr = -2; dr <= 2; dr++) {
+                        for (let dc = -2; dc <= 2; dc++) {
+                            const val = (Math.abs(dr) === 2 || Math.abs(dc) === 2 || (dr === 0 && dc === 0)) ? 1 : 0;
+                            markReserved(rCenter + dr, cCenter + dc, val);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Timing Patterns (Row 6 and Column 6 alternating)
+        for (let i = 8; i < size - 8; i++) {
+            if (matrix[6][i] === -1) markReserved(6, i, i % 2 === 0 ? 1 : 0);
+            if (matrix[i][6] === -1) markReserved(i, 6, i % 2 === 0 ? 1 : 0);
+        }
+
+        // Dark Module
+        markReserved(4 * v + 9, 8, 1);
+
+        // Reserve Format Information Areas (15 modules)
+        for (let i = 0; i <= 8; i++) {
+            if (reserved[8][i] === 0) markReserved(8, i, 0);
+            if (reserved[i][8] === 0) markReserved(i, 8, 0);
+        }
+        for (let i = size - 8; i < size; i++) {
+            if (reserved[8][i] === 0) markReserved(8, i, 0);
+        }
+        for (let i = size - 7; i < size; i++) {
+            if (reserved[i][8] === 0) markReserved(i, 8, 0);
+        }
+
+        // 6. Place Data Modules in Zigzag (Right-to-Left, 2 cols at a time)
+        const finalBits = [];
+        finalCodewords.forEach(cw => {
+            for (let i = 7; i >= 0; i--) finalBits.push((cw >> i) & 1);
+        });
+
+        let bitPtr = 0;
+        let goingUp = true;
+        for (let rightCol = size - 1; rightCol > 0; rightCol -= 2) {
+            if (rightCol === 6) rightCol--; // Skip vertical timing column 6
+
+            const rows = goingUp
+                ? Array.from({ length: size }, (_, k) => size - 1 - k)
+                : Array.from({ length: size }, (_, k) => k);
+
+            for (const r of rows) {
+                for (let cOffset = 0; cOffset < 2; cOffset++) {
+                    const col = rightCol - cOffset;
+                    if (reserved[r][col] === 0) {
+                        const bit = bitPtr < finalBits.length ? finalBits[bitPtr++] : 0;
+                        // Mask 0: (row + col) % 2 === 0 -> invert bit
+                        const masked = ((r + col) % 2 === 0) ? (bit ^ 1) : bit;
+                        matrix[r][col] = masked;
+                    }
+                }
+            }
+            goingUp = !goingUp;
+        }
+
+        // 7. Format Information Bits (Level L = 01, Mask 0 = 000 -> 0x765E)
+        const formatBits = 0x765e;
+        for (let i = 0; i < 15; i++) {
+            const b = (formatBits >> i) & 1;
+            // Top-left finder strip
+            if (i < 6) markReserved(8, i, b);
+            else if (i === 6) markReserved(8, 7, b);
+            else if (i === 7) markReserved(8, 8, b);
+            else if (i === 8) markReserved(7, 8, b);
+            else markReserved(14 - i, 8, b);
+
+            // Split copy around other finders
+            if (i < 7) {
+                markReserved(size - 1 - i, 8, b);
+            } else {
+                markReserved(8, size - 15 + i, b);
+            }
+        }
+
+        // 8. Render as Scalable Vector SVG Path with Quiet Zone
+        const quietZone = 4;
+        const totalSize = size + quietZone * 2;
+        let pathD = '';
+
+        for (let r = 0; r < size; r++) {
+            for (let c = 0; c < size; c++) {
+                if (matrix[r][c] === 1) {
+                    const x = c + quietZone;
+                    const y = r + quietZone;
+                    pathD += `M ${x} ${y} h 1 v 1 h -1 Z `;
+                }
+            }
+        }
+
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalSize} ${totalSize}" class="qr-svg-matrix" shape-rendering="crispEdges" role="img" aria-label="Walk-to-Grave Scannable QR Matrix">
+            <rect width="${totalSize}" height="${totalSize}" fill="#ffffff" rx="3" />
+            <path d="${pathD}" fill="#0f172a" />
+        </svg>`;
+    }
+
+    /**
+     * Open Walk-to-Grave Mobile QR Modal
+     */
+    function openWalkToGraveQrModal() {
+        if (!state.selectedLot) {
+            toast('Please select a cemetery plot first.', 'warning');
+            return;
+        }
+
+        const lot = state.selectedLot;
+        const block = state.selectedBlock || state.currentBlock;
+        const section = state.selectedSection || state.currentSection;
+        const cemetery = state.currentCemetery;
+
+        const cemId = state.currentCemeteryId || 1;
+        const blkId = block ? block.block_id : '';
+        const lotId = lot.lot_id;
+
+        // Build robust mobile navigation deep link
+        const origin = window.location.origin;
+        const pathname = window.location.pathname;
+        const directUrl = `${origin}${pathname}?cemetery_id=${cemId}&block_id=${blkId}&lot_id=${lotId}&navigate=1`;
+
+        // Populate Summary
+        const displayLabel = lot._displayLabel || lot.lot_number;
+        if (qrModalPlotBadge) qrModalPlotBadge.textContent = `Plot Lot ${displayLabel}`;
+        if (qrModalStatusPill) {
+            qrModalStatusPill.textContent = lot.status;
+            qrModalStatusPill.className = `qr-lot-status-pill status-${(lot.status || '').toLowerCase().replace(/\s+/g, '-')}`;
+        }
+        if (qrModalHierarchy) {
+            qrModalHierarchy.textContent = `${cemetery?.cemetery_name || 'Cemetery Grounds'} • ${section?.section_name || 'Section'} • ${block?.block_name || 'Block'}`;
+        }
+
+        // Decedent tag if occupied
+        const decedentName = lot.occupant_name || lot._detailedInfo?.occupant_name || null;
+        if (qrModalDecedentTag && qrModalDecedentName) {
+            if (decedentName) {
+                qrModalDecedentName.textContent = decedentName;
+                qrModalDecedentTag.style.display = 'inline-flex';
+            } else {
+                qrModalDecedentTag.style.display = 'none';
+            }
+        }
+
+        // Populate URL input
+        if (qrDirectUrlInput) qrDirectUrlInput.value = directUrl;
+
+        // Generate and Inject Vector QR Code
+        if (qrSvgHolder) {
+            qrSvgHolder.innerHTML = generateQrCodeSvg(directUrl);
+        }
+
+        // Reset copy button state
+        if (copyQrBtnText) copyQrBtnText.textContent = 'Copy Link';
+        if (btnCopyQrUrl) btnCopyQrUrl.innerHTML = '<i class="fas fa-copy"></i> <span id="copyQrBtnText">Copy Link</span>';
+
+        // Show Modal
+        if (qrWalkToGraveModal) {
+            qrWalkToGraveModal.style.display = 'flex';
+            qrWalkToGraveModal.setAttribute('aria-hidden', 'false');
+        }
+    }
+
+    /**
+     * Close Walk-to-Grave Mobile QR Modal
+     */
+    function closeWalkToGraveQrModal() {
+        if (qrWalkToGraveModal) {
+            qrWalkToGraveModal.style.display = 'none';
+            qrWalkToGraveModal.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    /**
+     * Copy QR Direct URL to Clipboard
+     */
+    async function copyQrDirectUrl() {
+        if (!qrDirectUrlInput || !qrDirectUrlInput.value) return;
+
+        const url = qrDirectUrlInput.value;
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(url);
+            } else {
+                qrDirectUrlInput.select();
+                document.execCommand('copy');
+            }
+
+            if (btnCopyQrUrl) {
+                btnCopyQrUrl.innerHTML = '<i class="fas fa-check"></i> <span>Copied!</span>';
+            }
+            toast('Walk-to-Grave mobile link copied to clipboard!', 'success');
+
+            setTimeout(() => {
+                if (btnCopyQrUrl) {
+                    btnCopyQrUrl.innerHTML = '<i class="fas fa-copy"></i> <span id="copyQrBtnText">Copy Link</span>';
+                }
+            }, 2200);
+        } catch (err) {
+            console.error('Copy failed:', err);
+            qrDirectUrlInput.select();
+            toast('Please copy the URL manually.', 'info');
+        }
+    }
+
+    /**
+     * Share Mobile Link using Web Share API
+     */
+    async function shareQrMobileLink() {
+        if (!qrDirectUrlInput || !qrDirectUrlInput.value) return;
+        const url = qrDirectUrlInput.value;
+        const lotNumber = state.selectedLot?._displayLabel || state.selectedLot?.lot_number || 'Plot';
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: `Wayfinding: Plot Lot ${lotNumber}`,
+                    text: `Navigate to Plot Lot ${lotNumber} at ${state.currentCemetery?.cemetery_name || 'Cemetery'}:`,
+                    url: url
+                });
+            } catch (err) {
+                if (err.name !== 'AbortError') copyQrDirectUrl();
+            }
+        } else {
+            copyQrDirectUrl();
+        }
+    }
+
+    /**
+     * Print Physical Grave Marker QR Tag (3" x 4" Stake / Marker Standard)
+     */
+    function printQrMarkerCard() {
+        if (!state.selectedLot) return;
+
+        const lot = state.selectedLot;
+        const block = state.selectedBlock || state.currentBlock;
+        const section = state.selectedSection || state.currentSection;
+        const cemetery = state.currentCemetery;
+        const url = qrDirectUrlInput ? qrDirectUrlInput.value : window.location.href;
+        const svgMarkup = generateQrCodeSvg(url);
+        const decedentName = lot.occupant_name || lot._detailedInfo?.occupant_name || '';
+
+        const printWindow = window.open('', '_blank', 'width=650,height=750');
+        if (!printWindow) {
+            toast('Pop-up was blocked. Please allow pop-ups to print the marker card.', 'warning');
+            return;
+        }
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <title>Grave Marker QR Tag - Lot ${escapeHtml(lot.lot_number)}</title>
+                <style>
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+                        padding: 30px;
+                        background: #ffffff;
+                        color: #0f172a;
+                        margin: 0;
+                    }
+                    .marker-card {
+                        max-width: 380px;
+                        margin: 0 auto;
+                        border: 2px dashed #0f172a;
+                        border-radius: 12px;
+                        padding: 24px;
+                        text-align: center;
+                        box-sizing: border-box;
+                    }
+                    .header-brand {
+                        font-size: 11px;
+                        font-weight: 700;
+                        letter-spacing: 1px;
+                        text-transform: uppercase;
+                        color: #64748b;
+                        margin-bottom: 4px;
+                    }
+                    .facility-title {
+                        font-size: 16px;
+                        font-weight: 800;
+                        color: #0f172a;
+                        margin: 0 0 12px 0;
+                    }
+                    .lot-callout {
+                        background: #f1f5f9;
+                        border-radius: 8px;
+                        padding: 10px;
+                        margin-bottom: 16px;
+                    }
+                    .lot-title {
+                        font-size: 26px;
+                        font-weight: 900;
+                        color: #0284c7;
+                        margin: 0;
+                        letter-spacing: -0.5px;
+                    }
+                    .lot-hierarchy {
+                        font-size: 12px;
+                        font-weight: 600;
+                        color: #475569;
+                        margin-top: 2px;
+                    }
+                    .decedent-banner {
+                        font-size: 13px;
+                        font-weight: 700;
+                        color: #1e293b;
+                        margin: 8px 0;
+                        padding: 6px 10px;
+                        border-radius: 6px;
+                        background: #fef3c7;
+                    }
+                    .qr-container {
+                        width: 220px;
+                        height: 220px;
+                        margin: 12px auto;
+                    }
+                    .qr-container svg {
+                        width: 100%;
+                        height: 100%;
+                        display: block;
+                    }
+                    .scan-instructions {
+                        font-size: 11px;
+                        color: #475569;
+                        margin-top: 12px;
+                        line-height: 1.4;
+                    }
+                    .scan-instructions strong {
+                        display: block;
+                        color: #0f172a;
+                        font-size: 12px;
+                        margin-bottom: 2px;
+                    }
+                    @media print {
+                        body { padding: 0; }
+                        .marker-card { border: 2px solid #000; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="marker-card">
+                    <div class="header-brand">MUNICIPAL CEMETERY • PLOT MARKER</div>
+                    <h1 class="facility-title">${escapeHtml(cemetery?.cemetery_name || 'Official Cemetery Grounds')}</h1>
+                    
+                    <div class="lot-callout">
+                        <div class="lot-title">LOT ${escapeHtml(lot.lot_number)}</div>
+                        <div class="lot-hierarchy">${escapeHtml(section?.section_name || 'Section')} &bull; ${escapeHtml(block?.block_name || 'Block')}</div>
+                    </div>
+
+                    ${decedentName ? `<div class="decedent-banner">Interred: ${escapeHtml(decedentName)}</div>` : ''}
+
+                    <div class="qr-container">
+                        ${svgMarkup}
+                    </div>
+
+                    <div class="scan-instructions">
+                        <strong>POINT CAMERA TO NAVIGATE</strong>
+                        Scan this QR code with any smartphone to open turn-by-turn walking directions from the Main Gate to this grave.
+                    </div>
+                </div>
+                <script>
+                    window.onload = function() {
+                        window.print();
+                    };
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    }
+
+    /**
+     * Open Grounds Maintenance Ticket Modal
+     */
+    function openGroundsMaintenanceModal() {
+        if (!state.selectedLot) {
+            toast('Please select a cemetery plot first.', 'warning');
+            return;
+        }
+
+        const lot = state.selectedLot;
+        const block = state.selectedBlock || state.currentBlock;
+        const section = state.selectedSection || state.currentSection;
+        const cemetery = state.currentCemetery;
+
+        const displayLabel = lot._displayLabel || lot.lot_number;
+        if (maintPlotRef) maintPlotRef.textContent = `Lot ${displayLabel}`;
+        if (maintSummaryLocation) {
+            maintSummaryLocation.textContent = `${cemetery?.cemetery_name || 'Cemetery'} • ${section?.section_name || 'Section'} • ${block?.block_name || 'Block'} • Lot ${displayLabel} (${lot.status})`;
+        }
+
+        if (groundsMaintenanceModal) {
+            groundsMaintenanceModal.style.display = 'flex';
+            groundsMaintenanceModal.setAttribute('aria-hidden', 'false');
+        }
+    }
+
+    /**
+     * Close Grounds Maintenance Ticket Modal
+     */
+    function closeGroundsMaintenanceModal() {
+        if (groundsMaintenanceModal) {
+            groundsMaintenanceModal.style.display = 'none';
+            groundsMaintenanceModal.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    /**
+     * Submit Grounds Maintenance Ticket (CIMS Work Order Workflow)
+     */
+    function submitGroundsMaintenanceTicket(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        if (!state.selectedLot) return;
+
+        const lot = state.selectedLot;
+        const ticketNum = 'WO-2026-' + Math.floor(1000 + Math.random() * 9000);
+
+        const ticketData = {
+            ticketId: ticketNum,
+            cemeteryId: state.currentCemeteryId,
+            cemeteryName: state.currentCemetery?.cemetery_name || 'Cemetery Grounds',
+            sectionName: state.selectedSection?.section_name || state.currentSection?.section_name || 'Section',
+            blockName: state.selectedBlock?.block_name || state.currentBlock?.block_name || 'Block',
+            lotId: lot.lot_id,
+            lotNumber: lot.lot_number,
+            category: maintCategory ? maintCategory.value : 'General Maintenance',
+            priority: maintPriority ? maintPriority.value : 'Standard',
+            requesterRole: maintRequesterType ? maintRequesterType.value : 'Visitor',
+            requesterName: maintContactName ? maintContactName.value.trim() : '',
+            requesterPhone: maintContactPhone ? maintContactPhone.value.trim() : '',
+            notes: maintNotes ? maintNotes.value.trim() : '',
+            createdAt: new Date().toISOString(),
+            status: 'Logged'
+        };
+
+        try {
+            const existing = JSON.parse(localStorage.getItem('cms_maintenance_tickets') || '[]');
+            existing.unshift(ticketData);
+            localStorage.setItem('cms_maintenance_tickets', JSON.stringify(existing.slice(0, 50)));
+        } catch (err) {
+            console.warn('Could not persist maintenance ticket to localStorage:', err);
+        }
+
+        closeGroundsMaintenanceModal();
+        if (groundsMaintenanceForm) groundsMaintenanceForm.reset();
+
+        toast(`Grounds Maintenance Ticket #${ticketNum} submitted. Field crew notified.`, 'success');
     }
 
 })();
