@@ -2106,32 +2106,46 @@ body[data-theme="dark"] .search-empty-sub {
     stroke: #a855f7;
 }
 
-/* Level of Detail (LOD) & Plot Spatial Presentation */
-.cemetery-map-svg.lod-low .svg-lot-label {
-    opacity: 0;
+/* Level of Detail (LOD) & Plot Spatial Presentation (Batch 24) */
+.cemetery-map-svg.lod-low .svg-lot-label,
+.cemetery-map-svg.lod-low .mp-lot-number {
+    opacity: 0 !important;
     pointer-events: none;
 }
 
-.cemetery-map-svg.lod-mid .svg-lot-label {
-    opacity: 0.85;
-    font-size: 7.5px;
+.cemetery-map-svg.lod-mid .svg-lot-label,
+.cemetery-map-svg.lod-mid .mp-lot-number {
+    opacity: 0.92 !important;
+    font-size: 5.8px;
+    font-weight: 800;
     fill: #0f172a;
+    pointer-events: none;
 }
 
 .cemetery-map-svg.lod-high .svg-lot-label,
+.cemetery-map-svg.lod-high .mp-lot-number,
 .cemetery-map-svg.is-zoomed-in .svg-lot-label,
+.cemetery-map-svg.is-zoomed-in .mp-lot-number,
 .svg-lot-tile:hover .svg-lot-label,
-.svg-lot-tile.is-selected .svg-lot-label {
+.svg-lot-tile:hover .mp-lot-number,
+.svg-lot-tile.is-selected .svg-lot-label,
+.svg-lot-tile.is-selected .mp-lot-number {
     opacity: 1 !important;
-    font-weight: 700;
+    font-size: 6.8px;
+    font-weight: 800;
     fill: #0f172a;
 }
 
 [data-theme="dark"] .cemetery-map-svg.lod-mid .svg-lot-label,
+[data-theme="dark"] .cemetery-map-svg.lod-mid .mp-lot-number,
 [data-theme="dark"] .cemetery-map-svg.lod-high .svg-lot-label,
+[data-theme="dark"] .cemetery-map-svg.lod-high .mp-lot-number,
 [data-theme="dark"] .cemetery-map-svg.is-zoomed-in .svg-lot-label,
+[data-theme="dark"] .cemetery-map-svg.is-zoomed-in .mp-lot-number,
 [data-theme="dark"] .svg-lot-tile:hover .svg-lot-label,
-[data-theme="dark"] .svg-lot-tile.is-selected .svg-lot-label {
+[data-theme="dark"] .svg-lot-tile:hover .mp-lot-number,
+[data-theme="dark"] .svg-lot-tile.is-selected .svg-lot-label,
+[data-theme="dark"] .svg-lot-tile.is-selected .mp-lot-number {
     fill: #ffffff;
 }
 
@@ -5877,47 +5891,63 @@ body.dark-mode .btn-wayfinding-slip:hover {
 .mp-theme-d .mp-block-tag { fill: #6b21a8; }
 .mp-theme-e .mp-block-tag { fill: #0e7490; }
 
-/* Individual Plots on Master Map (Compact burial plots with headstones) */
-.mp-lot-plot {
-    stroke-width: 0.65px;
+/* Individual Plots on Master Map (Compact burial plots with headstones - Batch 24) */
+.mp-lot-plot,
+.svg-lot-rect {
+    stroke-width: 0.95px;
     transition: fill 0.12s ease, stroke 0.12s ease, stroke-width 0.12s ease;
 }
 
-.mp-lot-headstone {
-    fill: #ffffff;
-    stroke: #94a3b8;
-    stroke-width: 0.4px;
-    pointer-events: none;
-    filter: drop-shadow(0 0.5px 0.5px rgba(0, 0, 0, 0.2));
-}
-[data-theme="dark"] .mp-lot-headstone {
-    fill: #cbd5e1;
-    stroke: #475569;
+/* Enhanced Plot Visibility at Overview (lod-low) */
+.cemetery-map-svg.lod-low .mp-lot-plot,
+.cemetery-map-svg.lod-low .svg-lot-rect {
+    stroke-width: 1.1px;
+    filter: drop-shadow(0 0.5px 1px rgba(0, 0, 0, 0.22));
 }
 
-.mp-lot-number {
+.mp-lot-headstone,
+.svg-lot-headstone {
+    fill: #ffffff;
+    stroke: #64748b;
+    stroke-width: 0.5px;
+    pointer-events: none;
+    filter: drop-shadow(0 0.5px 1px rgba(0, 0, 0, 0.25));
+}
+[data-theme="dark"] .mp-lot-headstone,
+[data-theme="dark"] .svg-lot-headstone {
+    fill: #cbd5e1;
+    stroke: #334155;
+}
+
+.mp-lot-number,
+.svg-lot-label {
     font-family: var(--font-sans, 'Inter', sans-serif);
-    font-size: 6.5px;
-    font-weight: 700;
+    font-size: 6px;
+    font-weight: 800;
     fill: #0f172a;
     pointer-events: none;
-    opacity: 0;
     transition: opacity 0.15s ease;
 }
-[data-theme="dark"] .mp-lot-number {
+[data-theme="dark"] .mp-lot-number,
+[data-theme="dark"] .svg-lot-label {
     fill: #ffffff;
 }
 
-.svg-lot-tile:hover .mp-lot-plot {
-    stroke-width: 1.8px;
-    stroke: #2563eb;
+.svg-lot-tile:hover .mp-lot-plot,
+.svg-lot-tile:hover .svg-lot-rect {
+    stroke-width: 2.0px !important;
+    stroke: #2563eb !important;
+    filter: drop-shadow(0 0 6px rgba(37, 99, 235, 0.55));
 }
-[data-theme="dark"] .svg-lot-tile:hover .mp-lot-plot {
-    stroke: #60a5fa;
-    stroke-width: 1.8px;
+[data-theme="dark"] .svg-lot-tile:hover .mp-lot-plot,
+[data-theme="dark"] .svg-lot-tile:hover .svg-lot-rect {
+    stroke: #60a5fa !important;
+    stroke-width: 2.0px !important;
 }
 .svg-lot-tile:hover .mp-lot-number,
-.svg-lot-tile.is-selected .mp-lot-number {
+.svg-lot-tile:hover .svg-lot-label,
+.svg-lot-tile.is-selected .mp-lot-number,
+.svg-lot-tile.is-selected .svg-lot-label {
     opacity: 1 !important;
     font-weight: 800;
 }

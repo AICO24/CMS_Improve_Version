@@ -2474,25 +2474,26 @@ sections.forEach((section, index) => {
 
             if (isColumbarium) {
                 // Columbarium vertical vault plates:
-                // Cap dimensions so vaults have architectural proportion
-                tileW = Math.min(maxW, 9.8);
-                tileH = Math.min(maxH, 13.5);
+                tileW = Math.min(maxW, 12.0);
+                tileH = Math.min(maxH, 14.5);
             } else if (n <= 5) {
                 // Ground burial plots in small blocks (A2, B1, B2, C1, C2)
-                // Cap tile size so they look like elegant plots with breathing room, not massive cards
                 if (cols === n) {
-                    // 1-row layout: cap tile width and height
-                    tileW = Math.min(maxW, 10.0);
-                    tileH = Math.min(maxH, 16.0);
+                    // 1-row layout
+                    tileW = Math.min(maxW, 14.0);
+                    tileH = Math.min(maxH, 18.0);
                 } else {
                     // Multi-row layout (e.g. C1, C2: 2 cols x 3 rows)
-                    tileW = Math.min(maxW, 9.5);
-                    tileH = Math.min(maxH, 8.5);
+                    tileW = Math.min(maxW, 13.0);
+                    tileH = Math.min(maxH, 14.0);
                 }
             } else if (n > 25) {
-                // Block A1: tightly packed grid (3.34 x 2.78 approx)
+                // Dense ground block (e.g. Block A1: 50 lots)
                 tileW = maxW;
                 tileH = maxH;
+            } else {
+                tileW = Math.min(maxW, 13.0);
+                tileH = Math.min(maxH, 15.0);
             }
 
             // Downscale smoothly if strict bounds are exceeded
@@ -2505,6 +2506,10 @@ sections.forEach((section, index) => {
                 gapX *= fit;
                 gapY *= fit;
             }
+
+            // Batch 24: Enforce minimum discernible plot dimensions (prevents microscopic 3x2px dots)
+            tileW = Math.max(tileW, 8.2);
+            tileH = Math.max(tileH, 8.2);
 
             // Center grid on lawn terrace
             const finalGridW = cols * tileW + (cols - 1) * gapX;
@@ -2540,6 +2545,13 @@ sections.forEach((section, index) => {
                 if (lot.lot_number && lot.lot_number.length > 12) {
                     isSanitizedHash = true;
                     displayLabel = isColumbarium ? `V-${i + 1}` : `L-${i + 1}`;
+                }
+
+                // Short label for compact mid-zoom readability (e.g. "1", "2")
+                let shortLabel = displayLabel;
+                const matchNum = String(displayLabel).match(/\d+$/);
+                if (matchNum) {
+                    shortLabel = matchNum[0];
                 }
 
                 lot._tierLevel = tierLevel;
@@ -2599,7 +2611,7 @@ sections.forEach((section, index) => {
                     lotGroup.appendChild(innerPlate);
                 }
 
-                // Lot Number Text (Hidden at overview level, appears on hover, zoom, or selection)
+                // Lot Number Text (Responsive LOD: overview=hidden, mid=shortLabel, high/hover=fullLabel)
                 const labelText = document.createElementNS(SVG_NS, 'text');
                 labelText.setAttribute('x', f1(lotX + (curTileW / 2)));
                 labelText.setAttribute('y', f1(isColumbarium ? (lotY + curTileH / 2) : (lotY + curTileH * 0.74)));
@@ -2608,7 +2620,9 @@ sections.forEach((section, index) => {
                     labelText.setAttribute('dominant-baseline', 'central');
                 }
                 labelText.setAttribute('class', 'svg-lot-label mp-lot-number');
-                labelText.textContent = displayLabel;
+                labelText.setAttribute('data-full-label', displayLabel);
+                labelText.setAttribute('data-short-label', shortLabel);
+                labelText.textContent = curTileW < 12 ? shortLabel : displayLabel;
                 lotGroup.appendChild(labelText);
 
                 // Accessibility Title
@@ -2632,6 +2646,7 @@ sections.forEach((section, index) => {
                 // Hover Tooltip
                 lotGroup.addEventListener('mouseenter', (e) => {
                     e.stopPropagation();
+                    labelText.textContent = displayLabel;
                     const elevHtml = isColumbarium
                         ? `<br>Vertical Placement: <strong>Level ${tierLevel} (${approxH})</strong>${isEyeLevel ? ' <span style="color:#f59e0b;">⭐ Eye-Level</span>' : ''}`
                         : `<br>Vertical Placement: <strong>Ground Level (Terraced Lawn)</strong>`;
@@ -2644,6 +2659,7 @@ sections.forEach((section, index) => {
                 });
                 lotGroup.addEventListener('mouseleave', (e) => {
                     e.stopPropagation();
+                    labelText.textContent = curTileW < 12 ? shortLabel : displayLabel;
                     hideFloatingTooltip();
                 });
 
@@ -6543,12 +6559,12 @@ if (count <= 4 && !usedZones.has('e')) {
         const vb = state.currentViewBox;
         cemeteryMapSvg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.width} ${vb.height}`);
 
-        // Batch 3: Level of Detail (LOD) responsive scaling
+        // Batch 24: Level of Detail (LOD) responsive scaling
         const zoomFactor = state.baseViewBox.width / (vb.width || 1);
         cemeteryMapSvg.classList.remove('lod-low', 'lod-mid', 'lod-high', 'is-zoomed-in');
         if (zoomFactor < 1.35) {
             cemeteryMapSvg.classList.add('lod-low');
-        } else if (zoomFactor < 2.4) {
+        } else if (zoomFactor < 1.95) {
             cemeteryMapSvg.classList.add('lod-mid', 'is-zoomed-in');
         } else {
             cemeteryMapSvg.classList.add('lod-high', 'is-zoomed-in');
