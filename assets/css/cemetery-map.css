@@ -8568,5 +8568,40 @@ button.btn-today-services.is-active,
     display: none !important;
 }
 
+/* =========================================================================
+   BATCH 37: PHYSICAL GROUNDS AMENITIES STYLING (CIMS BENCHMARK)
+   ========================================================================= */
+.svg-amenity-marker {
+    cursor: pointer;
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), filter 0.18s ease;
+    transform-origin: center;
+}
+
+.svg-amenity-marker:hover,
+.svg-amenity-marker:focus {
+    transform: scale(1.28);
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.28));
+    outline: none;
+}
+
+.mp-amenity-bg {
+    transition: fill 0.18s ease, stroke-width 0.18s ease;
+}
+
+.svg-amenity-marker:hover .mp-amenity-bg {
+    stroke-width: 2px;
+}
+
+.mp-amenity-icon {
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    user-select: none;
+    pointer-events: none;
+}
+
+/* Feature Toggle for Amenities */
+.cemetery-map-svg.hide-amenities #mapAmenitiesLayer {
+    display: none !important;
+}
+
 
 

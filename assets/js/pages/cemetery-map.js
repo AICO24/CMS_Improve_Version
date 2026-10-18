@@ -56,7 +56,8 @@
         layerToggles: {
             labels: true,
             foliage: true,
-            surroundings: true
+            surroundings: true,
+            amenities: true
         },
 
         // Batch 36: Mobile Touch Gestures & Responsive Pan/Pinch State
@@ -246,7 +247,7 @@
     let viewLevelBadge, viewLevelText, btnBackToOverview, btnBackText, btnBackIcon, filterMatchesBadge;
     let btnZoomIn, btnZoomOut, btnResetZoom;
     let svgStageContainer, cemeteryMapSvg, mapTransformLayer;
-    let mapGroundLayer, mapBoundaryLayer, mapRoadLayer, mapLandmarkLayer;
+    let mapGroundLayer, mapBoundaryLayer, mapRoadLayer, mapLandmarkLayer, mapAmenitiesLayer;
     let mapSectionLayer, mapBlockLayer, mapLotLayer, mapRouteLayer, mapSelectionLayer;
     let mapLoadingOverlay, loadingText, mapEmptyOverlay, emptyIcon, emptyTitle, emptyDesc, btnRetryMap;
     let svgFloatingTooltip;
@@ -320,7 +321,7 @@
     let mapLayersWidget, btnLayersTrigger, layersTriggerThumb, layersThumbPreview, layersThumbLabel;
     let layersFlyoutMenu, btnCloseLayers;
     let layerBtnDefault, layerBtnSatellite, layerBtnTerrain;
-    let btnToggleLabels, btnToggleFoliage, btnToggleSurroundings;
+    let btnToggleLabels, btnToggleFoliage, btnToggleSurroundings, btnToggleAmenities;
 
     /**
      * Entry Point on DOM Content Loaded
@@ -388,6 +389,7 @@
         mapBoundaryLayer = document.getElementById('mapBoundaryLayer');
         mapRoadLayer = document.getElementById('mapRoadLayer');
         mapLandmarkLayer = document.getElementById('mapLandmarkLayer');
+        mapAmenitiesLayer = document.getElementById('mapAmenitiesLayer');
         mapSectionLayer = document.getElementById('mapSectionLayer');
         mapBlockLayer = document.getElementById('mapBlockLayer');
         mapLotLayer = document.getElementById('mapLotLayer');
@@ -642,6 +644,7 @@
         btnToggleLabels = document.getElementById('btnToggleLabels');
         btnToggleFoliage = document.getElementById('btnToggleFoliage');
         btnToggleSurroundings = document.getElementById('btnToggleSurroundings');
+        btnToggleAmenities = document.getElementById('btnToggleAmenities');
     }
 
     /**
@@ -1140,6 +1143,9 @@
         if (btnToggleSurroundings) {
             btnToggleSurroundings.addEventListener('click', () => toggleMapDetail('surroundings'));
         }
+        if (btnToggleAmenities) {
+            btnToggleAmenities.addEventListener('click', () => toggleMapDetail('amenities'));
+        }
 
     }
 
@@ -1192,7 +1198,7 @@
     }
 
     /**
-     * Toggle specific map detail layer ('labels' | 'foliage' | 'surroundings')
+     * Toggle specific map detail layer ('labels' | 'foliage' | 'surroundings' | 'amenities')
      */
     function toggleMapDetail(feature) {
         if (!state.layerToggles.hasOwnProperty(feature)) return;
@@ -1208,6 +1214,9 @@
         } else if (feature === 'surroundings') {
             cemeteryMapSvg.classList.toggle('hide-surroundings', !isEnabled);
             if (btnToggleSurroundings) btnToggleSurroundings.classList.toggle('is-active', isEnabled);
+        } else if (feature === 'amenities') {
+            cemeteryMapSvg.classList.toggle('hide-amenities', !isEnabled);
+            if (btnToggleAmenities) btnToggleAmenities.classList.toggle('is-active', isEnabled);
         }
     }
 
@@ -1623,6 +1632,7 @@
             'mapBoundaryLayer',
             'mapRoadLayer',
             'mapLandmarkLayer',
+            'mapAmenitiesLayer',
             'mapSectionLayer',
             'mapBlockLayer',
             'mapLotLayer',
@@ -1645,6 +1655,7 @@
         mapBoundaryLayer = document.getElementById('mapBoundaryLayer');
         mapRoadLayer = document.getElementById('mapRoadLayer');
         mapLandmarkLayer = document.getElementById('mapLandmarkLayer');
+        mapAmenitiesLayer = document.getElementById('mapAmenitiesLayer');
         mapSectionLayer = document.getElementById('mapSectionLayer');
         mapBlockLayer = document.getElementById('mapBlockLayer');
         mapLotLayer = document.getElementById('mapLotLayer');
@@ -1661,6 +1672,7 @@
         if (mapBoundaryLayer) mapBoundaryLayer.innerHTML = '';
         if (mapRoadLayer) mapRoadLayer.innerHTML = '';
         if (mapLandmarkLayer) mapLandmarkLayer.innerHTML = '';
+        if (mapAmenitiesLayer) mapAmenitiesLayer.innerHTML = '';
         if (mapSectionLayer) mapSectionLayer.innerHTML = '';
         if (mapBlockLayer) mapBlockLayer.innerHTML = '';
         if (mapLotLayer) mapLotLayer.innerHTML = '';
@@ -3081,6 +3093,9 @@ if (count <= 4 && !usedZones.has('e')) {
 
         // Batch 30: Wire interactive wayfinding routing to landmarks and Google Maps pin
         setupLandmarkInteractivity();
+
+        // Batch 37: Render Physical Grounds Amenities (Water, Restrooms, Bins & Gazebos)
+        renderAmenitiesLayer();
     }
 
     /**
@@ -3132,6 +3147,96 @@ if (count <= 4 && !usedZones.has('e')) {
                     handleTrigger(e);
                 }
             });
+        });
+    }
+
+    // =========================================================================
+    // BATCH 37: PHYSICAL GROUNDS AMENITIES LAYER (CIMS BENCHMARK)
+    // Water Spigots, Public Restrooms, Waste Stations, and Gazebos/Benches
+    // =========================================================================
+    const AMENITIES_CONFIG = [
+        // Drinking Water & Spigot Stations
+        { id: 'water-1', type: 'water', x: 700, y: 620, label: 'Drinking Water Spigot #1', sub: 'Floral Care & Handwashing • Potable Water', icon: '🚰', node: 'WEST_INGRESS_MID' },
+        { id: 'water-2', type: 'water', x: 840, y: 395, label: 'Drinking Water Spigot #2', sub: 'Central Connector Walkway • Floral Water Point', icon: '🚰', node: 'CONNECTOR_MID' },
+        { id: 'water-3', type: 'water', x: 615, y: 220, label: 'Drinking Water Spigot #3', sub: 'Northwest Garden of Peace Water Point', icon: '🚰', node: 'NW_LOOP_BEND' },
+        { id: 'water-4', type: 'water', x: 920, y: 255, label: 'Drinking Water Spigot #4', sub: 'Columbarium Court Floral Care Spigot', icon: '🚰', node: 'COMFORT_ROOM_ACCESS' },
+        { id: 'water-5', type: 'water', x: 1015, y: 650, label: 'Drinking Water Spigot #5', sub: 'East Perimeter Roadside Water Point', icon: '🚰', node: 'EAST_EGRESS_MID' },
+
+        // Waste & Trash Stations
+        { id: 'trash-1', type: 'trash', x: 745, y: 840, label: 'Waste Station #1 (Main Gate)', sub: 'Trash Bins for Floral Wrap & Candle Waste', icon: '🗑️', node: 'MAIN_GATE' },
+        { id: 'trash-2', type: 'trash', x: 695, y: 445, label: 'Waste Station #2 (Central Fork)', sub: 'Biodegradable & General Waste Bins', icon: '🗑️', node: 'CENTRAL_FORK' },
+        { id: 'trash-3', type: 'trash', x: 965, y: 350, label: 'Waste Station #3 (Rotunda West)', sub: 'Floral & Garden Waste Disposal Bins', icon: '🗑️', node: 'ROTUNDA_APPROACH' },
+        { id: 'trash-4', type: 'trash', x: 955, y: 775, label: 'Waste Station #4 (Parking Bay)', sub: 'Visitor Parking Waste Bins', icon: '🗑️', node: 'PARKING_ACCESS' },
+
+        // Restroom Facility
+        { id: 'cr-1', type: 'restroom', x: 933, y: 242, label: 'Public Comfort Room (CR)', sub: 'Male / Female / PWD Accessible Restrooms', icon: '🚻', node: 'COMFORT_ROOM_ACCESS' },
+
+        // Shaded Gazebos & Resting Benches
+        { id: 'gazebo-1', type: 'gazebo', x: 625, y: 360, label: 'Shaded Garden Gazebo', sub: 'Covered Weather Pavilion with Bench Seating', icon: '🛖', node: 'NW_LOOP_WEST' },
+        { id: 'bench-1', type: 'bench', x: 785, y: 415, label: 'Promenade Resting Bench', sub: 'Cast-Iron Garden Bench under Shaded Canopy', icon: '🪑', node: 'CENTRAL_CROSSWAY' },
+        { id: 'bench-2', type: 'bench', x: 965, y: 405, label: 'Rotunda Garden Bench', sub: 'Shaded Arbor Resting Seat', icon: '🪑', node: 'ROTUNDA_WEST' },
+    ];
+
+    /**
+     * Render Physical Grounds Amenities on Master Map SVG (Batch 37)
+     */
+    function renderAmenitiesLayer() {
+        if (!mapAmenitiesLayer) return;
+        mapAmenitiesLayer.innerHTML = '';
+
+        AMENITIES_CONFIG.forEach(amenity => {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('class', `svg-amenity-marker amenity--${amenity.type}`);
+            g.setAttribute('data-amenity-id', amenity.id);
+            g.setAttribute('data-node-id', amenity.node);
+            g.setAttribute('role', 'button');
+            g.setAttribute('tabindex', '0');
+            g.setAttribute('aria-label', `${amenity.label} — ${amenity.sub}. Click for wayfinding directions.`);
+
+            let bgFill = '#0284c7';
+            let borderStroke = '#e0f2fe';
+            if (amenity.type === 'water') {
+                bgFill = '#0284c7'; borderStroke = '#e0f2fe';
+            } else if (amenity.type === 'trash') {
+                bgFill = '#b45309'; borderStroke = '#fef3c7';
+            } else if (amenity.type === 'restroom') {
+                bgFill = '#0d9488'; borderStroke = '#ccfbf1';
+            } else if (amenity.type === 'gazebo') {
+                bgFill = '#059669'; borderStroke = '#d1fae5';
+            } else if (amenity.type === 'bench') {
+                bgFill = '#475569'; borderStroke = '#f1f5f9';
+            }
+
+            g.innerHTML = `
+                <circle cx="${amenity.x}" cy="${amenity.y}" r="8.5" fill="rgba(0,0,0,0.22)" class="mp-amenity-shadow" transform="translate(1 1)"/>
+                <circle cx="${amenity.x}" cy="${amenity.y}" r="7.5" fill="${bgFill}" stroke="${borderStroke}" stroke-width="1.3" class="mp-amenity-bg"/>
+                <text x="${amenity.x}" y="${amenity.y + 3.2}" font-size="7.5" text-anchor="middle" class="mp-amenity-icon">${amenity.icon}</text>
+            `;
+
+            // Hover tooltip
+            g.addEventListener('mouseenter', (e) => {
+                showFloatingTooltip(e, `<strong>${amenity.icon} ${escapeHtml(amenity.label)}</strong><br>${escapeHtml(amenity.sub)}<br><small style="color:#0284c7;font-weight:600;">Click for walking directions from Main Gate</small>`);
+            });
+            g.addEventListener('mousemove', moveFloatingTooltip);
+            g.addEventListener('mouseleave', hideFloatingTooltip);
+
+            // Click Handler: Navigate to amenity using existing Dijkstra wayfinding!
+            const triggerWayfinding = (e) => {
+                if (state.hasTouchMoved) return;
+                e.stopPropagation();
+                generateRouteToFacility(amenity.node, amenity.label, true);
+                toast(`Routing to ${amenity.label}`, 'success');
+            };
+
+            g.addEventListener('click', triggerWayfinding);
+            g.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    triggerWayfinding(e);
+                }
+            });
+
+            mapAmenitiesLayer.appendChild(g);
         });
     }
 
