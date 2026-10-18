@@ -368,27 +368,48 @@ class ReportController {
         return $stmt->fetchAll();
     }
 
-    public function dashboardSummary($period = 'monthly') {
+    public function dashboardSummary($period = 'monthly', $filters = []) {
         $period = strtolower(trim((string)$period));
-        if (!in_array($period, ['weekly', 'monthly', 'yearly'])) {
+        $validPeriods = ['daily', 'day', 'today', 'weekly', 'week', 'monthly', 'month', 'yearly', 'year', 'overall', 'all'];
+        if (!in_array($period, $validPeriods, true)) {
             $period = 'monthly';
         }
 
-        $paymentStats = $this->paymentModel->getStats($period);
+        $paymentStats = $this->paymentModel->getStats($period, $filters);
         $lotStats = $this->lotModel->getStats();
 
         $startDate = $paymentStats['date_from'];
         $endDate = $paymentStats['date_to'];
+        $periodFilter = ['date_from' => $startDate, 'date_to' => $endDate];
 
-        // Query schedule operational metrics
-        $schedules = ['total' => 0, 'pending' => 0, 'confirmed' => 0];
+        // Format friendly label for header & export
+        $formattedLabel = '';
+        $dtStart = DateTime::createFromFormat('Y-m-d', $startDate);
+        $dtEnd = DateTime::createFromFormat('Y-m-d', $endDate);
+
+        if (in_array($period, ['daily', 'day', 'today'], true)) {
+            $formattedLabel = 'Daily Report · ' . ($dtStart ? $dtStart->format('F j, Y') : $startDate);
+        } elseif (in_array($period, ['weekly', 'week'], true)) {
+            $formattedLabel = 'Weekly Report · ' . ($dtStart ? $dtStart->format('M j') : $startDate) . ' - ' . ($dtEnd ? $dtEnd->format('M j, Y') : $endDate);
+        } elseif (in_array($period, ['monthly', 'month'], true)) {
+            $formattedLabel = 'Monthly Report · ' . ($dtStart ? $dtStart->format('F Y') : $startDate);
+        } elseif (in_array($period, ['overall', 'all'], true)) {
+            $formattedLabel = 'Overall Master Report · Cumulative as of ' . ($dtEnd ? $dtEnd->format('F j, Y') : date('F j, Y'));
+        } else {
+            $formattedLabel = 'Report Period · ' . $startDate . ' to ' . $endDate;
+        }
+
+        // Query schedule operational metrics (burial_schedules)
+        $schedules = ['total' => 0, 'pending' => 0, 'confirmed' => 0, 'completed' => 0, 'cancelled' => 0];
         try {
             $stmtSched = $this->db->prepare("
                 SELECT 
                     COUNT(*) AS total,
                     COALESCE(SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END), 0) AS pending,
-                    COALESCE(SUM(CASE WHEN status = 'Confirmed' THEN 1 ELSE 0 END), 0) AS confirmed
-                FROM schedules
+                    COALESCE(SUM(CASE WHEN status = 'Confirmed' THEN 1 ELSE 0 END), 0) AS confirmed,
+                    COALESCE(SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END), 0) AS completed,
+                    COALESCE(SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END), 0) AS cancelled
+                FROM burial_schedules
                 WHERE schedule_date >= ? AND schedule_date <= ?
             ");
             $stmtSched->execute([$startDate, $endDate]);
@@ -397,15 +418,17 @@ class ReportController {
             // graceful fallback
         }
 
-        // Query cremation operational metrics
-        $cremations = ['total' => 0, 'pending' => 0, 'scheduled' => 0];
+        // Query cremation operational metrics (cremation_records)
+        $cremations = ['total' => 0, 'pending' => 0, 'scheduled' => 0, 'completed' => 0, 'cancelled' => 0];
         try {
             $stmtCrem = $this->db->prepare("
                 SELECT 
                     COUNT(*) AS total,
                     COALESCE(SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END), 0) AS pending,
-                    COALESCE(SUM(CASE WHEN status = 'Scheduled' THEN 1 ELSE 0 END), 0) AS scheduled
-                FROM cremation_requests
+                    COALESCE(SUM(CASE WHEN status = 'Scheduled' THEN 1 ELSE 0 END), 0) AS scheduled,
+                    COALESCE(SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END), 0) AS completed,
+                    COALESCE(SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END), 0) AS cancelled
+                FROM cremation_records
                 WHERE cremation_date >= ? AND cremation_date <= ?
             ");
             $stmtCrem->execute([$startDate, $endDate]);
@@ -414,14 +437,73 @@ class ReportController {
             // graceful fallback
         }
 
+        // Query decedent metrics for period and all-time
+        $decedents = ['period_total' => 0, 'burials' => 0, 'cremations' => 0, 'all_time_total' => 0];
+        try {
+            $stmtDecPeriod = $this->db->prepare("
+                SELECT 
+                    COUNT(*) AS period_total,
+                    COALESCE(SUM(CASE WHEN interment_type = 'Burial' THEN 1 ELSE 0 END), 0) AS burials,
+                    COALESCE(SUM(CASE WHEN interment_type = 'Cremation' THEN 1 ELSE 0 END), 0) AS cremations
+                FROM decedent_records
+                WHERE DATE(created_at) >= ? AND DATE(created_at) <= ?
+            ");
+            $stmtDecPeriod->execute([$startDate, $endDate]);
+            $decRow = $stmtDecPeriod->fetch(PDO::FETCH_ASSOC);
+            if ($decRow) {
+                $decedents['period_total'] = (int)($decRow['period_total'] ?? 0);
+                $decedents['burials'] = (int)($decRow['burials'] ?? 0);
+                $decedents['cremations'] = (int)($decRow['cremations'] ?? 0);
+            }
+
+            $stmtDecAll = $this->db->query("SELECT COUNT(*) AS all_time FROM decedent_records");
+            $allDecRow = $stmtDecAll->fetch(PDO::FETCH_ASSOC);
+            $decedents['all_time_total'] = (int)($allDecRow['all_time'] ?? 0);
+        } catch (Exception $e) {
+            // graceful fallback
+        }
+
+        // Expiration summary
+        $expirations = [
+            'expiring_soon' => 0,
+            'expired' => 0,
+            'renewal_due' => 0,
+            'pending_review' => 0
+        ];
+        try {
+            $expirations = [
+                'expiring_soon' => (int) $this->expirationModel->countExpiringSoon(30),
+                'expired' => (int) $this->expirationModel->countExpired(),
+                'renewal_due' => (int) $this->expirationModel->countRenewalDue(30),
+                'pending_review' => (int) $this->expirationModel->countPendingReview(),
+            ];
+        } catch (Exception $e) {
+            // graceful fallback
+        }
+
+        // Revenue breakdown by method and service for period
+        $revenueByMethod = [];
+        $revenueByService = [];
+        try {
+            $revenueByMethod = $this->paymentModel->getRevenueByMethod($periodFilter);
+            $revenueByService = $this->paymentModel->getRevenueBreakdown($periodFilter);
+        } catch (Exception $e) {
+            // graceful fallback
+        }
+
         return [
             'period' => $period,
+            'period_label' => $formattedLabel,
             'date_from' => $startDate,
             'date_to' => $endDate,
             'revenue' => $paymentStats,
+            'revenue_by_method' => $revenueByMethod,
+            'revenue_by_service' => $revenueByService,
             'occupancy' => $lotStats,
             'schedules' => $schedules,
             'cremations' => $cremations,
+            'decedents' => $decedents,
+            'expirations' => $expirations,
         ];
     }
 }

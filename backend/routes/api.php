@@ -1632,7 +1632,10 @@ if ($path === 'reports/expiration' && $requestMethod === 'GET') {
 if ($path === 'reports/dashboard-summary' && $requestMethod === 'GET') {
     $user = AuthMiddleware::requireRole(['admin', 'staff']);
     $period = $_GET['period'] ?? 'monthly';
-    echo json_encode($reportController->dashboardSummary($period));
+    $filters = [];
+    if (!empty($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
+    if (!empty($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
+    echo json_encode($reportController->dashboardSummary($period, $filters));
     exit;
 }
 

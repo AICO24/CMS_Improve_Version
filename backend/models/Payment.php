@@ -427,7 +427,8 @@ class Payment {
 
     public function getStats($period = 'monthly', $filters = []) {
         $period = strtolower(trim((string)$period));
-        if (!in_array($period, ['weekly', 'monthly', 'yearly'])) {
+        $validPeriods = ['daily', 'day', 'today', 'weekly', 'week', 'monthly', 'month', 'yearly', 'year', 'overall', 'all'];
+        if (!in_array($period, $validPeriods, true)) {
             $period = 'monthly';
         }
 
@@ -437,16 +438,22 @@ class Payment {
         if (!empty($filters['date_from']) && !empty($filters['date_to'])) {
             $startDate = $filters['date_from'];
             $endDate = $filters['date_to'];
-        } elseif ($period === 'weekly') {
+        } elseif (in_array($period, ['daily', 'day', 'today'], true)) {
+            $startDate = $currentDate;
+            $endDate = $currentDate;
+        } elseif (in_array($period, ['weekly', 'week'], true)) {
             $startOfWeek = clone $now;
             $dayOfWeek = (int)$startOfWeek->format('N'); // 1 = Monday, 7 = Sunday
             $startOfWeek->modify('-' . ($dayOfWeek - 1) . ' days');
             $startDate = $startOfWeek->format('Y-m-d');
             $endDate = $currentDate;
-        } elseif ($period === 'yearly') {
+        } elseif (in_array($period, ['yearly', 'year'], true)) {
             $startDate = $now->format('Y-01-01');
             $endDate = $currentDate;
-        } else { // monthly
+        } elseif (in_array($period, ['overall', 'all'], true)) {
+            $startDate = '1970-01-01';
+            $endDate = $currentDate;
+        } else { // monthly / month
             $startDate = $now->format('Y-m-01');
             $endDate = $currentDate;
         }
@@ -457,6 +464,7 @@ class Payment {
                 COALESCE(SUM(CASE WHEN verification_status = 'Verified' THEN 1 ELSE 0 END), 0) AS transaction_count,
                 COALESCE(SUM(CASE WHEN verification_status = 'Verified' THEN amount ELSE 0 END), 0) AS verified_revenue,
                 COALESCE(SUM(CASE WHEN verification_status = 'Pending' THEN 1 ELSE 0 END), 0) AS pending_count,
+                COALESCE(SUM(CASE WHEN verification_status = 'Pending' THEN amount ELSE 0 END), 0) AS pending_revenue,
                 COALESCE(SUM(CASE WHEN verification_status = 'Verified' THEN 1 ELSE 0 END), 0) AS verified_count
             FROM payments
             WHERE COALESCE(payment_date, DATE(created_at)) >= ?
@@ -498,6 +506,7 @@ class Payment {
             'average_transaction' => $avg,
             'verified_revenue' => (float)($row['verified_revenue'] ?? 0),
             'pending_count' => (int)($row['pending_count'] ?? 0),
+            'pending_revenue' => (float)($row['pending_revenue'] ?? 0),
             'verified_count' => (int)($row['verified_count'] ?? 0),
             'ytd_revenue' => (float)($ytd['ytd_revenue'] ?? 0),
             'ytd_count' => (int)($ytd['ytd_count'] ?? 0),
