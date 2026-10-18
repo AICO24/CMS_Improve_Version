@@ -314,6 +314,11 @@
     let layerBtnDefault, layerBtnSatellite, layerBtnTerrain;
     let btnToggleLabels, btnToggleFoliage, btnToggleSurroundings;
 
+    // Batch 35: Street View Entrance & Road Guidance DOM Elements (Concern 4)
+    let mapStreetviewCluster, streetviewThumbCard, btnRecenterEntrance, btnPegmanStreetView;
+    let routeStreetviewPreview, btnOpenStreetViewFromRoute;
+    let streetViewModal, btnCloseStreetViewModal, btnGuideFromStreetView, streetviewPanoramaViewport;
+
     /**
      * Entry Point on DOM Content Loaded
      */
@@ -634,6 +639,18 @@
         btnToggleLabels = document.getElementById('btnToggleLabels');
         btnToggleFoliage = document.getElementById('btnToggleFoliage');
         btnToggleSurroundings = document.getElementById('btnToggleSurroundings');
+
+        // Batch 35: Google Street View & Road Guidance Elements (Concern 4)
+        mapStreetviewCluster = document.getElementById('mapStreetviewCluster');
+        streetviewThumbCard = document.getElementById('streetviewThumbCard');
+        btnRecenterEntrance = document.getElementById('btnRecenterEntrance');
+        btnPegmanStreetView = document.getElementById('btnPegmanStreetView');
+        routeStreetviewPreview = document.getElementById('routeStreetviewPreview');
+        btnOpenStreetViewFromRoute = document.getElementById('btnOpenStreetViewFromRoute');
+        streetViewModal = document.getElementById('streetViewModal');
+        btnCloseStreetViewModal = document.getElementById('btnCloseStreetViewModal');
+        btnGuideFromStreetView = document.getElementById('btnGuideFromStreetView');
+        streetviewPanoramaViewport = document.getElementById('streetviewPanoramaViewport');
     }
 
     /**
@@ -831,7 +848,9 @@
         // Close slip, lightbox, route, drawer, location summary, or today's services panel on ESC key
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                if (archetypeLightboxModal && archetypeLightboxModal.style.display !== 'none') {
+                if (streetViewModal && streetViewModal.style.display !== 'none') {
+                    closeStreetViewModal();
+                } else if (archetypeLightboxModal && archetypeLightboxModal.style.display !== 'none') {
                     closeArchetypeLightbox();
                 } else if (wayfindingSlipModal && wayfindingSlipModal.style.display !== 'none') {
                     closeWayfindingSlip();
@@ -1089,6 +1108,59 @@
         if (btnToggleSurroundings) {
             btnToggleSurroundings.addEventListener('click', () => toggleMapDetail('surroundings'));
         }
+
+        // Batch 35: Street View & Road Guidance Listeners (Concern 4)
+        if (streetviewThumbCard) {
+            streetviewThumbCard.addEventListener('click', () => openStreetViewModal(0));
+            streetviewThumbCard.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openStreetViewModal(0);
+                }
+            });
+        }
+
+        if (btnPegmanStreetView) {
+            btnPegmanStreetView.addEventListener('click', () => openStreetViewModal(0));
+        }
+
+        if (btnOpenStreetViewFromRoute) {
+            btnOpenStreetViewFromRoute.addEventListener('click', () => openStreetViewModal(0));
+            btnOpenStreetViewFromRoute.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openStreetViewModal(0);
+                }
+            });
+        }
+
+        if (btnRecenterEntrance) {
+            btnRecenterEntrance.addEventListener('click', recenterOnEntrance);
+        }
+
+        if (btnCloseStreetViewModal) {
+            btnCloseStreetViewModal.addEventListener('click', closeStreetViewModal);
+        }
+
+        if (btnGuideFromStreetView) {
+            btnGuideFromStreetView.addEventListener('click', () => {
+                closeStreetViewModal();
+                if (state.activeRoute && state.activeRoute.points) {
+                    fitRouteToViewport(state.activeRoute.points);
+                } else {
+                    recenterOnEntrance();
+                }
+            });
+        }
+
+        // Street View Walkthrough Steps click
+        const walkthroughSteps = document.querySelectorAll('.walkthrough-step');
+        walkthroughSteps.forEach(stepEl => {
+            stepEl.addEventListener('click', () => {
+                const stepIdx = parseInt(stepEl.getAttribute('data-step') || '0', 10);
+                setStreetViewStep(stepIdx);
+            });
+        });
     }
 
     /**
@@ -1156,6 +1228,48 @@
         } else if (feature === 'surroundings') {
             cemeteryMapSvg.classList.toggle('hide-surroundings', !isEnabled);
             if (btnToggleSurroundings) btnToggleSurroundings.classList.toggle('is-active', isEnabled);
+        }
+    }
+
+    /**
+     * Re-center camera on Main Entrance Gate along P. Aquino Avenue (Batch 35)
+     */
+    function recenterOnEntrance() {
+        centerViewOnPoint(730, 870, 0.75);
+        toast('Centered on P. Aquino Avenue Main Entrance Gate', 'info');
+    }
+
+    /**
+     * Open Street View Entrance Walkthrough Modal (Batch 35)
+     */
+    function openStreetViewModal(stepIndex = 0) {
+        if (!streetViewModal) return;
+        streetViewModal.style.display = 'flex';
+        setStreetViewStep(stepIndex);
+        document.body.style.overflow = 'hidden';
+    }
+
+    /**
+     * Close Street View Modal
+     */
+    function closeStreetViewModal() {
+        if (!streetViewModal) return;
+        streetViewModal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    /**
+     * Update active step in Street View Walkthrough Bar
+     */
+    function setStreetViewStep(stepIndex) {
+        const steps = document.querySelectorAll('.walkthrough-step');
+        steps.forEach((st, idx) => {
+            st.classList.toggle('is-active', idx === stepIndex);
+        });
+
+        if (state.activeRoute && typeof setActiveRouteStep === 'function') {
+            const mappedStep = Math.min(stepIndex, (state.activeRoute.steps?.length || 1) - 1);
+            setActiveRouteStep(mappedStep, false);
         }
     }
 
@@ -4626,6 +4740,9 @@ if (count <= 4 && !usedZones.has('e')) {
         }
 
         mapRouteInfoCard.style.display = 'block';
+        if (routeStreetviewPreview) {
+            routeStreetviewPreview.style.display = 'block';
+        }
     }
 
     /**
@@ -4701,6 +4818,9 @@ if (count <= 4 && !usedZones.has('e')) {
         }
         if (mapRouteInfoCard) {
             mapRouteInfoCard.style.display = 'none';
+        }
+        if (routeStreetviewPreview) {
+            routeStreetviewPreview.style.display = 'none';
         }
         if (mapLocationSummaryCard) {
             mapLocationSummaryCard.style.display = 'none';
