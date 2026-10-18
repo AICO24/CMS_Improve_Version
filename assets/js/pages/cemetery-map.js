@@ -59,9 +59,9 @@
         nodes: {
             EXTERNAL_ENTRY: { id: 'EXTERNAL_ENTRY', x: 1101, y: 928, label: 'P. Aquino Avenue Ingress' },
             MAIN_GATE: { id: 'MAIN_GATE', x: 1096, y: 881, label: 'Main Gate Portal (P. Aquino Ave)' },
-            SOUTH_JUNCTION: { id: 'SOUTH_JUNCTION', x: 1088, y: 755, label: 'Entrance Corridor Junction' },
-            PARKING_ACCESS: { id: 'PARKING_ACCESS', x: 1035, y: 755, label: 'Visitor Parking Zone' },
-            PARKING_SOUTH: { id: 'PARKING_SOUTH', x: 1035, y: 785, label: 'Visitor Parking (South Bay)' },
+            SOUTH_JUNCTION: { id: 'SOUTH_JUNCTION', x: 1088, y: 749, label: 'Entrance Corridor Junction' },
+            PARKING_ACCESS: { id: 'PARKING_ACCESS', x: 1034, y: 749, label: 'Visitor Parking Zone' },
+            PARKING_SOUTH: { id: 'PARKING_SOUTH', x: 1034, y: 780, label: 'Visitor Parking (South Bay)' },
             EAST_CORRIDOR_JUNCTION: { id: 'EAST_CORRIDOR_JUNCTION', x: 1085, y: 545, label: 'Avenue of Peace (East Entrance)' },
             CENTRAL_ROUNDABOUT: { id: 'CENTRAL_ROUNDABOUT', x: 800, y: 545, label: 'Avenue of Peace (Central Spine Crossing)' },
             CENTRAL_CROSSWAY: { id: 'CENTRAL_CROSSWAY', x: 800, y: 545, label: 'Avenue of Peace (Central Spine Crossing)' },
@@ -78,12 +78,12 @@
             ROTUNDA_EAST: { id: 'ROTUNDA_EAST', x: 992, y: 320, label: 'Memorial Rotunda (East Ingress)' },
 
             // Facility Anchors
-            ADMIN_ACCESS: { id: 'ADMIN_ACCESS', x: 782, y: 380, label: 'Administration Office' },
-            CHAPEL_ACCESS: { id: 'CHAPEL_ACCESS', x: 858, y: 362, label: 'Memorial Chapel' },
-            COLUMBARIUM_ACCESS: { id: 'COLUMBARIUM_ACCESS', x: 886, y: 274, label: 'Columbarium Sanctuary' },
-            CREMATORIUM_ACCESS: { id: 'CREMATORIUM_ACCESS', x: 978, y: 271, label: 'Crematorium Facility' },
-            COMFORT_ROOM_ACCESS: { id: 'COMFORT_ROOM_ACCESS', x: 932, y: 247, label: 'Comfort Room (CR)' },
-            COLUMBARIUM_SOUTH: { id: 'COLUMBARIUM_SOUTH', x: 886, y: 310, label: 'Columbarium South Approach' },
+            ADMIN_ACCESS: { id: 'ADMIN_ACCESS', x: 778, y: 350, label: 'Administration Office' },
+            CHAPEL_ACCESS: { id: 'CHAPEL_ACCESS', x: 852, y: 350, label: 'Memorial Chapel' },
+            COLUMBARIUM_ACCESS: { id: 'COLUMBARIUM_ACCESS', x: 887, y: 215, label: 'Columbarium Sanctuary' },
+            CREMATORIUM_ACCESS: { id: 'CREMATORIUM_ACCESS', x: 979, y: 260, label: 'Crematorium Facility' },
+            COMFORT_ROOM_ACCESS: { id: 'COMFORT_ROOM_ACCESS', x: 933, y: 242, label: 'Comfort Room (CR)' },
+            COLUMBARIUM_SOUTH: { id: 'COLUMBARIUM_SOUTH', x: 887, y: 275, label: 'Columbarium South Approach' },
 
             // Legacy & Context Intersections
             MID_WEST_CROSSWAY: { id: 'MID_WEST_CROSSWAY', x: 655, y: 545, label: 'Avenue of Peace (West Junction)' },
@@ -1620,8 +1620,8 @@ const FACILITY_ANCHORS = {
     parking: {
         id: 'parking',
         landmark: 'parking',
-        x: 1035,
-        y: 755,
+        x: 1034,
+        y: 749,
         label: 'Visitor Parking Zone',
         accessNode: 'PARKING_ACCESS',
         description: 'Operational Landmark: Calibrated Visitor Parking & Circulation Zone'
@@ -1629,8 +1629,8 @@ const FACILITY_ANCHORS = {
     admin: {
         id: 'admin',
         landmark: 'admin',
-        x: 782,
-        y: 380,
+        x: 778,
+        y: 350,
         label: 'Administration Office',
         accessNode: 'ADMIN_ACCESS',
         structureWayId: 927998601,
@@ -1639,8 +1639,8 @@ const FACILITY_ANCHORS = {
     chapel: {
         id: 'chapel',
         landmark: 'chapel',
-        x: 858,
-        y: 362,
+        x: 852,
+        y: 350,
         label: 'Memorial Chapel',
         accessNode: 'CHAPEL_ACCESS',
         structureWayId: 930065369,
@@ -1649,8 +1649,8 @@ const FACILITY_ANCHORS = {
     crematorium: {
         id: 'crematorium',
         landmark: 'crematorium',
-        x: 978,
-        y: 271,
+        x: 979,
+        y: 260,
         label: 'Crematorium Facility',
         accessNode: 'CREMATORIUM_ACCESS',
         structureWayId: 930065371,
@@ -1659,8 +1659,8 @@ const FACILITY_ANCHORS = {
     columbarium: {
         id: 'columbarium',
         landmark: 'columbarium',
-        x: 886,
-        y: 274,
+        x: 887,
+        y: 215,
         label: 'Columbarium & Ossuary',
         accessNode: 'COLUMBARIUM_ACCESS',
         structureWayId: 930065363,
@@ -1669,8 +1669,8 @@ const FACILITY_ANCHORS = {
     restroom: {
         id: 'restroom',
         landmark: 'restroom',
-        x: 932,
-        y: 247,
+        x: 933,
+        y: 242,
         label: 'Comfort Room (CR)',
         accessNode: 'COMFORT_ROOM_ACCESS',
         structureWayId: 930065365,
@@ -1849,17 +1849,17 @@ const roads = [
     // 7. Chapel Courtyard to Rotunda South Approach
     { d: 'M 800 410 H 935 Q 970 410 970 344', w: 14 },
     // 8. Visitor Parking Access Driveway
-    { d: 'M 1035 755 H 1088', w: 16 }
+    { d: 'M 1034 749 H 1088', w: 16 }
 ];
 
 // Pedestrian Walkways connecting landmarks, roads, and block parcels
 const primaryPaths = [
-    `M 782 275 V 360`,                                          // Promenade to Admin Office
-    `M 858 275 V 345`,                                          // Promenade to Memorial Chapel
-    `M 886 215 V 275`,                                          // North walk through Columbarium pavilion cluster
-    `M 920 270 H 965`,                                          // East cross walk to Crematorium
-    `M 975 255 V 298`,                                          // Crematorium south approach to Rotunda North Ingress
-    `M 1035 755 H 1085`                                         // Parking pedestrian connection to Entrance Road
+    `M 778 275 V 332`,                                          // Promenade to Admin Office
+    `M 852 275 V 330`,                                          // Promenade to Memorial Chapel
+    `M 887 236 V 275`,                                          // North walk from Columbarium sanctuary to Promenade
+    `M 924 242 H 952`,                                          // Restroom to Crematorium walkway
+    `M 979 284 V 298`,                                          // Crematorium south approach to Rotunda North Ingress
+    `M 1034 749 H 1088`                                         // Parking pedestrian connection to Entrance Road
 ];
 
 const roadG = mk('g', { class: 'svg-road-network mp-roads' }, mapRoadLayer);
@@ -1961,22 +1961,24 @@ const landmarkGroup = mk('g', { class: 'svg-landmarks-group mp-landmarks' }, map
 landmarkGroup.innerHTML += `
     <g class="svg-landmark-bldg mp-landmark" data-landmark="parking" tabindex="0" role="region" aria-label="Visitor Parking Area">
         <title>Visitor Parking Area — Entrance Corridor (Operational Landmark)</title>
-        <rect x="990" y="720" width="80" height="70" rx="4" class="mp-parking-curb"/>
-        <rect x="993" y="723" width="74" height="64" rx="3" class="mp-parking"/>
+        <rect x="990" y="706" width="86" height="86" rx="4" class="mp-parking-curb"/>
+        <rect x="993" y="709" width="80" height="80" rx="3" class="mp-parking"/>
         <!-- Perpendicular Parking Bays -->
-        <line x1="993" y1="738" x2="1040" y2="738" class="mp-parking-stripe"/>
-        <line x1="993" y1="753" x2="1040" y2="753" class="mp-parking-stripe"/>
-        <line x1="993" y1="768" x2="1040" y2="768" class="mp-parking-stripe"/>
+        <line x1="993" y1="724" x2="1044" y2="724" class="mp-parking-stripe"/>
+        <line x1="993" y1="739" x2="1044" y2="739" class="mp-parking-stripe"/>
+        <line x1="993" y1="754" x2="1044" y2="754" class="mp-parking-stripe"/>
+        <line x1="993" y1="769" x2="1044" y2="769" class="mp-parking-stripe"/>
         <!-- Parked visitor cars -->
-        <rect x="998" y="726" width="24" height="10" rx="2" fill="#1e3a5f" class="mp-car"/>
-        <rect x="998" y="741" width="24" height="10" rx="2" fill="#e5e7eb" class="mp-car"/>
-        <rect x="998" y="756" width="24" height="10" rx="2" fill="#9f1239" class="mp-car"/>
+        <rect x="998" y="712" width="24" height="10" rx="2" fill="#1e3a5f" class="mp-car"/>
+        <rect x="998" y="727" width="24" height="10" rx="2" fill="#e5e7eb" class="mp-car"/>
+        <rect x="998" y="742" width="24" height="10" rx="2" fill="#9f1239" class="mp-car"/>
+        <rect x="998" y="757" width="24" height="10" rx="2" fill="#475569" class="mp-car"/>
         <!-- PWD Accessible Bay -->
-        <rect x="995" y="770" width="28" height="15" rx="1.5" class="mp-parking-pwd"/>
-        <text x="1009" y="782" class="mp-parking-pwd-icon">♿</text>
+        <rect x="995" y="772" width="30" height="15" rx="1.5" class="mp-parking-pwd"/>
+        <text x="1010" y="784" class="mp-parking-pwd-icon">♿</text>
         <!-- Directional Ingress Arrow -->
-        <path d="M 1052 730 V 770 M 1047 764 L 1052 770 L 1057 764" class="mp-parking-arrow"/>
-        ${pillSvg(1030, 755, 'Visitor Parking', 'P', 'navy')}
+        <path d="M 1056 720 V 764 M 1051 758 L 1056 764 L 1061 758" class="mp-parking-arrow"/>
+        ${pillSvg(1034, 749, 'Visitor Parking', 'P', 'navy')}
     </g>
 `;
 
@@ -1984,14 +1986,14 @@ landmarkGroup.innerHTML += `
 landmarkGroup.innerHTML += `
     <g class="svg-landmark-bldg mp-landmark" data-landmark="admin" tabindex="0" role="region" aria-label="Administration Office">
         <title>Administration Office — Mapped Structures 927998601/927998602</title>
-        <rect x="768" y="360" width="30" height="38" rx="2" class="mp-bldg-shadow" transform="translate(1.5 2)"/>
-        <rect x="768" y="360" width="30" height="38" rx="2" class="mp-bldg-wall"/>
-        <rect x="770" y="362" width="26" height="34" rx="1" fill="#8aa1bd"/>
-        <line x1="770" y1="379" x2="796" y2="379" class="mp-roof-ridge mp-roof-ridge--thin"/>
+        <rect x="764" y="332" width="30" height="40" rx="2" class="mp-bldg-shadow" transform="translate(1.5 2)"/>
+        <rect x="764" y="332" width="30" height="40" rx="2" class="mp-bldg-wall"/>
+        <rect x="766" y="334" width="26" height="36" rx="1" fill="#8aa1bd"/>
+        <line x1="766" y1="352" x2="792" y2="352" class="mp-roof-ridge mp-roof-ridge--thin"/>
         <!-- Admin Entry Portico -->
-        <rect x="777" y="394" width="12" height="6" rx="1" class="mp-bldg-wall"/>
-        <rect x="778" y="395" width="10" height="4" fill="#cbd5e1"/>
-        ${pillSvg(782, 380, 'Admin Office', '🏢', 'navy')}
+        <rect x="788" y="347" width="8" height="10" rx="1" class="mp-bldg-wall"/>
+        <rect x="789" y="348" width="6" height="8" fill="#cbd5e1"/>
+        ${pillSvg(778, 320, 'Admin Office', '🏢', 'navy')}
     </g>
 `;
 
@@ -1999,39 +2001,49 @@ landmarkGroup.innerHTML += `
 landmarkGroup.innerHTML += `
     <g class="svg-landmark-bldg mp-landmark" data-landmark="chapel" tabindex="0" role="region" aria-label="Memorial Chapel">
         <title>Memorial Chapel — Mapped Structure 930065369</title>
-        <rect x="840" y="346" width="34" height="32" rx="2" class="mp-bldg-shadow" transform="translate(1.5 2)"/>
-        <rect x="840" y="346" width="34" height="32" rx="2" class="mp-bldg-wall"/>
+        <rect x="834" y="330" width="36" height="42" rx="2" class="mp-bldg-shadow" transform="translate(1.5 2)"/>
+        <rect x="834" y="330" width="36" height="42" rx="2" class="mp-bldg-wall"/>
         <!-- Chapel Pitched Roof -->
-        <rect x="842" y="348" width="15" height="28" fill="#6a8fbb"/>
-        <rect x="857" y="348" width="15" height="28" fill="#4b6f99"/>
-        <line x1="857" y1="348" x2="857" y2="376" class="mp-roof-ridge"/>
+        <rect x="836" y="332" width="16" height="38" fill="#5b80ab"/>
+        <rect x="852" y="332" width="16" height="38" fill="#3d628d"/>
+        <line x1="852" y1="332" x2="852" y2="370" class="mp-roof-ridge"/>
         <!-- Ceremonial Cross on Apex -->
-        <line x1="857" y1="341" x2="857" y2="352" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-        <line x1="853" y1="345" x2="861" y2="345" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+        <line x1="852" y1="324" x2="852" y2="336" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+        <line x1="848" y1="328" x2="856" y2="328" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
         <!-- Portico -->
-        <rect x="850" y="374" width="14" height="5" rx="1" class="mp-bldg-wall"/>
-        ${pillSvg(858, 362, 'Memorial Chapel', '✝', 'navy')}
+        <rect x="845" y="370" width="14" height="6" rx="1" class="mp-bldg-wall"/>
+        ${pillSvg(852, 318, 'Memorial Chapel', '✝', 'navy')}
     </g>
 `;
 
-// --- Crematorium Facility (Calibrated Facility Anchor: Way 930065371) ---
+// --- Crematorium Facility (Calibrated Landmark matching Google Maps Photo) ---
 landmarkGroup.innerHTML += `
     <g class="svg-landmark-bldg mp-landmark" data-landmark="crematorium" tabindex="0" role="region" aria-label="Crematorium Facility">
-        <title>Crematorium Facility — Mapped Structure 930065371</title>
-        <rect x="954" y="252" width="46" height="36" rx="2" class="mp-bldg-shadow" transform="translate(2 2)"/>
-        <rect x="954" y="252" width="46" height="36" rx="2" class="mp-bldg-wall"/>
-        <!-- Crematorium Hipped Roof -->
-        <polygon points="955,253 999,253 986,270 967,270" fill="#c3c9d0"/>
-        <polygon points="955,287 999,287 986,270 967,270" fill="#8e97a1"/>
-        <polygon points="955,253 967,270 955,287" fill="#a9b1ba"/>
-        <polygon points="999,253 986,270 999,287" fill="#9aa2ab"/>
-        <line x1="967" y1="270" x2="986" y2="270" class="mp-roof-ridge"/>
-        <!-- Chimney Stack Feature -->
-        <rect x="990" y="255" width="5" height="5" rx="1" fill="#475569" stroke="#1e293b" stroke-width="0.6"/>
-        <!-- Porte-Cochere Hearse Drop-Off -->
-        <rect x="965" y="284" width="24" height="6" rx="1" class="mp-bldg-wall"/>
-        <rect x="966" y="285" width="22" height="4" fill="#b8bec6"/>
-        ${pillSvg(978, 271, 'Crematorium', '🔥', 'navy')}
+        <title>Everlasting Peace Crematorium — Calibrated Structure (Google Maps Verified)</title>
+        <rect x="952" y="240" width="54" height="44" rx="2" class="mp-bldg-shadow" transform="translate(2 2)"/>
+        <!-- 2-Story Modern Facility matching client photograph -->
+        <rect x="952" y="240" width="54" height="44" rx="2" fill="#f8f6f0" stroke="#334155" stroke-width="1.4"/>
+        <!-- Ground-level architectural dark glass entrance -->
+        <rect x="956" y="262" width="46" height="16" rx="1" fill="#1e293b" stroke="#0f172a" stroke-width="0.8"/>
+        <line x1="979" y1="262" x2="979" y2="278" stroke="#475569" stroke-width="0.8"/>
+        <!-- 2nd-floor terrace deck & stainless steel railing -->
+        <rect x="954" y="242" width="50" height="18" fill="#ece8dd" stroke="#94a3b8" stroke-width="0.8"/>
+        <line x1="954" y1="245" x2="1004" y2="245" stroke="#64748b" stroke-width="1.2"/>
+        <line x1="954" y1="242" x2="954" y2="248" stroke="#64748b" stroke-width="0.8"/>
+        <line x1="966" y1="242" x2="966" y2="248" stroke="#64748b" stroke-width="0.8"/>
+        <line x1="979" y1="242" x2="979" y2="248" stroke="#64748b" stroke-width="0.8"/>
+        <line x1="992" y1="242" x2="992" y2="248" stroke="#64748b" stroke-width="0.8"/>
+        <line x1="1004" y1="242" x2="1004" y2="248" stroke="#64748b" stroke-width="0.8"/>
+        <!-- Prominent Facade Title Plaque (matching photo: "CREMATORIUM") -->
+        <rect x="961" y="250" width="36" height="8" rx="1" fill="#e2ded4" stroke="#94a3b8" stroke-width="0.6"/>
+        <text x="979" y="255.8" font-family="'Inter', sans-serif" font-size="3.4" font-weight="900" letter-spacing="0.1em" fill="#0f172a" text-anchor="middle">CREMATORIUM</text>
+        <!-- Roof industrial chimney stack -->
+        <rect x="993" y="242" width="6" height="6" rx="1" fill="#475569" stroke="#1e293b" stroke-width="0.6"/>
+        <circle cx="996" cy="245" r="1.5" fill="#1e293b"/>
+        <!-- Porte-Cochere Hearse Drop-Off connecting toward Rotunda -->
+        <rect x="962" y="280" width="34" height="6" rx="1" class="mp-bldg-wall"/>
+        <rect x="963" y="281" width="32" height="4" fill="#cbd5e1"/>
+        ${pillSvg(979, 226, 'Crematorium Facility', '🔥', 'navy')}
     </g>
 `;
 
@@ -2040,13 +2052,14 @@ landmarkGroup.innerHTML += `
     <g class="svg-landmark-bldg mp-landmark" data-landmark="columbarium" tabindex="0" role="region" aria-label="Columbarium and Ossuary Sanctuary">
         <title>Columbarium / Ossuary Sanctuary — Pavilion Cluster</title>
         <!-- Colonnade & Memorial Pavilion Courtyard -->
-        <rect x="864" y="260" width="44" height="32" rx="4" class="mp-garden-hedge"/>
-        <rect x="867" y="263" width="38" height="26" rx="2" fill="#7c5cc4" opacity="0.15"/>
-        <circle cx="886" cy="274" r="14" class="mp-bldg-shadow" transform="translate(1.5 2)"/>
-        <circle cx="886" cy="274" r="14" class="mp-bldg-wall"/>
-        <circle cx="886" cy="274" r="10" fill="#7c5cc4" stroke="#4c2f91" stroke-width="1.2"/>
-        <circle cx="886" cy="274" r="3" fill="#fbbf24" stroke="#b45309" stroke-width="0.8"/>
-        ${pillSvg(886, 274, 'Columbarium / Ossuary', '🏛', 'purple')}
+        <rect x="860" y="194" width="54" height="42" rx="4" class="mp-garden-hedge"/>
+        <rect x="863" y="197" width="48" height="36" rx="2" fill="#7c5cc4" opacity="0.12"/>
+        <circle cx="887" cy="215" r="14" class="mp-bldg-shadow" transform="translate(1.5 2)"/>
+        <circle cx="887" cy="215" r="14" class="mp-bldg-wall"/>
+        <circle cx="887" cy="215" r="10" fill="#7c5cc4" stroke="#4c2f91" stroke-width="1.2"/>
+        <circle cx="887" cy="215" r="3.2" fill="#fbbf24" stroke="#b45309" stroke-width="0.8"/>
+        <circle cx="887" cy="215" r="18" fill="none" stroke="#cbd5e1" stroke-width="1.8" stroke-dasharray="3 3"/>
+        ${pillSvg(887, 180, 'Columbarium Sanctuary', '🏛', 'purple')}
     </g>
 `;
 
@@ -2054,11 +2067,11 @@ landmarkGroup.innerHTML += `
 landmarkGroup.innerHTML += `
     <g class="svg-landmark-bldg mp-landmark" data-landmark="restroom" tabindex="0" role="region" aria-label="Public Comfort Room Facility">
         <title>Public Comfort Room (CR) — Mapped Structure 930065365</title>
-        <rect x="924" y="240" width="16" height="14" rx="1.5" class="mp-bldg-shadow" transform="translate(1 1)"/>
-        <rect x="924" y="240" width="16" height="14" rx="1.5" class="mp-bldg-wall"/>
-        <rect x="925" y="241" width="14" height="12" fill="#7fa7c9"/>
-        <line x1="925" y1="247" x2="939" y2="247" class="mp-roof-ridge mp-roof-ridge--thin"/>
-        ${pillSvg(932, 247, 'Comfort Room', '🚻', 'teal')}
+        <rect x="924" y="234" width="18" height="16" rx="1.5" class="mp-bldg-shadow" transform="translate(1 1)"/>
+        <rect x="924" y="234" width="18" height="16" rx="1.5" class="mp-bldg-wall"/>
+        <rect x="925" y="235" width="16" height="14" fill="#7fa7c9"/>
+        <line x1="925" y1="242" x2="941" y2="242" class="mp-roof-ridge mp-roof-ridge--thin"/>
+        ${pillSvg(933, 224, 'Comfort Room', '🚻', 'teal')}
     </g>
 `;
 
