@@ -7810,3 +7810,172 @@ button.btn-today-services.is-active,
         animation: none !important;
     }
 }
+
+/* =========================================================================
+   BATCH 31: SURROUNDING URBAN CONTEXT & GOOGLE MAPS AMBIENT ENVIRONMENT
+   ========================================================================= */
+
+/* 1. Google Maps Base Canvas Background */
+.svg-stage-container {
+    background: #f1f3f4 !important;
+}
+
+[data-theme="dark"] .svg-stage-container {
+    background: #111827 !important;
+}
+
+.mp-surround {
+    fill: #f1f3f4;
+    stroke: none;
+}
+
+[data-theme="dark"] .mp-surround {
+    fill: #111827;
+}
+
+/* 2. Tonsuya Residential Parcels & Building Footprints */
+.mp-neighbor-parcel {
+    fill: #e8eaed;
+    stroke: #dadce0;
+    stroke-width: 1px;
+}
+
+[data-theme="dark"] .mp-neighbor-parcel {
+    fill: #1e293b;
+    stroke: #334155;
+}
+
+.mp-neighbor-bldg {
+    fill: #dce1e6;
+    stroke: #c4c7c5;
+    stroke-width: 0.8px;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.08));
+}
+
+[data-theme="dark"] .mp-neighbor-bldg {
+    fill: #263342;
+    stroke: #3b4656;
+}
+
+/* 3. Our Lady of Lourdes Eternal Park (Adjacent Park Lawn) */
+.mp-neighbor-park {
+    fill: #dcedd9;
+    stroke: #b9d8b5;
+    stroke-width: 1.5px;
+}
+
+[data-theme="dark"] .mp-neighbor-park {
+    fill: #13281c;
+    stroke: #1e402d;
+}
+
+/* 4. Side Streets & Urban Corridors */
+.mp-ext-road-side {
+    fill: #e5e7eb;
+    stroke: #cbd5e1;
+    stroke-width: 1px;
+}
+
+[data-theme="dark"] .mp-ext-road-side {
+    fill: #1f2937;
+    stroke: #374151;
+}
+
+.mp-street-side-label {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 7.2px;
+    font-weight: 700;
+    fill: #475569;
+    letter-spacing: 0.1em;
+    text-anchor: middle;
+    pointer-events: none;
+    paint-order: stroke fill;
+    stroke: #ffffff;
+    stroke-width: 2.5px;
+    stroke-linejoin: round;
+}
+
+[data-theme="dark"] .mp-street-side-label {
+    fill: #94a3b8;
+    stroke: #0f172a;
+}
+
+.mp-context-label {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 8.5px;
+    font-weight: 800;
+    fill: #334155;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-anchor: middle;
+    pointer-events: none;
+    paint-order: stroke fill;
+    stroke: #ffffff;
+    stroke-width: 3.5px;
+    stroke-linejoin: round;
+}
+
+[data-theme="dark"] .mp-context-label {
+    fill: #e2e8f0;
+    stroke: #0f172a;
+}
+
+.mp-context-sublabel {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 6.8px;
+    font-weight: 600;
+    fill: #64748b;
+    letter-spacing: 0.04em;
+    text-anchor: middle;
+    pointer-events: none;
+    paint-order: stroke fill;
+    stroke: #ffffff;
+    stroke-width: 2.5px;
+}
+
+[data-theme="dark"] .mp-context-sublabel {
+    fill: #94a3b8;
+    stroke: #0f172a;
+}
+
+.mp-north-label {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 7.5px;
+    font-weight: 800;
+    fill: #64748b;
+    letter-spacing: 0.12em;
+    text-anchor: middle;
+    pointer-events: none;
+    paint-order: stroke fill;
+    stroke: #ffffff;
+    stroke-width: 3px;
+    stroke-linejoin: round;
+}
+
+[data-theme="dark"] .mp-north-label {
+    fill: #94a3b8;
+    stroke: #0f172a;
+}
+
+/* 5. Google Maps Pill Variants (Gray, Green, Road, etc.) */
+.mp-pill--gray .mp-pill-bg {
+    fill: rgba(71, 85, 105, 0.92);
+    stroke: rgba(255, 255, 255, 0.35);
+    stroke-width: 1px;
+}
+
+.mp-pill--gray .mp-pill-text {
+    fill: #ffffff;
+    font-weight: 700;
+}
+
+.mp-pill--green .mp-pill-bg {
+    fill: rgba(22, 101, 52, 0.92);
+    stroke: rgba(255, 255, 255, 0.35);
+    stroke-width: 1px;
+}
+
+.mp-pill--green .mp-pill-text {
+    fill: #ffffff;
+    font-weight: 700;
+}

@@ -1757,23 +1757,86 @@ const RD = {
 
 // ==========================================
 // LAYER 0: Canvas Background, Surrounding Context & Continuous Property Lawn
-// ==========================================
-mk('rect', { x: 300, y: 0, width: 1100, height: 1100, class: 'mp-surround' }, mapGroundLayer);
+// Canvas Base Surroundings: Extended to fill all pans and zooms with Google Maps terrain tone
+mk('rect', { x: -300, y: -200, width: 2200, height: 1600, class: 'mp-surround' }, mapGroundLayer);
 
 // Surrounding Geographic Context (Matching Google Maps Neighborhood: Tonsuya, Malabon & Adjacent Park)
 const surroundingContext = mk('g', { class: 'mp-surrounding-context', 'aria-hidden': 'true' }, mapGroundLayer);
 surroundingContext.innerHTML = `
-    <!-- West Urban Context (Barangay Tonsuya, Delos Santos, Rosal St.) -->
-    <text x="510" y="470" class="mp-context-label" style="font-size: 8px;">BARANGAY TONSUYA</text>
-    <text x="510" y="484" class="mp-context-sublabel" style="font-size: 6.8px;">Residential Area • Rosal St.</text>
+    <!-- West Urban Context: Barangay Tonsuya Residential Parcels & Real Streets -->
+    <!-- Rosal Street running North along Western Perimeter Wall -->
+    <polygon points="496,960 522,965 500,530 474,530" class="mp-ext-road-side"/>
+    <polygon points="474,530 500,530 494,220 468,220" class="mp-ext-road-side"/>
+    <line x1="509" y1="962.5" x2="487" y2="530" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="6 4"/>
+    <line x1="487" y1="530" x2="481" y2="220" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="6 4"/>
+    <text x="488" y="700" transform="rotate(-90 488 700)" class="mp-street-side-label">ROSAL STREET</text>
+    <text x="480" y="380" transform="rotate(-90 480 380)" class="mp-street-side-label">ROSAL EXTENSION</text>
 
-    <!-- East Urban Context (Our Lady of Lourdes Eternal Park) -->
-    <text x="1210" y="470" class="mp-context-label" style="font-size: 8px;">OUR LADY OF LOURDES</text>
-    <text x="1210" y="484" class="mp-context-sublabel" style="font-size: 6.8px;">Adjacent Memorial Park</text>
+    <!-- Delos Santos St crossing West into Tonsuya interior -->
+    <polygon points="260,610 488,610 488,634 260,634" class="mp-ext-road-side"/>
+    <line x1="260" y1="622" x2="488" y2="622" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="6 4"/>
+    <text x="390" y="626" class="mp-street-side-label">DELOS SANTOS ST</text>
+
+    <!-- Northwest Tonsuya Residential Block Footprints -->
+    <rect x="330" y="235" width="125" height="175" rx="4" class="mp-neighbor-parcel"/>
+    <rect x="340" y="245" width="34" height="24" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="382" y="245" width="30" height="24" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="420" y="245" width="28" height="24" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="340" y="278" width="40" height="26" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="388" y="278" width="38" height="26" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="340" y="312" width="36" height="28" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="384" y="312" width="42" height="28" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="340" y="348" width="50" height="28" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="398" y="348" width="45" height="28" rx="2" class="mp-neighbor-bldg"/>
+
+    <!-- Mid-West Tonsuya Residential Block Footprints -->
+    <rect x="330" y="440" width="125" height="160" rx="4" class="mp-neighbor-parcel"/>
+    <rect x="340" y="450" width="48" height="30" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="396" y="450" width="48" height="30" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="340" y="490" width="42" height="32" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="390" y="490" width="54" height="32" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="340" y="532" width="50" height="30" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="398" y="532" width="46" height="30" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="340" y="570" width="54" height="24" rx="2" class="mp-neighbor-bldg"/>
+
+    <!-- Southwest Tonsuya Residential Block Footprints -->
+    <rect x="330" y="645" width="130" height="195" rx="4" class="mp-neighbor-parcel"/>
+    <rect x="342" y="655" width="48" height="32" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="398" y="655" width="50" height="32" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="342" y="696" width="52" height="34" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="402" y="696" width="46" height="34" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="342" y="740" width="46" height="36" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="396" y="740" width="52" height="36" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="342" y="786" width="56" height="38" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="406" y="786" width="44" height="38" rx="2" class="mp-neighbor-bldg"/>
+    ${pillSvg(395, 380, 'BARANGAY TONSUYA', '🏘️', 'gray')}
+    <text x="395" y="405" class="mp-context-sublabel">Urban Residential Area • Malabon</text>
+
+    <!-- East Urban Context: Our Lady of Lourdes Eternal Park -->
+    <polygon points="1060,490 1060,700 1105,690 1170,900 1600,974 1600,135 1025,145 1035,400 1055,490" class="mp-neighbor-park"/>
+    <polygon points="1060,490 1060,700 1105,690 1170,900 1600,974 1600,135 1025,145 1035,400 1055,490" fill="url(#mpGrassSpeckle)" class="mp-texture"/>
+    <!-- Lourdes Park Memorial Centerpiece -->
+    <circle cx="1320" cy="480" r="38" fill="none" stroke="#b9d8b5" stroke-width="2.5"/>
+    <circle cx="1320" cy="480" r="16" fill="#a7d4a2" stroke="#8cb887" stroke-width="1.5"/>
+    <circle cx="1320" cy="480" r="6" fill="#e2e8f0"/>
+    ${treeCluster(1320, 480, 4, 12, 4, 6.5)}
+    ${treeLine(1185, 905, 1550, 965, 26, 6, 8.5, 0.8)}
+    ${treeLine(1030, 145, 1550, 140, 28, 6.5, 9, 0.8)}
+    ${treeLine(1480, 160, 1480, 850, 32, 6.5, 9, 0.8)}
+    ${pillSvg(1320, 420, 'Our Lady of Lourdes Eternal Park', '🌳', 'green')}
+    <text x="1320" y="445" class="mp-context-sublabel">Adjacent Memorial Park • 4.1 ★★★★☆ (71 Reviews)</text>
+
+    <!-- North Boundary Residential Blocks & Tree Wall -->
+    <rect x="620" y="40" width="380" height="85" rx="3" class="mp-neighbor-parcel"/>
+    <rect x="640" y="50" width="55" height="30" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="710" y="50" width="50" height="30" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="775" y="50" width="55" height="30" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="845" y="50" width="60" height="30" rx="2" class="mp-neighbor-bldg"/>
+    <rect x="920" y="50" width="55" height="30" rx="2" class="mp-neighbor-bldg"/>
+    <text x="890" y="125" class="mp-north-label">NORTH BOUNDARY • BARANGAY TONSUYA URBAN SECTOR</text>
 `;
 
-// P. Aquino Avenue (Letre Road) Frontage along southern edge (Bearing ~99.5° WNW to ESE)
-// Aligned to verified frontage edge P01(956.7, 863.5) -> P00(1168.9, 900.0) [Bearing 99.8°]
+// P. Aquino Avenue (Letre Road) Frontage along southern edge (Extended full width across canvas)
 const frontage = mk('g', { class: 'svg-external-road-group mp-frontage' }, mapGroundLayer);
 let crosswalkBars = '';
 // Pedestrian zebra crossings across P. Aquino Ave near West Ingress Gate (730) and East Egress (1005)
@@ -1786,22 +1849,32 @@ for (let cx = 985; cx <= 1025; cx += 8) {
     crosswalkBars += `<rect x="${cx}" y="${f1(cy)}" width="5" height="34" transform="rotate(9.8 ${cx} ${f1(cy)})" class="mp-crosswalk"/>`;
 }
 frontage.innerHTML = `
-    <!-- P. Aquino Avenue Sidewalks & Roadbed aligned to 99.5 deg bearing -->
-    <polygon points="350,962 1450,1154 1450,1166 350,974" class="mp-sidewalk"/>
-    <polygon points="350,972 1450,1164 1450,1230 350,1038" class="mp-ext-road"/>
-    <line x1="350" y1="973.5" x2="1450" y2="1165.5" class="mp-ext-edge"/>
-    <line x1="350" y1="1036.5" x2="1450" y2="1228.5" class="mp-ext-edge"/>
-    <line x1="350" y1="1005.0" x2="1450" y2="1197.0" class="mp-ext-centerline"/>
+    <!-- P. Aquino Avenue Sidewalks & Roadbed running full width (Bearing ~9.8 deg) -->
+    <polygon points="200,936 1600,1180 1600,1194 200,950" class="mp-sidewalk"/>
+    <polygon points="200,948 1600,1192 1600,1264 200,1020" class="mp-ext-road"/>
+    <line x1="200" y1="949.5" x2="1600" y2="1193.5" class="mp-ext-edge"/>
+    <line x1="200" y1="1018.5" x2="1600" y2="1262.5" class="mp-ext-edge"/>
+    <line x1="200" y1="984.0" x2="1600" y2="1228.0" class="mp-ext-centerline"/>
     ${crosswalkBars}
-    <polygon points="350,1038 1450,1230 1450,1242 350,1050" class="mp-sidewalk"/>
-    <text x="560" y="990" transform="rotate(9.8 560 990)" class="mp-ext-lane-label">◂  WESTBOUND (TONSUYA / LETRE)</text>
-    <text x="1140" y="1090" transform="rotate(9.8 1140 1090)" class="mp-ext-lane-label">EASTBOUND (MALABON / C-4)  ▸</text>
-    ${pillSvg(870, 995, '⟵   P. AQUINO AVENUE (LETRE ROAD)   ⟶', '', 'road')}
-`;
+    <polygon points="200,1020 1600,1264 1600,1278 200,1034" class="mp-sidewalk"/>
 
-// North Boundary Caption
-const northLabel = mk('text', { x: 890, y: 132, class: 'mp-north-label' }, mapGroundLayer);
-northLabel.textContent = 'NORTH BOUNDARY (MALABON/TONSUYA)';
+    <!-- South Commercial Strip Buildings along P. Aquino Ave (Matching Google Maps Street View) -->
+    <rect x="520" y="1030" width="70" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 520 1030)"/>
+    <rect x="610" y="1046" width="65" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 610 1046)"/>
+    <rect x="695" y="1060" width="80" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 695 1060)"/>
+    <rect x="795" y="1078" width="90" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 795 1078)"/>
+    <rect x="905" y="1096" width="85" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 905 1096)"/>
+    <rect x="1010" y="1114" width="75" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 1010 1114)"/>
+    <rect x="1105" y="1131" width="85" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 1105 1131)"/>
+    <rect x="1210" y="1149" width="90" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 1210 1149)"/>
+    <text x="640" y="1075" transform="rotate(9.8 640 1075)" class="mp-street-side-label">DIANZON WHOLESALE STORE</text>
+    <text x="840" y="1110" transform="rotate(9.8 840 1110)" class="mp-street-side-label">COMMERCIAL ROW • P. AQUINO AVE</text>
+
+    <!-- Lane Labels & Street Banner -->
+    <text x="560" y="974" transform="rotate(9.8 560 974)" class="mp-ext-lane-label">◂  WESTBOUND (TONSUYA / LETRE / TULLAHAN RIVER)</text>
+    <text x="1140" y="1074" transform="rotate(9.8 1140 1074)" class="mp-ext-lane-label">EASTBOUND (LONGOS / C-4 / MALABON CITY HALL)  ▸</text>
+    ${pillSvg(870, 980, '⟵   P. AQUINO AVENUE (LETRE ROAD)   ⟶', '', 'road')}
+`;
 
 // One Continuous Verified Cemetery Property Lawn (19-Vertex Polygon, OSM Relation 16828676)
 mk('polygon', { points: CEMETERY_POLYGON_POINTS, class: 'svg-cemetery-ground mp-property' }, mapGroundLayer);
