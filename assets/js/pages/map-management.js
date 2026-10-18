@@ -1675,29 +1675,54 @@
                     ${pillSvg(933, 224, 'Comfort Room', '🚻', 'teal')}
                 </g>
 
-                <!-- Main Gate Entrance Portal -->
-                <g class="svg-gate-portal mp-gate" data-landmark="gate" transform="translate(1096 881) rotate(9.8)">
-                    <title>Main Gate — 3 P. Aquino Avenue (Letre Road)</title>
-                    <rect x="-24" y="-12" width="48" height="24" rx="2" class="mp-gate-apron"/>
-                    <rect x="-24" y="-12" width="48" height="24" rx="2" fill="url(#mpPaverPattern)" class="mp-texture"/>
-                    <rect x="-21" y="-10" width="8" height="20" rx="1.5" class="mp-gate-pillar"/>
-                    <rect x="-22" y="-12" width="10" height="4" rx="1" class="mp-gate-cap"/>
-                    <rect x="13" y="-10" width="8" height="20" rx="1.5" class="mp-gate-pillar"/>
-                    <rect x="12" y="-12" width="10" height="4" rx="1" class="mp-gate-cap"/>
-                    <path d="M -13 -6 Q 0 -17 13 -6" class="mp-gate-arch"/>
-                    <path d="M -13 6 L -3 0 M 13 6 L 3 0" class="mp-gate-leaf"/>
-                    <line x1="-8" y1="4" x2="10" y2="4" class="mp-gate-boom"/>
-                    <rect x="23" y="-8" width="16" height="16" transform="translate(1.5 2)" class="mp-bldg-shadow"/>
-                    <rect x="23" y="-8" width="16" height="16" rx="1.5" class="mp-bldg-wall"/>
-                    <rect x="24" y="-7" width="14" height="14" fill="#8b6f5a"/>
-                    <line x1="24" y1="0" x2="38" y2="0" class="mp-roof-ridge mp-roof-ridge--thin"/>
-                    <circle cx="0" cy="-32" r="10" class="mp-gate-badge"/>
-                    <path d="M -5 -30 L 0 -35 L 5 -30 V -26 H -5 Z" fill="#ffffff"/>
-                    ${pillSvg(0, -50, 'MAIN GATE (GATE 1)', '', 'navy')}
+                <!-- West Ingress Gate Entrance Portal (P. Aquino Avenue) -->
+                <g class="svg-gate-portal mp-gate" data-landmark="gate" transform="translate(730 870) rotate(9.8)">
+                    <title>Main Ingress Gate (West Portal) — P. Aquino Avenue</title>
+                    <rect x="-20" y="-10" width="40" height="20" rx="2" class="mp-gate-apron"/>
+                    <rect x="-20" y="-10" width="40" height="20" rx="2" fill="url(#mpPaverPattern)" class="mp-texture"/>
+                    <rect x="-18" y="-9" width="7" height="18" rx="1.5" class="mp-gate-pillar"/>
+                    <rect x="-19" y="-11" width="9" height="3.5" rx="1" class="mp-gate-cap"/>
+                    <rect x="11" y="-9" width="7" height="18" rx="1.5" class="mp-gate-pillar"/>
+                    <rect x="10" y="-11" width="9" height="3.5" rx="1" class="mp-gate-cap"/>
+                    <path d="M -11 -5 Q 0 -14 11 -5" class="mp-gate-arch"/>
+                    <path d="M -11 5 L -2 0 M 11 5 L 2 0" class="mp-gate-leaf"/>
+                    <line x1="-7" y1="3" x2="8" y2="3" class="mp-gate-boom"/>
+                    <rect x="20" y="-7" width="14" height="14" rx="1.5" class="mp-bldg-wall"/>
+                    <rect x="21" y="-6" width="12" height="12" fill="#8b6f5a"/>
+                    <circle cx="0" cy="-26" r="8" class="mp-gate-badge"/>
+                    <path d="M -4 -24 L 0 -29 L 4 -24 V -20 H -4 Z" fill="#ffffff"/>
+                    ${pillSvg(0, -40, 'WEST INGRESS GATE', '', 'navy')}
                 </g>
 
-                <!-- Compass Rose -->
-                <g class="svg-north-indicator mp-compass" transform="translate(68 68)" aria-hidden="true">
+                <!-- East Egress Gate Portal (P. Aquino Avenue) -->
+                <g class="svg-gate-portal mp-gate" data-landmark="gateEast" transform="translate(1005 870) rotate(9.8)">
+                    <title>East Egress Gate Portal — P. Aquino Avenue</title>
+                    <rect x="-18" y="-9" width="36" height="18" rx="2" class="mp-gate-apron"/>
+                    <rect x="-16" y="-8" width="6" height="16" rx="1.5" class="mp-gate-pillar"/>
+                    <rect x="10" y="-8" width="6" height="16" rx="1.5" class="mp-gate-pillar"/>
+                    <line x1="-6" y1="3" x2="7" y2="3" class="mp-gate-boom"/>
+                    <circle cx="0" cy="-24" r="7" class="mp-gate-badge"/>
+                    <path d="M -3 -22 L 0 -26 L 3 -22 V -19 H -3 Z" fill="#ffffff"/>
+                    ${pillSvg(0, -36, 'EAST EGRESS GATE', '', 'navy')}
+                </g>
+
+                <!-- Signature Google Maps Red Location Pin ("Everlasting Peace Memorial Park & Crematorium") -->
+                <g class="mp-google-pin-group" data-landmark="crematorium" tabindex="0" role="button" aria-label="Everlasting Peace Memorial Park & Crematorium (Google Maps Pin)">
+                    <title>Everlasting Peace Memorial Park &amp; Crematorium — Verified Client Location (Google Maps)</title>
+                    <circle cx="979" cy="200" r="14" class="mp-google-pin-pulse"/>
+                    <ellipse cx="981" cy="202" rx="7" ry="2.6" class="mp-google-pin-shadow"/>
+                    <path d="M 979 200 C 973 192 966 182 966 172 A 13 13 0 1 1 992 172 C 992 182 985 192 979 200 Z" class="mp-google-pin"/>
+                    <circle cx="979" cy="172" r="5" fill="#ffffff"/>
+                    <circle cx="979" cy="172" r="2.2" fill="#ea4335"/>
+                    <g class="mp-google-pin-callout" transform="translate(979 146)">
+                        <rect x="-120" y="-14" width="240" height="22" rx="5" class="mp-google-pin-badge"/>
+                        <text x="0" y="-3.5" class="mp-google-pin-title">Everlasting Peace Memorial Park &amp; Crematorium</text>
+                        <text x="0" y="5.5" class="mp-google-pin-sub">4.9 ★★★★★ • Peaceful &amp; Safe • Malabon City</text>
+                    </g>
+                </g>
+
+                <!-- Compass Rose (Matching cemetery-map.js Top-Left Placement) -->
+                <g class="svg-north-indicator mp-compass" transform="translate(485 145)" aria-hidden="true">
                     <circle r="19" class="mp-compass-bg"/>
                     <polygon points="0,-13 4.5,2 0,0 -4.5,2" fill="#ef4444"/>
                     <polygon points="0,13 4.5,0 0,0 -4.5,0" fill="#cbd5e1"/>

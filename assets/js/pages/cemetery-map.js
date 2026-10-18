@@ -2148,6 +2148,28 @@ landmarkGroup.innerHTML += `
     </g>
 `;
 
+// --- Signature Google Maps Red Location Pin ("Everlasting Peace Memorial Park & Crematorium") ---
+landmarkGroup.innerHTML += `
+    <g class="mp-google-pin-group" data-landmark="crematorium" tabindex="0" role="button" aria-label="Everlasting Peace Memorial Park & Crematorium (Google Maps Pin)">
+        <title>Everlasting Peace Memorial Park &amp; Crematorium — Verified Client Location (Google Maps)</title>
+        <!-- Continuous radar pulse animation ring -->
+        <circle cx="979" cy="200" r="14" class="mp-google-pin-pulse"/>
+        <!-- Soft Ground Shadow -->
+        <ellipse cx="981" cy="202" rx="7" ry="2.6" class="mp-google-pin-shadow"/>
+        <!-- Iconic Red Teardrop Marker pointing to (979, 200) -->
+        <path d="M 979 200 C 973 192 966 182 966 172 A 13 13 0 1 1 992 172 C 992 182 985 192 979 200 Z" class="mp-google-pin"/>
+        <!-- Crisp White Inner Badge & Center Red Dot -->
+        <circle cx="979" cy="172" r="5" fill="#ffffff"/>
+        <circle cx="979" cy="172" r="2.2" fill="#ea4335"/>
+        <!-- Floating Google Maps Location Callout Pill (Exact Client Name) -->
+        <g class="mp-google-pin-callout" transform="translate(979 146)">
+            <rect x="-120" y="-14" width="240" height="22" rx="5" class="mp-google-pin-badge"/>
+            <text x="0" y="-3.5" class="mp-google-pin-title">Everlasting Peace Memorial Park &amp; Crematorium</text>
+            <text x="0" y="5.5" class="mp-google-pin-sub">4.9 ★★★★★ • Peaceful &amp; Safe • Malabon City</text>
+        </g>
+    </g>
+`;
+
 // --- Compass Rose Indicator (Top-Left, matching reference) ---
 landmarkGroup.innerHTML += `
     <g class="svg-north-indicator mp-compass" transform="translate(485 145)" aria-hidden="true">
@@ -2758,6 +2780,60 @@ if (count <= 4 && !usedZones.has('e')) {
 
         // Batch 11: Apply scheduled service markers to rendered lots
         highlightServiceLotsOnMap();
+
+        // Batch 30: Wire interactive wayfinding routing to landmarks and Google Maps pin
+        setupLandmarkInteractivity();
+    }
+
+    /**
+     * Batch 30: Setup Interactive Click & Keyboard Routing on Cemetery Landmarks & Gates
+     */
+    function setupLandmarkInteractivity() {
+        if (!mapLandmarkLayer) return;
+        const interactiveElements = mapLandmarkLayer.querySelectorAll('.mp-landmark, .svg-gate-portal, .mp-google-pin-group');
+        interactiveElements.forEach(el => {
+            el.style.cursor = 'pointer';
+            el.setAttribute('tabindex', '0');
+            el.setAttribute('role', 'button');
+
+            const handleTrigger = (e) => {
+                e.stopPropagation();
+                const lm = el.getAttribute('data-landmark');
+                if (lm === 'admin') {
+                    generateRouteToFacility('ADMIN_ACCESS', 'Administration Office', true);
+                    toast('Navigating to Administration Office', 'success');
+                } else if (lm === 'chapel') {
+                    generateRouteToFacility('CHAPEL_ACCESS', 'Memorial Chapel', true);
+                    toast('Navigating to Memorial Chapel', 'success');
+                } else if (lm === 'crematorium' || lm === 'google-pin') {
+                    generateRouteToFacility('CREMATORIUM_ACCESS', 'Everlasting Crematorium', true);
+                    toast('Navigating to Crematorium & Columbarium Complex', 'success');
+                } else if (lm === 'columbarium') {
+                    generateRouteToFacility('COLUMBARIUM_ACCESS', 'Columbarium & Ossuary Sanctuary', true);
+                    toast('Navigating to Columbarium Sanctuary', 'success');
+                } else if (lm === 'restroom') {
+                    generateRouteToFacility('COMFORT_ROOM_ACCESS', 'Public Comfort Room (CR)', true);
+                    toast('Navigating to Comfort Room', 'success');
+                } else if (lm === 'parking') {
+                    generateRouteToFacility('PARKING_ACCESS', 'Visitor Parking Area', true);
+                    toast('Navigating to Visitor Parking', 'success');
+                } else if (lm === 'gate') {
+                    toast('West Ingress Gate (Main Entrance from P. Aquino Avenue)', 'info');
+                    centerViewOnPoint(730, 870, 0.7);
+                } else if (lm === 'gateEast') {
+                    toast('East Egress Gate (Exit to P. Aquino Avenue)', 'info');
+                    centerViewOnPoint(1005, 870, 0.7);
+                }
+            };
+
+            el.addEventListener('click', handleTrigger);
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleTrigger(e);
+                }
+            });
+        });
     }
 
     /**

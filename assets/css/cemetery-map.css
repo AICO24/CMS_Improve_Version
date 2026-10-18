@@ -7696,6 +7696,117 @@ button.btn-today-services.is-active,
     }
 }
 
+/* =========================================================================
+   BATCH 30: GOOGLE MAPS RED PIN & LANDMARK INTERACTIVE WAYFINDING
+   ========================================================================= */
 
+.mp-google-pin-group {
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s ease;
+    outline: none;
+}
 
+.mp-google-pin-group:hover,
+.mp-google-pin-group:focus-visible {
+    transform: translateY(-2px);
+    filter: drop-shadow(0 6px 12px rgba(234, 67, 53, 0.45));
+}
 
+.mp-google-pin {
+    fill: #ea4335;
+    stroke: #b91c1c;
+    stroke-width: 1.2px;
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.35));
+}
+
+.mp-google-pin-shadow {
+    fill: rgba(0, 0, 0, 0.28);
+}
+
+.mp-google-pin-pulse {
+    fill: rgba(234, 67, 53, 0.15);
+    stroke: #ea4335;
+    stroke-width: 1.5px;
+    animation: googleRadarPulse 2.4s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+    transform-origin: 979px 200px;
+    pointer-events: none;
+}
+
+@keyframes googleRadarPulse {
+    0% {
+        r: 6px;
+        opacity: 0.95;
+        stroke-width: 2px;
+    }
+    60% {
+        opacity: 0.4;
+    }
+    100% {
+        r: 28px;
+        opacity: 0;
+        stroke-width: 0.5px;
+    }
+}
+
+.mp-google-pin-badge {
+    fill: rgba(15, 23, 42, 0.92);
+    stroke: rgba(234, 67, 53, 0.85);
+    stroke-width: 1.2px;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35));
+}
+
+[data-theme="dark"] .mp-google-pin-badge {
+    fill: rgba(10, 15, 29, 0.96);
+    stroke: #ea4335;
+}
+
+.mp-google-pin-title {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 6.8px;
+    font-weight: 800;
+    fill: #ffffff;
+    letter-spacing: 0.02em;
+    text-anchor: middle;
+    pointer-events: none;
+}
+
+.mp-google-pin-sub {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 5.2px;
+    font-weight: 600;
+    fill: #fca5a5;
+    text-anchor: middle;
+    pointer-events: none;
+}
+
+/* Landmark Wayfinding Hover Feedback */
+.mp-landmark,
+.svg-gate-portal {
+    cursor: pointer;
+    outline: none;
+    transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.mp-landmark:hover,
+.mp-landmark:focus-visible,
+.svg-gate-portal:hover,
+.svg-gate-portal:focus-visible {
+    filter: drop-shadow(0 4px 8px rgba(37, 99, 235, 0.35));
+}
+
+.mp-landmark:hover .mp-bldg-wall {
+    stroke: #2563eb !important;
+    stroke-width: 1.8px !important;
+}
+
+.mp-landmark:hover .mp-pill,
+.svg-gate-portal:hover .mp-pill {
+    opacity: 1 !important;
+    filter: drop-shadow(0 0 6px rgba(37, 99, 235, 0.65));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mp-google-pin-pulse {
+        animation: none !important;
+    }
+}
