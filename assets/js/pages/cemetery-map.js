@@ -338,10 +338,22 @@
      * Entry Point on DOM Content Loaded
      */
     document.addEventListener('DOMContentLoaded', async function () {
-        // Enforce route authentication across allowed roles
-        if (typeof requireRole === 'function') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isPublicWayfinding = urlParams.has('navigate') || urlParams.has('lot_id');
+
+        // Enforce route authentication across allowed roles (bypass for public scan-and-walk visitors)
+        if (!isPublicWayfinding && typeof requireRole === 'function') {
             const user = await requireRole(['admin', 'staff', 'user']);
             if (!user) return;
+        } else if (isPublicWayfinding && typeof requireRole === 'function') {
+            try {
+                const user = await api.getMe();
+                if (user && user.user_id && typeof setUserDisplay === 'function') {
+                    setUserDisplay(user);
+                }
+            } catch (e) {
+                // Public visitor guest mode (no active login session required for scan-and-walk wayfinding)
+            }
         }
 
         // Setup Logout modal helper if present
@@ -1422,172 +1434,131 @@
      *  - Hierarchy validation & safe error fallbacks
      */
     async function initFromUrlParams() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const rawCemId = urlParams.get('cemetery_id');
-        const rawBlkId = urlParams.get('block_id');
-        const rawLotId = urlParams.get('lot_id');
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const rawCemId = urlParams.get('cemetery_id');
+            const rawBlkId = urlParams.get('block_id');
+            const rawLotId = urlParams.get('lot_id');
+            const isNavigate = urlParams.get('navigate') === '1' || urlParams.get('navigate') === 'true';
 
-        // Case 1: No URL parameters provided -> default to normal cemetery overview
-        if (rawCemId === null && rawBlkId === null && rawLotId === null) {
-            if (state.cemeteries.length > 0) {
-                await switchCemetery(state.cemeteries[0].cemetery_id);
+            // Case 1: No URL parameters provided -> default to normal cemetery overview
+            if (rawCemId === null && rawBlkId === null && rawLotId === null) {
+                if (state.cemeteries.length > 0) {
+                    await switchCemetery(state.cemeteries[0].cemetery_id);
+                }
+                return;
             }
-            return;
-        }
 
-        // Case 2: Missing cemetery_id but block_id or lot_id is present
-        if (rawCemId === null && (rawBlkId !== null || rawLotId !== null)) {
-            toast('Cemetery ID is required to locate the block or lot.', 'warning');
-            if (state.cemeteries.length > 0) {
-                await switchCemetery(state.cemeteries[0].cemetery_id);
+            // Case 2: Resolve facility cemetery
+            let targetCem = null;
+            if (rawCemId !== null) {
+                const targetCemId = parsePositiveInt(rawCemId);
+                if (targetCemId !== -1) {
+                    targetCem = state.cemeteries.find(c => c.cemetery_id === targetCemId);
+                }
             }
-            return;
-        }
+            if (!targetCem && state.cemeteries.length > 0) {
+                targetCem = state.cemeteries[0];
+            }
 
-        // Case 3: cemetery_id provided -> validate format
-        const targetCemId = parsePositiveInt(rawCemId);
-        if (targetCemId === -1) {
-            toast('Cemetery not found.', 'error');
-            showEmptyOverlay(
-                'Cemetery Not Found',
-                'The requested cemetery facility identifier is invalid.',
-                true
-            );
-            return;
-        }
+            if (!targetCem) {
+                toast('No active cemetery facilities available.', 'error');
+                showEmptyOverlay(
+                    'Cemetery Not Found',
+                    'The requested cemetery facility could not be found.',
+                    true
+                );
+                return;
+            }
 
-        // Case 4: Verify cemetery exists in active facilities
-        const targetCem = state.cemeteries.find(c => c.cemetery_id === targetCemId);
-        if (!targetCem) {
-            toast('Cemetery not found.', 'error');
-            showEmptyOverlay(
-                'Cemetery Not Found',
-                'The requested cemetery facility could not be found.',
-                true
-            );
-            return;
-        }
+            // Switch to validated cemetery (loads layout and preloads block lots)
+            await switchCemetery(targetCem.cemetery_id);
 
-        // Switch to the validated cemetery (loads layout & resets filters)
-        await switchCemetery(targetCem.cemetery_id);
-
-        // Case 5: If block_id is not provided, stop at cemetery overview (or resolve direct lot_id if supplied)
-        if (rawBlkId === null) {
+            // Case 3: If lot_id is present (Direct Walk-to-Grave Deep Link)
             if (rawLotId !== null) {
-                const directLotId = parsePositiveInt(rawLotId);
-                if (directLotId !== -1) {
-                    const secs = state.currentLayout?.sections || [];
-                    for (const s of secs) {
-                        for (const b of (s.blocks || [])) {
-                            let cached = state.blockLotsCache[b.block_id];
-                            if (!cached) {
+                const targetLotId = parsePositiveInt(rawLotId);
+                if (targetLotId !== -1) {
+                    let targetLot = null;
+                    let targetBlock = null;
+                    let targetSection = null;
+
+                    const sections = state.currentLayout?.sections || [];
+
+                    // Scan sections and blocks to find the target lot
+                    for (const sec of sections) {
+                        for (const blk of (sec.blocks || [])) {
+                            let cachedLots = state.blockLotsCache[blk.block_id];
+                            if (!cachedLots || !Array.isArray(cachedLots)) {
                                 try {
-                                    const res = await api.request(`blocks/${b.block_id}/lots`, { method: 'GET' });
+                                    const res = await api.request(`map/blocks/${blk.block_id}/lots`, { method: 'GET' });
                                     if (res && res.success && res.data && Array.isArray(res.data.lots)) {
-                                        cached = res.data.lots;
-                                        state.blockLotsCache[b.block_id] = cached;
+                                        cachedLots = res.data.lots;
+                                        state.blockLotsCache[blk.block_id] = cachedLots;
                                     }
-                                } catch (e) {}
+                                } catch (e) {
+                                    console.warn(`Could not fetch lots for block ${blk.block_id}:`, e);
+                                }
                             }
-                            if (cached) {
-                                const targetLot = cached.find(l => l.lot_id === directLotId);
-                                if (targetLot) {
-                                    resetAllFilters(false);
-                                    await drillDownToBlock(b, s);
-                                    const lotElement = document.querySelector(`.svg-lot-tile[data-lot-id="${targetLot.lot_id}"]`);
-                                    selectLot(targetLot, b, s, lotElement);
-                                    if (urlParams.get('navigate') === '1' || urlParams.get('navigate') === 'true') {
-                                        setTimeout(() => {
-                                            generateRouteToLot(targetLot, b, s, true);
-                                            toast(`Turn-by-turn walking route active to Lot ${targetLot.lot_number}`, 'info');
-                                        }, 750);
-                                    }
-                                    return;
+                            if (cachedLots && Array.isArray(cachedLots)) {
+                                const found = cachedLots.find(l => l.lot_id === targetLotId);
+                                if (found) {
+                                    targetLot = found;
+                                    targetBlock = blk;
+                                    targetSection = sec;
+                                    break;
                                 }
                             }
                         }
+                        if (targetLot) break;
+                    }
+
+                    if (targetLot && targetBlock && targetSection) {
+                        resetAllFilters(false);
+
+                        if (isNavigate) {
+                            // Direct Walk-to-Grave Wayfinding on Master Overview Map
+                            // Keep master road network visible, highlight plot, and draw walking route immediately
+                            const lotElement = document.querySelector(`.svg-lot-tile[data-lot-id="${targetLot.lot_id}"]`);
+                            selectLot(targetLot, targetBlock, targetSection, lotElement);
+                            generateRouteToLot(targetLot, targetBlock, targetSection, true);
+                            const plotLabel = targetLot._displayLabel || targetLot.lot_number;
+                            toast(`Turn-by-turn walking route active to Lot ${plotLabel}`, 'info');
+                            return;
+                        } else if (rawBlkId !== null) {
+                            // Drilled block view if block_id was explicitly requested without navigate
+                            await drillDownToBlock(targetBlock, targetSection);
+                            const lotElement = document.querySelector(`.svg-lot-tile[data-lot-id="${targetLot.lot_id}"]`);
+                            selectLot(targetLot, targetBlock, targetSection, lotElement);
+                            return;
+                        } else {
+                            // Focus on lot within master plan
+                            focusOnLot(targetLot, targetBlock, targetSection);
+                            return;
+                        }
+                    } else {
+                        toast('The requested plot could not be located in this cemetery facility.', 'warning');
                     }
                 }
             }
-            return;
-        }
 
-        // Case 6: block_id provided -> validate format
-        const targetBlkId = parsePositiveInt(rawBlkId);
-        if (targetBlkId === -1) {
-            toast('The requested block could not be found on this cemetery.', 'error');
-            return;
-        }
-
-        // Case 7: Validate block exists and belongs to the selected cemetery
-        let targetBlockObj = null;
-        const sections = state.currentLayout?.sections || [];
-        for (const sec of sections) {
-            const foundBlk = (sec.blocks || []).find(b => b.block_id === targetBlkId);
-            if (foundBlk) {
-                targetBlockObj = { block: foundBlk, section: sec };
-                break;
-            }
-        }
-
-        if (!targetBlockObj) {
-            toast('The requested block could not be found on this cemetery.', 'error');
-            return;
-        }
-
-        // Clear active filters before opening block
-        resetAllFilters(false);
-
-        // Direct block loading
-        await drillDownToBlock(targetBlockObj.block, targetBlockObj.section);
-
-        // Case 8: If lot_id is not provided, stop at block view
-        if (rawLotId === null) {
-            return;
-        }
-
-        // Case 9: lot_id provided -> validate format
-        const targetLotId = parsePositiveInt(rawLotId);
-        if (targetLotId === -1) {
-            toast('The requested lot could not be found in this block.', 'error');
-            return;
-        }
-
-        // Case 10: Validate lot belongs to this block
-        const targetLot = state.currentLots.find(l => l.lot_id === targetLotId);
-        if (!targetLot) {
-            toast('The requested lot could not be found in this block.', 'error');
-            return;
-        }
-
-        // Exact lot found: clear filters, highlight, center, and open details drawer
-        resetAllFilters(false);
-
-        const lotElement = document.querySelector(`.svg-lot-tile[data-lot-id="${targetLot.lot_id}"]`);
-        selectLot(targetLot, targetBlockObj.block, targetBlockObj.section, lotElement);
-
-        if (lotElement) {
-            lotElement.classList.add('is-selected');
-            lotElement.classList.add('is-matched');
-
-            const rectEl = lotElement.querySelector('rect');
-            if (rectEl) {
-                const x = parseFloat(rectEl.getAttribute('x'));
-                const y = parseFloat(rectEl.getAttribute('y'));
-                const w = parseFloat(rectEl.getAttribute('width')) || 100;
-                const h = parseFloat(rectEl.getAttribute('height')) || 70;
-                if (!isNaN(x) && !isNaN(y)) {
-                    centerViewOnPoint(x + (w / 2), y + (h / 2));
+            // Case 4: block_id provided without lot_id
+            if (rawBlkId !== null) {
+                const targetBlkId = parsePositiveInt(rawBlkId);
+                if (targetBlkId !== -1) {
+                    const sections = state.currentLayout?.sections || [];
+                    for (const sec of sections) {
+                        const foundBlk = (sec.blocks || []).find(b => b.block_id === targetBlkId);
+                        if (foundBlk) {
+                            resetAllFilters(false);
+                            await drillDownToBlock(foundBlk, sec);
+                            return;
+                        }
+                    }
+                    toast('The requested block could not be found on this cemetery.', 'warning');
                 }
             }
-        }
-
-        // Batch 39: Auto-calculate and activate turn-by-turn route on URL navigate=1
-        if (urlParams.get('navigate') === '1' || urlParams.get('navigate') === 'true') {
-            setTimeout(() => {
-                generateRouteToLot(targetLot, targetBlockObj.block, targetBlockObj.section, true);
-                toast(`Turn-by-turn walking route active to Lot ${targetLot.lot_number}`, 'info');
-            }, 750);
+        } catch (err) {
+            console.error('Handled error in initFromUrlParams:', err);
         }
     }
 
@@ -8757,10 +8728,10 @@ if (count <= 4 && !usedZones.has('e')) {
         const blkId = block ? block.block_id : '';
         const lotId = lot.lot_id;
 
-        // Build robust mobile navigation deep link
+        // Build concise, high-speed scannable mobile navigation deep link
         const origin = window.location.origin;
         const pathname = window.location.pathname;
-        const directUrl = `${origin}${pathname}?cemetery_id=${cemId}&block_id=${blkId}&lot_id=${lotId}&navigate=1`;
+        const directUrl = `${origin}${pathname}?cemetery_id=${cemId}&lot_id=${lotId}&navigate=1`;
 
         // Populate Summary
         const displayLabel = lot._displayLabel || lot.lot_number;
