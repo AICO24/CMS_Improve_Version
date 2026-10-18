@@ -1918,9 +1918,9 @@ boulevardTrees.innerHTML =
     // North spine tree avenue
     treeLine(766, 95, 766, 285, 24, 7, 8.5, 0.4) +
     treeLine(834, 95, 834, 285, 24, 7, 8.5, 0.4) +
-    // Mid spine tree avenue (between Section A left/right)
-    treeLine(766, 315, 766, 530, 24, 7, 8.5, 0.4) +
-    treeLine(834, 315, 834, 530, 24, 7, 8.5, 0.4) +
+    // Mid spine tree avenue (north of Section A plots)
+    treeLine(766, 315, 766, 385, 24, 6.5, 8.5, 0.4) +
+    treeLine(834, 315, 834, 385, 24, 6.5, 8.5, 0.4) +
     // South neck tree avenue flanking entrance driveway
     treeLine(1096, 680, 1096, 850, 24, 6.5, 8.5, 0.4);
 
@@ -2112,13 +2112,13 @@ landmarkGroup.innerHTML += `
 
 const count = sections.length;
 
-// Spatial parcel boundaries for the 5 zones in the master plan:
+// Spatial parcel boundaries for the 5 zones in the master plan (Calibrated to Google Maps Acreage):
 const ZONES = {
-    c: { id: 'c', x: 700, y: 288, w: 66, h: 62, theme: 'c', defaultName: 'Sanctuario de San Jose', defaultCode: 'SECTION C' },
-    d: { id: 'd', x: 825, y: 190, w: 92, h: 125, theme: 'd', defaultName: 'Everlasting Columbarium & Ossuary', defaultCode: 'SECTION D' },
-    b: { id: 'b', x: 635, y: 375, w: 75, h: 105, theme: 'b', defaultName: 'Garden of Our Lady of Lourdes', defaultCode: 'SECTION B', stackVertical: true },
-    a: { id: 'a', x: 735, y: 400, w: 130, h: 50, theme: 'a', defaultName: 'Garden of Everlasting Peace', defaultCode: 'SECTION A', spine: RD.spine },
-    e: { id: 'e', x: 875, y: 390, w: 70, h: 42, theme: 'e', defaultName: 'Garden Reserve', defaultCode: 'SECTION E' }
+    c: { id: 'c', x: 672, y: 185, w: 116, h: 82, theme: 'c', defaultName: 'Sanctuario de San Jose', defaultCode: 'SECTION C' },
+    d: { id: 'd', x: 815, y: 165, w: 106, h: 100, theme: 'd', defaultName: 'Everlasting Columbarium & Ossuary', defaultCode: 'SECTION D' },
+    b: { id: 'b', x: 636, y: 320, w: 86, h: 202, theme: 'b', defaultName: 'Garden of Our Lady of Lourdes', defaultCode: 'SECTION B', stackVertical: true },
+    a: { id: 'a', x: 726, y: 395, w: 148, h: 130, theme: 'a', defaultName: 'Garden of Everlasting Peace', defaultCode: 'SECTION A', spine: RD.spine },
+    e: { id: 'e', x: 885, y: 375, w: 140, h: 150, theme: 'e', defaultName: 'Garden Reserve', defaultCode: 'SECTION E' }
 };
 
 const zoneOrder = ['a', 'b', 'c', 'd', 'e'];
@@ -2447,8 +2447,9 @@ sections.forEach((section, index) => {
                     else if (n <= 40) cols = 7;
                     else cols = 8;
                 } else if (n > 25) {
-                    // Dense ground block (e.g. Block A1: 50 lots -> 10 cols x 5 rows)
-                    cols = 10;
+                    // Dense ground block (e.g. Block A1: 50 lots)
+                    // Adapt columns to parcel aspect ratio (vertical parcels get 5 cols x 10 rows for square/rectangular plots)
+                    cols = (lotAreaH >= lotAreaW * 1.3) ? 5 : 10;
                 } else if (n <= 5) {
                     // Small ground blocks (e.g. 5 lots):
                     // If lot area is wider than tall, single row (5 cols x 1 row) e.g. A2, B1, B2
@@ -2667,14 +2668,14 @@ if (count <= 4 && !usedZones.has('e')) {
         <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="6" fill="url(#mpLawnStripes)" class="mp-texture"/>
         <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="6" class="mp-section-hedge"/>
         <!-- Central circular ornamental garden walkway ring in reserve park -->
-        <circle cx="${f1(cx)}" cy="${f1(cy)}" r="14" class="mp-block-walkway-edge"/>
-        <circle cx="${f1(cx)}" cy="${f1(cy)}" r="14" class="mp-block-walkway"/>
-        <circle cx="${f1(cx)}" cy="${f1(cy)}" r="7" fill="#15803d" opacity="0.35" stroke="#166534" stroke-width="1"/>
-        ${treeCluster(cx, cy, 2, 8, 3, 5)}
-        ${treeCluster(z.x + 15, z.y + 12, 2, 8, 3, 5)}
-        ${treeCluster(z.x + z.w - 15, z.y + 12, 2, 8, 3, 5)}
-        ${treeCluster(z.x + 15, z.y + z.h - 12, 2, 8, 3, 5)}
-        ${treeCluster(z.x + z.w - 15, z.y + z.h - 12, 2, 8, 3, 5)}
+        <circle cx="${f1(cx)}" cy="${f1(cy)}" r="20" class="mp-block-walkway-edge"/>
+        <circle cx="${f1(cx)}" cy="${f1(cy)}" r="20" class="mp-block-walkway"/>
+        <circle cx="${f1(cx)}" cy="${f1(cy)}" r="10" fill="#15803d" opacity="0.35" stroke="#166534" stroke-width="1"/>
+        ${treeCluster(cx, cy, 3, 9, 3.5, 5.5)}
+        ${treeCluster(z.x + 20, z.y + 20, 2, 8, 3, 5)}
+        ${treeCluster(z.x + z.w - 20, z.y + 20, 2, 8, 3, 5)}
+        ${treeCluster(z.x + 20, z.y + z.h - 20, 2, 8, 3, 5)}
+        ${treeCluster(z.x + z.w - 20, z.y + z.h - 20, 2, 8, 3, 5)}
     `;
 }
 
