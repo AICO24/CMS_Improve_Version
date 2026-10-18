@@ -5809,6 +5809,135 @@ body.dark-mode .btn-wayfinding-slip:hover {
     stroke: rgba(255, 255, 255, 0.04);
 }
 
+/* Surrounding Neighborhood Architectural Styling (Brgy Tonsuya & P. Aquino Ave) */
+.mp-neighbor-parcel {
+    fill: #e8edf2;
+    stroke: #cbd5e1;
+    stroke-width: 1px;
+}
+.mp-neighbor-park {
+    fill: #45783f;
+    stroke: #2a5225;
+    stroke-width: 1.5px;
+}
+.mp-ext-road-side {
+    fill: #475569;
+    stroke: #334155;
+    stroke-width: 1px;
+}
+.mp-street-side-label {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 7px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    fill: #ffffff;
+    text-anchor: middle;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+}
+
+/* Surrounding Residential Houses & Pitched Roofs */
+.mp-house {
+    pointer-events: none;
+}
+.mp-house-shadow {
+    fill: rgba(15, 23, 42, 0.26);
+}
+.mp-house-base {
+    fill: #e2e8f0;
+    stroke: #94a3b8;
+    stroke-width: 0.6px;
+}
+.mp-roof-ridge {
+    stroke: #ffffff;
+    stroke-width: 0.9px;
+    stroke-linecap: round;
+    opacity: 0.65;
+}
+
+/* Roof Colors & 3D Shading Facets */
+.mp-roof-terracotta .mp-roof-facet { fill: #c2410c; }
+.mp-roof-terracotta .mp-roof-facet--north { fill: #ea580c; }
+.mp-roof-terracotta .mp-roof-facet--south { fill: #9a3412; }
+.mp-roof-terracotta .mp-roof-facet--west { fill: #c2410c; }
+.mp-roof-terracotta .mp-roof-facet--east { fill: #b45309; }
+
+.mp-roof-blue .mp-roof-facet { fill: #2563eb; }
+.mp-roof-blue .mp-roof-facet--north { fill: #3b82f6; }
+.mp-roof-blue .mp-roof-facet--south { fill: #1d4ed8; }
+.mp-roof-blue .mp-roof-facet--west { fill: #2563eb; }
+.mp-roof-blue .mp-roof-facet--east { fill: #1e40af; }
+
+.mp-roof-slate .mp-roof-facet { fill: #475569; }
+.mp-roof-slate .mp-roof-facet--north { fill: #64748b; }
+.mp-roof-slate .mp-roof-facet--south { fill: #334155; }
+.mp-roof-slate .mp-roof-facet--west { fill: #475569; }
+.mp-roof-slate .mp-roof-facet--east { fill: #1e293b; }
+
+.mp-roof-sage .mp-roof-facet { fill: #4d7c0f; }
+.mp-roof-sage .mp-roof-facet--north { fill: #65a30d; }
+.mp-roof-sage .mp-roof-facet--south { fill: #3f6212; }
+.mp-roof-sage .mp-roof-facet--west { fill: #4d7c0f; }
+.mp-roof-sage .mp-roof-facet--east { fill: #365314; }
+
+/* Flower Stall, Commercial Stores & Signs */
+.mp-flower-stall {
+    pointer-events: none;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.28));
+}
+.mp-comm-store {
+    pointer-events: none;
+    filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.35));
+}
+.mp-comm-sign-text {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    font-size: 4.8px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    fill: #f8fafc;
+    text-anchor: middle;
+    pointer-events: none;
+}
+
+/* Highway Street Lamps & Vehicles */
+.mp-lamp-post {
+    pointer-events: none;
+}
+.mp-vehicle {
+    pointer-events: none;
+    filter: drop-shadow(0 1.5px 3px rgba(0, 0, 0, 0.35));
+}
+
+/* Dark Mode Overrides for Neighborhood Surroundings */
+[data-theme="dark"] .mp-neighbor-parcel {
+    fill: #1e293b;
+    stroke: #0f172a;
+}
+[data-theme="dark"] .mp-neighbor-park {
+    fill: #132a17;
+    stroke: #0a170c;
+}
+[data-theme="dark"] .mp-ext-road-side {
+    fill: #1e252e;
+    stroke: #0f172a;
+}
+[data-theme="dark"] .mp-house-base {
+    fill: #334155;
+    stroke: #1e293b;
+}
+[data-theme="dark"] .mp-roof-terracotta .mp-roof-facet--south {
+    fill: #7c2d12;
+}
+[data-theme="dark"] .mp-roof-blue .mp-roof-facet--south {
+    fill: #172554;
+}
+[data-theme="dark"] .mp-roof-slate .mp-roof-facet--south {
+    fill: #0f172a;
+}
+[data-theme="dark"] .mp-roof-sage .mp-roof-facet--south {
+    fill: #1a2e05;
+}
+
 /* North boundary caption */
 .mp-north-label {
     font-family: var(--font-sans, 'Inter', sans-serif);

@@ -36,9 +36,9 @@
             maxPrice: null,
         },
 
-        // SVG Viewport & Navigation Matrix (Refocused on Everlasting Peace parcel)
-        baseViewBox: { x: 440, y: 95, width: 880, height: 890 },
-        currentViewBox: { x: 440, y: 95, width: 880, height: 890 },
+        // SVG Viewport & Navigation Matrix (Balanced full master plan and surroundings framing)
+        baseViewBox: { x: 380, y: 65, width: 980, height: 970 },
+        currentViewBox: { x: 380, y: 65, width: 980, height: 970 },
         zoomLevel: 1.0,
         isPanning: false,
         panStart: { x: 0, y: 0 },
@@ -1861,6 +1861,72 @@
             cp.innerHTML = '<polygon points="560.0,835.0 715.0,862.0 745.0,867.0 990.0,873.0 1020.0,877.0 1168.9,900.0 1102.3,690.7 1058.9,697.8 1052.4,491.2 1033.7,400.5 1022.7,403.1 1022.1,146.6 975.8,145.0 864.5,145.0 808.5,145.0 720.0,150.0 660.0,165.0 600.0,200.0 575.0,300.0 565.0,440.0 560.0,600.0"/>';
             defs.appendChild(cp);
         }
+        if (!document.getElementById('mpAwningBlue')) {
+            const ab = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+            ab.setAttribute('id', 'mpAwningBlue');
+            ab.setAttribute('width', '8');
+            ab.setAttribute('height', '8');
+            ab.setAttribute('patternUnits', 'userSpaceOnUse');
+            ab.innerHTML = '<rect width="4" height="8" fill="#1e3a5f"/><rect x="4" width="4" height="8" fill="#ffffff"/>';
+            defs.appendChild(ab);
+        }
+        if (!document.getElementById('mpAwningRed')) {
+            const ar = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+            ar.setAttribute('id', 'mpAwningRed');
+            ar.setAttribute('width', '8');
+            ar.setAttribute('height', '8');
+            ar.setAttribute('patternUnits', 'userSpaceOnUse');
+            ar.innerHTML = '<rect width="4" height="8" fill="#b91c1c"/><rect x="4" width="4" height="8" fill="#ffffff"/>';
+            defs.appendChild(ar);
+        }
+        if (!document.getElementById('mpAwningGreen')) {
+            const ag = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+            ag.setAttribute('id', 'mpAwningGreen');
+            ag.setAttribute('width', '8');
+            ag.setAttribute('height', '8');
+            ag.setAttribute('patternUnits', 'userSpaceOnUse');
+            ag.innerHTML = '<rect width="4" height="8" fill="#15803d"/><rect x="4" width="4" height="8" fill="#ffffff"/>';
+            defs.appendChild(ag);
+        }
+        if (!document.getElementById('mpAwningYellow')) {
+            const ay = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+            ay.setAttribute('id', 'mpAwningYellow');
+            ay.setAttribute('width', '8');
+            ay.setAttribute('height', '8');
+            ay.setAttribute('patternUnits', 'userSpaceOnUse');
+            ay.innerHTML = '<rect width="4" height="8" fill="#d97706"/><rect x="4" width="4" height="8" fill="#ffffff"/>';
+            defs.appendChild(ay);
+        }
+        if (!document.getElementById('mpFountainGrad')) {
+            const fg = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+            fg.setAttribute('id', 'mpFountainGrad');
+            fg.setAttribute('x1', '0%');
+            fg.setAttribute('y1', '0%');
+            fg.setAttribute('x2', '100%');
+            fg.setAttribute('y2', '100%');
+            fg.innerHTML = '<stop offset="0%" stop-color="#38bdf8"/><stop offset="50%" stop-color="#0284c7"/><stop offset="100%" stop-color="#075985"/>';
+            defs.appendChild(fg);
+        }
+        if (!document.getElementById('mpFountainRim')) {
+            const fr = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+            fr.setAttribute('id', 'mpFountainRim');
+            fr.setAttribute('x1', '0%');
+            fr.setAttribute('y1', '0%');
+            fr.setAttribute('x2', '0%');
+            fr.setAttribute('y2', '100%');
+            fr.innerHTML = '<stop offset="0%" stop-color="#f8fafc"/><stop offset="100%" stop-color="#cbd5e1"/>';
+            defs.appendChild(fr);
+        }
+        if (!document.getElementById('mpBldgShadow')) {
+            const bs = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+            bs.setAttribute('id', 'mpBldgShadow');
+            bs.setAttribute('x', '-20%');
+            bs.setAttribute('y', '-20%');
+            bs.setAttribute('width', '140%');
+            bs.setAttribute('height', '140%');
+            bs.innerHTML = '<feDropShadow dx="1.5" dy="2.5" stdDeviation="1.8" flood-color="#0f172a" flood-opacity="0.28"/>';
+            defs.appendChild(bs);
+        }
     }
 
     /**
@@ -2110,120 +2176,299 @@ terrainContours.innerHTML = `
     <text x="490" y="718" font-size="6.5" fill="#8c7e63" font-weight="700">+3.0m</text>
 `;
 
+// Helpers for Surrounding Architectural Environment (Brgy Tonsuya & P. Aquino Ave)
+const houseSvg = (x, y, w, h, roofClass = 'mp-roof-terracotta', angle = 0) => {
+    const inset = Math.min(w, h) * 0.28;
+    let facets = '';
+    let ridge = '';
+    if (w >= h) {
+        const x1 = inset;
+        const x2 = w - inset;
+        const ym = h / 2;
+        facets = `<polygon points="0,0 ${w},0 ${x2},${ym} ${x1},${ym}" class="mp-roof-facet mp-roof-facet--north"/>` +
+            `<polygon points="0,${h} ${w},${h} ${x2},${ym} ${x1},${ym}" class="mp-roof-facet mp-roof-facet--south"/>` +
+            `<polygon points="0,0 ${x1},${ym} 0,${h}" class="mp-roof-facet mp-roof-facet--west"/>` +
+            `<polygon points="${w},0 ${x2},${ym} ${w},${h}" class="mp-roof-facet mp-roof-facet--east"/>`;
+        ridge = `<line x1="${x1}" y1="${ym}" x2="${x2}" y2="${ym}" class="mp-roof-ridge"/>`;
+    } else {
+        const y1 = inset;
+        const y2 = h - inset;
+        const xm = w / 2;
+        facets = `<polygon points="0,0 ${xm},${y1} ${w},0" class="mp-roof-facet mp-roof-facet--north"/>` +
+            `<polygon points="0,${h} ${xm},${y2} ${w},${h}" class="mp-roof-facet mp-roof-facet--south"/>` +
+            `<polygon points="0,0 ${xm},${y1} ${xm},${y2} 0,${h}" class="mp-roof-facet mp-roof-facet--west"/>` +
+            `<polygon points="${w},0 ${xm},${y1} ${xm},${y2} ${w},${h}" class="mp-roof-facet mp-roof-facet--east"/>`;
+        ridge = `<line x1="${xm}" y1="${y1}" x2="${xm}" y2="${y2}" class="mp-roof-ridge"/>`;
+    }
+    const transform = angle ? `transform="translate(${x}, ${y}) rotate(${angle})"` : `transform="translate(${x}, ${y})"`;
+    return `<g class="mp-house ${roofClass}" ${transform}>` +
+        `<rect x="-1.5" y="-1.5" width="${w + 3}" height="${h + 3}" rx="2" class="mp-house-shadow"/>` +
+        `<rect x="0" y="0" width="${w}" height="${h}" rx="1.5" class="mp-house-base"/>` +
+        facets +
+        ridge +
+        `</g>`;
+};
+
+const commShopSvg = (x, y, w, h, name, awningPattern, roofColor = '#334155', angle = 9.8) => {
+    const awningH = 8;
+    const signW = Math.min(w - 6, name.length * 4.6 + 8);
+    const signX = (w - signW) / 2;
+    return `<g class="mp-comm-store" transform="translate(${x}, ${y}) rotate(${angle})">` +
+        `<rect x="-1" y="-1" width="${w + 2}" height="${h + 2}" rx="2" fill="rgba(0,0,0,0.3)"/>` +
+        `<rect x="0" y="0" width="${w}" height="${h}" rx="1.8" fill="${roofColor}" stroke="#1e293b" stroke-width="0.7"/>` +
+        `<rect x="0" y="0" width="${w}" height="${awningH}" rx="1" fill="url(#${awningPattern})"/>` +
+        `<line x1="0" y1="${awningH}" x2="${w}" y2="${awningH}" stroke="#0f172a" stroke-width="0.8"/>` +
+        `<rect x="${signX}" y="${h - 9.5}" width="${signW}" height="7.5" rx="1.5" fill="#0f172a" stroke="#64748b" stroke-width="0.6"/>` +
+        `<text x="${w / 2}" y="${h - 4.2}" class="mp-comm-sign-text">${name}</text>` +
+        `</g>`;
+};
+
+const vehicleSvg = (x, y, color = '#2563eb', angle = 0, isVan = false) => {
+    const w = isVan ? 20 : 15;
+    const h = isVan ? 9 : 8;
+    const transform = angle ? `transform="translate(${x}, ${y}) rotate(${angle})"` : `transform="translate(${x}, ${y})"`;
+    return `<g class="mp-vehicle" ${transform}>` +
+        `<rect x="-0.8" y="-0.8" width="${w + 1.6}" height="${h + 1.6}" rx="2" fill="rgba(0,0,0,0.3)"/>` +
+        `<rect x="0" y="0" width="${w}" height="${h}" rx="1.8" fill="${color}"/>` +
+        `<rect x="${w * 0.22}" y="1" width="${w * 0.5}" height="${h - 2}" rx="1" fill="#0f172a"/>` +
+        `<rect x="${w * 0.28}" y="1.5" width="${w * 0.38}" height="${h - 3}" rx="0.5" fill="${color}"/>` +
+        `<rect x="${w - 2.5}" y="1.2" width="2" height="1.8" rx="0.4" fill="#fef08a"/>` +
+        `<rect x="${w - 2.5}" y="${h - 3}" width="2" height="1.8" rx="0.4" fill="#fef08a"/>` +
+        `</g>`;
+};
+
+const streetLampSvg = (x, y) =>
+    `<g class="mp-lamp-post" transform="translate(${x}, ${y})">` +
+    `<circle cx="0" cy="0" r="16" fill="#fef08a" opacity="0.12"/>` +
+    `<circle cx="0" cy="0" r="4.5" fill="#fef08a" opacity="0.45"/>` +
+    `<circle cx="0" cy="0" r="1.8" fill="#ffffff" stroke="#eab308" stroke-width="0.6"/>` +
+    `</g>`;
+
 // Surrounding Geographic Context (Matching Google Maps Neighborhood: Tonsuya, Malabon & Adjacent Park)
 const surroundingContext = mk('g', { class: 'mp-surrounding-context', 'aria-hidden': 'true' }, mapGroundLayer);
 surroundingContext.innerHTML = `
-    <!-- West Urban Context: Barangay Tonsuya Residential Parcels & Real Streets -->
-    <!-- Rosal Street running North along Western Perimeter Wall -->
-    <polygon points="496,960 522,965 500,530 474,530" class="mp-ext-road-side"/>
-    <polygon points="474,530 500,530 494,220 468,220" class="mp-ext-road-side"/>
-    <line x1="509" y1="962.5" x2="487" y2="530" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="6 4"/>
-    <line x1="487" y1="530" x2="481" y2="220" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="6 4"/>
-    <text x="488" y="700" transform="rotate(-90 488 700)" class="mp-street-side-label">ROSAL STREET</text>
-    <text x="480" y="380" transform="rotate(-90 480 380)" class="mp-street-side-label">ROSAL EXTENSION</text>
+    <!-- ======================================================== -->
+    <!-- WEST FLANK: BARANGAY TONSUYA RESIDENTIAL ENCLAVE & ROADS -->
+    <!-- ======================================================== -->
+    <!-- Rosal Street Running North-South along Cemetery West Boundary -->
+    <polygon points="480,940 486,940 486,180 480,180" class="mp-sidewalk"/>
+    <polygon points="486,940 508,940 508,180 486,180" class="mp-ext-road-side"/>
+    <polygon points="508,940 514,940 514,180 508,180" class="mp-sidewalk"/>
+    <line x1="497" y1="180" x2="497" y2="940" stroke="#f59e0b" stroke-width="1.3" stroke-dasharray="6 4"/>
+    <text x="497" y="460" transform="rotate(-90 497 460)" class="mp-street-side-label">ROSAL STREET • BRGY TONSUYA</text>
+    <text x="497" y="740" transform="rotate(-90 497 740)" class="mp-street-side-label">ROSAL STREET EXTENSION</text>
 
-    <!-- Delos Santos St crossing West into Tonsuya interior -->
-    <polygon points="260,610 488,610 488,634 260,634" class="mp-ext-road-side"/>
-    <line x1="260" y1="622" x2="488" y2="622" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="6 4"/>
-    <text x="390" y="626" class="mp-street-side-label">DELOS SANTOS ST</text>
+    <!-- Delos Santos Street Crossing West into Tonsuya Interior -->
+    <polygon points="360,578 486,578 486,598 360,598" class="mp-ext-road-side"/>
+    <line x1="360" y1="588" x2="486" y2="588" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="6 4"/>
+    <text x="420" y="585" class="mp-street-side-label">DELOS SANTOS ST</text>
 
-    <!-- Northwest Tonsuya Residential Block Footprints -->
-    <rect x="330" y="235" width="125" height="175" rx="4" class="mp-neighbor-parcel"/>
-    <rect x="340" y="245" width="34" height="24" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="382" y="245" width="30" height="24" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="420" y="245" width="28" height="24" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="340" y="278" width="40" height="26" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="388" y="278" width="38" height="26" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="340" y="312" width="36" height="28" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="384" y="312" width="42" height="28" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="340" y="348" width="50" height="28" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="398" y="348" width="45" height="28" rx="2" class="mp-neighbor-bldg"/>
+    <!-- Sampaguita Lane Crossing West -->
+    <polygon points="360,358 486,358 486,376 360,376" class="mp-ext-road-side"/>
+    <line x1="360" y1="367" x2="486" y2="367" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="6 4"/>
+    <text x="420" y="364" class="mp-street-side-label">SAMPAGUITA LANE</text>
 
-    <!-- Mid-West Tonsuya Residential Block Footprints -->
-    <rect x="330" y="440" width="125" height="160" rx="4" class="mp-neighbor-parcel"/>
-    <rect x="340" y="450" width="48" height="30" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="396" y="450" width="48" height="30" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="340" y="490" width="42" height="32" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="390" y="490" width="54" height="32" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="340" y="532" width="50" height="30" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="398" y="532" width="46" height="30" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="340" y="570" width="54" height="24" rx="2" class="mp-neighbor-bldg"/>
+    <!-- Northwest Connector Alley -->
+    <polygon points="360,172 486,172 486,188 360,188" class="mp-ext-road-side"/>
 
-    <!-- Southwest Tonsuya Residential Block Footprints -->
-    <rect x="330" y="645" width="130" height="195" rx="4" class="mp-neighbor-parcel"/>
-    <rect x="342" y="655" width="48" height="32" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="398" y="655" width="50" height="32" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="342" y="696" width="52" height="34" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="402" y="696" width="46" height="34" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="342" y="740" width="46" height="36" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="396" y="740" width="52" height="36" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="342" y="786" width="56" height="38" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="406" y="786" width="44" height="38" rx="2" class="mp-neighbor-bldg"/>
-    ${pillSvg(395, 380, 'BARANGAY TONSUYA', '🏘️', 'gray')}
-    <text x="395" y="405" class="mp-context-sublabel">Urban Residential Area • Malabon</text>
+    <!-- Northwest Tonsuya Residential Block Parcels & Illustrated Houses -->
+    <rect x="375" y="195" width="102" height="155" rx="3" class="mp-neighbor-parcel"/>
+    ${houseSvg(382, 202, 42, 30, 'mp-roof-terracotta')}
+    ${houseSvg(430, 202, 40, 30, 'mp-roof-blue')}
+    ${vehicleSvg(416, 236, '#dc2626', 90)}
+    ${houseSvg(382, 252, 42, 32, 'mp-roof-slate')}
+    ${houseSvg(430, 252, 40, 32, 'mp-roof-terracotta')}
+    ${houseSvg(382, 302, 42, 32, 'mp-roof-sage')}
+    ${houseSvg(430, 302, 40, 32, 'mp-roof-slate')}
+    ${treeCluster(420, 340, 3, 8, 4, 6)}
 
-    <!-- East Urban Context: Our Lady of Lourdes Eternal Park -->
+    <!-- Mid-West Tonsuya Residential Block Parcels & Illustrated Houses -->
+    <rect x="375" y="384" width="102" height="186" rx="3" class="mp-neighbor-parcel"/>
+    ${houseSvg(382, 392, 42, 32, 'mp-roof-blue')}
+    ${houseSvg(430, 392, 40, 32, 'mp-roof-terracotta')}
+    ${vehicleSvg(438, 428, '#16a34a', 0)}
+    ${houseSvg(382, 440, 42, 34, 'mp-roof-terracotta')}
+    ${houseSvg(430, 440, 40, 34, 'mp-roof-sage')}
+    ${houseSvg(382, 490, 42, 32, 'mp-roof-slate')}
+    ${houseSvg(430, 490, 40, 32, 'mp-roof-blue')}
+    ${houseSvg(382, 532, 44, 28, 'mp-roof-terracotta')}
+    ${houseSvg(432, 532, 38, 28, 'mp-roof-slate')}
+    ${treeCluster(425, 476, 3, 7, 4, 6)}
+
+    <!-- Southwest Tonsuya Residential Block Parcels & Illustrated Houses -->
+    <rect x="375" y="606" width="102" height="248" rx="3" class="mp-neighbor-parcel"/>
+    ${houseSvg(382, 614, 42, 34, 'mp-roof-sage')}
+    ${houseSvg(430, 614, 40, 34, 'mp-roof-terracotta')}
+    ${houseSvg(382, 662, 42, 36, 'mp-roof-terracotta')}
+    ${houseSvg(430, 662, 40, 36, 'mp-roof-blue')}
+    ${vehicleSvg(392, 704, '#eab308', 90)}
+    ${houseSvg(382, 712, 42, 34, 'mp-roof-slate')}
+    ${houseSvg(430, 712, 40, 34, 'mp-roof-terracotta')}
+    ${houseSvg(382, 760, 42, 34, 'mp-roof-blue')}
+    ${houseSvg(430, 760, 40, 34, 'mp-roof-sage')}
+    ${houseSvg(382, 808, 42, 34, 'mp-roof-terracotta')}
+    ${houseSvg(430, 808, 40, 34, 'mp-roof-slate')}
+    ${vehicleSvg(438, 846, '#2563eb', 0)}
+    ${treeCluster(424, 746, 3, 7, 4, 6)}
+
+    <!-- Residential Buffer Strip East of Rosal St (Flanking Cemetery Wall) -->
+    ${houseSvg(518, 220, 34, 26, 'mp-roof-terracotta')}
+    ${houseSvg(518, 290, 34, 26, 'mp-roof-blue')}
+    ${houseSvg(518, 360, 34, 26, 'mp-roof-sage')}
+    ${houseSvg(518, 440, 34, 28, 'mp-roof-slate')}
+    ${houseSvg(518, 520, 34, 28, 'mp-roof-terracotta')}
+    ${houseSvg(518, 600, 34, 28, 'mp-roof-blue')}
+    ${houseSvg(518, 680, 34, 28, 'mp-roof-sage')}
+    ${houseSvg(518, 750, 34, 26, 'mp-roof-terracotta')}
+    <!-- Tonsuya Memorial Flowers & Candle Kiosk -->
+    <g class="mp-flower-stall" transform="translate(516, 818)">
+        <rect x="-1" y="-1" width="38" height="26" rx="2" fill="rgba(0,0,0,0.25)"/>
+        <rect x="0" y="0" width="36" height="24" rx="1.5" fill="#334155"/>
+        <rect x="0" y="0" width="36" height="12" rx="1" fill="url(#mpAwningRed)"/>
+        <line x1="0" y1="12" x2="36" y2="12" stroke="#1e293b" stroke-width="0.8"/>
+        <circle cx="6" cy="18" r="2.8" fill="#f43f5e"/>
+        <circle cx="14" cy="18" r="2.8" fill="#fbbf24"/>
+        <circle cx="22" cy="18" r="2.8" fill="#ffffff"/>
+        <circle cx="30" cy="18" r="2.8" fill="#a855f7"/>
+        <rect x="3" y="1.5" width="30" height="7" rx="1.2" fill="#0f172a" opacity="0.9"/>
+        <text x="18" y="6.6" font-size="4.8" font-weight="800" fill="#ffffff" text-anchor="middle">🌸 FLOWERS</text>
+    </g>
+
+    <!-- Neighborhood Badge -->
+    ${pillSvg(425, 115, 'BARANGAY TONSUYA', '🏘️', 'gray')}
+    <text x="425" y="132" class="mp-context-sublabel">Urban Residential Enclave • Malabon City</text>
+
+    <!-- ======================================================== -->
+    <!-- EAST FLANK: OUR LADY OF LOURDES ETERNAL PARK MEMORIAL    -->
+    <!-- ======================================================== -->
     <polygon points="1060,490 1060,700 1105,690 1170,900 1600,974 1600,135 1025,145 1035,400 1055,490" class="mp-neighbor-park"/>
-    <polygon points="1060,490 1060,700 1105,690 1170,900 1600,974 1600,135 1025,145 1035,400 1055,490" fill="url(#mpGrassSpeckle)" class="mp-texture"/>
-    <!-- Lourdes Park Memorial Centerpiece -->
-    <circle cx="1320" cy="480" r="38" fill="none" stroke="#b9d8b5" stroke-width="2.5"/>
-    <circle cx="1320" cy="480" r="16" fill="#a7d4a2" stroke="#8cb887" stroke-width="1.5"/>
-    <circle cx="1320" cy="480" r="6" fill="#e2e8f0"/>
-    ${treeCluster(1320, 480, 4, 12, 4, 6.5)}
-    ${treeLine(1185, 905, 1550, 965, 26, 6, 8.5, 0.8)}
-    ${treeLine(1030, 145, 1550, 140, 28, 6.5, 9, 0.8)}
-    ${treeLine(1480, 160, 1480, 850, 32, 6.5, 9, 0.8)}
-    ${pillSvg(1320, 420, 'Our Lady of Lourdes Eternal Park', '🌳', 'green')}
-    <text x="1320" y="445" class="mp-context-sublabel">Adjacent Memorial Park • 4.1 ★★★★☆ (71 Reviews)</text>
+    <polygon points="1060,490 1060,700 1105,690 1170,900 1600,974 1600,135 1025,145 1035,400 1055,490" fill="url(#mpLawnStripes)" class="mp-texture"/>
 
-    <!-- North Boundary Residential Blocks & Tree Wall -->
-    <rect x="620" y="40" width="380" height="85" rx="3" class="mp-neighbor-parcel"/>
-    <rect x="640" y="50" width="55" height="30" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="710" y="50" width="50" height="30" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="775" y="50" width="55" height="30" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="845" y="50" width="60" height="30" rx="2" class="mp-neighbor-bldg"/>
-    <rect x="920" y="50" width="55" height="30" rx="2" class="mp-neighbor-bldg"/>
-    <text x="890" y="125" class="mp-north-label">NORTH BOUNDARY • BARANGAY TONSUYA URBAN SECTOR</text>
+    <!-- Garden Promenades Connecting Monuments -->
+    <path d="M 1220 345 L 1220 452 M 1220 548 Q 1220 660 1280 780 M 1172 500 L 1080 500 M 1268 500 L 1380 500" stroke="#e2e8f0" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M 1220 345 L 1220 452 M 1220 548 Q 1220 660 1280 780 M 1172 500 L 1080 500 M 1268 500 L 1380 500" stroke="#cbd5e1" stroke-width="5" stroke-linecap="round" fill="none"/>
+
+    <!-- Grand Reflection Fountain Centerpiece (Calibrated at x: 1220, y: 500) -->
+    <circle cx="1220" cy="500" r="48" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="2"/>
+    <!-- Flower Garland Ring -->
+    <circle cx="1220" cy="458" r="2.2" fill="#f43f5e"/><circle cx="1236" cy="461" r="2.2" fill="#fbbf24"/><circle cx="1250" cy="471" r="2.2" fill="#ec4899"/><circle cx="1259" cy="485" r="2.2" fill="#a855f7"/><circle cx="1262" cy="500" r="2.2" fill="#f43f5e"/><circle cx="1259" cy="515" r="2.2" fill="#fbbf24"/><circle cx="1250" cy="529" r="2.2" fill="#ec4899"/><circle cx="1236" cy="539" r="2.2" fill="#a855f7"/><circle cx="1220" cy="542" r="2.2" fill="#f43f5e"/><circle cx="1204" cy="539" r="2.2" fill="#fbbf24"/><circle cx="1190" cy="529" r="2.2" fill="#ec4899"/><circle cx="1181" cy="515" r="2.2" fill="#a855f7"/><circle cx="1178" cy="500" r="2.2" fill="#f43f5e"/><circle cx="1181" cy="485" r="2.2" fill="#fbbf24"/><circle cx="1190" cy="471" r="2.2" fill="#ec4899"/><circle cx="1204" cy="461" r="2.2" fill="#a855f7"/>
+    <!-- Stone Coping Rim & Deep Azure Reservoir -->
+    <circle cx="1220" cy="500" r="34" fill="url(#mpFountainRim)" stroke="#94a3b8" stroke-width="2.5" filter="url(#mpBldgShadow)"/>
+    <circle cx="1220" cy="500" r="29" fill="url(#mpFountainGrad)" stroke="#0284c7" stroke-width="1.2"/>
+    <!-- Water Ripples & Center Jet Spout -->
+    <circle cx="1220" cy="500" r="20" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.2" stroke-dasharray="6 3"/>
+    <circle cx="1220" cy="500" r="12" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1"/>
+    <circle cx="1220" cy="500" r="6" fill="#ffffff" stroke="#0284c7" stroke-width="1.5"/>
+    <circle cx="1220" cy="500" r="2.5" fill="#38bdf8"/>
+    <circle cx="1219" cy="498" r="1.2" fill="#ffffff"/>
+
+    <!-- Classical Memorial Colonnade / Pergola Monument (Calibrated at x: 1220, y: 310) -->
+    <rect x="1175" y="275" width="90" height="70" rx="3" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5" filter="url(#mpBldgShadow)"/>
+    <rect x="1185" y="285" width="70" height="50" rx="2" fill="#5a8d4a"/>
+    <line x1="1187" y1="283" x2="1253" y2="283" stroke="#cbd5e1" stroke-width="3"/>
+    <line x1="1187" y1="337" x2="1253" y2="337" stroke="#cbd5e1" stroke-width="3"/>
+    <!-- 8 Classical White Stone Columns -->
+    <circle cx="1187" cy="283" r="3.2" fill="#ffffff" stroke="#64748b" stroke-width="0.8"/>
+    <circle cx="1209" cy="283" r="3.2" fill="#ffffff" stroke="#64748b" stroke-width="0.8"/>
+    <circle cx="1231" cy="283" r="3.2" fill="#ffffff" stroke="#64748b" stroke-width="0.8"/>
+    <circle cx="1253" cy="283" r="3.2" fill="#ffffff" stroke="#64748b" stroke-width="0.8"/>
+    <circle cx="1187" cy="337" r="3.2" fill="#ffffff" stroke="#64748b" stroke-width="0.8"/>
+    <circle cx="1209" cy="337" r="3.2" fill="#ffffff" stroke="#64748b" stroke-width="0.8"/>
+    <circle cx="1231" cy="337" r="3.2" fill="#ffffff" stroke="#64748b" stroke-width="0.8"/>
+    <circle cx="1253" cy="337" r="3.2" fill="#ffffff" stroke="#64748b" stroke-width="0.8"/>
+    <!-- Creeping Bougainvillea Blossoms -->
+    <circle cx="1198" cy="283" r="1.5" fill="#ec4899"/><circle cx="1220" cy="283" r="1.5" fill="#f43f5e"/><circle cx="1242" cy="283" r="1.5" fill="#a855f7"/><circle cx="1198" cy="337" r="1.5" fill="#a855f7"/><circle cx="1220" cy="337" r="1.5" fill="#ec4899"/><circle cx="1242" cy="337" r="1.5" fill="#f43f5e"/>
+    <!-- Center Memorial Statue on Bronze Pedestal -->
+    <rect x="1213" y="303" width="14" height="14" rx="1.5" fill="#334155" stroke="#1e293b" stroke-width="0.8"/>
+    <circle cx="1220" cy="310" r="4.5" fill="#b45309" stroke="#78350f" stroke-width="1"/>
+    <text x="1220" y="327" font-size="5" font-weight="800" fill="#334155" text-anchor="middle" letter-spacing="0.08em">MEMORIAL MONUMENT</text>
+
+    <!-- Tree Lines & Topiary Groves -->
+    ${treeLine(1030, 145, 1360, 140, 26, 6.5, 9, 0.8)}
+    ${treeLine(1185, 905, 1360, 930, 26, 6, 8.5, 0.8)}
+    ${treeCluster(1290, 390, 5, 20, 6, 8.5)}
+    ${treeCluster(1290, 620, 5, 20, 6, 8.5)}
+
+    <!-- Lourdes Memorial Park Badge -->
+    ${pillSvg(1220, 235, 'Our Lady of Lourdes Eternal Park', '🌳', 'green')}
+    <text x="1220" y="252" class="mp-context-sublabel">Adjacent Memorial Grounds • 4.1 ★★★★☆ (71 Reviews)</text>
+
+    <!-- ======================================================== -->
+    <!-- NORTH FLANK: NORTH PERIMETER GREENWAY & RESIDENTIAL LANE -->
+    <!-- ======================================================== -->
+    <polygon points="550,96 1025,96 1025,110 550,110" class="mp-ext-road-side"/>
+    <line x1="550" y1="103" x2="1025" y2="103" stroke="#f59e0b" stroke-width="0.9" stroke-dasharray="5 3"/>
+    ${houseSvg(630, 56, 46, 30, 'mp-roof-terracotta')}
+    ${houseSvg(688, 56, 44, 30, 'mp-roof-sage')}
+    ${houseSvg(744, 56, 48, 30, 'mp-roof-blue')}
+    ${houseSvg(804, 56, 44, 30, 'mp-roof-terracotta')}
+    ${houseSvg(860, 56, 46, 30, 'mp-roof-slate')}
+    ${houseSvg(918, 56, 44, 30, 'mp-roof-terracotta')}
+    ${houseSvg(974, 56, 42, 30, 'mp-roof-blue')}
+    ${treeLine(610, 126, 1015, 126, 22, 5.5, 7.5, 0.6)}
+    <text x="810" y="122" class="mp-north-label">NORTH PERIMETER GREENWAY • BARANGAY TONSUYA</text>
 `;
 
 // P. Aquino Avenue (Letre Road) Frontage along southern edge (Extended full width across canvas)
 const frontage = mk('g', { class: 'svg-external-road-group mp-frontage' }, mapGroundLayer);
 let crosswalkBars = '';
-// Pedestrian zebra crossings across P. Aquino Ave near West Ingress Gate (730) and East Egress (1005)
+// Pedestrian zebra crossings across P. Aquino Ave calibrated to exact road slope
 for (let cx = 710; cx <= 750; cx += 8) {
-    const cy = 948 + (cx - 730) * 0.172;
-    crosswalkBars += `<rect x="${cx}" y="${f1(cy)}" width="5" height="34" transform="rotate(9.8 ${cx} ${f1(cy)})" class="mp-crosswalk"/>`;
+    const cy = 948 + (cx - 200) * 0.1743 + 2;
+    crosswalkBars += `<rect x="${cx}" y="${f1(cy)}" width="5" height="68" transform="rotate(9.8 ${cx} ${f1(cy)})" class="mp-crosswalk"/>`;
 }
 for (let cx = 985; cx <= 1025; cx += 8) {
-    const cy = 948 + (cx - 1005) * 0.172;
-    crosswalkBars += `<rect x="${cx}" y="${f1(cy)}" width="5" height="34" transform="rotate(9.8 ${cx} ${f1(cy)})" class="mp-crosswalk"/>`;
+    const cy = 948 + (cx - 200) * 0.1743 + 2;
+    crosswalkBars += `<rect x="${cx}" y="${f1(cy)}" width="5" height="68" transform="rotate(9.8 ${cx} ${f1(cy)})" class="mp-crosswalk"/>`;
 }
 frontage.innerHTML = `
-    <!-- P. Aquino Avenue Sidewalks & Roadbed running full width (Bearing ~9.8 deg) -->
+    <!-- Entrance Aprons connecting Highway to Cemetery Gates -->
+    <polygon points="716,864 744,868 744,1038 716,1034" class="mp-road mp-road--main"/>
+    <polygon points="991,872 1019,876 1019,1086 991,1082" class="mp-road mp-road--main"/>
+
+    <!-- P. Aquino Avenue 4-Lane Arterial Highway (Bearing ~9.8 deg) -->
     <polygon points="200,936 1600,1180 1600,1194 200,950" class="mp-sidewalk"/>
     <polygon points="200,948 1600,1192 1600,1264 200,1020" class="mp-ext-road"/>
     <line x1="200" y1="949.5" x2="1600" y2="1193.5" class="mp-ext-edge"/>
     <line x1="200" y1="1018.5" x2="1600" y2="1262.5" class="mp-ext-edge"/>
-    <line x1="200" y1="984.0" x2="1600" y2="1228.0" class="mp-ext-centerline"/>
+    <!-- Double Solid Yellow Centerline -->
+    <line x1="200" y1="982.5" x2="1600" y2="1226.5" stroke="#f59e0b" stroke-width="2.2"/>
+    <line x1="200" y1="985.5" x2="1600" y2="1229.5" stroke="#f59e0b" stroke-width="2.2"/>
+    <!-- Dashed Lane Dividers -->
+    <line x1="200" y1="964.0" x2="1600" y2="1208.0" stroke="#e2e8f0" stroke-width="1.2" stroke-dasharray="12 8"/>
+    <line x1="200" y1="1003.0" x2="1600" y2="1247.0" stroke="#e2e8f0" stroke-width="1.2" stroke-dasharray="12 8"/>
     ${crosswalkBars}
     <polygon points="200,1020 1600,1264 1600,1278 200,1034" class="mp-sidewalk"/>
 
-    <!-- South Commercial Strip Buildings along P. Aquino Ave (Matching Google Maps Street View) -->
-    <rect x="520" y="1030" width="70" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 520 1030)"/>
-    <rect x="610" y="1046" width="65" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 610 1046)"/>
-    <rect x="695" y="1060" width="80" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 695 1060)"/>
-    <rect x="795" y="1078" width="90" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 795 1078)"/>
-    <rect x="905" y="1096" width="85" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 905 1096)"/>
-    <rect x="1010" y="1114" width="75" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 1010 1114)"/>
-    <rect x="1105" y="1131" width="85" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 1105 1131)"/>
-    <rect x="1210" y="1149" width="90" height="34" rx="2" class="mp-neighbor-bldg" transform="rotate(9.8 1210 1149)"/>
-    <text x="640" y="1075" transform="rotate(9.8 640 1075)" class="mp-street-side-label">DIANZON WHOLESALE STORE</text>
-    <text x="840" y="1110" transform="rotate(9.8 840 1110)" class="mp-street-side-label">COMMERCIAL ROW • P. AQUINO AVE</text>
+    <!-- Highway Streetlamps -->
+    ${streetLampSvg(480, 934)}
+    ${streetLampSvg(620, 958)}
+    ${streetLampSvg(780, 986)}
+    ${streetLampSvg(940, 1014)}
+    ${streetLampSvg(1100, 1042)}
+    ${streetLampSvg(1260, 1070)}
+
+    <!-- Moving Highway Vehicles -->
+    ${vehicleSvg(550, 954, '#ef4444', 9.8)}
+    ${vehicleSvg(680, 996, '#3b82f6', 189.8)}
+    ${vehicleSvg(850, 1004, '#f59e0b', 9.8, true)}
+    ${vehicleSvg(1050, 1058, '#10b981', 189.8)}
+    ${vehicleSvg(1200, 1066, '#8b5cf6', 9.8)}
+
+    <!-- South Commercial Strip Establishments along P. Aquino Ave -->
+    ${commShopSvg(480, 1018, 80, 36, 'DIANZON WHOLESALE STORE', 'mpAwningBlue', '#334155', 9.8)}
+    ${commShopSvg(575, 1034, 76, 36, 'MALABON MARBLE WORKS', 'mpAwningRed', '#475569', 9.8)}
+    ${commShopSvg(666, 1050, 78, 36, 'EVERLASTING FLORAL BOUTIQUE', 'mpAwningGreen', '#334155', 9.8)}
+    ${commShopSvg(760, 1066, 92, 40, 'ST. PETER MEMORIAL CHAPEL', 'mpAwningBlue', '#1e293b', 9.8)}
+    ${commShopSvg(868, 1085, 68, 36, '7-ELEVEN / CAFE KIOSK', 'mpAwningYellow', '#334155', 9.8)}
+    ${commShopSvg(950, 1099, 82, 36, 'TONSUYA COMMERCIAL ROW', 'mpAwningRed', '#475569', 9.8)}
+    ${commShopSvg(1046, 1116, 88, 38, 'COMMUNITY SERVICE CENTER', 'mpAwningGreen', '#1e293b', 9.8)}
+    ${commShopSvg(1150, 1134, 90, 38, 'MALABON HARDWARE & AGRI', 'mpAwningBlue', '#334155', 9.8)}
 
     <!-- Lane Labels & Street Banner -->
-    <text x="560" y="974" transform="rotate(9.8 560 974)" class="mp-ext-lane-label">◂  WESTBOUND (TONSUYA / LETRE / TULLAHAN RIVER)</text>
-    <text x="1140" y="1074" transform="rotate(9.8 1140 1074)" class="mp-ext-lane-label">EASTBOUND (LONGOS / C-4 / MALABON CITY HALL)  ▸</text>
-    ${pillSvg(870, 980, '⟵   P. AQUINO AVENUE (LETRE ROAD)   ⟶', '', 'road')}
+    <text x="560" y="970" transform="rotate(9.8 560 970)" class="mp-ext-lane-label">◂  WESTBOUND (TONSUYA / LETRE / TULLAHAN RIVER)</text>
+    <text x="1140" y="1070" transform="rotate(9.8 1140 1070)" class="mp-ext-lane-label">EASTBOUND (LONGOS / C-4 / MALABON CITY HALL)  ▸</text>
+    ${pillSvg(870, 978, '⟵   P. AQUINO AVENUE (LETRE ROAD)   ⟶', '', 'road')}
 `;
 
 // One Continuous Verified Cemetery Property Lawn (19-Vertex Polygon, OSM Relation 16828676)
