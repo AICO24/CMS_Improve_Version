@@ -298,6 +298,91 @@
                             <!-- FLOATING TOOLTIP -->
                             <div class="svg-floating-tooltip" id="svgFloatingTooltip" role="tooltip" style="display: none;"></div>
 
+                            <!-- BATCH 34: FLOATING GOOGLE MAPS LAYERS CONTROLLER (Concern 2) -->
+                            <div class="map-layers-widget" id="mapLayersWidget" aria-label="Map Layers and Overlays">
+                                <!-- Collapsed Trigger Button (Google Maps Style Square Thumbnail) -->
+                                <button type="button" class="layers-trigger-btn" id="btnLayersTrigger" title="Map Layers & Overlays" aria-expanded="false" aria-controls="layersFlyoutMenu">
+                                    <div class="layers-trigger-thumb" id="layersTriggerThumb">
+                                        <div class="layers-thumb-preview thumb-default" id="layersThumbPreview">
+                                            <i class="fas fa-layer-group"></i>
+                                        </div>
+                                        <span class="layers-thumb-label" id="layersThumbLabel">Layers</span>
+                                    </div>
+                                </button>
+
+                                <!-- Expanded Horizontal Google Maps Layers Menu -->
+                                <div class="layers-flyout-menu" id="layersFlyoutMenu" role="menu">
+                                    <div class="layers-menu-header">
+                                        <span class="layers-menu-title"><i class="fas fa-layer-group"></i> Map Type</span>
+                                        <button type="button" class="btn-close-layers" id="btnCloseLayers" title="Collapse layers menu" aria-label="Close layers menu"><i class="fas fa-xmark"></i></button>
+                                    </div>
+                                    <div class="layers-types-row">
+                                        <!-- 1. Default Vector Map -->
+                                        <button type="button" class="layer-item-btn is-active" id="layerBtnDefault" data-layer-type="default" role="menuitem" title="Standard Vector Street Map">
+                                            <div class="layer-thumb-box thumb-default">
+                                                <svg viewBox="0 0 44 44" class="layer-svg-icon" aria-hidden="true">
+                                                    <rect width="44" height="44" rx="6" fill="#e8f5e9"/>
+                                                    <path d="M0,26 L44,26" stroke="#ffffff" stroke-width="7"/>
+                                                    <path d="M0,26 L44,26" stroke="#cbd5e1" stroke-width="5"/>
+                                                    <path d="M20,0 L20,44" stroke="#ffffff" stroke-width="7"/>
+                                                    <path d="M20,0 L20,44" stroke="#cbd5e1" stroke-width="5"/>
+                                                    <circle cx="20" cy="26" r="3.5" fill="#3b82f6"/>
+                                                </svg>
+                                            </div>
+                                            <span class="layer-item-label">Default</span>
+                                        </button>
+
+                                        <!-- 2. Satellite Aerial View -->
+                                        <button type="button" class="layer-item-btn" id="layerBtnSatellite" data-layer-type="satellite" role="menuitem" title="Aerial Satellite Imagery">
+                                            <div class="layer-thumb-box thumb-satellite">
+                                                <svg viewBox="0 0 44 44" class="layer-svg-icon" aria-hidden="true">
+                                                    <rect width="44" height="44" rx="6" fill="#1b2a1e"/>
+                                                    <path d="M0,15 Q22,9 44,19" stroke="#37474f" stroke-width="4.5" fill="none"/>
+                                                    <circle cx="26" cy="20" r="9" fill="#2d4a2b"/>
+                                                    <circle cx="34" cy="16" r="6" fill="#1a331c"/>
+                                                    <rect x="7" y="22" width="13" height="11" rx="1.5" fill="#475569"/>
+                                                </svg>
+                                            </div>
+                                            <span class="layer-item-label">Satellite</span>
+                                        </button>
+
+                                        <!-- 3. Terrain Topography -->
+                                        <button type="button" class="layer-item-btn" id="layerBtnTerrain" data-layer-type="terrain" role="menuitem" title="Topographical Terrain & Contours">
+                                            <div class="layer-thumb-box thumb-terrain">
+                                                <svg viewBox="0 0 44 44" class="layer-svg-icon" aria-hidden="true">
+                                                    <rect width="44" height="44" rx="6" fill="#f4ebd9"/>
+                                                    <path d="M0,34 Q16,20 44,28" stroke="#c4b5a0" stroke-width="2.5" fill="none"/>
+                                                    <path d="M0,24 Q22,12 44,20" stroke="#b0a088" stroke-width="2" fill="none"/>
+                                                    <path d="M0,14 Q18,4 44,12" stroke="#96856c" stroke-width="1.8" fill="none"/>
+                                                </svg>
+                                            </div>
+                                            <span class="layer-item-label">Terrain</span>
+                                        </button>
+                                    </div>
+
+                                    <div class="layers-divider"></div>
+
+                                    <!-- Overlays / Toggles -->
+                                    <div class="layers-toggles-row">
+                                        <span class="layers-toggles-title">Map details</span>
+                                        <div class="layers-chips-group">
+                                            <button type="button" class="layer-toggle-chip is-active" id="btnToggleLabels" title="Toggle Plot Numbers and Street Names">
+                                                <i class="fas fa-font"></i>
+                                                <span>Labels</span>
+                                            </button>
+                                            <button type="button" class="layer-toggle-chip is-active" id="btnToggleFoliage" title="Toggle Decorative Tree Clusters">
+                                                <i class="fas fa-tree"></i>
+                                                <span>Foliage</span>
+                                            </button>
+                                            <button type="button" class="layer-toggle-chip is-active" id="btnToggleSurroundings" title="Toggle Tonsuya Neighborhood Fabric">
+                                                <i class="fas fa-city"></i>
+                                                <span>Surroundings</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- ON-MAP LOCATION SUMMARY CARD (Batch 6) -->
                             <div class="map-location-summary-card" id="mapLocationSummaryCard" style="display: none;" aria-live="polite">
                                 <div class="loc-summary-header">

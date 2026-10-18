@@ -50,6 +50,14 @@
         selectedTodayServiceId: null,
         isTodayServicesLoading: false,
         activeCortegeService: null,
+
+        // Batch 34: Google Maps Layers Controller State (Concern 2)
+        activeLayerMode: 'default', // 'default' | 'satellite' | 'terrain'
+        layerToggles: {
+            labels: true,
+            foliage: true,
+            surroundings: true
+        },
     };
 
     // =========================================================================
@@ -300,6 +308,12 @@
     let todayServicesEmpty, todayServicesList;
     let drawerTodayServiceBanner, drawerServiceTime, drawerServiceDeceased, drawerServiceType, btnDrawerServiceRoute;
 
+    // Batch 34: Google Maps Layers Controller DOM Elements (Concern 2)
+    let mapLayersWidget, btnLayersTrigger, layersTriggerThumb, layersThumbPreview, layersThumbLabel;
+    let layersFlyoutMenu, btnCloseLayers;
+    let layerBtnDefault, layerBtnSatellite, layerBtnTerrain;
+    let btnToggleLabels, btnToggleFoliage, btnToggleSurroundings;
+
     /**
      * Entry Point on DOM Content Loaded
      */
@@ -317,6 +331,12 @@
 
         bindElements();
         attachEventListeners();
+        try {
+            const savedLayer = localStorage.getItem('cms-map-layer-mode');
+            if (savedLayer && ['default', 'satellite', 'terrain'].includes(savedLayer)) {
+                switchMapLayerMode(savedLayer);
+            }
+        } catch (e) {}
         await loadCemeteries();
     });
 
@@ -599,6 +619,21 @@
         drawerServiceDeceased = document.getElementById('drawerServiceDeceased');
         drawerServiceType = document.getElementById('drawerServiceType');
         btnDrawerServiceRoute = document.getElementById('btnDrawerServiceRoute');
+
+        // Batch 34: Google Maps Layers Controller Elements (Concern 2)
+        mapLayersWidget = document.getElementById('mapLayersWidget');
+        btnLayersTrigger = document.getElementById('btnLayersTrigger');
+        layersTriggerThumb = document.getElementById('layersTriggerThumb');
+        layersThumbPreview = document.getElementById('layersThumbPreview');
+        layersThumbLabel = document.getElementById('layersThumbLabel');
+        layersFlyoutMenu = document.getElementById('layersFlyoutMenu');
+        btnCloseLayers = document.getElementById('btnCloseLayers');
+        layerBtnDefault = document.getElementById('layerBtnDefault');
+        layerBtnSatellite = document.getElementById('layerBtnSatellite');
+        layerBtnTerrain = document.getElementById('layerBtnTerrain');
+        btnToggleLabels = document.getElementById('btnToggleLabels');
+        btnToggleFoliage = document.getElementById('btnToggleFoliage');
+        btnToggleSurroundings = document.getElementById('btnToggleSurroundings');
     }
 
     /**
@@ -1003,6 +1038,124 @@
             btnDrawerViewGeoMap.addEventListener('click', () => {
                 switchMapView('geo');
             });
+        }
+
+        // Batch 34: Layers Controller Event Listeners (Concern 2)
+        if (btnLayersTrigger) {
+            btnLayersTrigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (mapLayersWidget) {
+                    mapLayersWidget.classList.toggle('is-open');
+                    const isOpen = mapLayersWidget.classList.contains('is-open');
+                    btnLayersTrigger.setAttribute('aria-expanded', String(isOpen));
+                }
+            });
+        }
+
+        if (btnCloseLayers) {
+            btnCloseLayers.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (mapLayersWidget) {
+                    mapLayersWidget.classList.remove('is-open');
+                    if (btnLayersTrigger) btnLayersTrigger.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+
+        // Close flyout on click outside
+        document.addEventListener('click', (e) => {
+            if (mapLayersWidget && !mapLayersWidget.contains(e.target)) {
+                mapLayersWidget.classList.remove('is-open');
+                if (btnLayersTrigger) btnLayersTrigger.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        if (layerBtnDefault) {
+            layerBtnDefault.addEventListener('click', () => switchMapLayerMode('default'));
+        }
+        if (layerBtnSatellite) {
+            layerBtnSatellite.addEventListener('click', () => switchMapLayerMode('satellite'));
+        }
+        if (layerBtnTerrain) {
+            layerBtnTerrain.addEventListener('click', () => switchMapLayerMode('terrain'));
+        }
+
+        if (btnToggleLabels) {
+            btnToggleLabels.addEventListener('click', () => toggleMapDetail('labels'));
+        }
+        if (btnToggleFoliage) {
+            btnToggleFoliage.addEventListener('click', () => toggleMapDetail('foliage'));
+        }
+        if (btnToggleSurroundings) {
+            btnToggleSurroundings.addEventListener('click', () => toggleMapDetail('surroundings'));
+        }
+    }
+
+    /**
+     * Switch Google Maps Layer Mode ('default' | 'satellite' | 'terrain')
+     */
+    function switchMapLayerMode(mode) {
+        if (!['default', 'satellite', 'terrain'].includes(mode)) mode = 'default';
+        state.activeLayerMode = mode;
+
+        if (!cemeteryMapSvg) return;
+
+        cemeteryMapSvg.classList.remove('layer-satellite', 'layer-terrain');
+        if (mode === 'satellite') {
+            cemeteryMapSvg.classList.add('layer-satellite');
+        } else if (mode === 'terrain') {
+            cemeteryMapSvg.classList.add('layer-terrain');
+        }
+
+        // Update active class on layer buttons
+        [layerBtnDefault, layerBtnSatellite, layerBtnTerrain].forEach(btn => {
+            if (!btn) return;
+            const btnType = btn.getAttribute('data-layer-type');
+            if (btnType === mode) {
+                btn.classList.add('is-active');
+            } else {
+                btn.classList.remove('is-active');
+            }
+        });
+
+        // Update thumbnail trigger preview to show alternate mode
+        if (layersThumbLabel && layersThumbPreview) {
+            if (mode === 'default') {
+                layersThumbLabel.textContent = 'Satellite';
+                layersThumbPreview.innerHTML = '<i class="fas fa-satellite"></i>';
+            } else if (mode === 'satellite') {
+                layersThumbLabel.textContent = 'Default';
+                layersThumbPreview.innerHTML = '<i class="fas fa-layer-group"></i>';
+            } else if (mode === 'terrain') {
+                layersThumbLabel.textContent = 'Terrain';
+                layersThumbPreview.innerHTML = '<i class="fas fa-mountain"></i>';
+            }
+        }
+
+        try {
+            localStorage.setItem('cms-map-layer-mode', mode);
+        } catch (e) {}
+
+        toast(`Switched map layer to ${mode.charAt(0).toUpperCase() + mode.slice(1)} mode`, 'info');
+    }
+
+    /**
+     * Toggle specific map detail layer ('labels' | 'foliage' | 'surroundings')
+     */
+    function toggleMapDetail(feature) {
+        if (!state.layerToggles.hasOwnProperty(feature)) return;
+        state.layerToggles[feature] = !state.layerToggles[feature];
+        const isEnabled = state.layerToggles[feature];
+
+        if (feature === 'labels') {
+            cemeteryMapSvg.classList.toggle('hide-labels', !isEnabled);
+            if (btnToggleLabels) btnToggleLabels.classList.toggle('is-active', isEnabled);
+        } else if (feature === 'foliage') {
+            cemeteryMapSvg.classList.toggle('hide-foliage', !isEnabled);
+            if (btnToggleFoliage) btnToggleFoliage.classList.toggle('is-active', isEnabled);
+        } else if (feature === 'surroundings') {
+            cemeteryMapSvg.classList.toggle('hide-surroundings', !isEnabled);
+            if (btnToggleSurroundings) btnToggleSurroundings.classList.toggle('is-active', isEnabled);
         }
     }
 
@@ -1762,6 +1915,20 @@ const RD = {
 // LAYER 0: Canvas Background, Surrounding Context & Continuous Property Lawn
 // Canvas Base Surroundings: Extended to fill all pans and zooms with Google Maps terrain tone
 mk('rect', { x: -300, y: -200, width: 2200, height: 1600, class: 'mp-surround' }, mapGroundLayer);
+
+// Topographical Relief Contours (Visible in Google Maps Terrain Mode)
+const terrainContours = mk('g', { class: 'mp-terrain-contours', style: 'display: none;', 'aria-hidden': 'true' }, mapGroundLayer);
+terrainContours.innerHTML = `
+    <!-- Google Maps Terrain Elevation Contours -->
+    <path d="M 200 240 Q 600 200 1000 260 Q 1300 320 1600 280" stroke="#b8ad94" stroke-width="1.2" fill="none" opacity="0.65"/>
+    <text x="490" y="222" font-size="6.5" fill="#8c7e63" font-weight="700">+1.5m</text>
+    <path d="M 200 380 Q 620 320 1020 390 Q 1350 440 1600 400" stroke="#b8ad94" stroke-width="1.2" fill="none" opacity="0.65"/>
+    <text x="490" y="358" font-size="6.5" fill="#8c7e63" font-weight="700">+2.0m</text>
+    <path d="M 200 560 Q 620 500 1040 570 Q 1350 630 1600 580" stroke="#b8ad94" stroke-width="1.2" fill="none" opacity="0.65"/>
+    <text x="490" y="538" font-size="6.5" fill="#8c7e63" font-weight="700">+2.5m</text>
+    <path d="M 200 740 Q 640 680 1060 760 Q 1350 810 1600 770" stroke="#b8ad94" stroke-width="1.2" fill="none" opacity="0.65"/>
+    <text x="490" y="718" font-size="6.5" fill="#8c7e63" font-weight="700">+3.0m</text>
+`;
 
 // Surrounding Geographic Context (Matching Google Maps Neighborhood: Tonsuya, Malabon & Adjacent Park)
 const surroundingContext = mk('g', { class: 'mp-surrounding-context', 'aria-hidden': 'true' }, mapGroundLayer);
