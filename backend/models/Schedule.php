@@ -539,13 +539,18 @@ class Schedule {
         // with (int), which would turn a genuinely absent value into 0.
         $stmt = $this->db->prepare("
             INSERT INTO burial_schedules
-            (lot_id, deceased_id, decedent_request_id, schedule_date, schedule_time, status, notes, created_by, confirmed_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (lot_id, deceased_id, decedent_request_id, is_preneed, beneficiary_name, certificate_number, certificate_issued_at, certificate_hash, schedule_date, schedule_time, status, notes, created_by, confirmed_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $success = $stmt->execute([
             (int) $data['lot_id'],
             !empty($data['deceased_id']) ? (int) $data['deceased_id'] : null,
             !empty($data['decedent_request_id']) ? (int) $data['decedent_request_id'] : null,
+            !empty($data['is_preneed']) ? 1 : 0,
+            $data['beneficiary_name'] ?? null,
+            $data['certificate_number'] ?? null,
+            $data['certificate_issued_at'] ?? null,
+            $data['certificate_hash'] ?? null,
             $data['schedule_date'],
             $data['schedule_time'] ?? null,
             $data['status'] ?? 'Pending',
@@ -573,6 +578,7 @@ class Schedule {
                 lot_id = ?,
                 deceased_id = ?,
                 decedent_request_id = ?,
+                beneficiary_name = ?,
                 schedule_date = ?,
                 schedule_time = ?,
                 status = ?,
@@ -588,6 +594,7 @@ class Schedule {
             array_key_exists('decedent_request_id', $data)
                 ? (!empty($data['decedent_request_id']) ? (int) $data['decedent_request_id'] : null)
                 : (!empty($existing['decedent_request_id']) ? (int) $existing['decedent_request_id'] : null),
+            array_key_exists('beneficiary_name', $data) ? $data['beneficiary_name'] : ($existing['beneficiary_name'] ?? null),
             $data['schedule_date'] ?? $existing['schedule_date'],
             array_key_exists('schedule_time', $data) ? $data['schedule_time'] : $existing['schedule_time'],
             $data['status'] ?? $existing['status'],
