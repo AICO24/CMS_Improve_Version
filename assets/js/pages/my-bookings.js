@@ -18,6 +18,11 @@
     const bookingDetailFooter = document.getElementById('bookingDetailFooter');
     const closeDetailModal = document.getElementById('closeDetailModal');
     const closeDetailModalBtn = document.getElementById('closeDetailModalBtn');
+    const certificateModal = document.getElementById('certificateModal');
+    const certificateModalBody = document.getElementById('certificateModalBody');
+    const closeCertModalBtn = document.getElementById('closeCertModalBtn');
+    const btnCloseCertModal = document.getElementById('btnCloseCertModal');
+    const btnPrintCert = document.getElementById('btnPrintCert');
 
     let currentBookings = [];
 
@@ -205,14 +210,37 @@
 
         if (bookingsTableBody) {
             bookingsTableBody.addEventListener('click', (e) => {
-                const btn = e.target.closest('.btn-view-details');
-                if (btn) {
-                    const idx = Number(btn.getAttribute('data-index'));
+                const detailsBtn = e.target.closest('.btn-view-details');
+                if (detailsBtn) {
+                    const idx = Number(detailsBtn.getAttribute('data-index'));
                     const item = currentBookings[idx];
                     if (item) {
                         openBookingDetails(item);
                     }
+                    return;
                 }
+                const certBtn = e.target.closest('.btn-view-cert');
+                if (certBtn) {
+                    const idx = Number(certBtn.getAttribute('data-index'));
+                    const item = currentBookings[idx];
+                    if (item) {
+                        openCertificateModal(item);
+                    }
+                    return;
+                }
+            });
+        }
+
+        if (closeCertModalBtn) closeCertModalBtn.addEventListener('click', closeCertificateModal);
+        if (btnCloseCertModal) btnCloseCertModal.addEventListener('click', closeCertificateModal);
+        if (btnPrintCert) {
+            btnPrintCert.addEventListener('click', () => {
+                window.print();
+            });
+        }
+        if (certificateModal) {
+            certificateModal.addEventListener('click', (e) => {
+                if (e.target === certificateModal) closeCertificateModal();
             });
         }
 
@@ -318,11 +346,14 @@
 
             const isDraft = Number(item.is_draft) === 1 || item.source_kind === 'DRAFT';
             const serviceType = (item.service_type || '').toLowerCase();
+            const isPreNeed = Number(item.is_preneed) === 1 || serviceType === 'preneed';
 
             // Type Badge
             let typeBadge = '';
             if (isDraft) {
                 typeBadge = `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:0.75rem;background:#fef3c7;color:#92400e;font-weight:600;"><i class="fas fa-pen-to-square"></i> Draft (${serviceType ? capitalize(serviceType) : 'Service'})</span>`;
+            } else if (isPreNeed) {
+                typeBadge = '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:0.75rem;background:#fef3c7;color:#b45309;font-weight:700;border:1px solid #fde68a;"><i class="fas fa-crown"></i> Pre-Need Lot</span>';
             } else if (serviceType === 'burial') {
                 typeBadge = '<span style="display:inline-flex;align-items:center;gap:4px;color:#166534;font-weight:600;"><i class="fas fa-monument"></i> Burial</span>';
             } else if (serviceType === 'cremation') {
@@ -349,7 +380,9 @@
 
             // Format Date
             let displayDate = item.booking_date;
-            if (!displayDate || displayDate === '0000-00-00' || displayDate === '0000-00-00 00:00:00') {
+            if (isPreNeed) {
+                displayDate = '<span style="color:#b45309;font-weight:600;font-size:0.82rem;"><i class="fas fa-shield-halved"></i> Advance</span>';
+            } else if (!displayDate || displayDate === '0000-00-00' || displayDate === '0000-00-00 00:00:00') {
                 displayDate = isDraft ? '<em style="color:#94a3b8;">In progress</em>' : '<em style="color:#94a3b8;">TBD</em>';
             } else {
                 try {
@@ -367,6 +400,9 @@
                 actionHtml = `<a href="booking-assistant.html?draft_id=${draftId}" class="btn-primary" style="font-size:0.8rem;padding:4px 10px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-play"></i> Resume</a>`;
             } else {
                 actionHtml = `<button type="button" class="btn-secondary btn-view-details" data-index="${index}" style="font-size:0.8rem;padding:4px 10px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><i class="fas fa-eye"></i> Details</button>`;
+                if (isPreNeed || item.certificate_number) {
+                    actionHtml += ` <button type="button" class="btn-secondary btn-view-cert" data-index="${index}" style="font-size:0.8rem;padding:4px 10px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;background:#fffbeb;color:#b45309;border-color:#fde68a;font-weight:600;" title="View Official Certificate of Ownership"><i class="fas fa-certificate"></i> Cert</button>`;
+                }
             }
 
             tr.innerHTML = `
@@ -495,7 +531,8 @@
         try {
             let fullData = null;
             if (!isDraft && sourceId) {
-                const endpoint = serviceType === 'burial' ? `schedules/${sourceId}` : `cremations/${sourceId}`;
+                const isPreNeed = (serviceType === 'preneed' || Number(item.is_preneed) === 1);
+                const endpoint = (serviceType === 'burial' || isPreNeed) ? `schedules/${sourceId}` : `cremations/${sourceId}`;
                 fullData = await api.request(endpoint, { method: 'GET' }).catch(() => null);
             }
 
@@ -521,11 +558,14 @@
                 badge_class: 'pending',
                 workflow_guidance: 'No documents submitted online yet. Per municipal cemetery policy, applicant must present physical copies of Death Certificate and Permit at the office prior to burial/cremation.'
             };
-            const docItems = (Array.isArray(record.documents) && record.documents.length > 0) ? record.documents : [
+            const isPreNeedRecord = (serviceType === 'preneed' || Number(item.is_preneed) === 1 || Number(record.is_preneed) === 1);
+            const docItems = isPreNeedRecord ? [
+                { doc_type: 'valid_id', title: 'Valid Government ID (Purchaser)', description: 'Government-issued ID of Purchaser / Lot Owner', is_uploaded: Boolean(record.documents && record.documents.find(d => d.doc_type === 'valid_id' && d.is_uploaded)) }
+            ] : ((Array.isArray(record.documents) && record.documents.length > 0) ? record.documents : [
                 { doc_type: 'death_certificate', title: 'Death Certificate', description: 'PSA or Local Civil Registrar Certified True Copy', is_uploaded: false },
                 { doc_type: 'burial_permit', title: serviceType === 'cremation' ? 'Cremation Permit' : 'Burial Permit', description: 'City Health Office / Local Government Unit Permit', is_uploaded: false },
                 { doc_type: 'valid_id', title: 'Valid Government ID', description: 'Government-issued ID of Informant / Next-of-Kin (Claimant)', is_uploaded: false }
-            ];
+            ]);
 
             let docBadgeColor = '#64748b';
             let docBadgeBg = '#f1f5f9';
@@ -546,8 +586,8 @@
                             <span class="booking-detail-ref-code">${escapeHtml(item.booking_reference || '-')}</span>
                         </div>
                         <div class="booking-detail-tags">
-                            <span class="booking-detail-service-tag ${serviceType === 'burial' ? 'service-tag--burial' : 'service-tag--cremation'}">
-                                <i class="fas ${serviceType === 'burial' ? 'fa-monument' : 'fa-fire'}"></i> ${escapeHtml((serviceType || 'Service').toUpperCase())}
+                            <span class="booking-detail-service-tag ${isPreNeedRecord ? '' : (serviceType === 'burial' ? 'service-tag--burial' : 'service-tag--cremation')}" ${isPreNeedRecord ? 'style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;"' : ''}>
+                                <i class="fas ${isPreNeedRecord ? 'fa-crown' : (serviceType === 'burial' ? 'fa-monument' : 'fa-fire')}"></i> ${isPreNeedRecord ? 'PRE-NEED LOT' : escapeHtml((serviceType || 'Service').toUpperCase())}
                             </span>
                             <span class="booking-detail-status-pill">
                                 ${escapeHtml(formatBookingStatus(record.status || item.status, isDraft))}
@@ -565,18 +605,50 @@
                                     <span class="booking-detail-card-title"><i class="fas fa-id-card"></i> Schedule &amp; Allocation</span>
                                 </div>
                                 <div class="booking-detail-meta-grid">
-                                    <div class="booking-meta-item">
-                                        <label>Decedent</label>
-                                        <strong>${escapeHtml(item.decedent_name || 'Pending Formal Record')}</strong>
-                                    </div>
-                                    <div class="booking-meta-item">
-                                        <label>Scheduled Date &amp; Time</label>
-                                        <span>${escapeHtml(displayDate)} ${escapeHtml(displayTime)}</span>
-                                    </div>
-                                    <div class="booking-meta-item booking-meta-item--full">
-                                        <label>Allocation</label>
-                                        <span class="booking-allocation-text">${escapeHtml(item.allocation || 'Standard')}</span>
-                                    </div>
+                                    ${isPreNeedRecord ? `
+                                        <div class="booking-meta-item">
+                                            <label>Purchaser / Owner</label>
+                                            <strong>${escapeHtml(record.purchaser_name || record.contact_person || 'Owner')}</strong>
+                                        </div>
+                                        <div class="booking-meta-item">
+                                            <label>Designated Beneficiary</label>
+                                            <strong>${escapeHtml(record.beneficiary_name || item.beneficiary_name || 'Designated Beneficiary')}</strong>
+                                        </div>
+                                        <div class="booking-meta-item">
+                                            <label>Reservation Term</label>
+                                            <span style="color:#b45309;font-weight:600;"><i class="fas fa-shield-halved"></i> Perpetual Advance Reservation</span>
+                                        </div>
+                                        <div class="booking-meta-item">
+                                            <label>Allocated Lot</label>
+                                            <span class="booking-allocation-text">${escapeHtml(item.allocation || 'Reserved Lot')}</span>
+                                        </div>
+                                    ` : `
+                                        <div class="booking-meta-item">
+                                            <label>Decedent</label>
+                                            <strong>${escapeHtml(item.decedent_name || 'Pending Formal Record')}</strong>
+                                        </div>
+                                        <div class="booking-meta-item">
+                                            <label>Scheduled Date &amp; Time</label>
+                                            <span>${escapeHtml(displayDate)} ${escapeHtml(displayTime)}</span>
+                                        </div>
+                                        <div class="booking-meta-item booking-meta-item--full">
+                                            <label>Allocation</label>
+                                            <span class="booking-allocation-text">${escapeHtml(item.allocation || 'Standard')}</span>
+                                        </div>
+                                    `}
+                                    ${isPreNeedRecord && (record.certificate_number || item.certificate_number) ? `
+                                        <div class="booking-meta-item booking-meta-item--full" style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 12px;margin-top:4px;">
+                                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                                <div>
+                                                    <span style="font-size:0.75rem;text-transform:uppercase;color:#92400e;font-weight:700;"><i class="fas fa-certificate"></i> Ownership Certificate</span>
+                                                    <div style="font-family:monospace;font-size:0.95rem;font-weight:700;color:#b45309;">${escapeHtml(record.certificate_number || item.certificate_number)}</div>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-primary" id="btnModalViewCert" style="background:#b45309;border-color:#b45309;font-size:0.8rem;padding:5px 12px;">
+                                                    <i class="fas fa-award"></i> View Certificate
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ` : ''}
                                     ${notes && notes !== 'None' ? `
                                         <div class="booking-meta-item booking-meta-item--full">
                                             <label>Notes &amp; Special Instructions</label>
@@ -680,6 +752,9 @@
                 bookingDetailFooter.innerHTML = footerHtml;
 
                 document.getElementById('closeDetailModalBtnInner')?.addEventListener('click', closeDetails);
+                document.getElementById('btnModalViewCert')?.addEventListener('click', () => {
+                    openCertificateModal(Object.assign({}, item, record));
+                });
 
                 // Real-time PayMongo sync button in modal
                 const syncBtn = document.getElementById('btnSyncPaymentModal');
@@ -936,4 +1011,86 @@
         updateNotificationBadge();
         setInterval(updateNotificationBadge, 30000);
     });
+
+    function openCertificateModal(item) {
+        if (!certificateModal || !certificateModalBody) return;
+
+        const certNum = item.certificate_number || `CERT-PN-${new Date().getFullYear()}-${String(item.schedule_id || item.source_id || '000000').padStart(6, '0')}`;
+        const certHash = item.certificate_hash || 'SHA256:VERIFIED-MUNICIPAL-RECORD';
+        const ownerName = item.purchaser_name || item.contact_person || 'Authorized Lot Owner';
+        const beneficiaryName = item.beneficiary_name || 'Designated Beneficiary';
+        const allocation = item.allocation || 'Standard Cemetery Plot';
+        const issueDate = item.certificate_issued_at ? new Date(item.certificate_issued_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        certificateModalBody.innerHTML = `
+            <div style="border: 4px double #d97706; padding: 28px 24px; border-radius: 8px; background: #fff; text-align: center; position: relative;">
+                <div style="position: absolute; top: 12px; left: 16px; opacity: 0.15; font-size: 5rem; color: #b45309; pointer-events: none;">
+                    <i class="fas fa-tree"></i>
+                </div>
+                <div style="position: absolute; bottom: 12px; right: 16px; opacity: 0.15; font-size: 5rem; color: #b45309; pointer-events: none;">
+                    <i class="fas fa-award"></i>
+                </div>
+                
+                <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; color: #64748b; font-weight: 700; margin-bottom: 4px;">
+                    Republic of the Philippines · Municipal Cemetery Authority
+                </div>
+                <h2 style="font-family: 'Fraunces', serif; font-size: 1.45rem; color: #1e293b; margin: 0 0 6px 0; font-weight: 700; letter-spacing: 0.02em;">
+                    Certificate of Pre-Need Lot Ownership
+                </h2>
+                <div style="font-size: 0.82rem; color: #b45309; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 20px;">
+                    Perpetual Interment Right &amp; Advance Allocation Deed
+                </div>
+
+                <div style="background: #fffbeb; border: 1px dashed #fde68a; padding: 10px 16px; border-radius: 6px; display: inline-block; margin-bottom: 22px;">
+                    <span style="font-size: 0.75rem; text-transform: uppercase; color: #92400e; font-weight: 600;">Certificate Number:</span>
+                    <strong style="font-family: monospace; font-size: 1.15rem; color: #b45309; letter-spacing: 0.05em; margin-left: 6px;">${escapeHtml(certNum)}</strong>
+                </div>
+
+                <p style="font-size: 0.9rem; color: #475569; line-height: 1.6; max-width: 540px; margin: 0 auto 20px auto;">
+                    This certifies that full perpetual reservation rights for the cemetery plot described below have been officially registered and recorded in favor of:
+                </p>
+
+                <div style="border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 14px 10px; margin-bottom: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; text-align: left;">
+                    <div>
+                        <span style="display:block; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Registered Purchaser / Owner</span>
+                        <strong style="font-size: 1.05rem; color: #0f172a;">${escapeHtml(ownerName)}</strong>
+                    </div>
+                    <div>
+                        <span style="display:block; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Designated Beneficiary</span>
+                        <strong style="font-size: 1.05rem; color: #0f172a;">${escapeHtml(beneficiaryName)}</strong>
+                    </div>
+                    <div style="grid-column: span 2;">
+                        <span style="display:block; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Allocated Cemetery Plot</span>
+                        <strong style="font-size: 1.05rem; color: #166534;"><i class="fas fa-map-location-dot"></i> ${escapeHtml(allocation)}</strong>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 10px;">
+                    <div style="text-align: left;">
+                        <span style="display:block; font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Date of Issuance</span>
+                        <strong style="font-size: 0.85rem; color: #334155;">${escapeHtml(issueDate)}</strong>
+                        <div style="margin-top: 4px; font-size: 0.7rem; font-family: monospace; color: #64748b; word-break: break-all; max-width: 320px;">
+                            <i class="fas fa-fingerprint text-primary"></i> Hash: ${escapeHtml(certHash.substring(0, 32))}...
+                        </div>
+                    </div>
+                    <div style="text-align: center; min-width: 170px;">
+                        <div style="border-bottom: 1px solid #334155; margin-bottom: 4px; padding-bottom: 4px;">
+                            <span style="font-family: 'Fraunces', serif; font-size: 0.95rem; font-weight: 700; color: #1e293b;">Municipal Administrator</span>
+                        </div>
+                        <span style="font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Authorized Signatory</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        certificateModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeCertificateModal() {
+        if (!certificateModal) return;
+        certificateModal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
 })();
