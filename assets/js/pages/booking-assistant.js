@@ -573,8 +573,15 @@
         const paramConvId = urlParams.get('conversation_id') || urlParams.get('conv_id');
         const paramDraftId = urlParams.get('draft_id');
         const paramService = urlParams.get('service');
-        if (paramService && ['burial', 'cremation'].includes(paramService.toLowerCase())) {
+        if (paramService && ['burial', 'cremation', 'preneed'].includes(paramService.toLowerCase())) {
             state.serviceType = paramService.toLowerCase();
+            const paramLotId = urlParams.get('lot_id');
+            const paramLotNum = urlParams.get('lot_number');
+            if (paramLotId) {
+                state.extractedData.lot_id = paramLotId;
+                if (paramLotNum) state.extractedData.lot_number = paramLotNum;
+                fetchSelectedLotDetails(paramLotId);
+            }
         }
 
         try {
@@ -649,13 +656,23 @@
                 { text: '🔥 Full Cremation Service', action: () => selectFullCremation() },
                 { text: '🏛️ Columbarium Niche Only (With Existing Urn)', action: () => selectInurnmentOnly() }
             ]);
+        } else if (state.serviceType === 'preneed') {
+            appendAssistantMessage(
+                `Hello! I am your AI Booking Assistant. I will guide you step-by-step through reserving a **Pre-Need Cemetery Lot** in advance.\n\nPre-Need reservations allow you to secure a prime cemetery plot ahead of time for yourself or a designated loved one, guaranteeing your family peace of mind.\n\nTo begin, what is your **full legal name** (Purchaser / Future Lot Owner), and who will be the designated beneficiary?`
+            );
+            renderPromptChips([
+                { text: '👤 I am the Purchaser', action: () => sendQuickInput('I am purchasing this lot, my name is ') },
+                { text: '🗺️ Browse Available Lots', action: () => openLotPicker() },
+                { text: '❓ Pre-Need Policy & Terms', action: () => sendChatTurn('How does the pre-need lot reservation and certificate of ownership work?') }
+            ]);
         } else {
             appendAssistantMessage(
-                `Hello! I am your AI Booking Assistant. I will guide you step-by-step through arranging a **burial** or **cremation** service.\n\nTo begin, which type of service would you like to arrange?`
+                `Hello! I am your AI Booking Assistant. I will guide you step-by-step through arranging a **burial**, **cremation**, or **pre-need lot reservation**.\n\nTo begin, which type of service would you like to arrange?`
             );
             renderPromptChips([
                 { text: '⚰️ Arrange a Burial', action: () => selectService('burial') },
-                { text: '🔥 Arrange a Cremation', action: () => selectService('cremation') }
+                { text: '🔥 Arrange a Cremation', action: () => selectService('cremation') },
+                { text: '✨ Reserve Pre-Need Lot', action: () => selectService('preneed') }
             ]);
         }
         updateBlueprintHUD();
@@ -677,6 +694,18 @@
                 { text: '🔥 Full Cremation Service', action: () => selectFullCremation() },
                 { text: '🏛️ Columbarium Niche Only (With Existing Urn)', action: () => selectInurnmentOnly() }
             ]);
+            return;
+        }
+
+        if (serviceType === 'preneed') {
+            appendAssistantMessage(
+                `Understood. You have chosen a **Pre-Need Lot Reservation**.\n\nTo begin, please provide your full legal name as the purchaser, and who will be the designated beneficiary.`
+            );
+            renderPromptChips([
+                { text: '👤 Purchasing for myself', action: () => sendQuickInput('I am purchasing this lot for myself, my name is ') },
+                { text: '🗺️ Browse Available Lots', action: () => openLotPicker() }
+            ]);
+            await sendChatTurn(`I want to reserve a pre-need lot.`);
             return;
         }
 
@@ -975,24 +1004,45 @@
             hudServiceBadge.style.borderColor = '#a7f3d0';
             hudServiceDesc.textContent = 'Standard Burial Service';
             hudServiceVal.textContent = 'Burial';
+        } else if (state.serviceType === 'preneed') {
+            hudServiceBadge.textContent = 'Pre-Need';
+            hudServiceBadge.style.background = '#fef3c7';
+            hudServiceBadge.style.color = '#b45309';
+            hudServiceBadge.style.borderColor = '#f59e0b';
+            hudServiceDesc.textContent = 'Pre-Need Advance Lot Reservation';
+            hudServiceVal.textContent = 'Pre-Need';
         } else {
             hudServiceBadge.textContent = 'Detecting...';
             hudServiceDesc.textContent = 'Pending selection';
             hudServiceVal.textContent = 'Pending';
         }
 
-        // Decedent Card
-        const dName = state.extractedData.decedent_name;
+        // Decedent / Pre-Need Owner Card
+        const isPreNeed = state.serviceType === 'preneed';
+        const dName = isPreNeed ? (state.extractedData.purchaser_name || state.extractedData.decedent_name) : state.extractedData.decedent_name;
+        const bName = isPreNeed ? (state.extractedData.beneficiary_name || 'Designated Beneficiary') : null;
         const dRel = state.extractedData.relationship;
-        hudDecedentName.innerHTML = dName ? `<strong>${escapeHtml(dName)}</strong>` : '<span class="text-muted">Pending</span>';
-        hudRelationship.innerHTML = dRel ? `<strong>${escapeHtml(dRel)}</strong>` : '<span class="text-muted">Pending</span>';
+
+        const decedentHeaderTitle = document.querySelector('#hudCardDecedent .hud-card-header .hud-label');
+        if (decedentHeaderTitle) {
+            decedentHeaderTitle.innerHTML = isPreNeed ? '<i class="fas fa-id-card"></i> Owner &amp; Beneficiary' : '<i class="fas fa-id-card"></i> Decedent Details';
+        }
+        const decedentLabelSpan = document.querySelector('#hudCardDecedent .hud-detail-row:first-child span');
+        if (decedentLabelSpan) {
+            decedentLabelSpan.textContent = isPreNeed ? 'Purchaser / Owner:' : 'Name:';
+        }
+
+        hudDecedentName.innerHTML = dName ? `<strong>${escapeHtml(dName)}</strong>${isPreNeed && bName ? ` <small class="text-muted" style="display:block;margin-top:2px;">(Beneficiary: ${escapeHtml(bName)})</small>` : ''}` : '<span class="text-muted">Pending</span>';
+        hudRelationship.innerHTML = dRel ? `<strong>${escapeHtml(dRel)}</strong>` : (isPreNeed ? '<span class="text-muted">Self / Family</span>' : '<span class="text-muted">Pending</span>');
         hudDecedentVal.textContent = dName || 'Pending';
 
         // Schedule & Allocation Card
         const dateVal = isCremation ? state.extractedData.cremation_date : (state.extractedData.preferred_date || state.extractedData.schedule_date);
         const timeVal = state.extractedData.preferred_time || state.extractedData.schedule_time;
         let scheduleDisplay = '';
-        if (dateVal && timeVal) {
+        if (state.serviceType === 'preneed') {
+            scheduleDisplay = '<strong>Advance Reservation (No Deceased)</strong>';
+        } else if (dateVal && timeVal) {
             scheduleDisplay = `<strong>${formatDate(dateVal)}</strong> <span class="badge badge-light" style="font-size:0.8rem; margin-left:4px;"><i class="fas fa-clock"></i> ${formatTime(timeVal)}</span>`;
         } else if (dateVal) {
             scheduleDisplay = `<strong>${formatDate(dateVal)}</strong>`;
@@ -1055,7 +1105,7 @@
             }
 
             // Show lot picker button if burial and lot selection needed
-            hudLotActionBox.style.display = (state.serviceType === 'burial') ? 'block' : 'none';
+            hudLotActionBox.style.display = (state.serviceType === 'burial' || state.serviceType === 'preneed') ? 'block' : 'none';
             hudLotActionBox.innerHTML = `
                 <button type="button" class="select-lot-btn" id="btnOpenLotPicker" style="padding: 8px 14px; font-size: 0.84rem;">
                     <i class="fas fa-map-marked-alt"></i> Browse Available Lots
@@ -1103,6 +1153,26 @@
                         if (valSlotFee) valSlotFee.innerHTML = '<span class="text-muted">Pending slot (₱10k - ₱18k)</span>';
                         if (valTotalFee) valTotalFee.textContent = '₱15,000 + Niche Slot';
                     }
+                }
+            } else if (state.serviceType === 'preneed') {
+                // Pre-Need Perpetual Advance Reservation
+                if (labelBaseFee) labelBaseFee.textContent = 'Reservation Type:';
+                if (valBaseFee) valBaseFee.textContent = 'Perpetual Advance Reservation';
+                if (labelSlotFee) labelSlotFee.textContent = 'Burial Lot Price:';
+
+                let lotPrice = 0;
+                if (state.selectedLotDetails && state.selectedLotDetails.price) {
+                    lotPrice = Number(state.selectedLotDetails.price);
+                } else if (state.extractedData.lot_price) {
+                    lotPrice = Number(state.extractedData.lot_price);
+                }
+
+                if (lotPrice > 0) {
+                    if (valSlotFee) valSlotFee.textContent = `₱${lotPrice.toLocaleString()}`;
+                    if (valTotalFee) valTotalFee.textContent = `₱${lotPrice.toLocaleString()} (Lot Purchase)`;
+                } else {
+                    if (valSlotFee) valSlotFee.innerHTML = '<span class="text-muted">Lot not selected</span>';
+                    if (valTotalFee) valTotalFee.textContent = 'Pending selection';
                 }
             } else {
                 // Burial
@@ -1207,6 +1277,16 @@
                 : (isCrem ? 'City Health Office / Municipal Cremation Permit' : 'City Health Office or Local Government Unit Permit');
         }
 
+        const docDeathCert = document.getElementById('docItemDeathCert');
+        const docPermit = document.getElementById('docItemPermit');
+        if (state.serviceType === 'preneed') {
+            if (docDeathCert) docDeathCert.style.display = 'none';
+            if (docPermit) docPermit.style.display = 'none';
+        } else {
+            if (docDeathCert) docDeathCert.style.display = '';
+            if (docPermit) docPermit.style.display = '';
+        }
+
         updateDocItemUI('DeathCert', docs.death_certificate);
         updateDocItemUI('Permit', docs.burial_permit);
         updateDocItemUI('Id', docs.valid_id);
@@ -1234,8 +1314,14 @@
             return;
         }
 
-        // Step 2: Decedent Info
-        const hasDetails = Boolean(state.extractedData.decedent_name);
+        // Step 2: Decedent / Owner & Beneficiary Info
+        const step2Label = document.querySelector('#stepDetails .step-label');
+        if (step2Label) {
+            step2Label.textContent = state.serviceType === 'preneed' ? 'Owner & Beneficiary' : 'Decedent Info';
+        }
+        const hasDetails = state.serviceType === 'preneed'
+            ? Boolean(state.extractedData.purchaser_name || state.extractedData.decedent_name)
+            : Boolean(state.extractedData.decedent_name);
         if (hasDetails) {
             stepDetails.className = 'blueprint-step completed';
         } else {
@@ -1245,7 +1331,8 @@
 
         // Step 3: Allocation (Date + Lot/Columbarium)
         const isCremation = state.serviceType === 'cremation';
-        const hasDate = Boolean(isCremation ? state.extractedData.cremation_date : state.extractedData.preferred_date);
+        const isPreNeed = state.serviceType === 'preneed';
+        const hasDate = isPreNeed ? true : Boolean(isCremation ? state.extractedData.cremation_date : state.extractedData.preferred_date);
         const hasLot = isCremation 
             ? (state.extractedData.ash_disposition === 'take_home' || Boolean(state.extractedData.niche_number))
             : Boolean(state.extractedData.lot_id);
@@ -1355,7 +1442,7 @@
                 text: '📄 Requirements',
                 action: () => {
                     if (!state.draftId) {
-                        sendChatTurn('Ano ang mga documentary requirements para sa booking?');
+                        sendChatTurn('What are the documentary requirements for this booking?');
                     } else {
                         openDocModal();
                     }
@@ -2255,24 +2342,38 @@
         // Service Type
         const isExternal = Boolean(state.extractedData.is_external_cremation || state.extractedData.service_subtype === 'inurnment_only');
         if (confirmModalService) {
-            confirmModalService.textContent = isCremation ? (isExternal ? 'Columbarium Niche (Inurnment Only)' : 'Cremation Service') : 'Standard Burial Service';
+            if (state.serviceType === 'preneed') {
+                confirmModalService.textContent = 'Pre-Need Lot Reservation (Advance)';
+            } else {
+                confirmModalService.textContent = isCremation ? (isExternal ? 'Columbarium Niche (Inurnment Only)' : 'Cremation Service') : 'Standard Burial Service';
+            }
         }
 
-        // Decedent Name
+        // Decedent / Owner & Beneficiary Name
         if (confirmModalDecedent) {
-            confirmModalDecedent.textContent = state.extractedData.decedent_name || 'N/A';
+            if (state.serviceType === 'preneed') {
+                const pName = state.extractedData.purchaser_name || state.extractedData.decedent_name || 'Owner';
+                const bName = state.extractedData.beneficiary_name || 'Designated Beneficiary';
+                confirmModalDecedent.textContent = `Owner: ${pName} | Beneficiary: ${bName}`;
+            } else {
+                confirmModalDecedent.textContent = state.extractedData.decedent_name || 'N/A';
+            }
         }
 
         // Scheduled Date & Time
         if (confirmModalDate) {
-            const dateVal = isCremation ? state.extractedData.cremation_date : (state.extractedData.preferred_date || state.extractedData.schedule_date);
-            const timeVal = state.extractedData.preferred_time || state.extractedData.schedule_time;
-            if (dateVal && timeVal) {
-                confirmModalDate.textContent = `${formatDate(dateVal)} at ${formatTime(timeVal)}`;
-            } else if (dateVal) {
-                confirmModalDate.textContent = formatDate(dateVal);
+            if (state.serviceType === 'preneed') {
+                confirmModalDate.textContent = 'Advance Reservation (Active upon confirmation)';
             } else {
-                confirmModalDate.textContent = 'Pending Schedule';
+                const dateVal = isCremation ? state.extractedData.cremation_date : (state.extractedData.preferred_date || state.extractedData.schedule_date);
+                const timeVal = state.extractedData.preferred_time || state.extractedData.schedule_time;
+                if (dateVal && timeVal) {
+                    confirmModalDate.textContent = `${formatDate(dateVal)} at ${formatTime(timeVal)}`;
+                } else if (dateVal) {
+                    confirmModalDate.textContent = formatDate(dateVal);
+                } else {
+                    confirmModalDate.textContent = 'Pending Schedule';
+                }
             }
         }
 
@@ -2435,9 +2536,12 @@
                 state.committedRecordId = res.committed_record_id || res.cremation_id || res.schedule_id || null;
                 updateBlueprintHUD();
 
+                if (res.certificate_number) {
+                    state.certificateNumber = res.certificate_number;
+                }
                 if (res.checkout_url) {
                     showVoucherInChat();
-                    const serviceLabel = state.serviceType === 'cremation' ? 'Cremation' : 'Burial';
+                    const serviceLabel = state.serviceType === 'preneed' ? 'Pre-Need Lot' : (state.serviceType === 'cremation' ? 'Cremation' : 'Burial');
                     if (typeof showToast === 'function') {
                         showToast(`${serviceLabel} scheduled! Redirecting to PayMongo checkout...`, 'info');
                     }
@@ -2447,12 +2551,12 @@
 
                 if (res.checkout_error || res.checkout_initialized === false) {
                     showCheckoutPendingVoucher(res.checkout_error);
-                    const serviceLabel = state.serviceType === 'cremation' ? 'Cremation' : 'Burial';
+                    const serviceLabel = state.serviceType === 'preneed' ? 'Pre-Need Lot' : (state.serviceType === 'cremation' ? 'Cremation' : 'Burial');
                     const warnMsg = `${serviceLabel} reservation recorded (Pending). Online checkout could not be initialized at this time.`;
                     if (typeof showToast === 'function') showToast(warnMsg, 'warning');
                 } else {
                     showVoucherInChat();
-                    const serviceLabel = state.serviceType === 'cremation' ? 'Cremation' : 'Burial';
+                    const serviceLabel = state.serviceType === 'preneed' ? 'Pre-Need Lot' : (state.serviceType === 'cremation' ? 'Cremation' : 'Burial');
                     const successMsg = state.committedRecordId
                         ? `${serviceLabel} scheduled successfully! Reference ID #${state.committedRecordId}`
                         : 'Reservation draft confirmed!';
@@ -2496,15 +2600,15 @@
                 <div class="voucher-details-grid">
                     <div>
                         <span class="voucher-item-label">Service Type</span>
-                        <strong class="voucher-item-val">${isCremation ? 'Cremation Service' : 'Burial Service'}</strong>
+                        <strong class="voucher-item-val">${isPreNeed ? 'Pre-Need Lot Reservation' : (isCremation ? 'Cremation Service' : 'Burial Service')}</strong>
                     </div>
                     <div>
-                        <span class="voucher-item-label">Scheduled Date</span>
-                        <strong class="voucher-item-val">${formatDate(dateVal)}</strong>
+                        <span class="voucher-item-label">${isPreNeed ? 'Reservation Term' : 'Scheduled Date'}</span>
+                        <strong class="voucher-item-val">${isPreNeed ? 'Perpetual Advance Lease' : formatDate(dateVal)}</strong>
                     </div>
                     <div>
-                        <span class="voucher-item-label">Decedent Name</span>
-                        <strong class="voucher-item-val">${escapeHtml(state.extractedData.decedent_name || 'N/A')}</strong>
+                        <span class="voucher-item-label">${isPreNeed ? 'Owner &amp; Beneficiary' : 'Decedent Name'}</span>
+                        <strong class="voucher-item-val">${isPreNeed ? `${escapeHtml(state.extractedData.purchaser_name || state.extractedData.decedent_name || 'Owner')} (Ben: ${escapeHtml(state.extractedData.beneficiary_name || 'Self')})` : escapeHtml(state.extractedData.decedent_name || 'N/A')}</strong>
                     </div>
                     <div>
                         <span class="voucher-item-label">${isCremation ? 'Columbarium' : 'Burial Lot'}</span>
@@ -2536,9 +2640,10 @@
      * Display a Digital Reservation Voucher in the chat stream
      */
     function showVoucherInChat() {
+        const isPreNeed = state.serviceType === 'preneed';
         const isCremation = state.serviceType === 'cremation';
-        const dateVal = isCremation ? state.extractedData.cremation_date : state.extractedData.preferred_date;
-        const refPrefix = isCremation ? 'Cremation #' : 'Schedule #';
+        const dateVal = isPreNeed ? 'Advance Reservation' : (isCremation ? state.extractedData.cremation_date : state.extractedData.preferred_date);
+        const refPrefix = isPreNeed ? 'Pre-Need #' : (isCremation ? 'Cremation #' : 'Schedule #');
         const scheduleRef = state.committedRecordId ? `${refPrefix}${state.committedRecordId}` : `Draft #${state.draftId}`;
         const isCommitted = state.status === 'COMMITTED';
 
@@ -2556,15 +2661,15 @@
                 <div class="voucher-details-grid">
                     <div>
                         <span class="voucher-item-label">Service Type</span>
-                        <strong class="voucher-item-val">${isCremation ? 'Cremation Service' : 'Burial Service'}</strong>
+                        <strong class="voucher-item-val">${isPreNeed ? 'Pre-Need Lot Reservation' : (isCremation ? 'Cremation Service' : 'Burial Service')}</strong>
                     </div>
                     <div>
-                        <span class="voucher-item-label">Scheduled Date</span>
-                        <strong class="voucher-item-val">${formatDate(dateVal)}</strong>
+                        <span class="voucher-item-label">${isPreNeed ? 'Reservation Term' : 'Scheduled Date'}</span>
+                        <strong class="voucher-item-val">${isPreNeed ? 'Perpetual Advance Lease' : formatDate(dateVal)}</strong>
                     </div>
                     <div>
-                        <span class="voucher-item-label">Decedent Name</span>
-                        <strong class="voucher-item-val">${escapeHtml(state.extractedData.decedent_name || 'N/A')}</strong>
+                        <span class="voucher-item-label">${isPreNeed ? 'Owner &amp; Beneficiary' : 'Decedent Name'}</span>
+                        <strong class="voucher-item-val">${isPreNeed ? `${escapeHtml(state.extractedData.purchaser_name || state.extractedData.decedent_name || 'Owner')} (Ben: ${escapeHtml(state.extractedData.beneficiary_name || 'Self')})` : escapeHtml(state.extractedData.decedent_name || 'N/A')}</strong>
                     </div>
                     <div>
                         <span class="voucher-item-label">${isCremation ? 'Columbarium' : 'Burial Lot'}</span>
@@ -3203,6 +3308,15 @@
         document.body.style.overflow = 'hidden';
         const modal = document.getElementById('docUploadModal');
         if (modal) {
+            const cardUploadDeathCert = document.getElementById('cardUploadDeathCert');
+            const cardUploadPermit = document.getElementById('cardUploadPermit');
+            if (state.serviceType === 'preneed') {
+                if (cardUploadDeathCert) cardUploadDeathCert.style.display = 'none';
+                if (cardUploadPermit) cardUploadPermit.style.display = 'none';
+            } else {
+                if (cardUploadDeathCert) cardUploadDeathCert.style.display = '';
+                if (cardUploadPermit) cardUploadPermit.style.display = '';
+            }
             modal.style.display = 'flex';
             refreshDocModalState();
         }
@@ -3236,7 +3350,12 @@
                 updateBlueprintHUD();
                 const summaryEl = document.getElementById('modalDocSummaryText');
                 if (summaryEl) {
-                    summaryEl.textContent = `${res.uploaded_count || 0} of ${res.total_count || 3} documents submitted`;
+                    if (state.serviceType === 'preneed') {
+                        const hasId = Boolean(state.extractedData.documents && state.extractedData.documents.valid_id);
+                        summaryEl.textContent = `${hasId ? 1 : 0} of 1 document submitted (Valid Government ID)`;
+                    } else {
+                        summaryEl.textContent = `${res.uploaded_count || 0} of ${res.total_count || 3} documents submitted`;
+                    }
                 }
             }
         } catch (e) {
