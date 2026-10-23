@@ -74,6 +74,7 @@ class BookingAgentService {
     // Centralized Required Field Contracts
     public const REQUIRED_BURIAL_FIELDS    = ['service_type', 'decedent_name', 'preferred_date', 'lot_id'];
     public const REQUIRED_CREMATION_FIELDS = ['service_type', 'decedent_name', 'cremation_date'];
+    public const REQUIRED_PRENEED_FIELDS   = ['service_type', 'purchaser_name', 'beneficiary_name', 'lot_id'];
 
     private ?BookingAvailabilityService $availabilityService = null;
     private ?PaymentController $paymentController = null;
@@ -133,6 +134,7 @@ class BookingAgentService {
         return match (strtolower(trim($serviceType))) {
             'cremation' => self::REQUIRED_CREMATION_FIELDS,
             'burial'    => self::REQUIRED_BURIAL_FIELDS,
+            'preneed'   => self::REQUIRED_PRENEED_FIELDS,
             default     => [],
         };
     }
@@ -291,8 +293,15 @@ class BookingAgentService {
             }
         }
 
+        // Pre-Need specific progression:
+        if ($serviceType === 'preneed') {
+            if ((!empty($extractedData['purchaser_name']) || !empty($extractedData['beneficiary_name'])) && in_array('lot_id', $missingFields, true)) {
+                return BookingDraft::STATUS_LOT_SELECTION;
+            }
+        }
+
         // Generic collection state if any booking data has been supplied
-        if (!empty($extractedData['decedent_name']) || !empty($extractedData['preferred_date']) || !empty($extractedData['cremation_date'])) {
+        if (!empty($extractedData['decedent_name']) || !empty($extractedData['preferred_date']) || !empty($extractedData['cremation_date']) || !empty($extractedData['purchaser_name']) || !empty($extractedData['beneficiary_name'])) {
             return BookingDraft::STATUS_COLLECTING_INFO;
         }
 
@@ -1620,6 +1629,277 @@ class BookingAgentService {
         }
 
         return $outcome;
+    }
+
+    /**
+     * Finalize and Commit an Advance Pre-Need Lot Reservation Draft.
+     *
+     * Creates an authoritative pre-need lot reservation with zero death certificate requirements.
+     * Generates an official Certificate of Lot Ownership, marks the plot as Reserved,
+     * and sets up the Lot Purchase payment session.
+     *
+     * @param int         $draftId
+     * @param int         $userId
+     * @param string|null $username
+     * @param mixed       $user
+     * @param array       $options
+     * @return array
+     * @throws BookingDraftException
+     */
+    public function finalizePreNeedDraft(int $draftId, int $userId, ?string $username = null, $user = null, array $options = []): array {
+        $draft = $this->draftModel->requireOwnership($draftId, $userId);
+
+        if ($draft['service_type'] !== 'preneed') {
+            throw new BookingDraftException(
+                "Cannot finalize pre-need draft. Draft service type is '{$draft['service_type']}'.",
+                'INVALID_SERVICE_TYPE',
+                400
+            );
+        }
+
+        if ($draft['status'] === BookingDraft::STATUS_COMMITTED) {
+            throw new BookingDraftException(
+                "Draft #{$draftId} has already been committed.",
+                'DRAFT_ALREADY_COMMITTED',
+                409
+            );
+        }
+
+        if (BookingDraft::isTerminalState($draft['status'])) {
+            throw new BookingDraftException(
+                "Cannot finalize draft in terminal state '{$draft['status']}'.",
+                'TERMINAL_STATE_MODIFICATION',
+                400
+            );
+        }
+
+        $extracted = !empty($draft['extracted_data']) ? json_decode($draft['extracted_data'], true) : [];
+        $missing = $this->evaluateMissingFields('preneed', $extracted);
+
+        if (!empty($missing)) {
+            throw new BookingDraftException(
+                "Cannot finalize pre-need draft. Missing required fields: " . implode(', ', $missing),
+                'INCOMPLETE_DRAFT',
+                400
+            );
+        }
+
+        $lotId = (int) ($extracted['lot_id'] ?? 0);
+        if ($lotId <= 0) {
+            throw new BookingDraftException("A valid lot_id is required to finalize pre-need lot reservation.", 'MISSING_LOT', 400);
+        }
+
+        $purchaserName = trim((string) ($extracted['purchaser_name'] ?? ''));
+        $beneficiaryName = trim((string) ($extracted['beneficiary_name'] ?? 'Self'));
+        $userRole = strtolower(is_array($user) ? ($user['role'] ?? 'user') : 'user');
+
+        try {
+            $outcome = Database::getInstance()->transaction(function () use (
+                $draftId, $draft, $userId, $username, $userRole, $extracted, $lotId, $purchaserName, $beneficiaryName
+            ) {
+                // 1. Pessimistic Locking Read on Draft
+                $lockedDraft = $this->draftModel->findByIdForUpdate($draftId);
+                if (!$lockedDraft || $lockedDraft['status'] === BookingDraft::STATUS_COMMITTED) {
+                    throw new BookingDraftException("Draft #{$draftId} has already been committed.", 'DRAFT_ALREADY_COMMITTED', 409);
+                }
+                $draft = $lockedDraft;
+
+                // Step status to AWAITING_CONFIRM if needed
+                if ($draft['status'] === BookingDraft::STATUS_READY_FOR_REVIEW) {
+                    $this->draftModel->transitionStatus($draftId, BookingDraft::STATUS_AWAITING_CONFIRM);
+                } elseif ($draft['status'] !== BookingDraft::STATUS_AWAITING_CONFIRM) {
+                    if (in_array($draft['status'], [BookingDraft::STATUS_LOT_SELECTION, BookingDraft::STATUS_COLLECTING_INFO], true)) {
+                        $this->draftModel->transitionStatus($draftId, BookingDraft::STATUS_READY_FOR_REVIEW);
+                        $this->draftModel->transitionStatus($draftId, BookingDraft::STATUS_AWAITING_CONFIRM);
+                    } else {
+                        throw new BookingDraftException(
+                            "Cannot commit draft from status '{$draft['status']}'. Draft must be in 'AWAITING_CONFIRM'.",
+                            'INVALID_COMMIT_ATTEMPT',
+                            400
+                        );
+                    }
+                }
+
+                // 2. Pessimistic Locking Read on Lot
+                $lot = $this->lotModel->findByIdForUpdate($lotId);
+                if (!$lot) {
+                    throw new BookingDraftException("Lot #{$lotId} not found.", 'LOT_NOT_FOUND', 404);
+                }
+                if ($lot['status'] !== 'Available') {
+                    throw new BookingDraftException("This lot is no longer available for booking", 'LOT_NOT_AVAILABLE', 409);
+                }
+
+                // Active checkout lease check
+                require_once __DIR__ . '/../models/Payment.php';
+                $paymentModel = new Payment();
+                $activeLease = $paymentModel->findActiveLotCheckoutLease($lotId, null, $userId);
+                if ($activeLease) {
+                    throw new BookingDraftException(
+                        "This lot is currently held by an active checkout session in progress. Please try again later.",
+                        'LOT_HELD_CHECKOUT',
+                        409
+                    );
+                }
+
+                // Lock schedule range for lot
+                $this->scheduleModel->lockScheduleRangeForLot($lotId);
+
+                // Check conflict
+                $existingActive = $this->scheduleModel->findUnlinkedByLot($lotId);
+                if (!empty($existingActive)) {
+                    throw new BookingDraftException("This lot already has an active reservation record. Please select another lot.", 'LOT_ALREADY_BOOKED', 409);
+                }
+
+                // 3. Generate Official Certificate of Lot Ownership details
+                $year = date('Y');
+                $randomSuffix = strtoupper(bin2hex(random_bytes(3)));
+                $certificateNumber = "CERT-PN-{$year}-{$randomSuffix}";
+                $issuedAt = date('Y-m-d H:i:s');
+                $certificateHash = hash('sha256', "{$certificateNumber}|{$lotId}|{$userId}|{$issuedAt}");
+
+                // 4. Create Schedule record configured for Pre-Need
+                $scheduleStatus = 'Pending';
+                $confirmedBy = null;
+                if (in_array($userRole, ['admin', 'staff'], true) && !empty($extracted['status']) && $extracted['status'] === 'Confirmed') {
+                    $scheduleStatus = 'Confirmed';
+                    $confirmedBy = $userId;
+                }
+
+                $scheduleData = [
+                    'lot_id'                => $lotId,
+                    'deceased_id'           => null,
+                    'decedent_request_id'   => null,
+                    'is_preneed'            => 1,
+                    'beneficiary_name'      => $beneficiaryName,
+                    'certificate_number'    => $certificateNumber,
+                    'certificate_issued_at' => $issuedAt,
+                    'certificate_hash'      => $certificateHash,
+                    'schedule_date'         => date('Y-m-d'),
+                    'schedule_time'         => null,
+                    'status'                => $scheduleStatus,
+                    'notes'                 => 'Pre-Need Advance Lot Purchase by ' . $purchaserName . ' (Draft #' . $draftId . ')',
+                    'created_by'            => $userId,
+                    'confirmed_by'          => $confirmedBy,
+                ];
+
+                $scheduleId = $this->scheduleModel->create($scheduleData);
+                if (!$scheduleId) {
+                    throw new BookingDraftException("Failed to create pre-need reservation record.", 'SCHEDULE_CREATION_FAILED', 500);
+                }
+
+                // 5. Transition lot status to Reserved
+                $allowedStatuses = Lot::allowedFromStatusesFor('schedule.pending', 'Reserved');
+                $this->lotModel->transitionStatus($lotId, 'Reserved', $allowedStatuses);
+
+                // 6. Commit the Draft
+                $this->draftModel->commit($draftId, $scheduleId, 'preneed');
+
+                // 7. Audit Log
+                $this->auditLogModel->log(
+                    'Pre-Need Lot Reservation created',
+                    $userId,
+                    $username,
+                    'Schedule',
+                    $scheduleId,
+                    [
+                        'lot_id'             => $lotId,
+                        'certificate_number' => $certificateNumber,
+                        'purchaser_name'     => $purchaserName,
+                        'beneficiary_name'   => $beneficiaryName,
+                        'initial_status'     => $scheduleStatus,
+                        'draft_id'           => $draftId
+                    ]
+                );
+
+                $this->auditLogModel->log(
+                    'booking_draft.committed',
+                    $userId,
+                    $username,
+                    'BookingDraft',
+                    $draftId,
+                    [
+                        'schedule_id'  => $scheduleId,
+                        'service_type' => 'preneed'
+                    ]
+                );
+
+                return [
+                    'success'               => true,
+                    'draft_id'              => $draftId,
+                    'service_type'          => 'preneed',
+                    'status'                => BookingDraft::STATUS_COMMITTED,
+                    'committed_record_id'   => $scheduleId,
+                    'schedule_id'           => $scheduleId,
+                    'certificate_number'    => $certificateNumber,
+                    'certificate_issued_at' => $issuedAt,
+                    'certificate_hash'      => $certificateHash,
+                    'beneficiary_name'      => $beneficiaryName,
+                    'lot_id'                => $lotId,
+                    'message'               => 'Pre-Need lot reservation successfully finalized. Your Certificate of Ownership has been generated.'
+                ];
+            });
+
+            // Initialize payment checkout
+            $paymentController = $this->paymentController ?? new PaymentController();
+            $paymentUser = is_array($user) ? $user : ['user_id' => $userId, 'role' => $userRole];
+            if (!isset($paymentUser['role'])) {
+                $paymentUser['role'] = $userRole;
+            }
+
+            if (!empty($outcome['success']) && !empty($outcome['schedule_id'])) {
+                $sessionPayload = [
+                    'transaction_type' => 'Lot Purchase',
+                    'reference_id'     => (int) $outcome['schedule_id'],
+                    'reference_kind'   => 'schedule',
+                ];
+                if (!empty($options['origin'])) {
+                    $sessionPayload['origin'] = $options['origin'];
+                }
+                $checkoutResult = $paymentController->createCheckoutSession($sessionPayload, $paymentUser);
+
+                if (!empty($checkoutResult['payment_id'])) {
+                    $outcome['payment_id'] = (int) $checkoutResult['payment_id'];
+                }
+                if (!empty($checkoutResult['checkout_session_id'])) {
+                    $outcome['checkout_session_id'] = $checkoutResult['checkout_session_id'];
+                }
+                if (!empty($checkoutResult['checkout_url'])) {
+                    $outcome['checkout_url'] = $checkoutResult['checkout_url'];
+                    $outcome['checkout_initialized'] = true;
+                    $outcome['checkout_status'] = 'ready';
+                } else {
+                    $outcome['checkout_initialized'] = false;
+                    $outcome['checkout_status'] = 'failed';
+                    $outcome['payment_status'] = 'Pending';
+                    $outcome['booking_status'] = 'Pending';
+                    $outcome['message'] = 'Pre-Need lot reservation created (Pending). Online checkout could not be initialized at this time. You can complete payment from My Bookings.';
+                }
+                if (!empty($checkoutResult['gateway_status'])) {
+                    $outcome['gateway_status'] = $checkoutResult['gateway_status'];
+                }
+                if (!empty($checkoutResult['receipt_number'])) {
+                    $outcome['receipt_number'] = $checkoutResult['receipt_number'];
+                }
+                if (!empty($checkoutResult['amount'])) {
+                    $outcome['amount'] = $checkoutResult['amount'];
+                }
+                if (!empty($checkoutResult['currency'])) {
+                    $outcome['currency'] = $checkoutResult['currency'];
+                }
+                if (!empty($checkoutResult['code'])) {
+                    $outcome['checkout_code'] = (int) $checkoutResult['code'];
+                }
+                if (!empty($checkoutResult['error'])) {
+                    $outcome['checkout_error'] = $checkoutResult['error'];
+                }
+            }
+
+            return $outcome;
+        } catch (BookingDraftException $e) {
+            throw $e;
+        } catch (Throwable $t) {
+            throw new BookingDraftException("Failed to finalize pre-need draft: " . $t->getMessage(), 'FINALIZATION_FAILED', 500, $t);
+        }
     }
 
     /**
