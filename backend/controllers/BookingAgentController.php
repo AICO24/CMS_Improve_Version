@@ -1110,11 +1110,15 @@ class BookingAgentController {
 
         if (str_contains($msgLower, 'cremat') || str_contains($msgLower, 'urn') || str_contains($msgLower, 'columbarium')) {
             $serviceType = 'cremation';
+        } elseif (str_contains($msgLower, 'preneed') || str_contains($msgLower, 'pre-need') || str_contains($msgLower, 'future lot') || str_contains($msgLower, 'advance lot') || str_contains($msgLower, 'buy lot') || str_contains($msgLower, 'reserve lot')) {
+            $serviceType = 'preneed';
         } elseif (str_contains($msgLower, 'burial') || str_contains($msgLower, 'interment') || str_contains($msgLower, 'grave')) {
             $serviceType = 'burial';
         } elseif (!$serviceType) {
             if ($bookingReference && str_starts_with($bookingReference, 'CREM-')) {
                 $serviceType = 'cremation';
+            } elseif ($bookingReference && str_starts_with($bookingReference, 'PN-')) {
+                $serviceType = 'preneed';
             } else {
                 $serviceType = 'burial';
             }
@@ -1418,6 +1422,17 @@ class BookingAgentController {
         } else {
             // Guard: Do not re-extract decedent name if draft already has a valid decedent name,
             // or if the message is clearly providing date, time, or lot information.
+            if ($serviceType === 'preneed') {
+                $existingPurchaser = $draftContext['extracted_data']['purchaser_name'] ?? null;
+                $existingBeneficiary = $draftContext['extracted_data']['beneficiary_name'] ?? null;
+                if (!$existingPurchaser) {
+                    $cand = $this->extractCandidateDecedentName($message, null);
+                    if ($cand) $slots['purchaser_name'] = $cand;
+                } elseif (!$existingBeneficiary) {
+                    $cand = $this->extractCandidateDecedentName($message, null);
+                    if ($cand) $slots['beneficiary_name'] = $cand;
+                }
+            }
             $existingName = $draftContext['extracted_data']['decedent_name'] ?? null;
             $isSupplyingDateOrLot = (bool) preg_match('/\b(date|schedule|time|lot|section|columbarium|niche|sunday|monday|tuesday|wednesday|thursday|friday|saturday|tomorrow|week|month)\b/i', $message);
 
@@ -1431,6 +1446,8 @@ class BookingAgentController {
 
         $extractedFields = [
             'service_type'          => $slots['service_type'],
+            'purchaser_name'        => $slots['purchaser_name'] ?? null,
+            'beneficiary_name'      => $slots['beneficiary_name'] ?? null,
             'decedent_name'         => $slots['decedent_name'],
             'relationship'          => $slots['relationship'],
             'preferred_date'        => $slots['preferred_date'],
@@ -1462,7 +1479,39 @@ class BookingAgentController {
         $activeLot = $slots['lot_id'] ?? ($existingData['lot_id'] ?? null);
         $isTag = $this->isTagalog($message);
 
-        if ($intent === BookingAgentService::INTENT_GENERAL_INQUIRY) {
+        if ($serviceType === 'preneed') {
+            $activePurchaser = $slots['purchaser_name'] ?? ($existingData['purchaser_name'] ?? null);
+            $activeBeneficiary = $slots['beneficiary_name'] ?? ($existingData['beneficiary_name'] ?? null);
+            if (!empty($slots['lot_id']) || !empty($slots['lot_identifier'])) {
+                $lotDesc = $slots['lot_id'] ? "Lot #{$slots['lot_id']}" : "Lot {$slots['lot_identifier']}";
+                $reply = "I have selected **{$lotDesc}** for your advance pre-need plot reservation.";
+                if (empty($activePurchaser)) {
+                    $reply .= " Please provide the full legal name of the purchaser/owner.";
+                } elseif (empty($activeBeneficiary)) {
+                    $reply .= " Who is the designated future beneficiary? (e.g., 'For myself' or family member).";
+                } else {
+                    $reply .= " Your Pre-Need Blueprint is ready! Say **'Confirm'** to generate your official Certificate of Lot Ownership.";
+                }
+            } elseif (!empty($slots['beneficiary_name'])) {
+                $reply = "Designated beneficiary recorded as **{$slots['beneficiary_name']}**.";
+                if (empty($activeLot)) {
+                    $reply .= " Please choose your preferred lot from the interactive cemetery map.";
+                } else {
+                    $reply .= " Your Pre-Need Blueprint is ready! Say **'Confirm'** to finalize your reservation.";
+                }
+            } elseif (!empty($slots['purchaser_name'])) {
+                $reply = "Purchaser/owner name recorded as **{$slots['purchaser_name']}**.";
+                if (empty($activeBeneficiary)) {
+                    $reply .= " Who is the designated future beneficiary for this plot? (e.g., 'For myself' or family member).";
+                } elseif (empty($activeLot)) {
+                    $reply .= " Please select your preferred lot from the interactive cemetery map.";
+                } else {
+                    $reply .= " Your Pre-Need Blueprint is complete! Say **'Confirm'** to finalize.";
+                }
+            } else {
+                $reply = "Welcome to the Pre-Need Lot Reservation Assistant. This service allows you to secure prime cemetery plots in advance for future use with zero death certificate requirements. Please select a lot from the map or provide the purchaser name to begin.";
+            }
+        } elseif ($intent === BookingAgentService::INTENT_GENERAL_INQUIRY) {
             $reply = $this->resolveFaqAnswer($msgLower, $isTag);
         } elseif ($dateVal) {
             $valRes = BookingDateResolver::validate($dateVal, $serviceType === 'burial');
@@ -1783,6 +1832,11 @@ class BookingAgentController {
                 } elseif ($draft['service_type'] === 'cremation') {
                     $result = $this->agentService->finalizeCremationDraft($draftId, $userId, $username, $user, $input);
                     $this->syncFinalizedConversation($draftId, $result, 'cremation');
+
+                    return array_merge(['code' => 200], $result);
+                } elseif ($draft['service_type'] === 'preneed') {
+                    $result = $this->agentService->finalizePreNeedDraft($draftId, $userId, $username, $user, $input);
+                    $this->syncFinalizedConversation($draftId, $result, 'preneed');
                     return array_merge(['code' => 200], $result);
                 }
             }
@@ -1845,6 +1899,10 @@ class BookingAgentController {
             } elseif ($draft['service_type'] === 'cremation') {
                 $result = $this->agentService->finalizeCremationDraft($draftId, $userId, $username, $user, $input);
                 $this->syncFinalizedConversation($draftId, $result, 'cremation');
+
+                return array_merge(['code' => 200], $result);
+                $result = $this->agentService->finalizePreNeedDraft($draftId, $userId, $username, $user, $input);
+                $this->syncFinalizedConversation($draftId, $result, 'preneed');
                 return array_merge(['code' => 200], $result);
             }
 
