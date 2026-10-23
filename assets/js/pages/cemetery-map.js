@@ -258,7 +258,7 @@
     let lotDetailsDrawer, btnCloseDrawer, drawerLotNumber, drawerStatusDot, drawerStatusText;
     let drawerFacilityName, drawerSectionName, drawerBlockName, drawerLotType, drawerDimensions, drawerPrice;
     let drawerElevationRow, drawerElevationPlacement;
-    let drawerNotesRow, drawerLocationNotes, btnBookThisLot, btnLotUnavailable;
+    let drawerNotesRow, drawerLocationNotes, btnBookThisLot, btnPreneedThisLot, btnLotUnavailable;
     let mapLocationSummaryCard, locSummarySection, locSummaryBlock, locSummaryLot, btnCenterOnMapHud, btnCloseLocationSummary;
     let drawerYouAreHereBadge, drawerTrailFacility, drawerTrailSection, drawerTrailBlock, drawerTrailLot, btnCenterOnMapDrawer;
     let btnOpenWayfindingSlip;
@@ -449,6 +449,7 @@
         drawerNotesRow = document.getElementById('drawerNotesRow');
         drawerLocationNotes = document.getElementById('drawerLocationNotes');
         btnBookThisLot = document.getElementById('btnBookThisLot');
+        btnPreneedThisLot = document.getElementById('btnPreneedThisLot');
         btnLotUnavailable = document.getElementById('btnLotUnavailable');
 
         // Batch 4: Occupancy & Decedent Information Elements
@@ -4127,9 +4128,14 @@ if (count <= 4 && !usedZones.has('e')) {
                 btnBookThisLot.href = `booking-assistant.html?service=cremation&lot_id=${lot.lot_id}&lot_number=${encodeURIComponent(lot.lot_number)}`;
             } else {
                 btnBookThisLot.href = `booking-assistant.html?service=burial&lot_id=${lot.lot_id}&lot_number=${encodeURIComponent(lot.lot_number)}`;
+                if (btnPreneedThisLot) {
+                    btnPreneedThisLot.style.display = 'inline-flex';
+                    btnPreneedThisLot.href = `booking-assistant.html?service=preneed&lot_id=${lot.lot_id}&lot_number=${encodeURIComponent(lot.lot_number)}`;
+                }
             }
         } else {
             btnBookThisLot.style.display = 'none';
+            if (btnPreneedThisLot) btnPreneedThisLot.style.display = 'none';
             btnLotUnavailable.style.display = 'inline-flex';
             btnLotUnavailable.innerHTML = `<i class="fas fa-lock"></i> Lot is ${escapeHtml(lot.status)}`;
         }
