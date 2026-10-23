@@ -61,7 +61,7 @@ class BookingDraft {
         self::STATUS_EXPIRED,
     ];
 
-    public const ALLOWED_SERVICES = ['burial', 'cremation'];
+    public const ALLOWED_SERVICES = ['burial', 'cremation', 'preneed'];
 
     /**
      * Strict Server-Side Transition Map
@@ -169,7 +169,7 @@ class BookingDraft {
      */
     public function create(int $userId, string $serviceType, string $expiresAt, ?string $conversationId = null): int {
         if (!in_array($serviceType, self::ALLOWED_SERVICES, true)) {
-            throw new BookingDraftException("Invalid service type '{$serviceType}'. Must be 'burial' or 'cremation'.", 'INVALID_SERVICE_TYPE', 400);
+            throw new BookingDraftException("Invalid service type '{$serviceType}'. Must be 'burial', 'cremation', or 'preneed'.", 'INVALID_SERVICE_TYPE', 400);
         }
 
         if (strtotime($expiresAt) <= time()) {
@@ -458,7 +458,7 @@ class BookingDraft {
         }
 
         if (!in_array($recordType, self::ALLOWED_SERVICES, true)) {
-            throw new BookingDraftException("Committed record type must be 'burial' or 'cremation'.", 'INVALID_RECORD_TYPE', 400);
+            throw new BookingDraftException("Committed record type must be 'burial', 'cremation', or 'preneed'.", 'INVALID_RECORD_TYPE', 400);
         }
 
         $draft = $this->findById($draftId);
