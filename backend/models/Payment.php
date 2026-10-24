@@ -610,4 +610,192 @@ class Payment {
         $stmt->execute($params);
         return $stmt->fetchAll();
     }
+
+    /**
+     * Phase 3: Detailed collections & receipts ledger query with extensive joins.
+     * Supports filtering by period (daily, weekly, monthly, yearly, overall, custom),
+     * transaction/service type, and payment method.
+     */
+    public function getCollectionsLedger($filters = []) {
+        $now = new DateTime('now');
+        $currentDate = $now->format('Y-m-d');
+        $startDate = null;
+        $endDate = null;
+
+        $period = strtolower(trim((string)($filters['period'] ?? '')));
+
+        if (!empty($filters['date_from']) && !empty($filters['date_to'])) {
+            $startDate = $filters['date_from'];
+            $endDate = $filters['date_to'];
+        } elseif (in_array($period, ['daily', 'day', 'today'], true)) {
+            $startDate = $currentDate;
+            $endDate = $currentDate;
+        } elseif (in_array($period, ['weekly', 'week', 'this_week'], true)) {
+            $startOfWeek = clone $now;
+            $dayOfWeek = (int)$startOfWeek->format('N'); // 1 = Monday, 7 = Sunday
+            $startOfWeek->modify('-' . ($dayOfWeek - 1) . ' days');
+            $startDate = $startOfWeek->format('Y-m-d');
+            $endDate = $currentDate;
+        } elseif (in_array($period, ['monthly', 'month', 'this_month'], true)) {
+            $startDate = $now->format('Y-m-01');
+            $endDate = $currentDate;
+        } elseif (in_array($period, ['yearly', 'year', 'this_year'], true)) {
+            $startDate = $now->format('Y-01-01');
+            $endDate = $currentDate;
+        } elseif (in_array($period, ['overall', 'all', 'all_time'], true)) {
+            $startDate = '1970-01-01';
+            $endDate = $currentDate;
+        }
+
+        $sql = "
+            SELECT p.payment_id,
+                   COALESCE(p.receipt_number, CONCAT('RCPT-', YEAR(COALESCE(p.payment_date, p.created_at)), '-', p.payment_id)) AS receipt_number,
+                   p.transaction_type,
+                   p.amount,
+                   COALESCE(p.payment_date, p.created_at) AS payment_date,
+                   p.payment_method,
+                   p.verification_status,
+                   p.gateway_provider,
+                   p.gateway_checkout_session_id,
+                   p.gateway_payment_id,
+                   p.gateway_status,
+                   p.notes,
+                   u.full_name AS received_by_name,
+                   v.full_name AS verified_by_name,
+                   COALESCE(
+                       NULLIF(TRIM(d_sched.contact_name), ''),
+                       NULLIF(TRIM(d_crem.contact_name), ''),
+                       NULLIF(TRIM(CONCAT(COALESCE(d_sched.first_name, ''), ' ', COALESCE(d_sched.last_name, ''))), ''),
+                       NULLIF(TRIM(CONCAT(COALESCE(d_crem.first_name, ''), ' ', COALESCE(d_crem.last_name, ''))), ''),
+                       NULLIF(TRIM(p.notes), ''),
+                       NULLIF(TRIM(u.full_name), 'Admin User')
+                   ) AS payor_name,
+                   COALESCE(
+                       NULLIF(TRIM(d_sched.contact_number), ''),
+                       NULLIF(TRIM(d_crem.contact_number), ''),
+                       NULLIF(TRIM(u.contact_number), '')
+                   ) AS payor_contact,
+                   l.lot_id,
+                   l.lot_number,
+                   sec.section_name,
+                   blk.block_name,
+                   blk.block_number,
+                   l.status AS lot_status,
+                   l.lot_type
+            FROM payments p
+            LEFT JOIN users u ON p.received_by = u.user_id
+            LEFT JOIN users v ON p.verified_by = v.user_id
+            LEFT JOIN burial_schedules ref_schedule
+                   ON (p.reference_kind = 'schedule' OR p.reference_kind IS NULL OR p.reference_kind = '') AND p.reference_id = ref_schedule.schedule_id
+            LEFT JOIN cremation_records ref_cremation
+                   ON (p.transaction_type = 'Cremation' OR p.transaction_type = 'Columbarium' OR p.reference_kind = 'cremation') AND p.reference_id = ref_cremation.cremation_id
+            LEFT JOIN decedent_records d_sched ON ref_schedule.deceased_id = d_sched.decedent_id
+            LEFT JOIN decedent_records d_crem ON ref_cremation.deceased_id = d_crem.decedent_id
+            LEFT JOIN lots l
+                   ON ((p.reference_kind = 'schedule' OR p.reference_kind IS NULL OR p.reference_kind = '') AND l.lot_id = ref_schedule.lot_id)
+                   OR (p.reference_kind = 'lot' AND l.lot_id = p.reference_id)
+            LEFT JOIN blocks blk ON l.block_id = blk.block_id
+            LEFT JOIN sections sec ON blk.section_id = sec.section_id
+            WHERE 1=1
+        ";
+
+        $params = [];
+
+        if ($startDate && $endDate) {
+            $sql .= " AND DATE(COALESCE(p.payment_date, p.created_at)) >= ? AND DATE(COALESCE(p.payment_date, p.created_at)) <= ?";
+            $params[] = $startDate;
+            $params[] = $endDate;
+        }
+
+        if (!empty($filters['transaction_type']) && $filters['transaction_type'] !== 'all') {
+            if ($filters['transaction_type'] === 'preneed') {
+                $sql .= " AND (p.transaction_type = 'Pre-Need' OR p.notes LIKE '%Pre-Need%' OR p.notes LIKE '%Pre-need%')";
+            } elseif ($filters['transaction_type'] === 'burial') {
+                $sql .= " AND (p.transaction_type = 'Lot Purchase' OR p.transaction_type = 'Burial' OR p.transaction_type = 'Interment')";
+            } elseif ($filters['transaction_type'] === 'cremation') {
+                $sql .= " AND (p.transaction_type = 'Cremation' OR p.transaction_type = 'Columbarium')";
+            } elseif ($filters['transaction_type'] === 'maintenance') {
+                $sql .= " AND (p.transaction_type = 'Maintenance' OR p.transaction_type = 'Renewal' OR p.transaction_type = 'Transfer')";
+            } else {
+                $sql .= " AND p.transaction_type = ?";
+                $params[] = $filters['transaction_type'];
+            }
+        }
+
+        if (!empty($filters['payment_method']) && $filters['payment_method'] !== 'all') {
+            if ($filters['payment_method'] === 'cash') {
+                $sql .= " AND (p.payment_method = 'Cash' OR p.payment_method LIKE '%Cash%')";
+            } elseif ($filters['payment_method'] === 'online' || $filters['payment_method'] === 'paymongo') {
+                $sql .= " AND (p.payment_method = 'PayMongo' OR p.payment_method LIKE '%Online%' OR p.payment_method LIKE '%GCash%' OR p.payment_method LIKE '%Card%')";
+            } else {
+                $sql .= " AND p.payment_method = ?";
+                $params[] = $filters['payment_method'];
+            }
+        }
+
+        if (!empty($filters['verification_status']) && $filters['verification_status'] !== 'all') {
+            $sql .= " AND p.verification_status = ?";
+            $params[] = $filters['verification_status'];
+        }
+
+        $sql .= " ORDER BY DATE(COALESCE(p.payment_date, p.created_at)) DESC, p.payment_id DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $grandTotal = 0.0;
+        $cashTotal = 0.0;
+        $onlineTotal = 0.0;
+        $verifiedCount = 0;
+        $pendingCount = 0;
+
+        foreach ($rows as &$item) {
+            $amt = (float)($item['amount'] ?? 0);
+            $isVerified = ($item['verification_status'] ?? '') === 'Verified';
+            if ($isVerified) {
+                $grandTotal += $amt;
+                $verifiedCount++;
+                $method = strtolower($item['payment_method'] ?? '');
+                if (strpos($method, 'cash') !== false) {
+                    $cashTotal += $amt;
+                } else {
+                    $onlineTotal += $amt;
+                }
+            } else {
+                $pendingCount++;
+            }
+
+            // Allocation description formatting
+            $alloc = 'General Service / Undefined';
+            if (!empty($item['lot_number'])) {
+                $blk = !empty($item['block_name']) ? $item['block_name'] : ('Block ' . ($item['block_number'] ?? ''));
+                $secName = !empty($item['section_name']) ? $item['section_name'] . ' - ' : '';
+                $alloc = $secName . $blk . ' Lot ' . $item['lot_number'] . ' (' . ($item['lot_type'] ?? 'Standard Lawn') . ')';
+            } elseif (!empty($item['notes'])) {
+                $alloc = $item['notes'];
+            } else {
+                $alloc = $item['transaction_type'] ?? 'Memorial Service';
+            }
+            $item['allocation_description'] = $alloc;
+        }
+        unset($item);
+
+        return [
+            'period' => $period ?: 'custom',
+            'date_from' => $startDate,
+            'date_to' => $endDate,
+            'summary' => [
+                'total_collections' => $grandTotal,
+                'total_transactions' => count($rows),
+                'verified_count' => $verifiedCount,
+                'pending_count' => $pendingCount,
+                'cash_total' => $cashTotal,
+                'online_total' => $onlineTotal,
+                'average_amount' => $verifiedCount > 0 ? round($grandTotal / $verifiedCount, 2) : 0.0,
+            ],
+            'items' => $rows,
+        ];
+    }
+
 }
