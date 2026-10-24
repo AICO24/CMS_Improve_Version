@@ -2012,20 +2012,44 @@
                     <div class="lot-card-sub">
                         ${escapeHtml(lot.section_name || '')} • ${escapeHtml(lot.block_name || '')}
                     </div>
-                    <div class="lot-card-price">
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+                        <span class="badge" style="background:#ecfdf5;color:#047857;font-size:0.72rem;padding:2px 6px;border-radius:4px;font-weight:700;">
+                            <i class="fas fa-shield-halved"></i> Flood-Free
+                        </span>
+                        <span class="badge" style="background:#f1f5f9;color:#475569;font-size:0.72rem;padding:2px 6px;border-radius:4px;">
+                            <i class="fas fa-person-walking"></i> ~1 min walk
+                        </span>
+                    </div>
+                    <div class="lot-card-price" style="margin-top:6px;">
                         ₱${Number(lot.price || 0).toLocaleString()}
                     </div>
                     ${!isAvailable ? `<div style="margin-top:6px;"><span class="badge" style="background:#ef4444;color:#fff;font-size:0.75rem;padding:2px 6px;border-radius:4px;font-weight:600;"><i class="fas fa-ban"></i> Fully Occupied / Unavailable</span></div>` : ''}
                 </div>
-                <div class="card-actions-row">
-                    <a href="${viewOnMapUrl}" target="_blank" class="btn-view-on-map" title="View recommended lot on map" aria-label="View recommended lot on map">
-                        <i class="fas fa-map-marker-alt"></i> View on Map
+                <div class="card-actions-row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
+                    <button type="button" class="btn-preview-lot" data-lot-id="${lot.lot_id}" style="flex:1;min-width:110px;padding:6px 10px;font-size:0.8rem;border-radius:6px;border:1px solid #cbd5e1;background:#f8fafc;cursor:pointer;font-weight:600;color:#334155;display:inline-flex;align-items:center;justify-content:center;gap:4px;">
+                        <i class="fas fa-eye" style="color:#0284c7;"></i> Preview
+                    </button>
+                    <a href="${viewOnMapUrl}" target="_blank" class="btn-view-on-map" title="View recommended lot on map" aria-label="View recommended lot on map" style="flex:1;min-width:110px;padding:6px 10px;font-size:0.8rem;border-radius:6px;border:1px solid #cbd5e1;background:#fff;text-decoration:none;font-weight:600;color:#334155;display:inline-flex;align-items:center;justify-content:center;gap:4px;">
+                        <i class="fas fa-map-marker-alt" style="color:#10b981;"></i> On Map
                     </a>
-                    <button type="button" class="select-lot-btn" style="${!isAvailable ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${!isAvailable ? 'disabled' : ''}>
+                    <button type="button" class="select-lot-btn" style="width:100%;${!isAvailable ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${!isAvailable ? 'disabled' : ''}>
                         ${isSelected ? '<i class="fas fa-check"></i> Selected' : (isAvailable ? '<i class="fas fa-check-circle"></i> Select This Lot' : '<i class="fas fa-ban"></i> Unavailable')}
                     </button>
                 </div>
             `;
+
+            const previewBtn = card.querySelector('button.btn-preview-lot');
+            if (previewBtn) {
+                previewBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (window.LotVisualPreview && typeof window.LotVisualPreview.openPreviewModal === 'function') {
+                        window.LotVisualPreview.openPreviewModal(lot, async (selectedLot) => {
+                            closeLotPicker();
+                            await updateDraftField('lot_id', selectedLot.lot_id);
+                        });
+                    }
+                });
+            }
 
             if (isAvailable) {
                 card.querySelector('button.select-lot-btn').addEventListener('click', async () => {
