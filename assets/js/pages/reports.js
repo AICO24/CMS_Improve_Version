@@ -2430,7 +2430,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <td>${item.section_name || '—'}</td>
                     <td>${item.block_name   || '—'}</td>
                     <td>${displayDate}</td>
-                    <td><span class="status-badge ${diff !== null && diff < 0 ? 'status-danger' : statusClass}">${label} · ${daysLabel}</span></td>
+                    <td><span class="status-badge ${diff !== null && diff < 0 ? 'status-danger' : statusClass}"><i class="fas fa-circle" style="font-size: 0.45rem;"></i> ${label} &middot; ${daysLabel}</span></td>
                 </tr>`;
             }
 
