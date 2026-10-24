@@ -806,7 +806,15 @@ async function requireRole(allowedRoles) {
     }
 
     const roleName = String(user.role || '').toLowerCase();
-    if (Array.isArray(allowedRoles) && allowedRoles.length && !allowedRoles.includes(roleName)) {
+    const effectiveRoles = [roleName];
+    if (roleName === 'user') effectiveRoles.push('citizen');
+    if (roleName === 'citizen') effectiveRoles.push('user');
+
+    const hasAccess = Array.isArray(allowedRoles) && allowedRoles.length 
+        ? allowedRoles.some(r => effectiveRoles.includes(String(r).toLowerCase()))
+        : true;
+
+    if (!hasAccess) {
         window.location.replace(getRoleDashboardPath(roleName));
         return null;
     }
