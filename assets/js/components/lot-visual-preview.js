@@ -307,21 +307,26 @@
         const blockName = lot.block_name || 'Block';
         const price = Number(lot.price || 0);
 
-        // Populate modal data
-        document.getElementById('pvLotNumber').textContent = lotNumber;
-        document.getElementById('pvSectionBlock').textContent = `${sectionName} • ${blockName}`;
-        document.getElementById('pvArchetypeName').textContent = archetype.name;
-        document.getElementById('pvPriceVal').textContent = price > 0 ? `₱${price.toLocaleString()}` : 'Official Rate';
-        document.getElementById('pvCapacityVal').textContent = archetype.capacity;
-        document.getElementById('pvDimensionsVal').textContent = lot.dimensions || archetype.dimensions;
-        document.getElementById('pvMaterialsVal').textContent = archetype.materials.surface;
-        document.getElementById('pvElevationVal').textContent = spatial.terrainElev;
-        document.getElementById('pvWalkingVal').textContent = `${spatial.walkingDist} (${spatial.walkingTime})`;
-        document.getElementById('pvPathwayVal').textContent = spatial.pathwayCond;
+        // Populate modal data safely
+        const setSafeText = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
+
+        setSafeText('pvLotNumber', lotNumber);
+        setSafeText('pvSectionBlock', `${sectionName} • ${blockName}`);
+        setSafeText('pvArchetypeName', archetype.name);
+        setSafeText('pvPriceVal', price > 0 ? `₱${price.toLocaleString()}` : 'Official Rate');
+        setSafeText('pvCapacityVal', archetype.capacity);
+        setSafeText('pvDimensionsVal', lot.dimensions || archetype.dimensions);
+        setSafeText('pvMaterialsVal', archetype.materials.surface);
+        setSafeText('pvElevationVal', spatial.terrainElev);
+        setSafeText('pvWalkingVal', `${spatial.walkingDist} (${spatial.walkingTime})`);
+        setSafeText('pvPathwayVal', spatial.pathwayCond);
 
         // Render graphic
         const stage = document.getElementById('pvGraphicStage');
-        stage.innerHTML = archetype.svg;
+        if (stage) stage.innerHTML = archetype.svg;
 
         // Wire tabs
         const tabPerspective = document.getElementById('pvTabPerspective');
@@ -350,10 +355,10 @@
             selectBtn.style.display = 'none';
         }
 
-        // Deep-link to map
+        // Deep-link to map with navigation enabled
         const mapLink = document.getElementById('pvViewMapLink');
         if (mapLink) {
-            mapLink.href = `cemetery-map.html?lot_id=${lot.lot_id}&lot_number=${encodeURIComponent(lotNumber)}`;
+            mapLink.href = `cemetery-map.html?lot_id=${encodeURIComponent(lot.lot_id)}&navigate=1`;
         }
 
         modal.style.display = 'flex';
@@ -438,6 +443,10 @@
                         <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px;">
                             <span style="display: block; font-size: 0.72rem; color: #64748b; text-transform: uppercase; font-weight: 600;">Proximity to Main Gate</span>
                             <strong style="font-size: 0.88rem; color: #0f172a;" id="pvWalkingVal">—</strong>
+                        </div>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px;">
+                            <span style="display: block; font-size: 0.72rem; color: #64748b; text-transform: uppercase; font-weight: 600;">Pathway Accessibility</span>
+                            <strong style="font-size: 0.85rem; color: #047857;" id="pvPathwayVal">—</strong>
                         </div>
                         <div style="grid-column: 1 / -1; background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px;">
                             <span style="display: block; font-size: 0.72rem; color: #64748b; text-transform: uppercase; font-weight: 600;">Materials &amp; Memorial Guidelines</span>
