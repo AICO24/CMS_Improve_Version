@@ -506,4 +506,16 @@ class ReportController {
             'expirations' => $expirations,
         ];
     }
+
+    /**
+     * Phase 3: Detailed collections & official receipts ledger report.
+     * Provides filtered itemized transactions with summary metrics,
+     * support for specific periods (weekly, monthly, yearly, overall, custom),
+     * transaction categories, and payment methods.
+     */
+    public function collectionsLedger($filters = []) {
+        $ledger = $this->paymentModel->getCollectionsLedger($filters);
+        return $ledger;
+    }
+
 }
