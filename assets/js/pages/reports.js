@@ -4935,9 +4935,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Period Preset Buttons
-    document.querySelectorAll('[data-receipt-period]').forEach(btn => {
+    document.querySelectorAll('.receipt-period-pill-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
-            document.querySelectorAll('[data-receipt-period]').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.receipt-period-pill-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             const period = btn.getAttribute('data-receipt-period');
             const customDates = document.getElementById('receiptCustomDates');
