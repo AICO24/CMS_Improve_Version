@@ -679,9 +679,8 @@ class Payment {
                    l.lot_number,
                    sec.section_name,
                    blk.block_name,
-                   blk.block_number,
                    l.status AS lot_status,
-                   l.lot_type
+                   t.type_name AS lot_type
             FROM payments p
             LEFT JOIN users u ON p.received_by = u.user_id
             LEFT JOIN users v ON p.verified_by = v.user_id
@@ -696,6 +695,7 @@ class Payment {
                    OR (p.reference_kind = 'lot' AND l.lot_id = p.reference_id)
             LEFT JOIN blocks blk ON l.block_id = blk.block_id
             LEFT JOIN sections sec ON blk.section_id = sec.section_id
+            LEFT JOIN lot_types t ON l.lot_type_id = t.type_id
             WHERE 1=1
         ";
 
