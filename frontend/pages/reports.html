@@ -225,6 +225,42 @@
                     </div>
                 </div>
 
+                <!-- Receipts & Collections Stats -->
+                <div id="receiptsStats" class="report-stats">
+                    <div class="stat-card" role="button" tabindex="0" title="Total gross collections in selected period" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Total Collections</span>
+                            <span class="card-icon"><i class="fas fa-peso-sign"></i></span>
+                        </div>
+                        <div class="stat-value" id="ledgerTotalCollections">₱0.00</div>
+                        <div class="stat-sub" id="ledgerTotalCount">0 verified transactions</div>
+                    </div>
+                    <div class="stat-card" role="button" tabindex="0" title="Cash & Over-The-Counter collections" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Cash (Over-The-Counter)</span>
+                            <span class="card-icon"><i class="fas fa-money-bill-wave"></i></span>
+                        </div>
+                        <div class="stat-value" id="ledgerCashCollections">₱0.00</div>
+                        <div class="stat-sub" id="ledgerCashShare">0% of total</div>
+                    </div>
+                    <div class="stat-card" role="button" tabindex="0" title="Online payments via PayMongo & GCash" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Online (PayMongo / GCash)</span>
+                            <span class="card-icon"><i class="fas fa-credit-card"></i></span>
+                        </div>
+                        <div class="stat-value" id="ledgerOnlineCollections">₱0.00</div>
+                        <div class="stat-sub" id="ledgerOnlineShare">0% of total</div>
+                    </div>
+                    <div class="stat-card" role="button" tabindex="0" title="Average ticket amount per transaction" aria-pressed="false">
+                        <div class="stat-title">
+                            <span>Average / Receipt</span>
+                            <span class="card-icon"><i class="fas fa-chart-line"></i></span>
+                        </div>
+                        <div class="stat-value" id="ledgerAverageAmount">₱0.00</div>
+                        <div class="stat-sub" id="ledgerPendingSub">0 pending review</div>
+                    </div>
+                </div>
+
                 <div id="revenueStats" class="report-stats">
                     <div class="stat-card" role="button" tabindex="0" title="View all payments" data-href="payments.html" aria-pressed="false">
                         <div class="stat-title">
@@ -378,6 +414,9 @@
                                 </button>
                                 <button class="tab-btn active" data-tab="occupancy">
                                     <i class="fas fa-chart-pie"></i> Occupancy
+                                </button>
+                                <button class="tab-btn" data-tab="receipts">
+                                    <i class="fas fa-receipt"></i> Receipts & Collections
                                 </button>
                                 <button class="tab-btn" data-tab="revenue">
                                     <i class="fas fa-peso-sign"></i> Revenue
@@ -595,6 +634,169 @@
                                 <div class="periodic-brief-kpis" id="periodicKpisRow">
                                     <!-- Dynamically populated KPI chips -->
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    
+                    <!-- ── Receipts & Collections Report Generator Tab ────────────────── -->
+                    <div id="receiptsTab" class="report-content">
+                        <!-- Generator Filter Bar -->
+                        <div class="receipts-generator-bar">
+                            <div class="generator-header">
+                                <div class="generator-header__left">
+                                    <span class="generator-badge"><i class="fas fa-sliders"></i> Report Generator</span>
+                                    <h4 class="generator-title">Receipts &amp; Collections Ledger Generator</h4>
+                                    <p class="generator-subtitle">Select date parameters and service category to generate an audit-ready official collections ledger and printable summary sheet.</p>
+                                </div>
+                                <div class="generator-header__actions">
+                                    <button type="button" class="btn-primary btn-action-pill" id="printAuditSummaryBtn">
+                                        <i class="fas fa-print"></i> <span>Print Summary Sheet</span>
+                                    </button>
+                                    <button type="button" class="btn-secondary btn-action-pill" id="exportLedgerCsvBtn">
+                                        <i class="fas fa-file-csv"></i> <span>Export Ledger CSV</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="generator-controls">
+                                <!-- Period Presets -->
+                                <div class="generator-control-group">
+                                    <span class="generator-control-label">Period Preset:</span>
+                                    <div class="period-pill-group" role="group" aria-label="Select report time interval">
+                                        <button type="button" class="period-pill-btn active" data-receipt-period="this_week">
+                                            <i class="fas fa-calendar-week"></i> <span>This Week</span>
+                                        </button>
+                                        <button type="button" class="period-pill-btn" data-receipt-period="this_month">
+                                            <i class="fas fa-calendar-day"></i> <span>This Month</span>
+                                        </button>
+                                        <button type="button" class="period-pill-btn" data-receipt-period="this_year">
+                                            <i class="fas fa-calendar"></i> <span>This Year</span>
+                                        </button>
+                                        <button type="button" class="period-pill-btn" data-receipt-period="overall">
+                                            <i class="fas fa-earth-asia"></i> <span>Overall / All-Time</span>
+                                        </button>
+                                        <button type="button" class="period-pill-btn" data-receipt-period="custom">
+                                            <i class="fas fa-calendar-plus"></i> <span>Custom Range</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Filter Inputs Row -->
+                                <div class="generator-filters-row">
+                                    <div class="filter-col date-col" id="receiptCustomDates" style="display: none;">
+                                        <label class="date-filter-field">
+                                            <span>From</span>
+                                            <input type="date" id="receiptDateFrom" aria-label="From date">
+                                        </label>
+                                        <label class="date-filter-field">
+                                            <span>To</span>
+                                            <input type="date" id="receiptDateTo" aria-label="To date">
+                                        </label>
+                                    </div>
+
+                                    <div class="filter-col">
+                                        <label class="select-filter-field">
+                                            <span>Service / Purpose:</span>
+                                            <select id="receiptCategoryFilter" class="form-select">
+                                                <option value="all">All Service Categories</option>
+                                                <option value="burial">Burial &amp; Lot Purchases (At-Need)</option>
+                                                <option value="preneed">Pre-Need Lot Reservations</option>
+                                                <option value="cremation">Cremation &amp; Columbarium</option>
+                                                <option value="maintenance">Maintenance &amp; Lease Renewals</option>
+                                            </select>
+                                        </label>
+                                    </div>
+
+                                    <div class="filter-col">
+                                        <label class="select-filter-field">
+                                            <span>Payment Channel:</span>
+                                            <select id="receiptMethodFilter" class="form-select">
+                                                <option value="all">All Payment Methods</option>
+                                                <option value="cash">Cash (Over-the-Counter)</option>
+                                                <option value="online">Online (PayMongo / GCash / Card)</option>
+                                            </select>
+                                        </label>
+                                    </div>
+
+                                    <div class="filter-col action-col">
+                                        <button type="button" class="btn-filter" id="generateReceiptsReportBtn">
+                                            <i class="fas fa-magnifying-glass"></i> <span>Generate Report</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Active Report Summary Header (Prints cleanly) -->
+                        <div class="receipts-audit-header" id="receiptsAuditPrintHeader">
+                            <div class="audit-republic-header">
+                                <p class="audit-rep-title">Republic of the Philippines</p>
+                                <p class="audit-city-title">CITY GOVERNMENT CEMETERY MANAGEMENT SYSTEM</p>
+                                <p class="audit-office-title">OFFICE OF THE CEMETERY ADMINISTRATOR &amp; TREASURY OPERATIONS</p>
+                                <h3 class="audit-report-title" id="receiptsReportTitle">OFFICIAL COLLECTIONS &amp; RECEIPTS SUMMARY REPORT</h3>
+                                <p class="audit-report-period" id="receiptsReportSubtitle">Period: This Week · Generated on Today</p>
+                            </div>
+                        </div>
+
+                        <!-- Itemized Collections Ledger Table -->
+                        <div class="chart-card table-container receipts-ledger-card">
+                            <div class="chart-card__header">
+                                <div class="chart-card__header-left">
+                                    <span class="chart-card__title">Itemized Collections &amp; Official Receipts Ledger</span>
+                                    <span class="chart-card__badge" id="receiptsLedgerCountBadge">0 Records</span>
+                                </div>
+                                <div class="chart-card__header-right">
+                                    <span class="ledger-grand-total">Total: <strong id="ledgerTableGrandTotal">₱0.00</strong></span>
+                                </div>
+                            </div>
+                            <div class="table-wrap">
+                                <table class="data-table" id="receiptsLedgerTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Receipt / OR #</th>
+                                            <th>Date &amp; Time</th>
+                                            <th>Payor / Citizen</th>
+                                            <th>Service / Allocation</th>
+                                            <th>Method</th>
+                                            <th>Status</th>
+                                            <th class="text-right">Amount (₱)</th>
+                                            <th class="no-print" style="text-align: center; width: 110px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="receiptsLedgerTableBody">
+                                        <tr><td colspan="8" class="text-center" style="padding: 2.5rem 1rem;">Click "Generate Report" to populate collections ledger.</td></tr>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="ledger-summary-row">
+                                            <td colspan="6" class="text-right"><strong>TOTAL VERIFIED COLLECTIONS:</strong></td>
+                                            <td class="text-right"><strong id="ledgerFooterGrandTotal">₱0.00</strong></td>
+                                            <td class="no-print"></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Formal Municipal Audit Signatures (Shown on Print & Report) -->
+                        <div class="audit-signatures-block" id="auditSignaturesBlock">
+                            <div class="audit-sig-col">
+                                <p class="audit-sig-role">Prepared by:</p>
+                                <div class="audit-sig-line"></div>
+                                <p class="audit-sig-name" id="auditPreparedByName">Staff / Revenue Collector</p>
+                                <p class="audit-sig-title">Collection Officer</p>
+                            </div>
+                            <div class="audit-sig-col">
+                                <p class="audit-sig-role">Verified by:</p>
+                                <div class="audit-sig-line"></div>
+                                <p class="audit-sig-name">City Treasury Operations</p>
+                                <p class="audit-sig-title">City Treasurer / Auditor</p>
+                            </div>
+                            <div class="audit-sig-col">
+                                <p class="audit-sig-role">Approved by:</p>
+                                <div class="audit-sig-line"></div>
+                                <p class="audit-sig-name">Cemetery Administration</p>
+                                <p class="audit-sig-title">Cemetery Administrator</p>
                             </div>
                         </div>
                     </div>
@@ -1107,6 +1309,115 @@
                     </div>
 
                 </div><!-- /reportExportContainer -->
+
+                
+    <!-- ── Official Receipt (e-OR) Printable Modal ────────────────────────────── -->
+    <div id="officialReceiptModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card official-receipt-modal-card">
+            <div class="modal-header no-print">
+                <div class="modal-title-group">
+                    <i class="fas fa-receipt text-primary"></i>
+                    <div>
+                        <h4 class="modal-title">Official Municipal Receipt</h4>
+                        <p class="modal-subtitle">Republic of the Philippines · Electronic Official Receipt (e-OR)</p>
+                    </div>
+                </div>
+                <button type="button" class="modal-close" id="closeOfficialReceiptModal">&times;</button>
+            </div>
+
+            <div class="modal-body official-receipt-body" id="officialReceiptSlip">
+                <!-- Formal Republic of the Philippines Header -->
+                <div class="or-slip-header">
+                    <div class="or-slip-seal">
+                        <i class="fas fa-landmark"></i>
+                    </div>
+                    <div class="or-slip-header-text">
+                        <p class="or-rep">REPUBLIC OF THE PHILIPPINES</p>
+                        <p class="or-lgu">CITY GOVERNMENT OF VALENZUELA</p>
+                        <p class="or-dept">Office of the City Treasurer &amp; Cemetery Operations</p>
+                        <h2 class="or-doc-title">OFFICIAL RECEIPT</h2>
+                    </div>
+                    <div class="or-slip-meta">
+                        <div class="or-number-badge">
+                            <span class="or-lbl">ORIGINAL</span>
+                            <strong class="or-val" id="orSlipNumber">OR-0000-000</strong>
+                        </div>
+                        <div class="or-date-badge">
+                            <span class="or-lbl">DATE:</span>
+                            <strong class="or-val" id="orSlipDate">—</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="or-divider"></div>
+
+                <!-- Payor Information -->
+                <div class="or-info-grid">
+                    <div class="or-info-item">
+                        <span class="or-field-lbl">RECEIVED FROM:</span>
+                        <strong class="or-field-val" id="orSlipPayor">Juan Dela Cruz</strong>
+                    </div>
+                    <div class="or-info-item">
+                        <span class="or-field-lbl">CONTACT NUMBER:</span>
+                        <strong class="or-field-val" id="orSlipContact">—</strong>
+                    </div>
+                    <div class="or-info-item full-width">
+                        <span class="or-field-lbl">THE SUM OF PESOS:</span>
+                        <strong class="or-field-val or-amount-words" id="orSlipAmountWords">Zero Pesos Only</strong>
+                    </div>
+                </div>
+
+                <!-- Payment Details Table -->
+                <table class="or-breakdown-table">
+                    <thead>
+                        <tr>
+                            <th>NATURE OF COLLECTION / SERVICE</th>
+                            <th>ALLOCATION / PARTICULARS</th>
+                            <th class="text-right">AMOUNT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td id="orSlipNature">Lot Purchase (At-Need)</td>
+                            <td id="orSlipParticulars">Block 1 Lot 12 - Standard Lawn</td>
+                            <td class="text-right" id="orSlipAmount">₱0.00</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" class="text-right"><strong>TOTAL AMOUNT PAID:</strong></td>
+                            <td class="text-right"><strong id="orSlipGrandTotal">₱0.00</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <!-- Payment Method & Signature -->
+                <div class="or-footer-grid">
+                    <div class="or-method-box">
+                        <p class="or-method-lbl">PAYMENT METHOD:</p>
+                        <p class="or-method-val" id="orSlipMethod"><i class="fas fa-money-bill-wave"></i> Cash</p>
+                        <p class="or-method-ref" id="orSlipRef">Ref: —</p>
+                    </div>
+                    <div class="or-cashier-box">
+                        <div class="or-cashier-signature-line"></div>
+                        <p class="or-cashier-name" id="orSlipCashier">Authorized City Cashier</p>
+                        <p class="or-cashier-lbl">Collecting Officer / Liquidating Cashier</p>
+                    </div>
+                </div>
+
+                <div class="or-legal-note">
+                    <p><i class="fas fa-shield-halved"></i> Valid official electronic receipt pursuant to the Electronic Commerce Act of 2000 (R.A. 8792). Keep this copy for audit verification and lot ownership rights.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer no-print">
+                <button type="button" class="btn-secondary" id="closeOfficialReceiptBtn">Close</button>
+                <button type="button" class="btn-primary" id="printSingleReceiptBtn">
+                    <i class="fas fa-print"></i> <span>Print Official Receipt</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
                 <footer class="admin-dashboard-footer">
                     <div class="footer-divider"></div>
