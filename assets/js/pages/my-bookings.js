@@ -400,8 +400,11 @@
                 actionHtml = `<a href="booking-assistant.html?draft_id=${draftId}" class="btn-primary" style="font-size:0.8rem;padding:4px 10px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-play"></i> Resume</a>`;
             } else {
                 actionHtml = `<button type="button" class="btn-secondary btn-view-details" data-index="${index}" style="font-size:0.8rem;padding:4px 10px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><i class="fas fa-eye"></i> Details</button>`;
-                if (item.lot_id) {
-                    const navQ = 'navigate_to_lot=' + encodeURIComponent(item.lot_id) + '&decedent=' + encodeURIComponent(item.decedent_name || '');
+                const hasLotTarget = Boolean(item.lot_id || serviceType === 'burial' || isPreNeed || (item.allocation && !item.allocation.includes('Pending')));
+                if (hasLotTarget) {
+                    const navQ = item.lot_id 
+                        ? ('navigate_to_lot=' + encodeURIComponent(item.lot_id) + '&decedent=' + encodeURIComponent(item.decedent_name || ''))
+                        : ('decedent=' + encodeURIComponent(item.decedent_name || ''));
                     actionHtml += ` <a href="cemetery-map.html?${navQ}" class="btn-secondary" style="font-size:0.8rem;padding:4px 8px;display:inline-flex;align-items:center;gap:3px;text-decoration:none;" title="Navigate to Grave on Cemetery Map"><i class="fas fa-route" style="color:#2563eb;"></i> Route</a>`;
                 }
                 if (isPreNeed || item.certificate_number) {
