@@ -9514,3 +9514,176 @@ button.btn-today-services.is-active,
 
 
 
+
+
+/* ==========================================================================
+   Comprehensive Mobile & Tablet Responsive Enhancements (KPIs & Map UI)
+   ========================================================================== */
+
+/* Tablet & Medium Screen Breakpoint (max-width: 992px) */
+@media (max-width: 992px) {
+    .map-stats-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 12px !important;
+    }
+
+    .map-stat-card {
+        min-height: 96px !important;
+        padding: 14px 16px !important;
+    }
+
+    .map-stat-card .stat-value {
+        font-size: 1.6rem !important;
+    }
+}
+
+/* Mobile Screen Breakpoint (max-width: 680px) */
+@media (max-width: 680px) {
+    .map-stats-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .map-stat-card {
+        min-height: 84px !important;
+        padding: 10px 12px !important;
+        border-radius: 10px !important;
+    }
+
+    .map-stat-card .stat-title {
+        font-size: 0.7rem !important;
+        letter-spacing: 0.02em !important;
+        margin-bottom: 3px !important;
+    }
+
+    .map-stat-card .card-icon {
+        font-size: 0.82rem !important;
+    }
+
+    .map-stat-card .stat-value {
+        font-size: 1.35rem !important;
+        line-height: 1.1 !important;
+    }
+
+    .map-stat-card .stat-value.stat-facility-name {
+        font-size: 0.88rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .map-stat-card .stat-sub {
+        font-size: 0.65rem !important;
+        margin-top: 2px !important;
+        opacity: 0.85 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    /* Master Control Panel on Mobile */
+    .map-master-panel {
+        padding: 12px !important;
+        margin-bottom: 12px !important;
+        border-radius: 12px !important;
+    }
+
+    .filter-group.search-group,
+    .filter-group.status-group,
+    .filter-group.price-group {
+        width: 100% !important;
+    }
+
+    .price-inputs-wrapper {
+        flex-direction: row !important;
+        gap: 6px !important;
+    }
+
+    .price-input-box {
+        flex: 1 !important;
+        min-width: 0 !important;
+    }
+
+    /* Map Viewport Toolbar on Mobile */
+    .map-viewport-toolbar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+        padding: 8px 10px !important;
+    }
+
+    .toolbar-left, .toolbar-right {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+    }
+
+    .map-view-switcher {
+        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 4px !important;
+    }
+
+    .view-switch-btn {
+        justify-content: center !important;
+        font-size: 0.78rem !important;
+        padding: 6px 8px !important;
+    }
+
+    .map-zoom-controls {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between !important;
+    }
+
+    /* Floating Route & Cortege Cards on Mobile (Dock at bottom like Google Maps) */
+    .map-route-info-card,
+    .today-services-panel {
+        position: fixed !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        top: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: 70vh !important;
+        max-height: 70dvh !important;
+        border-radius: 18px 18px 0 0 !important;
+        border-bottom: none !important;
+        box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.28) !important;
+        z-index: 1045 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    /* Route Waypoints list scroll container */
+    .route-waypoints-section {
+        max-height: 38vh !important;
+        overflow-y: auto !important;
+    }
+
+    .route-endpoints-flow {
+        flex-direction: column !important;
+        gap: 6px !important;
+    }
+}
+
+/* Extra Small Phones (max-width: 380px) */
+@media (max-width: 380px) {
+    .map-stats-row {
+        grid-template-columns: 1fr !important;
+        gap: 6px !important;
+    }
+
+    .map-stat-card {
+        min-height: 68px !important;
+        padding: 8px 12px !important;
+    }
+
+    .map-stat-card .stat-value {
+        font-size: 1.25rem !important;
+    }
+}
