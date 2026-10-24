@@ -176,9 +176,9 @@
         },
         {
             route: 'cemetery-map.html',
-            allowedRoles: ['admin', 'staff', 'user'],
+            allowedRoles: ['admin', 'staff', 'user', 'citizen'],
             showInSidebar: true,
-            sidebarGroup: { admin: 'Cemetery Management', staff: 'Cemetery Management', user: 'Services' },
+            sidebarGroup: { admin: 'Cemetery Management', staff: 'Cemetery Management', user: 'Services', citizen: 'Services' },
             label: 'Cemetery Map',
             icon: 'fa-map',
             navigationOrder: 20.5,
