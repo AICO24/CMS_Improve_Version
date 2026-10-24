@@ -1577,7 +1577,7 @@
             const blockId = lot.block_id || '';
             const lotId = lot.lot_id;
             const lotNum = encodeURIComponent(lot.lot_number || '');
-            const viewOnMapUrl = `cemetery-map.html?cemetery_id=${encodeURIComponent(cemeteryId)}&block_id=${encodeURIComponent(blockId)}&lot_id=${encodeURIComponent(lotId)}&lot_number=${lotNum}`;
+            const viewOnMapUrl = `cemetery-map.html?cemetery_id=${encodeURIComponent(cemeteryId)}&lot_id=${encodeURIComponent(lotId)}&navigate=1`;
 
             const isAvailable = String(lot.status || 'Available').toLowerCase() === 'available';
             const hasScore = lot.score !== undefined && lot.score !== null;
@@ -1612,8 +1612,11 @@
                         </div>
                         ${reasonsHtml}
                     </div>
-                    <div class="card-actions-row">
-                        <a href="${viewOnMapUrl}" target="_blank" class="btn-view-on-map" title="View recommended lot on map" aria-label="View recommended lot on map">
+                    <div class="card-actions-row" style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <button type="button" class="btn-preview-rec-lot" data-lot-id="${lot.lot_id}" style="padding:6px 12px;font-size:0.8rem;border-radius:6px;border:1px solid #cbd5e1;background:#f8fafc;cursor:pointer;font-weight:600;color:#334155;display:inline-flex;align-items:center;gap:4px;">
+                            <i class="fas fa-eye" style="color:#0284c7;"></i> Preview
+                        </button>
+                        <a href="${viewOnMapUrl}" target="_blank" class="btn-view-on-map" title="View recommended lot on map" aria-label="View recommended lot on map" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
                             <i class="fas fa-map-marker-alt"></i> View on Map
                         </a>
                         <button type="button" class="select-lot-btn select-recommended-lot-btn" data-lot-id="${escapeHtml(String(lot.lot_id))}" data-lot-number="${escapeHtml(String(lot.lot_number))}" ${!isAvailable ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
@@ -2001,7 +2004,7 @@
             const blockId = lot.block_id || '';
             const lotId = lot.lot_id;
             const lotNum = encodeURIComponent(lot.lot_number || '');
-            const viewOnMapUrl = `cemetery-map.html?cemetery_id=${encodeURIComponent(cemeteryId)}&block_id=${encodeURIComponent(blockId)}&lot_id=${encodeURIComponent(lotId)}&lot_number=${lotNum}`;
+            const viewOnMapUrl = `cemetery-map.html?cemetery_id=${encodeURIComponent(cemeteryId)}&lot_id=${encodeURIComponent(lotId)}&navigate=1`;
 
             card.innerHTML = `
                 <div>
