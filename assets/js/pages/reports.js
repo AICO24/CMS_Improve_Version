@@ -58,6 +58,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (btn.dataset.tab === 'periodic' && !currentPeriodicData) {
                 loadPeriodicSummary('daily');
             }
+            if (btn.dataset.tab === 'receipts' && !currentLedgerData) {
+                loadCollectionsLedger('this_week');
+            }
         });
     });
 
@@ -4684,6 +4687,302 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadDemographics();
     await loadExpiration();
     await loadPeriodicSummary('daily');
+    
+    // =========================================================================
+    // Phase 3: Receipts & Collections Reports Generator & Printable e-OR Logic
+    // =========================================================================
+    let currentLedgerPeriod = 'this_week';
+    let currentLedgerData = null;
+
+    function numberToEnglishWords(num) {
+        const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+            'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+        const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+        function inWords(n) {
+            if (n < 20) return a[n];
+            const digit = n % 10;
+            if (n < 100) return b[Math.floor(n / 10)] + (digit ? ' ' + a[digit] : '');
+            if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 === 0 ? '' : ' ' + inWords(n % 100));
+            if (n < 1000000) return inWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 !== 0 ? ' ' + inWords(n % 1000) : '');
+            return inWords(Math.floor(n / 1000000)) + ' Million' + (n % 1000000 !== 0 ? ' ' + inWords(n % 1000000) : '');
+        }
+
+        const parsed = parseFloat(num) || 0;
+        const whole = Math.floor(parsed);
+        const cents = Math.round((parsed - whole) * 100);
+
+        if (whole === 0 && cents === 0) return 'Zero Pesos Only';
+
+        let result = whole > 0 ? inWords(whole) + ' Pesos' : '';
+        if (cents > 0) {
+            result += (result ? ' and ' : '') + cents + '/100';
+        }
+        return result + ' Only';
+    }
+
+    async function loadCollectionsLedger(period = currentLedgerPeriod, customFilters = null) {
+        currentLedgerPeriod = period;
+        try {
+            const params = [];
+            if (period && period !== 'custom') {
+                params.push(`period=${encodeURIComponent(period)}`);
+            }
+
+            const from = customFilters?.date_from || document.getElementById('receiptDateFrom')?.value;
+            const to = customFilters?.date_to || document.getElementById('receiptDateTo')?.value;
+            if (from) params.push(`date_from=${encodeURIComponent(from)}`);
+            if (to) params.push(`date_to=${encodeURIComponent(to)}`);
+
+            const category = customFilters?.category || document.getElementById('receiptCategoryFilter')?.value;
+            if (category && category !== 'all') params.push(`transaction_type=${encodeURIComponent(category)}`);
+
+            const method = customFilters?.method || document.getElementById('receiptMethodFilter')?.value;
+            if (method && method !== 'all') params.push(`payment_method=${encodeURIComponent(method)}`);
+
+            const url = `reports/collections-ledger${params.length ? '?' + params.join('&') : ''}`;
+            const data = await api.request(url, { method: 'GET' });
+            currentLedgerData = data;
+
+            // 1. Update Stat Cards (#receiptsStats)
+            const sum = data.summary || {};
+            const totEl = document.getElementById('ledgerTotalCollections');
+            const cntEl = document.getElementById('ledgerTotalCount');
+            const cashEl = document.getElementById('ledgerCashCollections');
+            const cashShareEl = document.getElementById('ledgerCashShare');
+            const onlineEl = document.getElementById('ledgerOnlineCollections');
+            const onlineShareEl = document.getElementById('ledgerOnlineShare');
+            const avgEl = document.getElementById('ledgerAverageAmount');
+            const pendSubEl = document.getElementById('ledgerPendingSub');
+
+            const tot = parseFloat(sum.total_collections || 0);
+            const cash = parseFloat(sum.cash_total || 0);
+            const online = parseFloat(sum.online_total || 0);
+            const verifiedCnt = parseInt(sum.verified_count || 0, 10);
+            const pendingCnt = parseInt(sum.pending_count || 0, 10);
+
+            if (totEl) totEl.textContent = formatPeso(tot);
+            if (cntEl) cntEl.textContent = `${verifiedCnt} verified transactions`;
+            if (cashEl) cashEl.textContent = formatPeso(cash);
+            if (cashShareEl) cashShareEl.textContent = tot > 0 ? `${Math.round((cash / tot) * 100)}% of total` : '0% of total';
+            if (onlineEl) onlineEl.textContent = formatPeso(online);
+            if (onlineShareEl) onlineShareEl.textContent = tot > 0 ? `${Math.round((online / tot) * 100)}% of total` : '0% of total';
+            if (avgEl) avgEl.textContent = formatPeso(sum.average_amount || 0);
+            if (pendSubEl) pendSubEl.textContent = `${pendingCnt} pending verification`;
+
+            // 2. Update Header Subtitle
+            const periodLabelMap = {
+                'this_week': 'This Week',
+                'this_month': 'This Month',
+                'this_year': 'This Year',
+                'overall': 'Overall / Master History',
+                'custom': `${from || 'Start'} to ${to || 'Present'}`
+            };
+            const subtitleEl = document.getElementById('receiptsReportSubtitle');
+            if (subtitleEl) {
+                const pLabel = periodLabelMap[period] || 'Selected Period';
+                subtitleEl.textContent = `Period: ${pLabel} · Generated: ${new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+            }
+
+            // 3. Populate Itemized Table
+            const tbody = document.getElementById('receiptsLedgerTableBody');
+            const countBadge = document.getElementById('receiptsLedgerCountBadge');
+            const grandTotalEl = document.getElementById('ledgerTableGrandTotal');
+            const footerGrandTotalEl = document.getElementById('ledgerFooterGrandTotal');
+
+            if (countBadge) countBadge.textContent = `${data.items?.length || 0} Records`;
+            if (grandTotalEl) grandTotalEl.textContent = formatPeso(tot);
+            if (footerGrandTotalEl) footerGrandTotalEl.textContent = formatPeso(tot);
+
+            if (!tbody) return;
+
+            const items = data.items || [];
+            if (!items.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 2.5rem 1rem;">No collection records found matching selected criteria.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = items.map((item, idx) => {
+                const date = item.payment_date ? new Date(item.payment_date).toLocaleString('en-PH', {
+                    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                }) : '—';
+                const amt = formatPeso(item.amount);
+                const orNum = item.receipt_number || (`RCPT-${item.payment_id}`);
+                const payor = item.payor_name || 'Citizen Client';
+                const alloc = item.allocation_description || item.transaction_type || 'Memorial Service';
+                const method = item.payment_method || 'Cash';
+                const status = item.verification_status || 'Pending';
+                const statusBadge = status === 'Verified'
+                    ? '<span class="status-badge status-badge--confirmed">Verified</span>'
+                    : '<span class="status-badge status-badge--pending">Pending</span>';
+
+                return `
+                    <tr>
+                        <td><strong>${orNum}</strong></td>
+                        <td>${date}</td>
+                        <td>${payor}</td>
+                        <td>${alloc}</td>
+                        <td>${method}</td>
+                        <td>${statusBadge}</td>
+                        <td class="text-right"><strong>${amt}</strong></td>
+                        <td class="no-print" style="text-align: center;">
+                            <button type="button" class="btn-view-receipt" data-payment-id="${item.payment_id}" title="View and Print Official Receipt">
+                                <i class="fas fa-file-invoice"></i> <span>Receipt</span>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Bind click handlers to individual receipt buttons
+            tbody.querySelectorAll('.btn-view-receipt').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const paymentId = parseInt(btn.getAttribute('data-payment-id'), 10);
+                    const record = items.find(r => parseInt(r.payment_id, 10) === paymentId);
+                    if (record) {
+                        openOfficialReceiptModal(record);
+                    }
+                });
+            });
+
+        } catch (error) {
+            console.error('Failed to load collections ledger:', error);
+            if (typeof showToast === 'function') {
+                showToast('Failed to load collections ledger report', { type: 'error' });
+            }
+        }
+    }
+
+    function openOfficialReceiptModal(record) {
+        const modal = document.getElementById('officialReceiptModal');
+        if (!modal) return;
+
+        const orNum = record.receipt_number || (`RCPT-${record.payment_id}`);
+        const pDate = record.payment_date ? new Date(record.payment_date).toLocaleDateString('en-PH', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        }) : new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
+        const payor = record.payor_name || 'Citizen Client';
+        const contact = record.payor_contact || 'N/A';
+        const amt = parseFloat(record.amount || 0);
+        const amtWords = numberToEnglishWords(amt);
+        const nature = record.transaction_type || 'Cemetery Service';
+        const alloc = record.allocation_description || nature;
+        const method = record.payment_method || 'Cash';
+        const cashier = record.verified_by_name || record.received_by_name || 'City Collection Officer';
+
+        document.getElementById('orSlipNumber').textContent = orNum;
+        document.getElementById('orSlipDate').textContent = pDate;
+        document.getElementById('orSlipPayor').textContent = payor;
+        document.getElementById('orSlipContact').textContent = contact;
+        document.getElementById('orSlipAmountWords').textContent = amtWords;
+        document.getElementById('orSlipNature').textContent = nature;
+        document.getElementById('orSlipParticulars').textContent = alloc;
+        document.getElementById('orSlipAmount').textContent = formatPeso(amt);
+        document.getElementById('orSlipGrandTotal').textContent = formatPeso(amt);
+        document.getElementById('orSlipMethod').innerHTML = method.toLowerCase().includes('cash')
+            ? '<i class="fas fa-money-bill-wave"></i> Cash (Over-The-Counter)'
+            : '<i class="fas fa-credit-card"></i> Online Gateway (PayMongo)';
+        document.getElementById('orSlipRef').textContent = record.gateway_payment_id ? `Gateway ID: ${record.gateway_payment_id}` : `Txn ID: #${record.payment_id}`;
+        document.getElementById('orSlipCashier').textContent = cashier;
+
+        modal.style.display = 'flex';
+    }
+
+    function closeOfficialReceiptModal() {
+        const modal = document.getElementById('officialReceiptModal');
+        if (modal) modal.style.display = 'none';
+        document.body.classList.remove('printing-receipt');
+    }
+
+    function exportLedgerToCsv() {
+        if (!currentLedgerData || !currentLedgerData.items || !currentLedgerData.items.length) {
+            if (typeof showToast === 'function') showToast('No ledger records to export', { type: 'warning' });
+            return;
+        }
+
+        const headers = ['Receipt / OR Number', 'Payment Date', 'Payor Name', 'Contact Number', 'Service Category', 'Particulars / Allocation', 'Payment Method', 'Verification Status', 'Amount (PHP)', 'Cashier / Collector'];
+        const csvRows = [headers.join(',')];
+
+        currentLedgerData.items.forEach(item => {
+            const row = [
+                `"${(item.receipt_number || '').replace(/"/g, '""')}"`,
+                `"${(item.payment_date || '').replace(/"/g, '""')}"`,
+                `"${(item.payor_name || '').replace(/"/g, '""')}"`,
+                `"${(item.payor_contact || '').replace(/"/g, '""')}"`,
+                `"${(item.transaction_type || '').replace(/"/g, '""')}"`,
+                `"${(item.allocation_description || '').replace(/"/g, '""')}"`,
+                `"${(item.payment_method || '').replace(/"/g, '""')}"`,
+                `"${(item.verification_status || '').replace(/"/g, '""')}"`,
+                (parseFloat(item.amount) || 0).toFixed(2),
+                `"${(item.received_by_name || item.verified_by_name || '').replace(/"/g, '""')}"`
+            ];
+            csvRows.push(row.join(','));
+        });
+
+        const csvContent = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvRows.join('\n'));
+        const link = document.createElement('a');
+        link.setAttribute('href', csvContent);
+        link.setAttribute('download', `Collections_Ledger_${currentLedgerPeriod}_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Set Prepared By user name
+    if (user) {
+        const prepEl = document.getElementById('auditPreparedByName');
+        if (prepEl) prepEl.textContent = user.full_name || user.username || 'Staff Officer';
+    }
+
+    // Period Preset Buttons
+    document.querySelectorAll('[data-receipt-period]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            document.querySelectorAll('[data-receipt-period]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const period = btn.getAttribute('data-receipt-period');
+            const customDates = document.getElementById('receiptCustomDates');
+
+            if (period === 'custom') {
+                if (customDates) customDates.style.display = 'flex';
+            } else {
+                if (customDates) customDates.style.display = 'none';
+                await loadCollectionsLedger(period);
+            }
+        });
+    });
+
+    // Generate Report Button
+    document.getElementById('generateReceiptsReportBtn')?.addEventListener('click', async () => {
+        const activeBtn = document.querySelector('[data-receipt-period].active');
+        const period = activeBtn ? activeBtn.getAttribute('data-receipt-period') : 'this_week';
+        await loadCollectionsLedger(period);
+    });
+
+    // Print Master Audit Summary Sheet Button
+    document.getElementById('printAuditSummaryBtn')?.addEventListener('click', () => {
+        document.body.classList.remove('printing-receipt');
+        window.print();
+    });
+
+    // Print Single Official Receipt Button
+    document.getElementById('printSingleReceiptBtn')?.addEventListener('click', () => {
+        document.body.classList.add('printing-receipt');
+        window.print();
+        setTimeout(() => {
+            document.body.classList.remove('printing-receipt');
+        }, 1000);
+    });
+
+    // Close Receipt Modal
+    document.getElementById('closeOfficialReceiptModal')?.addEventListener('click', closeOfficialReceiptModal);
+    document.getElementById('closeOfficialReceiptBtn')?.addEventListener('click', closeOfficialReceiptModal);
+    document.getElementById('officialReceiptModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'officialReceiptModal') closeOfficialReceiptModal();
+    });
+
+    // Export Ledger CSV
+    document.getElementById('exportLedgerCsvBtn')?.addEventListener('click', exportLedgerToCsv);
+
     updateNotificationBadge();
     setInterval(updateNotificationBadge, 30000);
 
