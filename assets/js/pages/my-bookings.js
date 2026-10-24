@@ -400,6 +400,10 @@
                 actionHtml = `<a href="booking-assistant.html?draft_id=${draftId}" class="btn-primary" style="font-size:0.8rem;padding:4px 10px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-play"></i> Resume</a>`;
             } else {
                 actionHtml = `<button type="button" class="btn-secondary btn-view-details" data-index="${index}" style="font-size:0.8rem;padding:4px 10px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><i class="fas fa-eye"></i> Details</button>`;
+                if (item.lot_id) {
+                    const navQ = 'navigate_to_lot=' + encodeURIComponent(item.lot_id) + '&decedent=' + encodeURIComponent(item.decedent_name || '');
+                    actionHtml += ` <a href="cemetery-map.html?${navQ}" class="btn-secondary" style="font-size:0.8rem;padding:4px 8px;display:inline-flex;align-items:center;gap:3px;text-decoration:none;" title="Navigate to Grave on Cemetery Map"><i class="fas fa-route" style="color:#2563eb;"></i> Route</a>`;
+                }
                 if (isPreNeed || item.certificate_number) {
                     actionHtml += ` <button type="button" class="btn-secondary btn-view-cert" data-index="${index}" style="font-size:0.8rem;padding:4px 10px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;background:#fffbeb;color:#b45309;border-color:#fde68a;font-weight:600;" title="View Official Certificate of Ownership"><i class="fas fa-certificate"></i> Cert</button>`;
                 }
@@ -577,6 +581,48 @@
                 docBadgeBg = '#fef3c7';
             }
 
+            const targetLotId = record.lot_id || item.lot_id;
+            const hasLotLocation = Boolean(targetLotId || (item.allocation && !item.allocation.includes('Pending')));
+            let lotPreviewCardHtml = '';
+            if (hasLotLocation) {
+                const navQuery = targetLotId 
+                    ? `navigate_to_lot=${encodeURIComponent(targetLotId)}&decedent=${encodeURIComponent(record.beneficiary_name || record.deceased_name || item.decedent_name || '')}`
+                    : `decedent=${encodeURIComponent(record.beneficiary_name || record.deceased_name || item.decedent_name || '')}`;
+
+                lotPreviewCardHtml = `
+                    <!-- Lot Appearance & Grave Wayfinding Card -->
+                    <div class="booking-detail-card" style="margin-top:16px;border:1px solid #bfdbfe;background:linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);padding:16px;border-radius:10px;">
+                        <div class="booking-detail-card-head" style="border-bottom:1px solid #dbeafe;padding-bottom:10px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+                            <span class="booking-detail-card-title" style="color:#1e40af;font-size:0.95rem;font-weight:700;"><i class="fas fa-map-location-dot"></i> Grave Location &amp; Plot Appearance</span>
+                            <span style="font-size:0.75rem;font-weight:700;color:#1e40af;background:#dbeafe;padding:3px 10px;border-radius:12px;display:inline-flex;align-items:center;gap:4px;">
+                                <i class="fas fa-compass"></i> Wayfinding Ready
+                            </span>
+                        </div>
+                        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:14px;">
+                            <div>
+                                <div style="font-size:0.75rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Cemetery Plot Allocation</div>
+                                <div style="font-weight:700;color:#0f172a;font-size:1.1rem;margin-top:2px;">${escapeHtml(item.allocation || record.allocation || 'Designated Cemetery Plot')}</div>
+                                <div style="font-size:0.8rem;color:#475569;margin-top:6px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                                    <span><i class="fas fa-layer-group" style="color:#3b82f6;"></i> Double-depth vault certified</span>
+                                    <span><i class="fas fa-water" style="color:#10b981;"></i> Flood-free elevated ground</span>
+                                    <span><i class="fas fa-person-walking" style="color:#6366f1;"></i> PWD accessible path</span>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                                ${targetLotId ? `
+                                    <button type="button" class="btn btn-secondary" id="btnPreviewPlotModal" style="display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;background:#ffffff;border:1px solid #cbd5e1;cursor:pointer;padding:8px 14px;border-radius:6px;font-weight:600;color:#334155;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                                        <i class="fas fa-eye" style="color:#2563eb;"></i> Visual Plot Preview
+                                    </button>
+                                ` : ''}
+                                <a href="cemetery-map.html?${navQuery}" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;text-decoration:none;padding:8px 14px;border-radius:6px;font-weight:600;box-shadow:0 2px 4px rgba(37,99,235,0.2);">
+                                    <i class="fas fa-route"></i> Navigate to Grave (Map)
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
             bookingDetailBody.innerHTML = `
                 <div class="booking-detail-deck">
                     <!-- Top Strip: Reference & Badges -->
@@ -728,8 +774,26 @@
                             </div>
                         </div>
                     </div>
+                    ${lotPreviewCardHtml}
                 </div>
             `;
+
+            // Wire Plot Visual Preview button
+            if (targetLotId) {
+                document.getElementById('btnPreviewPlotModal')?.addEventListener('click', () => {
+                    if (window.LotVisualPreview) {
+                        window.LotVisualPreview.openPreviewModal({
+                            lot_id: targetLotId,
+                            lot_number: record.lot_number || item.lot_number,
+                            block_name: record.block_name || item.block_name,
+                            section_name: record.section_name || item.section_name,
+                            type_name: record.lot_type_name || record.type_name,
+                            price: record.lot_price || record.price,
+                            status: record.lot_status || record.status
+                        });
+                    }
+                });
+            }
 
             if (bookingDetailFooter) {
                 let footerHtml = '<button type="button" class="btn btn-secondary" id="closeDetailModalBtnInner">Close</button>';
