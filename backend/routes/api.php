@@ -1639,6 +1639,19 @@ if ($path === 'reports/dashboard-summary' && $requestMethod === 'GET') {
     exit;
 }
 
+if ($path === 'reports/collections-ledger' && $requestMethod === 'GET') {
+    $user = AuthMiddleware::requireRole(['admin', 'staff']);
+    $filters = [];
+    if (!empty($_GET['period'])) $filters['period'] = $_GET['period'];
+    if (!empty($_GET['date_from'])) $filters['date_from'] = $_GET['date_from'];
+    if (!empty($_GET['date_to'])) $filters['date_to'] = $_GET['date_to'];
+    if (!empty($_GET['transaction_type'])) $filters['transaction_type'] = $_GET['transaction_type'];
+    if (!empty($_GET['payment_method'])) $filters['payment_method'] = $_GET['payment_method'];
+    if (!empty($_GET['verification_status'])) $filters['verification_status'] = $_GET['verification_status'];
+    echo json_encode($reportController->collectionsLedger($filters));
+    exit;
+}
+
 if ($path === 'ai/health' && $requestMethod === 'GET') {
     echo json_encode($aiController->health());
     exit;
