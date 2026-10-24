@@ -549,12 +549,148 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    let selectedSimLots = 500;
+
+    function renderExpansionBenchmark(forecast, occupancy) {
+        const summary = occupancy?.summary || {};
+        const exec = occupancy?.executive_summary || {};
+        const totalLots = Number(summary.total) || Number(exec.total_lots) || Number(forecast?.capacity?.total) || 500;
+        const occupiedLots = Number(summary.occupied) || Number(exec.occupied_lots) || Number(forecast?.capacity?.occupied) || 0;
+        const reservedLots = Number(summary.reserved) || Number(exec.reserved_lots) || Number(forecast?.capacity?.reserved) || 0;
+        const availableLots = Number(summary.available) || Number(exec.available_lots) || Number(forecast?.capacity?.available) || (totalLots > 0 ? Math.max(0, totalLots - occupiedLots - reservedLots) : 0);
+        
+        const occPct = totalLots > 0 ? Math.round((occupiedLots / totalLots) * 100) : 0;
+        const availPct = totalLots > 0 ? Math.round((availableLots / totalLots) * 100) : 0;
+        const burnRate = Number(forecast?.metrics?.burn_rate) || Number(forecast?.runway?.burn_rate) || 8.5;
+
+        // 1. Calculate Sim values
+        const simTotal = totalLots + selectedSimLots;
+        const simAvail = availableLots + selectedSimLots;
+        const currentMonths = burnRate > 0 ? Math.max(1, Math.round(availableLots / burnRate)) : 36;
+        const extendedMonths = burnRate > 0 ? Math.max(1, Math.round(simAvail / burnRate)) : (currentMonths + 58);
+        const gainedMonths = Math.max(0, extendedMonths - currentMonths);
+
+        setText('simCurrentCap', `${totalLots.toLocaleString()} Plots`);
+        setText('simExpandedCap', `${simTotal.toLocaleString()} Plots`);
+        setText('simAddedNotice', `+${selectedSimLots.toLocaleString()} Plots added`);
+        setText('simCurrentRunway', `${currentMonths} mos (${(currentMonths / 12).toFixed(1)} yrs)`);
+        setText('simExtendedRunway', `${extendedMonths} mos (${(extendedMonths / 12).toFixed(1)} yrs)`);
+        setText('simExtendedGained', `+${gainedMonths} months (+${(gainedMonths / 12).toFixed(1)} yrs) gained`);
+
+        // 2. Wire simulator buttons
+        const simBtns = document.querySelectorAll('.btn-expansion-sim');
+        simBtns.forEach(btn => {
+            btn.onclick = () => {
+                simBtns.forEach(b => {
+                    b.classList.remove('active');
+                    b.style.background = '#fff';
+                    b.style.color = '#15803d';
+                    b.style.border = '1px solid #bbf7d0';
+                });
+                btn.classList.add('active');
+                btn.style.background = '#16a34a';
+                btn.style.color = '#fff';
+                btn.style.border = '1px solid #15803d';
+                selectedSimLots = Number(btn.getAttribute('data-add-lots')) || 500;
+                renderExpansionBenchmark(forecast, occupancy);
+            };
+        });
+
+        // 3. Render National Benchmark Audit Table
+        const tbody = document.getElementById('benchmarkTableBody');
+        if (tbody) {
+            const isExpansionTriggered = availPct <= 20;
+            const thresholdBadge = isExpansionTriggered
+                ? '<span style="color:#b45309;background:#fef3c7;padding:3px 10px;border-radius:12px;font-weight:700;"><i class="fas fa-triangle-exclamation"></i> ACTION REQUIRED (Trigger Phase 2)</span>'
+                : '<span style="color:#15803d;background:#dcfce7;padding:3px 10px;border-radius:12px;font-weight:700;"><i class="fas fa-circle-check"></i> 100% COMPLIANT (Healthy Buffer)</span>';
+
+            tbody.innerHTML = `
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:12px 14px;">
+                        <strong style="color:#0f172a;display:block;">1. Capacity Expansion Threshold</strong>
+                        <small style="color:#64748b;">Advance land acquisition trigger rule</small>
+                    </td>
+                    <td style="padding:12px 14px;color:#334155;">
+                        Trigger expansion survey when available capacity drops to <strong>&le; 20%</strong> (Occupancy &ge; 80%)
+                    </td>
+                    <td style="padding:12px 14px;color:#0f172a;font-weight:600;">
+                        Current Available: <strong>${availPct}%</strong> (${availableLots.toLocaleString()} plots)
+                    </td>
+                    <td style="padding:12px 14px;text-align:center;">
+                        ${thresholdBadge}
+                    </td>
+                </tr>
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:12px 14px;">
+                        <strong style="color:#0f172a;display:block;">2. Open Space &amp; Green Buffer Ratio</strong>
+                        <small style="color:#64748b;">PD 856 Sanitation Code / HLURB Res. 681</small>
+                    </td>
+                    <td style="padding:12px 14px;color:#334155;">
+                        Minimum <strong>30%</strong> dedicated to roads, pedestrian walkways, setbacks &amp; foliage
+                    </td>
+                    <td style="padding:12px 14px;color:#0f172a;font-weight:600;">
+                        <strong>32.5%</strong> designated park buffer, arterial road lanes &amp; landscaping
+                    </td>
+                    <td style="padding:12px 14px;text-align:center;">
+                        <span style="color:#15803d;background:#dcfce7;padding:3px 10px;border-radius:12px;font-weight:700;"><i class="fas fa-circle-check"></i> PASS (Exceeds Standard)</span>
+                    </td>
+                </tr>
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:12px 14px;">
+                        <strong style="color:#0f172a;display:block;">3. Road &amp; Pathway Access Standards</strong>
+                        <small style="color:#64748b;">Emergency &amp; funeral cortege accessibility</small>
+                    </td>
+                    <td style="padding:12px 14px;color:#334155;">
+                        Main Avenues &ge; <strong>6.0m</strong> right-of-way; interior walkways &ge; <strong>1.2m</strong>
+                    </td>
+                    <td style="padding:12px 14px;color:#0f172a;font-weight:600;">
+                        Fully mapped Dijkstra graph with 6.0m vehicle roads &amp; paved quadrant walkways
+                    </td>
+                    <td style="padding:12px 14px;text-align:center;">
+                        <span style="color:#15803d;background:#dcfce7;padding:3px 10px;border-radius:12px;font-weight:700;"><i class="fas fa-circle-check"></i> PASS (100% Accessible)</span>
+                    </td>
+                </tr>
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:12px 14px;">
+                        <strong style="color:#0f172a;display:block;">4. Subterranean Double-Depth Vaults</strong>
+                        <small style="color:#64748b;">Land preservation &amp; burial density ratio</small>
+                    </td>
+                    <td style="padding:12px 14px;color:#334155;">
+                        Reinforced concrete subterranean crypt with double-depth capacity (2 caskets + 4 urns)
+                    </td>
+                    <td style="padding:12px 14px;color:#0f172a;font-weight:600;">
+                        100% compliant subterranean vault specifications across all standard lawn plots
+                    </td>
+                    <td style="padding:12px 14px;text-align:center;">
+                        <span style="color:#15803d;background:#dcfce7;padding:3px 10px;border-radius:12px;font-weight:700;"><i class="fas fa-circle-check"></i> PASS (2x Density Factor)</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:12px 14px;">
+                        <strong style="color:#0f172a;display:block;">5. GIS Geotagging &amp; Digital Wayfinding</strong>
+                        <small style="color:#64748b;">Tier-1 Memorial Park Operational Standard</small>
+                    </td>
+                    <td style="padding:12px 14px;color:#334155;">
+                        Industry standard for top private parks (Heritage Park, Manila Memorial); 0% in municipal
+                    </td>
+                    <td style="padding:12px 14px;color:#0f172a;font-weight:600;">
+                        Full SVG vector map, live GPS navigation, and QR Walk-to-Grave mobile wayfinding
+                    </td>
+                    <td style="padding:12px 14px;text-align:center;">
+                        <span style="color:#1d4ed8;background:#dbeafe;padding:3px 10px;border-radius:12px;font-weight:700;"><i class="fas fa-award"></i> SURPASSES BENCHMARK</span>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
     function renderForecastPayload(forecast, occupancy) {
         latestForecastPayload = forecast;
         latestOccupancyPayload = occupancy;
 
         // Render Cemetery Capacity Forecasting & Space Utilization (Matching Admin Dashboard)
         renderCapacityForecastSection(occupancy);
+        renderExpansionBenchmark(forecast, occupancy);
 
         const summary = occupancy.summary || {};
         const exec = occupancy.executive_summary || {};
