@@ -57,8 +57,7 @@
             labels: true,
             foliage: true,
             surroundings: true,
-            amenities: true,
-            expansion: true
+            amenities: true
         },
 
         // Batch 36: Mobile Touch Gestures & Responsive Pan/Pinch State
@@ -326,7 +325,7 @@
     let mapLayersWidget, btnLayersTrigger, layersTriggerThumb, layersThumbPreview, layersThumbLabel;
     let layersFlyoutMenu, btnCloseLayers;
     let layerBtnDefault, layerBtnSatellite, layerBtnTerrain;
-    let btnToggleLabels, btnToggleFoliage, btnToggleSurroundings, btnToggleAmenities, btnToggleExpansion, btnDrawerLotPreview;
+    let btnToggleLabels, btnToggleFoliage, btnToggleSurroundings, btnToggleAmenities, btnDrawerLotPreview;
 
     // Batch 38: Multi-Depth Vault & Capacity Cross-Section Graphic DOM Elements
     let drawerVaultCrossSectionCard, vaultCapacitySummaryBadge, vaultOccupancyRatio;
@@ -348,7 +347,7 @@
 
         // Enforce route authentication across allowed roles (bypass for public scan-and-walk visitors)
         if (!isPublicWayfinding && typeof requireRole === 'function') {
-            const user = await requireRole(['admin', 'staff', 'user']);
+            const user = await requireRole(['admin', 'staff', 'user', 'citizen']);
             if (!user) return;
         } else if (isPublicWayfinding && typeof requireRole === 'function') {
             try {
@@ -674,7 +673,6 @@
         btnToggleFoliage = document.getElementById('btnToggleFoliage');
         btnToggleSurroundings = document.getElementById('btnToggleSurroundings');
         btnToggleAmenities = document.getElementById('btnToggleAmenities');
-        btnToggleExpansion = document.getElementById('btnToggleExpansion');
         btnDrawerLotPreview = document.getElementById('btnDrawerLotPreview');
 
         // Batch 38: Multi-Depth Vault & Capacity Graphic Elements
@@ -1281,9 +1279,7 @@
         if (btnToggleAmenities) {
             btnToggleAmenities.addEventListener('click', () => toggleMapDetail('amenities'));
         }
-        if (btnToggleExpansion) {
-            btnToggleExpansion.addEventListener('click', () => toggleMapDetail('expansion'));
-        }
+        
         if (btnDrawerLotPreview) {
             btnDrawerLotPreview.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -1363,10 +1359,6 @@
         } else if (feature === 'amenities') {
             cemeteryMapSvg.classList.toggle('hide-amenities', !isEnabled);
             if (btnToggleAmenities) btnToggleAmenities.classList.toggle('is-active', isEnabled);
-        } else if (feature === 'expansion') {
-            const expEl = document.getElementById('expansionReserveGroup');
-            if (expEl) expEl.style.display = isEnabled ? 'block' : 'none';
-            if (btnToggleExpansion) btnToggleExpansion.classList.toggle('is-active', isEnabled);
         }
     }
 
@@ -2520,53 +2512,7 @@ const innerWallD = "M 1020.0 873.0 L 1163.8 895.6 L 1098.0 693.0 L 1055.5 701.9 
 mk('path', { d: outerWallD, class: 'mp-wall' }, mapBoundaryLayer);
 mk('path', { d: innerWallD, class: 'mp-wall-inner' }, mapBoundaryLayer);
 
-// ==========================================
-// LAYER: Phase 2 Future Expansion Reserve Parcel (Land Extension Readiness)
-// ==========================================
-const expansionGroup = mk('g', {
-    id: 'expansionReserveGroup',
-    class: 'svg-expansion-reserve-group',
-    style: state.layerToggles.expansion !== false ? 'display:block; cursor:pointer;' : 'display:none; cursor:pointer;'
-}, mapBoundaryLayer);
 
-expansionGroup.innerHTML = `
-    <!-- Reserved Parcel Polygon Boundary -->
-    <polygon points="1060,490 1280,510 1260,780 1105,760" 
-             fill="rgba(245, 158, 11, 0.08)" 
-             stroke="#d97706" 
-             stroke-width="2.5" 
-             stroke-dasharray="8,5" 
-             class="mp-expansion-polygon" />
-    
-    <!-- Diagonal Hash Pattern for Planning Reserve -->
-    <path d="M1065,520 L1120,495 M1100,560 L1180,500 M1140,610 L1230,510 M1180,670 L1270,540 M1210,730 L1275,610" 
-          stroke="rgba(217, 119, 6, 0.22)" 
-          stroke-width="1.5" />
-
-    <!-- Center Benchmark & Reserve Info Plaque -->
-    <g transform="translate(1120, 610)" class="mp-expansion-badge">
-        <rect x="-85" y="-28" width="170" height="56" rx="8" 
-              fill="#ffffff" stroke="#d97706" stroke-width="2" 
-              filter="drop-shadow(0 2px 6px rgba(0,0,0,0.12))" />
-        <rect x="-83" y="-26" width="166" height="18" rx="6" fill="#fef3c7" />
-        <text x="0" y="-13" text-anchor="middle" font-size="9" font-weight="700" fill="#92400e" letter-spacing="0.4">
-            ✦ PHASE 2 EXPANSION RESERVE
-        </text>
-        <text x="0" y="6" text-anchor="middle" font-size="8.5" font-weight="600" fill="#1e293b">
-            12,500 m² Municipal Land
-        </text>
-        <text x="0" y="19" text-anchor="middle" font-size="7.5" font-weight="500" fill="#64748b">
-            Projected Cap: +1,200 Plots
-        </text>
-    </g>
-`;
-
-expansionGroup.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (typeof toast === 'function') {
-        toast('Phase 2 Future Expansion Parcel: 12,500 m² reserved municipal ground ready for zero-downtime grid extension.', 'info');
-    }
-});
 
 // Wall Posts placed along expanded perimeter edges and flanking gate portals
 const postG = mk('g', { class: 'mp-wall-posts', 'aria-hidden': 'true' }, mapBoundaryLayer);
