@@ -27,6 +27,9 @@ Options -Indexes
 # Deny the .git directory and internal storage (logs, cache, rate limits)
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    # Pass Authorization header to PHP in FastCGI / PHP-FPM (InfinityFree)
+    RewriteCond %{HTTP:Authorization} ^(.*)
+    RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
     RewriteRule (^|/)\.git - [F,L]
     RewriteRule (^|/)backend/storage(/|$) - [F,L]
 </IfModule>

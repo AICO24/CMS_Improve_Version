@@ -12,18 +12,24 @@ class JWTConfig {
         }
 
         EnvironmentService::loadEnvironment(dirname(__DIR__) . '/.env');
+        EnvironmentService::loadEnvironment(dirname(dirname(__DIR__)) . '/.env');
         $secret = EnvironmentService::get('JWT_SECRET');
         if (!is_string($secret) || trim($secret) === '') {
-            try {
-                $secret = bin2hex(random_bytes(32));
-            } catch (Exception $e) {
-                $secret = sha1(uniqid('dev', true));
-            }
-
             $envPath = dirname(__DIR__) . '/.environment';
-            $content = "JWT_SECRET={$secret}\n";
-            if (!is_file($envPath)) {
-                @file_put_contents($envPath, $content, LOCK_EX);
+            if (is_file($envPath)) {
+                $envLines = @file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+                foreach ($envLines as $line) {
+                    if (strpos($line, 'JWT_SECRET=') === 0) {
+                        $secret = trim(substr($line, 11));
+                        break;
+                    }
+                }
+            }
+            if (!is_string($secret) || trim($secret) === '') {
+                // Persistent static fallback key for serverless/shared host environments (InfinityFree)
+                // so tokens are never invalidated across multiple PHP processes/workers
+                $secret = 'cms_default_jwt_secret_infinityfree_2026_secure_key';
+                @file_put_contents($envPath, "JWT_SECRET={$secret}\n", LOCK_EX);
             }
         }
 

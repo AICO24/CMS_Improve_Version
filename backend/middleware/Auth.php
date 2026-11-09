@@ -4,11 +4,20 @@ require_once __DIR__ . '/../models/User.php';
 
 class AuthMiddleware {
     public static function authenticate() {
-        $headers = getallheaders();
-        $authHeader = $headers['Authorization'] ?? ($headers['authorization'] ?? '');
+        $headers = function_exists('getallheaders') ? getallheaders() : [];
+        $authHeader = $headers['Authorization'] 
+            ?? ($headers['authorization'] 
+            ?? ($_SERVER['HTTP_AUTHORIZATION'] 
+            ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] 
+            ?? '')));
+
+        if (empty($authHeader) && function_exists('apache_request_headers')) {
+            $apacheHeaders = apache_request_headers();
+            $authHeader = $apacheHeaders['Authorization'] ?? ($apacheHeaders['authorization'] ?? '');
+        }
 
         $token = null;
-        if (!empty($authHeader) && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+        if (!empty($authHeader) && preg_match('/Bearer\s+(\S+)/i', $authHeader, $matches)) {
             $token = $matches[1];
         } elseif (!empty($_COOKIE['auth_token'])) {
             $token = $_COOKIE['auth_token'];
