@@ -2384,7 +2384,7 @@ if ($path === 'decedents/import/confirm' && $requestMethod === 'POST') {
 // UNIFIED BOOKING AGENT ROUTES (BMS-4 / BMS-5)
 // =========================================================================
 
-if ($path === 'booking-agent/chat' && $requestMethod === 'POST') {
+if (($path === 'booking-agent/chat' || $path === 'booking-agent/message') && $requestMethod === 'POST') {
     $user = AuthMiddleware::requireRole(['admin', 'staff', 'user']);
     if (!RateLimiter::allow('booking_agent_chat_' . $user['user_id'], 15, 60)) {
         http_response_code(429);

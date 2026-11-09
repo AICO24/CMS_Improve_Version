@@ -135,7 +135,9 @@ class ApiClient {
             headers.Authorization = `Bearer ${this.token}`;
         }
 
-        const response = await fetch(`${API_BASE}/${endpoint}`, {
+        const safeEndpoint = endpoint === 'booking-agent/chat' ? 'booking-agent/message' : endpoint;
+        const response = await fetch(`${API_BASE}/${safeEndpoint}`, {
+            credentials: 'include',
             ...options,
             headers,
             body: isFormData ? options.body : options.body ? JSON.stringify(options.body) : undefined,
