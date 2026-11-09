@@ -258,9 +258,9 @@
 
 .content-area {
     position: relative;
-    z-index: 1;
-    flex: 1;
-    min-height: 0;
+    z-index: 2;
+    flex: 1 1 auto;
+    min-height: calc(100vh - 76px);
     display: flex;
     flex-direction: column;
     padding: 16px 20px;
