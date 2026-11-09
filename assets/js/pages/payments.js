@@ -1101,7 +1101,6 @@ placeholder: 'Search reservation by decedent, lot number, or client...',
                 };
             },
         }
-        },
     };
 
     // currentReferenceKind ('schedule'|'lot'|null)
