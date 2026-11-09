@@ -16,7 +16,7 @@ Copy-Item -Path "$rootDir\frontend" -Destination $stagingDir -Recurse
 
 Write-Host "Pruning unnecessary heavy assets to ensure zip is under InfinityFree 10MB limit..."
 # Remove unneeded ~2MB PNGs (their .jpg versions are already used by frontend and are ~60KB)
-$heavyPngs = @('Buenabentura.png', 'Gabayan.png', 'Giray.png', 'Gochaico.png', 'Salas.png')
+$heavyPngs = @('Buenabentura.png', 'Buenaventura.png', 'Gabayan.png', 'Giray.png', 'Gochaico.png', 'Salas.png')
 foreach ($png in $heavyPngs) {
     $pngPath = Join-Path "$stagingDir\assets\images" $png
     if (Test-Path $pngPath) {

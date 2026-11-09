@@ -1202,10 +1202,12 @@ body.dark .service-card-icon {
     position: relative;
 }
 
+/* Team Grid & Interactive Hover Focus */
 .team-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 20px;
+    padding: 16px 4px;
 }
 
 .team-card {
@@ -1214,40 +1216,126 @@ body.dark .service-card-icon {
     border-radius: var(--radius-md);
     overflow: hidden;
     box-shadow: var(--shadow-sm);
-    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease, border-color 0.28s ease;
+    transition: transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1),
+                box-shadow 0.38s cubic-bezier(0.2, 0.8, 0.2, 1),
+                border-color 0.3s ease,
+                opacity 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+                filter 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
     display: flex;
     flex-direction: column;
     position: relative;
+    cursor: pointer;
+    will-change: transform, filter, opacity;
+    z-index: 1;
 }
 
-.team-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
-    border-color: var(--accent);
+/* Neon Top Accent Line (Uiverse Card Inspired) */
+.team-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #10b981, #34d399, transparent);
+    opacity: 0;
+    transform: scaleX(0.2);
+    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* Ambient Radial Backlight on Hover */
+.team-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12), transparent 70%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+    z-index: 1;
+}
+
+/* ========================================================
+   FOCUS HOVER ANIMATION (Peer De-focus + Focused Expansion)
+   When hovering over the team grid, the hovered card expands
+   prominently while sibling cards slightly dim & blur.
+   ======================================================== */
+@media (hover: hover) and (min-width: 769px) {
+    .team-grid:hover > .team-card:not(:hover),
+    .team-grid:focus-within > .team-card:not(:focus):not(:hover) {
+        opacity: 0.52;
+        filter: blur(1.5px) grayscale(25%);
+        transform: scale(0.95);
+    }
+}
+
+/* Active / Focused Card Pop & Expansion */
+.team-card:hover,
+.team-card:focus-visible {
+    transform: scale(1.08) translateY(-10px);
+    z-index: 10;
+    opacity: 1 !important;
+    filter: none !important;
+    border-color: #10b981;
+    box-shadow: 0 22px 42px -10px rgba(16, 185, 129, 0.28),
+                0 10px 20px -6px rgba(15, 23, 42, 0.12),
+                0 0 0 1px rgba(16, 185, 129, 0.35);
+    outline: none;
+}
+
+.team-card:hover::before,
+.team-card:focus-visible::before {
+    opacity: 1;
+    transform: scaleX(1);
+}
+
+.team-card:hover::after,
+.team-card:focus-visible::after {
+    opacity: 1;
 }
 
 body[data-theme="dark"] .team-card:hover,
-body.dark .team-card:hover {
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+body.dark .team-card:hover,
+body[data-theme="dark"] .team-card:focus-visible,
+body.dark .team-card:focus-visible {
     border-color: #34d399;
+    box-shadow: 0 24px 48px -8px rgba(0, 0, 0, 0.8),
+                0 0 25px rgba(52, 211, 153, 0.32),
+                0 0 0 1px rgba(52, 211, 153, 0.45);
 }
 
 /* Featured Card (Fullstack Lead: Manolo) */
 .team-card--featured {
-    border: 1.5px solid rgba(16, 185, 129, 0.4);
-    box-shadow: 0 4px 18px rgba(16, 185, 129, 0.12);
+    border: 1.5px solid rgba(16, 185, 129, 0.45);
+    box-shadow: 0 4px 18px rgba(16, 185, 129, 0.14);
 }
 
 body[data-theme="dark"] .team-card--featured,
 body.dark .team-card--featured {
-    border-color: rgba(52, 211, 153, 0.45);
-    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.18);
+    border-color: rgba(52, 211, 153, 0.5);
+    box-shadow: 0 4px 22px rgba(16, 185, 129, 0.22);
 }
 
-.team-card--featured:hover {
-    transform: translateY(-6px);
+.team-card--featured:hover,
+.team-card--featured:focus-visible {
+    transform: scale(1.10) translateY(-12px);
     border-color: #10b981;
-    box-shadow: 0 16px 36px rgba(16, 185, 129, 0.28);
+    box-shadow: 0 28px 52px -10px rgba(16, 185, 129, 0.38),
+                0 0 30px rgba(16, 185, 129, 0.28),
+                0 0 0 1.5px #10b981;
+}
+
+body[data-theme="dark"] .team-card--featured:hover,
+body.dark .team-card--featured:hover,
+body[data-theme="dark"] .team-card--featured:focus-visible,
+body.dark .team-card--featured:focus-visible {
+    border-color: #34d399;
+    box-shadow: 0 30px 58px -8px rgba(0, 0, 0, 0.85),
+                0 0 35px rgba(52, 211, 153, 0.4),
+                0 0 0 1.5px #34d399;
 }
 
 .card-panel {
@@ -1262,11 +1350,13 @@ body.dark .team-card--featured {
     height: 100%;
     object-fit: cover;
     object-position: top center;
-    transition: transform 0.35s ease, filter 0.35s ease;
+    transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.35s ease;
 }
 
-.team-card:hover .card-panel img {
-    transform: scale(1.06);
+.team-card:hover .card-panel img,
+.team-card:focus-visible .card-panel img {
+    transform: scale(1.08);
+    filter: brightness(1.04) contrast(1.02);
 }
 
 
@@ -1298,6 +1388,24 @@ body.dark .team-card--featured {
     text-transform: uppercase;
     color: #34d399;
     display: block;
+    transition: text-shadow 0.3s ease, color 0.3s ease;
+}
+
+.team-card:hover .team-role-title,
+.team-card:focus-visible .team-role-title {
+    text-shadow: 0 0 12px rgba(52, 211, 153, 0.55);
+}
+
+.team-card:hover .team-tech-chips span,
+.team-card:focus-visible .team-tech-chips span {
+    border-color: rgba(16, 185, 129, 0.35);
+    background: rgba(16, 185, 129, 0.08);
+}
+
+body[data-theme="dark"] .team-card:hover .team-tech-chips span,
+body.dark .team-card:hover .team-tech-chips span {
+    border-color: rgba(52, 211, 153, 0.45);
+    background: rgba(52, 211, 153, 0.12);
 }
 
 .role-title--fullstack {
@@ -1754,5 +1862,23 @@ body.dark .team-tech-chips .chip--primary {
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
+    }
+
+    /* Mobile adjustments for team cards */
+    .team-card:hover,
+    .team-card:focus-visible,
+    .team-card--featured:hover,
+    .team-card--featured:focus-visible {
+        transform: translateY(-4px) !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .team-card,
+    .card-panel img,
+    .team-grid:hover > .team-card:not(:hover) {
+        transition: none !important;
+        transform: none !important;
+        filter: none !important;
     }
 }
